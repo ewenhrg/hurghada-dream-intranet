@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { uuid, currency, saveLS } from "../utils";
+import { uuid, currency, saveLS, loadLS } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 
 export function QuotesPage({ activities, quotes, setQuotes }) {
@@ -16,19 +16,34 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
     slot: "",
   });
 
-  const [client, setClient] = useState({
+  // Charger le formulaire sauvegardé depuis localStorage
+  const savedForm = loadLS(LS_KEYS.quoteForm, null);
+  const defaultClient = savedForm?.client || {
     name: "",
     phone: "",
     hotel: "",
     room: "",
     neighborhood: "",
-  });
-  const [items, setItems] = useState([blankItem()]);
-  const [notes, setNotes] = useState("");
+  };
+  const defaultItems = savedForm?.items && savedForm.items.length > 0 ? savedForm.items : [blankItem()];
+  const defaultNotes = savedForm?.notes || "";
+
+  const [client, setClient] = useState(defaultClient);
+  const [items, setItems] = useState(defaultItems);
+  const [notes, setNotes] = useState(defaultNotes);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [ticketNumbers, setTicketNumbers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sauvegarder le formulaire dans localStorage à chaque modification
+  useEffect(() => {
+    saveLS(LS_KEYS.quoteForm, {
+      client,
+      items,
+      notes,
+    });
+  }, [client, items, notes]);
 
   function setItem(i, patch) {
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -228,6 +243,9 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
     });
     setItems([blankItem()]);
     setNotes("");
+    
+    // Supprimer le formulaire sauvegardé
+    localStorage.removeItem(LS_KEYS.quoteForm);
 
     setIsSubmitting(false);
     window.scrollTo({ top: 0, behavior: "smooth" });

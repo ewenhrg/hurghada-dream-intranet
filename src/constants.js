@@ -7,6 +7,7 @@ export const PIN_CODE = "0606";
 export const LS_KEYS = {
   activities: "hd_activities",
   quotes: "hd_quotes",
+  quoteForm: "hd_quote_form", // Formulaire de devis en cours
 };
 
 export const WEEKDAYS = [
