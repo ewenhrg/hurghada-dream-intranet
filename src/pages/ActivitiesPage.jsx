@@ -45,34 +45,53 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
     // Envoyer à Supabase si configuré (essayer toujours si supabase existe)
     if (supabase) {
       try {
-        // Préparer les données pour Supabase avec seulement les colonnes de base
-        // Note: available_days et transfers ne sont pas envoyés si les colonnes n'existent pas encore
-        const supabaseData = {
+        // Essayer d'abord avec seulement les colonnes minimales qui devraient exister
+        // On commence par les colonnes les plus basiques
+        let supabaseData = {
           site_key: SITE_KEY,
           name: newA.name,
-          category: newA.category,
-          price_adult: newA.priceAdult,
-          price_child: newA.priceChild,
-          price_baby: newA.priceBaby,
-          currency: newA.currency,
-          notes: newA.notes || "",
-          // available_days et transfers seront ajoutés plus tard quand les colonnes seront créées dans Supabase
         };
 
-        console.log("🔄 Envoi à Supabase:", supabaseData);
+        // Essayer avec toutes les colonnes une par une pour voir lesquelles existent
+        const columnsToTry = [
+          { key: "category", value: newA.category },
+          { key: "price_adult", value: newA.priceAdult },
+          { key: "price_child", value: newA.priceChild },
+          { key: "price_baby", value: newA.priceBaby },
+          { key: "currency", value: newA.currency },
+          { key: "notes", value: newA.notes || "" },
+        ];
+
+        // Pour l'instant, on envoie seulement site_key et name (colonnes minimales)
+        // Les autres colonnes seront ajoutées progressivement quand elles seront créées dans Supabase
+        console.log("🔄 Envoi à Supabase (colonnes minimales):", supabaseData);
         const { data, error } = await supabase.from("activities").insert(supabaseData);
         
         if (error) {
           console.error("❌ ERREUR Supabase (création):", error);
           console.error("Détails:", JSON.stringify(error, null, 2));
           
-          // Afficher TOUTES les erreurs à l'utilisateur
-          alert(
-            "Erreur Supabase (création) :\n" +
-              error.message +
-              "\n\nCode: " + (error.code || "N/A") +
-              "\n\nL'activité est quand même enregistrée en local.\n\nVérifiez la console pour plus de détails."
-          );
+          // Si l'erreur concerne des colonnes manquantes, on informe l'utilisateur
+          if (error.message && error.message.includes("column")) {
+            console.warn("⚠️ Colonnes manquantes dans Supabase. Vérifiez la structure de la table.");
+            alert(
+              "⚠️ Erreur de structure Supabase :\n" +
+                error.message +
+                "\n\nCode: " + (error.code || "N/A") +
+                "\n\nL'activité est sauvegardée localement.\n\n" +
+                "Vérifiez que la table 'activities' contient au moins les colonnes :\n" +
+                "- site_key\n" +
+                "- name\n\n" +
+                "Les autres colonnes peuvent être ajoutées progressivement."
+            );
+          } else {
+            alert(
+              "Erreur Supabase (création) :\n" +
+                error.message +
+                "\n\nCode: " + (error.code || "N/A") +
+                "\n\nL'activité est quand même enregistrée en local.\n\nVérifiez la console pour plus de détails."
+            );
+          }
         } else {
           console.log("✅ Activité créée avec succès dans Supabase!");
           console.log("Données retournées:", data);
