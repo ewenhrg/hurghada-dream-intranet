@@ -12,7 +12,6 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
     babies: 0,
     extraLabel: "",
     extraAmount: "",
-    dauphin: false,
     slot: "",
   });
 
@@ -25,6 +24,9 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
   });
   const [items, setItems] = useState([blankItem()]);
   const [notes, setNotes] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedQuote, setSelectedQuote] = useState(null);
+  const [ticketNumbers, setTicketNumbers] = useState({});
 
   function setItem(i, patch) {
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -78,11 +80,6 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
         lineTotal += Number(it.extraAmount || 0);
       }
 
-      // option dauphin +20
-      if (it.dauphin) {
-        lineTotal += 20;
-      }
-
       const pickupTime =
         it.slot === "morning"
           ? transferInfo?.morningTime
@@ -130,7 +127,6 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
         babies: Number(c.raw.babies || 0),
         extraLabel: c.raw.extraLabel || "",
         extraAmount: Number(c.raw.extraAmount || 0),
-        dauphin: !!c.raw.dauphin,
         neighborhood: client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
@@ -253,8 +249,8 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
                 </div>
               </div>
 
-              {/* extra + dauphin */}
-              <div className="grid md:grid-cols-4 gap-3">
+              {/* extra */}
+              <div className="grid md:grid-cols-3 gap-3">
                 <div className="md:col-span-2">
                   <p className="text-xs text-gray-500 mb-1">Extra (ex: photos, bateau privé…)</p>
                   <TextInput
@@ -270,14 +266,6 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
                     onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
                   />
                 </div>
-                <label className="flex items-center gap-2 text-sm mt-5 md:mt-6">
-                  <input
-                    type="checkbox"
-                    checked={c.raw.dauphin}
-                    onChange={(e) => setItem(idx, { dauphin: e.target.checked })}
-                  />
-                  Dauphin (+20€)
-                </label>
               </div>
 
               {/* passagers */}
@@ -332,24 +320,214 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
       <div>
         <h4 className="text-sm font-semibold mb-3">Devis récents</h4>
         <div className="space-y-3">
-          {quotes.map((q) => (
-            <div key={q.id} className="bg-white rounded-2xl border border-gray-100 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs text-gray-500">
-                    {new Date(q.createdAt).toLocaleString("fr-FR")} — {q.client.phone || "Tél ?"}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    {q.client.hotel || "Hôtel ?"} — {q.client.neighborhood || "Quartier ?"}
-                  </p>
+          {quotes.map((q) => {
+            // Vérifier si tous les tickets sont renseignés
+            const allTicketsFilled = q.items?.every((item) => item.ticketNumber?.trim());
+            const hasTickets = q.items?.some((item) => item.ticketNumber?.trim());
+
+            return (
+              <div key={q.id} className="bg-white rounded-2xl border border-gray-100 p-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div>
+                    <p className="text-xs text-gray-500">
+                      {new Date(q.createdAt).toLocaleString("fr-FR")} — {q.client.phone || "Tél ?"}
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      {q.client.hotel || "Hôtel ?"} — {q.client.neighborhood || "Quartier ?"}
+                    </p>
+                    {hasTickets && (
+                      <p className="text-xs text-green-600 mt-1">
+                        ✅ Tickets : {q.items.filter((item) => item.ticketNumber?.trim()).length}/{q.items.length}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-base font-semibold">{currency(q.total, q.currency)}</p>
                 </div>
-                <p className="text-base font-semibold">{currency(q.total, q.currency)}</p>
+                <div className="flex gap-2 flex-wrap">
+                  <GhostBtn
+                    onClick={() => {
+                      // Télécharger le devis (version simple)
+                      const quoteText = `
+DEVIS ${new Date(q.createdAt).toLocaleDateString("fr-FR")}
+Client: ${q.client.name || q.client.phone}
+Hôtel: ${q.client.hotel || "—"}
+Chambre: ${q.client.room || "—"}
+Quartier: ${q.client.neighborhood || "—"}
+
+ACTIVITÉS:
+${q.items
+  .map(
+    (item, idx) => `
+${idx + 1}. ${item.activityName}
+   Date: ${new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")}
+   Adultes: ${item.adults} | Enfants: ${item.children} | Bébés: ${item.babies}
+   Sous-total: ${currency(item.lineTotal, q.currency)}
+   ${item.ticketNumber ? `🎫 Ticket: ${item.ticketNumber}` : ""}
+`,
+  )
+  .join("\n")}
+
+TOTAL: ${currency(q.total, q.currency)}
+
+Notes: ${q.notes || "—"}
+                      `.trim();
+
+                      const blob = new Blob([quoteText], { type: "text/plain;charset=utf-8" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `devis-${q.id.slice(-8)}.txt`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    📥 Télécharger
+                  </GhostBtn>
+                  {!allTicketsFilled && (
+                    <GhostBtn
+                      onClick={() => {
+                        // Ouvrir le formulaire de modification
+                        setClient(q.client);
+                        setItems(
+                          q.items.map((item) => ({
+                            activityId: item.activityId || "",
+                            date: item.date || new Date().toISOString().slice(0, 10),
+                            adults: item.adults || 2,
+                            children: item.children || 0,
+                            babies: item.babies || 0,
+                            extraLabel: item.extraLabel || "",
+                            extraAmount: item.extraAmount || "",
+                            slot: item.slot || "",
+                          })),
+                        );
+                        setNotes(q.notes || "");
+                        // Supprimer l'ancien devis
+                        const updatedQuotes = quotes.filter((quote) => quote.id !== q.id);
+                        setQuotes(updatedQuotes);
+                        saveLS(LS_KEYS.quotes, updatedQuotes);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    >
+                      ✏️ Modifier
+                    </GhostBtn>
+                  )}
+                  <GhostBtn
+                    onClick={() => {
+                      setSelectedQuote(q);
+                      // Initialiser les numéros de ticket existants
+                      const existingTickets = {};
+                      q.items?.forEach((item, idx) => {
+                        existingTickets[idx] = item.ticketNumber || "";
+                      });
+                      setTicketNumbers(existingTickets);
+                      setShowPaymentModal(true);
+                    }}
+                    className={allTicketsFilled ? "bg-green-50 text-green-700 border-green-200" : ""}
+                  >
+                    {allTicketsFilled ? "✅ Payé" : "💰 Payer"}
+                  </GhostBtn>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {quotes.length === 0 && <p className="text-xs text-gray-400 text-center py-6">Aucun devis encore.</p>}
         </div>
       </div>
+
+      {/* Modale de paiement */}
+      {showPaymentModal && selectedQuote && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Enregistrer les numéros de ticket</h3>
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setSelectedQuote(null);
+                  setTicketNumbers({});
+                }}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              {selectedQuote.items?.map((item, idx) => (
+                <div key={idx} className="border rounded-xl p-4 bg-gray-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="font-medium text-sm">{item.activityName}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")} — {item.adults} adulte(s),{" "}
+                        {item.children} enfant(s)
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold">{currency(item.lineTotal, selectedQuote.currency)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Numéro de ticket unique</p>
+                    <TextInput
+                      placeholder="Ex: T-12345"
+                      value={ticketNumbers[idx] || ""}
+                      onChange={(e) => {
+                        setTicketNumbers((prev) => ({
+                          ...prev,
+                          [idx]: e.target.value,
+                        }));
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <GhostBtn
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setSelectedQuote(null);
+                  setTicketNumbers({});
+                }}
+              >
+                Annuler
+              </GhostBtn>
+              <PrimaryBtn
+                onClick={() => {
+                  // Vérifier que tous les tickets sont renseignés
+                  const allFilled = selectedQuote.items?.every((_, idx) => ticketNumbers[idx]?.trim());
+                  if (!allFilled) {
+                    alert("Veuillez renseigner tous les numéros de ticket.");
+                    return;
+                  }
+
+                  // Mettre à jour le devis avec les numéros de ticket
+                  const updatedQuote = {
+                    ...selectedQuote,
+                    items: selectedQuote.items.map((item, idx) => ({
+                      ...item,
+                      ticketNumber: ticketNumbers[idx]?.trim() || "",
+                    })),
+                  };
+
+                  const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? updatedQuote : q));
+                  setQuotes(updatedQuotes);
+                  saveLS(LS_KEYS.quotes, updatedQuotes);
+
+                  setShowPaymentModal(false);
+                  setSelectedQuote(null);
+                  setTicketNumbers({});
+                  alert("✅ Numéros de ticket enregistrés avec succès !");
+                }}
+              >
+                Enregistrer les tickets
+              </PrimaryBtn>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
