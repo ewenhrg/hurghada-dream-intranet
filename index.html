@@ -5,44 +5,8 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hurghada Dream</title>
-
-    <!-- ✅ Tailwind en CDN (rapide) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- ✅ On force notre thème beige -->
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              hd: {
-                bg: "#f5efe4",       // beige clair
-                card: "#fff",        // cartes blanches
-                accent: "#b87a3f",   // beige / doré
-                text: "#2f2a23",
-              },
-            },
-          },
-        },
-      };
-    </script>
-
-    <style>
-      body {
-        background: #f5efe4;
-      }
-      /* petit scroll propre */
-      ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, 0.15);
-        border-radius: 9999px;
-      }
-    </style>
   </head>
-  <body class="bg-hd-bg text-hd-text">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
