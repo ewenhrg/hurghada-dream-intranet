@@ -161,7 +161,22 @@ export default function App() {
       <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-md border-b border-blue-200/50 shadow-sm">
         <div className="max-w-6xl mx-auto px-3 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 text-white grid place-items-center font-bold text-sm shadow-md">HD</div>
+            <img 
+              src="/logo.png" 
+              alt="Hurghada Dream Logo" 
+              className="w-10 h-10 object-contain rounded-lg"
+              onError={(e) => {
+                // Fallback si le logo n'existe pas - afficher HD
+                e.target.style.display = 'none';
+                const parent = e.target.parentElement;
+                if (parent && !parent.querySelector('.fallback-logo')) {
+                  const fallback = document.createElement('div');
+                  fallback.className = 'fallback-logo w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 text-white grid place-items-center font-bold text-sm shadow-md';
+                  fallback.textContent = 'HD';
+                  parent.appendChild(fallback);
+                }
+              }}
+            />
             <div>
               <h1 className="text-sm font-semibold text-gray-800">Hurghada Dream — Bureaux</h1>
               <p className="text-[10px] text-gray-600">Mini site interne (devis, activités, historique)</p>
