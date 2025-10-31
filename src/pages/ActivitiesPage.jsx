@@ -42,25 +42,38 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
     setActivities(next);
     saveLS(LS_KEYS.activities, next);
 
-    if (remoteEnabled && supabase) {
-      const { error } = await supabase.from("activities").insert({
-        site_key: SITE_KEY,
-        name: newA.name,
-        category: newA.category,
-        price_adult: newA.priceAdult,
-        price_child: newA.priceChild,
-        price_baby: newA.priceBaby,
-        currency: newA.currency,
-        available_days: newA.availableDays,
-        transfers: newA.transfers,
-        notes: newA.notes,
-      });
-      if (error) {
-        alert(
-          "Erreur Supabase (création) : " +
-            error.message +
-            "\nL'activité est quand même enregistrée en local. (tu pourras corriger la table)",
-        );
+    // Envoyer à Supabase si configuré (essayer toujours si supabase existe)
+    if (supabase) {
+      try {
+        const { error } = await supabase.from("activities").insert({
+          site_key: SITE_KEY,
+          name: newA.name,
+          category: newA.category,
+          price_adult: newA.priceAdult,
+          price_child: newA.priceChild,
+          price_baby: newA.priceBaby,
+          currency: newA.currency,
+          available_days: newA.availableDays,
+          transfers: newA.transfers,
+          notes: newA.notes,
+        });
+        if (error) {
+          // Si l'erreur indique que Supabase n'est pas configuré, on ignore silencieusement
+          if (error.message && error.message.includes("Supabase non configuré")) {
+            console.log("Supabase non configuré, activité sauvegardée localement uniquement");
+          } else {
+            console.error("Erreur Supabase (création):", error);
+            alert(
+              "Erreur Supabase (création) : " +
+                error.message +
+                "\nL'activité est quand même enregistrée en local. (tu pourras corriger la table)",
+            );
+          }
+        } else {
+          console.log("✅ Activité créée avec succès dans Supabase");
+        }
+      } catch (err) {
+        console.error("Erreur lors de l'envoi à Supabase:", err);
       }
     }
 

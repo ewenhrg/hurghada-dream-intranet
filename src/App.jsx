@@ -34,8 +34,18 @@ export default function App() {
   async function syncWithSupabase() {
       if (!supabase) return;
     try {
+      // Vérifier si Supabase est configuré (pas un stub)
+      const { data: testData, error: testError } = await supabase.from("activities").select("id").limit(1);
+      
+      // Si pas d'erreur de connexion/config, Supabase est disponible
+      if (!testError || testError.code !== "PGRST116") {
+        setRemoteEnabled(true);
+      }
+
+      // Récupérer toutes les activités
       const { data, error } = await supabase.from("activities").select("*").eq("site_key", SITE_KEY).order("id", { ascending: false });
-      if (!error && Array.isArray(data) && data.length) {
+      if (!error && Array.isArray(data)) {
+        if (data.length > 0) {
         const mapped = data.map((row) => ({
           id: row.id?.toString?.() || uuid(),
           name: row.name,
@@ -50,7 +60,7 @@ export default function App() {
         }));
         setActivities(mapped);
         saveLS(LS_KEYS.activities, mapped);
-        setRemoteEnabled(true);
+        }
       }
     } catch (err) {
       console.warn("Erreur synchronisation Supabase:", err);
