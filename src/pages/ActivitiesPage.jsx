@@ -95,7 +95,7 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
         if (activityData.currency) supabaseData.currency = activityData.currency;
         if (activityData.notes) supabaseData.notes = activityData.notes;
         if (activityData.availableDays) supabaseData.available_days = activityData.availableDays;
-        if (activityData.transfers) supabaseData.transfers = JSON.stringify(activityData.transfers);
+        if (activityData.transfers) supabaseData.transfers = activityData.transfers; // JSONB accepte les objets directement
 
         console.log("🔄 Envoi à Supabase:", supabaseData);
         const { data, error } = await supabase.from("activities").insert(supabaseData);
