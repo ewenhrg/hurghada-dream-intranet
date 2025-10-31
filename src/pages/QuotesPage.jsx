@@ -322,8 +322,8 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
         <div className="space-y-3">
           {quotes.map((q) => {
             // Vérifier si tous les tickets sont renseignés
-            const allTicketsFilled = q.items?.every((item) => item.ticketNumber?.trim());
-            const hasTickets = q.items?.some((item) => item.ticketNumber?.trim());
+            const allTicketsFilled = q.items?.every((item) => item.ticketNumber && item.ticketNumber.trim());
+            const hasTickets = q.items?.some((item) => item.ticketNumber && item.ticketNumber.trim());
 
             return (
               <div key={q.id} className="bg-white rounded-2xl border border-gray-100 p-4">
@@ -337,13 +337,13 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
                     </p>
                     {hasTickets && (
                       <p className="text-xs text-green-600 mt-1">
-                        ✅ Tickets : {q.items.filter((item) => item.ticketNumber?.trim()).length}/{q.items.length}
+                        ✅ Tickets : {q.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{q.items.length}
                       </p>
                     )}
                   </div>
                   <p className="text-base font-semibold">{currency(q.total, q.currency)}</p>
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap border-t pt-3 mt-3">
                   <GhostBtn
                     onClick={() => {
                       // Télécharger le devis (version simple)
@@ -427,6 +427,18 @@ Notes: ${q.notes || "—"}
                     className={allTicketsFilled ? "bg-green-50 text-green-700 border-green-200" : ""}
                   >
                     {allTicketsFilled ? "✅ Payé" : "💰 Payer"}
+                  </GhostBtn>
+                  <GhostBtn
+                    onClick={() => {
+                      if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
+                        const updatedQuotes = quotes.filter((quote) => quote.id !== q.id);
+                        setQuotes(updatedQuotes);
+                        saveLS(LS_KEYS.quotes, updatedQuotes);
+                      }
+                    }}
+                    className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                  >
+                    🗑️ Supprimer
                   </GhostBtn>
                 </div>
               </div>
