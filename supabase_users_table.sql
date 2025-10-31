@@ -24,6 +24,28 @@ FOR SELECT
 TO public
 USING (true);
 
+-- Politique pour permettre l'INSERT (création)
+CREATE POLICY "Allow insert users"
+ON public.users
+FOR INSERT
+TO public
+WITH CHECK (true);
+
+-- Politique pour permettre l'UPDATE (modification)
+CREATE POLICY "Allow update users"
+ON public.users
+FOR UPDATE
+TO public
+USING (true)
+WITH CHECK (true);
+
+-- Politique pour permettre le DELETE (suppression)
+CREATE POLICY "Allow delete users"
+ON public.users
+FOR DELETE
+TO public
+USING (true);
+
 -- Insérer l'utilisateur Ewen avec tous les accès
 INSERT INTO public.users (name, code, can_delete_quote, can_add_activity, can_edit_activity, can_delete_activity, can_reset_data)
 VALUES ('Ewen', '040203', true, true, true, true, true)
