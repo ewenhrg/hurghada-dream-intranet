@@ -18,8 +18,17 @@ CREATE TABLE IF NOT EXISTS public.activities (
 
 -- Ajouter les colonnes manquantes si elles n'existent pas (pour les tables existantes)
 ALTER TABLE public.activities 
+ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'desert',
+ADD COLUMN IF NOT EXISTS price_adult NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS price_child NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS price_baby NUMERIC DEFAULT 0,
 ADD COLUMN IF NOT EXISTS age_child TEXT DEFAULT '',
-ADD COLUMN IF NOT EXISTS age_baby TEXT DEFAULT '';
+ADD COLUMN IF NOT EXISTS age_baby TEXT DEFAULT '',
+ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'EUR',
+ADD COLUMN IF NOT EXISTS available_days BOOLEAN[] DEFAULT ARRAY[false, false, false, false, false, false, false]::BOOLEAN[],
+ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '',
+ADD COLUMN IF NOT EXISTS transfers JSONB DEFAULT '{}'::jsonb,
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- Créer des index pour les recherches rapides
 CREATE INDEX IF NOT EXISTS idx_activities_site_key ON public.activities(site_key);
