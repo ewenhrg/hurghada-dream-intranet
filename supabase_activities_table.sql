@@ -28,6 +28,12 @@ CREATE INDEX IF NOT EXISTS idx_activities_category ON public.activities(category
 -- Activer Row Level Security (RLS)
 ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
 
+-- Supprimer les politiques existantes si elles existent (pour éviter les erreurs)
+DROP POLICY IF EXISTS "Allow insert activities" ON public.activities;
+DROP POLICY IF EXISTS "Allow select activities" ON public.activities;
+DROP POLICY IF EXISTS "Allow update activities" ON public.activities;
+DROP POLICY IF EXISTS "Allow delete activities" ON public.activities;
+
 -- Politique pour permettre l'INSERT (création)
 CREATE POLICY "Allow insert activities"
 ON public.activities
