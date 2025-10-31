@@ -104,7 +104,7 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
   const grandCurrency = computed.find((c) => c.currency)?.currency || "EUR";
   const grandTotal = computed.reduce((s, c) => s + (c.lineTotal || 0), 0);
 
-  function handleCreateQuote(e) {
+  async function handleCreateQuote(e) {
     e.preventDefault();
 
     const notAvailable = computed.filter((c) => c.act && c.weekday != null && !c.available);
@@ -163,22 +163,34 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
 
         if (error) {
           console.error("❌ ERREUR Supabase (création devis):", error);
-          if (error.message && error.message.includes("row-level security") || error.code === "42501") {
-            console.warn("⚠️ Erreur RLS - Vérifiez les politiques Supabase pour la table 'quotes'");
-          } else if (!error.message.includes("column")) {
-            alert(
-              "Erreur Supabase (création devis) :\n" +
-                error.message +
-                "\n\nCode: " + (error.code || "N/A") +
-                "\n\nLe devis est quand même enregistré en local."
-            );
-          }
+          console.error("Détails:", JSON.stringify(error, null, 2));
+          
+          // Toujours afficher l'erreur pour le debug
+          alert(
+            "❌ Erreur Supabase (création devis):\n\n" +
+            "Message: " + (error.message || "Erreur inconnue") + "\n" +
+            "Code: " + (error.code || "N/A") + "\n" +
+            "Détails: " + (error.details || "N/A") + "\n" +
+            "Hint: " + (error.hint || "N/A") + "\n\n" +
+            "Vérifiez la console pour plus de détails.\n\n" +
+            "Le devis est quand même enregistré en local."
+          );
         } else {
           console.log("✅ Devis créé avec succès dans Supabase!");
+          console.log("Réponse:", data);
+          alert("✅ Devis créé avec succès et enregistré dans Supabase !");
         }
       } catch (err) {
         console.error("❌ EXCEPTION lors de l'envoi du devis à Supabase:", err);
+        alert(
+          "❌ Exception lors de l'envoi à Supabase:\n\n" +
+          err.message + "\n\n" +
+          "Vérifiez la console pour plus de détails.\n\n" +
+          "Le devis est quand même enregistré en local."
+        );
       }
+    } else {
+      console.warn("⚠️ Supabase non configuré - le devis n'est enregistré qu'en local");
     }
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -369,8 +381,8 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
 
             return (
               <div key={q.id} className="bg-white rounded-2xl border border-gray-100 p-4">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1">
                     <p className="text-xs text-gray-500">
                       {new Date(q.createdAt).toLocaleString("fr-FR")} — {q.client.phone || "Tél ?"}
                     </p>
@@ -383,9 +395,9 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
                       </p>
                     )}
                   </div>
-                  <p className="text-base font-semibold">{currency(q.total, q.currency)}</p>
-                </div>
-                <div className="flex gap-2 flex-wrap border-t pt-3 mt-3">
+                  <div className="flex items-center gap-2">
+                    <p className="text-base font-semibold mr-3">{currency(q.total, q.currency)}</p>
+                    <div className="flex gap-2 flex-wrap">
                   <GhostBtn
                     onClick={() => {
                       // Télécharger le devis (version simple)
@@ -502,6 +514,8 @@ Notes: ${q.notes || "—"}
                   >
                     🗑️ Supprimer
                   </GhostBtn>
+                    </div>
+                  </div>
                 </div>
               </div>
             );

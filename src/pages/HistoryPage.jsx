@@ -31,8 +31,8 @@ export function HistoryPage({ quotes, setQuotes }) {
 
           return (
             <div key={d.id} className="bg-white rounded-2xl border border-gray-100 p-4">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
                   <p className="text-xs text-gray-500">{new Date(d.createdAt).toLocaleString("fr-FR")}</p>
                   <p className="text-sm text-gray-700">
                     {d.client?.phone || "Tél ?"} — {d.client?.hotel || "Hôtel ?"} ({d.client?.room || "ch ?"})
@@ -42,18 +42,18 @@ export function HistoryPage({ quotes, setQuotes }) {
                       ✅ Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
                     </p>
                   )}
-                </div>
-                <p className="text-base font-semibold">{currency(d.total, d.currency)}</p>
-              </div>
-              <div className="mt-2 space-y-1 mb-3">
-                {d.items.map((li, i) => (
-                  <div key={i} className="text-xs text-gray-500 border-t pt-1">
-                    {li.activityName} — {new Date(li.date + "T12:00:00").toLocaleDateString("fr-FR")}
-                    {li.ticketNumber && <span className="text-green-600 ml-2">🎫 {li.ticketNumber}</span>}
+                  <div className="mt-2 space-y-1">
+                    {d.items.map((li, i) => (
+                      <div key={i} className="text-xs text-gray-500">
+                        {li.activityName} — {new Date(li.date + "T12:00:00").toLocaleDateString("fr-FR")}
+                        {li.ticketNumber && <span className="text-green-600 ml-2">🎫 {li.ticketNumber}</span>}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="flex gap-2 flex-wrap border-t pt-3">
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-base font-semibold mr-3">{currency(d.total, d.currency)}</p>
+                  <div className="flex gap-2 flex-wrap">
                 <GhostBtn
                   onClick={() => {
                     // Télécharger le devis
@@ -152,6 +152,8 @@ Notes: ${d.notes || "—"}
                 >
                   🗑️ Supprimer
                 </GhostBtn>
+                  </div>
+                </div>
               </div>
             </div>
           );
