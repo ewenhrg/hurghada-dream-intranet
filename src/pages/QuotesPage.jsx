@@ -218,7 +218,6 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
         } else {
           console.log("✅ Devis créé avec succès dans Supabase!");
           console.log("Réponse:", data);
-          alert("✅ Devis créé avec succès et enregistré dans Supabase !");
         }
       } catch (err) {
         console.error("❌ EXCEPTION lors de l'envoi du devis à Supabase:", err);
