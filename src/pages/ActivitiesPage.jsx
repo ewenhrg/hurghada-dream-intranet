@@ -84,6 +84,21 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
                 "- name\n\n" +
                 "Les autres colonnes peuvent être ajoutées progressivement."
             );
+          } else if (error.message && error.message.includes("row-level security") || error.code === "42501") {
+            // Erreur de politique RLS (Row Level Security)
+            console.error("❌ Erreur RLS (Row Level Security) - Les politiques Supabase bloquent l'insertion");
+            alert(
+              "⚠️ Erreur de sécurité Supabase (RLS) :\n" +
+                error.message +
+                "\n\nCode: " + (error.code || "N/A") +
+                "\n\nL'activité est sauvegardée localement.\n\n" +
+                "SOLUTION : Dans Supabase, allez dans Authentication > Policies\n" +
+                "et créez une politique pour permettre l'INSERT sur la table 'activities' :\n\n" +
+                "Policy name: Allow insert activities\n" +
+                "Allowed operation: INSERT\n" +
+                "Policy definition: true\n\n" +
+                "Ou désactivez temporairement RLS sur la table 'activities' pour le développement."
+            );
           } else {
             alert(
               "Erreur Supabase (création) :\n" +
