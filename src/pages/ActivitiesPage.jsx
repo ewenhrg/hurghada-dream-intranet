@@ -80,22 +80,30 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
     if (supabase) {
       try {
         // Préparer les données pour Supabase
+        // On commence avec les colonnes de base
         let supabaseData = {
           site_key: SITE_KEY,
           name: activityData.name,
         };
 
-        // Ajouter les colonnes optionnelles si elles existent
+        // Ajouter les colonnes optionnelles seulement si elles ont des valeurs
+        // Cela évite d'envoyer des colonnes qui pourraient ne pas exister
         if (activityData.category) supabaseData.category = activityData.category;
-        if (activityData.priceAdult !== undefined) supabaseData.price_adult = activityData.priceAdult;
-        if (activityData.priceChild !== undefined) supabaseData.price_child = activityData.priceChild;
-        if (activityData.priceBaby !== undefined) supabaseData.price_baby = activityData.priceBaby;
+        if (activityData.priceAdult !== undefined && activityData.priceAdult !== null) supabaseData.price_adult = activityData.priceAdult;
+        if (activityData.priceChild !== undefined && activityData.priceChild !== null) supabaseData.price_child = activityData.priceChild;
+        if (activityData.priceBaby !== undefined && activityData.priceBaby !== null) supabaseData.price_baby = activityData.priceBaby;
         if (activityData.ageChild) supabaseData.age_child = activityData.ageChild;
         if (activityData.ageBaby) supabaseData.age_baby = activityData.ageBaby;
         if (activityData.currency) supabaseData.currency = activityData.currency;
         if (activityData.notes) supabaseData.notes = activityData.notes;
-        if (activityData.availableDays) supabaseData.available_days = activityData.availableDays;
-        if (activityData.transfers) supabaseData.transfers = activityData.transfers; // JSONB accepte les objets directement
+        // Pour available_days, on envoie seulement si c'est un tableau valide
+        if (activityData.availableDays && Array.isArray(activityData.availableDays) && activityData.availableDays.length === 7) {
+          supabaseData.available_days = activityData.availableDays;
+        }
+        // Pour transfers, on envoie seulement si c'est un objet valide
+        if (activityData.transfers && typeof activityData.transfers === 'object') {
+          supabaseData.transfers = activityData.transfers;
+        }
 
         console.log("🔄 Envoi à Supabase:", supabaseData);
         const { data, error } = await supabase.from("activities").insert(supabaseData);
@@ -104,18 +112,20 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
           console.error("❌ ERREUR Supabase (création):", error);
           console.error("Détails:", JSON.stringify(error, null, 2));
           
-          // Si l'erreur concerne des colonnes manquantes, on informe l'utilisateur
-          if (error.message && error.message.includes("column")) {
-            console.warn("⚠️ Colonnes manquantes dans Supabase. Vérifiez la structure de la table.");
+          // Si l'erreur concerne des colonnes manquantes ou le code PGRST204
+          if ((error.message && error.message.includes("column")) || error.code === "PGRST204") {
+            console.warn("⚠️ Erreur PGRST204 - Colonnes manquantes ou format incorrect dans Supabase.");
+            console.warn("Données envoyées:", JSON.stringify(supabaseData, null, 2));
             alert(
-              "⚠️ Erreur de structure Supabase :\n" +
-                error.message +
+              "⚠️ Erreur PGRST204 - Structure Supabase :\n" +
+                (error.message || error.code || "N/A") +
                 "\n\nCode: " + (error.code || "N/A") +
                 "\n\nL'activité est sauvegardée localement.\n\n" +
                 "Vérifiez que la table 'activities' contient au moins les colonnes :\n" +
                 "- site_key\n" +
                 "- name\n\n" +
-                "Les autres colonnes peuvent être ajoutées progressivement."
+                "Les autres colonnes peuvent être ajoutées progressivement.\n\n" +
+                "Vérifiez la console (F12) pour voir les données envoyées."
             );
           } else if (error.message && error.message.includes("row-level security") || error.code === "42501") {
             // Erreur de politique RLS (Row Level Security)
