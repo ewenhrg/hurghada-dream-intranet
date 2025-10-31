@@ -59,36 +59,37 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
           // available_days et transfers seront ajoutés plus tard quand les colonnes seront créées dans Supabase
         };
 
-        const { error } = await supabase.from("activities").insert(supabaseData);
+        console.log("🔄 Envoi à Supabase:", supabaseData);
+        const { data, error } = await supabase.from("activities").insert(supabaseData);
+        
         if (error) {
-          // Si l'erreur concerne une colonne manquante, on informe l'utilisateur
-          if (error.message && error.message.includes("column")) {
-            console.warn("Colonne manquante dans Supabase:", error.message);
-            // On continue silencieusement - l'activité est sauvegardée localement
-            console.log("⚠️ L'activité est sauvegardée localement mais certaines colonnes manquent dans Supabase");
-          } else if (error.message && error.message.includes("Supabase non configuré")) {
-            console.log("Supabase non configuré, activité sauvegardée localement uniquement");
-          } else {
-            console.error("Erreur Supabase (création):", error);
-            // Afficher l'alerte seulement pour les erreurs critiques
-            if (!error.message.includes("column")) {
-              alert(
-                "Erreur Supabase (création) : " +
-                  error.message +
-                  "\nL'activité est quand même enregistrée en local.",
-              );
-            }
-          }
+          console.error("❌ ERREUR Supabase (création):", error);
+          console.error("Détails:", JSON.stringify(error, null, 2));
+          
+          // Afficher TOUTES les erreurs à l'utilisateur
+          alert(
+            "Erreur Supabase (création) :\n" +
+              error.message +
+              "\n\nCode: " + (error.code || "N/A") +
+              "\n\nL'activité est quand même enregistrée en local.\n\nVérifiez la console pour plus de détails."
+          );
         } else {
-          console.log("✅ Activité créée avec succès dans Supabase");
+          console.log("✅ Activité créée avec succès dans Supabase!");
+          console.log("Données retournées:", data);
+          // Afficher un message de succès
+          alert("✅ Activité créée avec succès dans Supabase!");
         }
       } catch (err) {
-        console.error("Erreur lors de l'envoi à Supabase:", err);
-        // Ne pas afficher d'alerte pour les erreurs de schéma
-        if (!err.message || !err.message.includes("column")) {
-          console.warn("Erreur non critique, activité sauvegardée localement");
-        }
+        console.error("❌ EXCEPTION lors de l'envoi à Supabase:", err);
+        alert(
+          "Exception lors de l'envoi à Supabase :\n" +
+            (err.message || String(err)) +
+            "\n\nL'activité est quand même enregistrée en local.\n\nVérifiez la console pour plus de détails."
+        );
       }
+    } else {
+      console.warn("⚠️ Supabase n'est pas disponible (stub)");
+      alert("⚠️ Supabase n'est pas configuré. L'activité est sauvegardée uniquement en local.");
     }
 
     setForm({
