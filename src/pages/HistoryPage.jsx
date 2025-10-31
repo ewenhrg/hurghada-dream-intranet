@@ -30,7 +30,7 @@ export function HistoryPage({ quotes, setQuotes }) {
           const hasTickets = d.items?.some((item) => item.ticketNumber && item.ticketNumber.trim());
 
           return (
-            <div key={d.id} className="bg-white rounded-2xl border border-gray-100 p-4">
+            <div key={d.id} className="bg-white/95 rounded-2xl border border-blue-100/60 shadow-md hover:shadow-lg transition-shadow duration-200 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1">
                   <p className="text-xs text-gray-500">{new Date(d.createdAt).toLocaleString("fr-FR")}</p>
@@ -101,7 +101,9 @@ Notes: ${d.notes || "—"}
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;
-                    a.download = `devis-${d.id.slice(-8)}.txt`;
+                    const phoneNumber = d.client?.phone || "sans-tel";
+                    const sanitizedPhone = phoneNumber.replace(/[^0-9+]/g, ""); // Nettoyer le numéro
+                    a.download = `Devis ${sanitizedPhone}.txt`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
@@ -164,7 +166,7 @@ Notes: ${d.notes || "—"}
       {/* Modale de paiement */}
       {showPaymentModal && selectedQuote && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white/98 rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto backdrop-blur-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Enregistrer les numéros de ticket</h3>
               <button
@@ -181,7 +183,7 @@ Notes: ${d.notes || "—"}
 
             <div className="space-y-4 mb-6">
               {selectedQuote.items?.map((item, idx) => (
-                <div key={idx} className="border rounded-xl p-4 bg-gray-50">
+                <div key={idx} className="border border-blue-100/60 rounded-xl p-4 bg-blue-50/50 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <p className="font-medium text-sm">{item.activityName}</p>

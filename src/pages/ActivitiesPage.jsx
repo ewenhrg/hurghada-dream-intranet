@@ -266,7 +266,7 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
       </div>
 
       {/* Filtres et recherche */}
-      <div className="grid md:grid-cols-2 gap-3 bg-white rounded-2xl border border-gray-100 p-4">
+      <div className="grid md:grid-cols-2 gap-3 bg-white/90 rounded-2xl border border-blue-100/60 p-4 shadow-md">
         <div>
           <p className="text-xs text-gray-500 mb-1">Rechercher une activité</p>
           <TextInput
@@ -280,7 +280,7 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
           <select
             value={selectedDay}
             onChange={(e) => setSelectedDay(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
           >
             <option value="">Tous les jours</option>
             {WEEKDAYS.map((day) => (
@@ -293,7 +293,7 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="space-y-4 bg-gray-50 rounded-2xl p-4 border border-gray-100">
+        <form onSubmit={handleCreate} className="space-y-4 bg-blue-50/50 rounded-2xl p-4 border border-blue-100/60 shadow-md">
           <div className="grid md:grid-cols-2 gap-3">
             <TextInput
               placeholder="Nom de l'activité"
@@ -358,9 +358,9 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
       {CATEGORIES.map((cat) => (
         <div key={cat.key} className="space-y-2">
           <h3 className="text-sm font-semibold text-gray-700">{cat.label}</h3>
-          <div className="rounded-xl border bg-white overflow-hidden">
+          <div className="rounded-xl border border-blue-100/60 bg-white/90 shadow-sm overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs">
+              <thead className="bg-blue-50/70 text-gray-700 text-xs">
                 <tr>
                   <th className="text-left px-3 py-2">Activité</th>
                   <th className="text-left px-3 py-2">Adulte</th>

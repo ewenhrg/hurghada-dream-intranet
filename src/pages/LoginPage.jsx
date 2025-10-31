@@ -19,8 +19,8 @@ export function LoginPage({ onSuccess }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#e9dccb] flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5efe4] via-[#e9dccb] to-[#f5efe4] flex items-center justify-center p-4">
+      <div className="bg-white/95 rounded-3xl shadow-2xl border border-blue-100/50 backdrop-blur-sm p-8 md:p-12 w-full max-w-md">
         <div className="text-center mb-8">
           <img 
             src="/logo.png" 

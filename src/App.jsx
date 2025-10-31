@@ -56,6 +56,10 @@ export default function App() {
         }
       }
 
+      // Désactivation de la synchronisation automatique des devis depuis Supabase
+      // Les devis sont créés localement et envoyés à Supabase, mais on ne les récupère plus automatiquement
+      // pour éviter les problèmes de doublons et de devis vierges
+      /*
       // Récupérer tous les devis
       const { data: quotesData, error: quotesError } = await supabase.from("quotes").select("*").eq("site_key", SITE_KEY).order("created_at", { ascending: false });
       if (!quotesError && Array.isArray(quotesData)) {
@@ -117,6 +121,7 @@ export default function App() {
           });
         }
       }
+      */
     } catch (err) {
       console.warn("Erreur synchronisation Supabase:", err);
     }
@@ -151,15 +156,15 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#e9dccb]">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5efe4] via-[#e9dccb] to-[#f5efe4]">
       {/* HEADER */}
-      <header className="sticky top-0 z-10 bg-[#e9dccb]/80 backdrop-blur border-b border-[#e9dccb]">
+      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-md border-b border-blue-200/50 shadow-sm">
         <div className="max-w-6xl mx-auto px-3 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-black text-white grid place-items-center font-bold text-sm">HD</div>
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 text-white grid place-items-center font-bold text-sm shadow-md">HD</div>
             <div>
-              <h1 className="text-sm font-semibold text-gray-900">Hurghada Dream — Bureaux</h1>
-              <p className="text-[10px] text-gray-500">Mini site interne (devis, activités, historique)</p>
+              <h1 className="text-sm font-semibold text-gray-800">Hurghada Dream — Bureaux</h1>
+              <p className="text-[10px] text-gray-600">Mini site interne (devis, activités, historique)</p>
             </div>
           </div>
           <nav className="flex gap-2">

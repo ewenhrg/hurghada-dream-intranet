@@ -115,21 +115,35 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
     }
     setIsSubmitting(true);
 
-    const notAvailable = computed.filter((c) => c.act && c.weekday != null && !c.available);
+    // Filtrer les items vides (sans activité sélectionnée)
+    const validComputed = computed.filter((c) => c.act && c.act.id);
+    
+    // Vérifier qu'il y a au moins un item valide
+    if (validComputed.length === 0) {
+      alert("⚠️ Veuillez sélectionner au moins une activité pour créer le devis.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const notAvailable = validComputed.filter((c) => c.weekday != null && !c.available);
     if (notAvailable.length) {
       alert(
         `⚠️ ${notAvailable.length} activité(s) sont hors-dispo ce jour-là. Le devis est quand même créé (date exceptionnelle).`,
       );
     }
 
+    // Calculer le total uniquement avec les items valides
+    const validGrandTotal = validComputed.reduce((s, c) => s + (c.lineTotal || 0), 0);
+    const validGrandCurrency = validComputed.find((c) => c.currency)?.currency || "EUR";
+
     const q = {
       id: uuid(),
       createdAt: new Date().toISOString(),
       client,
       notes: notes.trim(),
-      items: computed.map((c) => ({
-        activityId: c.act?.id || "",
-        activityName: c.act?.name || "",
+      items: validComputed.map((c) => ({
+        activityId: c.act.id,
+        activityName: c.act.name || "",
         date: c.raw.date,
         adults: Number(c.raw.adults || 0),
         children: Number(c.raw.children || 0),
@@ -142,8 +156,8 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
         lineTotal: c.lineTotal,
         transferSurchargePerAdult: c.transferInfo?.surcharge || 0,
       })),
-      total: grandTotal,
-      currency: grandCurrency,
+      total: validGrandTotal,
+      currency: validGrandCurrency,
     };
 
     setQuotes((prev) => {
@@ -204,6 +218,17 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
       console.warn("⚠️ Supabase non configuré - le devis n'est enregistré qu'en local");
     }
 
+    // Réinitialiser le formulaire après création réussie
+    setClient({
+      name: "",
+      phone: "",
+      hotel: "",
+      room: "",
+      neighborhood: "",
+    });
+    setItems([blankItem()]);
+    setNotes("");
+
     setIsSubmitting(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -243,7 +268,7 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
             <select
               value={client.neighborhood}
               onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
             >
               <option value="">— Choisir —</option>
               {NEIGHBORHOODS.map((n) => (
@@ -258,7 +283,7 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
         {/* Lignes */}
         <div className="space-y-4">
           {computed.map((c, idx) => (
-            <div key={idx} className="bg-white/80 border border-gray-100 rounded-2xl p-4 space-y-3">
+            <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-4 space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
                 <GhostBtn type="button" onClick={() => removeItem(idx)}>
@@ -271,7 +296,7 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
                   <select
                     value={c.raw.activityId}
                     onChange={(e) => setItem(idx, { activityId: e.target.value })}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                    className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
                   >
                     <option value="">— Choisir —</option>
                     {activities.map((a) => (
@@ -292,7 +317,7 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Quartier</p>
-                  <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+                  <div className="rounded-xl border border-dashed border-blue-200/50 bg-blue-50/50 px-3 py-2 text-sm text-gray-600">
                     {client.neighborhood
                       ? NEIGHBORHOODS.find((n) => n.key === client.neighborhood)?.label
                       : "— Choisir avec le client"}
@@ -303,7 +328,7 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
                   <select
                     value={c.raw.slot}
                     onChange={(e) => setItem(idx, { slot: e.target.value })}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                    className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
                     disabled={!c.transferInfo || (!c.transferInfo.morningEnabled && !c.transferInfo.afternoonEnabled)}
                   >
                     <option value="">— Choisir —</option>
@@ -405,7 +430,7 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
             const hasTickets = q.items?.some((item) => item.ticketNumber && item.ticketNumber.trim());
 
             return (
-              <div key={q.id} className="bg-white rounded-2xl border border-gray-100 p-4">
+              <div key={q.id} className="bg-white/95 rounded-2xl border border-blue-100/60 shadow-md hover:shadow-lg transition-shadow duration-200 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1">
                     <p className="text-xs text-gray-500">
@@ -470,7 +495,9 @@ Notes: ${q.notes || "—"}
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;
-                      a.download = `devis-${q.id.slice(-8)}.txt`;
+                      const phoneNumber = q.client.phone || "sans-tel";
+                      const sanitizedPhone = phoneNumber.replace(/[^0-9+]/g, ""); // Nettoyer le numéro
+                      a.download = `Devis ${sanitizedPhone}.txt`;
                       document.body.appendChild(a);
                       a.click();
                       document.body.removeChild(a);
@@ -552,7 +579,7 @@ Notes: ${q.notes || "—"}
       {/* Modale de paiement */}
       {showPaymentModal && selectedQuote && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white/98 rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto backdrop-blur-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Enregistrer les numéros de ticket</h3>
               <button
@@ -569,7 +596,7 @@ Notes: ${q.notes || "—"}
 
             <div className="space-y-4 mb-6">
               {selectedQuote.items?.map((item, idx) => (
-                <div key={idx} className="border rounded-xl p-4 bg-gray-50">
+                <div key={idx} className="border border-blue-100/60 rounded-xl p-4 bg-blue-50/50 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <p className="font-medium text-sm">{item.activityName}</p>
