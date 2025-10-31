@@ -73,9 +73,12 @@ export function LoginPage({ onSuccess }) {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center space-y-1">
           <p className="text-xs text-gray-500">
             Système de gestion interne
+          </p>
+          <p className="text-[10px] text-gray-400">
+            accéder website by Ewen
           </p>
         </div>
       </div>
