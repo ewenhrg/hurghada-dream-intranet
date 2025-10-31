@@ -17,6 +17,8 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
     priceAdult: "",
     priceChild: "",
     priceBaby: "",
+    ageChild: "",
+    ageBaby: "",
     currency: "EUR",
     availableDays: [false, false, false, false, false, false, false],
     notes: "",
@@ -30,6 +32,8 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
       priceAdult: activity.priceAdult || "",
       priceChild: activity.priceChild || "",
       priceBaby: activity.priceBaby || "",
+      ageChild: activity.ageChild || "",
+      ageBaby: activity.ageBaby || "",
       currency: activity.currency || "EUR",
       availableDays: activity.availableDays || [false, false, false, false, false, false, false],
       notes: activity.notes || "",
@@ -52,6 +56,8 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
       priceAdult: Number(form.priceAdult || 0),
       priceChild: Number(form.priceChild || 0),
       priceBaby: Number(form.priceBaby || 0),
+      ageChild: form.ageChild || "",
+      ageBaby: form.ageBaby || "",
       currency: form.currency || "EUR",
       availableDays: form.availableDays,
       notes: form.notes,
@@ -315,26 +321,46 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
             </select>
           </div>
           <div className="grid md:grid-cols-4 gap-3">
-            <NumberInput
-              placeholder="Prix adulte"
-              value={form.priceAdult}
-              onChange={(e) => setForm((f) => ({ ...f, priceAdult: e.target.value }))}
-            />
-            <NumberInput
-              placeholder="Prix enfant"
-              value={form.priceChild}
-              onChange={(e) => setForm((f) => ({ ...f, priceChild: e.target.value }))}
-            />
-            <NumberInput
-              placeholder="Prix bébé"
-              value={form.priceBaby}
-              onChange={(e) => setForm((f) => ({ ...f, priceBaby: e.target.value }))}
-            />
-            <TextInput
-              placeholder="Devise"
-              value={form.currency}
-              onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))}
-            />
+            <div>
+              <NumberInput
+                placeholder="Prix adulte"
+                value={form.priceAdult}
+                onChange={(e) => setForm((f) => ({ ...f, priceAdult: e.target.value }))}
+              />
+            </div>
+            <div>
+              <NumberInput
+                placeholder="Prix enfant"
+                value={form.priceChild}
+                onChange={(e) => setForm((f) => ({ ...f, priceChild: e.target.value }))}
+              />
+              <TextInput
+                placeholder="Âge enfant (ex: 5-12 ans)"
+                value={form.ageChild}
+                onChange={(e) => setForm((f) => ({ ...f, ageChild: e.target.value }))}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <NumberInput
+                placeholder="Prix bébé"
+                value={form.priceBaby}
+                onChange={(e) => setForm((f) => ({ ...f, priceBaby: e.target.value }))}
+              />
+              <TextInput
+                placeholder="Âge bébé (ex: 0-4 ans)"
+                value={form.ageBaby}
+                onChange={(e) => setForm((f) => ({ ...f, ageBaby: e.target.value }))}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <TextInput
+                placeholder="Devise"
+                value={form.currency}
+                onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))}
+              />
+            </div>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Jours disponibles</p>

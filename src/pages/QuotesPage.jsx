@@ -396,11 +396,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Enfants</p>
+                  <p className="text-xs text-gray-500 mb-1">
+                    Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""}
+                  </p>
                   <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Bébés</p>
+                  <p className="text-xs text-gray-500 mb-1">
+                    Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""}
+                  </p>
                   <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
                 </div>
               </div>
