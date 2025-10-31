@@ -7,6 +7,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { ActivitiesPage } from "./pages/ActivitiesPage";
 import { QuotesPage } from "./pages/QuotesPage";
 import { HistoryPage } from "./pages/HistoryPage";
+import { UsersPage } from "./pages/UsersPage";
 
 export default function App() {
   const [ok, setOk] = useState(false);
@@ -217,6 +218,11 @@ export default function App() {
             <Pill active={tab === "history"} onClick={() => setTab("history")}>
               Historique
             </Pill>
+            {user?.canResetData && (
+              <Pill active={tab === "users"} onClick={() => setTab("users")}>
+                Utilisateurs
+              </Pill>
+            )}
           </nav>
         </div>
       </header>
@@ -257,7 +263,13 @@ export default function App() {
 
         {tab === "history" && (
           <Section title="Historique des devis" subtitle="Recherchez un devis par numéro de téléphone.">
-            <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} />
+            <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
+          </Section>
+        )}
+
+        {tab === "users" && user?.canResetData && (
+          <Section title="Gestion des utilisateurs" subtitle="Créez et gérez les utilisateurs avec leurs codes d'accès et permissions.">
+            <UsersPage user={user} />
           </Section>
         )}
       </main>
