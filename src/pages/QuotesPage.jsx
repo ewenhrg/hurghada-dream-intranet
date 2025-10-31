@@ -28,6 +28,7 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [ticketNumbers, setTicketNumbers] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function setItem(i, patch) {
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -106,6 +107,13 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
 
   async function handleCreateQuote(e) {
     e.preventDefault();
+    e.stopPropagation();
+
+    // Empêcher la double soumission
+    if (isSubmitting) {
+      return;
+    }
+    setIsSubmitting(true);
 
     const notAvailable = computed.filter((c) => c.act && c.weekday != null && !c.available);
     if (notAvailable.length) {
@@ -138,8 +146,11 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
       currency: grandCurrency,
     };
 
-    setQuotes((prev) => [q, ...prev]);
-    saveLS(LS_KEYS.quotes, [q, ...quotes]);
+    setQuotes((prev) => {
+      const updated = [q, ...prev];
+      saveLS(LS_KEYS.quotes, updated);
+      return updated;
+    });
 
     // Envoyer à Supabase si configuré
     if (supabase) {
@@ -193,12 +204,22 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
       console.warn("⚠️ Supabase non configuré - le devis n'est enregistré qu'en local");
     }
 
+    setIsSubmitting(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <form onSubmit={handleCreateQuote} className="space-y-5">
+      <form 
+        onSubmit={handleCreateQuote} 
+        onKeyDown={(e) => {
+          // Désactiver la touche Entrée pour soumettre le formulaire
+          if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+            e.preventDefault();
+          }
+        }}
+        className="space-y-5"
+      >
         {/* Infos client */}
         <div className="grid md:grid-cols-5 gap-3">
           <div>
@@ -365,8 +386,12 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
           />
         </div>
 
-        <PrimaryBtn type="submit" className="w-full">
-          Créer le devis
+        <PrimaryBtn 
+          type="submit" 
+          className="w-full"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Création en cours..." : "Créer le devis"}
         </PrimaryBtn>
       </form>
 
