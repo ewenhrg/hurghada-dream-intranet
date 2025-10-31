@@ -60,36 +60,60 @@ export default function App() {
       const { data: quotesData, error: quotesError } = await supabase.from("quotes").select("*").eq("site_key", SITE_KEY).order("created_at", { ascending: false });
       if (!quotesError && Array.isArray(quotesData)) {
         if (quotesData.length > 0) {
-          const mappedQuotes = quotesData.map((row) => {
-            let items = [];
-            try {
-              items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items || [];
-            } catch {
-              items = [];
-            }
-            return {
-              id: uuid(), // Nouvel ID local car on n'a peut-être pas l'ID Supabase
-              createdAt: row.created_at || row.createdAt || new Date().toISOString(),
-              client: {
-                name: row.client_name || "",
-                phone: row.client_phone || "",
-                hotel: row.client_hotel || "",
-                room: row.client_room || "",
-                neighborhood: row.client_neighborhood || "",
-              },
-              notes: row.notes || "",
-              items: items,
-              total: row.total || 0,
-              currency: row.currency || "EUR",
-            };
-          });
-          // Fusionner avec les devis locaux (priorité au local pour éviter les doublons)
           setQuotes((prevQuotes) => {
-            const existingIds = new Set(prevQuotes.map(q => q.id));
-            const newQuotes = mappedQuotes.filter(q => !existingIds.has(q.id));
-            const merged = [...prevQuotes, ...newQuotes];
-            saveLS(LS_KEYS.quotes, merged);
-            return merged;
+            // Créer un Set des identifiants uniques des devis locaux (basé sur client.phone + createdAt)
+            const existingQuotes = new Set();
+            prevQuotes.forEach(q => {
+              const key = `${q.client?.phone || ''}_${q.createdAt}`;
+              existingQuotes.add(key);
+            });
+
+            // Mapper les devis de Supabase et vérifier les doublons
+            const mappedQuotes = quotesData
+              .map((row) => {
+                let items = [];
+                try {
+                  items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items || [];
+                } catch {
+                  items = [];
+                }
+                const createdAt = row.created_at || row.createdAt || new Date().toISOString();
+                const clientPhone = row.client_phone || "";
+                
+                // Créer une clé unique basée sur le téléphone et la date de création
+                const uniqueKey = `${clientPhone}_${createdAt}`;
+                
+                // Si ce devis existe déjà localement, on le skip
+                if (existingQuotes.has(uniqueKey)) {
+                  return null;
+                }
+
+                return {
+                  id: uuid(), // Nouvel ID local
+                  createdAt: createdAt,
+                  client: {
+                    name: row.client_name || "",
+                    phone: clientPhone,
+                    hotel: row.client_hotel || "",
+                    room: row.client_room || "",
+                    neighborhood: row.client_neighborhood || "",
+                  },
+                  notes: row.notes || "",
+                  items: items,
+                  total: row.total || 0,
+                  currency: row.currency || "EUR",
+                };
+              })
+              .filter(q => q !== null); // Filtrer les nulls (doublons)
+
+            // Ne fusionner que s'il y a de nouveaux devis
+            if (mappedQuotes.length > 0) {
+              const merged = [...prevQuotes, ...mappedQuotes];
+              saveLS(LS_KEYS.quotes, merged);
+              return merged;
+            }
+            
+            return prevQuotes; // Pas de nouveaux devis, retourner l'état actuel
           });
         }
       }
