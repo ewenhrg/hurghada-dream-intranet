@@ -400,6 +400,21 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
                     <div className="flex gap-2 flex-wrap">
                   <GhostBtn
                     onClick={() => {
+                      setSelectedQuote(q);
+                      // Initialiser les numéros de ticket existants
+                      const existingTickets = {};
+                      q.items?.forEach((item, idx) => {
+                        existingTickets[idx] = item.ticketNumber || "";
+                      });
+                      setTicketNumbers(existingTickets);
+                      setShowPaymentModal(true);
+                    }}
+                    className={allTicketsFilled ? "bg-green-50 text-green-700 border-green-200" : ""}
+                  >
+                    {allTicketsFilled ? "✅ Payé" : "💰 Payer"}
+                  </GhostBtn>
+                  <GhostBtn
+                    onClick={() => {
                       // Télécharger le devis (version simple)
                       const quoteText = `
 DEVIS ${new Date(q.createdAt).toLocaleDateString("fr-FR")}
@@ -467,21 +482,6 @@ Notes: ${q.notes || "—"}
                       ✏️ Modifier
                     </GhostBtn>
                   )}
-                  <GhostBtn
-                    onClick={() => {
-                      setSelectedQuote(q);
-                      // Initialiser les numéros de ticket existants
-                      const existingTickets = {};
-                      q.items?.forEach((item, idx) => {
-                        existingTickets[idx] = item.ticketNumber || "";
-                      });
-                      setTicketNumbers(existingTickets);
-                      setShowPaymentModal(true);
-                    }}
-                    className={allTicketsFilled ? "bg-green-50 text-green-700 border-green-200" : ""}
-                  >
-                    {allTicketsFilled ? "✅ Payé" : "💰 Payer"}
-                  </GhostBtn>
                   <GhostBtn
                     onClick={async () => {
                       if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {

@@ -3,6 +3,7 @@ import { supabase } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
 import { uuid, emptyTransfers, saveLS, loadLS } from "./utils";
 import { Pill, GhostBtn, Section } from "./components/ui";
+import { LoginPage } from "./pages/LoginPage";
 import { ActivitiesPage } from "./pages/ActivitiesPage";
 import { QuotesPage } from "./pages/QuotesPage";
 import { HistoryPage } from "./pages/HistoryPage";
@@ -14,25 +15,17 @@ export default function App() {
   const [quotes, setQuotes] = useState(() => loadLS(LS_KEYS.quotes, []));
   const [remoteEnabled, setRemoteEnabled] = useState(false);
 
-  // code d'accès
+  // Vérifier si l'utilisateur est déjà connecté
   useEffect(() => {
     const already = sessionStorage.getItem("hd_ok") === "1";
     if (already) {
       setOk(true);
-      return;
-    }
-    const code = window.prompt("Code d'accès (4 chiffres) :");
-    if (code === PIN_CODE) {
-      sessionStorage.setItem("hd_ok", "1");
-      setOk(true);
-    } else {
-      alert("Mauvais code.");
     }
   }, []);
 
   // fonction de synchronisation Supabase
   async function syncWithSupabase() {
-    if (!supabase) return;
+      if (!supabase) return;
     try {
       // Vérifier si Supabase est configuré (pas un stub)
       const { data: testData, error: testError } = await supabase.from("activities").select("id").limit(1);
@@ -46,20 +39,20 @@ export default function App() {
       const { data, error } = await supabase.from("activities").select("*").eq("site_key", SITE_KEY).order("id", { ascending: false });
       if (!error && Array.isArray(data)) {
         if (data.length > 0) {
-          const mapped = data.map((row) => ({
-            id: row.id?.toString?.() || uuid(),
-            name: row.name,
-            category: row.category || "desert",
-            priceAdult: row.price_adult || 0,
-            priceChild: row.price_child || 0,
-            priceBaby: row.price_baby || 0,
-            currency: row.currency || "EUR",
-            availableDays: row.available_days || [false, false, false, false, false, false, false],
-            notes: row.notes || "",
-            transfers: row.transfers || emptyTransfers(),
-          }));
-          setActivities(mapped);
-          saveLS(LS_KEYS.activities, mapped);
+        const mapped = data.map((row) => ({
+          id: row.id?.toString?.() || uuid(),
+          name: row.name,
+          category: row.category || "desert",
+          priceAdult: row.price_adult || 0,
+          priceChild: row.price_child || 0,
+          priceBaby: row.price_baby || 0,
+          currency: row.currency || "EUR",
+          availableDays: row.available_days || [false, false, false, false, false, false, false],
+          notes: row.notes || "",
+          transfers: row.transfers || emptyTransfers(),
+        }));
+        setActivities(mapped);
+        saveLS(LS_KEYS.activities, mapped);
         }
       }
 
@@ -130,11 +123,7 @@ export default function App() {
   }, [quotes]);
 
   if (!ok) {
-    return (
-      <div className="min-h-screen bg-[#e9dccb] flex items-center justify-center text-gray-700">
-        Veuillez recharger et entrer le code.
-      </div>
-    );
+    return <LoginPage onSuccess={() => setOk(true)} />;
   }
 
   return (

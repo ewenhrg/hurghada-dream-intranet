@@ -56,6 +56,21 @@ export function HistoryPage({ quotes, setQuotes }) {
                   <div className="flex gap-2 flex-wrap">
                 <GhostBtn
                   onClick={() => {
+                    setSelectedQuote(d);
+                    // Initialiser les numéros de ticket existants
+                    const existingTickets = {};
+                    d.items?.forEach((item, idx) => {
+                      existingTickets[idx] = item.ticketNumber || "";
+                    });
+                    setTicketNumbers(existingTickets);
+                    setShowPaymentModal(true);
+                  }}
+                  className={allTicketsFilled ? "bg-green-50 text-green-700 border-green-200" : ""}
+                >
+                  {allTicketsFilled ? "✅ Payé" : "💰 Payer"}
+                </GhostBtn>
+                <GhostBtn
+                  onClick={() => {
                     // Télécharger le devis
                     const quoteText = `
 DEVIS ${new Date(d.createdAt).toLocaleDateString("fr-FR")}
@@ -105,21 +120,6 @@ Notes: ${d.notes || "—"}
                     ✏️ Modifier
                   </GhostBtn>
                 )}
-                <GhostBtn
-                  onClick={() => {
-                    setSelectedQuote(d);
-                    // Initialiser les numéros de ticket existants
-                    const existingTickets = {};
-                    d.items?.forEach((item, idx) => {
-                      existingTickets[idx] = item.ticketNumber || "";
-                    });
-                    setTicketNumbers(existingTickets);
-                    setShowPaymentModal(true);
-                  }}
-                  className={allTicketsFilled ? "bg-green-50 text-green-700 border-green-200" : ""}
-                >
-                  {allTicketsFilled ? "✅ Payé" : "💰 Payer"}
-                </GhostBtn>
                 <GhostBtn
                   onClick={async () => {
                     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
