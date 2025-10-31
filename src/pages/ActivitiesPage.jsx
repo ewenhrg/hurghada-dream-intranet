@@ -79,30 +79,26 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
     // Envoyer à Supabase si configuré (essayer toujours si supabase existe)
     if (supabase) {
       try {
-        // Essayer d'abord avec seulement les colonnes minimales qui devraient exister
-        // On commence par les colonnes les plus basiques
+        // Préparer les données pour Supabase
         let supabaseData = {
           site_key: SITE_KEY,
-          name: newA.name,
+          name: activityData.name,
         };
 
-        // Essayer avec toutes les colonnes une par une pour voir lesquelles existent
-        const columnsToTry = [
-          { key: "category", value: newA.category },
-          { key: "price_adult", value: newA.priceAdult },
-          { key: "price_child", value: newA.priceChild },
-          { key: "price_baby", value: newA.priceBaby },
-          { key: "currency", value: newA.currency },
-          { key: "notes", value: newA.notes || "" },
-        ];
+        // Ajouter les colonnes optionnelles si elles existent
+        if (activityData.category) supabaseData.category = activityData.category;
+        if (activityData.priceAdult !== undefined) supabaseData.price_adult = activityData.priceAdult;
+        if (activityData.priceChild !== undefined) supabaseData.price_child = activityData.priceChild;
+        if (activityData.priceBaby !== undefined) supabaseData.price_baby = activityData.priceBaby;
+        if (activityData.ageChild) supabaseData.age_child = activityData.ageChild;
+        if (activityData.ageBaby) supabaseData.age_baby = activityData.ageBaby;
+        if (activityData.currency) supabaseData.currency = activityData.currency;
+        if (activityData.notes) supabaseData.notes = activityData.notes;
+        if (activityData.availableDays) supabaseData.available_days = activityData.availableDays;
+        if (activityData.transfers) supabaseData.transfers = JSON.stringify(activityData.transfers);
 
-        // Pour l'instant, on envoie seulement site_key et name (colonnes minimales)
-        // Les autres colonnes seront ajoutées progressivement quand elles seront créées dans Supabase
-        console.log("🔄 Envoi à Supabase (colonnes minimales):", supabaseData);
-        const { data, error } = await supabase.from("activities").insert({
-          site_key: SITE_KEY,
-          name: activityData.name,
-        });
+        console.log("🔄 Envoi à Supabase:", supabaseData);
+        const { data, error } = await supabase.from("activities").insert(supabaseData);
         
         if (error) {
           console.error("❌ ERREUR Supabase (création):", error);
