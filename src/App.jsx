@@ -32,7 +32,7 @@ export default function App() {
 
   // fonction de synchronisation Supabase
   async function syncWithSupabase() {
-      if (!supabase) return;
+    if (!supabase) return;
     try {
       // Vérifier si Supabase est configuré (pas un stub)
       const { data: testData, error: testError } = await supabase.from("activities").select("id").limit(1);
@@ -46,20 +46,58 @@ export default function App() {
       const { data, error } = await supabase.from("activities").select("*").eq("site_key", SITE_KEY).order("id", { ascending: false });
       if (!error && Array.isArray(data)) {
         if (data.length > 0) {
-        const mapped = data.map((row) => ({
-          id: row.id?.toString?.() || uuid(),
-          name: row.name,
-          category: row.category || "desert",
-          priceAdult: row.price_adult || 0,
-          priceChild: row.price_child || 0,
-          priceBaby: row.price_baby || 0,
-          currency: row.currency || "EUR",
-          availableDays: row.available_days || [false, false, false, false, false, false, false],
-          notes: row.notes || "",
-          transfers: row.transfers || emptyTransfers(),
-        }));
-        setActivities(mapped);
-        saveLS(LS_KEYS.activities, mapped);
+          const mapped = data.map((row) => ({
+            id: row.id?.toString?.() || uuid(),
+            name: row.name,
+            category: row.category || "desert",
+            priceAdult: row.price_adult || 0,
+            priceChild: row.price_child || 0,
+            priceBaby: row.price_baby || 0,
+            currency: row.currency || "EUR",
+            availableDays: row.available_days || [false, false, false, false, false, false, false],
+            notes: row.notes || "",
+            transfers: row.transfers || emptyTransfers(),
+          }));
+          setActivities(mapped);
+          saveLS(LS_KEYS.activities, mapped);
+        }
+      }
+
+      // Récupérer tous les devis
+      const { data: quotesData, error: quotesError } = await supabase.from("quotes").select("*").eq("site_key", SITE_KEY).order("created_at", { ascending: false });
+      if (!quotesError && Array.isArray(quotesData)) {
+        if (quotesData.length > 0) {
+          const mappedQuotes = quotesData.map((row) => {
+            let items = [];
+            try {
+              items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items || [];
+            } catch {
+              items = [];
+            }
+            return {
+              id: uuid(), // Nouvel ID local car on n'a peut-être pas l'ID Supabase
+              createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+              client: {
+                name: row.client_name || "",
+                phone: row.client_phone || "",
+                hotel: row.client_hotel || "",
+                room: row.client_room || "",
+                neighborhood: row.client_neighborhood || "",
+              },
+              notes: row.notes || "",
+              items: items,
+              total: row.total || 0,
+              currency: row.currency || "EUR",
+            };
+          });
+          // Fusionner avec les devis locaux (priorité au local pour éviter les doublons)
+          setQuotes((prevQuotes) => {
+            const existingIds = new Set(prevQuotes.map(q => q.id));
+            const newQuotes = mappedQuotes.filter(q => !existingIds.has(q.id));
+            const merged = [...prevQuotes, ...newQuotes];
+            saveLS(LS_KEYS.quotes, merged);
+            return merged;
+          });
         }
       }
     } catch (err) {

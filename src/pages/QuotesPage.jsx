@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { LS_KEYS, NEIGHBORHOODS } from "../constants";
+import { supabase } from "../lib/supabase";
+import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { uuid, currency, saveLS } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 
@@ -139,6 +140,47 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
 
     setQuotes((prev) => [q, ...prev]);
     saveLS(LS_KEYS.quotes, [q, ...quotes]);
+
+    // Envoyer à Supabase si configuré
+    if (supabase) {
+      try {
+        const supabaseData = {
+          site_key: SITE_KEY,
+          client_name: q.client.name || "",
+          client_phone: q.client.phone || "",
+          client_hotel: q.client.hotel || "",
+          client_room: q.client.room || "",
+          client_neighborhood: q.client.neighborhood || "",
+          notes: q.notes || "",
+          total: q.total,
+          currency: q.currency,
+          items: JSON.stringify(q.items),
+          created_at: q.createdAt,
+        };
+
+        console.log("🔄 Envoi du devis à Supabase:", supabaseData);
+        const { data, error } = await supabase.from("quotes").insert(supabaseData);
+
+        if (error) {
+          console.error("❌ ERREUR Supabase (création devis):", error);
+          if (error.message && error.message.includes("row-level security") || error.code === "42501") {
+            console.warn("⚠️ Erreur RLS - Vérifiez les politiques Supabase pour la table 'quotes'");
+          } else if (!error.message.includes("column")) {
+            alert(
+              "Erreur Supabase (création devis) :\n" +
+                error.message +
+                "\n\nCode: " + (error.code || "N/A") +
+                "\n\nLe devis est quand même enregistré en local."
+            );
+          }
+        } else {
+          console.log("✅ Devis créé avec succès dans Supabase!");
+        }
+      } catch (err) {
+        console.error("❌ EXCEPTION lors de l'envoi du devis à Supabase:", err);
+      }
+    }
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -429,11 +471,31 @@ Notes: ${q.notes || "—"}
                     {allTicketsFilled ? "✅ Payé" : "💰 Payer"}
                   </GhostBtn>
                   <GhostBtn
-                    onClick={() => {
+                    onClick={async () => {
                       if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
                         const updatedQuotes = quotes.filter((quote) => quote.id !== q.id);
                         setQuotes(updatedQuotes);
                         saveLS(LS_KEYS.quotes, updatedQuotes);
+
+                        // Supprimer de Supabase si configuré
+                        if (supabase) {
+                          try {
+                            const { error: deleteError } = await supabase
+                              .from("quotes")
+                              .delete()
+                              .eq("site_key", SITE_KEY)
+                              .eq("client_phone", q.client?.phone || "")
+                              .eq("created_at", q.createdAt);
+                            
+                            if (deleteError) {
+                              console.warn("⚠️ Erreur suppression Supabase:", deleteError);
+                            } else {
+                              console.log("✅ Devis supprimé de Supabase!");
+                            }
+                          } catch (deleteErr) {
+                            console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
+                          }
+                        }
                       }
                     }}
                     className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
@@ -527,6 +589,30 @@ Notes: ${q.notes || "—"}
                   const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? updatedQuote : q));
                   setQuotes(updatedQuotes);
                   saveLS(LS_KEYS.quotes, updatedQuotes);
+
+                  // Mettre à jour dans Supabase si configuré
+                  if (supabase) {
+                    try {
+                      const supabaseUpdate = {
+                        items: JSON.stringify(updatedQuote.items),
+                      };
+                      
+                      const { error: updateError } = await supabase
+                        .from("quotes")
+                        .update(supabaseUpdate)
+                        .eq("site_key", SITE_KEY)
+                        .eq("client_phone", updatedQuote.client.phone || "")
+                        .eq("created_at", updatedQuote.createdAt);
+                      
+                      if (updateError) {
+                        console.warn("⚠️ Erreur mise à jour Supabase:", updateError);
+                      } else {
+                        console.log("✅ Tickets mis à jour dans Supabase!");
+                      }
+                    } catch (updateErr) {
+                      console.warn("⚠️ Erreur lors de la mise à jour Supabase:", updateErr);
+                    }
+                  }
 
                   setShowPaymentModal(false);
                   setSelectedQuote(null);
