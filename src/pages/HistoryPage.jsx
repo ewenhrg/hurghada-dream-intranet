@@ -4,7 +4,7 @@ import { SITE_KEY, LS_KEYS } from "../constants";
 import { currency, saveLS } from "../utils";
 import { TextInput, GhostBtn, PrimaryBtn } from "../components/ui";
 
-export function HistoryPage({ quotes, setQuotes }) {
+export function HistoryPage({ quotes, setQuotes, user }) {
   const [q, setQ] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
@@ -122,38 +122,40 @@ Notes: ${d.notes || "—"}
                     ✏️ Modifier
                   </GhostBtn>
                 )}
-                <GhostBtn
-                  onClick={async () => {
-                    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
-                      const updatedQuotes = quotes.filter((quote) => quote.id !== d.id);
-                      setQuotes(updatedQuotes);
-                      saveLS(LS_KEYS.quotes, updatedQuotes);
+                {user?.canDeleteQuote && (
+                  <GhostBtn
+                    onClick={async () => {
+                      if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
+                        const updatedQuotes = quotes.filter((quote) => quote.id !== d.id);
+                        setQuotes(updatedQuotes);
+                        saveLS(LS_KEYS.quotes, updatedQuotes);
 
-                      // Supprimer de Supabase si configuré
-                      if (supabase) {
-                        try {
-                          const { error: deleteError } = await supabase
-                            .from("quotes")
-                            .delete()
-                            .eq("site_key", SITE_KEY)
-                            .eq("client_phone", d.client?.phone || "")
-                            .eq("created_at", d.createdAt);
-                          
-                          if (deleteError) {
-                            console.warn("⚠️ Erreur suppression Supabase:", deleteError);
-                          } else {
-                            console.log("✅ Devis supprimé de Supabase!");
+                        // Supprimer de Supabase si configuré
+                        if (supabase) {
+                          try {
+                            const { error: deleteError } = await supabase
+                              .from("quotes")
+                              .delete()
+                              .eq("site_key", SITE_KEY)
+                              .eq("client_phone", d.client?.phone || "")
+                              .eq("created_at", d.createdAt);
+                            
+                            if (deleteError) {
+                              console.warn("⚠️ Erreur suppression Supabase:", deleteError);
+                            } else {
+                              console.log("✅ Devis supprimé de Supabase!");
+                            }
+                          } catch (deleteErr) {
+                            console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
                           }
-                        } catch (deleteErr) {
-                          console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
                         }
                       }
-                    }
-                  }}
-                  className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                >
-                  🗑️ Supprimer
-                </GhostBtn>
+                    }}
+                    className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                  >
+                    🗑️ Supprimer
+                  </GhostBtn>
+                )}
                   </div>
                 </div>
               </div>

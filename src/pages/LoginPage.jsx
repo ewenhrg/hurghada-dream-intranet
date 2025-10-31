@@ -1,20 +1,81 @@
 import { useState } from "react";
-import { PIN_CODE } from "../constants";
+import { supabase } from "../lib/supabase";
 
 export function LoginPage({ onSuccess }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-
-    if (code === PIN_CODE) {
-      sessionStorage.setItem("hd_ok", "1");
-      onSuccess();
-    } else {
-      setError("Code d'accès incorrect. Veuillez réessayer.");
+    
+    // Vérifier que le code fait 6 chiffres
+    if (code.length !== 6 || !/^\d{6}$/.test(code)) {
+      setError("Le code doit contenir 6 chiffres.");
       setCode("");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Chercher l'utilisateur dans Supabase
+      if (supabase) {
+        const { data, error: fetchError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("code", code)
+          .single();
+
+        if (fetchError || !data) {
+          setError("Code d'accès incorrect. Veuillez réessayer.");
+          setCode("");
+          setLoading(false);
+          return;
+        }
+
+        // Sauvegarder les informations utilisateur dans sessionStorage
+        sessionStorage.setItem("hd_ok", "1");
+        sessionStorage.setItem("hd_user", JSON.stringify({
+          id: data.id,
+          name: data.name,
+          code: data.code,
+          canDeleteQuote: data.can_delete_quote || false,
+          canAddActivity: data.can_add_activity || false,
+          canEditActivity: data.can_edit_activity || false,
+          canDeleteActivity: data.can_delete_activity || false,
+          canResetData: data.can_reset_data || false,
+        }));
+
+        onSuccess();
+      } else {
+        // Fallback si Supabase n'est pas configuré (pour le développement)
+        // Code par défaut : Ewen
+        if (code === "040203") {
+          sessionStorage.setItem("hd_ok", "1");
+          sessionStorage.setItem("hd_user", JSON.stringify({
+            id: 1,
+            name: "Ewen",
+            code: "040203",
+            canDeleteQuote: true,
+            canAddActivity: true,
+            canEditActivity: true,
+            canDeleteActivity: true,
+            canResetData: true,
+          }));
+          onSuccess();
+        } else {
+          setError("Code d'accès incorrect. Veuillez réessayer.");
+          setCode("");
+        }
+      }
+    } catch (err) {
+      console.error("Erreur lors de la connexion:", err);
+      setError("Une erreur s'est produite. Veuillez réessayer.");
+      setCode("");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -52,9 +113,9 @@ export function LoginPage({ onSuccess }) {
                 setCode(e.target.value);
                 setError("");
               }}
-              placeholder="Entrez votre code (4 chiffres)"
+              placeholder="Entrez votre code (6 chiffres)"
               className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-center text-lg font-semibold tracking-widest focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-              maxLength={4}
+              maxLength={6}
               autoFocus
             />
           </div>
@@ -67,9 +128,10 @@ export function LoginPage({ onSuccess }) {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl"
           >
-            Accéder
+            {loading ? "Connexion..." : "Accéder"}
           </button>
         </form>
 

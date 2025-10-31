@@ -14,14 +14,36 @@ export default function App() {
   const [activities, setActivities] = useState(() => loadLS(LS_KEYS.activities, getDefaultActivities()));
   const [quotes, setQuotes] = useState(() => loadLS(LS_KEYS.quotes, []));
   const [remoteEnabled, setRemoteEnabled] = useState(false);
+  const [user, setUser] = useState(null);
 
   // Vérifier si l'utilisateur est déjà connecté
   useEffect(() => {
     const already = sessionStorage.getItem("hd_ok") === "1";
     if (already) {
+      const userStr = sessionStorage.getItem("hd_user");
+      if (userStr) {
+        try {
+          setUser(JSON.parse(userStr));
+        } catch (e) {
+          console.error("Erreur lors de la lecture des données utilisateur:", e);
+        }
+      }
       setOk(true);
     }
   }, []);
+
+  // Fonction pour mettre à jour les permissions utilisateur après connexion
+  function handleLoginSuccess() {
+    const userStr = sessionStorage.getItem("hd_user");
+    if (userStr) {
+      try {
+        setUser(JSON.parse(userStr));
+      } catch (e) {
+        console.error("Erreur lors de la lecture des données utilisateur:", e);
+      }
+    }
+    setOk(true);
+  }
 
   // fonction de synchronisation Supabase
   async function syncWithSupabase() {
@@ -151,9 +173,9 @@ export default function App() {
     saveLS(LS_KEYS.quotes, quotes);
   }, [quotes]);
 
-  if (!ok) {
-    return <LoginPage onSuccess={() => setOk(true)} />;
-  }
+      if (!ok) {
+        return <LoginPage onSuccess={handleLoginSuccess} />;
+      }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5efe4] via-[#e9dccb] to-[#f5efe4]">
@@ -180,6 +202,9 @@ export default function App() {
             <div>
               <h1 className="text-sm font-semibold text-gray-800">Hurghada Dream — Bureaux</h1>
               <p className="text-[10px] text-gray-600">Mini site interne (devis, activités, historique)</p>
+              {user && (
+                <p className="text-[10px] text-blue-600 mt-0.5">Connecté en tant que : {user.name}</p>
+              )}
             </div>
           </div>
           <nav className="flex gap-2">
@@ -198,12 +223,12 @@ export default function App() {
 
       {/* CONTENU CENTRÉ */}
       <main className="max-w-6xl mx-auto px-3 py-6 space-y-6">
-        {tab === "devis" && (
+            {tab === "devis" && (
           <Section
             title="Créer & gérer les devis (multi-activités)"
             subtitle="Supplément transfert = (par adulte) × (nombre d'adultes). Alerte si jour hors-dispo, mais le devis peut être créé."
           >
-            <QuotesPage activities={activities} quotes={quotes} setQuotes={setQuotes} />
+            <QuotesPage activities={activities} quotes={quotes} setQuotes={setQuotes} user={user} />
           </Section>
         )}
 
@@ -212,25 +237,27 @@ export default function App() {
             title="Gestion des activités"
             subtitle="Ajoutez, modifiez les prix, jours, transferts par quartier."
             right={
-              <GhostBtn
-                onClick={() => {
-                  if (!window.confirm("Réinitialiser les données locales ?")) return;
-                  const defaultActivities = getDefaultActivities();
-                  setActivities(defaultActivities);
-                  saveLS(LS_KEYS.activities, defaultActivities);
-                }}
-              >
-                Réinitialiser les données
-              </GhostBtn>
+              user?.canResetData && (
+                <GhostBtn
+                  onClick={() => {
+                    if (!window.confirm("Réinitialiser les données locales ?")) return;
+                    const defaultActivities = getDefaultActivities();
+                    setActivities(defaultActivities);
+                    saveLS(LS_KEYS.activities, defaultActivities);
+                  }}
+                >
+                  Réinitialiser les données
+                </GhostBtn>
+              )
             }
           >
-            <ActivitiesPage activities={activities} setActivities={setActivities} remoteEnabled={remoteEnabled} />
+            <ActivitiesPage activities={activities} setActivities={setActivities} remoteEnabled={remoteEnabled} user={user} />
           </Section>
         )}
 
         {tab === "history" && (
           <Section title="Historique des devis" subtitle="Recherchez un devis par numéro de téléphone.">
-            <HistoryPage quotes={quotes} setQuotes={setQuotes} />
+            <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} />
           </Section>
         )}
       </main>

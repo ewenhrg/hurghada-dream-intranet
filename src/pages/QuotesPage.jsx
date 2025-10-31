@@ -4,7 +4,7 @@ import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { uuid, currency, saveLS, loadLS } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 
-export function QuotesPage({ activities, quotes, setQuotes }) {
+export function QuotesPage({ activities, quotes, setQuotes, user }) {
   const blankItem = () => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
@@ -303,9 +303,11 @@ export function QuotesPage({ activities, quotes, setQuotes }) {
             <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-4 space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
-                <GhostBtn type="button" onClick={() => removeItem(idx)}>
-                  Supprimer
-                </GhostBtn>
+                {user?.canDeleteQuote && (
+                  <GhostBtn type="button" onClick={() => removeItem(idx)}>
+                    Supprimer
+                  </GhostBtn>
+                )}
               </div>
               <div className="grid md:grid-cols-5 gap-3 items-end">
                 <div className="md:col-span-2">
@@ -551,38 +553,40 @@ Notes: ${q.notes || "—"}
                       ✏️ Modifier
                     </GhostBtn>
                   )}
-                  <GhostBtn
-                    onClick={async () => {
-                      if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
-                        const updatedQuotes = quotes.filter((quote) => quote.id !== q.id);
-                        setQuotes(updatedQuotes);
-                        saveLS(LS_KEYS.quotes, updatedQuotes);
+                  {user?.canDeleteQuote && (
+                    <GhostBtn
+                      onClick={async () => {
+                        if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
+                          const updatedQuotes = quotes.filter((quote) => quote.id !== q.id);
+                          setQuotes(updatedQuotes);
+                          saveLS(LS_KEYS.quotes, updatedQuotes);
 
-                        // Supprimer de Supabase si configuré
-                        if (supabase) {
-                          try {
-                            const { error: deleteError } = await supabase
-                              .from("quotes")
-                              .delete()
-                              .eq("site_key", SITE_KEY)
-                              .eq("client_phone", q.client?.phone || "")
-                              .eq("created_at", q.createdAt);
-                            
-                            if (deleteError) {
-                              console.warn("⚠️ Erreur suppression Supabase:", deleteError);
-                            } else {
-                              console.log("✅ Devis supprimé de Supabase!");
+                          // Supprimer de Supabase si configuré
+                          if (supabase) {
+                            try {
+                              const { error: deleteError } = await supabase
+                                .from("quotes")
+                                .delete()
+                                .eq("site_key", SITE_KEY)
+                                .eq("client_phone", q.client?.phone || "")
+                                .eq("created_at", q.createdAt);
+                              
+                              if (deleteError) {
+                                console.warn("⚠️ Erreur suppression Supabase:", deleteError);
+                              } else {
+                                console.log("✅ Devis supprimé de Supabase!");
+                              }
+                            } catch (deleteErr) {
+                              console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
                             }
-                          } catch (deleteErr) {
-                            console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
                           }
                         }
-                      }
-                    }}
-                    className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                  >
-                    🗑️ Supprimer
-                  </GhostBtn>
+                      }}
+                      className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                    >
+                      🗑️ Supprimer
+                    </GhostBtn>
+                  )}
                     </div>
                   </div>
                 </div>

@@ -6,7 +6,7 @@ import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
 
-export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
+export function ActivitiesPage({ activities, setActivities, remoteEnabled, user }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -242,27 +242,29 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
         <p className="text-sm text-gray-600">
           Ajoutez une activité, ses prix, ses jours, ses transferts (quartier, matin / après-midi).
         </p>
-        <PrimaryBtn
-          onClick={() => {
-            if (showForm) {
-              setForm({
-                name: "",
-                category: "desert",
-                priceAdult: "",
-                priceChild: "",
-                priceBaby: "",
-                currency: "EUR",
-                availableDays: [false, false, false, false, false, false, false],
-                notes: "",
-                transfers: emptyTransfers(),
-              });
-              setEditingId(null);
-            }
-            setShowForm((s) => !s);
-          }}
-        >
-          {showForm ? "Annuler" : "Ajouter une activité"}
-        </PrimaryBtn>
+        {user?.canAddActivity && (
+          <PrimaryBtn
+            onClick={() => {
+              if (showForm) {
+                setForm({
+                  name: "",
+                  category: "desert",
+                  priceAdult: "",
+                  priceChild: "",
+                  priceBaby: "",
+                  currency: "EUR",
+                  availableDays: [false, false, false, false, false, false, false],
+                  notes: "",
+                  transfers: emptyTransfers(),
+                });
+                setEditingId(null);
+              }
+              setShowForm((s) => !s);
+            }}
+          >
+            {showForm ? "Annuler" : "Ajouter une activité"}
+          </PrimaryBtn>
+        )}
       </div>
 
       {/* Filtres et recherche */}
@@ -395,8 +397,12 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
                     <td className="px-3 py-2 text-gray-500">{a.notes || "—"}</td>
                     <td className="px-3 py-2 text-right">
                       <div className="flex gap-2 justify-end">
-                        <GhostBtn onClick={() => handleEdit(a)}>Modifier</GhostBtn>
-                        <GhostBtn onClick={() => handleDelete(a.id)}>Supprimer</GhostBtn>
+                        {user?.canEditActivity && (
+                          <GhostBtn onClick={() => handleEdit(a)}>Modifier</GhostBtn>
+                        )}
+                        {user?.canDeleteActivity && (
+                          <GhostBtn onClick={() => handleDelete(a.id)}>Supprimer</GhostBtn>
+                        )}
                       </div>
                     </td>
                   </tr>
