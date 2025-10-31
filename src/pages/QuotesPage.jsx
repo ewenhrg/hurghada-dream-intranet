@@ -604,7 +604,7 @@ Notes: ${q.notes || "—"}
       {/* Modale de paiement */}
       {showPaymentModal && selectedQuote && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white/98 rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto backdrop-blur-sm">
+          <div className="bg-white rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Enregistrer les numéros de ticket</h3>
               <button
