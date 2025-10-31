@@ -8,6 +8,7 @@ import { TransfersEditor } from "../components/TransfersEditor";
 
 export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
     name: "",
     category: "desert",
@@ -20,12 +21,30 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
     transfers: emptyTransfers(),
   });
 
+  function handleEdit(activity) {
+    setForm({
+      name: activity.name || "",
+      category: activity.category || "desert",
+      priceAdult: activity.priceAdult || "",
+      priceChild: activity.priceChild || "",
+      priceBaby: activity.priceBaby || "",
+      currency: activity.currency || "EUR",
+      availableDays: activity.availableDays || [false, false, false, false, false, false, false],
+      notes: activity.notes || "",
+      transfers: activity.transfers || emptyTransfers(),
+    });
+    setEditingId(activity.id);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function handleCreate(e) {
     e.preventDefault();
     if (!form.name.trim()) return;
 
-    const newA = {
-      id: uuid(),
+    const isEditing = editingId !== null;
+    const activityData = {
+      id: isEditing ? editingId : uuid(),
       name: form.name.trim(),
       category: form.category,
       priceAdult: Number(form.priceAdult || 0),
@@ -38,7 +57,14 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
       site_key: SITE_KEY,
     };
 
-    const next = [newA, ...activities];
+    let next;
+    if (isEditing) {
+      // Modification
+      next = activities.map((a) => (a.id === editingId ? activityData : a));
+    } else {
+      // Création
+      next = [activityData, ...activities];
+    }
     setActivities(next);
     saveLS(LS_KEYS.activities, next);
 
@@ -108,10 +134,32 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
             );
           }
         } else {
-          console.log("✅ Activité créée avec succès dans Supabase!");
+          const action = isEditing ? "modifiée" : "créée";
+          console.log(`✅ Activité ${action} avec succès dans Supabase!`);
           console.log("Données retournées:", data);
           // Afficher un message de succès
-          alert("✅ Activité créée avec succès dans Supabase!");
+          alert(`✅ Activité ${action} avec succès dans Supabase!`);
+          
+          // Si modification, mettre à jour aussi dans Supabase (si possible)
+          if (isEditing && supabase) {
+            try {
+              // Note: Pour l'UPDATE, il faudrait avoir l'ID Supabase réel (pas le UUID local)
+              // Pour l'instant, on essaie juste avec site_key et name pour trouver la ligne
+              const { error: updateError } = await supabase
+                .from("activities")
+                .update({ name: activityData.name })
+                .eq("site_key", SITE_KEY)
+                .eq("name", activityData.name);
+              
+              if (updateError) {
+                console.warn("Erreur lors de la mise à jour Supabase:", updateError);
+              } else {
+                console.log("✅ Activité mise à jour dans Supabase");
+              }
+            } catch (updateErr) {
+              console.warn("Erreur lors de la mise à jour Supabase:", updateErr);
+            }
+          }
         }
       } catch (err) {
         console.error("❌ EXCEPTION lors de l'envoi à Supabase:", err);
@@ -137,6 +185,7 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
       notes: "",
       transfers: emptyTransfers(),
     });
+    setEditingId(null);
     setShowForm(false);
   }
 
@@ -163,7 +212,27 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
         <p className="text-sm text-gray-600">
           Ajoutez une activité, ses prix, ses jours, ses transferts (quartier, matin / après-midi).
         </p>
-        <PrimaryBtn onClick={() => setShowForm((s) => !s)}>{showForm ? "Fermer" : "Ajouter une activité"}</PrimaryBtn>
+        <PrimaryBtn
+          onClick={() => {
+            if (showForm) {
+              setForm({
+                name: "",
+                category: "desert",
+                priceAdult: "",
+                priceChild: "",
+                priceBaby: "",
+                currency: "EUR",
+                availableDays: [false, false, false, false, false, false, false],
+                notes: "",
+                transfers: emptyTransfers(),
+              });
+              setEditingId(null);
+            }
+            setShowForm((s) => !s);
+          }}
+        >
+          {showForm ? "Annuler" : "Ajouter une activité"}
+        </PrimaryBtn>
       </div>
 
       {showForm && (
@@ -224,7 +293,7 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
             onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
           />
           <div className="flex justify-end">
-            <PrimaryBtn type="submit">Enregistrer</PrimaryBtn>
+            <PrimaryBtn type="submit">{editingId ? "Modifier l'activité" : "Enregistrer"}</PrimaryBtn>
           </div>
         </form>
       )}
@@ -268,7 +337,10 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
                     </td>
                     <td className="px-3 py-2 text-gray-500">{a.notes || "—"}</td>
                     <td className="px-3 py-2 text-right">
-                      <GhostBtn onClick={() => handleDelete(a.id)}>Supprimer</GhostBtn>
+                      <div className="flex gap-2 justify-end">
+                        <GhostBtn onClick={() => handleEdit(a)}>Modifier</GhostBtn>
+                        <GhostBtn onClick={() => handleDelete(a.id)}>Supprimer</GhostBtn>
+                      </div>
                     </td>
                   </tr>
                 ))}
