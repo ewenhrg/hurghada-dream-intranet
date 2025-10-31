@@ -69,6 +69,8 @@ export default function App() {
           priceAdult: row.price_adult || 0,
           priceChild: row.price_child || 0,
           priceBaby: row.price_baby || 0,
+          ageChild: row.age_child || "",
+          ageBaby: row.age_baby || "",
           currency: row.currency || "EUR",
           availableDays: row.available_days || [false, false, false, false, false, false, false],
           notes: row.notes || "",
