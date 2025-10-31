@@ -30,10 +30,10 @@ export default function App() {
     }
   }, []);
 
-  // charger supabase
-  useEffect(() => {
-    async function fetchRemote() {
+  // fonction de synchronisation Supabase
+  async function syncWithSupabase() {
       if (!supabase) return;
+    try {
       const { data, error } = await supabase.from("activities").select("*").eq("site_key", SITE_KEY).order("id", { ascending: false });
       if (!error && Array.isArray(data) && data.length) {
         const mapped = data.map((row) => ({
@@ -52,8 +52,25 @@ export default function App() {
         saveLS(LS_KEYS.activities, mapped);
         setRemoteEnabled(true);
       }
+    } catch (err) {
+      console.warn("Erreur synchronisation Supabase:", err);
     }
-    fetchRemote();
+  }
+
+  // charger supabase au montage et synchronisation toutes les 3 secondes
+  useEffect(() => {
+    // Synchronisation immédiate
+    syncWithSupabase();
+
+    // Synchronisation toutes les 3 secondes
+    const interval = setInterval(() => {
+      syncWithSupabase();
+    }, 3000);
+
+    // Nettoyer l'intervalle au démontage
+    return () => {
+      clearInterval(interval);
+    };
   }, []);
 
   // persistance locale
