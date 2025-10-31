@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.quotes (
   total NUMERIC DEFAULT 0,
   currency TEXT DEFAULT 'EUR',
   items JSONB DEFAULT '[]'::jsonb,
+  created_by_name TEXT DEFAULT '',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_at_timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

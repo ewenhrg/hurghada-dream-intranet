@@ -39,7 +39,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             <div key={d.id} className="bg-white/95 rounded-2xl border border-blue-100/60 shadow-md hover:shadow-lg transition-shadow duration-200 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1">
-                  <p className="text-xs text-gray-500">{new Date(d.createdAt).toLocaleString("fr-FR")}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(d.createdAt).toLocaleString("fr-FR")}
+                    {d.createdByName && <span className="ml-2 text-blue-600">• Créé par {d.createdByName}</span>}
+                  </p>
                   <p className="text-sm text-gray-700">
                     {d.client?.phone || "Tél ?"} — {d.client?.hotel || "Hôtel ?"} ({d.client?.room || "ch ?"})
                   </p>
@@ -80,6 +83,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     // Télécharger le devis
                     const quoteText = `
 DEVIS ${new Date(d.createdAt).toLocaleDateString("fr-FR")}
+${d.createdByName ? `Créé par: ${d.createdByName}` : ""}
 Client: ${d.client?.name || d.client?.phone || "—"}
 Hôtel: ${d.client?.hotel || "—"}
 Chambre: ${d.client?.room || "—"}
@@ -337,6 +341,7 @@ Notes: ${d.notes || "—"}
                   total: updatedQuote.total,
                   currency: updatedQuote.currency,
                   items: JSON.stringify(updatedQuote.items),
+                  created_by_name: updatedQuote.createdByName || "",
                 };
 
                 const { error: updateError } = await supabase
@@ -472,6 +477,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       ...quote,
       client,
       notes: notes.trim(),
+      createdByName: quote.createdByName || "", // Garder le créateur original
       items: validComputed.map((c) => ({
         activityId: c.act.id,
         activityName: c.act.name || "",

@@ -156,6 +156,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
       createdAt: new Date().toISOString(),
       client,
       notes: notes.trim(),
+      createdByName: user?.name || "",
       items: validComputed.map((c) => ({
         activityId: c.act.id,
         activityName: c.act.name || "",
@@ -195,6 +196,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
           total: q.total,
           currency: q.currency,
           items: JSON.stringify(q.items),
+          created_by_name: q.createdByName || "",
           created_at: q.createdAt,
         };
 
@@ -454,6 +456,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   <div className="flex-1">
                     <p className="text-xs text-gray-500">
                       {new Date(q.createdAt).toLocaleString("fr-FR")} — {q.client.phone || "Tél ?"}
+                      {q.createdByName && <span className="ml-2 text-blue-600">• Créé par {q.createdByName}</span>}
                     </p>
                     <p className="text-sm text-gray-700">
                       {q.client.hotel || "Hôtel ?"} — {q.client.neighborhood || "Quartier ?"}
@@ -487,6 +490,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                       // Télécharger le devis (version simple)
                       const quoteText = `
 DEVIS ${new Date(q.createdAt).toLocaleDateString("fr-FR")}
+${q.createdByName ? `Créé par: ${q.createdByName}` : ""}
 Client: ${q.client.name || q.client.phone}
 Hôtel: ${q.client.hotel || "—"}
 Chambre: ${q.client.room || "—"}
