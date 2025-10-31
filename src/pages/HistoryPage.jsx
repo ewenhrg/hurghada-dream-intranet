@@ -220,7 +220,7 @@ Notes: ${d.notes || "—"}
                 Annuler
               </GhostBtn>
               <PrimaryBtn
-                onClick={() => {
+                onClick={async () => {
                   // Vérifier que tous les tickets sont renseignés
                   const allFilled = selectedQuote.items?.every((_, idx) => ticketNumbers[idx]?.trim());
                   if (!allFilled) {
