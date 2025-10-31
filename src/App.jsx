@@ -159,7 +159,7 @@ export default function App() {
 
         {tab === "history" && (
           <Section title="Historique des devis" subtitle="Recherchez un devis par numéro de téléphone.">
-            <HistoryPage quotes={quotes} />
+            <HistoryPage quotes={quotes} setQuotes={setQuotes} />
           </Section>
         )}
       </main>

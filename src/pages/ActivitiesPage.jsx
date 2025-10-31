@@ -9,6 +9,8 @@ import { TransfersEditor } from "../components/TransfersEditor";
 export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDay, setSelectedDay] = useState("");
   const [form, setForm] = useState({
     name: "",
     category: "desert",
@@ -91,7 +93,10 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
         // Pour l'instant, on envoie seulement site_key et name (colonnes minimales)
         // Les autres colonnes seront ajoutées progressivement quand elles seront créées dans Supabase
         console.log("🔄 Envoi à Supabase (colonnes minimales):", supabaseData);
-        const { data, error } = await supabase.from("activities").insert(supabaseData);
+        const { data, error } = await supabase.from("activities").insert({
+          site_key: SITE_KEY,
+          name: activityData.name,
+        });
         
         if (error) {
           console.error("❌ ERREUR Supabase (création):", error);
@@ -196,15 +201,40 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
     saveLS(LS_KEYS.activities, next);
   }
 
+  // Filtrer les activités par recherche et par jour
+  const filteredActivities = useMemo(() => {
+    let filtered = activities;
+
+    // Filtrer par recherche (nom ou notes)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((a) => {
+        const nameMatch = a.name?.toLowerCase().includes(query);
+        const notesMatch = a.notes?.toLowerCase().includes(query);
+        return nameMatch || notesMatch;
+      });
+    }
+
+    // Filtrer par jour sélectionné
+    if (selectedDay !== "") {
+      const dayIndex = parseInt(selectedDay);
+      filtered = filtered.filter((a) => {
+        return a.availableDays?.[dayIndex] === true;
+      });
+    }
+
+    return filtered;
+  }, [activities, searchQuery, selectedDay]);
+
   const grouped = useMemo(() => {
     const base = {};
     CATEGORIES.forEach((c) => (base[c.key] = []));
-    activities.forEach((a) => {
+    filteredActivities.forEach((a) => {
       const key = CATEGORIES.find((c) => c.key === a.category) ? a.category : "desert";
       base[key].push(a);
     });
     return base;
-  }, [activities]);
+  }, [filteredActivities]);
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -233,6 +263,33 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled }) {
         >
           {showForm ? "Annuler" : "Ajouter une activité"}
         </PrimaryBtn>
+      </div>
+
+      {/* Filtres et recherche */}
+      <div className="grid md:grid-cols-2 gap-3 bg-white rounded-2xl border border-gray-100 p-4">
+        <div>
+          <p className="text-xs text-gray-500 mb-1">Rechercher une activité</p>
+          <TextInput
+            placeholder="Rechercher par nom ou notes..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 mb-1">Filtrer par jour</p>
+          <select
+            value={selectedDay}
+            onChange={(e) => setSelectedDay(e.target.value)}
+            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+          >
+            <option value="">Tous les jours</option>
+            {WEEKDAYS.map((day) => (
+              <option key={day.key} value={day.key}>
+                {day.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {showForm && (
