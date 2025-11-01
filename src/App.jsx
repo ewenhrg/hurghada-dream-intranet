@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
-import { uuid, emptyTransfers, saveLS, loadLS } from "./utils";
+import { uuid, emptyTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
 import { ActivitiesPage } from "./pages/ActivitiesPage";
@@ -253,6 +253,134 @@ export default function App() {
       clearInterval(interval);
     };
   }, []);
+
+  // Synchronisation en temps réel des devis via Supabase Realtime
+  useEffect(() => {
+    if (!supabase || !remoteEnabled) return;
+
+    // Fonction pour faire correspondre un devis Supabase avec un devis local
+    const findMatchingLocalQuote = (supabaseQuote, localQuotes) => {
+      const supabasePhone = supabaseQuote.client_phone || "";
+      const supabaseCreatedAt = supabaseQuote.created_at || "";
+      
+      return localQuotes.find((localQuote) => {
+        const localPhone = localQuote.client?.phone || "";
+        const localCreatedAt = localQuote.createdAt || "";
+        
+        // Correspondre par téléphone et date de création
+        return localPhone === supabasePhone && localCreatedAt === supabaseCreatedAt;
+      });
+    };
+
+    // Fonction pour convertir un devis Supabase en format local
+    const convertSupabaseQuoteToLocal = (row) => {
+      let items = [];
+      try {
+        items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items || [];
+      } catch {
+        items = [];
+      }
+      
+      const createdAt = row.created_at || row.createdAt || new Date().toISOString();
+      
+      return {
+        id: row.id?.toString() || uuid(),
+        supabase_id: row.id,
+        createdAt: createdAt,
+        client: {
+          name: row.client_name || "",
+          phone: row.client_phone || "",
+          hotel: row.client_hotel || "",
+          room: row.client_room || "",
+          neighborhood: row.client_neighborhood || "",
+        },
+        notes: row.notes || "",
+        createdByName: row.created_by_name || "",
+        items: items,
+        total: row.total || 0,
+        totalCash: Math.round(row.total || 0),
+        totalCard: calculateCardPrice(row.total || 0),
+        currency: row.currency || "EUR",
+      };
+    };
+
+    console.log("🔄 Abonnement Realtime aux devis...");
+
+    // S'abonner aux changements sur la table quotes
+    const channel = supabase
+      .channel('quotes-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'quotes',
+          filter: `site_key=eq.${SITE_KEY}`,
+        },
+        async (payload) => {
+          console.log('📨 Changement Realtime reçu:', payload.eventType, payload);
+
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const newQuote = convertSupabaseQuoteToLocal(payload.new);
+            
+            setQuotes((prevQuotes) => {
+              // Chercher si le devis existe déjà localement
+              const existingIndex = prevQuotes.findIndex((q) => {
+                const match = findMatchingLocalQuote(payload.new, [q]);
+                return match !== undefined;
+              });
+
+              if (existingIndex >= 0) {
+                // Mettre à jour le devis existant
+                const updated = [...prevQuotes];
+                updated[existingIndex] = newQuote;
+                saveLS(LS_KEYS.quotes, updated);
+                return updated;
+              } else {
+                // Ajouter le nouveau devis
+                const updated = [newQuote, ...prevQuotes];
+                saveLS(LS_KEYS.quotes, updated);
+                return updated;
+              }
+            });
+          } else if (payload.eventType === 'DELETE') {
+            // Supprimer le devis local correspondant
+            setQuotes((prevQuotes) => {
+              const deletedId = payload.old.id;
+              const deletedPhone = payload.old.client_phone || "";
+              const deletedCreatedAt = payload.old.created_at || "";
+              
+              const filtered = prevQuotes.filter((q) => {
+                // Vérifier par ID Supabase si disponible
+                if (q.supabase_id && q.supabase_id === deletedId) {
+                  return false;
+                }
+                // Sinon vérifier par téléphone et date de création
+                const localPhone = q.client?.phone || "";
+                const localCreatedAt = q.createdAt || "";
+                return !(localPhone === deletedPhone && localCreatedAt === deletedCreatedAt);
+              });
+              
+              saveLS(LS_KEYS.quotes, filtered);
+              return filtered;
+            });
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Abonnement Realtime actif pour les devis');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.warn('⚠️ Erreur abonnement Realtime:', status);
+        }
+      });
+
+    // Nettoyer l'abonnement au démontage
+    return () => {
+      console.log('🔌 Déconnexion de l\'abonnement Realtime');
+      supabase.removeChannel(channel);
+    };
+  }, [remoteEnabled]);
 
   // persistance locale
   useEffect(() => {

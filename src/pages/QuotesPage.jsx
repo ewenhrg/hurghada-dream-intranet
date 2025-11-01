@@ -756,7 +756,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                           [idx]: e.target.value,
                         }));
                       }}
+                      disabled={item.ticketNumber && item.ticketNumber.trim() ? true : false}
+                      readOnly={item.ticketNumber && item.ticketNumber.trim() ? true : false}
+                      className={item.ticketNumber && item.ticketNumber.trim() ? "bg-gray-100 cursor-not-allowed" : ""}
                     />
+                    {item.ticketNumber && item.ticketNumber.trim() && (
+                      <p className="text-xs text-green-600 mt-1">✅ Ticket verrouillé (non modifiable)</p>
+                    )}
                   </div>
                 </div>
               ))}

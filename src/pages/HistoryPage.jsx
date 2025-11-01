@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid } from "../utils";
-import { TextInput, NumberInput, GhostBtn, PrimaryBtn } from "../components/ui";
+import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 
 // Options d'extra pour Speed Boat uniquement
 const SPEED_BOAT_EXTRAS = [
@@ -17,6 +17,7 @@ const SPEED_BOAT_EXTRAS = [
 
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
@@ -26,28 +27,87 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [editClient, setEditClient] = useState(null);
   const [editItems, setEditItems] = useState([]);
   const [editNotes, setEditNotes] = useState("");
+  
   const filtered = useMemo(() => {
-    if (!q.trim()) return quotes;
-    const needle = q.replace(/\D+/g, "");
-    return quotes.filter((d) => (d.client?.phone || "").replace(/\D+/g, "").includes(needle));
-  }, [q, quotes]);
+    let result = quotes;
+    
+    // Filtre par statut (payé/en attente)
+    if (statusFilter !== "all") {
+      result = result.filter((d) => {
+        const allTicketsFilled = d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim());
+        if (statusFilter === "paid") {
+          return allTicketsFilled;
+        } else if (statusFilter === "pending") {
+          return !allTicketsFilled;
+        }
+        return true;
+      });
+    }
+    
+    // Filtre par recherche téléphone
+    if (q.trim()) {
+      const needle = q.replace(/\D+/g, "");
+      result = result.filter((d) => (d.client?.phone || "").replace(/\D+/g, "").includes(needle));
+    }
+    
+    return result;
+  }, [q, quotes, statusFilter]);
 
   return (
     <div className="p-4 md:p-6 space-y-4">
-      <TextInput
-        placeholder="Rechercher par numéro de téléphone"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        className="max-w-md"
-      />
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <TextInput
+          placeholder="Rechercher par numéro de téléphone"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="max-w-md"
+        />
+        <div className="flex gap-2">
+          <Pill
+            active={statusFilter === "all"}
+            onClick={() => setStatusFilter("all")}
+          >
+            Tous
+          </Pill>
+          <Pill
+            active={statusFilter === "paid"}
+            onClick={() => setStatusFilter("paid")}
+          >
+            Payés
+          </Pill>
+          <Pill
+            active={statusFilter === "pending"}
+            onClick={() => setStatusFilter("pending")}
+          >
+            En attente
+          </Pill>
+        </div>
+      </div>
       <div className="space-y-3">
         {filtered.map((d) => {
           // Vérifier si tous les tickets sont renseignés
           const allTicketsFilled = d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim());
           const hasTickets = d.items?.some((item) => item.ticketNumber && item.ticketNumber.trim());
 
+          // Déterminer la couleur en fonction du statut
+          const borderColor = allTicketsFilled 
+            ? "border-green-400 bg-green-50/50" 
+            : "border-orange-400 bg-orange-50/50";
+          
           return (
-            <div key={d.id} className="bg-white/95 rounded-2xl border border-blue-100/60 shadow-md hover:shadow-lg transition-shadow duration-200 p-4">
+            <div key={d.id} className={`rounded-2xl border-2 ${borderColor} shadow-md hover:shadow-lg transition-shadow duration-200 p-4`}>
+              {/* Badge de statut */}
+              <div className="flex items-center gap-2 mb-2">
+                {allTicketsFilled ? (
+                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium border border-green-300">
+                    ✅ Payé
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium border border-orange-300">
+                    ⏳ En attente
+                  </span>
+                )}
+              </div>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1">
                   <p className="text-xs text-gray-500">
@@ -132,6 +192,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         buggySimple: item.buggySimple || 0,
                         buggyFamily: item.buggyFamily || 0,
                         slot: item.slot || "",
+                        ticketNumber: item.ticketNumber || "", // Préserver le ticketNumber existant
                       })));
                       setEditNotes(d.notes || "");
                       setShowEditModal(true);
@@ -228,7 +289,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                           [idx]: e.target.value,
                         }));
                       }}
+                      disabled={item.ticketNumber && item.ticketNumber.trim() ? true : false}
+                      readOnly={item.ticketNumber && item.ticketNumber.trim() ? true : false}
+                      className={item.ticketNumber && item.ticketNumber.trim() ? "bg-gray-100 cursor-not-allowed" : ""}
                     />
+                    {item.ticketNumber && item.ticketNumber.trim() && (
+                      <p className="text-xs text-green-600 mt-1">✅ Ticket verrouillé (non modifiable)</p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -529,7 +596,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         pickupTime: c.pickupTime || "",
         lineTotal: c.lineTotal,
         transferSurchargePerAdult: c.transferInfo?.surcharge || 0,
-        ticketNumber: c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act.id && item.date === c.raw.date)?.ticketNumber || "",
+        // Préserver le ticketNumber existant - ne peut pas être modifié si déjà rempli
+        ticketNumber: (c.raw.ticketNumber && c.raw.ticketNumber.trim()) 
+          ? c.raw.ticketNumber 
+          : (quote.items?.find((item) => item.activityId === c.act.id && item.date === c.raw.date)?.ticketNumber || ""),
       })),
       total: validGrandTotal,
       totalCash: Math.round(validGrandTotal),
@@ -725,6 +795,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     <label htmlFor={`edit-extraDolphin-${idx}`} className="text-sm text-gray-700 cursor-pointer">
                       Extra dauphin 20€
                     </label>
+                  </div>
+                )}
+                {/* Afficher le numéro de ticket si présent (non modifiable) */}
+                {(c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber) && (
+                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-xs text-green-700 font-medium">🎫 Ticket: {(c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber)}</p>
+                    <p className="text-[10px] text-green-600 mt-1">Non modifiable</p>
                   </div>
                 )}
                 {c.lineTotal > 0 && (
