@@ -168,21 +168,18 @@ export default function App() {
         }
       }
 
-      // Désactivation de la synchronisation automatique des devis depuis Supabase
-      // Les devis sont créés localement et envoyés à Supabase, mais on ne les récupère plus automatiquement
-      // pour éviter les problèmes de doublons et de devis vierges
-      // La synchronisation se fait uniquement via Realtime pour les mises à jour (tickets, etc.)
+      // Synchronisation des devis se fait dans un useEffect séparé pour éviter les doublons
     } catch (err) {
       console.warn("Erreur synchronisation Supabase:", err);
     }
   }
 
-  // charger supabase au montage et synchronisation toutes les 3 secondes
+  // charger supabase au montage et synchronisation des activités toutes les 3 secondes
   useEffect(() => {
     // Synchronisation immédiate
     syncWithSupabase();
 
-    // Synchronisation toutes les 3 secondes
+    // Synchronisation des activités toutes les 3 secondes (pas les devis pour éviter les doublons)
     const interval = setInterval(() => {
       syncWithSupabase();
     }, 3000);
@@ -192,6 +189,108 @@ export default function App() {
       clearInterval(interval);
     };
   }, []);
+
+  // Synchronisation initiale unique des devis depuis Supabase au chargement de la page
+  useEffect(() => {
+    if (!remoteEnabled) return;
+    
+    async function syncQuotesOnce() {
+      if (!supabase) return;
+      
+      try {
+        const { data: quotesData, error: quotesError } = await supabase
+          .from("quotes")
+          .select("*")
+          .eq("site_key", SITE_KEY)
+          .order("created_at", { ascending: false });
+        
+        if (!quotesError && Array.isArray(quotesData)) {
+          setQuotes((prevQuotes) => {
+            // Fonction pour convertir un devis Supabase en format local
+            const convertSupabaseQuoteToLocal = (row) => {
+              let items = [];
+              try {
+                items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items || [];
+              } catch {
+                items = [];
+              }
+              
+              const createdAt = row.created_at || row.createdAt || new Date().toISOString();
+              
+              return {
+                id: row.id?.toString() || uuid(),
+                supabase_id: row.id,
+                createdAt: createdAt,
+                client: {
+                  name: row.client_name || "",
+                  phone: row.client_phone || "",
+                  hotel: row.client_hotel || "",
+                  room: row.client_room || "",
+                  neighborhood: row.client_neighborhood || "",
+                },
+                notes: row.notes || "",
+                createdByName: row.created_by_name || "",
+                items: items,
+                total: row.total || 0,
+                totalCash: Math.round(row.total || 0),
+                totalCard: calculateCardPrice(row.total || 0),
+                currency: row.currency || "EUR",
+              };
+            };
+
+            // Créer un Set des IDs Supabase des devis locaux pour détecter les doublons
+            const localSupabaseIds = new Set();
+            prevQuotes.forEach((q) => {
+              if (q.supabase_id) {
+                localSupabaseIds.add(q.supabase_id);
+              }
+            });
+
+            // Créer un Map des devis Supabase par leur ID
+            const supabaseQuotesMap = new Map();
+            quotesData.forEach((row) => {
+              if (row.id) {
+                supabaseQuotesMap.set(row.id, convertSupabaseQuoteToLocal(row));
+              }
+            });
+
+            // Fusionner : utiliser les devis Supabase (à jour) et conserver les devis locaux non synchronisés
+            const merged = [];
+            const processedIds = new Set();
+
+            // D'abord, ajouter tous les devis Supabase
+            supabaseQuotesMap.forEach((supabaseQuote, supabaseId) => {
+              merged.push(supabaseQuote);
+              processedIds.add(supabaseId);
+            });
+
+            // Ensuite, ajouter les devis locaux qui n'existent pas dans Supabase (pas encore synchronisés)
+            prevQuotes.forEach((localQuote) => {
+              if (!localQuote.supabase_id || !processedIds.has(localQuote.supabase_id)) {
+                // Vérifier aussi par téléphone + date de création pour éviter les doublons
+                const localKey = `${localQuote.client?.phone || ''}_${localQuote.createdAt}`;
+                const existsInSupabase = quotesData.some((row) => {
+                  const supabaseKey = `${row.client_phone || ''}_${row.created_at}`;
+                  return supabaseKey === localKey;
+                });
+                
+                if (!existsInSupabase) {
+                  merged.push(localQuote);
+                }
+              }
+            });
+
+            saveLS(LS_KEYS.quotes, merged);
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.warn("Erreur synchronisation devis Supabase:", err);
+      }
+    }
+    
+    syncQuotesOnce();
+  }, [remoteEnabled]);
 
   // Synchronisation en temps réel des devis via Supabase Realtime
   useEffect(() => {

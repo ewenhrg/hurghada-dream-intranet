@@ -273,7 +273,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         };
 
         console.log("🔄 Envoi du devis à Supabase:", supabaseData);
-        const { data, error } = await supabase.from("quotes").insert(supabaseData);
+        const { data, error } = await supabase.from("quotes").insert(supabaseData).select().single();
 
         if (error) {
           console.error("❌ ERREUR Supabase (création devis):", error);
@@ -292,6 +292,24 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         } else {
           console.log("✅ Devis créé avec succès dans Supabase!");
           console.log("Réponse:", data);
+          
+          // Mettre à jour le devis local avec le supabase_id retourné
+          if (data && data.id) {
+            setQuotes((prev) => {
+              const updated = prev.map((quote) => {
+                if (quote.id === q.id) {
+                  return {
+                    ...quote,
+                    supabase_id: data.id,
+                    id: data.id.toString(), // Utiliser l'ID Supabase comme ID local
+                  };
+                }
+                return quote;
+              });
+              saveLS(LS_KEYS.quotes, updated);
+              return updated;
+            });
+          }
         }
       } catch (err) {
         console.error("❌ EXCEPTION lors de l'envoi du devis à Supabase:", err);
