@@ -71,17 +71,17 @@ export default function App() {
             supabaseActivitiesMap.set(supabaseId, {
               id: localId,
               supabase_id: supabaseId,
-              name: row.name,
-              category: row.category || "desert",
-              priceAdult: row.price_adult || 0,
-              priceChild: row.price_child || 0,
-              priceBaby: row.price_baby || 0,
+          name: row.name,
+          category: row.category || "desert",
+          priceAdult: row.price_adult || 0,
+          priceChild: row.price_child || 0,
+          priceBaby: row.price_baby || 0,
               ageChild: row.age_child || "",
               ageBaby: row.age_baby || "",
-              currency: row.currency || "EUR",
-              availableDays: row.available_days || [false, false, false, false, false, false, false],
-              notes: row.notes || "",
-              transfers: row.transfers || emptyTransfers(),
+          currency: row.currency || "EUR",
+          availableDays: row.available_days || [false, false, false, false, false, false, false],
+          notes: row.notes || "",
+          transfers: row.transfers || emptyTransfers(),
             });
           });
 
@@ -89,6 +89,7 @@ export default function App() {
           setActivities((prevActivities) => {
             const merged = [];
             const processedSupabaseIds = new Set();
+            const processedLocalIds = new Set();
 
             // D'abord, traiter les activités locales qui ont un supabase_id
             prevActivities.forEach((localActivity) => {
@@ -98,15 +99,34 @@ export default function App() {
                   // L'activité existe dans Supabase, utiliser les données Supabase (qui sont à jour)
                   merged.push(supabaseActivity);
                   processedSupabaseIds.add(localActivity.supabase_id);
+                  processedLocalIds.add(localActivity.id);
                 } else {
                   // L'activité locale a un supabase_id mais n'existe plus dans Supabase
                   // Conserver l'activité locale (peut-être supprimée)
                   merged.push(localActivity);
+                  processedLocalIds.add(localActivity.id);
                 }
               } else {
-                // Activité locale sans supabase_id (nouvelle, pas encore synchronisée)
-                // La conserver pour qu'elle soit envoyée à Supabase plus tard
-                merged.push(localActivity);
+                // Activité locale sans supabase_id - vérifier si elle existe déjà dans Supabase
+                // (peut arriver si l'activité a été créée dans Supabase depuis un autre appareil)
+                const existingSupabaseActivity = Array.from(supabaseActivitiesMap.values()).find(
+                  (supaActivity) => 
+                    supaActivity.name === localActivity.name && 
+                    supaActivity.category === localActivity.category &&
+                    Math.abs(supaActivity.priceAdult - localActivity.priceAdult) < 0.01
+                );
+                
+                if (existingSupabaseActivity) {
+                  // L'activité existe déjà dans Supabase, utiliser celle de Supabase avec son supabase_id
+                  merged.push(existingSupabaseActivity);
+                  processedSupabaseIds.add(existingSupabaseActivity.supabase_id);
+                  processedLocalIds.add(localActivity.id);
+                } else {
+                  // Activité locale sans supabase_id (nouvelle, pas encore synchronisée)
+                  // La conserver pour qu'elle soit envoyée à Supabase plus tard
+                  merged.push(localActivity);
+                  processedLocalIds.add(localActivity.id);
+                }
               }
             });
 
@@ -220,9 +240,9 @@ export default function App() {
     saveLS(LS_KEYS.quotes, quotes);
   }, [quotes]);
 
-      if (!ok) {
+  if (!ok) {
         return <LoginPage onSuccess={handleLoginSuccess} />;
-      }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5efe4] via-[#e9dccb] to-[#f5efe4]">
@@ -275,7 +295,7 @@ export default function App() {
 
       {/* CONTENU CENTRÉ */}
       <main className="max-w-6xl mx-auto px-3 py-6 space-y-6">
-            {tab === "devis" && (
+        {tab === "devis" && (
           <Section
             title="Créer & gérer les devis (multi-activités)"
             subtitle="Supplément transfert = (par adulte) × (nombre d'adultes). Alerte si jour hors-dispo, mais le devis peut être créé."
@@ -290,16 +310,16 @@ export default function App() {
             subtitle="Ajoutez, modifiez les prix, jours, transferts par quartier."
             right={
               user?.canResetData && (
-                <GhostBtn
-                  onClick={() => {
-                    if (!window.confirm("Réinitialiser les données locales ?")) return;
+              <GhostBtn
+                onClick={() => {
+                  if (!window.confirm("Réinitialiser les données locales ?")) return;
                     const defaultActivities = getDefaultActivities();
                     setActivities(defaultActivities);
                     saveLS(LS_KEYS.activities, defaultActivities);
-                  }}
-                >
-                  Réinitialiser les données
-                </GhostBtn>
+                }}
+              >
+                Réinitialiser les données
+              </GhostBtn>
               )
             }
           >

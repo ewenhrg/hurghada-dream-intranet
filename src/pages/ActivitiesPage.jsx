@@ -123,20 +123,41 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
           data = result.data;
           error = result.error;
         } else {
-          // CRÉATION : utiliser INSERT
-          console.log("🔄 Création dans Supabase:", supabaseData);
-          const result = await supabase.from("activities").insert(supabaseData);
-          data = result.data;
-          error = result.error;
+          // CRÉATION : vérifier d'abord si une activité similaire existe déjà dans Supabase
+          const { data: existingActivities, error: checkError } = await supabase
+            .from("activities")
+            .select("id")
+            .eq("site_key", SITE_KEY)
+            .eq("name", activityData.name)
+            .eq("category", activityData.category || "desert");
           
-          // Si création réussie, sauvegarder l'ID Supabase retourné
-          if (!error && data && data.length > 0 && data[0].id) {
-            const newSupabaseId = data[0].id;
-            activityData.supabase_id = newSupabaseId;
-            // Mettre à jour l'activité dans le state avec le supabase_id
-            next = next.map((a) => (a.id === activityData.id ? { ...a, supabase_id: newSupabaseId } : a));
+          if (!checkError && existingActivities && existingActivities.length > 0) {
+            // Une activité similaire existe déjà, utiliser son ID
+            const existingSupabaseId = existingActivities[0].id;
+            activityData.supabase_id = existingSupabaseId;
+            // Mettre à jour l'activité dans le state avec le supabase_id existant
+            next = next.map((a) => (a.id === activityData.id ? { ...a, supabase_id: existingSupabaseId } : a));
             setActivities(next);
             saveLS(LS_KEYS.activities, next);
+            console.log("✅ Activité trouvée dans Supabase, réutilisation de l'ID:", existingSupabaseId);
+            data = existingActivities;
+            error = null;
+          } else {
+            // Pas d'activité similaire, créer une nouvelle
+            console.log("🔄 Création dans Supabase:", supabaseData);
+            const result = await supabase.from("activities").insert(supabaseData);
+            data = result.data;
+            error = result.error;
+            
+            // Si création réussie, sauvegarder l'ID Supabase retourné
+            if (!error && data && data.length > 0 && data[0].id) {
+              const newSupabaseId = data[0].id;
+              activityData.supabase_id = newSupabaseId;
+              // Mettre à jour l'activité dans le state avec le supabase_id
+              next = next.map((a) => (a.id === activityData.id ? { ...a, supabase_id: newSupabaseId } : a));
+              setActivities(next);
+              saveLS(LS_KEYS.activities, next);
+            }
           }
         }
         
