@@ -9,6 +9,7 @@ import { QuotesPage } from "./pages/QuotesPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { UsersPage } from "./pages/UsersPage";
 import { TicketPage } from "./pages/TicketPage";
+import { PickUpPage } from "./pages/PickUpPage";
 
 export default function App() {
   const [ok, setOk] = useState(false);
@@ -539,6 +540,9 @@ export default function App() {
             <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
               Tickets
             </Pill>
+            <Pill active={tab === "pickup"} onClick={() => setTab("pickup")}>
+              Pick Up
+            </Pill>
             {user?.canResetData && (
               <Pill active={tab === "users"} onClick={() => setTab("users")}>
                 Utilisateurs
@@ -591,6 +595,12 @@ export default function App() {
         {tab === "tickets" && (
           <Section title="Liste des tickets" subtitle="Tableau automatique de tous les tickets renseignés (devis avec tous les tickets complétés)">
             <TicketPage quotes={quotes} />
+          </Section>
+        )}
+
+        {tab === "pickup" && (
+          <Section title="Gestion des Pick Ups" subtitle="Envoyez des messages automatiques aux clients pour les rappeler leur pickup">
+            <PickUpPage quotes={quotes} activities={activities} />
           </Section>
         )}
 
