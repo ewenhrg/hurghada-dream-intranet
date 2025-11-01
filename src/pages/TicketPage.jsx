@@ -46,34 +46,34 @@ export function TicketPage({ quotes }) {
           <thead>
             <tr className="bg-blue-50 border-b-2 border-blue-200">
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-blue-200">
-                1. Ticket
+                Ticket
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-blue-200">
-                2. Date
+                Date
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-blue-200">
-                3. Prénom + Téléphone
+                Prénom + Téléphone
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-blue-200">
-                4. Hôtel
+                Hôtel
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-blue-200">
-                5. Chambre
+                Chambre
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-blue-200">
-                6. Adultes
+                Adultes
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-blue-200">
-                7. Enfants
+                Enfants
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-blue-200">
-                8. Bébés
+                Bébés
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-blue-200">
-                9. Activité
+                Activité
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                10. Heure prise en charge
+                Heure prise en charge
               </th>
             </tr>
           </thead>
