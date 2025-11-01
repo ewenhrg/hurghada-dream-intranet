@@ -8,6 +8,7 @@ import { ActivitiesPage } from "./pages/ActivitiesPage";
 import { QuotesPage } from "./pages/QuotesPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { UsersPage } from "./pages/UsersPage";
+import { TicketPage } from "./pages/TicketPage";
 
 export default function App() {
   const [ok, setOk] = useState(false);
@@ -372,6 +373,9 @@ export default function App() {
             <Pill active={tab === "history"} onClick={() => setTab("history")}>
               Historique
             </Pill>
+            <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
+              Tickets
+            </Pill>
             {user?.canResetData && (
               <Pill active={tab === "users"} onClick={() => setTab("users")}>
                 Utilisateurs
@@ -418,6 +422,12 @@ export default function App() {
         {tab === "history" && (
           <Section title="Historique des devis" subtitle="Recherchez un devis par numéro de téléphone.">
             <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
+          </Section>
+        )}
+
+        {tab === "tickets" && (
+          <Section title="Liste des tickets" subtitle="Tableau automatique de tous les tickets renseignés (devis avec tous les tickets complétés)">
+            <TicketPage quotes={quotes} />
           </Section>
         )}
 
