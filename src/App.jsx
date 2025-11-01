@@ -271,7 +271,7 @@ export default function App() {
             });
 
             // Fusionner : UNIQUEMENT les devis Supabase (source de vérité absolue)
-            // Ne garder les devis locaux QUE s'ils n'ont PAS de supabase_id ET n'existent vraiment pas dans Supabase
+            // IGNORER COMPLÈTEMENT les devis locaux pour éviter les doublons et obsolètes
             const merged = [];
             const processedSupabaseIds = new Set();
             const processedSupabaseKeys = new Set();
@@ -286,8 +286,9 @@ export default function App() {
               }
             });
 
-            // ÉTAPE 2 : Ajouter UNIQUEMENT les devis locaux qui sont vraiment nouveaux
-            // (pas encore synchronisés : sans supabase_id ET sans correspondance dans Supabase)
+            // ÉTAPE 2 : Ajouter UNIQUEMENT les devis locaux qui sont vraiment nouveaux et récents
+            // (sans supabase_id ET créés il y a moins de 5 minutes - probablement en cours de création)
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
             prevQuotes.forEach((localQuote) => {
               // Ignorer TOUS les devis locaux qui ont un supabase_id (ils doivent être dans Supabase)
               if (localQuote.supabase_id) {
@@ -297,9 +298,12 @@ export default function App() {
               // Pour les devis locaux sans supabase_id, vérifier s'ils existent dans Supabase
               const localKey = `${localQuote.client?.phone || ''}_${localQuote.createdAt}`;
               
-              // Si le devis local a une clé valide et n'existe PAS dans Supabase, c'est un nouveau devis non synchronisé
-              if (localKey !== '_' && !processedSupabaseKeys.has(localKey) && !supabaseKeys.has(localKey)) {
-                // C'est un devis vraiment nouveau (créé localement mais pas encore synchronisé)
+              // Vérifier si c'est un devis très récent (créé il y a moins de 5 minutes)
+              const isVeryRecent = localQuote.createdAt && new Date(localQuote.createdAt) > new Date(fiveMinutesAgo);
+              
+              // Si le devis local n'existe PAS dans Supabase ET est très récent, c'est un nouveau devis en cours de création
+              if (isVeryRecent && localKey !== '_' && !processedSupabaseKeys.has(localKey) && !supabaseKeys.has(localKey)) {
+                // C'est un devis vraiment nouveau (créé localement il y a moins de 5 minutes, pas encore synchronisé)
                 merged.push(localQuote);
               }
               // Sinon, ignorer ce devis local (c'est probablement un doublon ou une version obsolète)
@@ -501,13 +505,13 @@ export default function App() {
               Devis
             </Pill>
             {user?.canAccessActivities !== false && (
-              <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
-                Activités
-              </Pill>
+            <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
+              Activités
+            </Pill>
             )}
             {user?.canAccessHistory !== false && (
-              <Pill active={tab === "history"} onClick={() => setTab("history")}>
-                Historique
+            <Pill active={tab === "history"} onClick={() => setTab("history")}>
+              Historique
               </Pill>
             )}
             <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
