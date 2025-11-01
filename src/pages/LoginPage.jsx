@@ -46,6 +46,8 @@ export function LoginPage({ onSuccess }) {
           canEditActivity: data.can_edit_activity || false,
           canDeleteActivity: data.can_delete_activity || false,
           canResetData: data.can_reset_data || false,
+          canAccessActivities: data.can_access_activities !== false, // true par défaut si null
+          canAccessHistory: data.can_access_history !== false, // true par défaut si null
         }));
 
         onSuccess();

@@ -25,7 +25,11 @@ export default function App() {
       const userStr = sessionStorage.getItem("hd_user");
       if (userStr) {
         try {
-          setUser(JSON.parse(userStr));
+          const userData = JSON.parse(userStr);
+          // S'assurer que les valeurs par défaut sont correctes pour l'accès aux pages
+          if (userData.canAccessActivities === undefined) userData.canAccessActivities = true;
+          if (userData.canAccessHistory === undefined) userData.canAccessHistory = true;
+          setUser(userData);
         } catch (e) {
           console.error("Erreur lors de la lecture des données utilisateur:", e);
         }
@@ -39,7 +43,11 @@ export default function App() {
     const userStr = sessionStorage.getItem("hd_user");
     if (userStr) {
       try {
-        setUser(JSON.parse(userStr));
+        const userData = JSON.parse(userStr);
+        // S'assurer que les valeurs par défaut sont correctes pour l'accès aux pages
+        if (userData.canAccessActivities === undefined) userData.canAccessActivities = true;
+        if (userData.canAccessHistory === undefined) userData.canAccessHistory = true;
+        setUser(userData);
       } catch (e) {
         console.error("Erreur lors de la lecture des données utilisateur:", e);
       }
@@ -491,12 +499,16 @@ export default function App() {
             <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
               Devis
             </Pill>
-            <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
-              Activités
-            </Pill>
-            <Pill active={tab === "history"} onClick={() => setTab("history")}>
-              Historique
-            </Pill>
+            {user?.canAccessActivities !== false && (
+              <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
+                Activités
+              </Pill>
+            )}
+            {user?.canAccessHistory !== false && (
+              <Pill active={tab === "history"} onClick={() => setTab("history")}>
+                Historique
+              </Pill>
+            )}
             <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
               Tickets
             </Pill>
@@ -520,7 +532,7 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "activities" && (
+        {tab === "activities" && user?.canAccessActivities !== false && (
           <Section
             title="Gestion des activités"
             subtitle="Ajoutez, modifiez les prix, jours, transferts par quartier."
@@ -543,7 +555,7 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "history" && (
+        {tab === "history" && user?.canAccessHistory !== false && (
           <Section title="Historique des devis" subtitle="Recherchez un devis par numéro de téléphone.">
             <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
           </Section>
