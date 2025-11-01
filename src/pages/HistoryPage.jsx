@@ -56,12 +56,18 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-        <TextInput
-          placeholder="Rechercher par numéro de téléphone"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="max-w-md"
-        />
+        <div className="flex flex-col gap-2 max-w-md">
+          <TextInput
+            placeholder="Rechercher par numéro de téléphone"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="w-full"
+          />
+          <p className="text-xs text-amber-600 flex items-center gap-1">
+            <span>⚠️</span>
+            <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
+          </p>
+        </div>
         <div className="flex gap-2">
           <Pill
             active={statusFilter === "all"}
