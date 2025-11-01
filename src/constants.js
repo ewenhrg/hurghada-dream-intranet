@@ -24,6 +24,7 @@ export const CATEGORIES = [
   { key: "desert", label: "Désert" },
   { key: "aquatique", label: "Aquatique" },
   { key: "exploration_bien_etre", label: "Exploration / Bien-être" },
+  { key: "luxor_caire", label: "LOUXOR & LE CAIRE" },
 ];
 
 export const NEIGHBORHOODS = [
