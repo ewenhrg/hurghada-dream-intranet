@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
+import { TextInput, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { cleanPhoneNumber } from "../utils";
 
@@ -7,7 +7,6 @@ export function PickUpPage({ quotes, setQuotes }) {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
-  const [sendProgress, setSendProgress] = useState(null);
 
   // Extraire tous les tickets pour la date sélectionnée
   const pickupRows = useMemo(() => {
@@ -104,69 +103,13 @@ export function PickUpPage({ quotes, setQuotes }) {
     toast.success(`Ouverture WhatsApp pour ${row.clientName || row.phone}`);
   }
 
-  // Fonction pour envoyer TOUS les messages automatiquement
-  async function handleSendAllMessages() {
-    if (pickupRows.length === 0) {
-      toast.warning("Aucun message à envoyer !");
-      return;
-    }
-
-    // Vérifier que tous les numéros sont remplis
-    const rowsWithoutPhone = pickupRows.filter(row => !row.phone || !cleanPhoneNumber(row.phone));
-    if (rowsWithoutPhone.length > 0) {
-      toast.error(`${rowsWithoutPhone.length} ligne(s) sans numéro de téléphone !`);
-      return;
-    }
-
-    // Vérifier que toutes les heures sont remplies
-    const rowsWithoutTime = pickupRows.filter(row => !row.pickupTime || !row.pickupTime.trim());
-    if (rowsWithoutTime.length > 0) {
-      toast.error(`${rowsWithoutTime.length} ligne(s) sans heure de pickup !`);
-      return;
-    }
-
-    setSendProgress({ current: 0, total: pickupRows.length });
-
-    // Envoyer les messages un par un avec un délai entre chaque
-    for (let i = 0; i < pickupRows.length; i++) {
-      const row = pickupRows[i];
-      const message = generateWhatsAppMessage(row);
-      const phone = cleanPhoneNumber(row.phone);
-      
-      // Ouvrir WhatsApp pour ce client
-      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, `whatsapp_${i}`);
-      
-      setSendProgress({ current: i + 1, total: pickupRows.length });
-      
-      // Attendre 5 secondes avant d'ouvrir le message suivant
-      if (i < pickupRows.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 5000));
-      }
-    }
-
-    setSendProgress(null);
-    toast.success(`${pickupRows.length} onglets WhatsApp ouverts ! Cliquez sur chaque message pour envoyer.`);
-  }
-
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Sélecteur de date */}
       <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-4 shadow-md">
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-semibold text-gray-800">
-            📅 Date de pickup
-          </label>
-          {pickupRows.length > 0 && (
-            <PrimaryBtn 
-              onClick={handleSendAllMessages}
-              disabled={sendProgress !== null}
-              className="text-xs"
-            >
-              {sendProgress ? `📤 Envoi... ${sendProgress.current}/${sendProgress.total}` : "📤 Envoyer tous les messages"}
-            </PrimaryBtn>
-          )}
-        </div>
+        <label className="block text-sm font-semibold text-gray-800 mb-2">
+          📅 Date de pickup
+        </label>
         <TextInput
           type="date"
           value={selectedDate}
