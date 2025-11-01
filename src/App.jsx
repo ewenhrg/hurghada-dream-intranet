@@ -62,22 +62,66 @@ export default function App() {
       const { data, error } = await supabase.from("activities").select("*").eq("site_key", SITE_KEY).order("id", { ascending: false });
       if (!error && Array.isArray(data)) {
         if (data.length > 0) {
-        const mapped = data.map((row) => ({
-          id: row.id?.toString?.() || uuid(),
-          name: row.name,
-          category: row.category || "desert",
-          priceAdult: row.price_adult || 0,
-          priceChild: row.price_child || 0,
-          priceBaby: row.price_baby || 0,
-          ageChild: row.age_child || "",
-          ageBaby: row.age_baby || "",
-          currency: row.currency || "EUR",
-          availableDays: row.available_days || [false, false, false, false, false, false, false],
-          notes: row.notes || "",
-          transfers: row.transfers || emptyTransfers(),
-        }));
-        setActivities(mapped);
-        saveLS(LS_KEYS.activities, mapped);
+          // Créer un Map des activités Supabase par leur ID Supabase
+          const supabaseActivitiesMap = new Map();
+          data.forEach((row) => {
+            const supabaseId = row.id;
+            const localId = supabaseId?.toString?.() || uuid();
+            
+            supabaseActivitiesMap.set(supabaseId, {
+              id: localId,
+              supabase_id: supabaseId,
+              name: row.name,
+              category: row.category || "desert",
+              priceAdult: row.price_adult || 0,
+              priceChild: row.price_child || 0,
+              priceBaby: row.price_baby || 0,
+              ageChild: row.age_child || "",
+              ageBaby: row.age_baby || "",
+              currency: row.currency || "EUR",
+              availableDays: row.available_days || [false, false, false, false, false, false, false],
+              notes: row.notes || "",
+              transfers: row.transfers || emptyTransfers(),
+            });
+          });
+
+          // Fusionner avec les activités locales en préservant les modifications locales récentes
+          setActivities((prevActivities) => {
+            const merged = [];
+            const processedSupabaseIds = new Set();
+
+            // D'abord, traiter les activités locales qui ont un supabase_id
+            prevActivities.forEach((localActivity) => {
+              if (localActivity.supabase_id) {
+                const supabaseActivity = supabaseActivitiesMap.get(localActivity.supabase_id);
+                if (supabaseActivity) {
+                  // L'activité existe dans Supabase, utiliser les données Supabase (qui sont à jour)
+                  merged.push(supabaseActivity);
+                  processedSupabaseIds.add(localActivity.supabase_id);
+                } else {
+                  // L'activité locale a un supabase_id mais n'existe plus dans Supabase
+                  // Conserver l'activité locale (peut-être supprimée)
+                  merged.push(localActivity);
+                }
+              } else {
+                // Activité locale sans supabase_id (nouvelle, pas encore synchronisée)
+                // La conserver pour qu'elle soit envoyée à Supabase plus tard
+                merged.push(localActivity);
+              }
+            });
+
+            // Ajouter les activités Supabase qui n'ont pas encore été traitées (nouvelles activités)
+            supabaseActivitiesMap.forEach((supabaseActivity, supabaseId) => {
+              if (!processedSupabaseIds.has(supabaseId)) {
+                merged.push(supabaseActivity);
+              }
+            });
+
+            // Mettre à jour aussi le localStorage
+            saveLS(LS_KEYS.activities, merged);
+
+            return merged;
+          });
         }
       }
 

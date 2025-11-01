@@ -49,6 +49,10 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
     if (!form.name.trim()) return;
 
     const isEditing = editingId !== null;
+    // Trouver l'activité en cours de modification pour récupérer son supabase_id
+    const existingActivity = isEditing ? activities.find((a) => a.id === editingId) : null;
+    const supabaseId = existingActivity?.supabase_id;
+    
     const activityData = {
       id: isEditing ? editingId : uuid(),
       name: form.name.trim(),
@@ -63,6 +67,8 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
       notes: form.notes,
       transfers: form.transfers,
       site_key: SITE_KEY,
+      // Préserver le supabase_id si on modifie
+      supabase_id: supabaseId,
     };
 
     let next;
@@ -105,11 +111,38 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
           supabaseData.transfers = activityData.transfers;
         }
 
-        console.log("🔄 Envoi à Supabase:", supabaseData);
-        const { data, error } = await supabase.from("activities").insert(supabaseData);
+        let data, error;
+        
+        if (isEditing && supabaseId) {
+          // MODIFICATION : utiliser UPDATE avec l'ID Supabase
+          console.log("🔄 Mise à jour dans Supabase (ID:", supabaseId, "):", supabaseData);
+          const result = await supabase
+            .from("activities")
+            .update(supabaseData)
+            .eq("id", supabaseId);
+          data = result.data;
+          error = result.error;
+        } else {
+          // CRÉATION : utiliser INSERT
+          console.log("🔄 Création dans Supabase:", supabaseData);
+          const result = await supabase.from("activities").insert(supabaseData);
+          data = result.data;
+          error = result.error;
+          
+          // Si création réussie, sauvegarder l'ID Supabase retourné
+          if (!error && data && data.length > 0 && data[0].id) {
+            const newSupabaseId = data[0].id;
+            activityData.supabase_id = newSupabaseId;
+            // Mettre à jour l'activité dans le state avec le supabase_id
+            next = next.map((a) => (a.id === activityData.id ? { ...a, supabase_id: newSupabaseId } : a));
+            setActivities(next);
+            saveLS(LS_KEYS.activities, next);
+          }
+        }
         
         if (error) {
-          console.error("❌ ERREUR Supabase (création):", error);
+          const action = isEditing ? "mise à jour" : "création";
+          console.error(`❌ ERREUR Supabase (${action}):`, error);
           console.error("Détails:", JSON.stringify(error, null, 2));
           
           // Si l'erreur concerne des colonnes manquantes ou le code PGRST204
@@ -154,29 +187,6 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
           const action = isEditing ? "modifiée" : "créée";
           console.log(`✅ Activité ${action} avec succès dans Supabase!`);
           console.log("Données retournées:", data);
-          // Afficher un message de succès
-          alert(`✅ Activité ${action} avec succès dans Supabase!`);
-          
-          // Si modification, mettre à jour aussi dans Supabase (si possible)
-          if (isEditing && supabase) {
-            try {
-              // Note: Pour l'UPDATE, il faudrait avoir l'ID Supabase réel (pas le UUID local)
-              // Pour l'instant, on essaie juste avec site_key et name pour trouver la ligne
-              const { error: updateError } = await supabase
-                .from("activities")
-                .update({ name: activityData.name })
-                .eq("site_key", SITE_KEY)
-                .eq("name", activityData.name);
-              
-              if (updateError) {
-                console.warn("Erreur lors de la mise à jour Supabase:", updateError);
-              } else {
-                console.log("✅ Activité mise à jour dans Supabase");
-              }
-            } catch (updateErr) {
-              console.warn("Erreur lors de la mise à jour Supabase:", updateErr);
-            }
-          }
         }
       } catch (err) {
         console.error("❌ EXCEPTION lors de l'envoi à Supabase:", err);
