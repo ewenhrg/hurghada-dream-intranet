@@ -27,6 +27,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     slot: "",
     extraDolphin: false, // Case à cocher "extra dauphin 20€" pour Speed Boat uniquement
     speedBoatExtra: "", // Menu déroulant pour les extras Speed Boat
+    buggySimple: 0, // Nombre de buggy simple (120€) pour BUGGY + SHOW uniquement
+    buggyFamily: 0, // Nombre de buggy family (160€) pour BUGGY + SHOW uniquement
   });
 
   // Charger le formulaire sauvegardé depuis localStorage
@@ -108,15 +110,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
             lineTotal += ch * selectedExtra.priceChild;
           }
         }
+      } else if (act && act.name.toLowerCase().includes("buggy + show")) {
+        // cas spécial BUGGY + SHOW : calcul basé sur buggy simple et family
+        const buggySimple = Number(it.buggySimple || 0);
+        const buggyFamily = Number(it.buggyFamily || 0);
+        lineTotal = buggySimple * 120 + buggyFamily * 160;
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
         lineTotal += Number(it.babies || 0) * Number(act.priceBaby || 0);
       }
 
-      // supplément transfert PAR ADULTE
+      // supplément transfert PAR ADULTE (sauf pour BUGGY + SHOW où on utilise buggySimple + buggyFamily)
       if (transferInfo && transferInfo.surcharge) {
-        lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
+        if (act && act.name.toLowerCase().includes("buggy + show")) {
+          // Pour BUGGY + SHOW, le supplément est calculé sur le nombre total de buggys
+          const totalBuggys = Number(it.buggySimple || 0) + Number(it.buggyFamily || 0);
+          lineTotal += Number(transferInfo.surcharge || 0) * totalBuggys;
+        } else {
+          lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
+        }
       }
 
       // extra (pour les autres activités, pas Speed Boat)
@@ -201,6 +214,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         extraAmount: Number(c.raw.extraAmount || 0),
         extraDolphin: c.raw.extraDolphin || false,
         speedBoatExtra: c.raw.speedBoatExtra || "",
+        buggySimple: Number(c.raw.buggySimple || 0),
+        buggyFamily: Number(c.raw.buggyFamily || 0),
         neighborhood: client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
@@ -448,25 +463,52 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                 </div>
               )}
 
-              {/* passagers */}
-              <div className="grid md:grid-cols-3 gap-3">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Adultes</p>
-                  <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+              {/* passagers - Champs spéciaux pour BUGGY + SHOW */}
+              {c.act && c.act.name.toLowerCase().includes("buggy + show") ? (
+                <>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Buggy Simple (120€)</p>
+                      <NumberInput value={c.raw.buggySimple || 0} onChange={(e) => setItem(idx, { buggySimple: e.target.value })} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Buggy Family (160€)</p>
+                      <NumberInput value={c.raw.buggyFamily || 0} onChange={(e) => setItem(idx, { buggyFamily: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-3 mt-3">
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">Adultes (informations uniquement)</p>
+                      <NumberInput value={c.raw.adults || 0} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">
+                        Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""} (informations uniquement)
+                      </p>
+                      <NumberInput value={c.raw.children || 0} onChange={(e) => setItem(idx, { children: e.target.value })} />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="grid md:grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Adultes</p>
+                    <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""}
+                    </p>
+                    <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""}
+                    </p>
+                    <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">
-                    Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""}
-                  </p>
-                  <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">
-                    Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""}
-                  </p>
-                  <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
-                </div>
-              </div>
+              )}
 
               {/* Extra dauphin (uniquement pour Speed Boat) */}
               {c.act && c.act.name.toLowerCase().includes("speed boat") && (
@@ -579,9 +621,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     onClick={() => {
                       // Générer le devis en HTML et l'ouvrir dans une nouvelle fenêtre
                       const htmlContent = generateQuoteHTML(q);
+                      const clientPhone = q.client?.phone || "";
+                      const fileName = `Devis - ${clientPhone}`;
                       const newWindow = window.open();
                       if (newWindow) {
                         newWindow.document.write(htmlContent);
+                        // Définir le titre pour le nom du fichier PDF avant de fermer le document
+                        newWindow.document.title = fileName;
                         newWindow.document.close();
                         // Après un court délai, proposer l'impression
                         setTimeout(() => {
@@ -608,6 +654,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                             extraAmount: item.extraAmount || "",
                             extraDolphin: item.extraDolphin || false,
                             speedBoatExtra: item.speedBoatExtra || "",
+                            buggySimple: item.buggySimple || 0,
+                            buggyFamily: item.buggyFamily || 0,
                             slot: item.slot || "",
                           })),
                         );
