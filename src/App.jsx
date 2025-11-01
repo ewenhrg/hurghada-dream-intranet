@@ -87,9 +87,16 @@ export default function App() {
 
           // Fusionner avec les activités locales en préservant les modifications locales récentes
           setActivities((prevActivities) => {
+            // Créer un Set des clés uniques (site_key + name + category) pour détecter les doublons
+            const uniqueKeys = new Set();
             const merged = [];
             const processedSupabaseIds = new Set();
             const processedLocalIds = new Set();
+
+            // Fonction pour créer une clé unique d'une activité
+            const getUniqueKey = (activity) => {
+              return `${activity.site_key || SITE_KEY}_${activity.name}_${activity.category || 'desert'}`;
+            };
 
             // D'abord, traiter les activités locales qui ont un supabase_id
             prevActivities.forEach((localActivity) => {
@@ -97,43 +104,58 @@ export default function App() {
                 const supabaseActivity = supabaseActivitiesMap.get(localActivity.supabase_id);
                 if (supabaseActivity) {
                   // L'activité existe dans Supabase, utiliser les données Supabase (qui sont à jour)
-                  merged.push(supabaseActivity);
-                  processedSupabaseIds.add(localActivity.supabase_id);
-                  processedLocalIds.add(localActivity.id);
+                  const key = getUniqueKey(supabaseActivity);
+                  if (!uniqueKeys.has(key)) {
+                    merged.push(supabaseActivity);
+                    uniqueKeys.add(key);
+                    processedSupabaseIds.add(localActivity.supabase_id);
+                    processedLocalIds.add(localActivity.id);
+                  }
                 } else {
                   // L'activité locale a un supabase_id mais n'existe plus dans Supabase
-                  // Conserver l'activité locale (peut-être supprimée)
-                  merged.push(localActivity);
-                  processedLocalIds.add(localActivity.id);
+                  // Conserver l'activité locale (peut-être supprimée) si elle n'est pas un doublon
+                  const key = getUniqueKey(localActivity);
+                  if (!uniqueKeys.has(key)) {
+                    merged.push(localActivity);
+                    uniqueKeys.add(key);
+                    processedLocalIds.add(localActivity.id);
+                  }
                 }
               } else {
-                // Activité locale sans supabase_id - vérifier si elle existe déjà dans Supabase
-                // (peut arriver si l'activité a été créée dans Supabase depuis un autre appareil)
+                // Activité locale sans supabase_id (nouvelle, pas encore synchronisée)
+                // La conserver pour qu'elle soit envoyée à Supabase plus tard
+                // MAIS vérifier d'abord qu'elle n'existe pas déjà dans Supabase
+                const key = getUniqueKey(localActivity);
                 const existingSupabaseActivity = Array.from(supabaseActivitiesMap.values()).find(
-                  (supaActivity) => 
-                    supaActivity.name === localActivity.name && 
-                    supaActivity.category === localActivity.category &&
-                    Math.abs(supaActivity.priceAdult - localActivity.priceAdult) < 0.01
+                  (supaActivity) => getUniqueKey(supaActivity) === key
                 );
                 
-                if (existingSupabaseActivity) {
+                if (existingSupabaseActivity && !uniqueKeys.has(key)) {
                   // L'activité existe déjà dans Supabase, utiliser celle de Supabase avec son supabase_id
                   merged.push(existingSupabaseActivity);
+                  uniqueKeys.add(key);
                   processedSupabaseIds.add(existingSupabaseActivity.supabase_id);
                   processedLocalIds.add(localActivity.id);
-                } else {
+                } else if (!uniqueKeys.has(key)) {
                   // Activité locale sans supabase_id (nouvelle, pas encore synchronisée)
                   // La conserver pour qu'elle soit envoyée à Supabase plus tard
                   merged.push(localActivity);
+                  uniqueKeys.add(key);
                   processedLocalIds.add(localActivity.id);
                 }
+                // Si uniqueKeys.has(key) est true, on ignore cette activité (doublon)
               }
             });
 
             // Ajouter les activités Supabase qui n'ont pas encore été traitées (nouvelles activités)
             supabaseActivitiesMap.forEach((supabaseActivity, supabaseId) => {
               if (!processedSupabaseIds.has(supabaseId)) {
-                merged.push(supabaseActivity);
+                const key = getUniqueKey(supabaseActivity);
+                if (!uniqueKeys.has(key)) {
+                  merged.push(supabaseActivity);
+                  uniqueKeys.add(key);
+                }
+                // Sinon, on ignore cette activité (doublon)
               }
             });
 
