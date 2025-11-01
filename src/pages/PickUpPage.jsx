@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { TextInput } from "../components/ui";
+import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { cleanPhoneNumber } from "../utils";
 
@@ -7,6 +7,7 @@ export function PickUpPage({ quotes, setQuotes }) {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
+  const [sendProgress, setSendProgress] = useState(null);
 
   // Extraire tous les tickets pour la date sélectionnée
   const pickupRows = useMemo(() => {
@@ -38,10 +39,10 @@ export function PickUpPage({ quotes, setQuotes }) {
       }
     });
 
-    // Trier par hôtel, puis par heure de pickup, puis par ticket
+    // Trier par activité, puis par heure de pickup, puis par ticket
     return rows.sort((a, b) => {
-      const hotelCompare = (a.hotel || "").localeCompare(b.hotel || "");
-      if (hotelCompare !== 0) return hotelCompare;
+      const activityCompare = (a.activityName || "").localeCompare(b.activityName || "");
+      if (activityCompare !== 0) return activityCompare;
       
       const timeCompare = (a.pickupTime || "").localeCompare(b.pickupTime || "");
       if (timeCompare !== 0) return timeCompare;
@@ -69,13 +70,103 @@ export function PickUpPage({ quotes, setQuotes }) {
     toast.success("Heure de pickup mise à jour !");
   }
 
+  // Fonction pour générer le message WhatsApp pour un client
+  function generateWhatsAppMessage(row) {
+    const dateStr = row.date ? new Date(row.date + "T12:00:00").toLocaleDateString("fr-FR") : "";
+    
+    let message = `Bonjour ${row.clientName || ""},\n\n`;
+    message += `Ceci est un rappel pour ${dateStr} :\n\n`;
+    message += `🏃 *${row.activityName}*\n`;
+    message += `🎫 Ticket: ${row.ticket}\n`;
+    message += `🏨 Hôtel: ${row.hotel}\n`;
+    message += `⏰ Heure de prise en charge: *${row.pickupTime}*\n\n`;
+    message += `⚠️ *Merci de vous tenir devant l'hôtel à ${row.pickupTime} pour que le transfert puisse vous récupérer.*\n\n`;
+    message += `En cas de retard ou d'annulation, merci de nous contacter rapidement.\n\n`;
+    message += `Bon séjour ! 🏖️`;
+
+    return message;
+  }
+
+  // Fonction pour envoyer un message WhatsApp à un client
+  function handleSendWhatsApp(row, index) {
+    const message = generateWhatsAppMessage(row);
+    const phone = cleanPhoneNumber(row.phone);
+    
+    if (!phone) {
+      toast.error("Numéro de téléphone manquant !");
+      return;
+    }
+
+    // Ouvrir WhatsApp Web avec le message pré-rempli
+    const whatsappUrl = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
+    
+    toast.success(`Ouverture WhatsApp pour ${row.clientName || row.phone}`);
+  }
+
+  // Fonction pour envoyer TOUS les messages automatiquement
+  async function handleSendAllMessages() {
+    if (pickupRows.length === 0) {
+      toast.warning("Aucun message à envoyer !");
+      return;
+    }
+
+    // Vérifier que tous les numéros sont remplis
+    const rowsWithoutPhone = pickupRows.filter(row => !row.phone || !cleanPhoneNumber(row.phone));
+    if (rowsWithoutPhone.length > 0) {
+      toast.error(`${rowsWithoutPhone.length} ligne(s) sans numéro de téléphone !`);
+      return;
+    }
+
+    // Vérifier que toutes les heures sont remplies
+    const rowsWithoutTime = pickupRows.filter(row => !row.pickupTime || !row.pickupTime.trim());
+    if (rowsWithoutTime.length > 0) {
+      toast.error(`${rowsWithoutTime.length} ligne(s) sans heure de pickup !`);
+      return;
+    }
+
+    setSendProgress({ current: 0, total: pickupRows.length });
+
+    // Envoyer les messages un par un avec un délai entre chaque
+    for (let i = 0; i < pickupRows.length; i++) {
+      const row = pickupRows[i];
+      const message = generateWhatsAppMessage(row);
+      const phone = cleanPhoneNumber(row.phone);
+      
+      // Ouvrir WhatsApp pour ce client
+      const whatsappUrl = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, "_blank");
+      
+      setSendProgress({ current: i + 1, total: pickupRows.length });
+      
+      // Attendre 2 secondes avant d'envoyer le message suivant (pour ne pas surcharger)
+      if (i < pickupRows.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    setSendProgress(null);
+    toast.success(`Tous les messages ont été ouverts dans WhatsApp !`);
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Sélecteur de date */}
       <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-4 shadow-md">
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
-          📅 Date de pickup
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-semibold text-gray-800">
+            📅 Date de pickup
+          </label>
+          {pickupRows.length > 0 && (
+            <PrimaryBtn 
+              onClick={handleSendAllMessages}
+              disabled={sendProgress !== null}
+              className="text-xs"
+            >
+              {sendProgress ? `📤 Envoi... ${sendProgress.current}/${sendProgress.total}` : "📤 Envoyer tous les messages"}
+            </PrimaryBtn>
+          )}
+        </div>
         <TextInput
           type="date"
           value={selectedDate}
@@ -103,17 +194,21 @@ export function PickUpPage({ quotes, setQuotes }) {
             <table className="w-full text-sm">
               <thead className="bg-blue-50/70 text-gray-700 text-xs">
                 <tr>
+                  <th className="px-4 py-3 text-left">Activité</th>
                   <th className="px-4 py-3 text-left">Numéro ticket</th>
                   <th className="px-4 py-3 text-left">Date</th>
                   <th className="px-4 py-3 text-left">Téléphone</th>
                   <th className="px-4 py-3 text-left">Hôtel</th>
                   <th className="px-4 py-3 text-left">Heure prise en charge</th>
-                  <th className="px-4 py-3 text-left">Activité</th>
+                  <th className="px-4 py-3 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {pickupRows.map((row, idx) => (
                   <tr key={idx} className="border-t hover:bg-blue-50/30 transition-colors">
+                    <td className="px-4 py-3 text-gray-700 font-medium">
+                      {row.activityName || "—"}
+                    </td>
                     <td className="px-4 py-3 font-mono text-green-700 font-medium">
                       🎫 {row.ticket}
                     </td>
@@ -135,8 +230,13 @@ export function PickUpPage({ quotes, setQuotes }) {
                         className="w-full rounded-lg border border-blue-200/50 bg-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       />
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {row.activityName || "—"}
+                    <td className="px-4 py-3">
+                      <GhostBtn
+                        onClick={() => handleSendWhatsApp(row, idx)}
+                        size="sm"
+                      >
+                        💬 Envoyer
+                      </GhostBtn>
                     </td>
                   </tr>
                 ))}

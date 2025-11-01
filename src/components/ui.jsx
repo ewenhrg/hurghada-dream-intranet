@@ -43,15 +43,20 @@ export const PrimaryBtn = ({ className = "", disabled, ...props }) => (
   />
 );
 
-export const GhostBtn = ({ className = "", ...props }) => (
-  <button
-    {...props}
-    className={
-      "inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200/60 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 shadow-sm " +
-      className
-    }
-  />
-);
+export const GhostBtn = ({ className = "", size, ...props }) => {
+  const sizeClasses = size === "sm" ? "px-2 py-1 text-xs" : "px-4 py-2 text-sm";
+  return (
+    <button
+      {...props}
+      className={
+        "inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200/60 bg-white font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 shadow-sm " +
+        sizeClasses +
+        " " +
+        className
+      }
+    />
+  );
+};
 
 export const Section = ({ title, subtitle, right, children }) => (
   <section className="space-y-4">
