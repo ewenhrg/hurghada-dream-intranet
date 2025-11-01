@@ -31,9 +31,10 @@ export function TicketPage({ quotes }) {
             // Prix activité = lineTotal - transferTotal (les extras font partie du prix de l'activité)
             const activityPrice = Math.max(0, (item.lineTotal || 0) - transferTotal);
             
-            // Prix ligne : cash et card
-            const lineCash = Math.round(item.lineTotal || 0);
-            const lineCard = calculateCardPrice(item.lineTotal || 0);
+            // Méthode de paiement : afficher "Cash" ou "Stripe" selon ce qui a été sélectionné
+            const paymentMethodDisplay = (item.paymentMethod === "cash" || item.paymentMethod === "stripe") 
+              ? item.paymentMethod.charAt(0).toUpperCase() + item.paymentMethod.slice(1) // Capitaliser la première lettre
+              : "";
             
             rows.push({
               ticket: item.ticketNumber || "",
@@ -50,9 +51,7 @@ export function TicketPage({ quotes }) {
               comment: "", // Colonne commentaire vide pour l'instant
               activityPrice: activityPrice,
               transferTotal: transferTotal,
-              cashPrice: lineCash,
-              cardPrice: lineCard,
-              paymentMethod: `Cash: ${lineCash}€ / Carte: ${lineCard}€`,
+              paymentMethod: paymentMethodDisplay,
               sellerName: quote.createdByName || "",
             });
           }
@@ -115,7 +114,7 @@ export function TicketPage({ quotes }) {
                 Prix transfert
               </th>
               <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
-                Paiement (Cash/Carte)
+                Méthode de paiement
               </th>
               <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
                 Vendeur

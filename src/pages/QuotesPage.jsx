@@ -68,6 +68,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [ticketNumbers, setTicketNumbers] = useState({});
+  const [paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" }
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sauvegarder le formulaire dans localStorage à chaque modification
@@ -645,10 +646,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                       setSelectedQuote(q);
                       // Initialiser les numéros de ticket existants
                       const existingTickets = {};
+                      const existingPaymentMethods = {};
                       q.items?.forEach((item, idx) => {
                         existingTickets[idx] = item.ticketNumber || "";
+                        existingPaymentMethods[idx] = item.paymentMethod || "";
                       });
                       setTicketNumbers(existingTickets);
+                      setPaymentMethods(existingPaymentMethods);
                       setShowPaymentModal(true);
                     }}
                     className={allTicketsFilled ? "bg-green-50 text-green-700 border-green-200" : ""}
@@ -763,6 +767,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   setShowPaymentModal(false);
                   setSelectedQuote(null);
                   setTicketNumbers({});
+                  setPaymentMethods({});
                 }}
                 className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
               >
@@ -783,24 +788,65 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     </div>
                     <p className="text-sm font-semibold">{currency(item.lineTotal, selectedQuote.currency)}</p>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Numéro de ticket unique</p>
-                    <TextInput
-                      placeholder="Ex: T-12345"
-                      value={ticketNumbers[idx] || ""}
-                      onChange={(e) => {
-                        setTicketNumbers((prev) => ({
-                          ...prev,
-                          [idx]: e.target.value,
-                        }));
-                      }}
-                      disabled={item.ticketNumber && item.ticketNumber.trim() ? true : false}
-                      readOnly={item.ticketNumber && item.ticketNumber.trim() ? true : false}
-                      className={item.ticketNumber && item.ticketNumber.trim() ? "bg-gray-100 cursor-not-allowed" : ""}
-                    />
-                    {item.ticketNumber && item.ticketNumber.trim() && (
-                      <p className="text-xs text-green-600 mt-1">✅ Ticket verrouillé (non modifiable)</p>
-                    )}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Numéro de ticket unique</p>
+                      <TextInput
+                        placeholder="Ex: T-12345"
+                        value={ticketNumbers[idx] || ""}
+                        onChange={(e) => {
+                          setTicketNumbers((prev) => ({
+                            ...prev,
+                            [idx]: e.target.value,
+                          }));
+                        }}
+                        disabled={item.ticketNumber && item.ticketNumber.trim() ? true : false}
+                        readOnly={item.ticketNumber && item.ticketNumber.trim() ? true : false}
+                        className={item.ticketNumber && item.ticketNumber.trim() ? "bg-gray-100 cursor-not-allowed" : ""}
+                      />
+                      {item.ticketNumber && item.ticketNumber.trim() && (
+                        <p className="text-xs text-green-600 mt-1">✅ Ticket verrouillé (non modifiable)</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-2">Méthode de paiement</p>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={paymentMethods[idx] === "cash" || item.paymentMethod === "cash"}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setPaymentMethods((prev) => ({
+                                  ...prev,
+                                  [idx]: "cash",
+                                }));
+                              }
+                            }}
+                            disabled={item.paymentMethod && item.paymentMethod.trim() ? true : false}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">Cash</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={paymentMethods[idx] === "stripe" || item.paymentMethod === "stripe"}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setPaymentMethods((prev) => ({
+                                  ...prev,
+                                  [idx]: "stripe",
+                                }));
+                              }
+                            }}
+                            disabled={item.paymentMethod && item.paymentMethod.trim() ? true : false}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">Stripe</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -812,6 +858,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   setShowPaymentModal(false);
                   setSelectedQuote(null);
                   setTicketNumbers({});
+                  setPaymentMethods({});
                 }}
               >
                 Annuler
@@ -825,12 +872,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     return;
                   }
 
-                  // Mettre à jour le devis avec les numéros de ticket
+                  // Vérifier que toutes les méthodes de paiement sont sélectionnées
+                  const allPaymentMethodsSelected = selectedQuote.items?.every((_, idx) => {
+                    // Si le ticket existe déjà, garder la méthode existante, sinon vérifier que c'est renseigné
+                    if (selectedQuote.items[idx].paymentMethod && selectedQuote.items[idx].paymentMethod.trim()) {
+                      return true;
+                    }
+                    return paymentMethods[idx] === "cash" || paymentMethods[idx] === "stripe";
+                  });
+                  if (!allPaymentMethodsSelected) {
+                    alert("Veuillez sélectionner une méthode de paiement pour chaque activité.");
+                    return;
+                  }
+
+                  // Mettre à jour le devis avec les numéros de ticket et les méthodes de paiement
                   const updatedQuote = {
                     ...selectedQuote,
                     items: selectedQuote.items.map((item, idx) => ({
                       ...item,
                       ticketNumber: ticketNumbers[idx]?.trim() || "",
+                      paymentMethod: item.paymentMethod || paymentMethods[idx] || "",
                     })),
                   };
 
@@ -863,6 +924,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   setShowPaymentModal(false);
                   setSelectedQuote(null);
                   setTicketNumbers({});
+                  setPaymentMethods({});
                   alert("✅ Numéros de ticket enregistrés avec succès !");
                 }}
               >
