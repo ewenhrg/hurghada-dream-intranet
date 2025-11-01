@@ -27,8 +27,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     slot: "",
     extraDolphin: false, // Case à cocher "extra dauphin 20€" pour Speed Boat uniquement
     speedBoatExtra: "", // Menu déroulant pour les extras Speed Boat
-    buggySimple: 0, // Nombre de buggy simple (120€) pour BUGGY + SHOW uniquement
-    buggyFamily: 0, // Nombre de buggy family (160€) pour BUGGY + SHOW uniquement
+    buggySimple: "", // Nombre de buggy simple (120€) pour BUGGY + SHOW uniquement
+    buggyFamily: "", // Nombre de buggy family (160€) pour BUGGY + SHOW uniquement
   });
 
   // Charger le formulaire sauvegardé depuis localStorage
@@ -469,23 +469,23 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   <div className="grid md:grid-cols-2 gap-3">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Buggy Simple (120€)</p>
-                      <NumberInput value={c.raw.buggySimple || 0} onChange={(e) => setItem(idx, { buggySimple: e.target.value })} />
+                      <NumberInput value={c.raw.buggySimple ?? ""} onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Buggy Family (160€)</p>
-                      <NumberInput value={c.raw.buggyFamily || 0} onChange={(e) => setItem(idx, { buggyFamily: e.target.value })} />
+                      <NumberInput value={c.raw.buggyFamily ?? ""} onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>
                   <div className="grid md:grid-cols-2 gap-3 mt-3">
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Adultes (informations uniquement)</p>
-                      <NumberInput value={c.raw.adults || 0} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+                      <NumberInput value={c.raw.adults ?? ""} onChange={(e) => setItem(idx, { adults: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-1">
                         Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.children || 0} onChange={(e) => setItem(idx, { children: e.target.value })} />
+                      <NumberInput value={c.raw.children ?? ""} onChange={(e) => setItem(idx, { children: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>
                 </>

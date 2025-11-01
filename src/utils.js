@@ -1,5 +1,16 @@
 import { NEIGHBORHOODS } from "./constants";
 
+// Options d'extra pour Speed Boat uniquement
+const SPEED_BOAT_EXTRAS = [
+  { id: "", label: "— Aucun extra —", priceAdult: 0, priceChild: 0 },
+  { id: "hula_hula", label: "HULA HULA", priceAdult: 10, priceChild: 5 },
+  { id: "orange_bay", label: "ORANGE BAY", priceAdult: 10, priceChild: 5 },
+  { id: "eden_beach", label: "EDEN BEACH", priceAdult: 15, priceChild: 10 },
+  { id: "eden_lunch", label: "EDEN + LUNCH", priceAdult: 30, priceChild: 15 },
+  { id: "ozeria", label: "OZERIA", priceAdult: 25, priceChild: 15 },
+  { id: "ozeria_lunch", label: "OZERIA + LUNCH", priceAdult: 45, priceChild: 25 },
+];
+
 export function uuid() {
   return "hd-" + Math.random().toString(36).slice(2) + "-" + Date.now().toString(36);
 }
@@ -76,10 +87,37 @@ export function generateQuoteHTML(quote) {
       month: "long",
       year: "numeric"
     });
+    
+    // Vérifier si c'est Speed Boat et récupérer les extras
+    const isSpeedBoat = item.activityName && item.activityName.toLowerCase().includes("speed boat");
+    let extrasInfo = [];
+    
+    if (isSpeedBoat) {
+      // Extra dauphin
+      if (item.extraDolphin) {
+        extrasInfo.push("🐬 Extra dauphin (+20€)");
+      }
+      
+      // Extra Speed Boat (menu déroulant)
+      if (item.speedBoatExtra) {
+        const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === item.speedBoatExtra);
+        if (selectedExtra && selectedExtra.id !== "") {
+          extrasInfo.push(`${selectedExtra.label} (+${selectedExtra.priceAdult}€/adt + ${selectedExtra.priceChild}€/enfant)`);
+        }
+      }
+    }
+    
+    const extrasHTML = extrasInfo.length > 0 
+      ? `<div style="margin-top: 5px; font-size: 11px; color: #2563eb; font-weight: 500;">${extrasInfo.join("<br>")}</div>`
+      : "";
+    
     return `
       <tr>
         <td>${idx + 1}</td>
-        <td><strong>${item.activityName || "—"}</strong></td>
+        <td>
+          <strong>${item.activityName || "—"}</strong>
+          ${extrasHTML}
+        </td>
         <td>${itemDate}</td>
         <td class="text-center">${item.pickupTime || "—"}</td>
         <td class="text-center">${item.adults || 0}</td>
