@@ -15,6 +15,25 @@ const SPEED_BOAT_EXTRAS = [
   { id: "ozeria_lunch", label: "OZERIA + LUNCH", priceAdult: 45, priceChild: 25 },
 ];
 
+// Helper pour vérifier si une activité utilise les champs buggy
+function isBuggyActivity(activityName) {
+  if (!activityName) return false;
+  const name = activityName.toLowerCase();
+  return name.includes("buggy + show") || name.includes("buggy safari matin");
+}
+
+// Helper pour obtenir les prix buggy selon l'activité
+function getBuggyPrices(activityName) {
+  if (!activityName) return { simple: 0, family: 0 };
+  const name = activityName.toLowerCase();
+  if (name.includes("buggy + show")) {
+    return { simple: 120, family: 160 };
+  } else if (name.includes("buggy safari matin")) {
+    return { simple: 110, family: 150 };
+  }
+  return { simple: 0, family: 0 };
+}
+
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
@@ -509,21 +528,22 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
             lineTotal += ch * selectedExtra.priceChild;
           }
         }
-      } else if (act && act.name.toLowerCase().includes("buggy + show")) {
-        // cas spécial BUGGY + SHOW : calcul basé sur buggy simple et family
+      } else if (act && isBuggyActivity(act.name)) {
+        // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy simple et family
         const buggySimple = Number(it.buggySimple || 0);
         const buggyFamily = Number(it.buggyFamily || 0);
-        lineTotal = buggySimple * 120 + buggyFamily * 160;
+        const prices = getBuggyPrices(act.name);
+        lineTotal = buggySimple * prices.simple + buggyFamily * prices.family;
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
         lineTotal += Number(it.babies || 0) * Number(act.priceBaby || 0);
       }
 
-      // supplément transfert PAR ADULTE (sauf pour BUGGY + SHOW où on utilise buggySimple + buggyFamily)
+      // supplément transfert PAR ADULTE (sauf pour les activités buggy où on utilise buggySimple + buggyFamily)
       if (transferInfo && transferInfo.surcharge) {
-        if (act && act.name.toLowerCase().includes("buggy + show")) {
-          // Pour BUGGY + SHOW, le supplément est calculé sur le nombre total de buggys
+        if (act && isBuggyActivity(act.name)) {
+          // Pour les activités buggy, le supplément est calculé sur le nombre total de buggys
           const totalBuggys = Number(it.buggySimple || 0) + Number(it.buggyFamily || 0);
           lineTotal += Number(transferInfo.surcharge || 0) * totalBuggys;
         } else {
@@ -695,14 +715,14 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <p className="text-[10px] text-amber-700 mt-1">⚠️ activité pas dispo ce jour-là</p>
                     )}
                   </div>
-                  {c.act && c.act.name.toLowerCase().includes("buggy + show") ? (
+                  {c.act && isBuggyActivity(c.act.name) ? (
                     <>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Buggy Simple (120€)</p>
+                        <p className="text-xs text-gray-500 mb-1">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
                         <NumberInput value={c.raw.buggySimple ?? ""} onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })} />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Buggy Family (160€)</p>
+                        <p className="text-xs text-gray-500 mb-1">Buggy Family ({getBuggyPrices(c.act.name).family}€)</p>
                         <NumberInput value={c.raw.buggyFamily ?? ""} onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })} />
                       </div>
                     </>
@@ -721,8 +741,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     </>
                   )}
                 </div>
-                {/* Champs adultes/enfants en dessous pour BUGGY + SHOW (informations uniquement) */}
-                {c.act && c.act.name.toLowerCase().includes("buggy + show") && (
+                {/* Champs adultes/enfants en dessous pour activités buggy (informations uniquement) */}
+                {c.act && isBuggyActivity(c.act.name) && (
                   <div className="grid md:grid-cols-2 gap-3 mt-3">
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Adultes (informations uniquement)</p>
@@ -737,7 +757,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   </div>
                 )}
                 <div className="grid md:grid-cols-4 gap-3">
-                  {!c.act || !c.act.name.toLowerCase().includes("buggy + show") ? (
+                  {!c.act || !isBuggyActivity(c.act.name) ? (
                     <div>
                       <p className="text-xs text-gray-500 mb-1">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""}
