@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
+import { toast } from "../utils/toast.js";
 
 export function UsersPage({ user }) {
   const [users, setUsers] = useState([]);
@@ -25,13 +26,13 @@ export function UsersPage({ user }) {
       const { data, error } = await supabase.from("users").select("*").order("created_at", { ascending: false });
       if (error) {
         console.error("Erreur lors du chargement des utilisateurs:", error);
-        alert("Erreur lors du chargement des utilisateurs: " + (error.message || "Erreur inconnue"));
+        toast.error("Erreur lors du chargement des utilisateurs: " + (error.message || "Erreur inconnue"));
       } else {
         setUsers(data || []);
       }
     } catch (err) {
       console.error("Exception lors du chargement des utilisateurs:", err);
-      alert("Exception lors du chargement des utilisateurs: " + err.message);
+      toast.error("Exception lors du chargement des utilisateurs: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -80,12 +81,12 @@ export function UsersPage({ user }) {
 
     // Validation
     if (!form.name.trim()) {
-      alert("Veuillez entrer un nom.");
+      toast.warning("Veuillez entrer un nom.");
       setLoading(false);
       return;
     }
     if (!form.code.trim() || !/^\d{6}$/.test(form.code)) {
-      alert("Le code doit contenir exactement 6 chiffres.");
+      toast.warning("Le code doit contenir exactement 6 chiffres.");
       setLoading(false);
       return;
     }
@@ -112,7 +113,7 @@ export function UsersPage({ user }) {
           console.log("✅ Utilisateur modifié avec succès!");
           await loadUsers();
           resetForm();
-          alert("✅ Utilisateur modifié avec succès !");
+          toast.success("Utilisateur modifié avec succès !");
         }
       } else {
         // Créer un nouvel utilisateur
@@ -121,20 +122,20 @@ export function UsersPage({ user }) {
         if (error) {
           console.error("Erreur lors de la création de l'utilisateur:", error);
           if (error.code === "23505") {
-            alert("❌ Ce code est déjà utilisé par un autre utilisateur.");
+            toast.error("Ce code est déjà utilisé par un autre utilisateur.");
           } else {
-            alert("Erreur lors de la création de l'utilisateur: " + (error.message || "Erreur inconnue"));
+            toast.error("Erreur lors de la création de l'utilisateur: " + (error.message || "Erreur inconnue"));
           }
         } else {
           console.log("✅ Utilisateur créé avec succès!");
           await loadUsers();
           resetForm();
-          alert("✅ Utilisateur créé avec succès !");
+          toast.success("Utilisateur créé avec succès !");
         }
       }
     } catch (err) {
       console.error("Exception lors de la sauvegarde de l'utilisateur:", err);
-      alert("Exception lors de la sauvegarde: " + err.message);
+      toast.error("Exception lors de la sauvegarde: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -152,15 +153,15 @@ export function UsersPage({ user }) {
 
       if (error) {
         console.error("Erreur lors de la suppression de l'utilisateur:", error);
-        alert("Erreur lors de la suppression: " + (error.message || "Erreur inconnue"));
+        toast.error("Erreur lors de la suppression: " + (error.message || "Erreur inconnue"));
       } else {
         console.log("✅ Utilisateur supprimé avec succès!");
         await loadUsers();
-        alert("✅ Utilisateur supprimé avec succès !");
+        toast.success("Utilisateur supprimé avec succès !");
       }
     } catch (err) {
       console.error("Exception lors de la suppression:", err);
-      alert("Exception lors de la suppression: " + err.message);
+      toast.error("Exception lors de la suppression: " + err.message);
     } finally {
       setLoading(false);
     }
