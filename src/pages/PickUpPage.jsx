@@ -97,8 +97,8 @@ export function PickUpPage({ quotes, setQuotes }) {
       return;
     }
 
-    // Ouvrir WhatsApp Web avec le message pré-rempli
-    const whatsappUrl = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+    // Ouvrir WhatsApp avec le message pré-rempli
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
     
     toast.success(`Ouverture WhatsApp pour ${row.clientName || row.phone}`);
@@ -134,14 +134,14 @@ export function PickUpPage({ quotes, setQuotes }) {
       const phone = cleanPhoneNumber(row.phone);
       
       // Ouvrir WhatsApp pour ce client
-      const whatsappUrl = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, "_blank");
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, `whatsapp_${i}`);
       
       setSendProgress({ current: i + 1, total: pickupRows.length });
       
-      // Attendre 10 secondes avant d'envoyer le message suivant (pour laisser le temps au navigateur)
+      // Attendre 5 secondes avant d'ouvrir le message suivant
       if (i < pickupRows.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
 
