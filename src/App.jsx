@@ -270,13 +270,13 @@ export default function App() {
               }
             });
 
-            // Fusionner : TOUJOURS utiliser TOUS les devis Supabase (source de vérité), puis ajouter les devis locaux non synchronisés
+            // Fusionner : UNIQUEMENT les devis Supabase (source de vérité absolue)
+            // Ne garder les devis locaux QUE s'ils n'ont PAS de supabase_id ET n'existent vraiment pas dans Supabase
             const merged = [];
             const processedSupabaseIds = new Set();
             const processedSupabaseKeys = new Set();
-            const processedLocalIds = new Set();
 
-            // ÉTAPE 1 : Ajouter TOUS les devis Supabase (source de vérité)
+            // ÉTAPE 1 : Ajouter TOUS les devis Supabase (source de vérité absolue)
             supabaseQuotesMap.forEach((supabaseQuote, supabaseId) => {
               merged.push(supabaseQuote);
               processedSupabaseIds.add(supabaseId);
@@ -286,22 +286,23 @@ export default function App() {
               }
             });
 
-            // ÉTAPE 2 : Ajouter les devis locaux qui n'existent PAS dans Supabase (pas encore synchronisés)
+            // ÉTAPE 2 : Ajouter UNIQUEMENT les devis locaux qui sont vraiment nouveaux
+            // (pas encore synchronisés : sans supabase_id ET sans correspondance dans Supabase)
             prevQuotes.forEach((localQuote) => {
-              // Ignorer si le devis local existe déjà dans Supabase (par ID ou par clé)
-              const localSupabaseId = localQuote.supabase_id;
+              // Ignorer TOUS les devis locaux qui ont un supabase_id (ils doivent être dans Supabase)
+              if (localQuote.supabase_id) {
+                return; // Ignorer ce devis local s'il a un supabase_id (il doit être dans Supabase)
+              }
+              
+              // Pour les devis locaux sans supabase_id, vérifier s'ils existent dans Supabase
               const localKey = `${localQuote.client?.phone || ''}_${localQuote.createdAt}`;
               
-              const existsInSupabase = 
-                (localSupabaseId && processedSupabaseIds.has(localSupabaseId)) ||
-                (localKey !== '_' && processedSupabaseKeys.has(localKey)) ||
-                (localKey !== '_' && supabaseKeys.has(localKey));
-              
-              // Si le devis local n'existe pas dans Supabase et n'a pas déjà été ajouté, l'ajouter
-              if (!existsInSupabase && !processedLocalIds.has(localQuote.id)) {
+              // Si le devis local a une clé valide et n'existe PAS dans Supabase, c'est un nouveau devis non synchronisé
+              if (localKey !== '_' && !processedSupabaseKeys.has(localKey) && !supabaseKeys.has(localKey)) {
+                // C'est un devis vraiment nouveau (créé localement mais pas encore synchronisé)
                 merged.push(localQuote);
-                processedLocalIds.add(localQuote.id);
               }
+              // Sinon, ignorer ce devis local (c'est probablement un doublon ou une version obsolète)
             });
 
             saveLS(LS_KEYS.quotes, merged);
