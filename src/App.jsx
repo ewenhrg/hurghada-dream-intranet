@@ -167,72 +167,87 @@ export default function App() {
         }
       }
 
-      // Désactivation de la synchronisation automatique des devis depuis Supabase
-      // Les devis sont créés localement et envoyés à Supabase, mais on ne les récupère plus automatiquement
-      // pour éviter les problèmes de doublons et de devis vierges
-      /*
-      // Récupérer tous les devis
+      // Synchronisation des devis depuis Supabase (toutes les 3 secondes)
+      // Récupérer tous les devis pour mettre à jour les tickets et autres modifications
       const { data: quotesData, error: quotesError } = await supabase.from("quotes").select("*").eq("site_key", SITE_KEY).order("created_at", { ascending: false });
       if (!quotesError && Array.isArray(quotesData)) {
         if (quotesData.length > 0) {
           setQuotes((prevQuotes) => {
-            // Créer un Set des identifiants uniques des devis locaux (basé sur client.phone + createdAt)
-            const existingQuotes = new Set();
-            prevQuotes.forEach(q => {
-              const key = `${q.client?.phone || ''}_${q.createdAt}`;
-              existingQuotes.add(key);
+            // Fonction pour convertir un devis Supabase en format local
+            const convertSupabaseQuoteToLocal = (row) => {
+              let items = [];
+              try {
+                items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items || [];
+              } catch {
+                items = [];
+              }
+              
+              const createdAt = row.created_at || row.createdAt || new Date().toISOString();
+              
+              return {
+                id: row.id?.toString() || uuid(),
+                supabase_id: row.id,
+                createdAt: createdAt,
+                client: {
+                  name: row.client_name || "",
+                  phone: row.client_phone || "",
+                  hotel: row.client_hotel || "",
+                  room: row.client_room || "",
+                  neighborhood: row.client_neighborhood || "",
+                },
+                notes: row.notes || "",
+                createdByName: row.created_by_name || "",
+                items: items,
+                total: row.total || 0,
+                totalCash: Math.round(row.total || 0),
+                totalCard: calculateCardPrice(row.total || 0),
+                currency: row.currency || "EUR",
+              };
+            };
+
+            // Créer un Map des devis Supabase par leur clé unique (phone + createdAt)
+            const supabaseQuotesMap = new Map();
+            quotesData.forEach((row) => {
+              const clientPhone = row.client_phone || "";
+              const createdAt = row.created_at || row.createdAt || new Date().toISOString();
+              const uniqueKey = `${clientPhone}_${createdAt}`;
+              supabaseQuotesMap.set(uniqueKey, convertSupabaseQuoteToLocal(row));
             });
 
-            // Mapper les devis de Supabase et vérifier les doublons
-            const mappedQuotes = quotesData
-              .map((row) => {
-                let items = [];
-                try {
-                  items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items || [];
-                } catch {
-                  items = [];
-                }
-                const createdAt = row.created_at || row.createdAt || new Date().toISOString();
-                const clientPhone = row.client_phone || "";
-                
-                // Créer une clé unique basée sur le téléphone et la date de création
-                const uniqueKey = `${clientPhone}_${createdAt}`;
-                
-                // Si ce devis existe déjà localement, on le skip
-                if (existingQuotes.has(uniqueKey)) {
-                  return null;
-                }
+            // Fusionner avec les devis locaux : mettre à jour les existants, ajouter les nouveaux
+            const merged = [];
+            const processedKeys = new Set();
 
-                return {
-                  id: uuid(), // Nouvel ID local
-                  createdAt: createdAt,
-                  client: {
-                    name: row.client_name || "",
-                    phone: clientPhone,
-                    hotel: row.client_hotel || "",
-                    room: row.client_room || "",
-                    neighborhood: row.client_neighborhood || "",
-                  },
-                  notes: row.notes || "",
-                  items: items,
-                  total: row.total || 0,
-                  currency: row.currency || "EUR",
-                };
-              })
-              .filter(q => q !== null); // Filtrer les nulls (doublons)
+            // D'abord, traiter tous les devis locaux
+            prevQuotes.forEach((localQuote) => {
+              const localPhone = localQuote.client?.phone || "";
+              const localCreatedAt = localQuote.createdAt || "";
+              const uniqueKey = `${localPhone}_${localCreatedAt}`;
+              
+              const supabaseQuote = supabaseQuotesMap.get(uniqueKey);
+              
+              if (supabaseQuote) {
+                // Le devis existe dans Supabase : utiliser les données Supabase (qui sont à jour)
+                merged.push(supabaseQuote);
+                processedKeys.add(uniqueKey);
+              } else {
+                // Le devis n'existe pas dans Supabase : le conserver localement (peut-être pas encore synchronisé)
+                merged.push(localQuote);
+              }
+            });
 
-            // Ne fusionner que s'il y a de nouveaux devis
-            if (mappedQuotes.length > 0) {
-              const merged = [...prevQuotes, ...mappedQuotes];
-              saveLS(LS_KEYS.quotes, merged);
-              return merged;
-            }
-            
-            return prevQuotes; // Pas de nouveaux devis, retourner l'état actuel
+            // Ajouter les nouveaux devis de Supabase qui n'existent pas localement
+            supabaseQuotesMap.forEach((supabaseQuote, uniqueKey) => {
+              if (!processedKeys.has(uniqueKey)) {
+                merged.push(supabaseQuote);
+              }
+            });
+
+            saveLS(LS_KEYS.quotes, merged);
+            return merged;
           });
         }
       }
-      */
     } catch (err) {
       console.warn("Erreur synchronisation Supabase:", err);
     }
