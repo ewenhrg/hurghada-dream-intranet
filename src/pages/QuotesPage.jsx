@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, loadLS } from "../utils";
@@ -70,25 +70,42 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
   const [ticketNumbers, setTicketNumbers] = useState({});
   const [paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" }
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Référence pour le timeout de sauvegarde debounce
+  const saveTimeoutRef = useRef(null);
 
-  // Sauvegarder le formulaire dans localStorage à chaque modification
+  // Sauvegarder le formulaire dans localStorage avec debounce (300ms)
   useEffect(() => {
-    saveLS(LS_KEYS.quoteForm, {
-      client,
-      items,
-      notes,
-    });
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      saveLS(LS_KEYS.quoteForm, {
+        client,
+        items,
+        notes,
+      });
+    }, 300);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [client, items, notes]);
 
-  function setItem(i, patch) {
+  const setItem = useCallback((i, patch) => {
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
-  }
-  function addItem() {
+  }, []);
+  
+  const addItem = useCallback(() => {
     setItems((prev) => [...prev, blankItem()]);
-  }
-  function removeItem(i) {
+  }, []);
+  
+  const removeItem = useCallback((i) => {
     setItems((prev) => prev.filter((_, idx) => idx !== i));
-  }
+  }, []);
 
   const computed = useMemo(() => {
     return items.map((it) => {

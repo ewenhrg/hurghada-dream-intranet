@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
 import { uuid, emptyTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
@@ -453,12 +453,39 @@ export default function App() {
     };
   }, [remoteEnabled]);
 
-  // persistance locale
+  // Références pour les timeouts de sauvegarde debounce
+  const activitiesSaveTimeoutRef = useRef(null);
+  const quotesSaveTimeoutRef = useRef(null);
+
+  // Persistance locale avec debounce pour éviter trop d'écritures
   useEffect(() => {
+    if (activitiesSaveTimeoutRef.current) {
+      clearTimeout(activitiesSaveTimeoutRef.current);
+    }
+    activitiesSaveTimeoutRef.current = setTimeout(() => {
     saveLS(LS_KEYS.activities, activities);
+    }, 300);
+
+    return () => {
+      if (activitiesSaveTimeoutRef.current) {
+        clearTimeout(activitiesSaveTimeoutRef.current);
+      }
+    };
   }, [activities]);
+
   useEffect(() => {
+    if (quotesSaveTimeoutRef.current) {
+      clearTimeout(quotesSaveTimeoutRef.current);
+    }
+    quotesSaveTimeoutRef.current = setTimeout(() => {
     saveLS(LS_KEYS.quotes, quotes);
+    }, 300);
+
+    return () => {
+      if (quotesSaveTimeoutRef.current) {
+        clearTimeout(quotesSaveTimeoutRef.current);
+      }
+    };
   }, [quotes]);
 
   if (!ok) {

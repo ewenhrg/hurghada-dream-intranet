@@ -129,9 +129,12 @@ export function TicketPage({ quotes }) {
                 </td>
               </tr>
             ) : (
-              ticketRows.map((row, idx) => (
+              ticketRows.map((row) => {
+                // Clé unique basée sur ticket + date + client pour éviter les re-renders inutiles
+                const uniqueKey = `${row.ticket}-${row.date}-${row.clientPhone || ''}`;
+                return (
                 <tr
-                  key={`${row.ticket}-${row.date}-${idx}`}
+                  key={uniqueKey}
                   style={{ borderBottom: '1px solid #ddd' }}
                 >
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
@@ -180,7 +183,8 @@ export function TicketPage({ quotes }) {
                     {row.sellerName || ""}
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

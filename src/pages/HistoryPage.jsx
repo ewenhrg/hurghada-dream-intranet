@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
+import { useDebounce } from "../hooks/useDebounce";
 
 // Options d'extra pour Speed Boat uniquement
 const SPEED_BOAT_EXTRAS = [
@@ -36,6 +37,7 @@ function getBuggyPrices(activityName) {
 
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
+  const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -48,30 +50,38 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [editItems, setEditItems] = useState([]);
   const [editNotes, setEditNotes] = useState("");
   
+  // Mémoriser le calcul des tickets remplis pour éviter de le refaire à chaque render
+  const quotesWithStatus = useMemo(() => {
+    return quotes.map((d) => ({
+      ...d,
+      allTicketsFilled: d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false,
+      hasTickets: d.items?.some((item) => item.ticketNumber && item.ticketNumber.trim()) || false,
+    }));
+  }, [quotes]);
+  
   const filtered = useMemo(() => {
-    let result = quotes;
+    let result = quotesWithStatus;
     
     // Filtre par statut (payé/en attente)
     if (statusFilter !== "all") {
       result = result.filter((d) => {
-        const allTicketsFilled = d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim());
         if (statusFilter === "paid") {
-          return allTicketsFilled;
+          return d.allTicketsFilled;
         } else if (statusFilter === "pending") {
-          return !allTicketsFilled;
+          return !d.allTicketsFilled;
         }
         return true;
       });
     }
     
-    // Filtre par recherche téléphone
-    if (q.trim()) {
-      const needle = q.replace(/\D+/g, "");
+    // Filtre par recherche téléphone (utilise la valeur debouncée)
+    if (debouncedQ.trim()) {
+      const needle = debouncedQ.replace(/\D+/g, "");
       result = result.filter((d) => (d.client?.phone || "").replace(/\D+/g, "").includes(needle));
     }
     
     return result;
-  }, [q, quotes, statusFilter]);
+  }, [debouncedQ, quotesWithStatus, statusFilter]);
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -111,9 +121,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       </div>
       <div className="space-y-3">
         {filtered.map((d) => {
-          // Vérifier si tous les tickets sont renseignés
-          const allTicketsFilled = d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim());
-          const hasTickets = d.items?.some((item) => item.ticketNumber && item.ticketNumber.trim());
+          // Utiliser les valeurs pré-calculées
+          const allTicketsFilled = d.allTicketsFilled;
+          const hasTickets = d.hasTickets;
 
           // Déterminer la couleur en fonction du statut
           const borderColor = allTicketsFilled 
