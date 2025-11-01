@@ -449,6 +449,12 @@ export function generateQuoteHTML(quote) {
       <p>Merci pour votre confiance !</p>
       <p>Pour toute question, n'hésitez pas à nous contacter.</p>
     </div>
+
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
+      <p style="font-size: 13px; color: #6b7280; font-style: italic;">
+        Ce devis est fourni à titre informatif. Les horaires sont approximatifs et seront confirmés la veille de votre départ.
+      </p>
+    </div>
   </div>
 </body>
 </html>
