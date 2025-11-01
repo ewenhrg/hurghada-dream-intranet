@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { uuid, currency, saveLS, loadLS } from "../utils";
+import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 
 export function QuotesPage({ activities, quotes, setQuotes, user }) {
@@ -121,6 +121,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
 
   const grandCurrency = computed.find((c) => c.currency)?.currency || "EUR";
   const grandTotal = computed.reduce((s, c) => s + (c.lineTotal || 0), 0);
+  const grandTotalCash = Math.round(grandTotal); // Prix espèces (arrondi sans centimes)
+  const grandTotalCard = calculateCardPrice(grandTotal); // Prix carte (espèces + 3% arrondi à l'euro supérieur)
 
   async function handleCreateQuote(e) {
     e.preventDefault();
@@ -175,6 +177,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         transferSurchargePerAdult: c.transferInfo?.surcharge || 0,
       })),
       total: validGrandTotal,
+      totalCash: Math.round(validGrandTotal),
+      totalCard: calculateCardPrice(validGrandTotal),
       currency: validGrandCurrency,
     };
 
@@ -418,7 +422,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
 
               <div className="flex items-center justify-between mt-1">
                 <p className="text-xs text-gray-500">Sous-total</p>
-                <p className="text-base font-semibold text-gray-900">{currency(c.lineTotal, c.currency)}</p>
+                <div className="text-right">
+                  <p className="text-base font-semibold text-gray-900">
+                    Espèces: {currencyNoCents(Math.round(c.lineTotal), c.currency)}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Carte: {currencyNoCents(calculateCardPrice(c.lineTotal), c.currency)}
+                  </p>
+                </div>
               </div>
             </div>
           ))}
@@ -430,7 +441,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
           </GhostBtn>
           <div className="text-right">
             <p className="text-xs text-gray-500">Total</p>
-            <p className="text-xl font-bold">{currency(grandTotal, grandCurrency)}</p>
+            <p className="text-xl font-bold">Espèces: {currencyNoCents(grandTotalCash, grandCurrency)}</p>
+            <p className="text-lg font-semibold text-gray-700">Carte: {currencyNoCents(grandTotalCard, grandCurrency)}</p>
           </div>
         </div>
 
@@ -479,7 +491,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className="text-base font-semibold mr-3">{currency(q.total, q.currency)}</p>
+                    <div className="text-right mr-3">
+                      <p className="text-base font-semibold">Espèces: {currencyNoCents(q.totalCash || Math.round(q.total), q.currency)}</p>
+                      <p className="text-sm text-gray-600">Carte: {currencyNoCents(q.totalCard || calculateCardPrice(q.total), q.currency)}</p>
+                    </div>
                     <div className="flex gap-2 flex-wrap">
                   <GhostBtn
                     onClick={() => {
@@ -514,13 +529,15 @@ ${q.items
 ${idx + 1}. ${item.activityName}
    Date: ${new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")}
    Adultes: ${item.adults} | Enfants: ${item.children} | Bébés: ${item.babies}
-   Sous-total: ${currency(item.lineTotal, q.currency)}
+   Sous-total Espèces: ${currencyNoCents(Math.round(item.lineTotal), q.currency)}
+   Sous-total Carte: ${currencyNoCents(calculateCardPrice(item.lineTotal), q.currency)}
    ${item.ticketNumber ? `🎫 Ticket: ${item.ticketNumber}` : ""}
 `,
   )
   .join("\n")}
 
-TOTAL: ${currency(q.total, q.currency)}
+TOTAL ESPÈCES: ${currencyNoCents(q.totalCash || Math.round(q.total), q.currency)}
+TOTAL CARTE: ${currencyNoCents(q.totalCard || calculateCardPrice(q.total), q.currency)}
 
 Notes: ${q.notes || "—"}
                       `.trim();

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { currency, saveLS, uuid } from "../utils";
+import { currency, currencyNoCents, calculateCardPrice, saveLS, uuid } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn } from "../components/ui";
 
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
@@ -61,7 +61,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="text-base font-semibold mr-3">{currency(d.total, d.currency)}</p>
+                  <div className="text-right mr-3">
+                    <p className="text-base font-semibold">Espèces: {currencyNoCents(d.totalCash || Math.round(d.total), d.currency)}</p>
+                    <p className="text-sm text-gray-600">Carte: {currencyNoCents(d.totalCard || calculateCardPrice(d.total), d.currency)}</p>
+                  </div>
                   <div className="flex gap-2 flex-wrap">
                 <GhostBtn
                   onClick={() => {
@@ -96,13 +99,15 @@ ${d.items
 ${idx + 1}. ${item.activityName}
    Date: ${new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")}
    Adultes: ${item.adults} | Enfants: ${item.children} | Bébés: ${item.babies}
-   Sous-total: ${currency(item.lineTotal, d.currency)}
+   Sous-total Espèces: ${currencyNoCents(Math.round(item.lineTotal), d.currency)}
+   Sous-total Carte: ${currencyNoCents(calculateCardPrice(item.lineTotal), d.currency)}
    ${item.ticketNumber ? `🎫 Ticket: ${item.ticketNumber}` : ""}
 `,
   )
   .join("\n")}
 
-TOTAL: ${currency(d.total, d.currency)}
+TOTAL ESPÈCES: ${currencyNoCents(d.totalCash || Math.round(d.total), d.currency)}
+TOTAL CARTE: ${currencyNoCents(d.totalCard || calculateCardPrice(d.total), d.currency)}
 
 Notes: ${d.notes || "—"}
                     `.trim();
@@ -217,7 +222,10 @@ Notes: ${d.notes || "—"}
                         {item.children} enfant(s)
                       </p>
                     </div>
-                    <p className="text-sm font-semibold">{currency(item.lineTotal, selectedQuote.currency)}</p>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">Espèces: {currencyNoCents(Math.round(item.lineTotal), selectedQuote.currency)}</p>
+                      <p className="text-xs text-gray-600">Carte: {currencyNoCents(calculateCardPrice(item.lineTotal), selectedQuote.currency)}</p>
+                    </div>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Numéro de ticket unique</p>
@@ -460,6 +468,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
 
   const grandCurrency = computed.find((c) => c.currency)?.currency || "EUR";
   const grandTotal = computed.reduce((s, c) => s + (c.lineTotal || 0), 0);
+  const grandTotalCash = Math.round(grandTotal); // Prix espèces (arrondi sans centimes)
+  const grandTotalCard = calculateCardPrice(grandTotal); // Prix carte (espèces + 3% arrondi à l'euro supérieur)
 
   function handleSave() {
     // Filtrer les items vides (sans activité sélectionnée)
@@ -497,6 +507,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         ticketNumber: c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act.id && item.date === c.raw.date)?.ticketNumber || "",
       })),
       total: validGrandTotal,
+      totalCash: Math.round(validGrandTotal),
+      totalCard: calculateCardPrice(validGrandTotal),
       currency: validGrandCurrency,
     };
 
@@ -626,7 +638,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 </div>
                 {c.lineTotal > 0 && (
                   <div className="text-right text-sm font-semibold text-gray-700">
-                    Sous-total : {currency(c.lineTotal, c.currency)}
+                    <p>Espèces: {currencyNoCents(Math.round(c.lineTotal), c.currency)}</p>
+                    <p className="text-xs text-gray-600">Carte: {currencyNoCents(calculateCardPrice(c.lineTotal), c.currency)}</p>
                   </div>
                 )}
               </div>
@@ -639,7 +652,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
             </GhostBtn>
             <div className="text-right">
               <p className="text-xs text-gray-500">Total</p>
-              <p className="text-xl font-bold">{currency(grandTotal, grandCurrency)}</p>
+              <p className="text-xl font-bold">Espèces: {currencyNoCents(grandTotalCash, grandCurrency)}</p>
+              <p className="text-lg font-semibold text-gray-700">Carte: {currencyNoCents(grandTotalCard, grandCurrency)}</p>
             </div>
           </div>
 
