@@ -139,14 +139,14 @@ export function PickUpPage({ quotes, setQuotes }) {
       
       setSendProgress({ current: i + 1, total: pickupRows.length });
       
-      // Attendre 2 secondes avant d'envoyer le message suivant (pour ne pas surcharger)
+      // Attendre 3 secondes avant d'envoyer le message suivant (pour laisser le temps au navigateur)
       if (i < pickupRows.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
 
     setSendProgress(null);
-    toast.success(`Tous les messages ont été ouverts dans WhatsApp !`);
+    toast.success(`${pickupRows.length} onglets WhatsApp ouverts ! Cliquez sur chaque message pour envoyer.`);
   }
 
   return (
