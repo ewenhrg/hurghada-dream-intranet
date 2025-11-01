@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS } from "../utils";
+import { uuid, currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, loadLS } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 
 export function QuotesPage({ activities, quotes, setQuotes, user }) {
@@ -513,42 +513,32 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   </GhostBtn>
                   <GhostBtn
                     onClick={() => {
-                      // Télécharger le devis (version simple)
-                      const quoteText = `
-DEVIS ${new Date(q.createdAt).toLocaleDateString("fr-FR")}
-${q.createdByName ? `Créé par: ${q.createdByName}` : ""}
-Client: ${q.client.name || q.client.phone}
-Hôtel: ${q.client.hotel || "—"}
-Chambre: ${q.client.room || "—"}
-Quartier: ${q.client.neighborhood || "—"}
-
-ACTIVITÉS:
-${q.items
-  .map(
-    (item, idx) => `
-${idx + 1}. ${item.activityName}
-   Date: ${new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")}
-   Adultes: ${item.adults} | Enfants: ${item.children} | Bébés: ${item.babies}
-   Sous-total Espèces: ${currencyNoCents(Math.round(item.lineTotal), q.currency)}
-   Sous-total Carte: ${currencyNoCents(calculateCardPrice(item.lineTotal), q.currency)}
-   ${item.ticketNumber ? `🎫 Ticket: ${item.ticketNumber}` : ""}
-`,
-  )
-  .join("\n")}
-
-TOTAL ESPÈCES: ${currencyNoCents(q.totalCash || Math.round(q.total), q.currency)}
-TOTAL CARTE: ${currencyNoCents(q.totalCard || calculateCardPrice(q.total), q.currency)}
-
-Notes: ${q.notes || "—"}
-                      `.trim();
-
-                      const blob = new Blob([quoteText], { type: "text/plain;charset=utf-8" });
+                      // Générer le devis en HTML et l'ouvrir dans une nouvelle fenêtre
+                      const htmlContent = generateQuoteHTML(q);
+                      const newWindow = window.open();
+                      if (newWindow) {
+                        newWindow.document.write(htmlContent);
+                        newWindow.document.close();
+                        // Après un court délai, proposer l'impression
+                        setTimeout(() => {
+                          newWindow.print();
+                        }, 500);
+                      }
+                    }}
+                  >
+                    🖨️ Imprimer
+                  </GhostBtn>
+                  <GhostBtn
+                    onClick={() => {
+                      // Générer et télécharger le devis en HTML
+                      const htmlContent = generateQuoteHTML(q);
+                      const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;
                       const phoneNumber = q.client.phone || "sans-tel";
                       const sanitizedPhone = phoneNumber.replace(/[^0-9+]/g, ""); // Nettoyer le numéro
-                      a.download = `Devis ${sanitizedPhone}.txt`;
+                      a.download = `Devis ${sanitizedPhone}.html`;
                       document.body.appendChild(a);
                       a.click();
                       document.body.removeChild(a);
