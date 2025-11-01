@@ -391,14 +391,18 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       if (act && act.name.toLowerCase().includes("speed boat")) {
         const ad = Number(it.adults || 0);
         const ch = Number(it.children || 0);
-        const totalPersons = ad + ch;
+
+        // Prix de base : 145€ pour 1 ou 2 adultes
         lineTotal = 145;
-        if (totalPersons > 2) {
-          const extraPersons = totalPersons - 2;
-          const extraAdults = Math.max(ad - 2, 0);
-          const extraKids = extraPersons - extraAdults;
-          lineTotal += extraAdults * 20 + extraKids * 10;
+
+        // Si plus de 2 adultes : +20€ par adulte supplémentaire (au-delà de 2)
+        if (ad > 2) {
+          const extraAdults = ad - 2;
+          lineTotal += extraAdults * 20;
         }
+
+        // Tous les enfants : +10€ par enfant
+        lineTotal += ch * 10;
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
