@@ -1,112 +1,72 @@
 import { useState, useMemo } from "react";
-import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
+import { TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { cleanPhoneNumber } from "../utils";
 
-export function PickUpPage({ quotes, activities }) {
+export function PickUpPage({ quotes, setQuotes }) {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
 
-  // Filtrer les devis pour le jour sélectionné qui ont tous leurs tickets remplis
-  const todaysPickups = useMemo(() => {
-    return quotes.filter((quote) => {
-      // Vérifier que tous les tickets sont renseignés
+  // Extraire tous les tickets pour la date sélectionnée
+  const pickupRows = useMemo(() => {
+    const rows = [];
+
+    quotes.forEach((quote) => {
+      // Vérifier que tous les tickets sont renseignés pour ce devis
       const allTicketsFilled = quote.items?.every(
         (item) => item.ticketNumber && item.ticketNumber.trim()
       );
 
-      if (!allTicketsFilled) return false;
+      if (allTicketsFilled && quote.items) {
+        // Pour chaque item du devis, créer une ligne si c'est pour la date sélectionnée
+        quote.items.forEach((item) => {
+          if (item.date === selectedDate && item.ticketNumber && item.ticketNumber.trim()) {
+            rows.push({
+              quoteId: quote.id,
+              itemIndex: quote.items.indexOf(item),
+              ticket: item.ticketNumber || "",
+              date: item.date || "",
+              phone: quote.client?.phone || "",
+              hotel: quote.client?.hotel || "",
+              pickupTime: item.pickupTime || "",
+              activityName: item.activityName || "",
+              clientName: quote.client?.name || "",
+            });
+          }
+        });
+      }
+    });
 
-      // Vérifier qu'au moins un item est pour la date sélectionnée
-      const hasItemForDate = quote.items?.some(
-        (item) => item.date === selectedDate
-      );
-
-      return hasItemForDate;
+    // Trier par hôtel, puis par heure de pickup, puis par ticket
+    return rows.sort((a, b) => {
+      const hotelCompare = (a.hotel || "").localeCompare(b.hotel || "");
+      if (hotelCompare !== 0) return hotelCompare;
+      
+      const timeCompare = (a.pickupTime || "").localeCompare(b.pickupTime || "");
+      if (timeCompare !== 0) return timeCompare;
+      
+      return (a.ticket || "").localeCompare(b.ticket || "");
     });
   }, [quotes, selectedDate]);
 
-  // Groupement par hôtel et heure de pickup
-  const groupedPickups = useMemo(() => {
-    const grouped = {};
-
-    todaysPickups.forEach((quote) => {
-      quote.items?.forEach((item) => {
-        if (item.date === selectedDate && item.pickupTime) {
-          const key = `${quote.client?.hotel || "Sans hotel"}_${item.pickupTime}`;
-
-          if (!grouped[key]) {
-            grouped[key] = {
-              hotel: quote.client?.hotel || "Sans hôtel",
-              pickupTime: item.pickupTime,
-              clients: [],
-            };
-          }
-
-          // Vérifier si le client n'est pas déjà dans la liste
-          const exists = grouped[key].clients.some(
-            (c) =>
-              c.name === quote.client?.name &&
-              c.phone === quote.client?.phone &&
-              c.activityName === item.activityName
-          );
-
-          if (!exists) {
-            grouped[key].clients.push({
-              name: quote.client?.name || "",
-              phone: quote.client?.phone || "",
-              ticket: item.ticketNumber || "",
-              activityName: item.activityName || "",
-            });
-          }
+  // Fonction pour mettre à jour l'heure de pickup
+  function handleUpdatePickupTime(quoteId, itemIndex, newTime) {
+    setQuotes((prev) => {
+      const updated = prev.map((quote) => {
+        if (quote.id === quoteId) {
+          const newItems = [...quote.items];
+          newItems[itemIndex] = {
+            ...newItems[itemIndex],
+            pickupTime: newTime,
+          };
+          return { ...quote, items: newItems };
         }
+        return quote;
       });
+      return updated;
     });
-
-    return Object.values(grouped);
-  }, [todaysPickups, selectedDate]);
-
-  // Fonction pour générer le message WhatsApp
-  function generateMessage(group) {
-    const { hotel, pickupTime, clients } = group;
-
-    let message = `🏨 *${hotel}* - Départ ${pickupTime}\n\n`;
-    message += `Bonjour,\n\n`;
-    message += `Ceci est un rappel pour demain :\n\n`;
-
-    clients.forEach((client) => {
-      message += `• ${client.activityName}`;
-      if (client.name) {
-        message += ` - ${client.name}`;
-      }
-      if (client.ticket) {
-        message += ` (Ticket: ${client.ticket})`;
-      }
-      message += `\n`;
-    });
-
-    message += `\n⚠️ *Merci de vous tenir devant l'hôtel à ${pickupTime} demain pour que le transfert puisse vous récupérer.*\n\n`;
-    message += `En cas de retard ou d'annulation, merci de nous contacter rapidement.\n\n`;
-    message += `Bon séjour ! 🏖️`;
-
-    return message;
-  }
-
-  // Fonction pour copier le message et ouvrir WhatsApp
-  function handleSendMessage(group) {
-    const message = generateMessage(group);
-
-    // Copier dans le presse-papier
-    navigator.clipboard.writeText(message).then(() => {
-      toast.success("Message copié dans le presse-papier !");
-
-      // Ouvrir WhatsApp Web avec le message
-      const whatsappUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(
-        message
-      )}`;
-      window.open(whatsappUrl, "_blank");
-    });
+    toast.success("Heure de pickup mise à jour !");
   }
 
   return (
@@ -122,120 +82,69 @@ export function PickUpPage({ quotes, activities }) {
           onChange={(e) => setSelectedDate(e.target.value)}
           className="max-w-xs"
         />
+        {pickupRows.length > 0 && (
+          <p className="text-xs text-blue-600 mt-2">
+            {pickupRows.length} activité(s) trouvée(s) pour cette date
+          </p>
+        )}
       </div>
 
-      {/* Liste des pickups groupés */}
-      {groupedPickups.length === 0 ? (
+      {/* Tableau des pickups */}
+      {pickupRows.length === 0 ? (
         <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-8 shadow-md text-center">
-          <p className="text-gray-500">
-            Aucun pickup prévu pour cette date.
-          </p>
+          <p className="text-gray-500">Aucune activité trouvée pour cette date.</p>
           <p className="text-xs text-gray-400 mt-2">
-            Les pickups n'apparaissent que pour les devis avec tous les tickets
-            renseignés.
+            Les activités n'apparaissent que pour les devis avec tous les tickets renseignés.
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {groupedPickups.map((group, idx) => (
-            <div
-              key={idx}
-              className="bg-white/90 rounded-2xl border border-blue-100/60 p-4 shadow-md"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    🏨 {group.hotel}
-                  </h3>
-                  <p className="text-sm text-blue-600">⏰ {group.pickupTime}</p>
-                </div>
-                <PrimaryBtn onClick={() => handleSendMessage(group)}>
-                  💬 Envoyer message
-                </PrimaryBtn>
-              </div>
-
-              <div className="space-y-2">
-                {group.clients.map((client, clientIdx) => (
-                  <div
-                    key={clientIdx}
-                    className="bg-blue-50/50 rounded-lg p-3 border border-blue-100"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-800">
-                          {client.activityName || "—"}
-                        </p>
-                        {client.name && (
-                          <p className="text-sm text-gray-600">
-                            👤 {client.name}
-                          </p>
-                        )}
-                        {client.phone && (
-                          <p className="text-sm text-blue-600">
-                            📱 +{cleanPhoneNumber(client.phone)}
-                          </p>
-                        )}
-                      </div>
-                      {client.ticket && (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-mono">
-                          🎫 {client.ticket}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+        <div className="bg-white/90 rounded-2xl border border-blue-100/60 overflow-hidden shadow-md">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-blue-50/70 text-gray-700 text-xs">
+                <tr>
+                  <th className="px-4 py-3 text-left">Numéro ticket</th>
+                  <th className="px-4 py-3 text-left">Date</th>
+                  <th className="px-4 py-3 text-left">Téléphone</th>
+                  <th className="px-4 py-3 text-left">Hôtel</th>
+                  <th className="px-4 py-3 text-left">Heure prise en charge</th>
+                  <th className="px-4 py-3 text-left">Activité</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pickupRows.map((row, idx) => (
+                  <tr key={idx} className="border-t hover:bg-blue-50/30 transition-colors">
+                    <td className="px-4 py-3 font-mono text-green-700 font-medium">
+                      🎫 {row.ticket}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {row.date ? new Date(row.date + "T12:00:00").toLocaleDateString("fr-FR") : ""}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-blue-700">
+                      {row.phone ? `+${cleanPhoneNumber(row.phone)}` : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 font-medium">
+                      {row.hotel || "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="text"
+                        value={row.pickupTime}
+                        onChange={(e) => handleUpdatePickupTime(row.quoteId, row.itemIndex, e.target.value)}
+                        placeholder="Ex: 07:30"
+                        className="w-full rounded-lg border border-blue-200/50 bg-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {row.activityName || "—"}
+                    </td>
+                  </tr>
                 ))}
-              </div>
-
-              {/* Aperçu du message */}
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-xs font-semibold text-gray-600 mb-2">
-                  Aperçu du message :
-                </p>
-                <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans">
-                  {generateMessage(group)}
-                </pre>
-              </div>
-            </div>
-          ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
-
-      {/* Statistiques rapides */}
-      <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl border border-blue-200 p-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600">
-              {groupedPickups.length}
-            </p>
-            <p className="text-xs text-gray-600">Lieux de pickup</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-green-600">
-              {todaysPickups.length}
-            </p>
-            <p className="text-xs text-gray-600">Devis payés</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-purple-600">
-              {todaysPickups.reduce(
-                (sum, q) => sum + (q.items?.length || 0),
-                0
-              )}
-            </p>
-            <p className="text-xs text-gray-600">Activités totales</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-amber-600">
-              {groupedPickups.reduce(
-                (sum, g) => sum + g.clients.length,
-                0
-              )}
-            </p>
-            <p className="text-xs text-gray-600">Clients concernés</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
-

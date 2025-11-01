@@ -599,8 +599,8 @@ export default function App() {
         )}
 
         {tab === "pickup" && (
-          <Section title="Gestion des Pick Ups" subtitle="Envoyez des messages automatiques aux clients pour les rappeler leur pickup">
-            <PickUpPage quotes={quotes} activities={activities} />
+          <Section title="Gestion des Pick Ups" subtitle="Visualisez et modifiez les heures de prise en charge pour une date donnée">
+            <PickUpPage quotes={quotes} setQuotes={setQuotes} />
           </Section>
         )}
 
