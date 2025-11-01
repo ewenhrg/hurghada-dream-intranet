@@ -374,8 +374,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       
                       if (updateError) {
                         console.warn("⚠️ Erreur mise à jour Supabase:", updateError);
-                      } else {
-                        console.log("✅ Tickets mis à jour dans Supabase!");
                       }
                     } catch (updateErr) {
                       console.warn("⚠️ Erreur lors de la mise à jour Supabase:", updateErr);
