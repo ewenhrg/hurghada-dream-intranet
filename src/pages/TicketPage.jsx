@@ -1,5 +1,7 @@
 import { useMemo } from "react";
-import { calculateCardPrice, cleanPhoneNumber } from "../utils";
+import { calculateCardPrice, cleanPhoneNumber, exportTicketsToCSV } from "../utils";
+import { PrimaryBtn } from "../components/ui";
+import { toast } from "../utils/toast.js";
 
 export function TicketPage({ quotes }) {
   // Extraire tous les items avec tickets renseignés depuis les devis complets
@@ -69,6 +71,17 @@ export function TicketPage({ quotes }) {
 
   return (
     <>
+      <div className="flex justify-end mb-4">
+        <PrimaryBtn
+          onClick={() => {
+            exportTicketsToCSV(ticketRows);
+            toast.success("Export Excel des tickets généré avec succès !");
+          }}
+          disabled={ticketRows.length === 0}
+        >
+          📊 Exporter Excel
+        </PrimaryBtn>
+      </div>
       <div className="overflow-x-auto">
         {/* Tableau style Excel pour faciliter le copier-coller */}
         <table className="w-full border-collapse bg-white" style={{ border: '1px solid #ddd' }}>

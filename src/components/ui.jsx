@@ -31,11 +31,13 @@ export const NumberInput = ({ className = "", ...props }) => (
   />
 );
 
-export const PrimaryBtn = ({ className = "", ...props }) => (
+export const PrimaryBtn = ({ className = "", disabled, ...props }) => (
   <button
     {...props}
+    disabled={disabled}
     className={
       "inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-medium text-white shadow-md hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transition-all duration-200 " +
+      (disabled ? "opacity-50 cursor-not-allowed" : "") +
       className
     }
   />

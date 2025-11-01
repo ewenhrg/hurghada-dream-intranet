@@ -545,3 +545,69 @@ export function exportQuotesToCSV(quotes) {
   URL.revokeObjectURL(url);
 }
 
+// Exporter les tickets en CSV (compatible Excel)
+export function exportTicketsToCSV(ticketRows) {
+  if (!ticketRows || ticketRows.length === 0) {
+    return;
+  }
+
+  // En-têtes du CSV (même structure que le tableau TicketPage)
+  const headers = [
+    "Ticket",
+    "Date",
+    "Prénom + Téléphone",
+    "Hôtel",
+    "Chambre",
+    "Adultes",
+    "Enfants",
+    "Bébés",
+    "Activité",
+    "Heure prise en charge",
+    "Commentaire",
+    "Prix activité",
+    "Prix transfert",
+    "Méthode de paiement",
+    "Vendeur"
+  ];
+
+  // Créer les lignes de données
+  const rows = ticketRows.map(row => [
+    row.ticket || "",
+    row.date ? new Date(row.date + "T12:00:00").toLocaleDateString("fr-FR") : "",
+    `${row.clientName || ""} ${row.clientPhone ? `(${row.clientPhone})` : ""}`,
+    row.hotel || "",
+    row.room || "",
+    row.adults || 0,
+    row.children || 0,
+    row.babies || 0,
+    row.activityName || "",
+    row.pickupTime || "",
+    row.comment || "",
+    row.activityPrice ? Math.round(row.activityPrice) + "€" : "",
+    row.transferTotal ? Math.round(row.transferTotal) + "€" : "",
+    row.paymentMethod || "",
+    row.sellerName || ""
+  ]);
+
+  // Convertir en CSV
+  const csvContent = [
+    headers.join(","),
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+  ].join("\n");
+
+  // Créer le fichier et le télécharger
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" }); // BOM UTF-8 pour Excel
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute("href", url);
+  link.setAttribute("download", `Tickets_Hurghada_${new Date().toISOString().slice(0, 10)}.csv`);
+  link.style.visibility = "hidden";
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  URL.revokeObjectURL(url);
+}
+

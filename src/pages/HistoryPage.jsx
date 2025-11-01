@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid, cleanPhoneNumber, exportQuotesToCSV } from "../utils";
+import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid, cleanPhoneNumber } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -118,15 +118,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           >
             En attente
           </Pill>
-          <PrimaryBtn
-            onClick={() => {
-              exportQuotesToCSV(filtered);
-              toast.success("Export Excel généré avec succès !");
-            }}
-            className="ml-2"
-          >
-            📊 Exporter Excel
-          </PrimaryBtn>
         </div>
       </div>
       <div className="space-y-3">
