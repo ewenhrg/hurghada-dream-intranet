@@ -574,7 +574,7 @@ export function exportTicketsToCSV(ticketRows) {
   const rows = ticketRows.map(row => [
     row.ticket || "",
     row.date ? new Date(row.date + "T12:00:00").toLocaleDateString("fr-FR") : "",
-    `${row.clientName || ""}${row.clientName && row.clientPhone ? " " : ""}${row.clientPhone || ""}`,
+    `${row.clientName || ""}${row.clientName && row.clientPhone ? " " : ""}${row.clientPhone ? `+${row.clientPhone}` : ""}`,
     row.hotel || "",
     row.room || "",
     row.adults || 0,

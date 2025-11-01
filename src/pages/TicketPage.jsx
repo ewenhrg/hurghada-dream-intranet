@@ -157,7 +157,7 @@ export function TicketPage({ quotes }) {
                     {row.date ? new Date(row.date + "T12:00:00").toLocaleDateString("fr-FR") : ""}
                   </td>
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.clientName || ""}{row.clientName && row.clientPhone ? " " : ""}{row.clientPhone || ""}
+                    {row.clientName || ""}{row.clientName && row.clientPhone ? " " : ""}{row.clientPhone ? `+${row.clientPhone}` : ""}
                   </td>
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                     {row.hotel || ""}
