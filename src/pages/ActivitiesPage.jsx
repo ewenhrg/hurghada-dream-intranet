@@ -5,6 +5,7 @@ import { uuid, currency, emptyTransfers, saveLS } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
+import { toast } from "../utils/toast.js";
 
 export function ActivitiesPage({ activities, setActivities, remoteEnabled, user }) {
   const [showForm, setShowForm] = useState(false);
@@ -170,39 +171,13 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
           if ((error.message && error.message.includes("column")) || error.code === "PGRST204") {
             console.warn("⚠️ Erreur PGRST204 - Colonnes manquantes ou format incorrect dans Supabase.");
             console.warn("Données envoyées:", JSON.stringify(supabaseData, null, 2));
-            alert(
-              "⚠️ Erreur PGRST204 - Structure Supabase :\n" +
-                (error.message || error.code || "N/A") +
-                "\n\nCode: " + (error.code || "N/A") +
-                "\n\nL'activité est sauvegardée localement.\n\n" +
-                "Vérifiez que la table 'activities' contient au moins les colonnes :\n" +
-                "- site_key\n" +
-                "- name\n\n" +
-                "Les autres colonnes peuvent être ajoutées progressivement.\n\n" +
-                "Vérifiez la console (F12) pour voir les données envoyées."
-            );
+            toast.error("Erreur PGRST204 - Structure Supabase. L'activité est sauvegardée localement. Vérifiez la console pour plus de détails.");
           } else if (error.message && error.message.includes("row-level security") || error.code === "42501") {
             // Erreur de politique RLS (Row Level Security)
             console.error("❌ Erreur RLS (Row Level Security) - Les politiques Supabase bloquent l'insertion");
-            alert(
-              "⚠️ Erreur de sécurité Supabase (RLS) :\n" +
-                error.message +
-                "\n\nCode: " + (error.code || "N/A") +
-                "\n\nL'activité est sauvegardée localement.\n\n" +
-                "SOLUTION : Dans Supabase, allez dans Authentication > Policies\n" +
-                "et créez une politique pour permettre l'INSERT sur la table 'activities' :\n\n" +
-                "Policy name: Allow insert activities\n" +
-                "Allowed operation: INSERT\n" +
-                "Policy definition: true\n\n" +
-                "Ou désactivez temporairement RLS sur la table 'activities' pour le développement."
-            );
+            toast.error("Erreur de sécurité Supabase (RLS). L'activité est sauvegardée localement. Vérifiez la console pour plus de détails.");
           } else {
-            alert(
-              "Erreur Supabase (création) :\n" +
-                error.message +
-                "\n\nCode: " + (error.code || "N/A") +
-                "\n\nL'activité est quand même enregistrée en local.\n\nVérifiez la console pour plus de détails."
-            );
+            toast.error("Erreur Supabase (création). L'activité est quand même enregistrée en local. Vérifiez la console pour plus de détails.");
           }
         } else {
           const action = isEditing ? "modifiée" : "créée";
@@ -211,15 +186,11 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
         }
       } catch (err) {
         console.error("❌ EXCEPTION lors de l'envoi à Supabase:", err);
-        alert(
-          "Exception lors de l'envoi à Supabase :\n" +
-            (err.message || String(err)) +
-            "\n\nL'activité est quand même enregistrée en local.\n\nVérifiez la console pour plus de détails."
-        );
+        toast.error("Exception lors de l'envoi à Supabase. L'activité est quand même enregistrée en local. Vérifiez la console pour plus de détails.");
       }
     } else {
       console.warn("⚠️ Supabase n'est pas disponible (stub)");
-      alert("⚠️ Supabase n'est pas configuré. L'activité est sauvegardée uniquement en local.");
+      toast.warning("Supabase n'est pas configuré. L'activité est sauvegardée uniquement en local.");
     }
 
     setForm({

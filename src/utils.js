@@ -455,9 +455,93 @@ export function generateQuoteHTML(quote) {
         Ce devis est fourni à titre informatif. Les horaires sont approximatifs et seront confirmés la veille de votre départ.
       </p>
     </div>
-  </div>
+    </div>
 </body>
 </html>
   `.trim();
+}
+
+// Exporter des devis en CSV (compatible Excel)
+export function exportQuotesToCSV(quotes) {
+  if (!quotes || quotes.length === 0) {
+    return;
+  }
+
+  // En-têtes du CSV
+  const headers = [
+    "Date devis",
+    "Nom client",
+    "Téléphone",
+    "Hôtel",
+    "Chambre",
+    "Quartier",
+    "Activité",
+    "Date activité",
+    "Heure prise en charge",
+    "Adultes",
+    "Enfants",
+    "Bébés",
+    "Ticket",
+    "Prix",
+    "Total Espèces",
+    "Total Carte",
+    "Statut",
+    "Créé par",
+    "Notes"
+  ];
+
+  // Créer les lignes de données
+  const rows = [];
+  
+  quotes.forEach(quote => {
+    const quoteDate = new Date(quote.createdAt).toLocaleDateString("fr-FR");
+    const statut = quote.items?.every(item => item.ticketNumber?.trim()) ? "Payé" : "En attente";
+    
+    quote.items?.forEach((item, idx) => {
+      const line = [
+        idx === 0 ? quoteDate : "", // Date du devis seulement sur la première ligne
+        idx === 0 ? quote.client?.name || "" : "",
+        idx === 0 ? quote.client?.phone || "" : "",
+        idx === 0 ? quote.client?.hotel || "" : "",
+        idx === 0 ? quote.client?.room || "" : "",
+        idx === 0 ? (quote.client?.neighborhood ? quote.client.neighborhood.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) : "") : "",
+        item.activityName || "",
+        new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR"),
+        item.pickupTime || "",
+        item.adults || 0,
+        item.children || 0,
+        item.babies || 0,
+        item.ticketNumber || "",
+        currencyNoCents(Math.round(item.lineTotal), quote.currency),
+        idx === 0 ? currencyNoCents(quote.totalCash || Math.round(quote.total), quote.currency) : "",
+        idx === 0 ? currencyNoCents(quote.totalCard || calculateCardPrice(quote.total), quote.currency) : "",
+        idx === 0 ? statut : "",
+        idx === 0 ? quote.createdByName || "" : "",
+        idx === 0 ? quote.notes || "" : ""
+      ];
+      rows.push(line);
+    });
+  });
+
+  // Convertir en CSV
+  const csvContent = [
+    headers.join(","),
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+  ].join("\n");
+
+  // Créer le fichier et le télécharger
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" }); // BOM UTF-8 pour Excel
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute("href", url);
+  link.setAttribute("download", `Devis_Hurghada_${new Date().toISOString().slice(0, 10)}.csv`);
+  link.style.visibility = "hidden";
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  URL.revokeObjectURL(url);
 }
 

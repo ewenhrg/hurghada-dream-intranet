@@ -108,7 +108,7 @@ export function UsersPage({ user }) {
 
         if (error) {
           console.error("Erreur lors de la modification de l'utilisateur:", error);
-          alert("Erreur lors de la modification de l'utilisateur: " + (error.message || "Erreur inconnue"));
+          toast.error("Erreur lors de la modification de l'utilisateur: " + (error.message || "Erreur inconnue"));
         } else {
           console.log("✅ Utilisateur modifié avec succès!");
           await loadUsers();

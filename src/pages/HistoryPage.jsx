@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid, cleanPhoneNumber } from "../utils";
+import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid, cleanPhoneNumber, exportQuotesToCSV } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
+import { toast } from "../utils/toast.js";
 
 // Options d'extra pour Speed Boat uniquement
 const SPEED_BOAT_EXTRAS = [
@@ -98,7 +99,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <Pill
             active={statusFilter === "all"}
             onClick={() => setStatusFilter("all")}
@@ -117,6 +118,15 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           >
             En attente
           </Pill>
+          <PrimaryBtn
+            onClick={() => {
+              exportQuotesToCSV(filtered);
+              toast.success("Export Excel généré avec succès !");
+            }}
+            className="ml-2"
+          >
+            📊 Exporter Excel
+          </PrimaryBtn>
         </div>
       </div>
       <div className="space-y-3">
@@ -398,7 +408,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   // Vérifier que tous les tickets sont renseignés
                   const allFilled = selectedQuote.items?.every((_, idx) => ticketNumbers[idx]?.trim());
                   if (!allFilled) {
-                    alert("Veuillez renseigner tous les numéros de ticket.");
+                    toast.warning("Veuillez renseigner tous les numéros de ticket.");
                     return;
                   }
 
@@ -411,7 +421,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     return paymentMethods[idx] === "cash" || paymentMethods[idx] === "stripe";
                   });
                   if (!allPaymentMethodsSelected) {
-                    alert("Veuillez sélectionner une méthode de paiement pour chaque activité.");
+                    toast.warning("Veuillez sélectionner une méthode de paiement pour chaque activité.");
                     return;
                   }
 
@@ -466,7 +476,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   setSelectedQuote(null);
                   setTicketNumbers({});
                   setPaymentMethods({});
-                  alert("✅ Numéros de ticket enregistrés avec succès !");
+                  toast.success("Numéros de ticket enregistrés avec succès !");
                 }}
               >
                 Enregistrer les tickets
@@ -555,7 +565,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             setEditClient(null);
             setEditItems([]);
             setEditNotes("");
-            alert("✅ Devis modifié avec succès !");
+            toast.success("Devis modifié avec succès !");
           }}
         />
       )}
@@ -690,7 +700,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
 
     // Vérifier qu'il y a au moins un item valide
     if (validComputed.length === 0) {
-      alert("⚠️ Veuillez sélectionner au moins une activité.");
+      toast.warning("Veuillez sélectionner au moins une activité.");
       return;
     }
 

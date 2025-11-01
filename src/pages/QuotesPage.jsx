@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, loadLS, cleanPhoneNumber } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
+import { toast } from "../utils/toast.js";
 
 // Options d'extra pour Speed Boat uniquement
 const SPEED_BOAT_EXTRAS = [
@@ -219,15 +220,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     
     // Vérifier qu'il y a au moins un item valide
     if (validComputed.length === 0) {
-      alert("⚠️ Veuillez sélectionner au moins une activité pour créer le devis.");
+      toast.warning("Veuillez sélectionner au moins une activité pour créer le devis.");
       setIsSubmitting(false);
       return;
     }
 
     const notAvailable = validComputed.filter((c) => c.weekday != null && !c.available);
     if (notAvailable.length) {
-      alert(
-        `⚠️ ${notAvailable.length} activité(s) sont hors-dispo ce jour-là. Le devis est quand même créé (date exceptionnelle).`,
+      toast.warning(
+        `${notAvailable.length} activité(s) sont hors-dispo ce jour-là. Le devis est quand même créé (date exceptionnelle).`,
       );
     }
 
@@ -304,14 +305,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
           console.error("Détails:", JSON.stringify(error, null, 2));
           
           // Toujours afficher l'erreur pour le debug
-          alert(
-            "❌ Erreur Supabase (création devis):\n\n" +
-            "Message: " + (error.message || "Erreur inconnue") + "\n" +
-            "Code: " + (error.code || "N/A") + "\n" +
-            "Détails: " + (error.details || "N/A") + "\n" +
-            "Hint: " + (error.hint || "N/A") + "\n\n" +
-            "Vérifiez la console pour plus de détails.\n\n" +
-            "Le devis est quand même enregistré en local."
+          toast.error(
+            "Erreur Supabase (création devis). Vérifiez la console pour plus de détails. Le devis est quand même enregistré en local."
           );
         } else {
           console.log("✅ Devis créé avec succès dans Supabase!");
@@ -337,11 +332,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         }
       } catch (err) {
         console.error("❌ EXCEPTION lors de l'envoi du devis à Supabase:", err);
-        alert(
-          "❌ Exception lors de l'envoi à Supabase:\n\n" +
-          err.message + "\n\n" +
-          "Vérifiez la console pour plus de détails.\n\n" +
-          "Le devis est quand même enregistré en local."
+        toast.error(
+          "Exception lors de l'envoi à Supabase. Vérifiez la console pour plus de détails. Le devis est quand même enregistré en local."
         );
       }
     } else {
@@ -898,7 +890,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   // Vérifier que tous les tickets sont renseignés
                   const allFilled = selectedQuote.items?.every((_, idx) => ticketNumbers[idx]?.trim());
                   if (!allFilled) {
-                    alert("Veuillez renseigner tous les numéros de ticket.");
+                    toast.warning("Veuillez renseigner tous les numéros de ticket.");
                     return;
                   }
 
@@ -911,7 +903,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     return paymentMethods[idx] === "cash" || paymentMethods[idx] === "stripe";
                   });
                   if (!allPaymentMethodsSelected) {
-                    alert("Veuillez sélectionner une méthode de paiement pour chaque activité.");
+                    toast.warning("Veuillez sélectionner une méthode de paiement pour chaque activité.");
                     return;
                   }
 
@@ -955,7 +947,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   setSelectedQuote(null);
                   setTicketNumbers({});
                   setPaymentMethods({});
-                  alert("✅ Numéros de ticket enregistrés avec succès !");
+                  toast.success("Numéros de ticket enregistrés avec succès !");
                 }}
               >
                 Enregistrer les tickets
