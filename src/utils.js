@@ -81,6 +81,7 @@ export function generateQuoteHTML(quote) {
         <td>${idx + 1}</td>
         <td><strong>${item.activityName || "—"}</strong></td>
         <td>${itemDate}</td>
+        <td class="text-center">${item.pickupTime || "—"}</td>
         <td class="text-center">${item.adults || 0}</td>
         <td class="text-center">${item.children || 0}</td>
         <td class="text-center">${item.babies || 0}</td>
@@ -367,6 +368,7 @@ export function generateQuoteHTML(quote) {
             <th>#</th>
             <th>Activité</th>
             <th>Date</th>
+            <th class="text-center">Heure prise en charge</th>
             <th class="text-center">Adultes</th>
             <th class="text-center">Enfants</th>
             <th class="text-center">Bébés</th>
