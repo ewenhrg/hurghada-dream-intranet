@@ -85,7 +85,6 @@ export function generateQuoteHTML(quote) {
         <td class="text-center">${item.children || 0}</td>
         <td class="text-center">${item.babies || 0}</td>
         <td class="text-right">${currencyNoCents(Math.round(item.lineTotal), quote.currency)}</td>
-        <td class="text-right">${currencyNoCents(calculateCardPrice(item.lineTotal), quote.currency)}</td>
         ${item.ticketNumber ? `<td class="text-center"><span class="ticket-badge">🎫 ${item.ticketNumber}</span></td>` : '<td class="text-center">—</td>'}
       </tr>
     `;
@@ -127,8 +126,40 @@ export function generateQuoteHTML(quote) {
     .logo-section {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       margin-bottom: 20px;
+    }
+    .logo-wrapper {
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .logo-img {
+      max-width: 120px;
+      max-height: 120px;
+      object-fit: contain;
+      display: block;
+    }
+    .logo-fallback {
+      width: 120px;
+      height: 120px;
+      background: linear-gradient(to bottom right, #2563eb, #1e40af);
+      border-radius: 12px;
+      display: none;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 24px;
+    }
+    .logo-fallback[style*="flex"] {
+      display: flex !important;
+    }
+    .company-info {
+      flex: 1;
+      margin-left: 20px;
     }
     .company-info h1 {
       color: #2563eb;
@@ -297,8 +328,12 @@ export function generateQuoteHTML(quote) {
 </head>
 <body>
   <div class="quote-container">
-    <div class="header">
+      <div class="header">
       <div class="logo-section">
+        <div class="logo-wrapper">
+          <img src="/logo.png" alt="Hurghada Dream Logo" class="logo-img" onerror="this.onerror=null; this.style.display='none'; this.parentElement.querySelector('.logo-fallback').style.display='flex';">
+          <div class="logo-fallback" style="display:none;">HD</div>
+        </div>
         <div class="company-info">
           <h1>HURGHADA DREAM</h1>
           <p>Votre partenaire pour des excursions inoubliables</p>
@@ -335,8 +370,7 @@ export function generateQuoteHTML(quote) {
             <th class="text-center">Adultes</th>
             <th class="text-center">Enfants</th>
             <th class="text-center">Bébés</th>
-            <th class="text-right">Espèces</th>
-            <th class="text-right">Carte</th>
+            <th class="text-right">Prix</th>
             <th class="text-center">Ticket</th>
           </tr>
         </thead>

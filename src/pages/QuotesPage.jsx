@@ -528,25 +528,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   >
                     🖨️ Imprimer
                   </GhostBtn>
-                  <GhostBtn
-                    onClick={() => {
-                      // Générer et télécharger le devis en HTML
-                      const htmlContent = generateQuoteHTML(q);
-                      const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      const phoneNumber = q.client.phone || "sans-tel";
-                      const sanitizedPhone = phoneNumber.replace(/[^0-9+]/g, ""); // Nettoyer le numéro
-                      a.download = `Devis ${sanitizedPhone}.html`;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                    }}
-                  >
-                    📥 Télécharger
-                  </GhostBtn>
                   {!allTicketsFilled && (
                     <GhostBtn
                       onClick={() => {
