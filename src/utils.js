@@ -22,6 +22,8 @@ export function emptyTransfers() {
       morningTime: "",
       afternoonEnabled: false,
       afternoonTime: "",
+      eveningEnabled: false,
+      eveningTime: "",
       surcharge: 0,
     };
   });

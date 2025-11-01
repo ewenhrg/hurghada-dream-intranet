@@ -102,7 +102,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
           ? transferInfo?.morningTime
           : it.slot === "afternoon"
             ? transferInfo?.afternoonTime
-            : "";
+            : it.slot === "evening"
+              ? transferInfo?.eveningTime
+              : "";
 
       return {
         raw: it,
@@ -350,7 +352,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     value={c.raw.slot}
                     onChange={(e) => setItem(idx, { slot: e.target.value })}
                     className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
-                    disabled={!c.transferInfo || (!c.transferInfo.morningEnabled && !c.transferInfo.afternoonEnabled)}
+                    disabled={!c.transferInfo || (!c.transferInfo.morningEnabled && !c.transferInfo.afternoonEnabled && !c.transferInfo.eveningEnabled)}
                   >
                     <option value="">— Choisir —</option>
                     {c.transferInfo?.morningEnabled && (
@@ -359,6 +361,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     {c.transferInfo?.afternoonEnabled && (
                       <option value="afternoon">
                         Après-midi {c.transferInfo.afternoonTime ? `(${c.transferInfo.afternoonTime})` : ""}
+                      </option>
+                    )}
+                    {c.transferInfo?.eveningEnabled && (
+                      <option value="evening">
+                        Soir {c.transferInfo.eveningTime ? `(${c.transferInfo.eveningTime})` : ""}
                       </option>
                     )}
                   </select>

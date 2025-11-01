@@ -12,13 +12,15 @@ export function TransfersEditor({ value = {}, onChange }) {
               morningTime: "",
               afternoonEnabled: false,
               afternoonTime: "",
+              eveningEnabled: false,
+              eveningTime: "",
               surcharge: 0,
             };
 
         return (
           <div key={n.key} className="border rounded-xl p-3 bg-white/40">
             <div className="font-medium text-sm mb-2">{n.label}</div>
-            <div className="grid md:grid-cols-5 gap-3 items-end">
+            <div className="grid md:grid-cols-7 gap-3 items-end">
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -62,6 +64,29 @@ export function TransfersEditor({ value = {}, onChange }) {
                   onChange({
                     ...value,
                     [n.key]: { ...row, afternoonTime: e.target.value },
+                  })
+                }
+              />
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={row.eveningEnabled}
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      [n.key]: { ...row, eveningEnabled: e.target.checked },
+                    })
+                  }
+                />
+                Soir
+              </label>
+              <TextInput
+                type="time"
+                value={row.eveningTime}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    [n.key]: { ...row, eveningTime: e.target.value },
                   })
                 }
               />

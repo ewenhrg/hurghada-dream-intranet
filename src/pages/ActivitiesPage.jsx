@@ -405,7 +405,7 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">
-              Transferts par quartier (activer Matin / Après-midi et indiquer les heures et suppléments)
+              Transferts par quartier (activer Matin / Après-midi / Soir et indiquer les heures et suppléments)
             </p>
             <TransfersEditor value={form.transfers} onChange={(v) => setForm((f) => ({ ...f, transfers: v }))} />
           </div>

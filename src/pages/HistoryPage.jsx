@@ -441,7 +441,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           ? transferInfo?.morningTime
           : it.slot === "afternoon"
             ? transferInfo?.afternoonTime
-            : "";
+            : it.slot === "evening"
+              ? transferInfo?.eveningTime
+              : "";
 
       return {
         raw: it,
@@ -609,6 +611,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         <option value="">—</option>
                         {c.transferInfo.morningEnabled && <option value="morning">Matin ({c.transferInfo.morningTime})</option>}
                         {c.transferInfo.afternoonEnabled && <option value="afternoon">Après-midi ({c.transferInfo.afternoonTime})</option>}
+                        {c.transferInfo.eveningEnabled && <option value="evening">Soir ({c.transferInfo.eveningTime})</option>}
                       </select>
                     </div>
                   )}
