@@ -4,6 +4,17 @@ import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, loadLS } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 
+// Options d'extra pour Speed Boat uniquement
+const SPEED_BOAT_EXTRAS = [
+  { id: "", label: "— Aucun extra —", priceAdult: 0, priceChild: 0 },
+  { id: "hula_hula", label: "HULA HULA", priceAdult: 10, priceChild: 5 },
+  { id: "orange_bay", label: "ORANGE BAY", priceAdult: 10, priceChild: 5 },
+  { id: "eden_beach", label: "EDEN BEACH", priceAdult: 15, priceChild: 10 },
+  { id: "eden_lunch", label: "EDEN + LUNCH", priceAdult: 30, priceChild: 15 },
+  { id: "ozeria", label: "OZERIA", priceAdult: 25, priceChild: 15 },
+  { id: "ozeria_lunch", label: "OZERIA + LUNCH", priceAdult: 45, priceChild: 25 },
+];
+
 export function QuotesPage({ activities, quotes, setQuotes, user }) {
   const blankItem = () => ({
     activityId: "",
@@ -14,6 +25,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     extraLabel: "",
     extraAmount: "",
     slot: "",
+    extraDolphin: false, // Case à cocher "extra dauphin 20€" pour Speed Boat uniquement
+    speedBoatExtra: "", // Menu déroulant pour les extras Speed Boat
   });
 
   // Charger le formulaire sauvegardé depuis localStorage
@@ -81,6 +94,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
 
         // Tous les enfants : +10€ par enfant
         lineTotal += ch * 10;
+
+        // Extra dauphin : +20€ si la case est cochée
+        if (it.extraDolphin) {
+          lineTotal += 20;
+        }
+
+        // Extra Speed Boat (menu déroulant) : calcul basé sur adultes et enfants
+        if (it.speedBoatExtra) {
+          const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === it.speedBoatExtra);
+          if (selectedExtra) {
+            lineTotal += ad * selectedExtra.priceAdult;
+            lineTotal += ch * selectedExtra.priceChild;
+          }
+        }
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
@@ -92,9 +119,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
       }
 
-      // extra
-      if (it.extraAmount) {
-        lineTotal += Number(it.extraAmount || 0);
+      // extra (pour les autres activités, pas Speed Boat)
+      if (!act || !act.name.toLowerCase().includes("speed boat")) {
+        if (it.extraAmount) {
+          lineTotal += Number(it.extraAmount || 0);
+        }
       }
 
       const pickupTime =
@@ -170,6 +199,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         babies: Number(c.raw.babies || 0),
         extraLabel: c.raw.extraLabel || "",
         extraAmount: Number(c.raw.extraAmount || 0),
+        extraDolphin: c.raw.extraDolphin || false,
+        speedBoatExtra: c.raw.speedBoatExtra || "",
         neighborhood: client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
@@ -381,24 +412,41 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                 </div>
               </div>
 
-              {/* extra */}
-              <div className="grid md:grid-cols-3 gap-3">
-                <div className="md:col-span-2">
-                  <p className="text-xs text-gray-500 mb-1">Extra (ex: photos, bateau privé…)</p>
-                  <TextInput
-                    placeholder="Libellé extra"
-                    value={c.raw.extraLabel}
-                    onChange={(e) => setItem(idx, { extraLabel: e.target.value })}
-                  />
-                </div>
+              {/* extra - Menu déroulant pour Speed Boat, champs classiques pour les autres */}
+              {c.act && c.act.name.toLowerCase().includes("speed boat") ? (
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Montant Extra</p>
-                  <NumberInput
-                    value={c.raw.extraAmount}
-                    onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
-                  />
+                  <p className="text-xs text-gray-500 mb-1">Extra</p>
+                  <select
+                    value={c.raw.speedBoatExtra || ""}
+                    onChange={(e) => setItem(idx, { speedBoatExtra: e.target.value })}
+                    className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+                  >
+                    {SPEED_BOAT_EXTRAS.map((extra) => (
+                      <option key={extra.id} value={extra.id}>
+                        {extra.label} {extra.priceAdult > 0 && `(${extra.priceAdult}€/adt + ${extra.priceChild}€ enfant)`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
+              ) : (
+                <div className="grid md:grid-cols-3 gap-3">
+                  <div className="md:col-span-2">
+                    <p className="text-xs text-gray-500 mb-1">Extra (ex: photos, bateau privé…)</p>
+                    <TextInput
+                      placeholder="Libellé extra"
+                      value={c.raw.extraLabel}
+                      onChange={(e) => setItem(idx, { extraLabel: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Montant Extra</p>
+                    <NumberInput
+                      value={c.raw.extraAmount}
+                      onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* passagers */}
               <div className="grid md:grid-cols-3 gap-3">
@@ -419,6 +467,22 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
                 </div>
               </div>
+
+              {/* Extra dauphin (uniquement pour Speed Boat) */}
+              {c.act && c.act.name.toLowerCase().includes("speed boat") && (
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="checkbox"
+                    id={`extraDolphin-${idx}`}
+                    checked={c.raw.extraDolphin || false}
+                    onChange={(e) => setItem(idx, { extraDolphin: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor={`extraDolphin-${idx}`} className="text-sm text-gray-700 cursor-pointer">
+                    Extra dauphin 20€
+                  </label>
+                </div>
+              )}
 
               <div className="flex items-center justify-between mt-1">
                 <p className="text-xs text-gray-500">Sous-total</p>
@@ -542,6 +606,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                             babies: item.babies || 0,
                             extraLabel: item.extraLabel || "",
                             extraAmount: item.extraAmount || "",
+                            extraDolphin: item.extraDolphin || false,
+                            speedBoatExtra: item.speedBoatExtra || "",
                             slot: item.slot || "",
                           })),
                         );

@@ -4,6 +4,17 @@ import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn } from "../components/ui";
 
+// Options d'extra pour Speed Boat uniquement
+const SPEED_BOAT_EXTRAS = [
+  { id: "", label: "— Aucun extra —", priceAdult: 0, priceChild: 0 },
+  { id: "hula_hula", label: "HULA HULA", priceAdult: 10, priceChild: 5 },
+  { id: "orange_bay", label: "ORANGE BAY", priceAdult: 10, priceChild: 5 },
+  { id: "eden_beach", label: "EDEN BEACH", priceAdult: 15, priceChild: 10 },
+  { id: "eden_lunch", label: "EDEN + LUNCH", priceAdult: 30, priceChild: 15 },
+  { id: "ozeria", label: "OZERIA", priceAdult: 25, priceChild: 15 },
+  { id: "ozeria_lunch", label: "OZERIA + LUNCH", priceAdult: 45, priceChild: 25 },
+];
+
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -112,6 +123,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         babies: item.babies || 0,
                         extraLabel: item.extraLabel || "",
                         extraAmount: item.extraAmount || "",
+                        extraDolphin: item.extraDolphin || false,
+                        speedBoatExtra: item.speedBoatExtra || "",
                         slot: item.slot || "",
                       })));
                       setEditNotes(d.notes || "");
@@ -403,6 +416,20 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
 
         // Tous les enfants : +10€ par enfant
         lineTotal += ch * 10;
+
+        // Extra dauphin : +20€ si la case est cochée
+        if (it.extraDolphin) {
+          lineTotal += 20;
+        }
+
+        // Extra Speed Boat (menu déroulant) : calcul basé sur adultes et enfants
+        if (it.speedBoatExtra) {
+          const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === it.speedBoatExtra);
+          if (selectedExtra) {
+            lineTotal += ad * selectedExtra.priceAdult;
+            lineTotal += ch * selectedExtra.priceChild;
+          }
+        }
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
@@ -414,9 +441,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
       }
 
-      // extra
-      if (it.extraAmount) {
-        lineTotal += Number(it.extraAmount || 0);
+      // extra (pour les autres activités, pas Speed Boat)
+      if (!act || !act.name.toLowerCase().includes("speed boat")) {
+        if (it.extraAmount) {
+          lineTotal += Number(it.extraAmount || 0);
+        }
       }
 
       const pickupTime =
@@ -474,6 +503,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         babies: Number(c.raw.babies || 0),
         extraLabel: c.raw.extraLabel || "",
         extraAmount: Number(c.raw.extraAmount || 0),
+        extraDolphin: c.raw.extraDolphin || false,
+        speedBoatExtra: c.raw.speedBoatExtra || "",
         neighborhood: client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
@@ -602,15 +633,49 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       </select>
                     </div>
                   )}
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Extra (label)</p>
-                    <TextInput value={c.raw.extraLabel || ""} onChange={(e) => setItem(idx, { extraLabel: e.target.value })} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Extra (montant)</p>
-                    <NumberInput value={c.raw.extraAmount || ""} onChange={(e) => setItem(idx, { extraAmount: e.target.value })} />
-                  </div>
+                  {c.act && c.act.name.toLowerCase().includes("speed boat") ? (
+                    <div className="md:col-span-2">
+                      <p className="text-xs text-gray-500 mb-1">Extra</p>
+                      <select
+                        value={c.raw.speedBoatExtra || ""}
+                        onChange={(e) => setItem(idx, { speedBoatExtra: e.target.value })}
+                        className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+                      >
+                        {SPEED_BOAT_EXTRAS.map((extra) => (
+                          <option key={extra.id} value={extra.id}>
+                            {extra.label} {extra.priceAdult > 0 && `(${extra.priceAdult}€/adt + ${extra.priceChild}€ enfant)`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Extra (label)</p>
+                        <TextInput value={c.raw.extraLabel || ""} onChange={(e) => setItem(idx, { extraLabel: e.target.value })} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Extra (montant)</p>
+                        <NumberInput value={c.raw.extraAmount || ""} onChange={(e) => setItem(idx, { extraAmount: e.target.value })} />
+                      </div>
+                    </>
+                  )}
                 </div>
+                {/* Extra dauphin (uniquement pour Speed Boat) */}
+                {c.act && c.act.name.toLowerCase().includes("speed boat") && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id={`edit-extraDolphin-${idx}`}
+                      checked={c.raw.extraDolphin || false}
+                      onChange={(e) => setItem(idx, { extraDolphin: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor={`edit-extraDolphin-${idx}`} className="text-sm text-gray-700 cursor-pointer">
+                      Extra dauphin 20€
+                    </label>
+                  </div>
+                )}
                 {c.lineTotal > 0 && (
                   <div className="text-right text-sm font-semibold text-gray-700">
                     <p>Espèces: {currencyNoCents(Math.round(c.lineTotal), c.currency)}</p>
