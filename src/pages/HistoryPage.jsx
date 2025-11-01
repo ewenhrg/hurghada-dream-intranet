@@ -426,12 +426,23 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         items: JSON.stringify(updatedQuote.items),
                       };
                       
-                      const { error: updateError } = await supabase
+                      // Utiliser supabase_id en priorité pour identifier le devis à mettre à jour
+                      let updateQuery = supabase
                         .from("quotes")
                         .update(supabaseUpdate)
-                        .eq("site_key", SITE_KEY)
-                        .eq("client_phone", updatedQuote.client.phone || "")
-                        .eq("created_at", updatedQuote.createdAt);
+                        .eq("site_key", SITE_KEY);
+
+                      if (selectedQuote.supabase_id) {
+                        // Si le devis a un supabase_id, l'utiliser (le plus fiable)
+                        updateQuery = updateQuery.eq("id", selectedQuote.supabase_id);
+                      } else {
+                        // Sinon, utiliser client_phone + created_at (pour compatibilité avec les anciens devis)
+                        updateQuery = updateQuery
+                          .eq("client_phone", updatedQuote.client.phone || "")
+                          .eq("created_at", updatedQuote.createdAt);
+                      }
+                      
+                      const { error: updateError } = await updateQuery;
                       
                       if (updateError) {
                         console.warn("⚠️ Erreur mise à jour Supabase:", updateError);
@@ -494,17 +505,35 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   created_by_name: updatedQuote.createdByName || "",
                 };
 
-                const { error: updateError } = await supabase
+                // Utiliser supabase_id en priorité pour identifier le devis à mettre à jour
+                let updateQuery = supabase
                   .from("quotes")
                   .update(supabaseUpdate)
-                  .eq("site_key", SITE_KEY)
-                  .eq("client_phone", selectedQuote.client?.phone || "")
-                  .eq("created_at", selectedQuote.createdAt);
+                  .eq("site_key", SITE_KEY);
+
+                if (selectedQuote.supabase_id) {
+                  // Si le devis a un supabase_id, l'utiliser (le plus fiable)
+                  updateQuery = updateQuery.eq("id", selectedQuote.supabase_id);
+                } else {
+                  // Sinon, utiliser client_phone + created_at (pour compatibilité avec les anciens devis)
+                  updateQuery = updateQuery
+                    .eq("client_phone", selectedQuote.client?.phone || "")
+                    .eq("created_at", selectedQuote.createdAt);
+                }
+
+                const { error: updateError } = await updateQuery;
 
                 if (updateError) {
                   console.warn("⚠️ Erreur mise à jour Supabase:", updateError);
                 } else {
                   console.log("✅ Devis mis à jour dans Supabase!");
+                  // Mettre à jour le supabase_id dans le devis local si ce n'était pas déjà fait
+                  if (!updatedQuote.supabase_id && selectedQuote.supabase_id) {
+                    const finalUpdatedQuote = { ...updatedQuote, supabase_id: selectedQuote.supabase_id };
+                    const finalUpdatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? finalUpdatedQuote : q));
+                    setQuotes(finalUpdatedQuotes);
+                    saveLS(LS_KEYS.quotes, finalUpdatedQuotes);
+                  }
                 }
               } catch (updateErr) {
                 console.warn("⚠️ Erreur lors de la mise à jour Supabase:", updateErr);
