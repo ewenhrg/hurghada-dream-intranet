@@ -139,9 +139,9 @@ export function PickUpPage({ quotes, setQuotes }) {
       
       setSendProgress({ current: i + 1, total: pickupRows.length });
       
-      // Attendre 3 secondes avant d'envoyer le message suivant (pour laisser le temps au navigateur)
+      // Attendre 10 secondes avant d'envoyer le message suivant (pour laisser le temps au navigateur)
       if (i < pickupRows.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 10000));
       }
     }
 
