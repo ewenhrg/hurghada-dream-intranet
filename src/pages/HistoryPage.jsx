@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid } from "../utils";
+import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid, cleanPhoneNumber } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 
@@ -698,9 +698,15 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     const validGrandTotal = validComputed.reduce((s, c) => s + (c.lineTotal || 0), 0);
     const validGrandCurrency = validComputed.find((c) => c.currency)?.currency || "EUR";
 
+    // Nettoyer le numéro de téléphone avant de sauvegarder
+    const cleanedClient = {
+      ...client,
+      phone: cleanPhoneNumber(client.phone || ""),
+    };
+
     const updatedQuote = {
       ...quote,
-      client,
+      client: cleanedClient,
       notes: notes.trim(),
       createdByName: quote.createdByName || "", // Garder le créateur original
       items: validComputed.map((c) => ({
@@ -754,7 +760,14 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Téléphone</p>
-              <TextInput value={client.phone || ""} onChange={(e) => setClient((c) => ({ ...c, phone: e.target.value }))} />
+              <TextInput 
+                value={client.phone || ""} 
+                onChange={(e) => {
+                  // Nettoyer automatiquement le numéro de téléphone (supprimer espaces, parenthèses, etc.)
+                  const cleaned = cleanPhoneNumber(e.target.value);
+                  setClient((c) => ({ ...c, phone: cleaned }));
+                }} 
+              />
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Hôtel</p>

@@ -43,6 +43,13 @@ export function currencyNoCents(n, curr = "EUR") {
   }
 }
 
+// Nettoyer un numéro de téléphone : garder uniquement les chiffres
+export function cleanPhoneNumber(phone) {
+  if (!phone) return "";
+  // Supprimer tous les caractères sauf les chiffres
+  return phone.replace(/\D+/g, "");
+}
+
 export function emptyTransfers() {
   const obj = {};
   NEIGHBORHOODS.forEach((n) => {

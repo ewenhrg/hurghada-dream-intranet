@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { uuid, currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, loadLS } from "../utils";
+import { uuid, currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, loadLS, cleanPhoneNumber } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 
 // Options d'extra pour Speed Boat uniquement
@@ -235,10 +235,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     const validGrandTotal = validComputed.reduce((s, c) => s + (c.lineTotal || 0), 0);
     const validGrandCurrency = validComputed.find((c) => c.currency)?.currency || "EUR";
 
+    // Nettoyer le numéro de téléphone avant de créer le devis
+    const cleanedClient = {
+      ...client,
+      phone: cleanPhoneNumber(client.phone || ""),
+    };
+
     const q = {
       id: uuid(),
       createdAt: new Date().toISOString(),
-      client,
+      client: cleanedClient,
       notes: notes.trim(),
       createdByName: user?.name || "",
       items: validComputed.map((c) => ({
@@ -380,7 +386,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Téléphone</p>
-            <TextInput value={client.phone} onChange={(e) => setClient((c) => ({ ...c, phone: e.target.value }))} />
+            <TextInput 
+              value={client.phone} 
+              onChange={(e) => {
+                // Nettoyer automatiquement le numéro de téléphone (supprimer espaces, parenthèses, etc.)
+                const cleaned = cleanPhoneNumber(e.target.value);
+                setClient((c) => ({ ...c, phone: cleaned }));
+              }} 
+            />
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Hôtel</p>

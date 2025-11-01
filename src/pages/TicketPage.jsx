@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { calculateCardPrice } from "../utils";
+import { calculateCardPrice, cleanPhoneNumber } from "../utils";
 
 export function TicketPage({ quotes }) {
   // Extraire tous les items avec tickets renseignés depuis les devis complets
@@ -40,7 +40,7 @@ export function TicketPage({ quotes }) {
               ticket: item.ticketNumber || "",
               date: item.date || "",
               clientName: quote.client?.name || "",
-              clientPhone: quote.client?.phone || "",
+              clientPhone: cleanPhoneNumber(quote.client?.phone || ""), // Nettoyer le numéro pour l'affichage
               hotel: quote.client?.hotel || "",
               room: quote.client?.room || "",
               adults: item.adults || 0,
