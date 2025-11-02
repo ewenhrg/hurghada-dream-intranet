@@ -654,11 +654,12 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "users" && user?.canResetData && (
-          <Section title="Gestion des utilisateurs" subtitle="Créez et gérez les utilisateurs avec leurs codes d'accès et permissions.">
-            <UsersPage user={user} />
-          </Section>
-        )}
+          {tab === "users" && user?.canResetData && (
+            <Section title="Gestion des utilisateurs" subtitle="Créez et gérez les utilisateurs avec leurs codes d'accès et permissions.">
+              <UsersPage user={user} />
+            </Section>
+          )}
+        </Suspense>
       </main>
 
       <footer className="max-w-6xl mx-auto px-3 py-8 text-[10px] text-gray-500">
