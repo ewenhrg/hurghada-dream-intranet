@@ -36,8 +36,23 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     ktm530: "",
   }), []);
 
-  // Toujours partir avec un formulaire vide (ne pas charger depuis localStorage)
-  const defaultClient = {
+  // Charger le formulaire sauvegardé depuis localStorage (sauf lors d'un vrai rechargement de page)
+  // Détecter si c'est un vrai rechargement de page (F5) ou juste un changement d'onglet
+  const [isPageReload] = useState(() => {
+    // Vérifier si c'est un rechargement de page
+    const navigationEntry = performance.getEntriesByType('navigation')[0];
+    const isReload = navigationEntry && navigationEntry.type === 'reload';
+    
+    // Si c'est un rechargement, supprimer la sauvegarde et retourner true
+    if (isReload) {
+      localStorage.removeItem(LS_KEYS.quoteForm);
+      return true;
+    }
+    return false;
+  });
+
+  const savedForm = !isPageReload ? loadLS(LS_KEYS.quoteForm, null) : null;
+  const defaultClient = savedForm?.client || {
     name: "",
     phone: "",
     hotel: "",
@@ -47,13 +62,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     departureDate: "",
   };
   
-  const defaultItems = [blankItemMemo()];
-  const defaultNotes = "";
-  
-  // Supprimer la sauvegarde au chargement de la page
-  useEffect(() => {
-    localStorage.removeItem(LS_KEYS.quoteForm);
-  }, []);
+  const defaultItems = savedForm?.items && savedForm.items.length > 0 ? savedForm.items : [blankItemMemo()];
+  const defaultNotes = savedForm?.notes || "";
 
   const [client, setClient] = useState(defaultClient);
   const [items, setItems] = useState(defaultItems);
