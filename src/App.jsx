@@ -227,6 +227,12 @@ export default function App() {
               
               const createdAt = row.created_at || row.createdAt || new Date().toISOString();
               
+              // Calculer isModified à partir de la présence de modifications
+              // Soit dans quote.modifications, soit dans les items (item.modifications)
+              const hasQuoteModifications = items.some(item => 
+                item.modifications && Array.isArray(item.modifications) && item.modifications.length > 0
+              );
+              
               return {
                 id: row.id?.toString() || uuid(),
                 supabase_id: row.id,
@@ -245,6 +251,7 @@ export default function App() {
                 totalCash: Math.round(row.total || 0),
                 totalCard: calculateCardPrice(row.total || 0),
                 currency: row.currency || "EUR",
+                isModified: hasQuoteModifications || false,
               };
             };
 
@@ -281,6 +288,16 @@ export default function App() {
               merged.push(supabaseQuote);
             });
 
+            // Calculer isModified pour tous les devis Supabase s'ils ne l'ont pas déjà
+            merged.forEach((quote) => {
+              if (quote.isModified === undefined) {
+                const hasItemModifications = quote.items?.some(item => 
+                  item.modifications && Array.isArray(item.modifications) && item.modifications.length > 0
+                );
+                quote.isModified = hasItemModifications || false;
+              }
+            });
+
             // Ajouter UNIQUEMENT les devis locaux qui sont vraiment nouveaux et très récents
             // (sans supabase_id ET créés il y a moins de 2 minutes - probablement en cours de création)
             const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
@@ -301,6 +318,11 @@ export default function App() {
               // Si le devis local n'existe PAS dans Supabase ET est très récent, c'est un nouveau devis en cours de création
               if (isVeryRecent && localKey !== '_' && !supabaseKeysSet.has(localKey)) {
                 // C'est un devis vraiment nouveau (créé localement il y a moins de 2 minutes, pas encore synchronisé)
+                // Calculer isModified pour ce devis local aussi
+                const hasItemModifications = localQuote.items?.some(item => 
+                  item.modifications && Array.isArray(item.modifications) && item.modifications.length > 0
+                );
+                localQuote.isModified = hasItemModifications || localQuote.isModified || false;
                 merged.push(localQuote);
               }
               // Sinon, ignorer ce devis local (c'est probablement un doublon ou une version obsolète)
