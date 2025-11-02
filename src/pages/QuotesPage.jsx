@@ -368,7 +368,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
       arrivalDate: "",
       departureDate: "",
     });
-    setItems([blankItem()]);
+    setItems([blankItemMemo()]);
     setNotes("");
     
     // Supprimer le formulaire sauvegardé
@@ -376,6 +376,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
 
     setIsSubmitting(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    
+    // Afficher un message de succès
+    toast.success("Devis créé avec succès ! Formulaire réinitialisé.");
   }
 
   return (
