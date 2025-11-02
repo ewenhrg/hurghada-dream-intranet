@@ -1,11 +1,14 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { calculateCardPrice, cleanPhoneNumber, exportTicketsToCSV } from "../utils";
-import { PrimaryBtn } from "../components/ui";
+import { PrimaryBtn, NumberInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 
 export function TicketPage({ quotes }) {
+  const [minTicket, setMinTicket] = useState("");
+  const [maxTicket, setMaxTicket] = useState("");
+  
   // Extraire tous les items avec tickets renseignés depuis les devis complets
-  const ticketRows = useMemo(() => {
+  const allTicketRows = useMemo(() => {
     const rows = [];
     
     quotes.forEach((quote) => {
@@ -67,18 +70,79 @@ export function TicketPage({ quotes }) {
     });
   }, [quotes]);
 
+  // Filtrer les tickets selon la plage sélectionnée
+  const ticketRows = useMemo(() => {
+    if (!minTicket && !maxTicket) {
+      return allTicketRows;
+    }
+    
+    return allTicketRows.filter((row) => {
+      const ticketNum = parseInt(row.ticket.replace(/\D/g, ""), 10) || 0;
+      const min = parseInt(minTicket.replace(/\D/g, ""), 10) || 0;
+      const max = parseInt(maxTicket.replace(/\D/g, ""), 10) || Infinity;
+      
+      if (minTicket && maxTicket) {
+        return ticketNum >= min && ticketNum <= max;
+      } else if (minTicket) {
+        return ticketNum >= min;
+      } else if (maxTicket) {
+        return ticketNum <= max;
+      }
+      return true;
+    });
+  }, [allTicketRows, minTicket, maxTicket]);
+
   return (
     <>
-      <div className="flex justify-end mb-4">
-        <PrimaryBtn
-          onClick={() => {
-            exportTicketsToCSV(ticketRows);
-            toast.success("Export Excel des tickets généré avec succès !");
-          }}
-          disabled={ticketRows.length === 0}
-        >
-          📊 Exporter Excel
-        </PrimaryBtn>
+      {/* Barre de filtrage par plage de tickets */}
+      <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-4 shadow-sm mb-4">
+        <div className="flex flex-col md:flex-row gap-4 items-end">
+          <div className="flex-1 grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Ticket minimum</p>
+              <NumberInput
+                placeholder="Ex: 164500"
+                value={minTicket}
+                onChange={(e) => setMinTicket(e.target.value)}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Ticket maximum</p>
+              <NumberInput
+                placeholder="Ex: 164550"
+                value={maxTicket}
+                onChange={(e) => setMaxTicket(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {(minTicket || maxTicket) && (
+              <button
+                onClick={() => {
+                  setMinTicket("");
+                  setMaxTicket("");
+                }}
+                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-xl border border-gray-200 hover:bg-gray-200 transition-colors"
+              >
+                Réinitialiser
+              </button>
+            )}
+            <PrimaryBtn
+              onClick={() => {
+                exportTicketsToCSV(ticketRows);
+                toast.success("Export Excel des tickets généré avec succès !");
+              }}
+              disabled={ticketRows.length === 0}
+            >
+              📊 Exporter Excel
+            </PrimaryBtn>
+          </div>
+        </div>
+        {(minTicket || maxTicket) && (
+          <p className="text-xs text-gray-500 mt-2">
+            Affichage de {ticketRows.length} ticket(s) sur {allTicketRows.length} total
+          </p>
+        )}
       </div>
       <div className="overflow-x-auto">
         {/* Tableau style Excel pour faciliter le copier-coller */}
