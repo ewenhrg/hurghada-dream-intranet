@@ -582,9 +582,6 @@ export default function App() {
             <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
               Tickets
             </Pill>
-            <Pill active={tab === "pickup"} onClick={() => setTab("pickup")}>
-              Pick Up
-            </Pill>
             {(user?.name === "Ewen" || user?.name === "Léa") && (
               <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
                 Modifications
@@ -642,12 +639,6 @@ export default function App() {
         {tab === "tickets" && (
           <Section title="Liste des tickets" subtitle="Tableau automatique de tous les tickets renseignés (devis avec tous les tickets complétés)">
             <TicketPage quotes={quotes} />
-          </Section>
-        )}
-
-        {tab === "pickup" && (
-          <Section title="Gestion des Pick Ups" subtitle="Visualisez et modifiez les heures de prise en charge pour une date donnée">
-            <PickUpPage quotes={quotes} setQuotes={setQuotes} />
           </Section>
         )}
 
