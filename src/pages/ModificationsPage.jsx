@@ -22,10 +22,10 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
     });
   }, [quotes]);
 
-  // Filtrer par numéro de téléphone
+  // Filtrer par numéro de téléphone - ne rien afficher par défaut
   const filteredQuotes = useMemo(() => {
     if (!debouncedSearchPhone.trim()) {
-      return paidQuotes;
+      return [];
     }
     const needle = debouncedSearchPhone.replace(/\D+/g, "");
     return paidQuotes.filter((quote) => {
@@ -202,7 +202,7 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
         {filteredQuotes.length === 0 ? (
           <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-6 text-center">
             <p className="text-sm text-gray-500">
-              {debouncedSearchPhone.trim() ? "Aucun devis trouvé pour ce numéro" : "Aucun devis payé disponible"}
+              {debouncedSearchPhone.trim() ? "Aucun devis trouvé pour ce numéro" : "Recherchez un devis par numéro de téléphone pour commencer"}
             </p>
           </div>
         ) : (
