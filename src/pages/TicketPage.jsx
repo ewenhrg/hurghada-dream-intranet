@@ -176,6 +176,36 @@ export function TicketPage({ quotes }) {
       <div className="overflow-x-auto">
         {/* Tableau style Excel pour faciliter le copier-coller */}
         <div style={{ position: 'relative', paddingLeft: '40px' }}>
+          {/* Logos des modifications/annulations positionnés absolument */}
+          {ticketRows.map((row, rowIndex) => {
+            if (!row.isModified && !row.isCancelled) return null;
+            const uniqueKey = `${row.ticket}-${row.date}-${row.clientPhone || ''}`;
+            // Position calculée : 38px (en-tête) + rowIndex * ~40px (hauteur approximative de ligne)
+            const topOffset = 38 + (rowIndex * 40);
+            
+            return (
+              <div
+                key={`icon-${uniqueKey}`}
+                style={{
+                  position: 'absolute',
+                  left: '5px',
+                  top: `${topOffset}px`,
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px',
+                  width: '30px',
+                  textAlign: 'center',
+                  userSelect: 'none',
+                  pointerEvents: 'none',
+                  zIndex: 10
+                }}
+              >
+                {row.isCancelled ? '❌' : '🔄'}
+              </div>
+            );
+          })}
           <table className="w-full border-collapse bg-white" style={{ border: '1px solid #ddd' }}>
             <thead>
               <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #333' }}>
@@ -226,36 +256,6 @@ export function TicketPage({ quotes }) {
               </th>
             </tr>
           </thead>
-          {/* Logos des modifications/annulations positionnés absolument */}
-          {ticketRows.map((row, rowIndex) => {
-            if (!row.isModified && !row.isCancelled) return null;
-            const uniqueKey = `${row.ticket}-${row.date}-${row.clientPhone || ''}`;
-            // Position calculée : 38px (en-tête) + rowIndex * ~40px (hauteur approximative de ligne)
-            const topOffset = 38 + (rowIndex * 40);
-            
-            return (
-              <div
-                key={`icon-${uniqueKey}`}
-                style={{
-                  position: 'absolute',
-                  left: '5px',
-                  top: `${topOffset}px`,
-                  height: '40px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '16px',
-                  width: '30px',
-                  textAlign: 'center',
-                  userSelect: 'none',
-                  pointerEvents: 'none',
-                  zIndex: 10
-                }}
-              >
-                {row.isCancelled ? '❌' : '🔄'}
-              </div>
-            );
-          })}
           <tbody>
             {ticketRows.length === 0 ? (
               <tr>
