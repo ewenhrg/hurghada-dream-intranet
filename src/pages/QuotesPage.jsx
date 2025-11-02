@@ -382,7 +382,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     <div className="relative">
       {/* Modale des dates utilisées - collante à gauche */}
       {usedDates.length > 0 && (
-        <div className="absolute left-4 top-0 w-64 z-50 hidden md:block">
+        <div className="sticky left-4 top-4 w-64 z-50 hidden md:block self-start">
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-lg">
             <h3 className="text-sm font-semibold text-amber-900 mb-3">📅 Dates utilisées</h3>
             <div className="space-y-3">
