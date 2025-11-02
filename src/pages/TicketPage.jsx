@@ -160,42 +160,68 @@ export function TicketPage({ quotes }) {
 
   return (
     <>
-      {/* Barre de filtrage */}
+      {/* Barre de recherche et filtres */}
       <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-4 shadow-sm mb-4">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          {/* Bouton pour filtrer les modifiés/annulés */}
-          <button
-            onClick={() => {
-              setShowModifiedOrCancelled(!showModifiedOrCancelled);
-              setCurrentPage(1); // Réinitialiser à la première page
-            }}
-            className={`px-4 py-2 text-sm rounded-xl border transition-colors ${
-              showModifiedOrCancelled
-                ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200"
-                : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
-            }`}
-          >
-            {showModifiedOrCancelled ? "✅ Modifiés/Annulés" : "🔄 Modifiés/Annulés"}
-          </button>
-
-          <div className="flex items-center gap-4">
-            <p className="text-sm text-gray-600">
-              Total : <span className="font-semibold">{filteredTicketRows.length}</span> ticket(s)
-            </p>
-            {pages.length > 0 && (
-              <p className="text-sm text-gray-600">
-                Page <span className="font-semibold">{currentPage}</span> sur <span className="font-semibold">{pages.length}</span>
-              </p>
-            )}
-            <PrimaryBtn
-              onClick={() => {
-                exportTicketsToCSV(filteredTicketRows);
-                toast.success("Export Excel des tickets généré avec succès !");
+        <div className="space-y-4">
+          {/* Barre de recherche */}
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Rechercher par numéro de ticket ou téléphone</p>
+            <TextInput
+              placeholder="Ex: 163400 ou +20123456789"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1); // Réinitialiser à la première page lors de la recherche
               }}
-              disabled={filteredTicketRows.length === 0}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setCurrentPage(1);
+                }}
+                className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+              >
+                Effacer la recherche
+              </button>
+            )}
+          </div>
+
+          {/* Boutons de filtre et info */}
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <button
+              onClick={() => {
+                setShowModifiedOrCancelled(!showModifiedOrCancelled);
+                setCurrentPage(1); // Réinitialiser à la première page
+              }}
+              className={`px-4 py-2 text-sm rounded-xl border transition-colors ${
+                showModifiedOrCancelled
+                  ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200"
+                  : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+              }`}
             >
-              📊 Exporter Excel
-            </PrimaryBtn>
+              {showModifiedOrCancelled ? "✅ Modifiés/Annulés" : "🔄 Modifiés/Annulés"}
+            </button>
+
+            <div className="flex items-center gap-4">
+              <p className="text-sm text-gray-600">
+                Total : <span className="font-semibold">{filteredTicketRows.length}</span> ticket(s)
+              </p>
+              {pages.length > 0 && (
+                <p className="text-sm text-gray-600">
+                  Page <span className="font-semibold">{currentPage}</span> sur <span className="font-semibold">{pages.length}</span>
+                </p>
+              )}
+              <PrimaryBtn
+                onClick={() => {
+                  exportTicketsToCSV(filteredTicketRows);
+                  toast.success("Export Excel des tickets généré avec succès !");
+                }}
+                disabled={filteredTicketRows.length === 0}
+              >
+                📊 Exporter Excel
+              </PrimaryBtn>
+            </div>
           </div>
         </div>
       </div>
