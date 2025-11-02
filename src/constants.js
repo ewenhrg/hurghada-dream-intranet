@@ -36,6 +36,7 @@ export const NEIGHBORHOODS = [
   { key: "hurghada_kawther", label: "Hurghada Kawther" },
   { key: "hurghada_sheraton", label: "Hurghada Sheraton" },
   { key: "hurghada_arabia", label: "Hurghada Arabia" },
+  { key: "hurghada_ahyaa", label: "Hurghada Ahyaa" },
 ];
 
 export function getDefaultActivities() {
