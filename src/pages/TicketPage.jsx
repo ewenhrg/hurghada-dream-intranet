@@ -173,9 +173,10 @@ export function TicketPage({ quotes }) {
           </p>
         )}
       </div>
-      <div className="overflow-x-auto" style={{ paddingLeft: '40px' }}>
+      <div className="overflow-x-auto">
         {/* Tableau style Excel pour faciliter le copier-coller */}
-        <table className="w-full border-collapse bg-white" style={{ border: '1px solid #ddd', position: 'relative' }}>
+        <div style={{ position: 'relative', paddingLeft: '40px' }}>
+          <table className="w-full border-collapse bg-white" style={{ border: '1px solid #ddd' }}>
             <thead>
               <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #333' }}>
                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
@@ -240,8 +241,7 @@ export function TicketPage({ quotes }) {
                 <tr
                   key={uniqueKey}
                   style={{ 
-                    borderBottom: '1px solid #ddd', 
-                    position: 'relative',
+                    borderBottom: '1px solid #ddd',
                     backgroundColor: row.isCancelled ? '#fee2e2' : 'transparent',
                     opacity: row.isCancelled ? 0.6 : 1
                   }}
@@ -249,9 +249,12 @@ export function TicketPage({ quotes }) {
                   {(row.isModified || row.isCancelled) && (
                     <div style={{
                       position: 'absolute',
-                      left: '-35px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
+                      left: '5px',
+                      top: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       fontSize: '16px',
                       width: '30px',
                       textAlign: 'center',
