@@ -4,6 +4,7 @@ import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, loadLS, cleanPhoneNumber } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
 
 // Options d'extra pour Speed Boat uniquement
 const SPEED_BOAT_EXTRAS = [
@@ -16,56 +17,7 @@ const SPEED_BOAT_EXTRAS = [
   { id: "ozeria_lunch", label: "OZERIA + LUNCH", priceAdult: 45, priceChild: 25 },
 ];
 
-// Helper pour vérifier si une activité utilise les champs buggy
-function isBuggyActivity(activityName) {
-  if (!activityName) return false;
-  const name = activityName.toLowerCase();
-  return name.includes("buggy + show") || name.includes("buggy safari matin");
-}
-
-// Helper pour obtenir les prix buggy selon l'activité
-function getBuggyPrices(activityName) {
-  if (!activityName) return { simple: 0, family: 0 };
-  const name = activityName.toLowerCase();
-  if (name.includes("buggy + show")) {
-    return { simple: 120, family: 160 };
-  } else if (name.includes("buggy safari matin")) {
-    return { simple: 110, family: 150 };
-  }
-  return { simple: 0, family: 0 };
-}
-
-// Helper pour vérifier si une activité utilise les champs moto cross
-function isMotoCrossActivity(activityName) {
-  if (!activityName) return false;
-  const name = activityName.toLowerCase();
-  return name.includes("moto cross");
-}
-
-// Helper pour obtenir les prix moto cross
-function getMotoCrossPrices() {
-  return { yamaha250: 100, ktm640: 120, ktm530: 160 };
-}
-
 export function QuotesPage({ activities, quotes, setQuotes, user }) {
-  const blankItem = () => ({
-    activityId: "",
-    date: new Date().toISOString().slice(0, 10),
-    adults: 2,
-    children: 0,
-    babies: 0,
-    extraLabel: "",
-    extraAmount: "",
-    slot: "",
-    extraDolphin: false, // Case à cocher "extra dauphin 20€" pour Speed Boat uniquement
-    speedBoatExtra: "", // Menu déroulant pour les extras Speed Boat
-    buggySimple: "", // Nombre de buggy simple (120€) pour BUGGY + SHOW uniquement
-    buggyFamily: "", // Nombre de buggy family (160€) pour BUGGY + SHOW uniquement
-    yamaha250: "", // Nombre de YAMAHA 250CC (100€) pour MOTO CROSS uniquement
-    ktm640: "", // Nombre de KTM640CC (120€) pour MOTO CROSS uniquement
-    ktm530: "", // Nombre de KTM 530CC (160€) pour MOTO CROSS uniquement
-  });
-
   // Charger le formulaire sauvegardé depuis localStorage
   const savedForm = loadLS(LS_KEYS.quoteForm, null);
   const defaultClient = savedForm?.client || {
@@ -77,7 +29,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     arrivalDate: "",
     departureDate: "",
   };
-  const defaultItems = savedForm?.items && savedForm.items.length > 0 ? savedForm.items : [blankItem()];
+  
+  const blankItemMemo = useCallback(() => ({
+    activityId: "",
+    date: new Date().toISOString().slice(0, 10),
+    adults: 2,
+    children: 0,
+    babies: 0,
+    extraLabel: "",
+    extraAmount: "",
+    slot: "",
+    extraDolphin: false,
+    speedBoatExtra: "",
+    buggySimple: "",
+    buggyFamily: "",
+    yamaha250: "",
+    ktm640: "",
+    ktm530: "",
+  }), []);
+  
+  const defaultItems = savedForm?.items && savedForm.items.length > 0 ? savedForm.items : [blankItemMemo()];
   const defaultNotes = savedForm?.notes || "";
 
   const [client, setClient] = useState(defaultClient);
@@ -118,8 +89,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
   }, []);
   
   const addItem = useCallback(() => {
-    setItems((prev) => [...prev, blankItem()]);
-  }, []);
+    setItems((prev) => [...prev, blankItemMemo()]);
+  }, [blankItemMemo]);
   
   const removeItem = useCallback((i) => {
     setItems((prev) => prev.filter((_, idx) => idx !== i));

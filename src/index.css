@@ -76,3 +76,44 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Optimisations mobile */
+@media (max-width: 768px) {
+  /* Réduction des espacements sur mobile */
+  .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+  
+  /* Meilleure lisibilité des tableaux sur mobile */
+  table {
+    font-size: 0.75rem;
+  }
+  
+  /* Navigation responsive */
+  nav {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  /* Amélioration de la scrollabilité sur mobile */
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Optimisation des inputs sur mobile */
+  input, textarea, select {
+    font-size: 16px; /* Évite le zoom automatique sur iOS */
+  }
+}
+
+/* Optimisations de performance */
+* {
+  /* Amélioration du rendu */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optimisation des transitions */
+.transition-all {
+  will-change: transform, opacity;
+}

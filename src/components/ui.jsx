@@ -1,4 +1,6 @@
-export const Pill = ({ active, children, ...props }) => (
+import { memo } from "react";
+
+export const Pill = memo(({ active, children, ...props }) => (
   <button
     {...props}
     className={
@@ -8,9 +10,11 @@ export const Pill = ({ active, children, ...props }) => (
   >
     {children}
   </button>
-);
+));
 
-export const TextInput = ({ className = "", ...props }) => (
+Pill.displayName = "Pill";
+
+export const TextInput = memo(({ className = "", ...props }) => (
   <input
     {...props}
     className={
@@ -18,9 +22,11 @@ export const TextInput = ({ className = "", ...props }) => (
       className
     }
   />
-);
+));
 
-export const NumberInput = ({ className = "", ...props }) => (
+TextInput.displayName = "TextInput";
+
+export const NumberInput = memo(({ className = "", ...props }) => (
   <input
     type="number"
     {...props}
@@ -29,9 +35,11 @@ export const NumberInput = ({ className = "", ...props }) => (
       className
     }
   />
-);
+));
 
-export const PrimaryBtn = ({ className = "", disabled, ...props }) => (
+NumberInput.displayName = "NumberInput";
+
+export const PrimaryBtn = memo(({ className = "", disabled, ...props }) => (
   <button
     {...props}
     disabled={disabled}
@@ -41,9 +49,11 @@ export const PrimaryBtn = ({ className = "", disabled, ...props }) => (
       className
     }
   />
-);
+));
 
-export const GhostBtn = ({ className = "", size, ...props }) => {
+PrimaryBtn.displayName = "PrimaryBtn";
+
+export const GhostBtn = memo(({ className = "", size, ...props }) => {
   const sizeClasses = size === "sm" ? "px-2 py-1 text-xs" : "px-4 py-2 text-sm";
   return (
     <button
@@ -56,9 +66,11 @@ export const GhostBtn = ({ className = "", size, ...props }) => {
       }
     />
   );
-};
+});
 
-export const Section = ({ title, subtitle, right, children }) => (
+GhostBtn.displayName = "GhostBtn";
+
+export const Section = memo(({ title, subtitle, right, children }) => (
   <section className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
@@ -69,5 +81,7 @@ export const Section = ({ title, subtitle, right, children }) => (
     </div>
     <div className="rounded-2xl bg-white/95 shadow-lg border border-blue-100/50 backdrop-blur-sm">{children}</div>
   </section>
-);
+));
+
+Section.displayName = "Section";
 

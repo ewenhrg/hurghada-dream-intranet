@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid, cleanPhoneNumber } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
 
 // Options d'extra pour Speed Boat uniquement
 const SPEED_BOAT_EXTRAS = [
@@ -16,37 +17,6 @@ const SPEED_BOAT_EXTRAS = [
   { id: "ozeria", label: "OZERIA", priceAdult: 25, priceChild: 15 },
   { id: "ozeria_lunch", label: "OZERIA + LUNCH", priceAdult: 45, priceChild: 25 },
 ];
-
-// Helper pour vérifier si une activité utilise les champs buggy
-function isBuggyActivity(activityName) {
-  if (!activityName) return false;
-  const name = activityName.toLowerCase();
-  return name.includes("buggy + show") || name.includes("buggy safari matin");
-}
-
-// Helper pour obtenir les prix buggy selon l'activité
-function getBuggyPrices(activityName) {
-  if (!activityName) return { simple: 0, family: 0 };
-  const name = activityName.toLowerCase();
-  if (name.includes("buggy + show")) {
-    return { simple: 120, family: 160 };
-  } else if (name.includes("buggy safari matin")) {
-    return { simple: 110, family: 150 };
-  }
-  return { simple: 0, family: 0 };
-}
-
-// Helper pour vérifier si une activité utilise les champs moto cross
-function isMotoCrossActivity(activityName) {
-  if (!activityName) return false;
-  const name = activityName.toLowerCase();
-  return name.includes("moto cross");
-}
-
-// Helper pour obtenir les prix moto cross
-function getMotoCrossPrices() {
-  return { yamaha250: 100, ktm640: 120, ktm530: 160 };
-}
 
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");

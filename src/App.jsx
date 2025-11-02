@@ -1,15 +1,17 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { supabase } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
 import { uuid, emptyTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
-import { ActivitiesPage } from "./pages/ActivitiesPage";
-import { QuotesPage } from "./pages/QuotesPage";
-import { HistoryPage } from "./pages/HistoryPage";
-import { UsersPage } from "./pages/UsersPage";
-import { TicketPage } from "./pages/TicketPage";
-import { ModificationsPage } from "./pages/ModificationsPage";
+
+// Lazy loading des pages pour optimiser le chargement initial
+const ActivitiesPage = lazy(() => import("./pages/ActivitiesPage").then(module => ({ default: module.ActivitiesPage })));
+const QuotesPage = lazy(() => import("./pages/QuotesPage").then(module => ({ default: module.QuotesPage })));
+const HistoryPage = lazy(() => import("./pages/HistoryPage").then(module => ({ default: module.HistoryPage })));
+const UsersPage = lazy(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
+const TicketPage = lazy(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
+const ModificationsPage = lazy(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
 
 export default function App() {
   const [ok, setOk] = useState(false);
@@ -598,25 +600,26 @@ export default function App() {
 
       {/* CONTENU CENTRÉ */}
       <main className="max-w-6xl mx-auto px-3 py-6 space-y-6">
-        {tab === "devis" && (
-          <Section
-            title="Créer & gérer les devis (multi-activités)"
-            subtitle="Supplément transfert = (par adulte) × (nombre d'adultes). Alerte si jour hors-dispo, mais le devis peut être créé."
-          >
-            <QuotesPage activities={activities} quotes={quotes} setQuotes={setQuotes} user={user} />
-          </Section>
-        )}
+        <Suspense fallback={<div className="flex items-center justify-center p-8"><p className="text-gray-500">Chargement...</p></div>}>
+          {tab === "devis" && (
+            <Section
+              title="Créer & gérer les devis (multi-activités)"
+              subtitle="Supplément transfert = (par adulte) × (nombre d'adultes). Alerte si jour hors-dispo, mais le devis peut être créé."
+            >
+              <QuotesPage activities={activities} quotes={quotes} setQuotes={setQuotes} user={user} />
+            </Section>
+          )}
 
-        {tab === "activities" && user?.canAccessActivities !== false && (
-          <Section
-            title="Gestion des activités"
-            subtitle="Ajoutez, modifiez les prix, jours, transferts par quartier."
-            right={
-              user?.canResetData && (
-              <GhostBtn
-                onClick={() => {
-                  if (!window.confirm("Réinitialiser les données locales ?")) return;
-                    const defaultActivities = getDefaultActivities();
+          {tab === "activities" && user?.canAccessActivities !== false && (
+            <Section
+              title="Gestion des activités"
+              subtitle="Ajoutez, modifiez les prix, jours, transferts par quartier."
+              right={
+                user?.canResetData && (
+                <GhostBtn
+                  onClick={() => {
+                    if (!window.confirm("Réinitialiser les données locales ?")) return;
+                      const defaultActivities = getDefaultActivities();
                     setActivities(defaultActivities);
                     saveLS(LS_KEYS.activities, defaultActivities);
                 }}
