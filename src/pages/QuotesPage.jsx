@@ -35,6 +35,18 @@ function getBuggyPrices(activityName) {
   return { simple: 0, family: 0 };
 }
 
+// Helper pour vérifier si une activité utilise les champs moto cross
+function isMotoCrossActivity(activityName) {
+  if (!activityName) return false;
+  const name = activityName.toLowerCase();
+  return name.includes("moto cross");
+}
+
+// Helper pour obtenir les prix moto cross
+function getMotoCrossPrices() {
+  return { yamaha250: 100, ktm640: 120, ktm530: 160 };
+}
+
 export function QuotesPage({ activities, quotes, setQuotes, user }) {
   const blankItem = () => ({
     activityId: "",
@@ -49,6 +61,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     speedBoatExtra: "", // Menu déroulant pour les extras Speed Boat
     buggySimple: "", // Nombre de buggy simple (120€) pour BUGGY + SHOW uniquement
     buggyFamily: "", // Nombre de buggy family (160€) pour BUGGY + SHOW uniquement
+    yamaha250: "", // Nombre de YAMAHA 250CC (100€) pour MOTO CROSS uniquement
+    ktm640: "", // Nombre de KTM640CC (120€) pour MOTO CROSS uniquement
+    ktm530: "", // Nombre de KTM 530CC (160€) pour MOTO CROSS uniquement
   });
 
   // Charger le formulaire sauvegardé depuis localStorage
@@ -156,18 +171,29 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         const buggyFamily = Number(it.buggyFamily || 0);
         const prices = getBuggyPrices(act.name);
         lineTotal = buggySimple * prices.simple + buggyFamily * prices.family;
+      } else if (act && isMotoCrossActivity(act.name)) {
+        // cas spécial MOTO CROSS : calcul basé sur les trois types de moto
+        const yamaha250 = Number(it.yamaha250 || 0);
+        const ktm640 = Number(it.ktm640 || 0);
+        const ktm530 = Number(it.ktm530 || 0);
+        const prices = getMotoCrossPrices();
+        lineTotal = yamaha250 * prices.yamaha250 + ktm640 * prices.ktm640 + ktm530 * prices.ktm530;
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
         lineTotal += Number(it.babies || 0) * Number(act.priceBaby || 0);
       }
 
-      // supplément transfert PAR ADULTE (sauf pour les activités buggy où on utilise buggySimple + buggyFamily)
+      // supplément transfert PAR ADULTE (sauf pour les activités buggy et moto cross où on utilise les quantités spécifiques)
       if (transferInfo && transferInfo.surcharge) {
         if (act && isBuggyActivity(act.name)) {
           // Pour les activités buggy, le supplément est calculé sur le nombre total de buggys
           const totalBuggys = Number(it.buggySimple || 0) + Number(it.buggyFamily || 0);
           lineTotal += Number(transferInfo.surcharge || 0) * totalBuggys;
+        } else if (act && isMotoCrossActivity(act.name)) {
+          // Pour MOTO CROSS, le supplément est calculé sur le nombre total de motos
+          const totalMotos = Number(it.yamaha250 || 0) + Number(it.ktm640 || 0) + Number(it.ktm530 || 0);
+          lineTotal += Number(transferInfo.surcharge || 0) * totalMotos;
         } else {
           lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
         }
@@ -279,6 +305,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         speedBoatExtra: c.raw.speedBoatExtra || "",
         buggySimple: Number(c.raw.buggySimple || 0),
         buggyFamily: Number(c.raw.buggyFamily || 0),
+        yamaha250: Number(c.raw.yamaha250 || 0),
+        ktm640: Number(c.raw.ktm640 || 0),
+        ktm530: Number(c.raw.ktm530 || 0),
         neighborhood: client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
@@ -611,6 +640,23 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                         Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""} (informations uniquement)
                       </p>
                       <NumberInput value={c.raw.children ?? ""} onChange={(e) => setItem(idx, { children: e.target.value === "" ? "" : e.target.value })} />
+                    </div>
+                  </div>
+                </>
+              ) : c.act && isMotoCrossActivity(c.act.name) ? (
+                <>
+                  <div className="grid md:grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
+                      <NumberInput value={c.raw.yamaha250 ?? ""} onChange={(e) => setItem(idx, { yamaha250: e.target.value === "" ? "" : e.target.value })} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">KTM640CC ({getMotoCrossPrices().ktm640}€)</p>
+                      <NumberInput value={c.raw.ktm640 ?? ""} onChange={(e) => setItem(idx, { ktm640: e.target.value === "" ? "" : e.target.value })} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">KTM 530CC ({getMotoCrossPrices().ktm530}€)</p>
+                      <NumberInput value={c.raw.ktm530 ?? ""} onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>
                 </>
