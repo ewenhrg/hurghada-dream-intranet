@@ -1,11 +1,10 @@
 import { useState, useMemo } from "react";
 import { calculateCardPrice, cleanPhoneNumber, exportTicketsToCSV } from "../utils";
-import { PrimaryBtn, NumberInput } from "../components/ui";
+import { PrimaryBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 
 export function TicketPage({ quotes }) {
-  const [minTicket, setMinTicket] = useState("");
-  const [maxTicket, setMaxTicket] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [showModifiedOrCancelled, setShowModifiedOrCancelled] = useState(false);
   
   // Extraire tous les items avec tickets renseignés depuis les devis complets
@@ -17,40 +16,36 @@ export function TicketPage({ quotes }) {
       const allTicketsFilled = quote.items?.every((item) => item.ticketNumber && item.ticketNumber.trim());
       
       if (allTicketsFilled && quote.items) {
-        // Pour chaque item du devis, créer une ligne dans le tableau
         quote.items.forEach((item) => {
-          
           if (item.ticketNumber && item.ticketNumber.trim()) {
             // Calculer le prix du transfert
             let transferTotal = 0;
             if (item.transferSurchargePerAdult) {
-              // Pour Buggy + Show et Buggy Safari Matin, utiliser buggySimple + buggyFamily
               if (item.activityName?.toLowerCase().includes("buggy")) {
                 const totalBuggys = (Number(item.buggySimple || 0) + Number(item.buggyFamily || 0));
                 transferTotal = item.transferSurchargePerAdult * totalBuggys;
               } else {
-                // Pour les autres activités, utiliser adults
                 transferTotal = item.transferSurchargePerAdult * (Number(item.adults || 0));
               }
             }
             
-            // Calculer le prix de l'activité : lineTotal inclut activité + transfert + extras
-            // Prix activité = lineTotal - transferTotal (les extras font partie du prix de l'activité)
             const activityPrice = Math.max(0, (item.lineTotal || 0) - transferTotal);
-            
-            // Méthode de paiement : afficher "Cash" ou "Stripe" selon ce qui a été sélectionné
             const paymentMethodDisplay = (item.paymentMethod === "cash" || item.paymentMethod === "stripe") 
-              ? item.paymentMethod.charAt(0).toUpperCase() + item.paymentMethod.slice(1) // Capitaliser la première lettre
+              ? item.paymentMethod.charAt(0).toUpperCase() + item.paymentMethod.slice(1)
               : "";
             
             const isModified = item.modifications && item.modifications.length > 0 && item.modifications.some(m => m.type === "modified");
             const isCancelled = item.isCancelled || false;
             
+            // Extraire le numéro numérique du ticket
+            const ticketNum = parseInt(item.ticketNumber.replace(/\D/g, ""), 10) || 0;
+            
             rows.push({
               ticket: item.ticketNumber || "",
+              ticketNum: ticketNum, // Numéro numérique pour tri et pagination
               date: item.date || "",
               clientName: quote.client?.name || "",
-              clientPhone: cleanPhoneNumber(quote.client?.phone || ""), // Nettoyer le numéro pour l'affichage
+              clientPhone: cleanPhoneNumber(quote.client?.phone || ""),
               hotel: quote.client?.hotel || "",
               room: quote.client?.room || "",
               adults: item.adults || 0,
@@ -58,7 +53,7 @@ export function TicketPage({ quotes }) {
               babies: item.babies || 0,
               activityName: item.activityName || "",
               pickupTime: item.pickupTime || "",
-              comment: "", // Colonne commentaire vide pour l'instant
+              comment: "",
               activityPrice: activityPrice,
               transferTotal: transferTotal,
               paymentMethod: paymentMethodDisplay,
@@ -71,53 +66,85 @@ export function TicketPage({ quotes }) {
       }
     });
     
-    // Trier par numéro de ticket
-    return rows.sort((a, b) => {
-      return (a.ticket || "").localeCompare(b.ticket || "");
-    });
+    // Trier par numéro de ticket (numérique)
+    return rows.sort((a, b) => a.ticketNum - b.ticketNum);
   }, [quotes]);
 
-  // Filtrer les tickets selon la plage sélectionnée et le filtre modifié/annulé
-  const ticketRows = useMemo(() => {
-    let filtered = allTicketRows;
-    
-    // Filtre modifié/annulé
+  // Filtrer les tickets modifiés/annulés si nécessaire
+  const filteredTicketRows = useMemo(() => {
     if (showModifiedOrCancelled) {
-      filtered = filtered.filter((row) => row.isModified || row.isCancelled);
+      return allTicketRows.filter((row) => row.isModified || row.isCancelled);
     } else {
-      // Exclure les annulées quand le filtre n'est pas actif
-      filtered = filtered.filter((row) => !row.isCancelled);
+      return allTicketRows.filter((row) => !row.isCancelled);
+    }
+  }, [allTicketRows, showModifiedOrCancelled]);
+
+  // Calculer les pages basées sur les numéros de ticket (50 tickets par page)
+  const pages = useMemo(() => {
+    if (filteredTicketRows.length === 0) return [];
+    
+    const sortedRows = [...filteredTicketRows].sort((a, b) => a.ticketNum - b.ticketNum);
+    const minTicket = sortedRows[0]?.ticketNum || 0;
+    const maxTicket = sortedRows[sortedRows.length - 1]?.ticketNum || 0;
+    
+    const pageList = [];
+    let currentStart = minTicket;
+    let pageIndex = 1;
+    
+    while (currentStart <= maxTicket) {
+      const pageEnd = currentStart + 49; // 50 tickets par page (0-49 = 50 tickets)
+      const pageRows = sortedRows.filter(row => 
+        row.ticketNum >= currentStart && row.ticketNum <= pageEnd
+      );
+      
+      if (pageRows.length > 0) {
+        pageList.push({
+          page: pageIndex,
+          startTicket: currentStart,
+          endTicket: pageEnd,
+          rows: pageRows,
+        });
+        pageIndex++;
+      }
+      
+      currentStart = pageEnd + 1;
     }
     
-    // Filtre par plage de tickets
-    if (minTicket || maxTicket) {
-      filtered = filtered.filter((row) => {
-        const ticketNum = parseInt(row.ticket.replace(/\D/g, ""), 10) || 0;
-        const min = parseInt(minTicket.replace(/\D/g, ""), 10) || 0;
-        const max = parseInt(maxTicket.replace(/\D/g, ""), 10) || Infinity;
-        
-        if (minTicket && maxTicket) {
-          return ticketNum >= min && ticketNum <= max;
-        } else if (minTicket) {
-          return ticketNum >= min;
-        } else if (maxTicket) {
-          return ticketNum <= max;
-        }
-        return true;
-      });
+    return pageList;
+  }, [filteredTicketRows]);
+
+  // Récupérer les lignes de la page courante
+  const currentPageData = useMemo(() => {
+    if (pages.length === 0) return { rows: [], startTicket: 0, endTicket: 0 };
+    const page = pages[currentPage - 1];
+    if (!page) return { rows: [], startTicket: 0, endTicket: 0 };
+    return {
+      rows: page.rows.slice(0, 50), // Maximum 50 lignes
+      startTicket: page.startTicket,
+      endTicket: page.endTicket,
+    };
+  }, [pages, currentPage]);
+
+  // Ajuster la page courante si elle dépasse le nombre de pages disponibles
+  useState(() => {
+    if (currentPage > pages.length && pages.length > 0) {
+      setCurrentPage(pages.length);
+    } else if (currentPage < 1 && pages.length > 0) {
+      setCurrentPage(1);
     }
-    
-    return filtered;
-  }, [allTicketRows, minTicket, maxTicket, showModifiedOrCancelled]);
+  });
 
   return (
     <>
-      {/* Barre de filtrage par plage de tickets */}
+      {/* Barre de filtrage */}
       <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-4 shadow-sm mb-4">
-        <div className="flex flex-col md:flex-row gap-4 items-end">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           {/* Bouton pour filtrer les modifiés/annulés */}
           <button
-            onClick={() => setShowModifiedOrCancelled(!showModifiedOrCancelled)}
+            onClick={() => {
+              setShowModifiedOrCancelled(!showModifiedOrCancelled);
+              setCurrentPage(1); // Réinitialiser à la première page
+            }}
             className={`px-4 py-2 text-sm rounded-xl border transition-colors ${
               showModifiedOrCancelled
                 ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200"
@@ -126,55 +153,31 @@ export function TicketPage({ quotes }) {
           >
             {showModifiedOrCancelled ? "✅ Modifiés/Annulés" : "🔄 Modifiés/Annulés"}
           </button>
-          <div className="flex-1 grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Ticket minimum</p>
-              <NumberInput
-                placeholder="Ex: 164500"
-                value={minTicket}
-                onChange={(e) => setMinTicket(e.target.value)}
-              />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Ticket maximum</p>
-              <NumberInput
-                placeholder="Ex: 164550"
-                value={maxTicket}
-                onChange={(e) => setMaxTicket(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {(minTicket || maxTicket) && (
-              <button
-                onClick={() => {
-                  setMinTicket("");
-                  setMaxTicket("");
-                }}
-                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-xl border border-gray-200 hover:bg-gray-200 transition-colors"
-              >
-                Réinitialiser
-              </button>
+
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-gray-600">
+              Total : <span className="font-semibold">{filteredTicketRows.length}</span> ticket(s)
+            </p>
+            {pages.length > 0 && (
+              <p className="text-sm text-gray-600">
+                Page <span className="font-semibold">{currentPage}</span> sur <span className="font-semibold">{pages.length}</span>
+              </p>
             )}
             <PrimaryBtn
               onClick={() => {
-                exportTicketsToCSV(ticketRows);
+                exportTicketsToCSV(filteredTicketRows);
                 toast.success("Export Excel des tickets généré avec succès !");
               }}
-              disabled={ticketRows.length === 0}
+              disabled={filteredTicketRows.length === 0}
             >
               📊 Exporter Excel
             </PrimaryBtn>
           </div>
         </div>
-        {(minTicket || maxTicket) && (
-          <p className="text-xs text-gray-500 mt-2">
-            Affichage de {ticketRows.length} ticket(s) sur {allTicketRows.length} total
-          </p>
-        )}
       </div>
+
+      {/* Tableau */}
       <div className="overflow-x-auto">
-        {/* Tableau style Excel pour faciliter le copier-coller */}
         <table className="w-full border-collapse bg-white" style={{ border: '1px solid #ddd' }}>
           <thead>
             <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #333' }}>
@@ -229,98 +232,159 @@ export function TicketPage({ quotes }) {
             </tr>
           </thead>
           <tbody>
-            {ticketRows.length === 0 ? (
+            {currentPageData.rows.length === 0 ? (
               <tr>
-                <td colSpan="13" style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
+                <td colSpan="16" style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
                   Aucun ticket disponible. Les tickets apparaîtront automatiquement lorsque tous les numéros de ticket d'un devis seront renseignés.
                 </td>
               </tr>
             ) : (
-              ticketRows.map((row) => {
-                // Clé unique basée sur ticket + date + client pour éviter les re-renders inutiles
+              currentPageData.rows.map((row) => {
                 const uniqueKey = `${row.ticket}-${row.date}-${row.clientPhone || ''}`;
                 return (
-                <tr
-                  key={uniqueKey}
-                  style={{ 
-                    borderBottom: '1px solid #ddd',
-                    backgroundColor: row.isCancelled ? '#fee2e2' : 'transparent',
-                    opacity: row.isCancelled ? 0.6 : 1
-                  }}
-                >
-                  <td 
+                  <tr
+                    key={uniqueKey}
                     style={{ 
-                      border: '1px solid #ddd', 
-                      padding: '8px', 
-                      textAlign: 'center',
-                      fontSize: '16px',
-                      userSelect: 'none',
-                      WebkitUserSelect: 'none',
-                      MozUserSelect: 'none',
-                      msUserSelect: 'none',
-                      width: '30px'
+                      borderBottom: '1px solid #ddd',
+                      backgroundColor: row.isCancelled ? '#fee2e2' : 'transparent',
+                      opacity: row.isCancelled ? 0.6 : 1
                     }}
-                    className="no-select"
                   >
-                    {row.isModified && '🔄'}
-                    {row.isCancelled && '❌'}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.ticket}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.date ? new Date(row.date + "T12:00:00").toLocaleDateString("fr-FR") : ""}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.clientName || ""}{row.clientName && row.clientPhone ? " " : ""}{row.clientPhone ? `+${row.clientPhone}` : ""}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.hotel || ""}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.room || ""}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
-                    {row.adults || 0}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
-                    {row.children || 0}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
-                    {row.babies || 0}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.activityName || ""}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.pickupTime || ""}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.comment || ""}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontSize: '13px' }}>
-                    {row.activityPrice ? `${Math.round(row.activityPrice)}€` : ""}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontSize: '13px' }}>
-                    {row.transferTotal ? `${Math.round(row.transferTotal)}€` : ""}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.paymentMethod || ""}
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.sellerName || ""}
-                  </td>
-                </tr>
+                    <td 
+                      style={{ 
+                        border: '1px solid #ddd', 
+                        padding: '8px', 
+                        textAlign: 'center',
+                        fontSize: '16px',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        MozUserSelect: 'none',
+                        msUserSelect: 'none',
+                        width: '30px'
+                      }}
+                      className="no-select"
+                    >
+                      {row.isModified && '🔄'}
+                      {row.isCancelled && '❌'}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                      {row.ticket}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                      {row.date ? new Date(row.date + "T12:00:00").toLocaleDateString("fr-FR") : ""}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                      {row.clientName || ""}{row.clientName && row.clientPhone ? " " : ""}{row.clientPhone ? `+${row.clientPhone}` : ""}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                      {row.hotel || ""}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                      {row.room || ""}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
+                      {row.adults || 0}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
+                      {row.children || 0}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
+                      {row.babies || 0}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                      {row.activityName || ""}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                      {row.pickupTime || ""}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                      {row.comment || ""}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontSize: '13px' }}>
+                      {row.activityPrice ? `${Math.round(row.activityPrice)}€` : ""}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontSize: '13px' }}>
+                      {row.transferTotal ? `${Math.round(row.transferTotal)}€` : ""}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                      {row.paymentMethod || ""}
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                      {row.sellerName || ""}
+                    </td>
+                  </tr>
                 );
               })
             )}
           </tbody>
         </table>
       </div>
-      
-      {ticketRows.length > 0 && (
-        <div className="mt-4 text-xs text-gray-500 text-center">
-          Total : {ticketRows.length} ticket(s)
+
+      {/* Pagination en bas */}
+      {pages.length > 1 && (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+              currentPage === 1
+                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            ← Précédent
+          </button>
+          
+          {pages.map((page, index) => {
+            const pageNum = index + 1;
+            // Afficher la première page, la dernière, la page courante, et quelques pages autour
+            const shouldShow = 
+              pageNum === 1 || 
+              pageNum === pages.length || 
+              (pageNum >= currentPage - 2 && pageNum <= currentPage + 2);
+            
+            if (!shouldShow) {
+              // Afficher des points de suspension
+              if (pageNum === currentPage - 3 || pageNum === currentPage + 3) {
+                return <span key={`dots-${pageNum}`} className="px-2 text-gray-400">...</span>;
+              }
+              return null;
+            }
+            
+            return (
+              <button
+                key={page.page}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`px-4 py-2 text-sm rounded-lg border transition-colors ${
+                  currentPage === pageNum
+                    ? "bg-blue-600 text-white border-blue-600 font-semibold"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+          
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(pages.length, prev + 1))}
+            disabled={currentPage === pages.length}
+            className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+              currentPage === pages.length
+                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            Suivant →
+          </button>
+        </div>
+      )}
+
+      {/* Info sur la plage de tickets de la page courante */}
+      {pages.length > 0 && currentPageData.startTicket > 0 && (
+        <div className="mt-4 text-center text-xs text-gray-500">
+          Page {currentPage} : Tickets {currentPageData.startTicket} à {currentPageData.endTicket}
+          {currentPageData.rows.length < 50 && ` (${currentPageData.rows.length} ligne${currentPageData.rows.length > 1 ? 's' : ''})`}
         </div>
       )}
     </>
