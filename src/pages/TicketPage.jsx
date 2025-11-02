@@ -150,45 +150,9 @@ export function TicketPage({ quotes }) {
           </p>
         )}
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" style={{ paddingLeft: '40px' }}>
         {/* Tableau style Excel pour faciliter le copier-coller */}
-        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-          {/* Colonne des logos modifiés à gauche du tableau */}
-          <div style={{ width: '30px', flexShrink: 0 }}>
-            {/* En-tête vide pour alignement */}
-            <div style={{ height: '38px', borderBottom: '2px solid #333', backgroundColor: '#f0f0f0' }} />
-            {ticketRows.map((row, idx) => {
-              const uniqueKey = `${row.ticket}-${row.date}-${row.clientPhone || ''}`;
-              return row.isModified ? (
-                <div
-                  key={uniqueKey}
-                  style={{
-                    minHeight: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px',
-                    borderBottom: '1px solid #ddd',
-                    padding: '8px 0'
-                  }}
-                >
-                  🔄
-                </div>
-              ) : (
-                <div
-                  key={uniqueKey}
-                  style={{
-                    minHeight: '40px',
-                    borderBottom: '1px solid #ddd',
-                    padding: '8px 0'
-                  }}
-                />
-              );
-            })}
-          </div>
-          
-          {/* Tableau principal */}
-          <table className="w-full border-collapse bg-white" style={{ border: '1px solid #ddd' }}>
+        <table className="w-full border-collapse bg-white" style={{ border: '1px solid #ddd', position: 'relative' }}>
             <thead>
               <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #333' }}>
                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
@@ -252,8 +216,24 @@ export function TicketPage({ quotes }) {
                 return (
                 <tr
                   key={uniqueKey}
-                  style={{ borderBottom: '1px solid #ddd' }}
+                  style={{ borderBottom: '1px solid #ddd', position: 'relative' }}
                 >
+                  {row.isModified && (
+                    <div style={{
+                      position: 'absolute',
+                      left: '-35px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: '16px',
+                      width: '30px',
+                      textAlign: 'center',
+                      userSelect: 'none',
+                      pointerEvents: 'none',
+                      zIndex: 10
+                    }}>
+                      🔄
+                    </div>
+                  )}
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                     {row.ticket}
                   </td>
