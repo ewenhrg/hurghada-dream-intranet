@@ -231,7 +231,7 @@ export function TicketPage({ quotes }) {
           <tbody>
             {ticketRows.length === 0 ? (
               <tr>
-                <td colSpan="12" style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
+                <td colSpan="13" style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
                   Aucun ticket disponible. Les tickets apparaîtront automatiquement lorsque tous les numéros de ticket d'un devis seront renseignés.
                 </td>
               </tr>
@@ -316,7 +316,6 @@ export function TicketPage({ quotes }) {
             )}
           </tbody>
         </table>
-        </div>
       </div>
       
       {ticketRows.length > 0 && (
