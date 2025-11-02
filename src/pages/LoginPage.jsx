@@ -36,8 +36,7 @@ export function LoginPage({ onSuccess }) {
         }
 
         // Sauvegarder les informations utilisateur dans sessionStorage
-        sessionStorage.setItem("hd_ok", "1");
-        sessionStorage.setItem("hd_user", JSON.stringify({
+        const userPermissions = {
           id: data.id,
           name: data.name,
           code: data.code,
@@ -48,7 +47,21 @@ export function LoginPage({ onSuccess }) {
           canResetData: data.can_reset_data || false,
           canAccessActivities: data.can_access_activities !== false, // true par défaut si null
           canAccessHistory: data.can_access_history !== false, // true par défaut si null
-        }));
+        };
+        
+        // Donner tous les accès à Léa sauf canResetData
+        if (data.name === "Léa") {
+          userPermissions.canDeleteQuote = true;
+          userPermissions.canAddActivity = true;
+          userPermissions.canEditActivity = true;
+          userPermissions.canDeleteActivity = true;
+          userPermissions.canAccessActivities = true;
+          userPermissions.canAccessHistory = true;
+          userPermissions.canResetData = false; // Ne pas donner l'accès au reset
+        }
+        
+        sessionStorage.setItem("hd_ok", "1");
+        sessionStorage.setItem("hd_user", JSON.stringify(userPermissions));
 
         onSuccess();
       } else {
