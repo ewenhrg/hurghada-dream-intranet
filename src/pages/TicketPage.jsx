@@ -312,8 +312,7 @@ export function TicketPage({ quotes }) {
               })
             )}
           </tbody>
-          </table>
-        </div>
+        </table>
       </div>
       
       {ticketRows.length > 0 && (
