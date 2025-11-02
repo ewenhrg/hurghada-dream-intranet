@@ -49,6 +49,41 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
     setShowModifyModal(true);
   }
 
+  async function handleUpdateComment(quote, itemIndex, comment) {
+    const updatedItems = [...quote.items];
+    updatedItems[itemIndex] = {
+      ...updatedItems[itemIndex],
+      modificationComment: comment,
+    };
+
+    const updatedQuote = {
+      ...quote,
+      items: updatedItems,
+    };
+
+    // Mettre à jour la liste des devis
+    const updatedQuotes = quotes.map((q) => (q.id === quote.id ? updatedQuote : q));
+    setQuotes(updatedQuotes);
+    saveLS(LS_KEYS.quotes, updatedQuotes);
+
+    // Mettre à jour dans Supabase si configuré
+    if (supabase) {
+      try {
+        const supabaseUpdate = {
+          items: JSON.stringify(updatedQuote.items),
+        };
+
+        await supabase
+          .from("quotes")
+          .update(supabaseUpdate)
+          .eq("site_key", SITE_KEY)
+          .eq("id", quote.supabase_id || quote.id);
+      } catch (err) {
+        console.warn("⚠️ Erreur lors de la mise à jour du commentaire dans Supabase:", err);
+      }
+    }
+  }
+
   async function handleConfirmModification() {
     if (!selectedQuote || selectedItemIndex === null) return;
 
@@ -252,7 +287,7 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                         : "bg-blue-50/50 border-blue-100"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <p className={`text-sm font-medium ${item.isCancelled ? "line-through text-gray-400" : ""}`}>
@@ -277,9 +312,33 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                           {currencyNoCents(Math.round(item.lineTotal || 0), quote.currency)}
                         </p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col gap-2 flex-1 max-w-xs">
+                        <TextInput
+                          placeholder="Commentaire..."
+                          value={item.modificationComment || ""}
+                          onChange={(e) => {
+                            // Mise à jour immédiate dans l'état local pour l'affichage
+                            const updatedItems = [...quote.items];
+                            updatedItems[idx] = {
+                              ...updatedItems[idx],
+                              modificationComment: e.target.value,
+                            };
+                            const updatedQuote = {
+                              ...quote,
+                              items: updatedItems,
+                            };
+                            const updatedQuotes = quotes.map((q) => (q.id === quote.id ? updatedQuote : q));
+                            setQuotes(updatedQuotes);
+                          }}
+                          onBlur={(e) => {
+                            // Sauvegarder quand on quitte le champ
+                            handleUpdateComment(quote, idx, e.target.value);
+                          }}
+                          className="text-xs"
+                          disabled={item.isCancelled}
+                        />
                         {!item.isCancelled && (
-                          <>
+                          <div className="flex gap-2">
                             <GhostBtn
                               onClick={() => handleModifyActivity(quote, idx)}
                               className="text-xs px-3 py-1"
@@ -292,7 +351,7 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                             >
                               Annuler
                             </GhostBtn>
-                          </>
+                          </div>
                         )}
                       </div>
                     </div>
