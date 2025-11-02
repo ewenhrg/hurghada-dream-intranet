@@ -61,10 +61,8 @@ export function TicketPage({ quotes }) {
       }
     });
     
-    // Trier par date puis par numéro de ticket
+    // Trier par numéro de ticket
     return rows.sort((a, b) => {
-      const dateCompare = new Date(a.date) - new Date(b.date);
-      if (dateCompare !== 0) return dateCompare;
       return (a.ticket || "").localeCompare(b.ticket || "");
     });
   }, [quotes]);

@@ -59,6 +59,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     hotel: "",
     room: "",
     neighborhood: "",
+    arrivalDate: "",
+    departureDate: "",
   };
   const defaultItems = savedForm?.items && savedForm.items.length > 0 ? savedForm.items : [blankItem()];
   const defaultNotes = savedForm?.notes || "";
