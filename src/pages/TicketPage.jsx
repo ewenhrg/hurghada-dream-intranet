@@ -1,11 +1,14 @@
 import { useState, useMemo } from "react";
 import { calculateCardPrice, cleanPhoneNumber, exportTicketsToCSV } from "../utils";
-import { PrimaryBtn } from "../components/ui";
+import { PrimaryBtn, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { useDebounce } from "../hooks/useDebounce";
 
 export function TicketPage({ quotes }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [showModifiedOrCancelled, setShowModifiedOrCancelled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
   // Extraire tous les items avec tickets renseignés depuis les devis complets
   const allTicketRows = useMemo(() => {
@@ -70,14 +73,35 @@ export function TicketPage({ quotes }) {
     return rows.sort((a, b) => a.ticketNum - b.ticketNum);
   }, [quotes]);
 
-  // Filtrer les tickets modifiés/annulés si nécessaire
+  // Filtrer les tickets modifiés/annulés et par recherche
   const filteredTicketRows = useMemo(() => {
+    let filtered = allTicketRows;
+    
+    // Filtre modifié/annulé
     if (showModifiedOrCancelled) {
-      return allTicketRows.filter((row) => row.isModified || row.isCancelled);
+      filtered = filtered.filter((row) => row.isModified || row.isCancelled);
     } else {
-      return allTicketRows.filter((row) => !row.isCancelled);
+      filtered = filtered.filter((row) => !row.isCancelled);
     }
-  }, [allTicketRows, showModifiedOrCancelled]);
+    
+    // Filtre par recherche (numéro de ticket ou téléphone)
+    if (debouncedSearchQuery.trim()) {
+      const searchTerm = debouncedSearchQuery.replace(/\D/g, ""); // Extraire uniquement les chiffres
+      filtered = filtered.filter((row) => {
+        // Rechercher dans le numéro de ticket
+        const ticketNum = row.ticket.replace(/\D/g, "");
+        const ticketMatch = ticketNum.includes(searchTerm);
+        
+        // Rechercher dans le numéro de téléphone
+        const phoneNum = row.clientPhone.replace(/\D/g, "");
+        const phoneMatch = phoneNum.includes(searchTerm);
+        
+        return ticketMatch || phoneMatch;
+      });
+    }
+    
+    return filtered;
+  }, [allTicketRows, showModifiedOrCancelled, debouncedSearchQuery]);
 
   // Calculer les pages basées sur les numéros de ticket (50 tickets par page)
   const pages = useMemo(() => {
