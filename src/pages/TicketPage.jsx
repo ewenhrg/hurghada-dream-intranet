@@ -175,43 +175,15 @@ export function TicketPage({ quotes }) {
       </div>
       <div className="overflow-x-auto">
         {/* Tableau style Excel pour faciliter le copier-coller */}
-        <div style={{ position: 'relative', paddingLeft: '40px' }}>
-          {/* Logos des modifications/annulations positionnés absolument */}
-          {ticketRows.map((row, rowIndex) => {
-            if (!row.isModified && !row.isCancelled) return null;
-            const uniqueKey = `${row.ticket}-${row.date}-${row.clientPhone || ''}`;
-            // Position calculée : 38px (en-tête) + rowIndex * ~40px (hauteur approximative de ligne)
-            const topOffset = 38 + (rowIndex * 40);
-            
-            return (
-              <div
-                key={`icon-${uniqueKey}`}
-                style={{
-                  position: 'absolute',
-                  left: '5px',
-                  top: `${topOffset}px`,
-                  height: '40px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '16px',
-                  width: '30px',
-                  textAlign: 'center',
-                  userSelect: 'none',
-                  pointerEvents: 'none',
-                  zIndex: 10
-                }}
-              >
-                {row.isCancelled ? '❌' : '🔄'}
-              </div>
-            );
-          })}
-          <table className="w-full border-collapse bg-white" style={{ border: '1px solid #ddd' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #333' }}>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
-                  Ticket
-                </th>
+        <table className="w-full border-collapse bg-white" style={{ border: '1px solid #ddd' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #333' }}>
+              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontWeight: 'bold', fontSize: '12px', width: '30px' }}>
+                {/* Colonne pour les logos modifiés/annulés */}
+              </th>
+              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
+                Ticket
+              </th>
               <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
                 Date
               </th>
@@ -276,6 +248,23 @@ export function TicketPage({ quotes }) {
                     opacity: row.isCancelled ? 0.6 : 1
                   }}
                 >
+                  <td 
+                    style={{ 
+                      border: '1px solid #ddd', 
+                      padding: '8px', 
+                      textAlign: 'center',
+                      fontSize: '16px',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      MozUserSelect: 'none',
+                      msUserSelect: 'none',
+                      width: '30px'
+                    }}
+                    className="no-select"
+                  >
+                    {row.isModified && '🔄'}
+                    {row.isCancelled && '❌'}
+                  </td>
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                     {row.ticket}
                   </td>
