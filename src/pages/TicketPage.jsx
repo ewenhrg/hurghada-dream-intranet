@@ -6,6 +6,7 @@ import { toast } from "../utils/toast.js";
 export function TicketPage({ quotes }) {
   const [minTicket, setMinTicket] = useState("");
   const [maxTicket, setMaxTicket] = useState("");
+  const [showModifiedOrCancelled, setShowModifiedOrCancelled] = useState(false);
   
   // Extraire tous les items avec tickets renseignés depuis les devis complets
   const allTicketRows = useMemo(() => {
@@ -18,10 +19,6 @@ export function TicketPage({ quotes }) {
       if (allTicketsFilled && quote.items) {
         // Pour chaque item du devis, créer une ligne dans le tableau
         quote.items.forEach((item) => {
-          // Ignorer les activités annulées
-          if (item.isCancelled) {
-            return;
-          }
           
           if (item.ticketNumber && item.ticketNumber.trim()) {
             // Calculer le prix du transfert
@@ -46,6 +43,9 @@ export function TicketPage({ quotes }) {
               ? item.paymentMethod.charAt(0).toUpperCase() + item.paymentMethod.slice(1) // Capitaliser la première lettre
               : "";
             
+            const isModified = item.modifications && item.modifications.length > 0 && item.modifications.some(m => m.type === "modified");
+            const isCancelled = item.isCancelled || false;
+            
             rows.push({
               ticket: item.ticketNumber || "",
               date: item.date || "",
@@ -63,7 +63,8 @@ export function TicketPage({ quotes }) {
               transferTotal: transferTotal,
               paymentMethod: paymentMethodDisplay,
               sellerName: quote.createdByName || "",
-              isModified: item.modifications && item.modifications.length > 0 && item.modifications.some(m => m.type === "modified"),
+              isModified: isModified,
+              isCancelled: isCancelled,
             });
           }
         });
@@ -76,33 +77,55 @@ export function TicketPage({ quotes }) {
     });
   }, [quotes]);
 
-  // Filtrer les tickets selon la plage sélectionnée
+  // Filtrer les tickets selon la plage sélectionnée et le filtre modifié/annulé
   const ticketRows = useMemo(() => {
-    if (!minTicket && !maxTicket) {
-      return allTicketRows;
+    let filtered = allTicketRows;
+    
+    // Filtre modifié/annulé
+    if (showModifiedOrCancelled) {
+      filtered = filtered.filter((row) => row.isModified || row.isCancelled);
+    } else {
+      // Exclure les annulées quand le filtre n'est pas actif
+      filtered = filtered.filter((row) => !row.isCancelled);
     }
     
-    return allTicketRows.filter((row) => {
-      const ticketNum = parseInt(row.ticket.replace(/\D/g, ""), 10) || 0;
-      const min = parseInt(minTicket.replace(/\D/g, ""), 10) || 0;
-      const max = parseInt(maxTicket.replace(/\D/g, ""), 10) || Infinity;
-      
-      if (minTicket && maxTicket) {
-        return ticketNum >= min && ticketNum <= max;
-      } else if (minTicket) {
-        return ticketNum >= min;
-      } else if (maxTicket) {
-        return ticketNum <= max;
-      }
-      return true;
-    });
-  }, [allTicketRows, minTicket, maxTicket]);
+    // Filtre par plage de tickets
+    if (minTicket || maxTicket) {
+      filtered = filtered.filter((row) => {
+        const ticketNum = parseInt(row.ticket.replace(/\D/g, ""), 10) || 0;
+        const min = parseInt(minTicket.replace(/\D/g, ""), 10) || 0;
+        const max = parseInt(maxTicket.replace(/\D/g, ""), 10) || Infinity;
+        
+        if (minTicket && maxTicket) {
+          return ticketNum >= min && ticketNum <= max;
+        } else if (minTicket) {
+          return ticketNum >= min;
+        } else if (maxTicket) {
+          return ticketNum <= max;
+        }
+        return true;
+      });
+    }
+    
+    return filtered;
+  }, [allTicketRows, minTicket, maxTicket, showModifiedOrCancelled]);
 
   return (
     <>
       {/* Barre de filtrage par plage de tickets */}
       <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-4 shadow-sm mb-4">
         <div className="flex flex-col md:flex-row gap-4 items-end">
+          {/* Bouton pour filtrer les modifiés/annulés */}
+          <button
+            onClick={() => setShowModifiedOrCancelled(!showModifiedOrCancelled)}
+            className={`px-4 py-2 text-sm rounded-xl border transition-colors ${
+              showModifiedOrCancelled
+                ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200"
+                : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            {showModifiedOrCancelled ? "✅ Modifiés/Annulés" : "🔄 Modifiés/Annulés"}
+          </button>
           <div className="flex-1 grid grid-cols-2 gap-3">
             <div>
               <p className="text-xs text-gray-500 mb-1">Ticket minimum</p>
@@ -216,9 +239,14 @@ export function TicketPage({ quotes }) {
                 return (
                 <tr
                   key={uniqueKey}
-                  style={{ borderBottom: '1px solid #ddd', position: 'relative' }}
+                  style={{ 
+                    borderBottom: '1px solid #ddd', 
+                    position: 'relative',
+                    backgroundColor: row.isCancelled ? '#fee2e2' : 'transparent',
+                    opacity: row.isCancelled ? 0.6 : 1
+                  }}
                 >
-                  {row.isModified && (
+                  {(row.isModified || row.isCancelled) && (
                     <div style={{
                       position: 'absolute',
                       left: '-35px',
@@ -231,7 +259,7 @@ export function TicketPage({ quotes }) {
                       pointerEvents: 'none',
                       zIndex: 10
                     }}>
-                      🔄
+                      {row.isCancelled ? '❌' : '🔄'}
                     </div>
                   )}
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
