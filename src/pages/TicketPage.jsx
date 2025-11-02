@@ -18,6 +18,11 @@ export function TicketPage({ quotes }) {
       if (allTicketsFilled && quote.items) {
         // Pour chaque item du devis, créer une ligne dans le tableau
         quote.items.forEach((item) => {
+          // Ignorer les activités annulées
+          if (item.isCancelled) {
+            return;
+          }
+          
           if (item.ticketNumber && item.ticketNumber.trim()) {
             // Calculer le prix du transfert
             let transferTotal = 0;
@@ -58,6 +63,7 @@ export function TicketPage({ quotes }) {
               transferTotal: transferTotal,
               paymentMethod: paymentMethodDisplay,
               sellerName: quote.createdByName || "",
+              isModified: item.modifications && item.modifications.length > 0 && item.modifications.some(m => m.type === "modified"),
             });
           }
         });
@@ -237,7 +243,21 @@ export function TicketPage({ quotes }) {
                     {row.babies || 0}
                   </td>
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    {row.activityName || ""}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>{row.activityName || ""}</span>
+                      {row.isModified && (
+                        <span style={{ 
+                          fontSize: '10px', 
+                          backgroundColor: '#fef3c7', 
+                          color: '#92400e', 
+                          padding: '2px 6px', 
+                          borderRadius: '4px',
+                          fontWeight: 'medium'
+                        }}>
+                          🔄 Modifié
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                     {row.pickupTime || ""}
