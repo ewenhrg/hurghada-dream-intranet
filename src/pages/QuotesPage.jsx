@@ -207,6 +207,24 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
   const grandTotalCash = Math.round(grandTotal); // Prix espèces (arrondi sans centimes)
   const grandTotalCard = calculateCardPrice(grandTotal); // Prix carte (espèces + 3% arrondi à l'euro supérieur)
 
+  // Récupérer toutes les dates utilisées avec leurs activités
+  const usedDates = useMemo(() => {
+    const datesMap = new Map();
+    quotes.forEach((quote) => {
+      quote.items?.forEach((item) => {
+        if (item.date && item.activityName) {
+          if (!datesMap.has(item.date)) {
+            datesMap.set(item.date, []);
+          }
+          datesMap.get(item.date).push(item.activityName);
+        }
+      });
+    });
+    
+    // Trier les dates du plus récent au plus ancien
+    return Array.from(datesMap.entries()).sort((a, b) => new Date(b[0]) - new Date(a[0]));
+  }, [quotes]);
+
   async function handleCreateQuote(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -363,17 +381,43 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <form 
-        onSubmit={handleCreateQuote} 
-        onKeyDown={(e) => {
-          // Désactiver la touche Entrée pour soumettre le formulaire
-          if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
-            e.preventDefault();
-          }
-        }}
-        className="space-y-5"
-      >
+    <div className="relative">
+      {/* Modale des dates utilisées - collante à gauche */}
+      {usedDates.length > 0 && (
+        <div className="fixed left-4 top-20 bottom-4 w-64 overflow-y-auto z-30 hidden md:block">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-lg">
+            <h3 className="text-sm font-semibold text-amber-900 mb-3">📅 Dates utilisées</h3>
+            <div className="space-y-3">
+              {usedDates.map(([date, activities]) => (
+                <div key={date} className="bg-white/50 rounded-xl p-3 border border-amber-100">
+                  <p className="text-xs font-medium text-amber-900 mb-2">
+                    {new Date(date + "T12:00:00").toLocaleDateString("fr-FR")}
+                  </p>
+                  <ul className="space-y-1">
+                    {activities.map((activity, idx) => (
+                      <li key={idx} className="text-xs text-amber-800">
+                        • {activity}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="p-4 md:p-6 space-y-6 md:ml-72">
+        <form 
+          onSubmit={handleCreateQuote} 
+          onKeyDown={(e) => {
+            // Désactiver la touche Entrée pour soumettre le formulaire
+            if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+              e.preventDefault();
+            }
+          }}
+          className="space-y-5"
+        >
         {/* Infos client */}
         <div className="grid md:grid-cols-5 gap-3">
           <div>
@@ -978,6 +1022,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
