@@ -316,15 +316,16 @@ export function TicketPage({ quotes }) {
                 </td>
               </tr>
             ) : (
-              currentPageData.rows.map((row) => {
-                const uniqueKey = `${row.ticket}-${row.date}-${row.clientPhone || ''}`;
+              currentPageData.rows.map((row, index) => {
+                // Utiliser ticketNum pour les lignes vides aussi
+                const uniqueKey = row.isEmpty ? `empty-${row.ticketNum}-${index}` : `${row.ticket}-${row.date}-${row.clientPhone || ''}`;
                 return (
                   <tr
                     key={uniqueKey}
                     style={{ 
                       borderBottom: '1px solid #ddd',
-                      backgroundColor: row.isCancelled ? '#fee2e2' : 'transparent',
-                      opacity: row.isCancelled ? 0.6 : 1
+                      backgroundColor: row.isCancelled ? '#fee2e2' : (row.isEmpty ? '#f9f9f9' : 'transparent'),
+                      opacity: row.isCancelled ? 0.6 : (row.isEmpty ? 0.5 : 1)
                     }}
                   >
                     <td 
@@ -341,8 +342,8 @@ export function TicketPage({ quotes }) {
                       }}
                       className="no-select"
                     >
-                      {row.isModified && '🔄'}
-                      {row.isCancelled && '❌'}
+                      {!row.isEmpty && row.isModified && '🔄'}
+                      {!row.isEmpty && row.isCancelled && '❌'}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', fontStyle: row.isEmpty ? 'italic' : 'normal', color: row.isEmpty ? '#999' : 'inherit' }}>
                       {row.isEmpty ? `(${row.ticketNum})` : row.ticket}
@@ -351,7 +352,7 @@ export function TicketPage({ quotes }) {
                       {row.isEmpty ? "" : (row.date ? new Date(row.date + "T12:00:00").toLocaleDateString("fr-FR") : "")}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
-                      {row.isEmpty ? "" : (row.clientName || "" + (row.clientName && row.clientPhone ? " " : "") + (row.clientPhone ? `+${row.clientPhone}` : ""))}
+                      {row.isEmpty ? "" : (row.clientName || "") + (row.clientName && row.clientPhone ? " " : "") + (row.clientPhone ? `+${row.clientPhone}` : "")}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
                       {row.isEmpty ? "" : (row.hotel || "")}
