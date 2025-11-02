@@ -316,6 +316,7 @@ export function TicketPage({ quotes }) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
       
       {ticketRows.length > 0 && (
