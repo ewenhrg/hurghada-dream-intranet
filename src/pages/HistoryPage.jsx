@@ -488,6 +488,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           notes={editNotes}
           setNotes={setEditNotes}
           activities={activities}
+          user={user}
           onClose={() => {
             setShowEditModal(false);
             setSelectedQuote(null);
@@ -565,7 +566,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 }
 
 // Composant modale de modification de devis
-function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, onClose, onSave }) {
+function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, onClose, onSave, user }) {
   const blankItem = () => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
@@ -575,6 +576,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     extraLabel: "",
     extraAmount: "",
     slot: "",
+    extraDolphin: false,
+    speedBoatExtra: "",
+    buggySimple: "",
+    buggyFamily: "",
   });
 
   function setItem(i, patch) {
@@ -801,9 +806,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-4 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
-                  <GhostBtn type="button" onClick={() => removeItem(idx)}>
-                    Supprimer
-                  </GhostBtn>
+                  {user?.canDeleteQuote && (
+                    <GhostBtn type="button" onClick={() => removeItem(idx)}>
+                      Supprimer
+                    </GhostBtn>
+                  )}
                 </div>
                 <div className="grid md:grid-cols-5 gap-3 items-end">
                   <div className="md:col-span-2">
