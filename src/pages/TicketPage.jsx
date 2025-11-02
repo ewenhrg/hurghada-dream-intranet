@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { calculateCardPrice, cleanPhoneNumber, exportTicketsToCSV } from "../utils";
 import { PrimaryBtn, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
@@ -192,14 +192,25 @@ export function TicketPage({ quotes }) {
     };
   }, [pages, currentPage]);
 
-  // Ajuster la page courante si elle dépasse le nombre de pages disponibles
-  useState(() => {
-    if (currentPage > pages.length && pages.length > 0) {
-      setCurrentPage(pages.length);
-    } else if (currentPage < 1 && pages.length > 0) {
-      setCurrentPage(1);
+  // Ajuster la page courante quand la recherche change ou quand les pages changent
+  useEffect(() => {
+    if (debouncedSearchQuery.trim()) {
+      // Si recherche active, trouver la première page qui contient des résultats
+      const firstPageWithResults = pages.findIndex(page => page.rows.length > 0);
+      if (firstPageWithResults !== -1 && currentPage !== firstPageWithResults + 1) {
+        setCurrentPage(firstPageWithResults + 1);
+      } else if (pages.length > 0 && currentPage > pages.length) {
+        setCurrentPage(pages.length);
+      }
+    } else {
+      // Sans recherche, ajuster si nécessaire
+      if (currentPage > pages.length && pages.length > 0) {
+        setCurrentPage(pages.length);
+      } else if (currentPage < 1 && pages.length > 0) {
+        setCurrentPage(1);
+      }
     }
-  });
+  }, [debouncedSearchQuery, pages, currentPage]);
 
   return (
     <>
