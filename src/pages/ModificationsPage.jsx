@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS } from "../constants";
-import { currencyNoCents, saveLS, uuid } from "../utils";
-import { GhostBtn, PrimaryBtn } from "../components/ui";
+import { currencyNoCents, saveLS, cleanPhoneNumber } from "../utils";
+import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { useDebounce } from "../hooks/useDebounce";
 
 export function ModificationsPage({ quotes, setQuotes, activities, user }) {
   const [selectedQuote, setSelectedQuote] = useState(null);
@@ -11,6 +12,8 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
   const [showModifyModal, setShowModifyModal] = useState(false);
   const [newActivityId, setNewActivityId] = useState("");
   const [modifyType, setModifyType] = useState(""); // "modify" or "cancel"
+  const [searchPhone, setSearchPhone] = useState("");
+  const debouncedSearchPhone = useDebounce(searchPhone, 300);
 
   // Filtrer uniquement les devis payés (tous les tickets renseignés)
   const paidQuotes = useMemo(() => {
@@ -18,6 +21,18 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
       return quote.items?.every((item) => item.ticketNumber && item.ticketNumber.trim());
     });
   }, [quotes]);
+
+  // Filtrer par numéro de téléphone
+  const filteredQuotes = useMemo(() => {
+    if (!debouncedSearchPhone.trim()) {
+      return paidQuotes;
+    }
+    const needle = debouncedSearchPhone.replace(/\D+/g, "");
+    return paidQuotes.filter((quote) => {
+      const quotePhone = (quote.client?.phone || "").replace(/\D+/g, "");
+      return quotePhone.includes(needle);
+    });
+  }, [paidQuotes, debouncedSearchPhone]);
 
   function handleModifyActivity(quote, itemIndex) {
     setSelectedQuote(quote);
@@ -41,8 +56,26 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
     const oldItem = updatedItems[selectedItemIndex];
 
     if (modifyType === "cancel") {
-      // Annuler l'activité (la supprimer)
-      updatedItems.splice(selectedItemIndex, 1);
+      // Annuler l'activité (la marquer comme annulée mais la garder visible)
+      const cancelledItem = {
+        ...oldItem,
+        isCancelled: true,
+        cancelledDate: new Date().toISOString(),
+        cancelledBy: user?.name || "",
+      };
+      
+      // Ajouter l'historique de modification
+      if (!cancelledItem.modifications) {
+        cancelledItem.modifications = [];
+      }
+      cancelledItem.modifications.push({
+        date: new Date().toISOString(),
+        type: "cancelled",
+        activityName: oldItem.activityName,
+        modifiedBy: user?.name || "",
+      });
+      
+      updatedItems[selectedItemIndex] = cancelledItem;
     } else if (modifyType === "modify" && newActivityId) {
       // Modifier l'activité (la remplacer)
       const newActivity = activities.find((a) => a.id === newActivityId);
@@ -77,10 +110,12 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
       return;
     }
 
-    // Recalculer le total du devis
+    // Recalculer le total du devis (ne pas inclure les activités annulées)
     let newTotal = 0;
     updatedItems.forEach((item) => {
-      newTotal += item.lineTotal || 0;
+      if (!item.isCancelled) {
+        newTotal += item.lineTotal || 0;
+      }
     });
 
     const updatedQuote = {
@@ -148,13 +183,30 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
         </p>
       </div>
 
+      {/* Barre de recherche par téléphone */}
+      <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-4 shadow-sm">
+        <div>
+          <p className="text-xs text-gray-500 mb-1">Rechercher un devis par numéro de téléphone</p>
+          <TextInput
+            placeholder="Ex: 0123456789"
+            value={searchPhone}
+            onChange={(e) => {
+              const cleaned = cleanPhoneNumber(e.target.value);
+              setSearchPhone(cleaned);
+            }}
+          />
+        </div>
+      </div>
+
       <div className="space-y-3">
-        {paidQuotes.length === 0 ? (
+        {filteredQuotes.length === 0 ? (
           <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-6 text-center">
-            <p className="text-sm text-gray-500">Aucun devis payé disponible</p>
+            <p className="text-sm text-gray-500">
+              {debouncedSearchPhone.trim() ? "Aucun devis trouvé pour ce numéro" : "Aucun devis payé disponible"}
+            </p>
           </div>
         ) : (
-          paidQuotes.map((quote) => (
+          filteredQuotes.map((quote) => (
             <div
               key={quote.id}
               className={`bg-white/95 rounded-2xl border ${
@@ -193,7 +245,9 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                   <div
                     key={idx}
                     className={`p-3 rounded-xl border ${
-                      item.modifications && item.modifications.length > 0
+                      item.isCancelled
+                        ? "bg-red-50/50 border-red-200"
+                        : item.modifications && item.modifications.length > 0
                         ? "bg-amber-50/50 border-amber-200"
                         : "bg-blue-50/50 border-blue-100"
                     }`}
@@ -201,34 +255,45 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium">{item.activityName || "Activité"}</p>
-                          {item.modifications && item.modifications.length > 0 && (
+                          <p className={`text-sm font-medium ${item.isCancelled ? "line-through text-gray-400" : ""}`}>
+                            {item.activityName || "Activité"}
+                          </p>
+                          {item.isCancelled && (
+                            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-medium">
+                              Annulé
+                            </span>
+                          )}
+                          {!item.isCancelled && item.modifications && item.modifications.length > 0 && (
                             <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-medium">
                               Modifié
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500">
+                        <p className={`text-xs ${item.isCancelled ? "line-through text-gray-400" : "text-gray-500"}`}>
                           {item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR") : ""} — Ticket:{" "}
                           {item.ticketNumber || "—"}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className={`text-xs ${item.isCancelled ? "line-through text-gray-400" : "text-gray-500"}`}>
                           {currencyNoCents(Math.round(item.lineTotal || 0), quote.currency)}
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <GhostBtn
-                          onClick={() => handleModifyActivity(quote, idx)}
-                          className="text-xs px-3 py-1"
-                        >
-                          Modifier
-                        </GhostBtn>
-                        <GhostBtn
-                          onClick={() => handleCancelActivity(quote, idx)}
-                          className="text-xs px-3 py-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                        >
-                          Annuler
-                        </GhostBtn>
+                        {!item.isCancelled && (
+                          <>
+                            <GhostBtn
+                              onClick={() => handleModifyActivity(quote, idx)}
+                              className="text-xs px-3 py-1"
+                            >
+                              Modifier
+                            </GhostBtn>
+                            <GhostBtn
+                              onClick={() => handleCancelActivity(quote, idx)}
+                              className="text-xs px-3 py-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                            >
+                              Annuler
+                            </GhostBtn>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -253,7 +318,7 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                   Êtes-vous sûr de vouloir annuler l'activité : <strong>{selectedQuote.items[selectedItemIndex]?.activityName}</strong> ?
                 </p>
                 <p className="text-xs text-amber-600">
-                  ⚠️ Cette action supprimera l'activité du devis et ajustera le total.
+                  ⚠️ L'activité sera barrée mais restera visible dans le devis. Le total sera ajusté.
                 </p>
               </div>
             ) : (
