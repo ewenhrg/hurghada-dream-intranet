@@ -349,6 +349,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
       hotel: "",
       room: "",
       neighborhood: "",
+      arrivalDate: "",
+      departureDate: "",
     });
     setItems([blankItem()]);
     setNotes("");
@@ -411,6 +413,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        {/* Dates séjour */}
+        <div className="grid md:grid-cols-2 gap-3">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Date d'arrivée</p>
+            <TextInput 
+              type="date" 
+              value={client.arrivalDate || ""} 
+              onChange={(e) => setClient((c) => ({ ...c, arrivalDate: e.target.value }))} 
+            />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Date de départ</p>
+            <TextInput 
+              type="date" 
+              value={client.departureDate || ""} 
+              onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
+            />
           </div>
         </div>
 
