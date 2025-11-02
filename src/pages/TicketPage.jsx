@@ -226,6 +226,36 @@ export function TicketPage({ quotes }) {
               </th>
             </tr>
           </thead>
+          {/* Logos des modifications/annulations positionnés absolument */}
+          {ticketRows.map((row, rowIndex) => {
+            if (!row.isModified && !row.isCancelled) return null;
+            const uniqueKey = `${row.ticket}-${row.date}-${row.clientPhone || ''}`;
+            // Position calculée : 38px (en-tête) + rowIndex * ~40px (hauteur approximative de ligne)
+            const topOffset = 38 + (rowIndex * 40);
+            
+            return (
+              <div
+                key={`icon-${uniqueKey}`}
+                style={{
+                  position: 'absolute',
+                  left: '5px',
+                  top: `${topOffset}px`,
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px',
+                  width: '30px',
+                  textAlign: 'center',
+                  userSelect: 'none',
+                  pointerEvents: 'none',
+                  zIndex: 10
+                }}
+              >
+                {row.isCancelled ? '❌' : '🔄'}
+              </div>
+            );
+          })}
           <tbody>
             {ticketRows.length === 0 ? (
               <tr>
@@ -246,25 +276,6 @@ export function TicketPage({ quotes }) {
                     opacity: row.isCancelled ? 0.6 : 1
                   }}
                 >
-                  {(row.isModified || row.isCancelled) && (
-                    <div style={{
-                      position: 'absolute',
-                      left: '5px',
-                      top: 0,
-                      bottom: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '16px',
-                      width: '30px',
-                      textAlign: 'center',
-                      userSelect: 'none',
-                      pointerEvents: 'none',
-                      zIndex: 10
-                    }}>
-                      {row.isCancelled ? '❌' : '🔄'}
-                    </div>
-                  )}
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                     {row.ticket}
                   </td>
