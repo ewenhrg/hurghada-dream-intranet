@@ -115,54 +115,70 @@ export function TicketPage({ quotes }) {
       const startTicket = START_TICKET + ((pageIndex - 1) * TICKETS_PER_PAGE);
       const endTicket = startTicket + (TICKETS_PER_PAGE - 1); // 50 tickets : start à start+49
       
-      // Filtrer les tickets qui correspondent à cette page
+      // Si une recherche est active, filtrer les tickets qui correspondent à cette page ET à la recherche
+      // Sinon, utiliser tous les tickets qui correspondent à cette page
       const pageRows = filteredTicketRows.filter(row => 
         row.ticketNum >= startTicket && row.ticketNum <= endTicket
       );
       
-      // Créer 50 lignes (même si certaines sont vides)
+      // Si recherche active, créer uniquement les lignes avec résultats
+      // Sinon, créer 50 lignes (même si certaines sont vides)
       const rows = [];
-      for (let ticketNum = startTicket; ticketNum <= endTicket; ticketNum++) {
-        const matchingRow = pageRows.find(row => row.ticketNum === ticketNum);
-        if (matchingRow) {
-          rows.push(matchingRow);
-        } else {
-          // Ligne vide - sera remplie plus tard
-          rows.push({
-            ticket: "",
-            ticketNum: ticketNum,
-            isEmpty: true,
-            date: "",
-            clientName: "",
-            clientPhone: "",
-            hotel: "",
-            room: "",
-            adults: 0,
-            children: 0,
-            babies: 0,
-            activityName: "",
-            pickupTime: "",
-            comment: "",
-            activityPrice: 0,
-            transferTotal: 0,
-            paymentMethod: "",
-            sellerName: "",
-            isModified: false,
-            isCancelled: false,
-          });
+      if (debouncedSearchQuery.trim()) {
+        // Avec recherche : afficher uniquement les tickets qui matchent
+        for (let ticketNum = startTicket; ticketNum <= endTicket; ticketNum++) {
+          const matchingRow = pageRows.find(row => row.ticketNum === ticketNum);
+          if (matchingRow) {
+            rows.push(matchingRow);
+          }
+        }
+      } else {
+        // Sans recherche : créer 50 lignes (remplies ou vides)
+        for (let ticketNum = startTicket; ticketNum <= endTicket; ticketNum++) {
+          const matchingRow = pageRows.find(row => row.ticketNum === ticketNum);
+          if (matchingRow) {
+            rows.push(matchingRow);
+          } else {
+            // Ligne vide - sera remplie plus tard
+            rows.push({
+              ticket: "",
+              ticketNum: ticketNum,
+              isEmpty: true,
+              date: "",
+              clientName: "",
+              clientPhone: "",
+              hotel: "",
+              room: "",
+              adults: 0,
+              children: 0,
+              babies: 0,
+              activityName: "",
+              pickupTime: "",
+              comment: "",
+              activityPrice: 0,
+              transferTotal: 0,
+              paymentMethod: "",
+              sellerName: "",
+              isModified: false,
+              isCancelled: false,
+            });
+          }
         }
       }
       
-      pageList.push({
-        page: pageIndex,
-        startTicket: startTicket,
-        endTicket: endTicket,
-        rows: rows,
-      });
+      // Ajouter la page seulement si elle contient des résultats (avec recherche) ou toujours (sans recherche)
+      if (!debouncedSearchQuery.trim() || rows.length > 0) {
+        pageList.push({
+          page: pageIndex,
+          startTicket: startTicket,
+          endTicket: endTicket,
+          rows: rows,
+        });
+      }
     }
     
     return pageList;
-  }, [filteredTicketRows]);
+  }, [filteredTicketRows, debouncedSearchQuery]);
 
   // Récupérer les lignes de la page courante
   const currentPageData = useMemo(() => {
@@ -345,49 +361,49 @@ export function TicketPage({ quotes }) {
                       {!row.isEmpty && row.isModified && '🔄'}
                       {!row.isEmpty && row.isCancelled && '❌'}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', fontStyle: row.isEmpty ? 'italic' : 'normal', color: row.isEmpty ? '#999' : 'inherit' }}>
-                      {row.isEmpty ? `(${row.ticketNum})` : row.ticket}
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                      {row.isEmpty ? row.ticketNum : row.ticket}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.date ? new Date(row.date + "T12:00:00").toLocaleDateString("fr-FR") : "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.clientName || "") + (row.clientName && row.clientPhone ? " " : "") + (row.clientPhone ? `+${row.clientPhone}` : "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.hotel || "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.room || "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.adults || 0)}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.children || 0)}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.babies || 0)}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.activityName || "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.pickupTime || "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.comment || "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.activityPrice ? `${Math.round(row.activityPrice)}€` : "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.transferTotal ? `${Math.round(row.transferTotal)}€` : "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.paymentMethod || "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px', color: row.isEmpty ? '#999' : 'inherit' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.sellerName || "")}
                     </td>
                   </tr>
