@@ -96,6 +96,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     setItems((prev) => prev.filter((_, idx) => idx !== i));
   }, []);
 
+  // Trier les activités par ordre alphabétique pour le menu déroulant
+  const sortedActivities = useMemo(() => {
+    return [...activities].sort((a, b) => {
+      const nameA = (a.name || "").toLowerCase();
+      const nameB = (b.name || "").toLowerCase();
+      return nameA.localeCompare(nameB, "fr");
+    });
+  }, [activities]);
+
   const computed = useMemo(() => {
     return items.map((it) => {
       const act = activities.find((a) => a.id === it.activityId);
@@ -500,7 +509,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
                   >
                     <option value="">— Choisir —</option>
-                    {activities.map((a) => (
+                    {sortedActivities.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.name}
                       </option>
