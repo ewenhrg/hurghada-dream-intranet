@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid, cleanPhoneNumber } from "../utils";
@@ -46,6 +46,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [ticketNumbers, setTicketNumbers] = useState({});
   const [paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" }
   
+  // Référence pour le conteneur de la modale de paiement
+  const paymentModalRef = useRef(null);
+  
   // États pour la modale de modification
   const [editClient, setEditClient] = useState(null);
   const [editItems, setEditItems] = useState([]);
@@ -83,6 +86,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     
     return result;
   }, [debouncedQ, quotesWithStatus, statusFilter]);
+
+  // Scroller en haut de la modale de paiement quand elle s'ouvre
+  useEffect(() => {
+    if (showPaymentModal && paymentModalRef.current) {
+      paymentModalRef.current.scrollTop = 0;
+    }
+  }, [showPaymentModal]);
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -287,7 +297,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       {/* Modale de paiement */}
       {showPaymentModal && selectedQuote && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div ref={paymentModalRef} className="bg-white rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Enregistrer les numéros de ticket</h3>
               <button
