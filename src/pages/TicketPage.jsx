@@ -155,6 +155,9 @@ export function TicketPage({ quotes }) {
         <table className="w-full border-collapse bg-white" style={{ border: '1px solid #ddd' }}>
           <thead>
             <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #333' }}>
+              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontWeight: 'bold', fontSize: '12px', width: '60px' }}>
+                Modifié
+              </th>
               <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
                 Ticket
               </th>
@@ -205,7 +208,7 @@ export function TicketPage({ quotes }) {
           <tbody>
             {ticketRows.length === 0 ? (
               <tr>
-                <td colSpan="15" style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
+                <td colSpan="13" style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
                   Aucun ticket disponible. Les tickets apparaîtront automatiquement lorsque tous les numéros de ticket d'un devis seront renseignés.
                 </td>
               </tr>
@@ -218,6 +221,9 @@ export function TicketPage({ quotes }) {
                   key={uniqueKey}
                   style={{ borderBottom: '1px solid #ddd' }}
                 >
+                  <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
+                    {row.isModified ? '🔄' : ''}
+                  </td>
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                     {row.ticket}
                   </td>
@@ -243,21 +249,7 @@ export function TicketPage({ quotes }) {
                     {row.babies || 0}
                   </td>
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>{row.activityName || ""}</span>
-                      {row.isModified && (
-                        <span style={{ 
-                          fontSize: '10px', 
-                          backgroundColor: '#fef3c7', 
-                          color: '#92400e', 
-                          padding: '2px 6px', 
-                          borderRadius: '4px',
-                          fontWeight: 'medium'
-                        }}>
-                          🔄 Modifié
-                        </span>
-                      )}
-                    </div>
+                    {row.activityName || ""}
                   </td>
                   <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
                     {row.pickupTime || ""}
