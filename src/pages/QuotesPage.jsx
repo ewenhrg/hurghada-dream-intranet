@@ -18,18 +18,6 @@ const SPEED_BOAT_EXTRAS = [
 ];
 
 export function QuotesPage({ activities, quotes, setQuotes, user }) {
-  // Charger le formulaire sauvegardé depuis localStorage
-  const savedForm = loadLS(LS_KEYS.quoteForm, null);
-  const defaultClient = savedForm?.client || {
-    name: "",
-    phone: "",
-    hotel: "",
-    room: "",
-    neighborhood: "",
-    arrivalDate: "",
-    departureDate: "",
-  };
-  
   const blankItemMemo = useCallback(() => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
@@ -47,9 +35,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     ktm640: "",
     ktm530: "",
   }), []);
+
+  // Toujours partir avec un formulaire vide (ne pas charger depuis localStorage)
+  const defaultClient = {
+    name: "",
+    phone: "",
+    hotel: "",
+    room: "",
+    neighborhood: "",
+    arrivalDate: "",
+    departureDate: "",
+  };
   
-  const defaultItems = savedForm?.items && savedForm.items.length > 0 ? savedForm.items : [blankItemMemo()];
-  const defaultNotes = savedForm?.notes || "";
+  const defaultItems = [blankItemMemo()];
+  const defaultNotes = "";
+  
+  // Supprimer la sauvegarde au chargement de la page
+  useEffect(() => {
+    localStorage.removeItem(LS_KEYS.quoteForm);
+  }, []);
 
   const [client, setClient] = useState(defaultClient);
   const [items, setItems] = useState(defaultItems);
@@ -63,13 +67,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
   // Référence pour le timeout de sauvegarde debounce
   const saveTimeoutRef = useRef(null);
 
-  // Sauvegarder le formulaire dans localStorage avec debounce (300ms)
+  // Sauvegarder le formulaire dans localStorage avec debounce (300ms) - uniquement pendant la session
+  // (sera supprimé au rechargement de la page)
   useEffect(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     
     saveTimeoutRef.current = setTimeout(() => {
+      // Sauvegarder uniquement pendant la session actuelle
       saveLS(LS_KEYS.quoteForm, {
         client,
         items,
