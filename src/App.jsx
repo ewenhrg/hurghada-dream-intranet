@@ -9,7 +9,6 @@ import { QuotesPage } from "./pages/QuotesPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { UsersPage } from "./pages/UsersPage";
 import { TicketPage } from "./pages/TicketPage";
-import { PickUpPage } from "./pages/PickUpPage";
 import { ModificationsPage } from "./pages/ModificationsPage";
 
 export default function App() {
