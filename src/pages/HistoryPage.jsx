@@ -816,11 +816,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-4 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
-                  {user?.canDeleteQuote && (
-                    <GhostBtn type="button" onClick={() => removeItem(idx)}>
-                      Supprimer
-                    </GhostBtn>
-                  )}
+                  <GhostBtn type="button" onClick={() => removeItem(idx)}>
+                    Supprimer
+                  </GhostBtn>
                 </div>
                 <div className="grid md:grid-cols-5 gap-3 items-end">
                   <div className="md:col-span-2">
