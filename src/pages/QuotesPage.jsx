@@ -207,23 +207,21 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
   const grandTotalCash = Math.round(grandTotal); // Prix espèces (arrondi sans centimes)
   const grandTotalCard = calculateCardPrice(grandTotal); // Prix carte (espèces + 3% arrondi à l'euro supérieur)
 
-  // Récupérer toutes les dates utilisées avec leurs activités
+  // Récupérer toutes les dates utilisées dans le formulaire en cours avec leurs activités
   const usedDates = useMemo(() => {
     const datesMap = new Map();
-    quotes.forEach((quote) => {
-      quote.items?.forEach((item) => {
-        if (item.date && item.activityName) {
-          if (!datesMap.has(item.date)) {
-            datesMap.set(item.date, []);
-          }
-          datesMap.get(item.date).push(item.activityName);
+    computed.forEach((c) => {
+      if (c.act && c.act.name && c.raw.date) {
+        if (!datesMap.has(c.raw.date)) {
+          datesMap.set(c.raw.date, []);
         }
-      });
+        datesMap.get(c.raw.date).push(c.act.name);
+      }
     });
     
     // Trier les dates du plus récent au plus ancien
     return Array.from(datesMap.entries()).sort((a, b) => new Date(b[0]) - new Date(a[0]));
-  }, [quotes]);
+  }, [computed]);
 
   async function handleCreateQuote(e) {
     e.preventDefault();
