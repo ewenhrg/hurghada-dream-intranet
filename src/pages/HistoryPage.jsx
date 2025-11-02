@@ -154,6 +154,11 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     ⏳ En attente
                   </span>
                 )}
+                {d.isModified && (
+                  <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium border border-amber-300">
+                    🔄 Modifié
+                  </span>
+                )}
               </div>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1">

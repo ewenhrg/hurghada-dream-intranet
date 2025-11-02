@@ -10,6 +10,7 @@ import { HistoryPage } from "./pages/HistoryPage";
 import { UsersPage } from "./pages/UsersPage";
 import { TicketPage } from "./pages/TicketPage";
 import { PickUpPage } from "./pages/PickUpPage";
+import { ModificationsPage } from "./pages/ModificationsPage";
 
 export default function App() {
   const [ok, setOk] = useState(false);
@@ -543,6 +544,11 @@ export default function App() {
             <Pill active={tab === "pickup"} onClick={() => setTab("pickup")}>
               Pick Up
             </Pill>
+            {(user?.name === "Ewen" || user?.name === "Léa") && (
+              <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
+                Modifications
+              </Pill>
+            )}
             {user?.canResetData && (
               <Pill active={tab === "users"} onClick={() => setTab("users")}>
                 Utilisateurs
@@ -601,6 +607,15 @@ export default function App() {
         {tab === "pickup" && (
           <Section title="Gestion des Pick Ups" subtitle="Visualisez et modifiez les heures de prise en charge pour une date donnée">
             <PickUpPage quotes={quotes} setQuotes={setQuotes} />
+          </Section>
+        )}
+
+        {tab === "modifications" && (user?.name === "Ewen" || user?.name === "Léa") && (
+          <Section
+            title="Modifications & Annulations"
+            subtitle="Gérez les modifications et annulations pour les devis payés uniquement."
+          >
+            <ModificationsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
           </Section>
         )}
 

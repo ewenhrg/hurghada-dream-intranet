@@ -1,0 +1,303 @@
+import { useState, useMemo } from "react";
+import { supabase } from "../lib/supabase";
+import { SITE_KEY, LS_KEYS } from "../constants";
+import { currencyNoCents, saveLS, uuid } from "../utils";
+import { GhostBtn, PrimaryBtn } from "../components/ui";
+import { toast } from "../utils/toast.js";
+
+export function ModificationsPage({ quotes, setQuotes, activities, user }) {
+  const [selectedQuote, setSelectedQuote] = useState(null);
+  const [selectedItemIndex, setSelectedItemIndex] = useState(null);
+  const [showModifyModal, setShowModifyModal] = useState(false);
+  const [newActivityId, setNewActivityId] = useState("");
+  const [modifyType, setModifyType] = useState(""); // "modify" or "cancel"
+
+  // Filtrer uniquement les devis payés (tous les tickets renseignés)
+  const paidQuotes = useMemo(() => {
+    return quotes.filter((quote) => {
+      return quote.items?.every((item) => item.ticketNumber && item.ticketNumber.trim());
+    });
+  }, [quotes]);
+
+  function handleModifyActivity(quote, itemIndex) {
+    setSelectedQuote(quote);
+    setSelectedItemIndex(itemIndex);
+    setNewActivityId("");
+    setModifyType("modify");
+    setShowModifyModal(true);
+  }
+
+  function handleCancelActivity(quote, itemIndex) {
+    setSelectedQuote(quote);
+    setSelectedItemIndex(itemIndex);
+    setModifyType("cancel");
+    setShowModifyModal(true);
+  }
+
+  async function handleConfirmModification() {
+    if (!selectedQuote || selectedItemIndex === null) return;
+
+    const updatedItems = [...selectedQuote.items];
+    const oldItem = updatedItems[selectedItemIndex];
+
+    if (modifyType === "cancel") {
+      // Annuler l'activité (la supprimer)
+      updatedItems.splice(selectedItemIndex, 1);
+    } else if (modifyType === "modify" && newActivityId) {
+      // Modifier l'activité (la remplacer)
+      const newActivity = activities.find((a) => a.id === newActivityId);
+      if (!newActivity) {
+        toast.error("Activité non trouvée");
+        return;
+      }
+
+      // Créer le nouvel item avec les mêmes données mais nouvelle activité
+      const newItem = {
+        ...oldItem,
+        activityId: newActivity.id,
+        activityName: newActivity.name,
+        // Garder les autres informations (date, adultes, etc.)
+      };
+
+      // Ajouter l'historique de modification
+      if (!newItem.modifications) {
+        newItem.modifications = [];
+      }
+      newItem.modifications.push({
+        date: new Date().toISOString(),
+        type: "modified",
+        oldActivity: oldItem.activityName,
+        newActivity: newActivity.name,
+        modifiedBy: user?.name || "",
+      });
+
+      updatedItems[selectedItemIndex] = newItem;
+    } else {
+      toast.warning("Veuillez sélectionner une nouvelle activité");
+      return;
+    }
+
+    // Recalculer le total du devis
+    let newTotal = 0;
+    updatedItems.forEach((item) => {
+      newTotal += item.lineTotal || 0;
+    });
+
+    const updatedQuote = {
+      ...selectedQuote,
+      items: updatedItems,
+      total: newTotal,
+      totalCash: Math.round(newTotal),
+      totalCard: Math.round(newTotal * 1.03),
+      isModified: true,
+      modifications: [
+        ...(selectedQuote.modifications || []),
+        {
+          date: new Date().toISOString(),
+          type: modifyType === "cancel" ? "cancelled" : "modified",
+          itemIndex: selectedItemIndex,
+          activityName: oldItem.activityName,
+          modifiedBy: user?.name || "",
+        },
+      ],
+    };
+
+    // Mettre à jour la liste des devis
+    const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? updatedQuote : q));
+    setQuotes(updatedQuotes);
+    saveLS(LS_KEYS.quotes, updatedQuotes);
+
+    // Mettre à jour dans Supabase si configuré
+    if (supabase) {
+      try {
+        const supabaseUpdate = {
+          items: JSON.stringify(updatedQuote.items),
+          total: updatedQuote.total,
+        };
+
+        const { error: updateError } = await supabase
+          .from("quotes")
+          .update(supabaseUpdate)
+          .eq("site_key", SITE_KEY)
+          .eq("id", selectedQuote.supabase_id || selectedQuote.id);
+
+        if (updateError) {
+          console.warn("⚠️ Erreur mise à jour Supabase:", updateError);
+          toast.warning("Erreur lors de la mise à jour dans Supabase");
+        } else {
+          toast.success("Modification enregistrée avec succès !");
+        }
+      } catch (err) {
+        console.warn("⚠️ Erreur lors de la mise à jour Supabase:", err);
+        toast.warning("Erreur lors de la mise à jour dans Supabase");
+      }
+    }
+
+    setShowModifyModal(false);
+    setSelectedQuote(null);
+    setSelectedItemIndex(null);
+    setNewActivityId("");
+  }
+
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      <div>
+        <h2 className="text-xl font-semibold mb-2">Modifications & Annulations</h2>
+        <p className="text-xs text-gray-600 mb-4">
+          Gérez les modifications et annulations pour les devis payés uniquement
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {paidQuotes.length === 0 ? (
+          <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-6 text-center">
+            <p className="text-sm text-gray-500">Aucun devis payé disponible</p>
+          </div>
+        ) : (
+          paidQuotes.map((quote) => (
+            <div
+              key={quote.id}
+              className={`bg-white/95 rounded-2xl border ${
+                quote.isModified ? "border-amber-400 bg-amber-50/30" : "border-blue-100/60"
+              } shadow-md hover:shadow-lg transition-shadow duration-200 p-4`}
+            >
+              {quote.isModified && (
+                <div className="mb-2">
+                  <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium border border-amber-300">
+                    🔄 Modifié
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500">
+                    {new Date(quote.createdAt).toLocaleString("fr-FR")} — {quote.client?.phone || "Tél ?"}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    {quote.client?.name || "Client ?"} — {quote.client?.hotel || "Hôtel ?"}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-semibold">
+                      Total: {currencyNoCents(quote.totalCash || Math.round(quote.total), quote.currency)}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      ({quote.items?.length || 0} activité{quote.items?.length > 1 ? "s" : ""})
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {quote.items?.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-3 rounded-xl border ${
+                      item.modifications && item.modifications.length > 0
+                        ? "bg-amber-50/50 border-amber-200"
+                        : "bg-blue-50/50 border-blue-100"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{item.activityName || "Activité"}</p>
+                          {item.modifications && item.modifications.length > 0 && (
+                            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-medium">
+                              Modifié
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR") : ""} — Ticket:{" "}
+                          {item.ticketNumber || "—"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {currencyNoCents(Math.round(item.lineTotal || 0), quote.currency)}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <GhostBtn
+                          onClick={() => handleModifyActivity(quote, idx)}
+                          className="text-xs px-3 py-1"
+                        >
+                          Modifier
+                        </GhostBtn>
+                        <GhostBtn
+                          onClick={() => handleCancelActivity(quote, idx)}
+                          className="text-xs px-3 py-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                        >
+                          Annuler
+                        </GhostBtn>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Modal de modification/annulation */}
+      {showModifyModal && selectedQuote && selectedItemIndex !== null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">
+              {modifyType === "cancel" ? "Annuler l'activité" : "Modifier l'activité"}
+            </h3>
+
+            {modifyType === "cancel" ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-700">
+                  Êtes-vous sûr de vouloir annuler l'activité : <strong>{selectedQuote.items[selectedItemIndex]?.activityName}</strong> ?
+                </p>
+                <p className="text-xs text-amber-600">
+                  ⚠️ Cette action supprimera l'activité du devis et ajustera le total.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-700">
+                  Remplacer l'activité : <strong>{selectedQuote.items[selectedItemIndex]?.activityName}</strong>
+                </p>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Nouvelle activité</p>
+                  <select
+                    value={newActivityId}
+                    onChange={(e) => setNewActivityId(e.target.value)}
+                    className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="">— Choisir —</option>
+                    {activities.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end mt-6 pt-4 border-t">
+              <GhostBtn
+                onClick={() => {
+                  setShowModifyModal(false);
+                  setSelectedQuote(null);
+                  setSelectedItemIndex(null);
+                  setNewActivityId("");
+                }}
+              >
+                Annuler
+              </GhostBtn>
+              <PrimaryBtn onClick={handleConfirmModification}>
+                {modifyType === "cancel" ? "Confirmer l'annulation" : "Confirmer la modification"}
+              </PrimaryBtn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
