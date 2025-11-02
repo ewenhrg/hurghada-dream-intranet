@@ -31,6 +31,16 @@ export default function App() {
           // S'assurer que les valeurs par défaut sont correctes pour l'accès aux pages
           if (userData.canAccessActivities === undefined) userData.canAccessActivities = true;
           if (userData.canAccessHistory === undefined) userData.canAccessHistory = true;
+          // Donner tous les accès à Léa sauf canResetData
+          if (userData.name === "Léa") {
+            userData.canDeleteQuote = true;
+            userData.canAddActivity = true;
+            userData.canEditActivity = true;
+            userData.canDeleteActivity = true;
+            userData.canAccessActivities = true;
+            userData.canAccessHistory = true;
+            userData.canResetData = false; // Ne pas donner l'accès au reset
+          }
           setUser(userData);
         } catch (e) {
           console.error("Erreur lors de la lecture des données utilisateur:", e);
