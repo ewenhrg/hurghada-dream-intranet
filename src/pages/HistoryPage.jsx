@@ -39,7 +39,7 @@ function getBuggyPrices(activityName) {
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
-  const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
+  const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending", "modified"
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
@@ -66,13 +66,15 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const filtered = useMemo(() => {
     let result = quotesWithStatus;
     
-    // Filtre par statut (payé/en attente)
+    // Filtre par statut (payé/en attente/modifié)
     if (statusFilter !== "all") {
       result = result.filter((d) => {
         if (statusFilter === "paid") {
           return d.allTicketsFilled;
         } else if (statusFilter === "pending") {
           return !d.allTicketsFilled;
+        } else if (statusFilter === "modified") {
+          return d.isModified === true;
         }
         return true;
       });
@@ -127,6 +129,12 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             onClick={() => setStatusFilter("pending")}
           >
             En attente
+          </Pill>
+          <Pill
+            active={statusFilter === "modified"}
+            onClick={() => setStatusFilter("modified")}
+          >
+            Modifié
           </Pill>
         </div>
       </div>
