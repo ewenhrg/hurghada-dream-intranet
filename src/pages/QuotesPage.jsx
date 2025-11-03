@@ -433,7 +433,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         </div>
       )}
 
-      <div className="p-4 md:p-6 space-y-6 md:ml-72">
+      <div className="p-6 md:p-8 lg:p-10 space-y-8 md:ml-72">
         <form 
           onSubmit={handleCreateQuote} 
           onKeyDown={(e) => {
@@ -442,10 +442,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
               e.preventDefault();
             }
           }}
-          className="space-y-5"
+          className="space-y-6"
         >
         {/* Infos client */}
-        <div className="grid md:grid-cols-5 gap-3">
+        <div className="grid md:grid-cols-5 gap-4">
           <div>
             <p className="text-xs text-gray-500 mb-1">Client</p>
             <TextInput value={client.name} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} />
@@ -487,7 +487,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         </div>
 
         {/* Dates séjour */}
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="grid md:grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-gray-500 mb-1">Date d'arrivée</p>
             <TextInput 
@@ -507,16 +507,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         </div>
 
         {/* Lignes */}
-        <div className="space-y-4">
+        <div className="space-y-5">
           {computed.map((c, idx) => (
-            <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-4 space-y-3 shadow-sm">
+            <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-5 md:p-6 space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
                 <GhostBtn type="button" onClick={() => removeItem(idx)}>
                   Supprimer
                 </GhostBtn>
               </div>
-              <div className="grid md:grid-cols-5 gap-3 items-end">
+              <div className="grid md:grid-cols-5 gap-4 items-end">
                 <div className="md:col-span-2">
                   <p className="text-xs text-gray-500 mb-1">Activité</p>
                   <select
@@ -597,7 +597,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   </select>
                 </div>
               ) : (
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="grid md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
                     <p className="text-xs text-gray-500 mb-1">Extra (ex: photos, bateau privé…)</p>
                     <TextInput
@@ -619,7 +619,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
               {/* passagers - Champs spéciaux pour activités buggy */}
               {c.act && isBuggyActivity(c.act.name) ? (
                 <>
-                  <div className="grid md:grid-cols-2 gap-3">
+                  <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
                       <NumberInput value={c.raw.buggySimple ?? ""} onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })} />
@@ -629,7 +629,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                       <NumberInput value={c.raw.buggyFamily ?? ""} onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-3 mt-3">
+                  <div className="grid md:grid-cols-2 gap-4 mt-4">
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Adultes (informations uniquement)</p>
                       <NumberInput value={c.raw.adults ?? ""} onChange={(e) => setItem(idx, { adults: e.target.value === "" ? "" : e.target.value })} />
@@ -644,7 +644,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                 </>
               ) : c.act && isMotoCrossActivity(c.act.name) ? (
                 <>
-                  <div className="grid md:grid-cols-3 gap-3">
+                  <div className="grid md:grid-cols-3 gap-4">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
                       <NumberInput value={c.raw.yamaha250 ?? ""} onChange={(e) => setItem(idx, { yamaha250: e.target.value === "" ? "" : e.target.value })} />
@@ -660,7 +660,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   </div>
                 </>
               ) : (
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="grid md:grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Adultes</p>
                     <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
