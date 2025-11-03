@@ -179,7 +179,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             onChange={(e) => setQ(e.target.value)}
             className="w-full"
           />
-          <p className="text-xs text-amber-600 flex items-center gap-1">
+                  <p className="text-xs text-amber-700 flex items-center gap-1">
             <span>⚠️</span>
             <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
           </p>
@@ -217,57 +217,57 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           const allTicketsFilled = d.allTicketsFilled;
           const hasTickets = d.hasTickets;
 
-          // Déterminer la couleur en fonction du statut
+          // Déterminer la couleur en fonction du statut - palette moderne
           const borderColor = allTicketsFilled 
-            ? "border-green-400 bg-green-50/50" 
-            : "border-orange-400 bg-orange-50/50";
+            ? "border-emerald-300 bg-emerald-50/60" 
+            : "border-amber-300 bg-amber-50/60";
           
           return (
-            <div key={d.id} className={`rounded-2xl border-2 ${borderColor} shadow-md hover:shadow-lg transition-shadow duration-200 p-4`}>
+            <div key={d.id} className={`rounded-2xl border-2 ${borderColor} shadow-lg hover:shadow-xl transition-all duration-200 p-5 bg-white/95 backdrop-blur-sm`}>
               {/* Badge de statut */}
               <div className="flex items-center gap-2 mb-2">
                 {allTicketsFilled ? (
-                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium border border-green-300">
+                  <span className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-full text-xs font-semibold shadow-md border border-emerald-400">
                     ✅ Payé
                   </span>
                 ) : (
-                  <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium border border-orange-300">
+                  <span className="px-3 py-1.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full text-xs font-semibold shadow-md border border-amber-400">
                     ⏳ En attente
                   </span>
                 )}
                 {d.isModified && (
-                  <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium border border-amber-300">
+                  <span className="px-3 py-1.5 bg-gradient-to-r from-purple-400 to-indigo-500 text-white rounded-full text-xs font-semibold shadow-md border border-purple-400">
                     🔄 Modifié
                   </span>
                 )}
               </div>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-slate-500">
                     {new Date(d.createdAt).toLocaleString("fr-FR")}
-                    {d.createdByName && <span className="ml-2 text-blue-600">• Créé par {d.createdByName}</span>}
+                    {d.createdByName && <span className="ml-2 text-cyan-600 font-medium">• Créé par {d.createdByName}</span>}
                   </p>
-                  <p className="text-sm text-gray-700">
+                  <p className="text-sm text-slate-700">
                     {d.client?.phone || "Tél ?"} — {d.client?.hotel || "Hôtel ?"} ({d.client?.room || "ch ?"})
                   </p>
                   {hasTickets && (
-                    <p className="text-xs text-green-600 mt-1">
+                    <p className="text-xs text-emerald-600 font-semibold mt-1">
                       ✅ Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
                     </p>
                   )}
                   <div className="mt-2 space-y-1">
                     {d.items.map((li, i) => (
-                      <div key={i} className="text-xs text-gray-500">
+                      <div key={i} className="text-xs text-slate-500">
                         {li.activityName} — {new Date(li.date + "T12:00:00").toLocaleDateString("fr-FR")}
-                        {li.ticketNumber && <span className="text-green-600 ml-2">🎫 {li.ticketNumber}</span>}
+                        {li.ticketNumber && <span className="text-emerald-600 font-semibold ml-2">🎫 {li.ticketNumber}</span>}
                       </div>
                     ))}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right mr-3">
-                    <p className="text-base font-semibold">Espèces: {currencyNoCents(d.totalCash || Math.round(d.total), d.currency)}</p>
-                    <p className="text-sm text-gray-600">Carte: {currencyNoCents(d.totalCard || calculateCardPrice(d.total), d.currency)}</p>
+                    <p className="text-base font-semibold text-slate-900">Espèces: {currencyNoCents(d.totalCash || Math.round(d.total), d.currency)}</p>
+                    <p className="text-sm text-slate-600">Carte: {currencyNoCents(d.totalCard || calculateCardPrice(d.total), d.currency)}</p>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                 <GhostBtn
@@ -284,7 +284,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     setPaymentMethods(existingPaymentMethods);
                     setShowPaymentModal(true);
                   }}
-                  className={allTicketsFilled ? "bg-green-50 text-green-700 border-green-200" : ""}
+                  className={allTicketsFilled ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100" : "hover:bg-cyan-50 hover:border-cyan-300"}
                 >
                   {allTicketsFilled ? "✅ Payé" : "💰 Payer"}
                 </GhostBtn>
@@ -380,7 +380,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             </div>
           );
         })}
-        {filtered.length === 0 && <p className="text-xs text-gray-400 text-center py-6">Aucun devis trouvé.</p>}
+        {filtered.length === 0 && <p className="text-xs text-slate-400 text-center py-6">Aucun devis trouvé.</p>}
       </div>
 
       {/* Modale de paiement */}
@@ -396,7 +396,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   setTicketNumbers({});
                   setPaymentMethods({});
                 }}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
               >
                 ×
               </button>
@@ -404,23 +404,23 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
             <div className="space-y-4 mb-6">
               {selectedQuote.items?.map((item, idx) => (
-                <div key={idx} className="border border-blue-100/60 rounded-xl p-4 bg-blue-50/50 shadow-sm">
+                <div key={idx} className="border border-cyan-100/60 rounded-xl p-4 bg-cyan-50/50 shadow-md">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <p className="font-medium text-sm">{item.activityName}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-medium text-sm text-slate-900">{item.activityName}</p>
+                      <p className="text-xs text-slate-500">
                         {new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")} — {item.adults} adulte(s),{" "}
                         {item.children} enfant(s)
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold">Espèces: {currencyNoCents(Math.round(item.lineTotal), selectedQuote.currency)}</p>
-                      <p className="text-xs text-gray-600">Carte: {currencyNoCents(calculateCardPrice(item.lineTotal), selectedQuote.currency)}</p>
+                      <p className="text-sm font-semibold text-slate-900">Espèces: {currencyNoCents(Math.round(item.lineTotal), selectedQuote.currency)}</p>
+                      <p className="text-xs text-slate-600">Carte: {currencyNoCents(calculateCardPrice(item.lineTotal), selectedQuote.currency)}</p>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Numéro de ticket unique</p>
+                      <p className="text-xs text-slate-500 mb-1">Numéro de ticket unique</p>
                       <TextInput
                         placeholder="Ex: T-12345"
                         value={ticketNumbers[idx] || ""}
@@ -432,14 +432,14 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         }}
                         disabled={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? true : false}
                         readOnly={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? true : false}
-                        className={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? "bg-gray-100 cursor-not-allowed" : ""}
+                        className={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? "bg-slate-100 cursor-not-allowed" : ""}
                       />
                       {user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() && (
-                        <p className="text-xs text-green-600 mt-1">✅ Ticket verrouillé (non modifiable)</p>
+                        <p className="text-xs text-emerald-600 font-semibold mt-1">✅ Ticket verrouillé (non modifiable)</p>
                       )}
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">Méthode de paiement</p>
+                      <p className="text-xs text-slate-500 mb-2">Méthode de paiement</p>
                       <div className="flex gap-4">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -454,9 +454,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                               }
                             }}
                             disabled={item.paymentMethod && item.paymentMethod.trim() ? true : false}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            className="w-4 h-4 text-cyan-600 border-slate-300 rounded focus:ring-cyan-500"
                           />
-                          <span className="text-sm text-gray-700">Cash</span>
+                          <span className="text-sm text-slate-700">Cash</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -471,9 +471,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                               }
                             }}
                             disabled={item.paymentMethod && item.paymentMethod.trim() ? true : false}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            className="w-4 h-4 text-cyan-600 border-slate-300 rounded focus:ring-cyan-500"
                           />
-                          <span className="text-sm text-gray-700">Stripe</span>
+                          <span className="text-sm text-slate-700">Stripe</span>
                         </label>
                       </div>
                     </div>
@@ -949,59 +949,45 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <p className="text-[10px] text-amber-700 mt-1">⚠️ activité pas dispo ce jour-là</p>
                     )}
                   </div>
-                  {c.act && isBuggyActivity(c.act.name) ? (
-                    <>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
-                        <NumberInput value={c.raw.buggySimple ?? ""} onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Buggy Family ({getBuggyPrices(c.act.name).family}€)</p>
-                        <NumberInput value={c.raw.buggyFamily ?? ""} onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })} />
-                      </div>
-                    </>
-                  ) : c.act && isMotoCrossActivity(c.act.name) ? (
-                    <>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
-                        <NumberInput value={c.raw.yamaha250 ?? ""} onChange={(e) => setItem(idx, { yamaha250: e.target.value === "" ? "" : e.target.value })} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">KTM640CC ({getMotoCrossPrices().ktm640}€)</p>
-                        <NumberInput value={c.raw.ktm640 ?? ""} onChange={(e) => setItem(idx, { ktm640: e.target.value === "" ? "" : e.target.value })} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">KTM 530CC ({getMotoCrossPrices().ktm530}€)</p>
-                        <NumberInput value={c.raw.ktm530 ?? ""} onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })} />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Adultes</p>
-                        <NumberInput value={c.raw.adults || 0} onChange={(e) => setItem(idx, { adults: e.target.value })} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">
-                          Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""}
-                        </p>
-                        <NumberInput value={c.raw.children || 0} onChange={(e) => setItem(idx, { children: e.target.value })} />
-                      </div>
-                    </>
-                  )}
+                  {/* Toujours afficher les champs adultes et enfants */}
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Adultes</p>
+                    <NumberInput value={c.raw.adults || 0} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""}
+                    </p>
+                    <NumberInput value={c.raw.children || 0} onChange={(e) => setItem(idx, { children: e.target.value })} />
+                  </div>
                 </div>
-                {/* Champs adultes/enfants en dessous pour activités buggy (informations uniquement) */}
+                {/* Champs spécifiques pour Buggy */}
                 {c.act && isBuggyActivity(c.act.name) && (
                   <div className="grid md:grid-cols-2 gap-3 mt-3">
                     <div>
-                      <p className="text-xs text-gray-400 mb-1">Adultes (informations uniquement)</p>
-                      <NumberInput value={c.raw.adults ?? ""} onChange={(e) => setItem(idx, { adults: e.target.value === "" ? "" : e.target.value })} />
+                      <p className="text-xs text-gray-500 mb-1">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
+                      <NumberInput value={c.raw.buggySimple ?? ""} onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 mb-1">
-                        Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""} (informations uniquement)
-                      </p>
-                      <NumberInput value={c.raw.children ?? ""} onChange={(e) => setItem(idx, { children: e.target.value === "" ? "" : e.target.value })} />
+                      <p className="text-xs text-gray-500 mb-1">Buggy Family ({getBuggyPrices(c.act.name).family}€)</p>
+                      <NumberInput value={c.raw.buggyFamily ?? ""} onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })} />
+                    </div>
+                  </div>
+                )}
+                {/* Champs spécifiques pour MotoCross */}
+                {c.act && isMotoCrossActivity(c.act.name) && (
+                  <div className="grid md:grid-cols-3 gap-3 mt-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
+                      <NumberInput value={c.raw.yamaha250 ?? ""} onChange={(e) => setItem(idx, { yamaha250: e.target.value === "" ? "" : e.target.value })} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">KTM640CC ({getMotoCrossPrices().ktm640}€)</p>
+                      <NumberInput value={c.raw.ktm640 ?? ""} onChange={(e) => setItem(idx, { ktm640: e.target.value === "" ? "" : e.target.value })} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">KTM 530CC ({getMotoCrossPrices().ktm530}€)</p>
+                      <NumberInput value={c.raw.ktm530 ?? ""} onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>
                 )}
@@ -1074,15 +1060,15 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 )}
                 {/* Afficher le numéro de ticket si présent (non modifiable) */}
                 {(c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber) && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-xs text-green-700 font-medium">🎫 Ticket: {(c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber)}</p>
-                    <p className="text-[10px] text-green-600 mt-1">Non modifiable</p>
+                  <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <p className="text-xs text-emerald-700 font-medium">🎫 Ticket: {(c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber)}</p>
+                    <p className="text-[10px] text-emerald-600 font-semibold mt-1">Non modifiable</p>
                   </div>
                 )}
                 {c.lineTotal > 0 && (
-                  <div className="text-right text-sm font-semibold text-gray-700">
+                  <div className="text-right text-sm font-semibold text-slate-700">
                     <p>Espèces: {currencyNoCents(Math.round(c.lineTotal), c.currency)}</p>
-                    <p className="text-xs text-gray-600">Carte: {currencyNoCents(calculateCardPrice(c.lineTotal), c.currency)}</p>
+                    <p className="text-xs text-slate-600">Carte: {currencyNoCents(calculateCardPrice(c.lineTotal), c.currency)}</p>
                   </div>
                 )}
               </div>

@@ -538,10 +538,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f5efe4] via-[#e9dccb] to-[#f5efe4]">
+    <div className="min-h-screen">
       {/* HEADER */}
-      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-md border-b border-blue-200/50 shadow-sm">
-        <div className="max-w-6xl mx-auto px-3 py-3 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
+        <div className="max-w-6xl mx-auto px-3 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <img 
               src="/logo.png" 
@@ -553,17 +553,17 @@ export default function App() {
                 const parent = e.target.parentElement;
                 if (parent && !parent.querySelector('.fallback-logo')) {
                   const fallback = document.createElement('div');
-                  fallback.className = 'fallback-logo w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 text-white grid place-items-center font-bold text-sm shadow-md';
+                  fallback.className = 'fallback-logo w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-600 text-white grid place-items-center font-bold text-sm shadow-lg';
                   fallback.textContent = 'HD';
                   parent.appendChild(fallback);
                 }
               }}
             />
             <div>
-              <h1 className="text-sm font-semibold text-gray-800">Hurghada Dream — Bureaux</h1>
-              <p className="text-[10px] text-gray-600">Mini site interne (devis, activités, historique)</p>
+              <h1 className="text-sm font-semibold text-slate-900">Hurghada Dream — Bureaux</h1>
+              <p className="text-[10px] text-slate-600">Mini site interne (devis, activités, historique)</p>
               {user && (
-                <p className="text-[10px] text-blue-600 mt-0.5">Connecté en tant que : {user.name}</p>
+                <p className="text-[10px] text-cyan-600 mt-0.5 font-medium">Connecté en tant que : {user.name}</p>
               )}
             </div>
           </div>
@@ -662,7 +662,7 @@ export default function App() {
         </Suspense>
       </main>
 
-      <footer className="max-w-6xl mx-auto px-3 py-8 text-[10px] text-gray-500">
+      <footer className="max-w-6xl mx-auto px-3 py-8 text-[10px] text-slate-500 border-t border-slate-200 mt-8">
         Données stockées en local + Supabase (si dispo). Site interne Hurghada Dream.
       </footer>
     </div>
