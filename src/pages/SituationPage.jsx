@@ -9,6 +9,7 @@ export function SituationPage({ user }) {
   const [showPreview, setShowPreview] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendLog, setSendLog] = useState([]);
+  const [detectedColumns, setDetectedColumns] = useState([]);
 
   // Extraire le numéro de téléphone depuis le champ "Name"
   const extractPhoneFromName = (nameField) => {
@@ -73,7 +74,7 @@ export function SituationPage({ user }) {
         });
 
         // Si aucune colonne n'est détectée, essayer de lire la première ligne comme en-têtes manuellement
-        if (jsonData.length === 0 || Object.keys(jsonData[0] || {}).length === 0) {
+        if (jsonData.length === 0 || (jsonData[0] && Object.keys(jsonData[0] || {}).length === 0)) {
           // Lire comme tableau de tableaux
           const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
           
@@ -176,8 +177,8 @@ export function SituationPage({ user }) {
         });
 
         // Afficher un debug des colonnes trouvées
-        if (jsonDataNormalized.length > 0) {
-          const detectedColumns = Object.keys(jsonDataNormalized[0]).filter(col => col && col !== "__EMPTY");
+        if (jsonDataNormalized.length > 0 && jsonDataNormalized[0]) {
+          const detectedColumns = Object.keys(jsonDataNormalized[0] || {}).filter(col => col && col !== "__EMPTY");
           setDetectedColumns(detectedColumns);
           console.log("📊 Colonnes détectées dans le fichier Excel:", detectedColumns);
           console.log("📋 Première ligne de données:", jsonDataNormalized[0]);
@@ -186,6 +187,8 @@ export function SituationPage({ user }) {
           if (detectedColumns.length === 0) {
             toast.error("Aucune colonne valide détectée. Vérifiez que la première ligne de votre Excel contient les en-têtes (Invoice #, Date, Name, etc.)");
           }
+        } else {
+          setDetectedColumns([]);
         }
 
         setExcelData(mappedData);

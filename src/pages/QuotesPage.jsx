@@ -94,9 +94,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     }, 300);
 
     return () => {
+      // Sauvegarder immédiatement au démontage du composant pour ne pas perdre les données
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
+      // Sauvegarder immédiatement les données actuelles avant de démonter le composant
+      saveLS(LS_KEYS.quoteForm, {
+        client,
+        items,
+        notes,
+      });
     };
   }, [client, items, notes]);
 
