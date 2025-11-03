@@ -67,28 +67,52 @@ export function SituationPage({ user }) {
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        // Lire d'abord comme tableau de tableaux pour avoir la première ligne comme en-têtes
+        // Lire d'abord comme tableau de tableaux pour avoir toutes les lignes
         const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        
+        console.log("📋 Données brutes du fichier Excel (premières 5 lignes):", rawData.slice(0, 5));
+        
+        // Chercher automatiquement la ligne qui contient les en-têtes
+        // On cherche des mots-clés comme "Invoice", "Date", "Name", "Hotel", etc.
+        let headerRowIndex = 0;
+        const headerKeywords = ["invoice", "date", "name", "hotel", "room", "pax", "trip", "time", "comment"];
+        
+        for (let i = 0; i < Math.min(rawData.length, 10); i++) {
+          const row = rawData[i] || [];
+          const rowString = row.map(cell => String(cell || "").toLowerCase()).join(" ");
+          const matches = headerKeywords.filter(keyword => rowString.includes(keyword));
+          
+          // Si on trouve au moins 3 mots-clés dans cette ligne, c'est probablement la ligne d'en-têtes
+          if (matches.length >= 3) {
+            headerRowIndex = i;
+            console.log(`✅ Ligne d'en-têtes trouvée à l'index ${i}:`, row);
+            break;
+          }
+        }
         
         let jsonData = [];
         
-        if (rawData.length > 1) {
-          // Première ligne = en-têtes (même si certains sont vides)
-          const headers = rawData[0].map((h, idx) => {
+        if (rawData.length > headerRowIndex + 1) {
+          // La ligne d'en-têtes trouvée
+          const headers = rawData[headerRowIndex].map((h, idx) => {
             const header = String(h || "").trim();
             // Si l'en-tête est vide, utiliser un nom par défaut basé sur l'index
             return header || `Column_${idx + 1}`;
           });
           
+          console.log("📊 En-têtes détectés:", headers);
+          
           if (headers.length > 0) {
-            // Convertir les lignes suivantes en objets
-            jsonData = rawData.slice(1).map(row => {
-              const obj = {};
-              headers.forEach((header, index) => {
-                obj[header] = row[index] !== undefined && row[index] !== null ? String(row[index]) : "";
+            // Convertir les lignes suivantes en objets (en sautant la ligne d'en-têtes)
+            jsonData = rawData.slice(headerRowIndex + 1)
+              .filter(row => row && row.some(cell => cell !== "" && cell !== null && cell !== undefined)) // Ignorer les lignes complètement vides
+              .map(row => {
+                const obj = {};
+                headers.forEach((header, index) => {
+                  obj[header] = row[index] !== undefined && row[index] !== null ? String(row[index]) : "";
+                });
+                return obj;
               });
-              return obj;
-            });
           }
         } else {
           // Fallback : essayer la méthode normale de XLSX
