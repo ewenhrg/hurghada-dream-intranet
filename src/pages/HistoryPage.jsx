@@ -918,13 +918,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
 
           {/* Activités */}
           <div className="space-y-4">
-            {editItems.map((it, idx) => {
-              // Trouver l'activité correspondante
-              const act = activities.find((a) => a.id === it.activityId);
-              const weekday = it.date ? new Date(it.date + "T12:00:00").getDay() : null;
-              const available = act && weekday != null ? !!act.availableDays?.[weekday] : true;
-              
-              return (
+            {computed.map((c, idx) => (
               <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-4 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
@@ -937,7 +931,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   <div className="md:col-span-2">
                     <p className="text-xs text-gray-500 mb-1">Activité</p>
                     <select
-                      value={it.activityId || ""}
+                      value={c.raw.activityId || ""}
                       onChange={(e) => setItem(idx, { activityId: e.target.value })}
                       className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
                     >
@@ -951,8 +945,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Date</p>
-                    <TextInput type="date" value={it.date} onChange={(e) => setItem(idx, { date: e.target.value })} />
-                    {act && !available && (
+                    <TextInput type="date" value={c.raw.date} onChange={(e) => setItem(idx, { date: e.target.value })} />
+                    {c.act && !c.available && (
                       <p className="text-[10px] text-amber-700 mt-1">⚠️ activité pas dispo ce jour-là</p>
                     )}
                   </div>
@@ -961,19 +955,19 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 <div className="grid md:grid-cols-3 gap-3 bg-cyan-50/50 p-4 rounded-xl border-2 border-cyan-200">
                   <div>
                     <p className="text-xs text-gray-700 font-semibold mb-2">👥 Adultes</p>
-                    <NumberInput value={it.adults || 0} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+                    <NumberInput value={c.raw.adults || 0} onChange={(e) => setItem(idx, { adults: e.target.value })} />
                   </div>
                   <div>
                     <p className="text-xs text-gray-700 font-semibold mb-2">
-                      👶 Enfants{act?.ageChild ? <span className="text-gray-500 ml-1">({act.ageChild})</span> : ""}
+                      👶 Enfants{c.act?.ageChild ? <span className="text-gray-500 ml-1">({c.act.ageChild})</span> : ""}
                     </p>
-                    <NumberInput value={it.children || 0} onChange={(e) => setItem(idx, { children: e.target.value })} />
+                    <NumberInput value={c.raw.children || 0} onChange={(e) => setItem(idx, { children: e.target.value })} />
                   </div>
                   <div>
                     <p className="text-xs text-gray-700 font-semibold mb-2">
-                      🍼 Bébés{act?.ageBaby ? <span className="text-gray-500 ml-1">({act.ageBaby})</span> : ""}
+                      🍼 Bébés{c.act?.ageBaby ? <span className="text-gray-500 ml-1">({c.act.ageBaby})</span> : ""}
                     </p>
-                    <NumberInput value={it.babies || 0} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                    <NumberInput value={c.raw.babies || 0} onChange={(e) => setItem(idx, { babies: e.target.value })} />
                   </div>
                 </div>
                 {/* Champs spécifiques pour Buggy */}
@@ -1066,7 +1060,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   </div>
                 )}
                 {/* Afficher le numéro de ticket si présent (non modifiable) */}
-                {(c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber) && (
+                {((c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber)) && (
                   <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg">
                     <p className="text-xs text-emerald-700 font-medium">🎫 Ticket: {(c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber)}</p>
                     <p className="text-[10px] text-emerald-600 font-semibold mt-1">Non modifiable</p>
