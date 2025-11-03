@@ -318,18 +318,18 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       setEditItems(d.items.map((item) => ({
                         activityId: item.activityId || "",
                         date: item.date || new Date().toISOString().slice(0, 10),
-                        adults: item.adults || 2,
-                        children: item.children || 0,
-                        babies: item.babies || 0,
+                        adults: item.adults !== undefined && item.adults !== null ? item.adults : 2,
+                        children: item.children !== undefined && item.children !== null ? item.children : 0,
+                        babies: item.babies !== undefined && item.babies !== null ? item.babies : 0,
                         extraLabel: item.extraLabel || "",
                         extraAmount: item.extraAmount || "",
                         extraDolphin: item.extraDolphin || false,
                         speedBoatExtra: item.speedBoatExtra || "",
-        buggySimple: item.buggySimple || 0,
-        buggyFamily: item.buggyFamily || 0,
-        yamaha250: item.yamaha250 || 0,
-        ktm640: item.ktm640 || 0,
-        ktm530: item.ktm530 || 0,
+                        buggySimple: item.buggySimple !== undefined && item.buggySimple !== null ? item.buggySimple : 0,
+                        buggyFamily: item.buggyFamily !== undefined && item.buggyFamily !== null ? item.buggyFamily : 0,
+                        yamaha250: item.yamaha250 !== undefined && item.yamaha250 !== null ? item.yamaha250 : 0,
+                        ktm640: item.ktm640 !== undefined && item.ktm640 !== null ? item.ktm640 : 0,
+                        ktm530: item.ktm530 !== undefined && item.ktm530 !== null ? item.ktm530 : 0,
                         slot: item.slot || "",
                         ticketNumber: item.ticketNumber || "", // Préserver le ticketNumber existant
                       })));
@@ -992,14 +992,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   </div>
                 )}
                 <div className="grid md:grid-cols-4 gap-3">
-                  {!c.act || !isBuggyActivity(c.act.name) ? (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">
-                        Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""}
-                      </p>
-                      <NumberInput value={c.raw.babies || 0} onChange={(e) => setItem(idx, { babies: e.target.value })} />
-                    </div>
-                  ) : null}
+                  {/* Toujours afficher le champ bébés */}
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""}
+                    </p>
+                    <NumberInput value={c.raw.babies || 0} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                  </div>
                   {c.transferInfo && (
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Créneau</p>
