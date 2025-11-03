@@ -30,7 +30,7 @@ export const CATEGORIES = [
 export const NEIGHBORHOODS = [
   { key: "soma_bay", label: "Soma Bay" },
   { key: "makadi", label: "Makadi" },
-  { key: "salh_hasheesh", label: "Salh Hasheesh" },
+  { key: "salh_hasheesh", label: "Sahl Hasheesh" },
   { key: "el_gouna", label: "El Gouna" },
   { key: "hurghada_cora", label: "Hurghada Cora" },
   { key: "hurghada_kawther", label: "Hurghada Kawther" },
