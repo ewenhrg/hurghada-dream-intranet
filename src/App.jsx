@@ -12,6 +12,7 @@ const HistoryPage = lazy(() => import("./pages/HistoryPage").then(module => ({ d
 const UsersPage = lazy(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
 const TicketPage = lazy(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
 const ModificationsPage = lazy(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
+const SituationPage = lazy(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
 
 export default function App() {
   const [ok, setOk] = useState(false);
@@ -493,7 +494,7 @@ export default function App() {
     <div className="min-h-screen">
       {/* HEADER */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/95 border-b border-slate-200/80 shadow-lg">
-        <div className={`mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4 ${tab === "devis" ? "max-w-7xl" : "max-w-6xl"}`}>
+        <div className={`mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
           <div className="flex items-center gap-3.5">
             <img 
               src="/logo.png" 
@@ -541,6 +542,11 @@ export default function App() {
                 Modifications
               </Pill>
             )}
+            {(user?.name === "Ewen" || user?.name === "Léa") && (
+              <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
+                Situation
+              </Pill>
+            )}
             {user?.canResetData && (
               <Pill active={tab === "users"} onClick={() => setTab("users")}>
                 Utilisateurs
@@ -551,7 +557,7 @@ export default function App() {
       </header>
 
       {/* CONTENU CENTRÉ */}
-      <main className={`mx-auto px-4 py-8 space-y-8 ${tab === "devis" ? "max-w-7xl" : "max-w-6xl"}`}>
+      <main className={`mx-auto px-4 py-8 space-y-8 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
         <Suspense fallback={<div className="flex items-center justify-center p-8"><p className="text-gray-500">Chargement...</p></div>}>
           {tab === "devis" && (
             <section className="space-y-6">
@@ -611,6 +617,10 @@ export default function App() {
           </Section>
         )}
 
+        {tab === "situation" && (user?.name === "Ewen" || user?.name === "Léa") && (
+          <SituationPage user={user} />
+        )}
+
           {tab === "users" && user?.canResetData && (
             <Section title="Gestion des utilisateurs" subtitle="Créez et gérez les utilisateurs avec leurs codes d'accès et permissions.">
               <UsersPage user={user} />
@@ -619,7 +629,7 @@ export default function App() {
         </Suspense>
       </main>
 
-      <footer className={`mx-auto px-4 py-8 text-[11px] text-slate-600 border-t border-slate-200/80 mt-10 font-medium tracking-wide ${tab === "devis" ? "max-w-7xl" : "max-w-6xl"}`}>
+      <footer className={`mx-auto px-4 py-8 text-[11px] text-slate-600 border-t border-slate-200/80 mt-10 font-medium tracking-wide ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
         Données stockées en local + Supabase (si dispo). Site interne Hurghada Dream.
       </footer>
     </div>
