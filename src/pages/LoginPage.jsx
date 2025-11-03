@@ -95,29 +95,29 @@ export function LoginPage({ onSuccess }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f5efe4] via-[#e9dccb] to-[#f5efe4] flex items-center justify-center p-4">
-      <div className="bg-white/95 rounded-3xl shadow-2xl border border-blue-100/50 backdrop-blur-sm p-8 md:p-12 w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+      <div className="bg-white/95 rounded-3xl shadow-2xl border-2 border-slate-200/60 backdrop-blur-sm p-8 md:p-12 w-full max-w-md transform hover:scale-[1.02] transition-all duration-300">
         <div className="text-center mb-8">
           <img 
             src="/logo.png" 
             alt="Hurghada Dream Logo" 
-            className="mx-auto mb-6 max-w-[200px] h-auto"
+            className="mx-auto mb-6 max-w-[200px] h-auto rounded-xl shadow-lg border-2 border-slate-200/50"
             onError={(e) => {
               // Fallback si le logo n'existe pas
               e.target.style.display = 'none';
             }}
           />
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
             Hurghada Dream
           </h1>
-          <p className="text-gray-600 text-sm md:text-base">
+          <p className="text-slate-600 text-sm md:text-base font-medium">
             Veuillez entrer votre code d'accès pour continuer
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="code" className="block text-sm font-semibold text-slate-700 mb-2">
               Code d'accès
             </label>
             <input
@@ -129,14 +129,14 @@ export function LoginPage({ onSuccess }) {
                 setError("");
               }}
               placeholder="Entrez votre code (6 chiffres)"
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-center text-lg font-semibold tracking-widest focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+              className="w-full rounded-xl border-2 border-slate-200/80 bg-white/90 backdrop-blur-sm px-4 py-3 text-center text-lg font-semibold tracking-widest focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none transition-all shadow-sm hover:shadow-md"
               maxLength={6}
               autoFocus
             />
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+            <div className="bg-red-50/90 border-2 border-red-200/60 text-red-700 px-4 py-3 rounded-xl text-sm font-medium shadow-sm">
               {error}
             </div>
           )}
@@ -144,17 +144,17 @@ export function LoginPage({ onSuccess }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl"
+            className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transform hover:scale-105 active:scale-95"
           >
             {loading ? "Connexion..." : "Accéder"}
           </button>
         </form>
 
         <div className="mt-6 text-center space-y-1">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-slate-600 font-medium">
             Système de gestion interne
           </p>
-          <p className="text-[10px] text-gray-400">
+          <p className="text-[10px] text-slate-400">
             accéder website by Ewen
           </p>
         </div>

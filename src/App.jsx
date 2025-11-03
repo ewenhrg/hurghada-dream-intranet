@@ -492,34 +492,34 @@ export default function App() {
   return (
     <div className="min-h-screen">
       {/* HEADER */}
-      <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-3 py-4 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-40 backdrop-blur-lg bg-white/90 border-b-2 border-slate-300/50 shadow-xl">
+        <div className="max-w-6xl mx-auto px-3 py-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <img 
               src="/logo.png" 
               alt="Hurghada Dream Logo" 
-              className="w-10 h-10 object-contain rounded-lg"
+              className="w-12 h-12 object-contain rounded-xl shadow-lg border-2 border-slate-200/50"
               onError={(e) => {
                 // Fallback si le logo n'existe pas - afficher HD
                 e.target.style.display = 'none';
                 const parent = e.target.parentElement;
                 if (parent && !parent.querySelector('.fallback-logo')) {
                   const fallback = document.createElement('div');
-                  fallback.className = 'fallback-logo w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-600 text-white grid place-items-center font-bold text-sm shadow-lg';
+                  fallback.className = 'fallback-logo w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white grid place-items-center font-bold text-base shadow-lg';
                   fallback.textContent = 'HD';
                   parent.appendChild(fallback);
                 }
               }}
             />
             <div>
-              <h1 className="text-sm font-semibold text-slate-900">Hurghada Dream — Bureaux</h1>
-              <p className="text-[10px] text-slate-600">Mini site interne (devis, activités, historique)</p>
+              <h1 className="text-base font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Hurghada Dream — Bureaux</h1>
+              <p className="text-[10px] text-slate-600 font-medium">Mini site interne (devis, activités, historique)</p>
               {user && (
-                <p className="text-[10px] text-cyan-600 mt-0.5 font-medium">Connecté en tant que : {user.name}</p>
+                <p className="text-[10px] text-blue-600 mt-0.5 font-semibold">👤 Connecté : {user.name}</p>
               )}
             </div>
           </div>
-          <nav className="flex gap-2">
+          <nav className="flex gap-2 flex-wrap">
             <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
               Devis
             </Pill>
@@ -614,7 +614,7 @@ export default function App() {
         </Suspense>
       </main>
 
-      <footer className="max-w-6xl mx-auto px-3 py-8 text-[10px] text-slate-500 border-t border-slate-200 mt-8">
+      <footer className="max-w-6xl mx-auto px-3 py-8 text-[10px] text-slate-600 border-t-2 border-slate-300/50 mt-8 font-medium">
         Données stockées en local + Supabase (si dispo). Site interne Hurghada Dream.
       </footer>
     </div>
