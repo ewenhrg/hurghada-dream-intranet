@@ -66,28 +66,55 @@ export function SituationPage({ user }) {
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        // Convertir en JSON
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+        // Convertir en JSON - XLSX utilise automatiquement la première ligne comme en-têtes
+        let jsonData = XLSX.utils.sheet_to_json(worksheet, { 
           defval: "", // Valeur par défaut pour les cellules vides
           raw: false // Convertir les dates en chaînes
         });
+
+        // Si aucune colonne n'est détectée, essayer de lire la première ligne comme en-têtes manuellement
+        if (jsonData.length === 0 || Object.keys(jsonData[0] || {}).length === 0) {
+          // Lire comme tableau de tableaux
+          const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+          
+          if (rawData.length > 1) {
+            // Première ligne = en-têtes
+            const headers = rawData[0].map(h => String(h || "").trim()).filter(h => h);
+            if (headers.length > 0) {
+              // Convertir les lignes suivantes en objets
+              jsonData = rawData.slice(1).map(row => {
+                const obj = {};
+                headers.forEach((header, index) => {
+                  obj[header] = row[index] !== undefined && row[index] !== null ? String(row[index]) : "";
+                });
+                return obj;
+              });
+            }
+          }
+        }
 
         if (jsonData.length === 0) {
           toast.error("Le fichier Excel est vide ou ne contient pas de données");
           return;
         }
 
+        const jsonDataNormalized = jsonData;
+
         // Fonction pour trouver une colonne avec flexibilité (ignore majuscules/minuscules, espaces, caractères spéciaux)
         const findColumn = (row, possibleNames) => {
           // Normaliser le nom de colonne: enlever espaces, caractères spéciaux, mettre en minuscules
           const normalize = (str) => str?.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "";
           
-          // D'abord, chercher exactement (avec variations de casse)
+          // D'abord, chercher exactement (avec variations de casse) - même si la valeur est vide
           for (const name of possibleNames) {
             // Chercher exactement le nom (insensible à la casse)
             const exactMatch = Object.keys(row).find(key => key.toLowerCase() === name.toLowerCase());
-            if (exactMatch && row[exactMatch] !== undefined && row[exactMatch] !== null && row[exactMatch] !== "") {
-              return row[exactMatch];
+            if (exactMatch) {
+              const value = row[exactMatch];
+              // Retourner la valeur même si elle est vide (string vide) car c'est la colonne correcte
+              if (value !== undefined && value !== null) {
+                return value;
+              }
             }
           }
           
@@ -97,7 +124,8 @@ export function SituationPage({ user }) {
             const normalizedKey = normalize(key);
             if (normalizedPossibleNames.includes(normalizedKey)) {
               const value = row[key];
-              if (value !== undefined && value !== null && value !== "") {
+              // Retourner la valeur même si elle est vide
+              if (value !== undefined && value !== null) {
                 return value;
               }
             }
@@ -107,7 +135,7 @@ export function SituationPage({ user }) {
         };
 
         // Mapper les colonnes (chercher les colonnes possibles)
-        const mappedData = jsonData.map((row, index) => {
+        const mappedData = jsonDataNormalized.map((row, index) => {
           // Chercher les colonnes avec toutes les variations possibles
           const invoiceN = findColumn(row, ["Invoice N", "Invoice #", "Invoice#", "invoice_n", "Invoice", "invoice", "Invoice Number", "invoice_number"]);
           const date = findColumn(row, ["Date", "date"]);
@@ -147,16 +175,26 @@ export function SituationPage({ user }) {
           };
         });
 
-        // Afficher un debug des colonnes trouvées (uniquement en console)
-        if (jsonData.length > 0) {
-          console.log("📊 Colonnes détectées dans le fichier Excel:", Object.keys(jsonData[0]));
-          console.log("📋 Première ligne de données:", jsonData[0]);
+        // Afficher un debug des colonnes trouvées
+        if (jsonDataNormalized.length > 0) {
+          const detectedColumns = Object.keys(jsonDataNormalized[0]).filter(col => col && col !== "__EMPTY");
+          setDetectedColumns(detectedColumns);
+          console.log("📊 Colonnes détectées dans le fichier Excel:", detectedColumns);
+          console.log("📋 Première ligne de données:", jsonDataNormalized[0]);
+          
+          // Avertir si aucune colonne valide n'est détectée
+          if (detectedColumns.length === 0) {
+            toast.error("Aucune colonne valide détectée. Vérifiez que la première ligne de votre Excel contient les en-têtes (Invoice #, Date, Name, etc.)");
+          }
         }
 
         setExcelData(mappedData);
         setShowPreview(false);
         setSendLog([]);
-        toast.success(`${mappedData.length} ligne(s) chargée(s) depuis le fichier Excel`);
+        
+        if (mappedData.length > 0) {
+          toast.success(`${mappedData.length} ligne(s) chargée(s) depuis le fichier Excel`);
+        }
       } catch (error) {
         console.error("Erreur lors de la lecture du fichier Excel:", error);
         toast.error("Erreur lors de la lecture du fichier Excel. Vérifiez que le fichier est valide.");
@@ -345,6 +383,20 @@ export function SituationPage({ user }) {
             </div>
           </label>
         </div>
+
+        {/* Colonnes détectées */}
+        {detectedColumns.length > 0 && (
+          <div className="bg-blue-50/50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm font-semibold text-blue-900 mb-2">📊 Colonnes détectées dans le fichier Excel:</p>
+            <div className="flex flex-wrap gap-2">
+              {detectedColumns.map((col, idx) => (
+                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                  {col}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Statistiques */}
         {stats.total > 0 && (
