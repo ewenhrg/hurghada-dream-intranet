@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS } from "../constants";
-import { currencyNoCents, saveLS, cleanPhoneNumber } from "../utils";
-import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
+import { currencyNoCents, saveLS, cleanPhoneNumber, calculateCardPrice } from "../utils";
+import { GhostBtn, PrimaryBtn, TextInput, NumberInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
 
@@ -11,6 +11,9 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
   const [showModifyModal, setShowModifyModal] = useState(false);
   const [newActivityId, setNewActivityId] = useState("");
+  const [newAdults, setNewAdults] = useState("");
+  const [newChildren, setNewChildren] = useState("");
+  const [newBabies, setNewBabies] = useState("");
   const [modifyType, setModifyType] = useState(""); // "modify" or "cancel"
   const [searchPhone, setSearchPhone] = useState("");
   const debouncedSearchPhone = useDebounce(searchPhone, 300);
@@ -35,9 +38,13 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
   }, [paidQuotes, debouncedSearchPhone]);
 
   function handleModifyActivity(quote, itemIndex) {
+    const item = quote.items[itemIndex];
     setSelectedQuote(quote);
     setSelectedItemIndex(itemIndex);
     setNewActivityId("");
+    setNewAdults(item?.adults !== undefined && item?.adults !== null ? item.adults : 2);
+    setNewChildren(item?.children !== undefined && item?.children !== null ? item.children : 0);
+    setNewBabies(item?.babies !== undefined && item?.babies !== null ? item.babies : 0);
     setModifyType("modify");
     setShowModifyModal(true);
   }
@@ -119,12 +126,39 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
         return;
       }
 
-      // Créer le nouvel item avec les mêmes données mais nouvelle activité
+      // Calculer le nouveau total en fonction de la nouvelle activité et du nouveau nombre de personnes
+      const adults = Number(newAdults) || 0;
+      const children = Number(newChildren) || 0;
+      const babies = Number(newBabies) || 0;
+      
+      let newLineTotal = 0;
+      
+      // Calcul de base selon les prix de l'activité
+      if (newActivity.priceAdult !== undefined) {
+        newLineTotal += adults * Number(newActivity.priceAdult || 0);
+        newLineTotal += children * Number(newActivity.priceChild || 0);
+        newLineTotal += babies * Number(newActivity.priceBaby || 0);
+      }
+      
+      // Ajouter le supplément transfert si nécessaire (par adulte)
+      const neighborhood = selectedQuote.client?.neighborhood || "";
+      const transferInfo = newActivity.transfers?.[neighborhood];
+      if (transferInfo && transferInfo.surcharge) {
+        newLineTotal += Number(transferInfo.surcharge || 0) * adults;
+      }
+      
+      // Créer le nouvel item avec les nouvelles données
       const newItem = {
         ...oldItem,
         activityId: newActivity.id,
         activityName: newActivity.name,
-        // Garder les autres informations (date, adultes, etc.)
+        adults: adults,
+        children: children,
+        babies: babies,
+        lineTotal: newLineTotal,
+        // Préserver les informations de transfert
+        transferSurchargePerAdult: transferInfo?.surcharge || 0,
+        // Garder les autres informations (date, ticketNumber, etc.)
       };
 
       // Ajouter l'historique de modification
@@ -158,7 +192,7 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
       items: updatedItems,
       total: newTotal,
       totalCash: Math.round(newTotal),
-      totalCard: Math.round(newTotal * 1.03),
+      totalCard: calculateCardPrice(newTotal),
       isModified: true,
       modifications: [
         ...(selectedQuote.modifications || []),
@@ -207,6 +241,9 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
     setSelectedQuote(null);
     setSelectedItemIndex(null);
     setNewActivityId("");
+    setNewAdults("");
+    setNewChildren("");
+    setNewBabies("");
   }
 
   return (
@@ -400,6 +437,30 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                     ))}
                   </select>
                 </div>
+                {/* Champs pour modifier le nombre de personnes */}
+                <div className="grid grid-cols-3 gap-3 bg-cyan-50/50 p-4 rounded-xl border-2 border-cyan-200">
+                  <div>
+                    <p className="text-xs text-gray-700 font-semibold mb-2">👥 Adultes</p>
+                    <NumberInput 
+                      value={newAdults} 
+                      onChange={(e) => setNewAdults(e.target.value)} 
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-700 font-semibold mb-2">👶 Enfants</p>
+                    <NumberInput 
+                      value={newChildren} 
+                      onChange={(e) => setNewChildren(e.target.value)} 
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-700 font-semibold mb-2">🍼 Bébés</p>
+                    <NumberInput 
+                      value={newBabies} 
+                      onChange={(e) => setNewBabies(e.target.value)} 
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -410,6 +471,9 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                   setSelectedQuote(null);
                   setSelectedItemIndex(null);
                   setNewActivityId("");
+                  setNewAdults("");
+                  setNewChildren("");
+                  setNewBabies("");
                 }}
               >
                 Annuler
