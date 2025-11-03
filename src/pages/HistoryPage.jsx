@@ -28,8 +28,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [ticketNumbers, setTicketNumbers] = useState({});
   const [paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" }
   
-  // Référence pour le conteneur de la modale de paiement
+  // Références pour le conteneur de la modale de paiement
   const paymentModalRef = useRef(null);
+  const paymentModalContainerRef = useRef(null);
   
   // États pour la modale de modification
   const [editClient, setEditClient] = useState(null);
@@ -71,12 +72,102 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     return result;
   }, [debouncedQ, quotesWithStatus, statusFilter]);
 
-  // Scroller en haut de la modale de paiement quand elle s'ouvre
+  // Scroller en haut de la modale de paiement et de la page quand elle s'ouvre
   useEffect(() => {
-    if (showPaymentModal && paymentModalRef.current) {
-      paymentModalRef.current.scrollTop = 0;
+    if (showPaymentModal) {
+      // Scroller la page vers le haut pour que la modale soit visible
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // Attendre un court instant pour que la modale soit rendue
+      setTimeout(() => {
+        // Scroller le contenu de la modale vers le haut
+        if (paymentModalRef.current) {
+          paymentModalRef.current.scrollTop = 0;
+        }
+        // Scroller vers le conteneur de la modale si nécessaire
+        if (paymentModalContainerRef.current) {
+          paymentModalContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     }
   }, [showPaymentModal]);
+
+  // Fonction pour supprimer automatiquement les devis non payés de plus de 5 jours
+  useEffect(() => {
+    // Ne pas exécuter si quotes est vide
+    if (!quotes || quotes.length === 0) {
+      return;
+    }
+
+    const cleanupOldUnpaidQuotes = async () => {
+      const now = new Date();
+      const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000); // 5 jours en millisecondes
+      
+      // Identifier les devis à supprimer
+      const quotesToDelete = quotes.filter((quote) => {
+        // Vérifier si le devis est non payé (tous les tickets ne sont pas remplis)
+        const allTicketsFilled = quote.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false;
+        if (allTicketsFilled) {
+          return false; // Le devis est payé, ne pas le supprimer
+        }
+        
+        // Vérifier si le devis a été créé il y a plus de 5 jours
+        const createdAt = new Date(quote.createdAt);
+        if (isNaN(createdAt.getTime())) {
+          return false; // Date invalide, ne pas supprimer
+        }
+        
+        return createdAt < fiveDaysAgo;
+      });
+
+      if (quotesToDelete.length > 0) {
+        console.log(`🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de 5 jours`);
+        
+        // Supprimer de la liste locale
+        const remainingQuotes = quotes.filter((quote) => 
+          !quotesToDelete.some((toDelete) => toDelete.id === quote.id)
+        );
+        setQuotes(remainingQuotes);
+        saveLS(LS_KEYS.quotes, remainingQuotes);
+
+        // Supprimer de Supabase si configuré
+        if (supabase) {
+          for (const quoteToDelete of quotesToDelete) {
+            try {
+              let deleteQuery = supabase
+                .from("quotes")
+                .delete()
+                .eq("site_key", SITE_KEY);
+
+              // Utiliser supabase_id en priorité pour identifier le devis à supprimer
+              if (quoteToDelete.supabase_id) {
+                deleteQuery = deleteQuery.eq("id", quoteToDelete.supabase_id);
+              } else {
+                // Sinon, utiliser client_phone + created_at (pour compatibilité avec les anciens devis)
+                deleteQuery = deleteQuery
+                  .eq("client_phone", quoteToDelete.client?.phone || "")
+                  .eq("created_at", quoteToDelete.createdAt);
+              }
+              
+              const { error: deleteError } = await deleteQuery;
+              
+              if (deleteError) {
+                console.warn("⚠️ Erreur suppression Supabase:", deleteError);
+              } else {
+                console.log(`✅ Devis supprimé de Supabase (ID: ${quoteToDelete.supabase_id || quoteToDelete.id})`);
+              }
+            } catch (deleteErr) {
+              console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
+            }
+          }
+        }
+      }
+    };
+
+    // Exécuter le nettoyage au chargement de la page historique
+    cleanupOldUnpaidQuotes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Exécuter uniquement une fois au montage du composant
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -294,7 +385,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
       {/* Modale de paiement */}
       {showPaymentModal && selectedQuote && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div ref={paymentModalContainerRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div ref={paymentModalRef} className="bg-white rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Enregistrer les numéros de ticket</h3>
