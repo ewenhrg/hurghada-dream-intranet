@@ -1,4 +1,5 @@
 import { NEIGHBORHOODS } from "./constants";
+import { isBuggyActivity, isMotoCrossActivity } from "./utils/activityHelpers";
 
 // Options d'extra pour Speed Boat uniquement
 const SPEED_BOAT_EXTRAS = [
@@ -81,6 +82,36 @@ export function loadLS(key, fallback) {
   }
 }
 
+// Calculer le montant total du supplément transfert pour un item
+export function calculateTransferSurcharge(item) {
+  if (!item || !item.transferSurchargePerAdult || item.transferSurchargePerAdult === 0) {
+    return 0;
+  }
+  
+  const surchargePerAdult = Number(item.transferSurchargePerAdult || 0);
+  
+  // Pour Buggy : multiplier par le nombre total de buggys (simple + family)
+  if (isBuggyActivity(item.activityName)) {
+    const buggySimple = Number(item.buggySimple || 0);
+    const buggyFamily = Number(item.buggyFamily || 0);
+    const totalBuggys = buggySimple + buggyFamily;
+    return surchargePerAdult * totalBuggys;
+  }
+  
+  // Pour MotoCross : multiplier par le nombre total de motos (yamaha250 + ktm640 + ktm530)
+  if (isMotoCrossActivity(item.activityName)) {
+    const yamaha250 = Number(item.yamaha250 || 0);
+    const ktm640 = Number(item.ktm640 || 0);
+    const ktm530 = Number(item.ktm530 || 0);
+    const totalMotos = yamaha250 + ktm640 + ktm530;
+    return surchargePerAdult * totalMotos;
+  }
+  
+  // Pour les autres activités : multiplier par le nombre d'adultes
+  const adults = Number(item.adults || 0);
+  return surchargePerAdult * adults;
+}
+
 // Générer un template HTML professionnel pour le devis
 export function generateQuoteHTML(quote) {
   const date = new Date(quote.createdAt).toLocaleDateString("fr-FR", {
@@ -94,6 +125,9 @@ export function generateQuoteHTML(quote) {
       month: "long",
       year: "numeric"
     });
+    
+    // Calculer le montant du supplément transfert
+    const transferSurchargeAmount = calculateTransferSurcharge(item);
     
     // Vérifier si c'est Speed Boat et récupérer les extras
     const isSpeedBoat = item.activityName && item.activityName.toLowerCase().includes("speed boat");
@@ -112,6 +146,11 @@ export function generateQuoteHTML(quote) {
           extrasInfo.push(`${selectedExtra.label} (+${selectedExtra.priceAdult}€/adt + ${selectedExtra.priceChild}€/enfant)`);
         }
       }
+    }
+    
+    // Ajouter le supplément transfert s'il existe
+    if (transferSurchargeAmount > 0) {
+      extrasInfo.push(`🚗 Transfert: ${currencyNoCents(transferSurchargeAmount, quote.currency)}`);
     }
     
     const extrasHTML = extrasInfo.length > 0 

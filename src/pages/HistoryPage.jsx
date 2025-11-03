@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid, cleanPhoneNumber } from "../utils";
+import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -440,6 +440,11 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     <div className="text-right">
                       <p className="text-sm font-semibold text-slate-900">Espèces: {currencyNoCents(Math.round(item.lineTotal), selectedQuote.currency)}</p>
                       <p className="text-xs text-slate-600">Carte: {currencyNoCents(calculateCardPrice(item.lineTotal), selectedQuote.currency)}</p>
+                      {calculateTransferSurcharge(item) > 0 && (
+                        <p className="text-xs text-cyan-600 font-medium mt-1">
+                          🚗 Transfert: {currencyNoCents(calculateTransferSurcharge(item), selectedQuote.currency)}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -1096,6 +1101,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   <div className="text-right text-sm font-semibold text-slate-700">
                     <p>Espèces: {currencyNoCents(Math.round(c.lineTotal), c.currency)}</p>
                     <p className="text-xs text-slate-600">Carte: {currencyNoCents(calculateCardPrice(c.lineTotal), c.currency)}</p>
+                    {calculateTransferSurcharge(c.raw) > 0 && (
+                      <p className="text-xs text-cyan-600 font-medium mt-1">
+                        🚗 Transfert: {currencyNoCents(calculateTransferSurcharge(c.raw), c.currency)}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

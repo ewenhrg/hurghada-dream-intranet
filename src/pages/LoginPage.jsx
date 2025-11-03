@@ -95,29 +95,29 @@ export function LoginPage({ onSuccess }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="bg-white/95 rounded-3xl shadow-2xl border-2 border-slate-200/60 backdrop-blur-sm p-8 md:p-12 w-full max-w-md transform hover:scale-[1.02] transition-all duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 flex items-center justify-center p-4">
+      <div className="bg-white/98 rounded-2xl shadow-2xl border border-slate-200/80 backdrop-blur-xl p-8 md:p-10 w-full max-w-md">
         <div className="text-center mb-8">
           <img 
             src="/logo.png" 
             alt="Hurghada Dream Logo" 
-            className="mx-auto mb-6 max-w-[200px] h-auto rounded-xl shadow-lg border-2 border-slate-200/50"
+            className="mx-auto mb-6 max-w-[180px] h-auto rounded-lg shadow-md border border-slate-200/60"
             onError={(e) => {
               // Fallback si le logo n'existe pas
               e.target.style.display = 'none';
             }}
           />
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
             Hurghada Dream
           </h1>
-          <p className="text-slate-600 text-sm md:text-base font-medium">
+          <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed">
             Veuillez entrer votre code d'accès pour continuer
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="code" className="block text-sm font-semibold text-slate-700 mb-2">
+            <label htmlFor="code" className="block text-sm font-semibold text-slate-700 mb-2.5">
               Code d'accès
             </label>
             <input
@@ -129,14 +129,14 @@ export function LoginPage({ onSuccess }) {
                 setError("");
               }}
               placeholder="Entrez votre code (6 chiffres)"
-              className="w-full rounded-xl border-2 border-slate-200/80 bg-white/90 backdrop-blur-sm px-4 py-3 text-center text-lg font-semibold tracking-widest focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none transition-all shadow-sm hover:shadow-md"
+              className="w-full rounded-lg border border-slate-300/80 bg-white/95 backdrop-blur-sm px-4 py-3 text-center text-lg font-semibold tracking-widest focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all duration-200 shadow-sm hover:border-slate-400/80 hover:shadow"
               maxLength={6}
               autoFocus
             />
           </div>
 
           {error && (
-            <div className="bg-red-50/90 border-2 border-red-200/60 text-red-700 px-4 py-3 rounded-xl text-sm font-medium shadow-sm">
+            <div className="bg-red-50/95 border border-red-200/80 text-red-700 px-4 py-3 rounded-lg text-sm font-medium shadow-sm">
               {error}
             </div>
           )}
@@ -144,17 +144,17 @@ export function LoginPage({ onSuccess }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transform hover:scale-105 active:scale-95"
+            className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0"
           >
             {loading ? "Connexion..." : "Accéder"}
           </button>
         </form>
 
-        <div className="mt-6 text-center space-y-1">
+        <div className="mt-7 text-center space-y-1.5">
           <p className="text-xs text-slate-600 font-medium">
             Système de gestion interne
           </p>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-slate-500 tracking-wide">
             accéder website by Ewen
           </p>
         </div>
