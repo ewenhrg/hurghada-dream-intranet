@@ -67,31 +67,35 @@ export function SituationPage({ user }) {
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        // Convertir en JSON - XLSX utilise automatiquement la première ligne comme en-têtes
-        let jsonData = XLSX.utils.sheet_to_json(worksheet, { 
-          defval: "", // Valeur par défaut pour les cellules vides
-          raw: false // Convertir les dates en chaînes
-        });
-
-        // Si aucune colonne n'est détectée, essayer de lire la première ligne comme en-têtes manuellement
-        if (jsonData.length === 0 || (jsonData[0] && Object.keys(jsonData[0] || {}).length === 0)) {
-          // Lire comme tableau de tableaux
-          const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        // Lire d'abord comme tableau de tableaux pour avoir la première ligne comme en-têtes
+        const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        
+        let jsonData = [];
+        
+        if (rawData.length > 1) {
+          // Première ligne = en-têtes (même si certains sont vides)
+          const headers = rawData[0].map((h, idx) => {
+            const header = String(h || "").trim();
+            // Si l'en-tête est vide, utiliser un nom par défaut basé sur l'index
+            return header || `Column_${idx + 1}`;
+          });
           
-          if (rawData.length > 1) {
-            // Première ligne = en-têtes
-            const headers = rawData[0].map(h => String(h || "").trim()).filter(h => h);
-            if (headers.length > 0) {
-              // Convertir les lignes suivantes en objets
-              jsonData = rawData.slice(1).map(row => {
-                const obj = {};
-                headers.forEach((header, index) => {
-                  obj[header] = row[index] !== undefined && row[index] !== null ? String(row[index]) : "";
-                });
-                return obj;
+          if (headers.length > 0) {
+            // Convertir les lignes suivantes en objets
+            jsonData = rawData.slice(1).map(row => {
+              const obj = {};
+              headers.forEach((header, index) => {
+                obj[header] = row[index] !== undefined && row[index] !== null ? String(row[index]) : "";
               });
-            }
+              return obj;
+            });
           }
+        } else {
+          // Fallback : essayer la méthode normale de XLSX
+          jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+            defval: "", 
+            raw: false 
+          });
         }
 
         if (jsonData.length === 0) {
@@ -178,7 +182,12 @@ export function SituationPage({ user }) {
 
         // Afficher un debug des colonnes trouvées
         if (jsonDataNormalized.length > 0 && jsonDataNormalized[0]) {
-          const detectedColumns = Object.keys(jsonDataNormalized[0] || {}).filter(col => col && col !== "__EMPTY");
+          const detectedColumns = Object.keys(jsonDataNormalized[0] || {}).filter(col => 
+            col && 
+            col !== "__EMPTY" && 
+            !col.startsWith("_EMPTY") && 
+            !col.startsWith("Column_") // Filtrer aussi les colonnes par défaut
+          );
           setDetectedColumns(detectedColumns);
           console.log("📊 Colonnes détectées dans le fichier Excel:", detectedColumns);
           console.log("📋 Première ligne de données:", jsonDataNormalized[0]);
