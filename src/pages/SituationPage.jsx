@@ -14,14 +14,17 @@ export function SituationPage({ user }) {
   const extractPhoneFromName = (nameField) => {
     if (!nameField) return null;
     
+    const str = String(nameField);
+    if (!str || str.trim() === "") return null;
+    
     // Chercher un numéro de téléphone (commence par + suivi de chiffres)
-    const phoneMatch = nameField.match(/\+\d[\d\s-]{6,}/);
+    const phoneMatch = str.match(/\+\d[\d\s-]{6,}/);
     if (phoneMatch) {
       return phoneMatch[0].replace(/\s|-/g, ""); // Nettoyer espaces et tirets
     }
     
-    // Chercher aussi les numéros sans le + (commence par des chiffres)
-    const phoneMatch2 = nameField.match(/\d[\d\s-]{8,}/);
+    // Chercher aussi les numéros sans le + (commence par des chiffres, minimum 8 caractères)
+    const phoneMatch2 = str.match(/\d[\d\s-]{7,}/);
     if (phoneMatch2) {
       return phoneMatch2[0].replace(/\s|-/g, "");
     }
@@ -31,10 +34,13 @@ export function SituationPage({ user }) {
 
   // Extraire le nom du client (sans le téléphone)
   const extractNameFromField = (nameField) => {
-    if (!nameField) return "";
+    if (!nameField) return "Client";
+    
+    const str = String(nameField);
+    if (!str || str.trim() === "") return "Client";
     
     // Enlever le numéro de téléphone
-    const name = nameField.replace(/\+\d[\d\s-]{6,}/g, "").replace(/\d[\d\s-]{8,}/g, "").trim();
+    let name = str.replace(/\+\d[\d\s-]{6,}/g, "").replace(/\d[\d\s-]{7,}/g, "").trim();
     return name || "Client";
   };
 
@@ -71,30 +77,62 @@ export function SituationPage({ user }) {
           return;
         }
 
+        // Fonction pour trouver une colonne avec flexibilité (ignore majuscules/minuscules, espaces, caractères spéciaux)
+        const findColumn = (row, possibleNames) => {
+          // Normaliser le nom de colonne: enlever espaces, caractères spéciaux, mettre en minuscules
+          const normalize = (str) => str?.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "";
+          
+          // D'abord, chercher exactement (avec variations de casse)
+          for (const name of possibleNames) {
+            // Chercher exactement le nom (insensible à la casse)
+            const exactMatch = Object.keys(row).find(key => key.toLowerCase() === name.toLowerCase());
+            if (exactMatch && row[exactMatch] !== undefined && row[exactMatch] !== null && row[exactMatch] !== "") {
+              return row[exactMatch];
+            }
+          }
+          
+          // Ensuite, chercher avec normalisation (enlever espaces et caractères spéciaux)
+          const normalizedPossibleNames = possibleNames.map(normalize);
+          for (const key of Object.keys(row)) {
+            const normalizedKey = normalize(key);
+            if (normalizedPossibleNames.includes(normalizedKey)) {
+              const value = row[key];
+              if (value !== undefined && value !== null && value !== "") {
+                return value;
+              }
+            }
+          }
+          
+          return "";
+        };
+
         // Mapper les colonnes (chercher les colonnes possibles)
         const mappedData = jsonData.map((row, index) => {
-          // Chercher les colonnes (peuvent avoir différents noms)
-          const invoiceN = row["Invoice N"] || row["invoice_n"] || row["Invoice"] || row["invoice"] || "";
-          const date = row["Date"] || row["date"] || "";
-          const name = row["Name"] || row["name"] || row["Client"] || row["client"] || "";
-          const hotel = row["Hotel"] || row["hotel"] || "";
-          const roomNo = row["Rm No"] || row["Room No"] || row["room_no"] || row["room"] || "";
-          const pax = row["Pax"] || row["pax"] || row["Adults"] || row["adults"] || 0;
-          const ch = row["Ch"] || row["ch"] || row["Children"] || row["children"] || 0;
-          const inf = row["inf"] || row["Inf"] || row["Infants"] || row["infants"] || 0;
-          const trip = row["Trip"] || row["trip"] || row["Activity"] || row["activity"] || "";
-          const time = row["time"] || row["Time"] || row["Pickup Time"] || row["pickup_time"] || "";
-          const comment = row["Comment"] || row["comment"] || row["Notes"] || row["notes"] || "";
+          // Chercher les colonnes avec toutes les variations possibles
+          const invoiceN = findColumn(row, ["Invoice N", "Invoice #", "Invoice#", "invoice_n", "Invoice", "invoice", "Invoice Number", "invoice_number"]);
+          const date = findColumn(row, ["Date", "date"]);
+          const name = findColumn(row, ["Name", "name", "Client", "client", "Nom", "nom"]);
+          const hotel = findColumn(row, ["Hotel", "hotel", "Hôtel", "hôtel"]);
+          const roomNo = findColumn(row, ["Rm No", "Room No", "Room#", "rm_no", "room_no", "room", "Room", "Chambre", "chambre"]);
+          const pax = findColumn(row, ["Pax", "pax", "Adults", "adults", "Adultes", "adultes"]) || 0;
+          const ch = findColumn(row, ["Ch", "ch", "Children", "children", "Enfants", "enfants"]) || 0;
+          const inf = findColumn(row, ["inf", "Inf", "Infants", "infants", "Bébés", "bébés", "Babies", "babies"]) || 0;
+          const trip = findColumn(row, ["Trip", "trip", "Activity", "activity", "Activité", "activité"]);
+          const time = findColumn(row, ["time", "Time", "Pickup Time", "pickup_time", "Heure", "heure", "Pickup", "pickup"]);
+          const comment = findColumn(row, ["Comment", "comment", "Notes", "notes", "Commentaire", "commentaire"]);
 
+          // Convertir les valeurs en chaînes pour éviter les erreurs
+          const nameStr = String(name || "");
+          
           // Extraire le téléphone et le nom
-          const phone = extractPhoneFromName(name);
-          const clientName = extractNameFromField(name);
+          const phone = extractPhoneFromName(nameStr);
+          const clientName = extractNameFromField(nameStr);
 
           return {
             id: `row-${index}`,
             invoiceN: String(invoiceN || ""),
             date: String(date || ""),
-            name: clientName,
+            name: clientName || "Client",
             phone: phone || "",
             hotel: String(hotel || ""),
             roomNo: String(roomNo || ""),
@@ -108,6 +146,12 @@ export function SituationPage({ user }) {
             messageSentAt: null,
           };
         });
+
+        // Afficher un debug des colonnes trouvées (uniquement en console)
+        if (jsonData.length > 0) {
+          console.log("📊 Colonnes détectées dans le fichier Excel:", Object.keys(jsonData[0]));
+          console.log("📋 Première ligne de données:", jsonData[0]);
+        }
 
         setExcelData(mappedData);
         setShowPreview(false);
