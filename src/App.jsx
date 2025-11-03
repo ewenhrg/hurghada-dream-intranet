@@ -492,34 +492,34 @@ export default function App() {
   return (
     <div className="min-h-screen">
       {/* HEADER */}
-      <header className="sticky top-0 z-40 backdrop-blur-lg bg-white/90 border-b-2 border-slate-300/50 shadow-xl">
-        <div className="max-w-6xl mx-auto px-3 py-4 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/95 border-b border-slate-200/80 shadow-lg">
+        <div className={`mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4 ${tab === "devis" ? "max-w-7xl" : "max-w-6xl"}`}>
+          <div className="flex items-center gap-3.5">
             <img 
               src="/logo.png" 
               alt="Hurghada Dream Logo" 
-              className="w-12 h-12 object-contain rounded-xl shadow-lg border-2 border-slate-200/50"
+              className="w-12 h-12 object-contain rounded-lg shadow-md border border-slate-200/60"
               onError={(e) => {
                 // Fallback si le logo n'existe pas - afficher HD
                 e.target.style.display = 'none';
                 const parent = e.target.parentElement;
                 if (parent && !parent.querySelector('.fallback-logo')) {
                   const fallback = document.createElement('div');
-                  fallback.className = 'fallback-logo w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white grid place-items-center font-bold text-base shadow-lg';
+                  fallback.className = 'fallback-logo w-12 h-12 rounded-lg bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white grid place-items-center font-bold text-base shadow-md';
                   fallback.textContent = 'HD';
                   parent.appendChild(fallback);
                 }
               }}
             />
             <div>
-              <h1 className="text-base font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Hurghada Dream — Bureaux</h1>
-              <p className="text-[10px] text-slate-600 font-medium">Mini site interne (devis, activités, historique)</p>
+              <h1 className="text-base font-bold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Hurghada Dream — Bureaux</h1>
+              <p className="text-[10px] text-slate-600 font-medium mt-0.5">Mini site interne (devis, activités, historique)</p>
               {user && (
-                <p className="text-[10px] text-blue-600 mt-0.5 font-semibold">👤 Connecté : {user.name}</p>
+                <p className="text-[10px] text-blue-600 mt-1 font-semibold">👤 Connecté : {user.name}</p>
               )}
             </div>
           </div>
-          <nav className="flex gap-2 flex-wrap">
+          <nav className="flex gap-2.5 flex-wrap">
             <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
               Devis
             </Pill>
@@ -551,15 +551,20 @@ export default function App() {
       </header>
 
       {/* CONTENU CENTRÉ */}
-      <main className="max-w-6xl mx-auto px-3 py-6 space-y-6">
+      <main className={`mx-auto px-4 py-8 space-y-8 ${tab === "devis" ? "max-w-7xl" : "max-w-6xl"}`}>
         <Suspense fallback={<div className="flex items-center justify-center p-8"><p className="text-gray-500">Chargement...</p></div>}>
           {tab === "devis" && (
-            <Section
-              title="Créer & gérer les devis (multi-activités)"
-              subtitle="Supplément transfert = (par adulte) × (nombre d'adultes). Alerte si jour hors-dispo, mais le devis peut être créé."
-            >
-              <QuotesPage activities={activities} quotes={quotes} setQuotes={setQuotes} user={user} />
-            </Section>
+            <section className="space-y-6">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-1.5">Créer & gérer les devis (multi-activités)</h2>
+                  <p className="text-sm text-slate-600 font-medium leading-relaxed">Supplément transfert = (par adulte) × (nombre d'adultes). Alerte si jour hors-dispo, mais le devis peut être créé.</p>
+                </div>
+              </div>
+              <div className="rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/80 p-8 md:p-10 lg:p-12 transition-all duration-300">
+                <QuotesPage activities={activities} quotes={quotes} setQuotes={setQuotes} user={user} />
+              </div>
+            </section>
           )}
 
           {tab === "activities" && user?.canAccessActivities !== false && (
@@ -614,7 +619,7 @@ export default function App() {
         </Suspense>
       </main>
 
-      <footer className="max-w-6xl mx-auto px-3 py-8 text-[10px] text-slate-600 border-t-2 border-slate-300/50 mt-8 font-medium">
+      <footer className={`mx-auto px-4 py-8 text-[11px] text-slate-600 border-t border-slate-200/80 mt-10 font-medium tracking-wide ${tab === "devis" ? "max-w-7xl" : "max-w-6xl"}`}>
         Données stockées en local + Supabase (si dispo). Site interne Hurghada Dream.
       </footer>
     </div>

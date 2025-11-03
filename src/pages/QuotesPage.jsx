@@ -433,7 +433,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         </div>
       )}
 
-      <div className="p-6 md:p-8 lg:p-10 space-y-8 md:ml-72">
+      <div className="space-y-10">
         <form 
           onSubmit={handleCreateQuote} 
           onKeyDown={(e) => {
@@ -442,16 +442,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
               e.preventDefault();
             }
           }}
-          className="space-y-6"
+          className="space-y-8"
         >
         {/* Infos client */}
-        <div className="grid md:grid-cols-5 gap-4">
+        <div className="grid md:grid-cols-5 gap-6 md:gap-7 lg:gap-8">
           <div>
-            <p className="text-xs text-gray-500 mb-1">Client</p>
+            <p className="text-xs text-gray-500 mb-2">Client</p>
             <TextInput value={client.name} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} />
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">Téléphone</p>
+            <p className="text-xs text-gray-500 mb-2">Téléphone</p>
             <TextInput 
               value={client.phone} 
               onChange={(e) => {
@@ -462,15 +462,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
             />
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">Hôtel</p>
+            <p className="text-xs text-gray-500 mb-2">Hôtel</p>
             <TextInput value={client.hotel} onChange={(e) => setClient((c) => ({ ...c, hotel: e.target.value }))} />
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">Chambre</p>
+            <p className="text-xs text-gray-500 mb-2">Chambre</p>
             <TextInput value={client.room} onChange={(e) => setClient((c) => ({ ...c, room: e.target.value }))} />
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">Quartier (client)</p>
+            <p className="text-xs text-gray-500 mb-2">Quartier (client)</p>
             <select
               value={client.neighborhood}
               onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
@@ -487,9 +487,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         </div>
 
         {/* Dates séjour */}
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 gap-6 md:gap-7 lg:gap-8">
           <div>
-            <p className="text-xs text-gray-500 mb-1">Date d'arrivée</p>
+            <p className="text-xs text-gray-500 mb-2">Date d'arrivée</p>
             <TextInput 
               type="date" 
               value={client.arrivalDate || ""} 
@@ -497,7 +497,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
             />
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">Date de départ</p>
+            <p className="text-xs text-gray-500 mb-2">Date de départ</p>
             <TextInput 
               type="date" 
               value={client.departureDate || ""} 
@@ -507,18 +507,18 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         </div>
 
         {/* Lignes */}
-        <div className="space-y-5">
+        <div className="space-y-6 md:space-y-7">
           {computed.map((c, idx) => (
-            <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-5 md:p-6 space-y-4 shadow-sm">
-              <div className="flex items-center justify-between">
+            <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-7 md:p-9 lg:p-10 space-y-6 md:space-y-7 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
                 <GhostBtn type="button" onClick={() => removeItem(idx)}>
                   Supprimer
                 </GhostBtn>
               </div>
-              <div className="grid md:grid-cols-5 gap-4 items-end">
+              <div className="grid md:grid-cols-5 gap-6 md:gap-7 lg:gap-8 items-end">
                 <div className="md:col-span-2">
-                  <p className="text-xs text-gray-500 mb-1">Activité</p>
+                  <p className="text-xs text-gray-500 mb-2">Activité</p>
                   <select
                     value={c.raw.activityId}
                     onChange={(e) => setItem(idx, { activityId: e.target.value })}
@@ -533,16 +533,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   </select>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Date</p>
+                  <p className="text-xs text-gray-500 mb-2">Date</p>
                   <TextInput type="date" value={c.raw.date} onChange={(e) => setItem(idx, { date: e.target.value })} />
                   {c.act && !c.available && (
-                    <p className="text-[10px] text-amber-700 mt-1">
+                    <p className="text-[10px] text-amber-700 mt-2">
                       ⚠️ activité pas dispo ce jour-là (on peut quand même créer)
                     </p>
                   )}
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Quartier</p>
+                  <p className="text-xs text-gray-500 mb-2">Quartier</p>
                   <div className="rounded-xl border border-dashed border-blue-200/50 bg-blue-50/50 px-3 py-2 text-sm text-gray-600">
                     {client.neighborhood
                       ? NEIGHBORHOODS.find((n) => n.key === client.neighborhood)?.label
@@ -550,7 +550,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Créneau</p>
+                  <p className="text-xs text-gray-500 mb-2">Créneau</p>
                   <select
                     value={c.raw.slot}
                     onChange={(e) => setItem(idx, { slot: e.target.value })}
@@ -583,7 +583,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
               {/* extra - Menu déroulant pour Speed Boat, champs classiques pour les autres */}
               {c.act && c.act.name.toLowerCase().includes("speed boat") ? (
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Extra</p>
+                  <p className="text-xs text-gray-500 mb-2">Extra</p>
                   <select
                     value={c.raw.speedBoatExtra || ""}
                     onChange={(e) => setItem(idx, { speedBoatExtra: e.target.value })}
@@ -597,9 +597,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                   </select>
                 </div>
               ) : (
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
                   <div className="md:col-span-2">
-                    <p className="text-xs text-gray-500 mb-1">Extra (ex: photos, bateau privé…)</p>
+                    <p className="text-xs text-gray-500 mb-2">Extra (ex: photos, bateau privé…)</p>
                     <TextInput
                       placeholder="Libellé extra"
                       value={c.raw.extraLabel}
@@ -607,7 +607,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Montant Extra</p>
+                    <p className="text-xs text-gray-500 mb-2">Montant Extra</p>
                     <NumberInput
                       value={c.raw.extraAmount}
                       onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
@@ -619,23 +619,23 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
               {/* passagers - Champs spéciaux pour activités buggy */}
               {c.act && isBuggyActivity(c.act.name) ? (
                 <>
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid md:grid-cols-2 gap-6 md:gap-7 lg:gap-8">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
+                      <p className="text-xs text-gray-500 mb-2">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
                       <NumberInput value={c.raw.buggySimple ?? ""} onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Buggy Family ({getBuggyPrices(c.act.name).family}€)</p>
+                      <p className="text-xs text-gray-500 mb-2">Buggy Family ({getBuggyPrices(c.act.name).family}€)</p>
                       <NumberInput value={c.raw.buggyFamily ?? ""} onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  <div className="grid md:grid-cols-2 gap-6 md:gap-7 lg:gap-8 mt-6">
                     <div>
-                      <p className="text-xs text-gray-400 mb-1">Adultes (informations uniquement)</p>
+                      <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
                       <NumberInput value={c.raw.adults ?? ""} onChange={(e) => setItem(idx, { adults: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 mb-1">
+                      <p className="text-xs text-gray-400 mb-2">
                         Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""} (informations uniquement)
                       </p>
                       <NumberInput value={c.raw.children ?? ""} onChange={(e) => setItem(idx, { children: e.target.value === "" ? "" : e.target.value })} />
@@ -644,35 +644,35 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                 </>
               ) : c.act && isMotoCrossActivity(c.act.name) ? (
                 <>
-                  <div className="grid md:grid-cols-3 gap-4">
+                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
+                      <p className="text-xs text-gray-500 mb-2">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
                       <NumberInput value={c.raw.yamaha250 ?? ""} onChange={(e) => setItem(idx, { yamaha250: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">KTM640CC ({getMotoCrossPrices().ktm640}€)</p>
+                      <p className="text-xs text-gray-500 mb-2">KTM640CC ({getMotoCrossPrices().ktm640}€)</p>
                       <NumberInput value={c.raw.ktm640 ?? ""} onChange={(e) => setItem(idx, { ktm640: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">KTM 530CC ({getMotoCrossPrices().ktm530}€)</p>
+                      <p className="text-xs text-gray-500 mb-2">KTM 530CC ({getMotoCrossPrices().ktm530}€)</p>
                       <NumberInput value={c.raw.ktm530 ?? ""} onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Adultes</p>
+                    <p className="text-xs text-gray-500 mb-2">Adultes</p>
                     <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">
+                    <p className="text-xs text-gray-500 mb-2">
                       Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""}
                     </p>
                     <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">
+                    <p className="text-xs text-gray-500 mb-2">
                       Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""}
                     </p>
                     <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
@@ -723,7 +723,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         </div>
 
         <div>
-          <p className="text-xs text-gray-500 mb-1">Notes</p>
+          <p className="text-xs text-gray-500 mb-2">Notes</p>
           <TextInput
             placeholder="Infos supplémentaires : langue du guide, pick-up, etc."
             value={notes}
