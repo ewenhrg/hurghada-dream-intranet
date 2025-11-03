@@ -32,6 +32,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const paymentModalRef = useRef(null);
   const paymentModalContainerRef = useRef(null);
   
+  // Références pour le conteneur de la modale de modification
+  const editModalRef = useRef(null);
+  const editModalContainerRef = useRef(null);
+  
   // États pour la modale de modification
   const [editClient, setEditClient] = useState(null);
   const [editItems, setEditItems] = useState([]);
@@ -91,6 +95,26 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       }, 100);
     }
   }, [showPaymentModal]);
+
+  // Scroller en haut de la modale de modification et de la page quand elle s'ouvre
+  useEffect(() => {
+    if (showEditModal) {
+      // Scroller la page vers le haut pour que la modale soit visible
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // Attendre un court instant pour que la modale soit rendue
+      setTimeout(() => {
+        // Scroller le contenu de la modale vers le haut
+        if (editModalRef.current) {
+          editModalRef.current.scrollTop = 0;
+        }
+        // Scroller vers le conteneur de la modale si nécessaire
+        if (editModalContainerRef.current) {
+          editModalContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [showEditModal]);
 
   // Fonction pour supprimer automatiquement les devis non payés de plus de 5 jours
   useEffect(() => {
@@ -588,6 +612,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           setNotes={setEditNotes}
           activities={activities}
           user={user}
+          editModalRef={editModalRef}
+          editModalContainerRef={editModalContainerRef}
           onClose={() => {
             setShowEditModal(false);
             setSelectedQuote(null);
@@ -665,7 +691,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 }
 
 // Composant modale de modification de devis
-function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, onClose, onSave, user }) {
+function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, onClose, onSave, user, editModalRef, editModalContainerRef }) {
   const blankItem = () => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
@@ -864,8 +890,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div ref={editModalContainerRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div ref={editModalRef} className="bg-white rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Modifier le devis</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">
