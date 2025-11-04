@@ -47,6 +47,9 @@ export function LoginPage({ onSuccess }) {
           canResetData: data.can_reset_data || false,
           canAccessActivities: data.can_access_activities !== false, // true par défaut si null
           canAccessHistory: data.can_access_history !== false, // true par défaut si null
+          canAccessTickets: data.can_access_tickets !== false, // true par défaut si null
+          canAccessModifications: data.can_access_modifications || false,
+          canAccessSituation: data.can_access_situation || false,
           canAccessUsers: data.can_access_users || false,
         };
         

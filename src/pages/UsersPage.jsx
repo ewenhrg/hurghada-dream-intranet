@@ -18,6 +18,9 @@ export function UsersPage({ user }) {
     canResetData: false,
     canAccessActivities: true,
     canAccessHistory: true,
+    canAccessTickets: true,
+    canAccessModifications: false,
+    canAccessSituation: false,
     canAccessUsers: false,
   });
 
@@ -58,6 +61,9 @@ export function UsersPage({ user }) {
       canResetData: false,
       canAccessActivities: true,
       canAccessHistory: true,
+      canAccessTickets: true,
+      canAccessModifications: false,
+      canAccessSituation: false,
       canAccessUsers: false,
     });
     setEditingUser(null);
@@ -76,6 +82,9 @@ export function UsersPage({ user }) {
       canResetData: u.can_reset_data || false,
       canAccessActivities: u.can_access_activities !== false, // true par défaut
       canAccessHistory: u.can_access_history !== false, // true par défaut
+      canAccessTickets: u.can_access_tickets !== false, // true par défaut
+      canAccessModifications: u.can_access_modifications || false,
+      canAccessSituation: u.can_access_situation || false,
       canAccessUsers: u.can_access_users || false,
     });
     setEditingUser(u);
@@ -111,6 +120,9 @@ export function UsersPage({ user }) {
         can_reset_data: form.canResetData,
         can_access_activities: form.canAccessActivities,
         can_access_history: form.canAccessHistory,
+        can_access_tickets: form.canAccessTickets,
+        can_access_modifications: form.canAccessModifications,
+        can_access_situation: form.canAccessSituation,
         can_access_users: form.canAccessUsers,
       };
 
@@ -296,6 +308,33 @@ export function UsersPage({ user }) {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={form.canAccessTickets}
+                  onChange={(e) => setForm((f) => ({ ...f, canAccessTickets: e.target.checked }))}
+                  className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Peut accéder à la page Tickets</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.canAccessModifications}
+                  onChange={(e) => setForm((f) => ({ ...f, canAccessModifications: e.target.checked }))}
+                  className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Peut accéder à la page Modifications</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.canAccessSituation}
+                  onChange={(e) => setForm((f) => ({ ...f, canAccessSituation: e.target.checked }))}
+                  className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Peut accéder à la page Situation</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
                   checked={form.canAccessUsers}
                   onChange={(e) => setForm((f) => ({ ...f, canAccessUsers: e.target.checked }))}
                   className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
@@ -365,7 +404,16 @@ export function UsersPage({ user }) {
                         {u.can_access_history !== false && (
                           <span className="px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 text-[10px] font-medium">Page Historique</span>
                         )}
-                        {u.can_access_users && (
+                        {u.can_access_tickets !== false && (
+                          <span className="px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 text-[10px] font-medium">Page Tickets</span>
+                        )}
+                        {u.can_access_modifications === true && (
+                          <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-medium">Page Modifications</span>
+                        )}
+                        {u.can_access_situation === true && (
+                          <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-[10px] font-medium">Page Situation</span>
+                        )}
+                        {u.can_access_users === true && (
                           <span className="px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 text-[10px] font-medium">Page Utilisateurs</span>
                         )}
                         {!u.can_delete_quote &&
@@ -375,7 +423,10 @@ export function UsersPage({ user }) {
                           !u.can_reset_data &&
                           u.can_access_activities === false &&
                           u.can_access_history === false &&
-                          !u.can_access_users && <span className="text-[10px] text-gray-400">Aucune permission</span>}
+                          u.can_access_tickets === false &&
+                          u.can_access_modifications !== true &&
+                          u.can_access_situation !== true &&
+                          u.can_access_users !== true && <span className="text-[10px] text-gray-400">Aucune permission</span>}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">

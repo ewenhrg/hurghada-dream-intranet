@@ -34,6 +34,7 @@ export default function App() {
           // S'assurer que les valeurs par défaut sont correctes pour l'accès aux pages
           if (userData.canAccessActivities === undefined) userData.canAccessActivities = true;
           if (userData.canAccessHistory === undefined) userData.canAccessHistory = true;
+          if (userData.canAccessTickets === undefined) userData.canAccessTickets = true;
           // Donner tous les accès à Léa sauf canResetData
           if (userData.name === "Léa") {
             userData.canDeleteQuote = true;
@@ -42,7 +43,17 @@ export default function App() {
             userData.canDeleteActivity = true;
             userData.canAccessActivities = true;
             userData.canAccessHistory = true;
+            userData.canAccessTickets = true;
+            userData.canAccessModifications = true;
+            userData.canAccessSituation = true;
+            userData.canAccessUsers = true;
             userData.canResetData = false; // Ne pas donner l'accès au reset
+          }
+          // Donner tous les accès à Ewen
+          if (userData.name === "Ewen") {
+            userData.canAccessModifications = true;
+            userData.canAccessSituation = true;
+            userData.canAccessUsers = true;
           }
           setUser(userData);
         } catch (e) {
@@ -62,6 +73,7 @@ export default function App() {
         // S'assurer que les valeurs par défaut sont correctes pour l'accès aux pages
         if (userData.canAccessActivities === undefined) userData.canAccessActivities = true;
         if (userData.canAccessHistory === undefined) userData.canAccessHistory = true;
+        if (userData.canAccessTickets === undefined) userData.canAccessTickets = true;
         // Donner tous les accès à Léa sauf canResetData
         if (userData.name === "Léa") {
           userData.canDeleteQuote = true;
@@ -70,7 +82,17 @@ export default function App() {
           userData.canDeleteActivity = true;
           userData.canAccessActivities = true;
           userData.canAccessHistory = true;
+          userData.canAccessTickets = true;
+          userData.canAccessModifications = true;
+          userData.canAccessSituation = true;
+          userData.canAccessUsers = true;
           userData.canResetData = false; // Ne pas donner l'accès au reset
+        }
+        // Donner tous les accès à Ewen
+        if (userData.name === "Ewen") {
+          userData.canAccessModifications = true;
+          userData.canAccessSituation = true;
+          userData.canAccessUsers = true;
         }
         setUser(userData);
       } catch (e) {
@@ -534,15 +556,17 @@ export default function App() {
               Historique
               </Pill>
             )}
-            <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
-              Tickets
-            </Pill>
-            {(user?.name === "Ewen" || user?.name === "Léa") && (
+            {user?.canAccessTickets !== false && (
+              <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
+                Tickets
+              </Pill>
+            )}
+            {(user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
               <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
                 Modifications
               </Pill>
             )}
-            {(user?.name === "Ewen" || user?.name === "Léa") && (
+            {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
               <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
                 Situation
               </Pill>
@@ -602,13 +626,13 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "tickets" && (
+        {tab === "tickets" && user?.canAccessTickets !== false && (
           <Section title="Liste des tickets" subtitle="Tableau automatique de tous les tickets renseignés (devis avec tous les tickets complétés)">
             <TicketPage quotes={quotes} />
           </Section>
         )}
 
-        {tab === "modifications" && (user?.name === "Ewen" || user?.name === "Léa") && (
+        {tab === "modifications" && (user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
           <Section
             title="Modifications & Annulations"
             subtitle="Gérez les modifications et annulations pour les devis payés uniquement."
@@ -617,7 +641,7 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "situation" && (user?.name === "Ewen" || user?.name === "Léa") && (
+        {tab === "situation" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
           <SituationPage user={user} />
         )}
 
