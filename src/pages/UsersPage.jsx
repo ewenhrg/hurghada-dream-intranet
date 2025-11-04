@@ -16,6 +16,9 @@ export function UsersPage({ user }) {
     canEditActivity: false,
     canDeleteActivity: false,
     canResetData: false,
+    canAccessActivities: true,
+    canAccessHistory: true,
+    canAccessUsers: false,
   });
 
   // Charger les utilisateurs depuis Supabase
@@ -53,6 +56,9 @@ export function UsersPage({ user }) {
       canEditActivity: false,
       canDeleteActivity: false,
       canResetData: false,
+      canAccessActivities: true,
+      canAccessHistory: true,
+      canAccessUsers: false,
     });
     setEditingUser(null);
     setShowForm(false);
@@ -68,6 +74,9 @@ export function UsersPage({ user }) {
       canEditActivity: u.can_edit_activity || false,
       canDeleteActivity: u.can_delete_activity || false,
       canResetData: u.can_reset_data || false,
+      canAccessActivities: u.can_access_activities !== false, // true par défaut
+      canAccessHistory: u.can_access_history !== false, // true par défaut
+      canAccessUsers: u.can_access_users || false,
     });
     setEditingUser(u);
     setShowForm(true);
@@ -100,6 +109,9 @@ export function UsersPage({ user }) {
         can_edit_activity: form.canEditActivity,
         can_delete_activity: form.canDeleteActivity,
         can_reset_data: form.canResetData,
+        can_access_activities: form.canAccessActivities,
+        can_access_history: form.canAccessHistory,
+        can_access_users: form.canAccessUsers,
       };
 
       if (editingUser) {
@@ -260,6 +272,39 @@ export function UsersPage({ user }) {
             </div>
           </div>
 
+          <div className="border-t pt-4 mt-4">
+            <p className="text-xs font-semibold text-gray-700 mb-3">Accès aux pages</p>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.canAccessActivities}
+                  onChange={(e) => setForm((f) => ({ ...f, canAccessActivities: e.target.checked }))}
+                  className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Peut accéder à la page Activités</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.canAccessHistory}
+                  onChange={(e) => setForm((f) => ({ ...f, canAccessHistory: e.target.checked }))}
+                  className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Peut accéder à la page Historique</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.canAccessUsers}
+                  onChange={(e) => setForm((f) => ({ ...f, canAccessUsers: e.target.checked }))}
+                  className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Peut accéder à la page Utilisateurs</span>
+              </label>
+            </div>
+          </div>
+
           <div className="flex gap-3 justify-end pt-4 border-t">
             <GhostBtn type="button" onClick={resetForm}>
               Annuler
@@ -314,11 +359,23 @@ export function UsersPage({ user }) {
                         {u.can_reset_data && (
                           <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">Admin</span>
                         )}
+                        {u.can_access_activities !== false && (
+                          <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-medium">Page Activités</span>
+                        )}
+                        {u.can_access_history !== false && (
+                          <span className="px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 text-[10px] font-medium">Page Historique</span>
+                        )}
+                        {u.can_access_users && (
+                          <span className="px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 text-[10px] font-medium">Page Utilisateurs</span>
+                        )}
                         {!u.can_delete_quote &&
                           !u.can_add_activity &&
                           !u.can_edit_activity &&
                           !u.can_delete_activity &&
-                          !u.can_reset_data && <span className="text-[10px] text-gray-400">Aucune permission</span>}
+                          !u.can_reset_data &&
+                          u.can_access_activities === false &&
+                          u.can_access_history === false &&
+                          !u.can_access_users && <span className="text-[10px] text-gray-400">Aucune permission</span>}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">

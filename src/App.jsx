@@ -547,7 +547,7 @@ export default function App() {
                 Situation
               </Pill>
             )}
-            {user?.canResetData && (
+            {(user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
               <Pill active={tab === "users"} onClick={() => setTab("users")}>
                 Utilisateurs
               </Pill>
@@ -621,7 +621,7 @@ export default function App() {
           <SituationPage user={user} />
         )}
 
-          {tab === "users" && user?.canResetData && (
+          {tab === "users" && (user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
             <Section title="Gestion des utilisateurs" subtitle="Créez et gérez les utilisateurs avec leurs codes d'accès et permissions.">
               <UsersPage user={user} />
             </Section>

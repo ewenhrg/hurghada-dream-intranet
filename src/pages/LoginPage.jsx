@@ -47,6 +47,7 @@ export function LoginPage({ onSuccess }) {
           canResetData: data.can_reset_data || false,
           canAccessActivities: data.can_access_activities !== false, // true par défaut si null
           canAccessHistory: data.can_access_history !== false, // true par défaut si null
+          canAccessUsers: data.can_access_users || false,
         };
         
         // Donner tous les accès à Léa sauf canResetData
