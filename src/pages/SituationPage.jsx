@@ -87,6 +87,33 @@ export function SituationPage({ user }) {
     // Détecter si c'est une colonne de date ou d'heure
     const isDateColumn = normalizedColName.includes("date") || normalizedColName.includes("jour");
     const isTimeColumn = normalizedColName.includes("time") || normalizedColName.includes("heure") || normalizedColName.includes("pickup");
+    
+    // Détecter les colonnes qui ne doivent PAS être converties (numéros de chambre, etc.)
+    const isRoomColumn = normalizedColName.includes("rm") || normalizedColName.includes("room") || 
+                         normalizedColName.includes("chambre") || normalizedColName.includes("numéro") ||
+                         normalizedColName.includes("numero") || normalizedColName.includes("number");
+    const isInvoiceColumn = normalizedColName.includes("invoice") || normalizedColName.includes("facture");
+    const isPaxColumn = normalizedColName.includes("pax") || normalizedColName.includes("adults") || 
+                        normalizedColName.includes("adultes") || normalizedColName.includes("children") ||
+                        normalizedColName.includes("enfants") || normalizedColName.includes("infants") ||
+                        normalizedColName.includes("bébés") || normalizedColName.includes("babies");
+    
+    // Si c'est une colonne qui ne doit pas être convertie (numéro de chambre, invoice, etc.), retourner directement
+    if (isRoomColumn || isInvoiceColumn || isPaxColumn) {
+      // Pour les nombres, préserver le format (pas de conversion en date/heure)
+      // Convertir en string en préservant les zéros initiaux si c'était une string
+      if (typeof value === "string") {
+        return value;
+      }
+      // Si c'est un nombre, le convertir en string sans décimales si c'est un entier
+      if (typeof value === "number") {
+        if (Number.isInteger(value)) {
+          return String(value);
+        }
+        return String(value);
+      }
+      return String(value);
+    }
 
     // Les dates Excel sont des nombres >= 1 (généralement > 1000 pour les dates récentes)
     // Les heures Excel sont des fractions de jour (entre 0 et 1, ou parfois combinées avec une date)
@@ -136,14 +163,17 @@ export function SituationPage({ user }) {
     }
 
     // Si c'est un nombre qui pourrait être une date (pas de colonne spécifiée)
-    if (!isDateColumn && !isTimeColumn && numValue >= 1 && numValue < 1000000) {
+    // Mais exclure les colonnes de numéro de chambre, invoice, etc.
+    if (!isDateColumn && !isTimeColumn && !isRoomColumn && !isInvoiceColumn && !isPaxColumn && 
+        numValue >= 1 && numValue < 1000000) {
       // Vérifier si c'est probablement une date (nombre entre des valeurs raisonnables)
       const excelEpoch = new Date(1899, 11, 30);
       const daysSince1900 = numValue;
       const date = new Date(excelEpoch.getTime() + daysSince1900 * 24 * 60 * 60 * 1000);
       
       // Si la date est valide et raisonnable (entre 1900 et 2100), c'est probablement une date
-      if (!isNaN(date.getTime()) && date.getFullYear() >= 1900 && date.getFullYear() <= 2100) {
+      // Mais aussi vérifier que ce n'est pas un nombre trop petit (comme un numéro de chambre)
+      if (!isNaN(date.getTime()) && date.getFullYear() >= 1900 && date.getFullYear() <= 2100 && numValue > 1000) {
         return date.toLocaleDateString("fr-FR", {
           day: "2-digit",
           month: "2-digit",
@@ -321,7 +351,7 @@ export function SituationPage({ user }) {
           const date = findColumn(row, ["Date", "date"]);
           const name = findColumn(row, ["Name", "name", "Client", "client", "Nom", "nom"]);
           const hotel = findColumn(row, ["Hotel", "hotel", "Hôtel", "hôtel"]);
-          const roomNo = findColumn(row, ["Rm No", "Room No", "Room#", "rm_no", "room_no", "room", "Room", "Chambre", "chambre"]);
+          const roomNo = findColumn(row, ["Rm No", "Rm No.", "RmNo", "Room No", "Room No.", "RoomNo", "Room#", "rm_no", "room_no", "rmno", "roomno", "room", "Room", "Chambre", "chambre", "Numéro", "numero", "Number", "number"]);
           const pax = findColumn(row, ["Pax", "pax", "Adults", "adults", "Adultes", "adultes"]) || 0;
           const ch = findColumn(row, ["Ch", "ch", "Children", "children", "Enfants", "enfants"]) || 0;
           const inf = findColumn(row, ["inf", "Inf", "Infants", "infants", "Bébés", "bébés", "Babies", "babies"]) || 0;
