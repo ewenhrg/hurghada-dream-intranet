@@ -36,21 +36,38 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     ktm530: "",
   }), []);
 
-  // Charger le formulaire sauvegardé depuis localStorage (sauf lors d'un vrai rechargement de page)
-  // Détecter si c'est un vrai rechargement de page (F5) ou juste un changement d'onglet
+  // Charger le formulaire sauvegardé depuis localStorage
+  // Utiliser un flag dans sessionStorage pour distinguer un vrai rechargement d'un changement d'onglet
   const [isPageReload] = useState(() => {
-    // Vérifier si c'est un rechargement de page
+    // Vérifier si c'est un rechargement de page (F5 ou refresh)
     const navigationEntry = performance.getEntriesByType('navigation')[0];
     const isReload = navigationEntry && navigationEntry.type === 'reload';
     
-    // Si c'est un rechargement, supprimer la sauvegarde et retourner true
+    // Vérifier si le flag de session existe (défini lors du montage précédent dans cette session)
+    const wasMounted = sessionStorage.getItem('quotesPageMounted') === 'true';
+    
+    // Si c'est un vrai rechargement (F5), supprimer la sauvegarde
     if (isReload) {
       localStorage.removeItem(LS_KEYS.quoteForm);
+      // Marquer que la page est montée après rechargement
+      sessionStorage.setItem('quotesPageMounted', 'true');
       return true;
     }
+    
+    // Si le flag n'existe pas, c'est la première fois dans cette session (ou nouveau navigateur/onglet)
+    // Mais on veut quand même restaurer les données si elles existent
+    // On ne supprime PAS la sauvegarde ici, on la conservera
+    if (!wasMounted) {
+      sessionStorage.setItem('quotesPageMounted', 'true');
+    }
+    
+    // Si le flag existe et ce n'est pas un rechargement, c'est juste un changement d'onglet
+    // Ne PAS supprimer la sauvegarde, elle sera restaurée
     return false;
   });
 
+  // Toujours charger le formulaire sauvegardé (sauf lors d'un vrai rechargement F5)
+  // Les données seront restaurées lors du changement d'onglet
   const savedForm = !isPageReload ? loadLS(LS_KEYS.quoteForm, null) : null;
   const defaultClient = savedForm?.client || {
     name: "",
@@ -77,15 +94,19 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
   // Référence pour le timeout de sauvegarde debounce
   const saveTimeoutRef = useRef(null);
 
-  // Sauvegarder le formulaire dans localStorage avec debounce (300ms) - uniquement pendant la session
-  // (sera supprimé au rechargement de la page)
+  // Sauvegarder le formulaire dans localStorage avec debounce (300ms)
+  // Les données seront conservées lors du changement d'onglet et restaurées au retour
   useEffect(() => {
+    // Marquer que la page est montée pour éviter de supprimer la sauvegarde lors du prochain montage
+    sessionStorage.setItem('quotesPageMounted', 'true');
+    
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     
     saveTimeoutRef.current = setTimeout(() => {
-      // Sauvegarder uniquement pendant la session actuelle
+      // Sauvegarder les données dans localStorage
+      // Ces données seront restaurées si l'utilisateur change d'onglet puis revient
       saveLS(LS_KEYS.quoteForm, {
         client,
         items,
@@ -95,10 +116,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
 
     return () => {
       // Sauvegarder immédiatement au démontage du composant pour ne pas perdre les données
+      // C'est important lors du changement d'onglet - les données doivent être sauvegardées
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
       // Sauvegarder immédiatement les données actuelles avant de démonter le composant
+      // Cela garantit que même si l'utilisateur change rapidement d'onglet, les données sont sauvegardées
       saveLS(LS_KEYS.quoteForm, {
         client,
         items,

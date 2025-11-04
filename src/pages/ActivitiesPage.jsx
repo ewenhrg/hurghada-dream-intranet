@@ -1,18 +1,49 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
-import { uuid, currency, emptyTransfers, saveLS } from "../utils";
+import { uuid, currency, emptyTransfers, saveLS, loadLS } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
 import { toast } from "../utils/toast.js";
 
 export function ActivitiesPage({ activities, setActivities, remoteEnabled, user }) {
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDay, setSelectedDay] = useState("");
-  const [form, setForm] = useState({
+  
+  // Charger le formulaire sauvegardé depuis localStorage
+  const [isPageReload] = useState(() => {
+    const navigationEntry = performance.getEntriesByType('navigation')[0];
+    const isReload = navigationEntry && navigationEntry.type === 'reload';
+    const wasMounted = sessionStorage.getItem('activitiesPageMounted') === 'true';
+    
+    if (isReload) {
+      localStorage.removeItem(LS_KEYS.activityForm);
+      sessionStorage.setItem('activitiesPageMounted', 'true');
+      return true;
+    }
+    
+    if (!wasMounted) {
+      sessionStorage.setItem('activitiesPageMounted', 'true');
+    }
+    
+    return false;
+  });
+
+  const savedForm = !isPageReload ? loadLS(LS_KEYS.activityForm, null) : null;
+  const defaultForm = savedForm ? {
+    name: savedForm.name || "",
+    category: savedForm.category || "desert",
+    priceAdult: savedForm.priceAdult || "",
+    priceChild: savedForm.priceChild || "",
+    priceBaby: savedForm.priceBaby || "",
+    ageChild: savedForm.ageChild || "",
+    ageBaby: savedForm.ageBaby || "",
+    currency: savedForm.currency || "EUR",
+    availableDays: savedForm.availableDays || [false, false, false, false, false, false, false],
+    notes: savedForm.notes || "",
+    transfers: savedForm.transfers || emptyTransfers(),
+  } : {
     name: "",
     category: "desert",
     priceAdult: "",
@@ -24,7 +55,40 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
     availableDays: [false, false, false, false, false, false, false],
     notes: "",
     transfers: emptyTransfers(),
-  });
+  };
+  
+  const [form, setForm] = useState(defaultForm);
+  const [showForm, setShowForm] = useState(savedForm?.showForm || false);
+  const [editingId, setEditingId] = useState(savedForm?.editingId || null);
+  const saveTimeoutRef = useRef(null);
+
+  // Sauvegarder le formulaire dans localStorage avec debounce (300ms)
+  useEffect(() => {
+    sessionStorage.setItem('activitiesPageMounted', 'true');
+    
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      saveLS(LS_KEYS.activityForm, {
+        ...form,
+        showForm,
+        editingId,
+      });
+    }, 300);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveLS(LS_KEYS.activityForm, {
+        ...form,
+        showForm,
+        editingId,
+      });
+    };
+  }, [form, showForm, editingId]);
 
   function handleEdit(activity) {
     setForm({
@@ -206,6 +270,9 @@ export function ActivitiesPage({ activities, setActivities, remoteEnabled, user 
     });
     setEditingId(null);
     setShowForm(false);
+    
+    // Supprimer le formulaire sauvegardé après création réussie
+    localStorage.removeItem(LS_KEYS.activityForm);
   }
 
   function handleDelete(id) {

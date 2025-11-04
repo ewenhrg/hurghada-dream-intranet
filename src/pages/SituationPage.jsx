@@ -45,6 +45,130 @@ export function SituationPage({ user }) {
     return name || "Client";
   };
 
+  // Convertir une valeur Excel (date/heure) en format lisible
+  const convertExcelValue = (value, columnName = "") => {
+    if (value === null || value === undefined || value === "") {
+      return "";
+    }
+
+    // Si c'est déjà un objet Date JavaScript, le formater directement
+    if (value instanceof Date) {
+      const normalizedColName = String(columnName || "").toLowerCase();
+      const isTimeColumn = normalizedColName.includes("time") || normalizedColName.includes("heure") || normalizedColName.includes("pickup");
+      
+      if (isTimeColumn) {
+        // Formater uniquement l'heure
+        return value.toLocaleTimeString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false
+        });
+      } else {
+        // Formater la date
+        return value.toLocaleDateString("fr-FR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric"
+        });
+      }
+    }
+
+    // Si c'est déjà une string, vérifier si c'est un nombre en string
+    const numValue = typeof value === "number" ? value : parseFloat(value);
+    
+    // Si ce n'est pas un nombre valide, retourner la valeur telle quelle
+    if (isNaN(numValue)) {
+      return String(value);
+    }
+
+    // Normaliser le nom de colonne pour la détection
+    const normalizedColName = String(columnName || "").toLowerCase();
+
+    // Détecter si c'est une colonne de date ou d'heure
+    const isDateColumn = normalizedColName.includes("date") || normalizedColName.includes("jour");
+    const isTimeColumn = normalizedColName.includes("time") || normalizedColName.includes("heure") || normalizedColName.includes("pickup");
+
+    // Les dates Excel sont des nombres >= 1 (généralement > 1000 pour les dates récentes)
+    // Les heures Excel sont des fractions de jour (entre 0 et 1, ou parfois combinées avec une date)
+    
+    // Traiter les colonnes de date
+    if (isDateColumn && numValue >= 1 && numValue < 1000000) {
+      // Convertir la date Excel en date JavaScript
+      // Excel compte les jours depuis le 1er janvier 1900, mais il y a un bug: il compte le 29 février 1900 qui n'existe pas
+      // Donc on doit soustraire 2 jours pour corriger le bug Excel du 29 février 1900
+      const excelEpoch = new Date(1899, 11, 30); // 30 décembre 1899 (base Excel)
+      const daysSince1900 = numValue;
+      const date = new Date(excelEpoch.getTime() + daysSince1900 * 24 * 60 * 60 * 1000);
+      
+      // Formater la date en format français
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString("fr-FR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric"
+        });
+      }
+    }
+
+    // Traiter les colonnes d'heure
+    if (isTimeColumn) {
+      let hours = 0;
+      let minutes = 0;
+      
+      if (numValue < 1) {
+        // C'est juste une heure (fraction de jour)
+        const totalSeconds = numValue * 24 * 60 * 60;
+        hours = Math.floor(totalSeconds / 3600);
+        const remainingSeconds = totalSeconds % 3600;
+        minutes = Math.floor(remainingSeconds / 60);
+      } else if (numValue >= 1) {
+        // C'est une date+heure combinée, extraire seulement la partie heure
+        const datePart = Math.floor(numValue);
+        const timePart = numValue - datePart;
+        const totalSeconds = timePart * 24 * 60 * 60;
+        hours = Math.floor(totalSeconds / 3600);
+        const remainingSeconds = totalSeconds % 3600;
+        minutes = Math.floor(remainingSeconds / 60);
+      }
+
+      // Formater l'heure en HH:MM
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    }
+
+    // Si c'est un nombre qui pourrait être une date (pas de colonne spécifiée)
+    if (!isDateColumn && !isTimeColumn && numValue >= 1 && numValue < 1000000) {
+      // Vérifier si c'est probablement une date (nombre entre des valeurs raisonnables)
+      const excelEpoch = new Date(1899, 11, 30);
+      const daysSince1900 = numValue;
+      const date = new Date(excelEpoch.getTime() + daysSince1900 * 24 * 60 * 60 * 1000);
+      
+      // Si la date est valide et raisonnable (entre 1900 et 2100), c'est probablement une date
+      if (!isNaN(date.getTime()) && date.getFullYear() >= 1900 && date.getFullYear() <= 2100) {
+        return date.toLocaleDateString("fr-FR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric"
+        });
+      }
+    }
+
+    // Si c'est un nombre qui pourrait être une heure (fraction de jour)
+    if (!isDateColumn && !isTimeColumn && numValue > 0 && numValue < 1) {
+      const totalSeconds = numValue * 24 * 60 * 60;
+      const hours = Math.floor(totalSeconds / 3600);
+      const remainingSeconds = totalSeconds % 3600;
+      const minutes = Math.floor(remainingSeconds / 60);
+      
+      // Si l'heure est valide (entre 00:00 et 23:59), c'est probablement une heure
+      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+        return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+      }
+    }
+
+    // Si ce n'est ni une date ni une heure reconnue, retourner la valeur telle quelle
+    return String(value);
+  };
+
   // Lire le fichier Excel
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -67,8 +191,8 @@ export function SituationPage({ user }) {
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        // Lire d'abord comme tableau de tableaux pour avoir toutes les lignes
-        const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        // Lire d'abord comme tableau de tableaux pour avoir toutes les lignes avec les valeurs brutes
+        const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: true });
         
         console.log("📋 Données brutes du fichier Excel (premières 5 lignes):", rawData.slice(0, 5));
         
@@ -103,22 +227,49 @@ export function SituationPage({ user }) {
           console.log("📊 En-têtes détectés:", headers);
           
           if (headers.length > 0) {
+            // Filtrer les colonnes à ignorer : J (index 9), L (index 11), M (index 12), N (index 13)
+            const columnsToIgnore = [9, 11, 12, 13];
+            const filteredHeaders = headers
+              .map((header, index) => ({ header, index }))
+              .filter(({ index }) => !columnsToIgnore.includes(index))
+              .map(({ header, index }) => ({ header, originalIndex: index }));
+            
             // Convertir les lignes suivantes en objets (en sautant la ligne d'en-têtes)
             jsonData = rawData.slice(headerRowIndex + 1)
               .filter(row => row && row.some(cell => cell !== "" && cell !== null && cell !== undefined)) // Ignorer les lignes complètement vides
               .map(row => {
                 const obj = {};
-                headers.forEach((header, index) => {
-                  obj[header] = row[index] !== undefined && row[index] !== null ? String(row[index]) : "";
+                filteredHeaders.forEach(({ header, originalIndex }) => {
+                  const rawValue = row[originalIndex];
+                  // Convertir les dates et heures Excel en formats lisibles
+                  obj[header] = convertExcelValue(rawValue, header);
                 });
                 return obj;
               });
           }
         } else {
-          // Fallback : essayer la méthode normale de XLSX
-          jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+          // Fallback : essayer la méthode normale de XLSX avec valeurs brutes
+          const fallbackData = XLSX.utils.sheet_to_json(worksheet, { 
             defval: "", 
-            raw: false 
+            raw: true 
+          });
+          // Convertir les dates et heures pour chaque ligne et filtrer les colonnes à ignorer
+          // Colonnes à ignorer : J "time", L "Lieux", M "Option", N (sans nom ou "Column_14")
+          const columnsToIgnoreNames = ["time", "lieux", "option"];
+          jsonData = fallbackData.map(row => {
+            const convertedRow = {};
+            Object.keys(row).forEach(key => {
+              // Ignorer les colonnes J, L, M, N
+              const normalizedKey = key.toLowerCase().trim();
+              const isIgnoredByName = columnsToIgnoreNames.includes(normalizedKey);
+              const isIgnoredByColumnNumber = normalizedKey.startsWith("column_") && 
+                ["10", "12", "13", "14"].some(num => normalizedKey.endsWith("_" + num) || normalizedKey === "column_" + num);
+              
+              if (!isIgnoredByName && !isIgnoredByColumnNumber) {
+                convertedRow[key] = convertExcelValue(row[key], key);
+              }
+            });
+            return convertedRow;
           });
         }
 
@@ -175,8 +326,10 @@ export function SituationPage({ user }) {
           const ch = findColumn(row, ["Ch", "ch", "Children", "children", "Enfants", "enfants"]) || 0;
           const inf = findColumn(row, ["inf", "Inf", "Infants", "infants", "Bébés", "bébés", "Babies", "babies"]) || 0;
           const trip = findColumn(row, ["Trip", "trip", "Activity", "activity", "Activité", "activité"]);
-          const time = findColumn(row, ["time", "Time", "Pickup Time", "pickup_time", "Heure", "heure", "Pickup", "pickup"]);
-          const comment = findColumn(row, ["Comment", "comment", "Notes", "notes", "Commentaire", "commentaire"]);
+          // La colonne K "Comment" contient l'heure de prise en charge
+          const pickupTime = findColumn(row, ["Comment", "comment"]);
+          // Ignorer la colonne J "time" - on ne la lit pas
+          const comment = findColumn(row, ["Notes", "notes", "Commentaire", "commentaire"]);
 
           // Convertir les valeurs en chaînes pour éviter les erreurs
           const nameStr = String(name || "");
@@ -197,7 +350,7 @@ export function SituationPage({ user }) {
             children: Number(ch) || 0,
             infants: Number(inf) || 0,
             trip: String(trip || ""),
-            time: String(time || ""),
+            time: String(pickupTime || ""), // Utiliser la colonne K "Comment" comme heure de prise en charge
             comment: String(comment || ""),
             messageSent: false,
             messageSentAt: null,
@@ -398,7 +551,31 @@ export function SituationPage({ user }) {
     >
       <div className="space-y-6">
         {/* Upload */}
-        <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50/50">
+        <div 
+          className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50/50"
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+              const file = files[0];
+              if (file.name.match(/\.(xlsx|xls)$/i)) {
+                const fakeEvent = { target: { files: [file] } };
+                handleFileUpload(fakeEvent);
+              } else {
+                toast.error("Veuillez glisser un fichier Excel (.xlsx ou .xls)");
+              }
+            }
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
           <input
             type="file"
             accept=".xlsx,.xls"
@@ -414,7 +591,7 @@ export function SituationPage({ user }) {
               📤
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-700">Cliquez pour charger un fichier Excel</p>
+              <p className="text-sm font-semibold text-slate-700">Cliquez ou glissez un fichier Excel ici</p>
               <p className="text-xs text-slate-500 mt-1">Formats acceptés: .xlsx, .xls</p>
             </div>
           </label>
