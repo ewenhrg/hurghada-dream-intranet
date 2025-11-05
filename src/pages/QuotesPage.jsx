@@ -216,7 +216,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
           lineTotal = 300;
         }
         // Sinon, le prix reste à 0
-      } else if (act && act.name.toLowerCase().includes("aeroport") && act.name.toLowerCase().includes("4 pax")) {
+      } else if (act && act.name.toLowerCase().includes("aeroport") && act.name.toLowerCase().includes("4")) {
         // cas spécial HURGHADA - AEROPORT 4 pax
         // Prix fixe : Aller simple = 20€, Aller retour = 40€
         // Les adultes/enfants/bébés ne changent pas le prix
@@ -778,7 +778,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     </div>
                   </div>
                 </>
-              ) : c.act && c.act.name.toLowerCase().includes("aeroport") && c.act.name.toLowerCase().includes("4 pax") ? (
+              ) : c.act && c.act.name.toLowerCase().includes("aeroport") && c.act.name.toLowerCase().includes("4") ? (
                 <>
                   {/* Message d'avertissement */}
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
