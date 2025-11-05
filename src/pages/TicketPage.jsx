@@ -1,14 +1,24 @@
 import { useState, useMemo, useEffect } from "react";
-import { calculateCardPrice, cleanPhoneNumber, exportTicketsToCSV } from "../utils";
+import { calculateCardPrice, cleanPhoneNumber, exportTicketsToCSV, saveLS, loadLS } from "../utils";
 import { PrimaryBtn, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
+import { supabase } from "../lib/supabase";
+import { SITE_KEY, LS_KEYS } from "../constants";
 
-export function TicketPage({ quotes }) {
+export function TicketPage({ quotes, setQuotes, user }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [showModifiedOrCancelled, setShowModifiedOrCancelled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  
+  // Vérifier si l'utilisateur peut modifier (Ewen, Léa ou canAccessSituation)
+  const canEdit = useMemo(() => {
+    return user?.name === "Ewen" || user?.name === "Léa" || user?.canAccessSituation;
+  }, [user]);
+  
+  // État pour l'édition des cellules
+  const [editingCell, setEditingCell] = useState(null); // { rowKey: string, field: string }
   
   // Extraire tous les items avec tickets renseignés depuis les devis complets
   const allTicketRows = useMemo(() => {
@@ -56,13 +66,18 @@ export function TicketPage({ quotes }) {
               babies: item.babies || 0,
               activityName: item.activityName || "",
               pickupTime: item.pickupTime || "",
-              comment: "",
+              comment: item.comment || "",
               activityPrice: activityPrice,
               transferTotal: transferTotal,
               paymentMethod: paymentMethodDisplay,
               sellerName: quote.createdByName || "",
               isModified: isModified,
               isCancelled: isCancelled,
+              // Références pour l'édition
+              quoteId: quote.id,
+              itemIndex: quote.items.findIndex((i) => i === item),
+              quote: quote,
+              item: item,
             });
           }
         });
@@ -211,6 +226,134 @@ export function TicketPage({ quotes }) {
       }
     }
   }, [debouncedSearchQuery, pages, currentPage]);
+  
+  // Fonction pour modifier une cellule
+  const handleCellEdit = (row, field, value) => {
+    if (!row.quote || row.itemIndex === undefined || row.itemIndex === -1) {
+      toast.error("Impossible de modifier cette ligne");
+      return;
+    }
+    
+    const quote = row.quote;
+    const itemIndex = row.itemIndex;
+    
+    // Mettre à jour le quote localement
+    const updatedQuotes = quotes.map((q) => {
+      if (q.id === quote.id) {
+        const updatedItems = q.items.map((item, idx) => {
+          if (idx === itemIndex) {
+            const updatedItem = { ...item };
+            
+            // Mapper les champs du tableau aux champs de l'item
+            if (field === "date") {
+              updatedItem.date = value;
+            } else if (field === "clientName") {
+              // Mettre à jour le nom du client dans le quote
+              return item; // On gérera ça séparément
+            } else if (field === "clientPhone") {
+              // Mettre à jour le téléphone du client dans le quote
+              return item; // On gérera ça séparément
+            } else if (field === "hotel") {
+              // Mettre à jour l'hôtel du client dans le quote
+              return item; // On gérera ça séparément
+            } else if (field === "room") {
+              // Mettre à jour la chambre du client dans le quote
+              return item; // On gérera ça séparément
+            } else if (field === "adults") {
+              updatedItem.adults = Number(value) || 0;
+            } else if (field === "children") {
+              updatedItem.children = Number(value) || 0;
+            } else if (field === "babies") {
+              updatedItem.babies = Number(value) || 0;
+            } else if (field === "activityName") {
+              updatedItem.activityName = value;
+            } else if (field === "pickupTime") {
+              updatedItem.pickupTime = value;
+            } else if (field === "comment") {
+              updatedItem.comment = value;
+            }
+            
+            return updatedItem;
+          }
+          return item;
+        });
+        
+        // Mettre à jour les champs du client si nécessaire
+        let updatedClient = { ...q.client };
+        if (field === "clientName") {
+          updatedClient.name = value;
+        } else if (field === "clientPhone") {
+          updatedClient.phone = value;
+        } else if (field === "hotel") {
+          updatedClient.hotel = value;
+        } else if (field === "room") {
+          updatedClient.room = value;
+        }
+        
+        return {
+          ...q,
+          client: updatedClient,
+          items: updatedItems,
+        };
+      }
+      return q;
+    });
+    
+    setQuotes(updatedQuotes);
+    saveLS(LS_KEYS.quotes, updatedQuotes);
+    
+    // Sauvegarder en base de données Supabase
+    handleSaveToDatabase(updatedQuotes.find((q) => q.id === quote.id));
+  };
+  
+  // Fonction pour sauvegarder un quote en base de données
+  const handleSaveToDatabase = async (quote) => {
+    if (!quote || !supabase) return;
+    
+    try {
+      const supabaseUpdate = {
+        client_name: quote.client?.name || "",
+        client_phone: quote.client?.phone || "",
+        client_hotel: quote.client?.hotel || "",
+        client_room: quote.client?.room || "",
+        client_neighborhood: quote.client?.neighborhood || "",
+        notes: quote.notes || "",
+        total: quote.total || 0,
+        currency: quote.currency || "EUR",
+        items: JSON.stringify(quote.items || []),
+        created_by_name: quote.createdByName || "",
+      };
+      
+      // Utiliser supabase_id en priorité pour identifier le devis à mettre à jour
+      let updateQuery = supabase
+        .from("quotes")
+        .update(supabaseUpdate)
+        .eq("site_key", SITE_KEY);
+      
+      if (quote.supabase_id) {
+        // Si le devis a un supabase_id, l'utiliser (le plus fiable)
+        updateQuery = updateQuery.eq("id", quote.supabase_id);
+      } else {
+        // Sinon, utiliser client_phone + created_at (pour compatibilité avec les anciens devis)
+        updateQuery = updateQuery
+          .eq("client_phone", quote.client?.phone || "")
+          .eq("created_at", quote.createdAt);
+      }
+      
+      const { error: updateError } = await updateQuery;
+      
+      if (updateError) {
+        console.warn("⚠️ Erreur mise à jour Supabase:", updateError);
+        toast.error("Erreur lors de la sauvegarde en base de données.");
+      } else {
+        console.log("✅ Devis mis à jour dans Supabase!");
+        toast.success("Modifications sauvegardées en base de données !");
+      }
+    } catch (error) {
+      console.error("❌ Erreur lors de la sauvegarde:", error);
+      toast.error("Erreur lors de la sauvegarde en base de données.");
+    }
+  };
 
   return (
     <>
@@ -376,34 +519,247 @@ export function TicketPage({ quotes }) {
                       {row.isEmpty ? row.ticketNum : row.ticket}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                      {row.isEmpty ? "" : (row.date ? new Date(row.date + "T12:00:00").toLocaleDateString("fr-FR") : "")}
+                      {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "date" ? (
+                        <input
+                          type="date"
+                          value={row.date || ""}
+                          onChange={(e) => {
+                            const dateValue = e.target.value;
+                            handleCellEdit(row, "date", dateValue);
+                          }}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          style={{ cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', padding: canEdit && !row.isEmpty ? '4px' : '0', borderRadius: canEdit && !row.isEmpty ? '4px' : '0', display: 'inline-block', width: '100%' }}
+                          onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "date" })}
+                          onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
+                          onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                        >
+                          {row.isEmpty ? "" : (row.date ? new Date(row.date + "T12:00:00").toLocaleDateString("fr-FR") : "")}
+                        </span>
+                      )}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                      {row.isEmpty ? "" : (row.clientName || "") + (row.clientName && row.clientPhone ? " " : "") + (row.clientPhone ? `+${row.clientPhone}` : "")}
+                      {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "clientName" ? (
+                        <input
+                          type="text"
+                          value={row.clientName || ""}
+                          onChange={(e) => handleCellEdit(row, "clientName", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          style={{ cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', padding: canEdit && !row.isEmpty ? '4px' : '0', borderRadius: canEdit && !row.isEmpty ? '4px' : '0', display: 'inline-block', width: '100%' }}
+                          onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "clientName" })}
+                          onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
+                          onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                        >
+                          {row.isEmpty ? "" : (row.clientName || "") + (row.clientName && row.clientPhone ? " " : "") + (row.clientPhone ? `+${row.clientPhone}` : "")}
+                        </span>
+                      )}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                      {row.isEmpty ? "" : (row.hotel || "")}
+                      {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "hotel" ? (
+                        <input
+                          type="text"
+                          value={row.hotel || ""}
+                          onChange={(e) => handleCellEdit(row, "hotel", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          style={{ cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', padding: canEdit && !row.isEmpty ? '4px' : '0', borderRadius: canEdit && !row.isEmpty ? '4px' : '0', display: 'inline-block', width: '100%' }}
+                          onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "hotel" })}
+                          onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
+                          onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                        >
+                          {row.isEmpty ? "" : (row.hotel || "")}
+                        </span>
+                      )}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                      {row.isEmpty ? "" : (row.room || "")}
+                      {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "room" ? (
+                        <input
+                          type="text"
+                          value={row.room || ""}
+                          onChange={(e) => handleCellEdit(row, "room", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          style={{ cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', padding: canEdit && !row.isEmpty ? '4px' : '0', borderRadius: canEdit && !row.isEmpty ? '4px' : '0', display: 'inline-block', width: '100%' }}
+                          onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "room" })}
+                          onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
+                          onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                        >
+                          {row.isEmpty ? "" : (row.room || "")}
+                        </span>
+                      )}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
-                      {row.isEmpty ? "" : (row.adults || 0)}
+                      {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "adults" ? (
+                        <input
+                          type="number"
+                          value={row.adults || 0}
+                          onChange={(e) => handleCellEdit(row, "adults", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px', textAlign: 'center' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          style={{ cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', padding: canEdit && !row.isEmpty ? '4px' : '0', borderRadius: canEdit && !row.isEmpty ? '4px' : '0', display: 'inline-block', width: '100%' }}
+                          onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "adults" })}
+                          onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
+                          onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                        >
+                          {row.isEmpty ? "" : (row.adults || 0)}
+                        </span>
+                      )}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
-                      {row.isEmpty ? "" : (row.children || 0)}
+                      {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "children" ? (
+                        <input
+                          type="number"
+                          value={row.children || 0}
+                          onChange={(e) => handleCellEdit(row, "children", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px', textAlign: 'center' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          style={{ cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', padding: canEdit && !row.isEmpty ? '4px' : '0', borderRadius: canEdit && !row.isEmpty ? '4px' : '0', display: 'inline-block', width: '100%' }}
+                          onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "children" })}
+                          onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
+                          onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                        >
+                          {row.isEmpty ? "" : (row.children || 0)}
+                        </span>
+                      )}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
-                      {row.isEmpty ? "" : (row.babies || 0)}
+                      {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "babies" ? (
+                        <input
+                          type="number"
+                          value={row.babies || 0}
+                          onChange={(e) => handleCellEdit(row, "babies", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px', textAlign: 'center' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          style={{ cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', padding: canEdit && !row.isEmpty ? '4px' : '0', borderRadius: canEdit && !row.isEmpty ? '4px' : '0', display: 'inline-block', width: '100%' }}
+                          onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "babies" })}
+                          onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
+                          onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                        >
+                          {row.isEmpty ? "" : (row.babies || 0)}
+                        </span>
+                      )}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                      {row.isEmpty ? "" : (row.activityName || "")}
+                      {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "activityName" ? (
+                        <input
+                          type="text"
+                          value={row.activityName || ""}
+                          onChange={(e) => handleCellEdit(row, "activityName", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          style={{ cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', padding: canEdit && !row.isEmpty ? '4px' : '0', borderRadius: canEdit && !row.isEmpty ? '4px' : '0', display: 'inline-block', width: '100%' }}
+                          onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "activityName" })}
+                          onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
+                          onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                        >
+                          {row.isEmpty ? "" : (row.activityName || "")}
+                        </span>
+                      )}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                      {row.isEmpty ? "" : (row.pickupTime || "")}
+                      {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "pickupTime" ? (
+                        <input
+                          type="text"
+                          value={row.pickupTime || ""}
+                          onChange={(e) => handleCellEdit(row, "pickupTime", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          style={{ cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', padding: canEdit && !row.isEmpty ? '4px' : '0', borderRadius: canEdit && !row.isEmpty ? '4px' : '0', display: 'inline-block', width: '100%' }}
+                          onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "pickupTime" })}
+                          onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
+                          onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                        >
+                          {row.isEmpty ? "" : (row.pickupTime || "")}
+                        </span>
+                      )}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
-                      {row.isEmpty ? "" : (row.comment || "")}
+                      {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "comment" ? (
+                        <input
+                          type="text"
+                          value={row.comment || ""}
+                          onChange={(e) => handleCellEdit(row, "comment", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          style={{ cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', padding: canEdit && !row.isEmpty ? '4px' : '0', borderRadius: canEdit && !row.isEmpty ? '4px' : '0', display: 'inline-block', width: '100%' }}
+                          onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "comment" })}
+                          onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
+                          onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                        >
+                          {row.isEmpty ? "" : (row.comment || "")}
+                        </span>
+                      )}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontSize: '13px' }}>
                       {row.isEmpty ? "" : (row.activityPrice ? `${Math.round(row.activityPrice)}€` : "")}

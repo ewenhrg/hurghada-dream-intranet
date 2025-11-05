@@ -657,7 +657,7 @@ export default function App() {
 
         {tab === "tickets" && user?.canAccessTickets !== false && (
           <Section title={t("page.tickets.title")} subtitle={t("page.tickets.subtitle")}>
-            <TicketPage quotes={quotes} />
+            <TicketPage quotes={quotes} setQuotes={setQuotes} user={user} />
           </Section>
         )}
 

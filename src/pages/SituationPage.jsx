@@ -1,9 +1,13 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, memo } from "react";
 import * as XLSX from "xlsx";
 import { PrimaryBtn, GhostBtn, Section, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { LS_KEYS } from "../constants";
 import { loadLS, saveLS } from "../utils";
+import { extractPhoneFromName, validatePhoneNumber, extractNameFromField } from "../utils/phoneUtils";
+import { findHotelInList } from "../utils/hotelMatcher";
+import { convertExcelValue, findColumn } from "../utils/excelParser";
+import { generateMessage, getDefaultTemplate } from "../utils/messageGenerator";
 
 export function SituationPage({ user, activities = [] }) {
   const [excelData, setExcelData] = useState([]);
@@ -49,6 +53,9 @@ export function SituationPage({ user, activities = [] }) {
     const saved = loadLS("hd_rows_with_marina", []);
     return new Set(saved);
   });
+  
+  // État pour l'édition des cellules du tableau
+  const [editingCell, setEditingCell] = useState(null); // { rowId: string, field: string }
 
   // Sauvegarder les templates dans localStorage
   useEffect(() => {
@@ -155,442 +162,9 @@ export function SituationPage({ user, activities = [] }) {
     }));
   };
   
-  // Fonction pour calculer la similarité entre deux chaînes (distance de Levenshtein simplifiée)
-  const calculateSimilarity = (str1, str2) => {
-    const s1 = str1.toLowerCase().trim();
-    const s2 = str2.toLowerCase().trim();
-    
-    // Si identique, retourner 1
-    if (s1 === s2) return 1;
-    
-    // Si une chaîne contient l'autre, retourner un score élevé
-    if (s1.includes(s2) || s2.includes(s1)) return 0.8;
-    
-    // Calculer la distance de Levenshtein simplifiée
-    const longer = s1.length > s2.length ? s1 : s2;
-    const shorter = s1.length > s2.length ? s2 : s1;
-    
-    if (longer.length === 0) return 1;
-    
-    // Calculer la distance
-    const distance = levenshteinDistance(longer, shorter);
-    const similarity = (longer.length - distance) / longer.length;
-    
-    return similarity;
-  };
-  
-  // Distance de Levenshtein
-  const levenshteinDistance = (str1, str2) => {
-    const matrix = [];
-    
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-    
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
-    
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1, // substitution
-            matrix[i][j - 1] + 1, // insertion
-            matrix[i - 1][j] + 1 // deletion
-          );
-        }
-      }
-    }
-    
-    return matrix[str2.length][str1.length];
-  };
-  
-  // Trouver un hôtel dans la liste (tolérant aux fautes d'orthographe) et retourner l'objet complet
-  const findHotelInList = (hotelName) => {
-    if (!hotelName || !exteriorHotels.length) return null;
-    
-    const hotelClean = hotelName.trim();
-    const hotelLower = hotelClean.toLowerCase();
-    
-    // Fonction helper pour obtenir le nom de l'hôtel (gérer migration string -> objet)
-    const getHotelName = (h) => typeof h === 'string' ? h.trim() : h.name.trim();
-    
-    // 1. Recherche exacte (insensible à la casse)
-    const exactMatch = exteriorHotels.find(h => {
-      const hName = getHotelName(h);
-      return hName.toLowerCase() === hotelLower;
-    });
-    if (exactMatch) {
-      // Convertir en objet si c'est un string
-      if (typeof exactMatch === 'string') {
-        return { name: exactMatch, hasBeachBoats: false };
-      }
-      return exactMatch;
-    }
-    
-    // 2. Recherche avec correspondance partielle (si un nom contient l'autre)
-    const partialMatch = exteriorHotels.find(h => {
-      const hName = getHotelName(h);
-      const hLower = hName.toLowerCase();
-      // Vérifier si les mots clés principaux sont présents
-      const hotelWords = hotelLower.split(/\s+/).filter(w => w.length > 3);
-      const hWords = hLower.split(/\s+/).filter(w => w.length > 3);
-      
-      // Si au moins 2 mots de 4+ caractères correspondent
-      const matchingWords = hotelWords.filter(w => hWords.some(hw => hw.includes(w) || w.includes(hw)));
-      if (matchingWords.length >= 2) return true;
-      
-      // Vérifier si une chaîne contient l'autre (pour les noms courts)
-      if (hotelLower.length < 20 && hLower.length < 20) {
-        return hotelLower.includes(hLower) || hLower.includes(hotelLower);
-      }
-      
-      return false;
-    });
-    if (partialMatch) {
-      // Convertir en objet si c'est un string
-      if (typeof partialMatch === 'string') {
-        return { name: partialMatch, hasBeachBoats: false };
-      }
-      return partialMatch;
-    }
-    
-    // 3. Recherche avec similarité (distance de Levenshtein)
-    // Seuil de similarité : 0.75 (75% de similarité minimum)
-    const similarityMatch = exteriorHotels.find(h => {
-      const hName = getHotelName(h);
-      const similarity = calculateSimilarity(hotelClean, hName);
-      return similarity >= 0.75;
-    });
-    
-    if (similarityMatch) {
-      // Convertir en objet si c'est un string
-      if (typeof similarityMatch === 'string') {
-        return { name: similarityMatch, hasBeachBoats: false };
-      }
-      return similarityMatch;
-    }
-    
-    return null;
-  };
-  
-  // Vérifier si un hôtel est dans la liste (pour compatibilité)
-  const isExteriorHotel = (hotelName) => {
-    return findHotelInList(hotelName) !== null;
-  };
-
-  // Obtenir le template par défaut pour une activité
-  const getDefaultTemplate = () => {
-    return `Bonjour {name},
-
-Votre pick-up pour {trip} est prévu le {date} à {time}.
-
-📍 Hôtel: {hotel}
-🛏️ Chambre: {roomNo}
-👥 Participants: {adults} adulte(s), {children} enfant(s), {infants} bébé(s)
-
-Merci de vous présenter à l'heure indiquée.
-
-Cordialement,
-Hurghada Dream`;
-  };
-
-  // Extraire le numéro de téléphone depuis le champ "Name"
-  const extractPhoneFromName = (nameField) => {
-    if (!nameField) return null;
-    
-    const str = String(nameField);
-    if (!str || str.trim() === "") return null;
-    
-    // Chercher un numéro de téléphone (commence par + suivi de chiffres)
-    const phoneMatch = str.match(/\+\d[\d\s-]{6,}/);
-    if (phoneMatch) {
-      return phoneMatch[0].replace(/\s|-/g, ""); // Nettoyer espaces et tirets
-    }
-    
-    // Chercher aussi les numéros sans le + (commence par des chiffres, minimum 8 caractères)
-    const phoneMatch2 = str.match(/\d[\d\s-]{7,}/);
-    if (phoneMatch2) {
-      return phoneMatch2[0].replace(/\s|-/g, "");
-    }
-    
-    return null;
-  };
-  
-  // Valider un numéro de téléphone
-  const validatePhoneNumber = (phone) => {
-    if (!phone || phone.trim() === "") {
-      return { valid: false, error: "Numéro manquant" };
-    }
-    
-    // Nettoyer le numéro (enlever espaces, tirets, etc.)
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
-    
-    // Vérifier la longueur minimale (au moins 8 chiffres pour un numéro valide)
-    if (cleanPhone.length < 8) {
-      return { valid: false, error: `Trop court (${cleanPhone.length} chiffres au lieu de 8 minimum)` };
-    }
-    
-    // Vérifier si c'est un numéro international (commence par +)
-    if (cleanPhone.startsWith("+")) {
-      // Numéro international : doit avoir au moins 10 chiffres après le +
-      const digitsOnly = cleanPhone.substring(1).replace(/\D/g, "");
-      if (digitsOnly.length < 8) {
-        return { valid: false, error: `Numéro international trop court (${digitsOnly.length} chiffres)` };
-      }
-      return { valid: true, error: null };
-    }
-    
-    // Vérifier que ce sont bien des chiffres
-    if (!/^\d+$/.test(cleanPhone)) {
-      return { valid: false, error: "Contient des caractères invalides" };
-    }
-    
-    // Vérifier la longueur (8-15 chiffres pour un numéro standard)
-    if (cleanPhone.length < 8 || cleanPhone.length > 15) {
-      return { valid: false, error: `Longueur invalide (${cleanPhone.length} chiffres)` };
-    }
-    
-    return { valid: true, error: null };
-  };
-
-  // Extraire le nom du client (sans le téléphone)
-  const extractNameFromField = (nameField) => {
-    if (!nameField) return "Client";
-    
-    const str = String(nameField);
-    if (!str || str.trim() === "") return "Client";
-    
-    // Enlever le numéro de téléphone
-    let name = str.replace(/\+\d[\d\s-]{6,}/g, "").replace(/\d[\d\s-]{7,}/g, "").trim();
-    return name || "Client";
-  };
-
-  // Convertir une valeur Excel (date/heure) en format lisible
-  const convertExcelValue = (value, columnName = "") => {
-    if (value === null || value === undefined || value === "") {
-      return "";
-    }
-
-    // Si c'est déjà un objet Date JavaScript, le formater directement
-    if (value instanceof Date) {
-      const normalizedColName = String(columnName || "").toLowerCase();
-      const isTimeColumn = normalizedColName.includes("time") || normalizedColName.includes("heure") || normalizedColName.includes("pickup");
-      
-      if (isTimeColumn) {
-        // Formater uniquement l'heure
-        return value.toLocaleTimeString("fr-FR", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false
-        });
-      } else {
-        // Formater la date
-        return value.toLocaleDateString("fr-FR", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric"
-        });
-      }
-    }
-
-    // Si c'est déjà une string, vérifier si c'est un nombre en string
-    const numValue = typeof value === "number" ? value : parseFloat(value);
-    
-    // Si ce n'est pas un nombre valide, retourner la valeur telle quelle
-    if (isNaN(numValue)) {
-      return String(value);
-    }
-
-    // Normaliser le nom de colonne pour la détection
-    const normalizedColName = String(columnName || "").toLowerCase();
-
-    // Détecter si c'est une colonne de date ou d'heure
-    const isDateColumn = normalizedColName.includes("date") || normalizedColName.includes("jour");
-    const isTimeColumn = normalizedColName.includes("time") || normalizedColName.includes("heure") || normalizedColName.includes("pickup");
-    
-    // Détecter les colonnes qui ne doivent PAS être converties (numéros de chambre, etc.)
-    const isRoomColumn = normalizedColName.includes("rm") || normalizedColName.includes("room") || 
-                         normalizedColName.includes("chambre") || normalizedColName.includes("numéro") ||
-                         normalizedColName.includes("numero") || normalizedColName.includes("number");
-    const isInvoiceColumn = normalizedColName.includes("invoice") || normalizedColName.includes("facture");
-    const isPaxColumn = normalizedColName.includes("pax") || normalizedColName.includes("adults") || 
-                        normalizedColName.includes("adultes") || normalizedColName.includes("children") ||
-                        normalizedColName.includes("enfants") || normalizedColName.includes("infants") ||
-                        normalizedColName.includes("bébés") || normalizedColName.includes("babies");
-    
-    // Si c'est une colonne qui ne doit pas être convertie (numéro de chambre, invoice, etc.), retourner directement
-    if (isRoomColumn || isInvoiceColumn || isPaxColumn) {
-      // Pour les nombres, préserver le format (pas de conversion en date/heure)
-      // Convertir en string en préservant les zéros initiaux si c'était une string
-      if (typeof value === "string") {
-        return value;
-      }
-      // Si c'est un nombre, le convertir en string sans décimales si c'est un entier
-      if (typeof value === "number") {
-        if (Number.isInteger(value)) {
-          return String(value);
-        }
-        return String(value);
-      }
-      return String(value);
-    }
-
-    // Les dates Excel sont des nombres >= 1 (généralement > 1000 pour les dates récentes)
-    // Les heures Excel sont des fractions de jour (entre 0 et 1, ou parfois combinées avec une date)
-    
-    // Traiter les colonnes de date
-    if (isDateColumn && numValue >= 1 && numValue < 1000000) {
-      // Convertir la date Excel en date JavaScript
-      // Excel compte les jours depuis le 1er janvier 1900, mais il y a un bug: il compte le 29 février 1900 qui n'existe pas
-      // Donc on doit soustraire 2 jours pour corriger le bug Excel du 29 février 1900
-      const excelEpoch = new Date(1899, 11, 30); // 30 décembre 1899 (base Excel)
-      const daysSince1900 = numValue;
-      const date = new Date(excelEpoch.getTime() + daysSince1900 * 24 * 60 * 60 * 1000);
-      
-      // Formater la date en format français
-      // IMPORTANT: Ajouter 1 jour car les messages sont pour le lendemain
-      if (!isNaN(date.getTime())) {
-        const dateForMessage = new Date(date);
-        dateForMessage.setDate(dateForMessage.getDate() + 1); // Ajouter 1 jour
-        return dateForMessage.toLocaleDateString("fr-FR", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric"
-        });
-      }
-    }
-
-    // Traiter les colonnes d'heure
-    if (isTimeColumn) {
-      // Si c'est déjà une string formatée (ex: "08:30", "8h30", "8:30", "08h30", "08.30", etc.)
-      if (typeof value === "string") {
-        const strValue = value.trim();
-        
-        // Essayer de parser les différents formats d'heure en string
-        // Format 1: "08:30" ou "8:30"
-        const matchColon = strValue.match(/^(\d{1,2}):(\d{2})$/);
-        if (matchColon) {
-          const h = parseInt(matchColon[1], 10);
-          const m = parseInt(matchColon[2], 10);
-          if (h >= 0 && h < 24 && m >= 0 && m < 60) {
-            return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-          }
-        }
-        
-        // Format 2: "08h30" ou "8h30" ou "08h30m" ou "8h30m"
-        const matchH = strValue.match(/^(\d{1,2})h(\d{1,2})(?:m)?$/i);
-        if (matchH) {
-          const h = parseInt(matchH[1], 10);
-          const m = parseInt(matchH[2], 10);
-          if (h >= 0 && h < 24 && m >= 0 && m < 60) {
-            return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-          }
-        }
-        
-        // Format 3: "08.30" ou "8.30"
-        const matchDot = strValue.match(/^(\d{1,2})\.(\d{2})$/);
-        if (matchDot) {
-          const h = parseInt(matchDot[1], 10);
-          const m = parseInt(matchDot[2], 10);
-          if (h >= 0 && h < 24 && m >= 0 && m < 60) {
-            return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-          }
-        }
-        
-        // Format 4: Juste un nombre (ex: "830" pour 8h30)
-        const matchNumber = strValue.match(/^(\d{1,4})$/);
-        if (matchNumber) {
-          const num = parseInt(matchNumber[1], 10);
-          if (num >= 0 && num < 2400) {
-            const h = Math.floor(num / 100);
-            const m = num % 100;
-            if (h >= 0 && h < 24 && m >= 0 && m < 60) {
-              return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-            }
-          }
-        }
-        
-        // Si aucun format ne correspond, retourner la valeur telle quelle
-        return strValue;
-      }
-      
-      // Si c'est un nombre, traiter comme une heure Excel
-      let hours = 0;
-      let minutes = 0;
-      
-      if (numValue < 1) {
-        // C'est juste une heure (fraction de jour)
-        const totalSeconds = numValue * 24 * 60 * 60;
-        hours = Math.floor(totalSeconds / 3600);
-        const remainingSeconds = totalSeconds % 3600;
-        minutes = Math.floor(remainingSeconds / 60);
-      } else if (numValue >= 1 && numValue < 1000000) {
-        // C'est une date+heure combinée, extraire seulement la partie heure
-        const datePart = Math.floor(numValue);
-        const timePart = numValue - datePart;
-        const totalSeconds = timePart * 24 * 60 * 60;
-        hours = Math.floor(totalSeconds / 3600);
-        const remainingSeconds = totalSeconds % 3600;
-        minutes = Math.floor(remainingSeconds / 60);
-      } else {
-        // Peut-être un nombre représentant l'heure directement (ex: 830 pour 8h30)
-        if (numValue >= 0 && numValue < 2400) {
-          hours = Math.floor(numValue / 100);
-          minutes = numValue % 100;
-        }
-      }
-
-      // Formater l'heure en HH:MM
-      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-      }
-      
-      // Si l'heure n'est pas valide, retourner la valeur originale
-      return String(value);
-    }
-
-    // Si c'est un nombre qui pourrait être une date (pas de colonne spécifiée)
-    // Mais exclure les colonnes de numéro de chambre, invoice, etc.
-    if (!isDateColumn && !isTimeColumn && !isRoomColumn && !isInvoiceColumn && !isPaxColumn && 
-        numValue >= 1 && numValue < 1000000) {
-      // Vérifier si c'est probablement une date (nombre entre des valeurs raisonnables)
-      const excelEpoch = new Date(1899, 11, 30);
-      const daysSince1900 = numValue;
-      const date = new Date(excelEpoch.getTime() + daysSince1900 * 24 * 60 * 60 * 1000);
-      
-      // Si la date est valide et raisonnable (entre 1900 et 2100), c'est probablement une date
-      // Mais aussi vérifier que ce n'est pas un nombre trop petit (comme un numéro de chambre)
-      // IMPORTANT: Ajouter 1 jour car les messages sont pour le lendemain
-      if (!isNaN(date.getTime()) && date.getFullYear() >= 1900 && date.getFullYear() <= 2100 && numValue > 1000) {
-        const dateForMessage = new Date(date);
-        dateForMessage.setDate(dateForMessage.getDate() + 1); // Ajouter 1 jour
-        return dateForMessage.toLocaleDateString("fr-FR", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric"
-        });
-      }
-    }
-
-    // Si c'est un nombre qui pourrait être une heure (fraction de jour)
-    if (!isDateColumn && !isTimeColumn && numValue > 0 && numValue < 1) {
-      const totalSeconds = numValue * 24 * 60 * 60;
-      const hours = Math.floor(totalSeconds / 3600);
-      const remainingSeconds = totalSeconds % 3600;
-      const minutes = Math.floor(remainingSeconds / 60);
-      
-      // Si l'heure est valide (entre 00:00 et 23:59), c'est probablement une heure
-      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-        return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-      }
-    }
-
-    // Si ce n'est ni une date ni une heure reconnue, retourner la valeur telle quelle
-    return String(value);
+  // Helper pour trouver un hôtel dans la liste (avec contexte des exteriorHotels)
+  const findHotelInListWithContext = (hotelName) => {
+    return findHotelInList(hotelName, exteriorHotels);
   };
 
   // Lire le fichier Excel
@@ -703,49 +277,6 @@ Hurghada Dream`;
         }
 
         const jsonDataNormalized = jsonData;
-
-        // Fonction pour trouver une colonne avec flexibilité (ignore majuscules/minuscules, espaces, caractères spéciaux)
-        const findColumn = (row, possibleNames) => {
-          // Normaliser le nom de colonne: enlever espaces, caractères spéciaux, mettre en minuscules
-          const normalize = (str) => str?.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "";
-          
-          // D'abord, chercher exactement (avec variations de casse et trim)
-          for (const name of possibleNames) {
-            // Chercher exactement le nom (insensible à la casse, avec trim)
-            const exactMatch = Object.keys(row).find(key => {
-              const keyTrimmed = String(key || "").trim();
-              const nameTrimmed = String(name || "").trim();
-              return keyTrimmed.toLowerCase() === nameTrimmed.toLowerCase();
-            });
-            if (exactMatch) {
-              const value = row[exactMatch];
-              // Retourner la valeur même si elle est vide (string vide) car c'est la colonne correcte
-              // Convertir null/undefined en chaîne vide pour éviter les erreurs
-              if (value !== undefined && value !== null) {
-                return String(value);
-              } else {
-                return ""; // Colonne trouvée mais valeur vide
-              }
-            }
-          }
-          
-          // Ensuite, chercher avec normalisation (enlever espaces et caractères spéciaux)
-          const normalizedPossibleNames = possibleNames.map(normalize);
-          for (const key of Object.keys(row)) {
-            const normalizedKey = normalize(key);
-            if (normalizedPossibleNames.includes(normalizedKey)) {
-              const value = row[key];
-              // Retourner la valeur même si elle est vide
-              if (value !== undefined && value !== null) {
-                return String(value);
-              } else {
-                return ""; // Colonne trouvée mais valeur vide
-              }
-            }
-          }
-          
-          return "";
-        };
 
         // Mapper les colonnes (chercher les colonnes possibles)
         const mappedData = jsonDataNormalized.map((row, index) => {
@@ -953,122 +484,9 @@ Hurghada Dream`;
     });
   };
   
-  const generateMessage = (data) => {
-    // Vérifier si un template existe pour cette activité
-    const activityName = data.trip || "";
-    
-    // Rechercher le template de manière insensible à la casse
-    let template = messageTemplates[activityName];
-    
-    // Si pas trouvé exactement, chercher avec une correspondance insensible à la casse
-    if (!template) {
-      const lowerActivityName = activityName.toLowerCase().trim();
-      const matchingKey = Object.keys(messageTemplates).find(
-        key => key.toLowerCase().trim() === lowerActivityName
-      );
-      if (matchingKey) {
-        template = messageTemplates[matchingKey];
-      }
-    }
-    
-    // Si un template personnalisé existe, l'utiliser
-    if (template && template.trim() !== "") {
-      // Remplacer les variables dans le template
-      let message = template
-        .replace(/\{name\}/g, data.name || "Client")
-        .replace(/\{trip\}/g, data.trip || "l'activité")
-        .replace(/\{date\}/g, data.date || "la date")
-        .replace(/\{time\}/g, data.time || "l'heure")
-        .replace(/\{hotel\}/g, data.hotel || "")
-        .replace(/\{roomNo\}/g, data.roomNo || "")
-        .replace(/\{adults\}/g, String(data.adults || 0))
-        .replace(/\{children\}/g, String(data.children || 0))
-        .replace(/\{infants\}/g, String(data.infants || 0));
-      
-      // Ajouter le message RDV selon l'hôtel
-      if (data.hotel) {
-        // Si la case marina est cochée pour cette ligne, utiliser le message marina
-        if (rowsWithMarina.has(data.id)) {
-          message += "\n\n📍 Rendez-vous directement à la marina de votre hôtel.";
-        } else {
-          const hotelInfo = findHotelInList(data.hotel);
-          let rdvMessage;
-          
-          if (hotelInfo) {
-            if (hotelInfo.hasBeachBoats) {
-              rdvMessage = `📍 Rendez-vous directement à la marina du ${data.hotel}.`;
-            } else {
-              rdvMessage = "📍 Rendez-vous à l'extérieur de l'hôtel.";
-            }
-          } else {
-            rdvMessage = "📍 Rendez-vous devant la réception de l'hôtel.";
-          }
-          
-          message += "\n\n" + rdvMessage;
-        }
-      }
-      
-      return message;
-    }
-    
-    // Sinon, utiliser le template par défaut
-    const parts = [];
-
-    parts.push(`Bonjour ${data.name || "Client"},`);
-    parts.push("");
-    parts.push(`Votre pick-up pour ${data.trip || "l'activité"} est prévu le ${data.date || "la date"} à ${data.time || "l'heure"}.
-`);
-
-    if (data.hotel) {
-      parts.push(`📍 Hôtel: ${data.hotel}`);
-    }
-
-    if (data.roomNo) {
-      parts.push(`🛏️ Chambre: ${data.roomNo}`);
-    }
-
-    const participants = [];
-    if (data.adults > 0) participants.push(`${data.adults} adulte(s)`);
-    if (data.children > 0) participants.push(`${data.children} enfant(s)`);
-    if (data.infants > 0) participants.push(`${data.infants} bébé(s)`);
-    
-    if (participants.length > 0) {
-      parts.push(`👥 Participants: ${participants.join(", ")}`);
-    }
-
-    parts.push("");
-    parts.push("Merci de vous présenter à l'heure indiquée.");
-    
-    // Ajouter le message RDV selon l'hôtel
-    if (data.hotel) {
-      // Si la case marina est cochée pour cette ligne, utiliser le message marina
-      if (rowsWithMarina.has(data.id)) {
-        parts.push("");
-        parts.push("📍 Rendez-vous directement à la marina de votre hôtel.");
-      } else {
-        const hotelInfo = findHotelInList(data.hotel);
-        let rdvMessage;
-        
-        if (hotelInfo) {
-          if (hotelInfo.hasBeachBoats) {
-            rdvMessage = `📍 Rendez-vous directement à la marina du ${data.hotel}.`;
-          } else {
-            rdvMessage = "📍 Rendez-vous à l'extérieur de l'hôtel.";
-          }
-        } else {
-          rdvMessage = "📍 Rendez-vous devant la réception de l'hôtel.";
-        }
-        
-        parts.push("");
-        parts.push(rdvMessage);
-      }
-    }
-    
-    parts.push("");
-    parts.push("Cordialement,");
-    parts.push("Hurghada Dream");
-
-    return parts.join("\n");
+  // Wrapper pour generateMessage avec contexte local
+  const generateMessageWithContext = (data) => {
+    return generateMessage(data, messageTemplates, rowsWithMarina, exteriorHotels);
   };
 
   // Prévisualiser les messages
@@ -1080,7 +498,7 @@ Hurghada Dream`;
 
     const messages = excelData.map((data) => ({
       ...data,
-      message: generateMessage(data),
+      message: generateMessageWithContext(data),
     }));
 
     setPreviewMessages(messages);
@@ -1133,104 +551,61 @@ Hurghada Dream`;
     console.log(`📱 Changement de l'URL WhatsApp pour ${phone}...`);
     console.log(`📱 URL: ${whatsappUrl.substring(0, 50)}...`);
     
-    // IMPORTANT: Ne jamais ouvrir une nouvelle fenêtre, toujours réutiliser la même
-    // Vérifier si la fenêtre existe déjà
-    if (whatsappWindowRef.current) {
-      try {
-        // Vérifier si la fenêtre est toujours ouverte
-        const isClosed = whatsappWindowRef.current.closed;
-        
-        if (!isClosed) {
-          console.log("🔄 Fenêtre WhatsApp existe déjà, changement de l'URL...");
-          try {
-            // Essayer de changer l'URL de la fenêtre existante
-            whatsappWindowRef.current.location.href = whatsappUrl;
-            whatsappWindowRef.current.focus();
-            console.log("✅ URL changée dans la fenêtre existante (même page)");
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            return whatsappWindowRef.current;
-          } catch (crossOriginError) {
-            // Si on ne peut pas changer l'URL (cross-origin), c'est normal avec WhatsApp Web
-            // WhatsApp Web bloque les changements d'URL depuis d'autres domaines pour des raisons de sécurité
-            // On ne peut pas changer automatiquement la conversation, mais on peut réutiliser la même fenêtre
-            console.log("⚠️ Impossible de changer l'URL directement (cross-origin WhatsApp)");
-            console.log("ℹ️ La fenêtre WhatsApp reste ouverte - l'utilisateur devra changer manuellement la conversation");
-            console.log(`ℹ️ URL à utiliser: ${whatsappUrl.substring(0, 80)}...`);
-            
-            // Ne pas ouvrir une nouvelle fenêtre, juste réutiliser celle qui existe
-            // L'utilisateur devra copier-coller l'URL ou changer manuellement la conversation
-            whatsappWindowRef.current.focus();
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            return whatsappWindowRef.current;
-          }
-        } else {
-          console.log("⚠️ La fenêtre précédente a été fermée, ouverture d'une nouvelle fenêtre...");
-          // Si la fenêtre a été fermée, on doit en ouvrir une nouvelle
-          // Mais on utilisera toujours le même nom pour que le navigateur réutilise si possible
-          const windowName = "whatsapp_auto_send";
-          const newWindow = window.open(whatsappUrl, windowName);
-          if (newWindow) {
-            whatsappWindowRef.current = newWindow;
-            console.log("✅ Nouvelle fenêtre WhatsApp ouverte");
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            return newWindow;
-          }
-        }
-      } catch (error) {
-        console.error("❌ Erreur lors de la réutilisation de la fenêtre:", error);
-        // En cas d'erreur, essayer d'ouvrir une nouvelle fenêtre
-        const windowName = "whatsapp_auto_send";
-        const newWindow = window.open(whatsappUrl, windowName);
-        if (newWindow) {
-          whatsappWindowRef.current = newWindow;
-          console.log("✅ Fenêtre WhatsApp ouverte après erreur");
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          return newWindow;
-        }
-      }
-    } else {
-      // Si aucune fenêtre n'existe encore, ouvrir la première
-      console.log("📂 Ouverture de la première fenêtre WhatsApp...");
-      const windowName = "whatsapp_auto_send";
-      const newWindow = window.open(whatsappUrl, windowName);
+    // Nom de fenêtre fixe pour forcer la réutilisation
+    const windowName = "whatsapp_auto_send";
+    
+    // IMPORTANT: Utiliser window.open() avec le même nom pour forcer la réutilisation de la fenêtre
+    // Le navigateur réutilisera la fenêtre existante si elle existe et n'est pas fermée
+    console.log("🔄 Ouverture/réutilisation de la fenêtre WhatsApp...");
+    
+    // Utiliser window.open() avec le même nom - le navigateur réutilisera la fenêtre si elle existe
+    const whatsappWindow = window.open(whatsappUrl, windowName);
+    
+    if (whatsappWindow) {
+      // Mettre à jour la référence
+      whatsappWindowRef.current = whatsappWindow;
       
-      if (newWindow) {
-        console.log(`✅ Fenêtre WhatsApp ouverte avec succès`);
-        whatsappWindowRef.current = newWindow;
-        
-        // Attendre un peu pour que la fenêtre se charge
-        console.log("⏳ Attente de 1 seconde pour que la fenêtre se charge...");
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        
-        // Vérifier si la fenêtre est fermée
+      // Vérifier si c'est une nouvelle fenêtre ou une réutilisation
+      if (whatsappWindowRef.current === whatsappWindow) {
+        // Vérifier si la fenêtre était déjà ouverte
         try {
-          if (newWindow.closed) {
-            console.warn("⚠️ La fenêtre WhatsApp semble avoir été fermée après l'ouverture");
+          // Essayer de vérifier si la fenêtre était fermée avant
+          const wasClosed = whatsappWindow.closed;
+          if (wasClosed) {
+            console.log("✅ Nouvelle fenêtre WhatsApp ouverte");
           } else {
-            console.log("✅ Fenêtre WhatsApp vérifiée et ouverte correctement");
+            console.log("✅ Fenêtre WhatsApp réutilisée - URL changée pour la nouvelle conversation");
           }
         } catch (error) {
-          console.error("❌ Erreur lors de la vérification de la fenêtre:", error);
+          console.log("✅ Fenêtre WhatsApp ouverte/réutilisée");
         }
-        
-        return newWindow;
-      } else {
-        console.error("❌ window.open() a retourné null - Impossible d'ouvrir la fenêtre WhatsApp");
-        console.error("❌ Le navigateur bloque probablement les popups automatiques");
-        console.error("❌ IMPORTANT: Vous devez autoriser les popups pour ce site");
-        console.error("❌ Instructions: Cliquez sur l'icône de cadenas dans la barre d'adresse → Autoriser les popups");
-        whatsappWindowRef.current = null;
-        return null;
       }
+      
+      // Attendre un peu pour que la fenêtre se charge
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      
+      // Focus sur la fenêtre
+      try {
+        whatsappWindow.focus();
+      } catch (error) {
+        // Ignorer les erreurs de focus
+      }
+      
+      return whatsappWindow;
+    } else {
+      console.error("❌ window.open() a retourné null - Impossible d'ouvrir la fenêtre WhatsApp");
+      console.error("❌ Le navigateur bloque probablement les popups automatiques");
+      console.error("❌ IMPORTANT: Vous devez autoriser les popups pour ce site");
+      console.error("❌ Instructions: Cliquez sur l'icône de cadenas dans la barre d'adresse → Autoriser les popups");
+      whatsappWindowRef.current = null;
+      return null;
     }
-    
-    return null;
   };
 
   // Envoyer un message via WhatsApp Web automatiquement
   const sendWhatsAppMessage = async (data, index, total) => {
     console.log(`📨 Envoi du message ${index + 1}/${total} pour ${data.name} (${data.phone})`);
-    const message = generateMessage(data);
+    const message = generateMessageWithContext(data);
     
     // IMPORTANT: Attendre 15 secondes minimum entre chaque message pour éviter le bannissement WhatsApp
     // C'est le délai minimum recommandé par WhatsApp pour éviter les restrictions
@@ -1482,6 +857,41 @@ Hurghada Dream`;
     toast.warning("Envoi automatique arrêté.");
   };
   
+  // Fonction pour gérer l'édition d'une cellule dans le tableau
+  const handleCellEdit = (rowId, field, value) => {
+    setExcelData((prev) =>
+      prev.map((row) => {
+        if (row.id === rowId) {
+          const updatedRow = { ...row, [field]: value };
+          
+          // Si on modifie le téléphone, revalider
+          if (field === "phone") {
+            const phoneValidation = value ? validatePhoneNumber(value) : { valid: false, error: "Numéro manquant" };
+            updatedRow.phoneValid = phoneValidation.valid;
+            updatedRow.phoneError = phoneValidation.error;
+          }
+          
+          // Si on modifie le nom, extraire le téléphone et le nom
+          if (field === "name") {
+            const nameStr = String(value || "");
+            const phone = extractPhoneFromName(nameStr);
+            const clientName = extractNameFromField(nameStr);
+            updatedRow.name = clientName || "Client";
+            updatedRow.phone = phone || updatedRow.phone;
+            if (updatedRow.phone) {
+              const phoneValidation = validatePhoneNumber(updatedRow.phone);
+              updatedRow.phoneValid = phoneValidation.valid;
+              updatedRow.phoneError = phoneValidation.error;
+            }
+          }
+          
+          return updatedRow;
+        }
+        return row;
+      })
+    );
+  };
+  
   // Nettoyer lors du démontage du composant
   useEffect(() => {
     return () => {
@@ -1532,7 +942,7 @@ Hurghada Dream`;
     // Simuler l'envoi des messages
     for (let i = 0; i < dataWithPhone.length; i++) {
       const data = dataWithPhone[i];
-      const message = generateMessage(data);
+      const message = generateMessageWithContext(data);
 
       try {
         // TODO: Remplacer par un vrai service d'envoi (Twilio, WhatsApp API, etc.)
@@ -1722,9 +1132,69 @@ Hurghada Dream`;
                       !row.phoneValid ? "bg-red-50/50 border-l-4 border-l-red-500" : ""
                     }`}
                   >
-                    <td className="px-4 py-2 text-xs text-slate-700">{row.invoiceN}</td>
-                    <td className="px-4 py-2 text-xs text-slate-700">{row.date}</td>
-                    <td className="px-4 py-2 text-xs font-medium text-slate-900">{row.name}</td>
+                    <td className="px-4 py-2 text-xs text-slate-700">
+                      {editingCell?.rowId === row.id && editingCell?.field === "invoiceN" ? (
+                        <TextInput
+                          value={row.invoiceN}
+                          onChange={(e) => handleCellEdit(row.id, "invoiceN", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "invoiceN" })}
+                        >
+                          {row.invoiceN}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-700">
+                      {editingCell?.rowId === row.id && editingCell?.field === "date" ? (
+                        <TextInput
+                          value={row.date}
+                          onChange={(e) => handleCellEdit(row.id, "date", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "date" })}
+                        >
+                          {row.date}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs font-medium text-slate-900">
+                      {editingCell?.rowId === row.id && editingCell?.field === "name" ? (
+                        <TextInput
+                          value={row.name}
+                          onChange={(e) => handleCellEdit(row.id, "name", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "name" })}
+                        >
+                          {row.name}
+                        </span>
+                      )}
+                    </td>
                     <td className={`px-4 py-2 text-xs ${
                       !row.phoneValid 
                         ? "text-red-600 font-semibold" 
@@ -1732,23 +1202,121 @@ Hurghada Dream`;
                           ? "text-blue-600 font-medium" 
                           : "text-amber-600"
                     }`}>
-                      {row.phone ? (
-                        <>
-                          <span>{row.phone}</span>
-                          {!row.phoneValid && row.phoneError && (
-                            <span className="block text-[10px] text-red-500 mt-1" title={row.phoneError}>
-                              ⚠️ {row.phoneError}
-                            </span>
-                          )}
-                        </>
+                      {editingCell?.rowId === row.id && editingCell?.field === "phone" ? (
+                        <TextInput
+                          value={row.phone}
+                          onChange={(e) => handleCellEdit(row.id, "phone", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
                       ) : (
-                        <span>⚠️ Non trouvé</span>
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "phone" })}
+                        >
+                          {row.phone ? (
+                            <>
+                              <span>{row.phone}</span>
+                              {!row.phoneValid && row.phoneError && (
+                                <span className="block text-[10px] text-red-500 mt-1" title={row.phoneError}>
+                                  ⚠️ {row.phoneError}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span>⚠️ Non trouvé</span>
+                          )}
+                        </span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-xs text-slate-700">{row.hotel}</td>
-                    <td className="px-4 py-2 text-xs text-slate-700">{row.roomNo}</td>
-                    <td className="px-4 py-2 text-xs text-slate-700">{row.trip}</td>
-                    <td className="px-4 py-2 text-xs font-semibold text-slate-900">{row.time}</td>
+                    <td className="px-4 py-2 text-xs text-slate-700">
+                      {editingCell?.rowId === row.id && editingCell?.field === "hotel" ? (
+                        <TextInput
+                          value={row.hotel}
+                          onChange={(e) => handleCellEdit(row.id, "hotel", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "hotel" })}
+                        >
+                          {row.hotel}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-700">
+                      {editingCell?.rowId === row.id && editingCell?.field === "roomNo" ? (
+                        <TextInput
+                          value={row.roomNo}
+                          onChange={(e) => handleCellEdit(row.id, "roomNo", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "roomNo" })}
+                        >
+                          {row.roomNo}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-700">
+                      {editingCell?.rowId === row.id && editingCell?.field === "trip" ? (
+                        <TextInput
+                          value={row.trip}
+                          onChange={(e) => handleCellEdit(row.id, "trip", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "trip" })}
+                        >
+                          {row.trip}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs font-semibold text-slate-900">
+                      {editingCell?.rowId === row.id && editingCell?.field === "time" ? (
+                        <TextInput
+                          value={row.time}
+                          onChange={(e) => handleCellEdit(row.id, "time", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "time" })}
+                        >
+                          {row.time}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-2 text-center">
                       <label className="flex items-center justify-center cursor-pointer">
                         <input
