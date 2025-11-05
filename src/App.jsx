@@ -4,6 +4,8 @@ import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
 import { uuid, emptyTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
+import { useLanguage } from "./contexts/LanguageContext";
+import { useTranslation } from "./hooks/useTranslation";
 
 // Lazy loading des pages pour optimiser le chargement initial
 const ActivitiesPage = lazy(() => import("./pages/ActivitiesPage").then(module => ({ default: module.ActivitiesPage })));
@@ -22,6 +24,8 @@ export default function App() {
   const [quotes, setQuotes] = useState(() => loadLS(LS_KEYS.quotes, []));
   const [remoteEnabled, setRemoteEnabled] = useState(false);
   const [user, setUser] = useState(null);
+  const { language, setLanguage } = useLanguage();
+  const { t } = useTranslation();
 
   // Vérifier si l'utilisateur est déjà connecté
   useEffect(() => {
@@ -535,48 +539,73 @@ export default function App() {
               }}
             />
             <div>
-              <h1 className="text-base font-bold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Hurghada Dream — Bureaux</h1>
-              <p className="text-[10px] text-slate-600 font-medium mt-0.5">Mini site interne (devis, activités, historique)</p>
+              <h1 className="text-base font-bold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">{t("header.title")}</h1>
+              <p className="text-[10px] text-slate-600 font-medium mt-0.5">{t("header.subtitle")}</p>
               {user && (
-                <p className="text-[10px] text-blue-600 mt-1 font-semibold">👤 Connecté : {user.name}</p>
+                <p className="text-[10px] text-blue-600 mt-1 font-semibold">👤 {t("header.connected")} : {user.name}</p>
               )}
             </div>
           </div>
-          <nav className="flex gap-2.5 flex-wrap">
-            <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
-              Devis
-            </Pill>
-            {user?.canAccessActivities !== false && (
-            <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
-              Activités
-            </Pill>
-            )}
-            {user?.canAccessHistory !== false && (
-            <Pill active={tab === "history"} onClick={() => setTab("history")}>
-              Historique
+          <div className="flex items-center gap-3">
+            {/* Sélecteur de langue */}
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1">
+              <button
+                onClick={() => setLanguage("fr")}
+                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                  language === "fr"
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                FR
+              </button>
+              <button
+                onClick={() => setLanguage("en")}
+                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                  language === "en"
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                EN
+              </button>
+            </div>
+            <nav className="flex gap-2.5 flex-wrap">
+              <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
+                {t("nav.devis")}
               </Pill>
-            )}
-            {user?.canAccessTickets !== false && (
-              <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
-                Tickets
+              {user?.canAccessActivities !== false && (
+              <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
+                {t("nav.activities")}
               </Pill>
-            )}
-            {(user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
-              <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
-                Modifications
-              </Pill>
-            )}
-            {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
-              <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
-                Situation
-              </Pill>
-            )}
-            {(user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
-              <Pill active={tab === "users"} onClick={() => setTab("users")}>
-                Utilisateurs
-              </Pill>
-            )}
-          </nav>
+              )}
+              {user?.canAccessHistory !== false && (
+              <Pill active={tab === "history"} onClick={() => setTab("history")}>
+                {t("nav.history")}
+                </Pill>
+              )}
+              {user?.canAccessTickets !== false && (
+                <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
+                  {t("nav.tickets")}
+                </Pill>
+              )}
+              {(user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
+                <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
+                  {t("nav.modifications")}
+                </Pill>
+              )}
+              {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
+                <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
+                  {t("nav.situation")}
+                </Pill>
+              )}
+              {(user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
+                <Pill active={tab === "users"} onClick={() => setTab("users")}>
+                  {t("nav.users")}
+                </Pill>
+              )}
+            </nav>
+          </div>
         </div>
       </header>
 
@@ -587,8 +616,8 @@ export default function App() {
             <section className="space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-1.5">Créer & gérer les devis (multi-activités)</h2>
-                  <p className="text-sm text-slate-600 font-medium leading-relaxed">Supplément transfert = (par adulte) × (nombre d'adultes). Alerte si jour hors-dispo, mais le devis peut être créé.</p>
+                  <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-1.5">{t("page.devis.title")}</h2>
+                  <p className="text-sm text-slate-600 font-medium leading-relaxed">{t("page.devis.subtitle")}</p>
                 </div>
               </div>
               <div className="rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/80 p-8 md:p-10 lg:p-12 transition-all duration-300">
@@ -599,8 +628,8 @@ export default function App() {
 
           {tab === "activities" && user?.canAccessActivities !== false && (
             <Section
-              title="Gestion des activités"
-              subtitle="Ajoutez, modifiez les prix, jours, transferts par quartier."
+              title={t("page.activities.title")}
+              subtitle={t("page.activities.subtitle")}
               right={
                 user?.canResetData && (
                 <GhostBtn
@@ -611,7 +640,7 @@ export default function App() {
                     saveLS(LS_KEYS.activities, defaultActivities);
                 }}
               >
-                Réinitialiser les données
+                {t("btn.reset")}
               </GhostBtn>
               )
             }
@@ -621,21 +650,21 @@ export default function App() {
         )}
 
         {tab === "history" && user?.canAccessHistory !== false && (
-          <Section title="Historique des devis" subtitle="Recherchez un devis par numéro de téléphone.">
+          <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")}>
             <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
           </Section>
         )}
 
         {tab === "tickets" && user?.canAccessTickets !== false && (
-          <Section title="Liste des tickets" subtitle="Tableau automatique de tous les tickets renseignés (devis avec tous les tickets complétés)">
+          <Section title={t("page.tickets.title")} subtitle={t("page.tickets.subtitle")}>
             <TicketPage quotes={quotes} />
           </Section>
         )}
 
         {tab === "modifications" && (user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
           <Section
-            title="Modifications & Annulations"
-            subtitle="Gérez les modifications et annulations pour les devis payés uniquement."
+            title={t("page.modifications.title")}
+            subtitle={t("page.modifications.subtitle")}
           >
             <ModificationsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
           </Section>
@@ -646,7 +675,7 @@ export default function App() {
         )}
 
           {tab === "users" && (user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
-            <Section title="Gestion des utilisateurs" subtitle="Créez et gérez les utilisateurs avec leurs codes d'accès et permissions.">
+            <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")}>
               <UsersPage user={user} />
             </Section>
           )}
