@@ -1,9 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
-import { PrimaryBtn, GhostBtn, Section } from "../components/ui";
+import { PrimaryBtn, GhostBtn, Section, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { LS_KEYS, loadLS, saveLS } from "../utils";
 
-export function SituationPage({ user }) {
+export function SituationPage({ user, activities = [] }) {
   const [excelData, setExcelData] = useState([]);
   const [previewMessages, setPreviewMessages] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -17,6 +18,78 @@ export function SituationPage({ user }) {
   const messageQueueRef = useRef([]);
   const intervalRef = useRef(null);
   const isAutoSendingRef = useRef(false);
+  
+  // État pour la configuration des messages
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [messageTemplates, setMessageTemplates] = useState(() => {
+    return loadLS(LS_KEYS.messageTemplates, {});
+  });
+  const [selectedActivity, setSelectedActivity] = useState("");
+  const [editingTemplate, setEditingTemplate] = useState({
+    activity: "",
+    template: "",
+  });
+
+  // Sauvegarder les templates dans localStorage
+  useEffect(() => {
+    if (messageTemplates && Object.keys(messageTemplates).length >= 0) {
+      saveLS(LS_KEYS.messageTemplates, messageTemplates);
+    }
+  }, [messageTemplates]);
+
+  // Ouvrir la configuration pour une activité
+  const handleOpenConfig = (activityName) => {
+    const template = messageTemplates[activityName] || "";
+    setSelectedActivity(activityName);
+    setEditingTemplate({
+      activity: activityName,
+      template: template,
+    });
+    setShowConfigModal(true);
+  };
+
+  // Sauvegarder un template
+  const handleSaveTemplate = () => {
+    if (!editingTemplate.activity.trim()) {
+      toast.error("Veuillez sélectionner une activité");
+      return;
+    }
+
+    const newTemplates = {
+      ...messageTemplates,
+      [editingTemplate.activity]: editingTemplate.template,
+    };
+    
+    setMessageTemplates(newTemplates);
+    toast.success(`Template sauvegardé pour "${editingTemplate.activity}"`);
+    setShowConfigModal(false);
+  };
+
+  // Supprimer un template
+  const handleDeleteTemplate = (activityName) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le template pour "${activityName}" ?`)) {
+      const newTemplates = { ...messageTemplates };
+      delete newTemplates[activityName];
+      setMessageTemplates(newTemplates);
+      toast.success(`Template supprimé pour "${activityName}"`);
+    }
+  };
+
+  // Obtenir le template par défaut pour une activité
+  const getDefaultTemplate = () => {
+    return `Bonjour {name},
+
+Votre pick-up pour {trip} est prévu le {date} à {time}.
+
+📍 Hôtel: {hotel}
+🛏️ Chambre: {roomNo}
+👥 Participants: {adults} adulte(s), {children} enfant(s), {infants} bébé(s)
+
+Merci de vous présenter à l'heure indiquée.
+
+Cordialement,
+Hurghada Dream`;
+  };
 
   // Extraire le numéro de téléphone depuis le champ "Name"
   const extractPhoneFromName = (nameField) => {
@@ -439,6 +512,28 @@ export function SituationPage({ user }) {
 
   // Générer le message personnalisé
   const generateMessage = (data) => {
+    // Vérifier si un template existe pour cette activité
+    const activityName = data.trip || "";
+    const template = messageTemplates[activityName];
+    
+    // Si un template personnalisé existe, l'utiliser
+    if (template && template.trim() !== "") {
+      // Remplacer les variables dans le template
+      let message = template
+        .replace(/\{name\}/g, data.name || "Client")
+        .replace(/\{trip\}/g, data.trip || "l'activité")
+        .replace(/\{date\}/g, data.date || "la date")
+        .replace(/\{time\}/g, data.time || "l'heure")
+        .replace(/\{hotel\}/g, data.hotel || "")
+        .replace(/\{roomNo\}/g, data.roomNo || "")
+        .replace(/\{adults\}/g, String(data.adults || 0))
+        .replace(/\{children\}/g, String(data.children || 0))
+        .replace(/\{infants\}/g, String(data.infants || 0));
+      
+      return message;
+    }
+    
+    // Sinon, utiliser le template par défaut
     const parts = [];
 
     parts.push(`Bonjour ${data.name || "Client"},`);
@@ -917,6 +1012,11 @@ export function SituationPage({ user }) {
     <Section
       title="📋 Situation - Envoi de messages"
       subtitle="Chargez un fichier Excel et envoyez automatiquement les messages de rappel aux clients"
+      right={
+        <GhostBtn onClick={() => setShowConfigModal(true)}>
+          ⚙️ Configurer les messages
+        </GhostBtn>
+      }
     >
       <div className="space-y-6">
         {/* Upload */}
@@ -1166,6 +1266,186 @@ export function SituationPage({ user }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Modal de configuration des messages */}
+        {showConfigModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              {/* En-tête */}
+              <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold">⚙️ Configuration des messages par activité</h3>
+                  <p className="text-sm opacity-90 mt-1">Personnalisez les messages WhatsApp pour chaque activité</p>
+                </div>
+                <button
+                  onClick={() => setShowConfigModal(false)}
+                  className="text-white/80 hover:text-white text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Contenu */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Sélection d'activité */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Sélectionner une activité
+                  </label>
+                  <div className="flex gap-2 flex-wrap">
+                    {activities.length > 0 ? (
+                      activities.map((activity) => (
+                        <button
+                          key={activity.id}
+                          onClick={() => {
+                            const template = messageTemplates[activity.name] || "";
+                            setSelectedActivity(activity.name);
+                            setEditingTemplate({
+                              activity: activity.name,
+                              template: template,
+                            });
+                          }}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            selectedActivity === activity.name
+                              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
+                              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                          }`}
+                        >
+                          {activity.name}
+                          {messageTemplates[activity.name] && (
+                            <span className="ml-2 text-xs opacity-75">✓</span>
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-500">
+                        Aucune activité disponible. Les templates seront appliqués par nom d'activité depuis le fichier Excel.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Entrée manuelle du nom d'activité */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Ou saisir le nom de l'activité manuellement
+                  </label>
+                  <TextInput
+                    placeholder="Ex: Speed Boat, Safari Désert..."
+                    value={editingTemplate.activity}
+                    onChange={(e) =>
+                      setEditingTemplate({
+                        ...editingTemplate,
+                        activity: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                {/* Éditeur de template */}
+                {editingTemplate.activity && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-slate-700">
+                        Template de message pour "{editingTemplate.activity}"
+                      </label>
+                      <div className="flex gap-2">
+                        <GhostBtn
+                          size="sm"
+                          onClick={() => {
+                            setEditingTemplate({
+                              ...editingTemplate,
+                              template: getDefaultTemplate(),
+                            });
+                          }}
+                        >
+                          📋 Template par défaut
+                        </GhostBtn>
+                        {messageTemplates[editingTemplate.activity] && (
+                          <GhostBtn
+                            size="sm"
+                            onClick={() => handleDeleteTemplate(editingTemplate.activity)}
+                            className="text-red-600 hover:bg-red-50"
+                          >
+                            🗑️ Supprimer
+                          </GhostBtn>
+                        )}
+                      </div>
+                    </div>
+                    <textarea
+                      value={editingTemplate.template}
+                      onChange={(e) =>
+                        setEditingTemplate({
+                          ...editingTemplate,
+                          template: e.target.value,
+                        })
+                      }
+                      placeholder="Entrez votre template de message ici..."
+                      className="w-full rounded-lg border border-slate-300 bg-white p-4 text-sm font-mono min-h-[300px] resize-y focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      rows={12}
+                    />
+                    <p className="text-xs text-slate-500 mt-2">
+                      Variables disponibles : <code className="bg-slate-100 px-1 rounded">{"{name}"}</code>,{" "}
+                      <code className="bg-slate-100 px-1 rounded">{"{trip}"}</code>,{" "}
+                      <code className="bg-slate-100 px-1 rounded">{"{date}"}</code>,{" "}
+                      <code className="bg-slate-100 px-1 rounded">{"{time}"}</code>,{" "}
+                      <code className="bg-slate-100 px-1 rounded">{"{hotel}"}</code>,{" "}
+                      <code className="bg-slate-100 px-1 rounded">{"{roomNo}"}</code>,{" "}
+                      <code className="bg-slate-100 px-1 rounded">{"{adults}"}</code>,{" "}
+                      <code className="bg-slate-100 px-1 rounded">{"{children}"}</code>,{" "}
+                      <code className="bg-slate-100 px-1 rounded">{"{infants}"}</code>
+                    </p>
+                  </div>
+                )}
+
+                {/* Liste des templates configurés */}
+                {Object.keys(messageTemplates).length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3">
+                      Templates configurés ({Object.keys(messageTemplates).length})
+                    </h4>
+                    <div className="space-y-2">
+                      {Object.keys(messageTemplates).map((activityName) => (
+                        <div
+                          key={activityName}
+                          className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
+                        >
+                          <span className="text-sm font-medium text-slate-700">{activityName}</span>
+                          <div className="flex gap-2">
+                            <GhostBtn
+                              size="sm"
+                              onClick={() => handleOpenConfig(activityName)}
+                            >
+                              ✏️ Modifier
+                            </GhostBtn>
+                            <GhostBtn
+                              size="sm"
+                              onClick={() => handleDeleteTemplate(activityName)}
+                              className="text-red-600 hover:bg-red-50"
+                            >
+                              🗑️ Supprimer
+                            </GhostBtn>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Pied de page */}
+              <div className="border-t border-slate-200 p-6 flex items-center justify-end gap-3">
+                <GhostBtn onClick={() => setShowConfigModal(false)}>Annuler</GhostBtn>
+                <PrimaryBtn
+                  onClick={handleSaveTemplate}
+                  disabled={!editingTemplate.activity.trim()}
+                >
+                  💾 Sauvegarder le template
+                </PrimaryBtn>
+              </div>
             </div>
           </div>
         )}

@@ -9,6 +9,7 @@ export const LS_KEYS = {
   quotes: "hd_quotes",
   quoteForm: "hd_quote_form", // Formulaire de devis en cours
   activityForm: "hd_activity_form", // Formulaire d'activité en cours
+  messageTemplates: "hd_message_templates", // Templates de messages par activité
 };
 
 export const WEEKDAYS = [
