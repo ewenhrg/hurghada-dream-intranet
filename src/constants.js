@@ -27,6 +27,7 @@ export const CATEGORIES = [
   { key: "aquatique", label: "Aquatique" },
   { key: "exploration_bien_etre", label: "Exploration / Bien-être" },
   { key: "luxor_caire", label: "LOUXOR & LE CAIRE" },
+  { key: "transfert", label: "TRANSFERT" },
 ];
 
 export const NEIGHBORHOODS = [
