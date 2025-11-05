@@ -2,9 +2,8 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { PrimaryBtn, GhostBtn, Section, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
-import { LS_KEYS, SITE_KEY } from "../constants";
+import { LS_KEYS } from "../constants";
 import { loadLS, saveLS } from "../utils";
-import { supabase } from "../lib/supabase";
 
 export function SituationPage({ user, activities = [] }) {
   const [excelData, setExcelData] = useState([]);
@@ -50,9 +49,6 @@ export function SituationPage({ user, activities = [] }) {
     const saved = loadLS("hd_rows_with_marina", []);
     return new Set(saved);
   });
-  
-  // État pour l'édition des cellules du tableau
-  const [editingCell, setEditingCell] = useState(null); // { rowId: string, field: string }
 
   // Sauvegarder les templates dans localStorage
   useEffect(() => {
@@ -1486,125 +1482,6 @@ Hurghada Dream`;
     toast.warning("Envoi automatique arrêté.");
   };
   
-  // Fonction pour gérer l'édition d'une cellule
-  const handleCellEdit = (rowId, field, value) => {
-    setExcelData((prev) =>
-      prev.map((row) => {
-        if (row.id === rowId) {
-          const updatedRow = { ...row, [field]: value };
-          
-          // Si on modifie le téléphone, revalider
-          if (field === "phone") {
-            const phoneValidation = value ? validatePhoneNumber(value) : { valid: false, error: "Numéro manquant" };
-            updatedRow.phoneValid = phoneValidation.valid;
-            updatedRow.phoneError = phoneValidation.error;
-          }
-          
-          // Si on modifie le nom, extraire le téléphone et le nom
-          if (field === "name") {
-            const nameStr = String(value || "");
-            const phone = extractPhoneFromName(nameStr);
-            const clientName = extractNameFromField(nameStr);
-            updatedRow.name = clientName || "Client";
-            updatedRow.phone = phone || updatedRow.phone;
-            if (updatedRow.phone) {
-              const phoneValidation = validatePhoneNumber(updatedRow.phone);
-              updatedRow.phoneValid = phoneValidation.valid;
-              updatedRow.phoneError = phoneValidation.error;
-            }
-          }
-          
-          return updatedRow;
-        }
-        return row;
-      })
-    );
-  };
-  
-  // Fonction pour sauvegarder une ligne modifiée en base de données
-  const handleSaveRowToDatabase = async (row) => {
-    if (!row.phone || !row.phoneValid) {
-      toast.warning("Veuillez d'abord corriger le numéro de téléphone avant de sauvegarder.");
-      return;
-    }
-    
-    try {
-      // Chercher si un devis existe déjà avec ce numéro de téléphone
-      const { data: existingQuotes, error: searchError } = await supabase
-        .from("quotes")
-        .select("*")
-        .eq("site_key", SITE_KEY)
-        .eq("client_phone", row.phone)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      
-      if (searchError) {
-        console.error("❌ Erreur lors de la recherche du devis:", searchError);
-        toast.error("Erreur lors de la recherche du devis existant.");
-        return;
-      }
-      
-      // Créer ou mettre à jour le devis
-      const quoteData = {
-        site_key: SITE_KEY,
-        client_name: row.name || "",
-        client_phone: row.phone || "",
-        client_hotel: row.hotel || "",
-        client_room: row.roomNo || "",
-        client_neighborhood: "",
-        notes: row.comment || "",
-        total: 0,
-        currency: "EUR",
-        items: JSON.stringify([
-          {
-            activityName: row.trip || "",
-            date: row.date || "",
-            adults: row.adults || 0,
-            children: row.children || 0,
-            babies: row.infants || 0,
-            ticketNumber: "",
-            paymentMethod: "",
-          },
-        ]),
-        created_by_name: user?.name || "",
-      };
-      
-      if (existingQuotes && existingQuotes.length > 0) {
-        // Mettre à jour le devis existant
-        const { error: updateError } = await supabase
-          .from("quotes")
-          .update(quoteData)
-          .eq("id", existingQuotes[0].id);
-        
-        if (updateError) {
-          console.error("❌ Erreur lors de la mise à jour du devis:", updateError);
-          toast.error("Erreur lors de la mise à jour du devis.");
-          return;
-        }
-        
-        toast.success("Devis mis à jour dans la base de données !");
-      } else {
-        // Créer un nouveau devis
-        const { data: newQuote, error: insertError } = await supabase
-          .from("quotes")
-          .insert(quoteData)
-          .select()
-          .single();
-        
-        if (insertError) {
-          console.error("❌ Erreur lors de la création du devis:", insertError);
-          toast.error("Erreur lors de la création du devis.");
-          return;
-        }
-        
-        toast.success("Devis créé et sauvegardé dans la base de données !");
-      }
-    } catch (error) {
-      console.error("❌ Erreur lors de la sauvegarde:", error);
-      toast.error("Erreur lors de la sauvegarde en base de données.");
-    }
-  };
-
   // Nettoyer lors du démontage du composant
   useEffect(() => {
     return () => {
@@ -1832,7 +1709,6 @@ Hurghada Dream`;
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Trip</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Heure</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase">Marina</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase">Actions</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase">Statut</th>
                 </tr>
               </thead>
@@ -1846,69 +1722,9 @@ Hurghada Dream`;
                       !row.phoneValid ? "bg-red-50/50 border-l-4 border-l-red-500" : ""
                     }`}
                   >
-                    <td className="px-4 py-2 text-xs text-slate-700">
-                      {editingCell?.rowId === row.id && editingCell?.field === "invoiceN" ? (
-                        <TextInput
-                          value={row.invoiceN}
-                          onChange={(e) => handleCellEdit(row.id, "invoiceN", e.target.value)}
-                          onBlur={() => setEditingCell(null)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") setEditingCell(null);
-                          }}
-                          className="w-full px-2 py-1 text-xs"
-                          autoFocus
-                        />
-                      ) : (
-                        <span 
-                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
-                          onClick={() => setEditingCell({ rowId: row.id, field: "invoiceN" })}
-                        >
-                          {row.invoiceN}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-slate-700">
-                      {editingCell?.rowId === row.id && editingCell?.field === "date" ? (
-                        <TextInput
-                          value={row.date}
-                          onChange={(e) => handleCellEdit(row.id, "date", e.target.value)}
-                          onBlur={() => setEditingCell(null)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") setEditingCell(null);
-                          }}
-                          className="w-full px-2 py-1 text-xs"
-                          autoFocus
-                        />
-                      ) : (
-                        <span 
-                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
-                          onClick={() => setEditingCell({ rowId: row.id, field: "date" })}
-                        >
-                          {row.date}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-xs font-medium text-slate-900">
-                      {editingCell?.rowId === row.id && editingCell?.field === "name" ? (
-                        <TextInput
-                          value={row.name}
-                          onChange={(e) => handleCellEdit(row.id, "name", e.target.value)}
-                          onBlur={() => setEditingCell(null)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") setEditingCell(null);
-                          }}
-                          className="w-full px-2 py-1 text-xs"
-                          autoFocus
-                        />
-                      ) : (
-                        <span 
-                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
-                          onClick={() => setEditingCell({ rowId: row.id, field: "name" })}
-                        >
-                          {row.name}
-                        </span>
-                      )}
-                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-700">{row.invoiceN}</td>
+                    <td className="px-4 py-2 text-xs text-slate-700">{row.date}</td>
+                    <td className="px-4 py-2 text-xs font-medium text-slate-900">{row.name}</td>
                     <td className={`px-4 py-2 text-xs ${
                       !row.phoneValid 
                         ? "text-red-600 font-semibold" 
@@ -1916,121 +1732,23 @@ Hurghada Dream`;
                           ? "text-blue-600 font-medium" 
                           : "text-amber-600"
                     }`}>
-                      {editingCell?.rowId === row.id && editingCell?.field === "phone" ? (
-                        <TextInput
-                          value={row.phone}
-                          onChange={(e) => handleCellEdit(row.id, "phone", e.target.value)}
-                          onBlur={() => setEditingCell(null)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") setEditingCell(null);
-                          }}
-                          className="w-full px-2 py-1 text-xs"
-                          autoFocus
-                        />
-                      ) : (
-                        <span 
-                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
-                          onClick={() => setEditingCell({ rowId: row.id, field: "phone" })}
-                        >
                       {row.phone ? (
-                            <>
-                              <span>{row.phone}</span>
-                              {!row.phoneValid && row.phoneError && (
-                                <span className="block text-[10px] text-red-500 mt-1" title={row.phoneError}>
-                                  ⚠️ {row.phoneError}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <span>⚠️ Non trouvé</span>
+                        <>
+                          <span>{row.phone}</span>
+                          {!row.phoneValid && row.phoneError && (
+                            <span className="block text-[10px] text-red-500 mt-1" title={row.phoneError}>
+                              ⚠️ {row.phoneError}
+                            </span>
                           )}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-slate-700">
-                      {editingCell?.rowId === row.id && editingCell?.field === "hotel" ? (
-                        <TextInput
-                          value={row.hotel}
-                          onChange={(e) => handleCellEdit(row.id, "hotel", e.target.value)}
-                          onBlur={() => setEditingCell(null)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") setEditingCell(null);
-                          }}
-                          className="w-full px-2 py-1 text-xs"
-                          autoFocus
-                        />
+                        </>
                       ) : (
-                        <span 
-                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
-                          onClick={() => setEditingCell({ rowId: row.id, field: "hotel" })}
-                        >
-                          {row.hotel}
-                        </span>
+                        <span>⚠️ Non trouvé</span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-xs text-slate-700">
-                      {editingCell?.rowId === row.id && editingCell?.field === "roomNo" ? (
-                        <TextInput
-                          value={row.roomNo}
-                          onChange={(e) => handleCellEdit(row.id, "roomNo", e.target.value)}
-                          onBlur={() => setEditingCell(null)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") setEditingCell(null);
-                          }}
-                          className="w-full px-2 py-1 text-xs"
-                          autoFocus
-                        />
-                      ) : (
-                        <span 
-                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
-                          onClick={() => setEditingCell({ rowId: row.id, field: "roomNo" })}
-                        >
-                          {row.roomNo}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-slate-700">
-                      {editingCell?.rowId === row.id && editingCell?.field === "trip" ? (
-                        <TextInput
-                          value={row.trip}
-                          onChange={(e) => handleCellEdit(row.id, "trip", e.target.value)}
-                          onBlur={() => setEditingCell(null)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") setEditingCell(null);
-                          }}
-                          className="w-full px-2 py-1 text-xs"
-                          autoFocus
-                        />
-                      ) : (
-                        <span 
-                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
-                          onClick={() => setEditingCell({ rowId: row.id, field: "trip" })}
-                        >
-                          {row.trip}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-xs font-semibold text-slate-900">
-                      {editingCell?.rowId === row.id && editingCell?.field === "time" ? (
-                        <TextInput
-                          value={row.time}
-                          onChange={(e) => handleCellEdit(row.id, "time", e.target.value)}
-                          onBlur={() => setEditingCell(null)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") setEditingCell(null);
-                          }}
-                          className="w-full px-2 py-1 text-xs"
-                          autoFocus
-                        />
-                      ) : (
-                        <span 
-                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
-                          onClick={() => setEditingCell({ rowId: row.id, field: "time" })}
-                        >
-                          {row.time}
-                        </span>
-                      )}
-                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-700">{row.hotel}</td>
+                    <td className="px-4 py-2 text-xs text-slate-700">{row.roomNo}</td>
+                    <td className="px-4 py-2 text-xs text-slate-700">{row.trip}</td>
+                    <td className="px-4 py-2 text-xs font-semibold text-slate-900">{row.time}</td>
                     <td className="px-4 py-2 text-center">
                       <label className="flex items-center justify-center cursor-pointer">
                         <input
@@ -2041,15 +1759,6 @@ Hurghada Dream`;
                           title="Bateau garé à la marina de cet hôtel"
                         />
                       </label>
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <button
-                        onClick={() => handleSaveRowToDatabase(row)}
-                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                        title="Sauvegarder en base de données"
-                      >
-                        💾 Sauvegarder
-                      </button>
                     </td>
                     <td className="px-4 py-2 text-center">
                       {row.messageSent ? (
