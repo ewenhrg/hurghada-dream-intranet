@@ -488,8 +488,27 @@ export function SituationPage({ user }) {
     setShowPreview(true);
   };
 
+  // Fermer la fenêtre WhatsApp précédente de manière synchrone
+  const closePreviousWindow = async () => {
+    if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
+      try {
+        console.log("🔒 Fermeture de la fenêtre WhatsApp précédente...");
+        whatsappWindowRef.current.close();
+        whatsappWindowRef.current = null;
+        // Attendre que la fermeture soit effective
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        console.log("✅ Fenêtre précédente fermée");
+      } catch (error) {
+        console.log("⚠️ Erreur lors de la fermeture de la fenêtre précédente:", error);
+        whatsappWindowRef.current = null;
+        // Attendre quand même pour éviter les conflits
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+    }
+  };
+
   // Ouvrir WhatsApp Web avec le numéro et le message pré-rempli
-  const openWhatsApp = (phone, message) => {
+  const openWhatsApp = async (phone, message) => {
     // Nettoyer le numéro de téléphone (enlever les espaces, tirets, etc.)
     const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
     // Encoder le message pour l'URL
@@ -499,62 +518,37 @@ export function SituationPage({ user }) {
     
     console.log(`📱 Ouverture de WhatsApp Web pour ${phone}...`);
     
-    // Fermer la fenêtre précédente si elle existe pour éviter les conflits avec les service workers
-    if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
+    // IMPORTANT: Fermer la fenêtre précédente AVANT d'ouvrir la nouvelle
+    await closePreviousWindow();
+    
+    // Attendre un peu avant d'ouvrir la nouvelle fenêtre pour éviter les conflits
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
+    // Ouvrir WhatsApp Web dans un nouvel onglet
+    // Utiliser "_blank" sans nom spécifique pour éviter les conflits avec les service workers
+    const newWindow = window.open(whatsappUrl, "_blank");
+    
+    if (newWindow) {
+      console.log(`✅ Fenêtre WhatsApp ouverte avec succès`);
+      whatsappWindowRef.current = newWindow;
+      
+      // Vérifier que la fenêtre n'a pas été bloquée après un court délai
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      
       try {
-        console.log("🔒 Fermeture de la fenêtre WhatsApp précédente...");
-        whatsappWindowRef.current.close();
-        // Attendre un peu pour que la fermeture soit effective
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            // Ouvrir une nouvelle fenêtre après fermeture de l'ancienne
-            const newWindow = window.open(whatsappUrl, "_blank");
-            if (newWindow) {
-              console.log(`✅ Nouvelle fenêtre WhatsApp ouverte avec succès`);
-              whatsappWindowRef.current = newWindow;
-            } else {
-              console.error("❌ Impossible d'ouvrir la fenêtre WhatsApp. Les popups sont peut-être bloquées.");
-            }
-            resolve(newWindow);
-          }, 1000); // Attendre 1 seconde pour que la fermeture soit bien effective
-        });
+        if (newWindow.closed) {
+          console.error("❌ La fenêtre WhatsApp a été fermée immédiatement (peut-être bloquée par le navigateur)");
+          return null;
+        }
+        console.log("✅ Fenêtre WhatsApp vérifiée et ouverte");
       } catch (error) {
-        console.log("⚠️ Erreur lors de la fermeture de la fenêtre précédente:", error);
-        whatsappWindowRef.current = null;
+        console.error("❌ Erreur lors de la vérification de la fenêtre:", error);
       }
+    } else {
+      console.error("❌ Impossible d'ouvrir la fenêtre WhatsApp. Vérifiez que les popups ne sont pas bloquées.");
     }
     
-    // Attendre un peu avant d'ouvrir la nouvelle fenêtre
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Ouvrir WhatsApp Web dans un nouvel onglet
-        // Utiliser "_blank" sans nom spécifique pour éviter les conflits avec les service workers
-        const newWindow = window.open(whatsappUrl, "_blank");
-        
-        if (newWindow) {
-          console.log(`✅ Fenêtre WhatsApp ouverte avec succès`);
-          whatsappWindowRef.current = newWindow;
-          
-          // Vérifier que la fenêtre n'a pas été bloquée
-          setTimeout(() => {
-            try {
-              if (newWindow.closed) {
-                console.error("❌ La fenêtre WhatsApp a été fermée immédiatement (peut-être bloquée par le navigateur)");
-                resolve(null);
-                return;
-              }
-              console.log("✅ Fenêtre WhatsApp vérifiée et ouverte");
-            } catch (error) {
-              console.error("❌ Erreur lors de la vérification de la fenêtre:", error);
-            }
-          }, 100);
-        } else {
-          console.error("❌ Impossible d'ouvrir la fenêtre WhatsApp. Vérifiez que les popups ne sont pas bloquées.");
-        }
-        
-        resolve(newWindow);
-      }, 500); // Attendre 500ms avant d'ouvrir la nouvelle fenêtre
-    });
+    return newWindow;
   };
 
   // Envoyer un message via WhatsApp Web automatiquement
@@ -617,25 +611,9 @@ export function SituationPage({ user }) {
       )
     );
 
-    // Essayer de fermer la fenêtre WhatsApp après l'envoi
-    // Note: Certains navigateurs peuvent bloquer la fermeture automatique
-    try {
-      if (whatsappWindow && !whatsappWindow.closed) {
-        // Attendre un peu avant de fermer pour laisser le temps à l'utilisateur de voir le message envoyé
-        setTimeout(() => {
-          try {
-            if (whatsappWindow && !whatsappWindow.closed) {
-              whatsappWindow.close();
-            }
-          } catch (error) {
-            // Ignorer les erreurs de fermeture (peut être bloqué par le navigateur)
-            console.log("Impossible de fermer la fenêtre WhatsApp automatiquement. Fermez-la manuellement.");
-          }
-        }, 1000);
-      }
-    } catch (error) {
-      // Ignorer les erreurs
-    }
+    // Ne pas fermer la fenêtre ici - elle sera fermée avant l'ouverture de la suivante
+    // Cela évite les problèmes de timing et permet à l'utilisateur de voir le message envoyé
+    console.log("✅ Message traité, la fenêtre sera fermée avant l'ouverture du suivant");
 
     return true;
   };
