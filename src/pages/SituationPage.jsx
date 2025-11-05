@@ -30,6 +30,13 @@ export function SituationPage({ user, activities = [] }) {
     activity: "",
     template: "",
   });
+  
+  // État pour la gestion des hôtels avec RDV à l'extérieur
+  const [showHotelsModal, setShowHotelsModal] = useState(false);
+  const [exteriorHotels, setExteriorHotels] = useState(() => {
+    return loadLS(LS_KEYS.exteriorHotels, []);
+  });
+  const [newHotel, setNewHotel] = useState("");
 
   // Sauvegarder les templates dans localStorage
   useEffect(() => {
@@ -37,6 +44,11 @@ export function SituationPage({ user, activities = [] }) {
       saveLS(LS_KEYS.messageTemplates, messageTemplates);
     }
   }, [messageTemplates]);
+  
+  // Sauvegarder la liste des hôtels dans localStorage
+  useEffect(() => {
+    saveLS(LS_KEYS.exteriorHotels, exteriorHotels);
+  }, [exteriorHotels]);
 
   // Ouvrir la configuration pour une activité
   const handleOpenConfig = (activityName) => {
@@ -74,6 +86,126 @@ export function SituationPage({ user, activities = [] }) {
       setMessageTemplates(newTemplates);
       toast.success(`Template supprimé pour "${activityName}"`);
     }
+  };
+  
+  // Gestion des hôtels avec RDV à l'extérieur
+  const handleAddHotel = () => {
+    if (!newHotel.trim()) {
+      toast.error("Veuillez entrer un nom d'hôtel");
+      return;
+    }
+    
+    const hotelName = newHotel.trim();
+    const hotelLower = hotelName.toLowerCase();
+    if (exteriorHotels.some(h => h.toLowerCase() === hotelLower)) {
+      toast.error("Cet hôtel est déjà dans la liste");
+      return;
+    }
+    
+    setExteriorHotels([...exteriorHotels, hotelName]);
+    toast.success(`Hôtel "${hotelName}" ajouté`);
+    setNewHotel("");
+  };
+  
+  const handleDeleteHotel = (hotel) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir retirer "${hotel}" de la liste ?`)) {
+      setExteriorHotels(exteriorHotels.filter(h => h !== hotel));
+      toast.success(`Hôtel "${hotel}" retiré`);
+    }
+  };
+  
+  // Fonction pour calculer la similarité entre deux chaînes (distance de Levenshtein simplifiée)
+  const calculateSimilarity = (str1, str2) => {
+    const s1 = str1.toLowerCase().trim();
+    const s2 = str2.toLowerCase().trim();
+    
+    // Si identique, retourner 1
+    if (s1 === s2) return 1;
+    
+    // Si une chaîne contient l'autre, retourner un score élevé
+    if (s1.includes(s2) || s2.includes(s1)) return 0.8;
+    
+    // Calculer la distance de Levenshtein simplifiée
+    const longer = s1.length > s2.length ? s1 : s2;
+    const shorter = s1.length > s2.length ? s2 : s1;
+    
+    if (longer.length === 0) return 1;
+    
+    // Calculer la distance
+    const distance = levenshteinDistance(longer, shorter);
+    const similarity = (longer.length - distance) / longer.length;
+    
+    return similarity;
+  };
+  
+  // Distance de Levenshtein
+  const levenshteinDistance = (str1, str2) => {
+    const matrix = [];
+    
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            matrix[i][j - 1] + 1, // insertion
+            matrix[i - 1][j] + 1 // deletion
+          );
+        }
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
+  };
+  
+  // Vérifier si un hôtel est dans la liste (tolérant aux fautes d'orthographe)
+  const isExteriorHotel = (hotelName) => {
+    if (!hotelName || !exteriorHotels.length) return false;
+    
+    const hotelClean = hotelName.trim();
+    const hotelLower = hotelClean.toLowerCase();
+    
+    // 1. Recherche exacte (insensible à la casse)
+    const exactMatch = exteriorHotels.find(h => h.trim().toLowerCase() === hotelLower);
+    if (exactMatch) return true;
+    
+    // 2. Recherche avec correspondance partielle (si un nom contient l'autre)
+    const partialMatch = exteriorHotels.find(h => {
+      const hLower = h.trim().toLowerCase();
+      // Vérifier si les mots clés principaux sont présents
+      const hotelWords = hotelLower.split(/\s+/).filter(w => w.length > 3);
+      const hWords = hLower.split(/\s+/).filter(w => w.length > 3);
+      
+      // Si au moins 2 mots de 4+ caractères correspondent
+      const matchingWords = hotelWords.filter(w => hWords.some(hw => hw.includes(w) || w.includes(hw)));
+      if (matchingWords.length >= 2) return true;
+      
+      // Vérifier si une chaîne contient l'autre (pour les noms courts)
+      if (hotelLower.length < 20 && hLower.length < 20) {
+        return hotelLower.includes(hLower) || hLower.includes(hotelLower);
+      }
+      
+      return false;
+    });
+    if (partialMatch) return true;
+    
+    // 3. Recherche avec similarité (distance de Levenshtein)
+    // Seuil de similarité : 0.75 (75% de similarité minimum)
+    const similarityMatch = exteriorHotels.find(h => {
+      const similarity = calculateSimilarity(hotelClean, h);
+      return similarity >= 0.75;
+    });
+    
+    return !!similarityMatch;
   };
 
   // Obtenir le template par défaut pour une activité
@@ -544,6 +676,14 @@ Hurghada Dream`;
         .replace(/\{children\}/g, String(data.children || 0))
         .replace(/\{infants\}/g, String(data.infants || 0));
       
+      // Ajouter le message RDV selon l'hôtel
+      if (data.hotel) {
+        const rdvMessage = isExteriorHotel(data.hotel)
+          ? "📍 Rendez-vous à l'extérieur de l'hôtel."
+          : "📍 Rendez-vous devant la réception de l'hôtel.";
+        message += "\n\n" + rdvMessage;
+      }
+      
       return message;
     }
     
@@ -574,6 +714,16 @@ Hurghada Dream`;
 
     parts.push("");
     parts.push("Merci de vous présenter à l'heure indiquée.");
+    
+    // Ajouter le message RDV selon l'hôtel
+    if (data.hotel) {
+      const rdvMessage = isExteriorHotel(data.hotel)
+        ? "📍 Rendez-vous à l'extérieur de l'hôtel."
+        : "📍 Rendez-vous devant la réception de l'hôtel.";
+      parts.push("");
+      parts.push(rdvMessage);
+    }
+    
     parts.push("");
     parts.push("Cordialement,");
     parts.push("Hurghada Dream");
@@ -1027,9 +1177,14 @@ Hurghada Dream`;
       title="📋 Situation - Envoi de messages"
       subtitle="Chargez un fichier Excel et envoyez automatiquement les messages de rappel aux clients"
       right={
-        <GhostBtn onClick={() => setShowConfigModal(true)}>
-          ⚙️ Configurer les messages
-        </GhostBtn>
+        <div className="flex gap-2">
+          <GhostBtn onClick={() => setShowHotelsModal(true)}>
+            🏨 Hôtels extérieur
+          </GhostBtn>
+          <GhostBtn onClick={() => setShowConfigModal(true)}>
+            ⚙️ Configurer les messages
+          </GhostBtn>
+        </div>
       }
     >
       <div className="space-y-6">
@@ -1459,6 +1614,91 @@ Hurghada Dream`;
                 >
                   💾 Sauvegarder le template
                 </PrimaryBtn>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de gestion des hôtels avec RDV à l'extérieur */}
+        {showHotelsModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              {/* En-tête */}
+              <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold">🏨 Hôtels avec RDV à l'extérieur</h3>
+                  <p className="text-sm opacity-90 mt-1">Liste des hôtels où les clients doivent attendre à l'extérieur</p>
+                </div>
+                <button
+                  onClick={() => setShowHotelsModal(false)}
+                  className="text-white/80 hover:text-white text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Contenu */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {/* Ajouter un hôtel */}
+                <div className="flex gap-2">
+                  <TextInput
+                    placeholder="Nom de l'hôtel (ex: Hilton Hurghada Resort)"
+                    value={newHotel}
+                    onChange={(e) => setNewHotel(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleAddHotel();
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <PrimaryBtn onClick={handleAddHotel}>
+                    ➕ Ajouter
+                  </PrimaryBtn>
+                </div>
+
+                {/* Liste des hôtels */}
+                {exteriorHotels.length > 0 ? (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3">
+                      Liste des hôtels ({exteriorHotels.length})
+                    </h4>
+                    {exteriorHotels.map((hotel, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
+                      >
+                        <span className="text-sm font-medium text-slate-900">{hotel}</span>
+                        <button
+                          onClick={() => handleDeleteHotel(hotel)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          🗑️ Supprimer
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <p className="text-sm">Aucun hôtel dans la liste</p>
+                    <p className="text-xs mt-2">Les clients auront le message "RDV devant la réception" par défaut</p>
+                  </div>
+                )}
+
+                {/* Information */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                  <p className="text-xs text-blue-900">
+                    <strong>ℹ️ Information :</strong> Pour les hôtels dans cette liste, le message "📍 Rendez-vous à l'extérieur de l'hôtel." sera automatiquement ajouté à tous les messages. 
+                    Pour les autres hôtels, ce sera "📍 Rendez-vous devant la réception de l'hôtel."
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-slate-200 p-4 flex justify-end">
+                <GhostBtn onClick={() => setShowHotelsModal(false)}>
+                  Fermer
+                </GhostBtn>
               </div>
             </div>
           </div>

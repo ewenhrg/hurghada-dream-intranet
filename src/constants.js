@@ -10,6 +10,7 @@ export const LS_KEYS = {
   quoteForm: "hd_quote_form", // Formulaire de devis en cours
   activityForm: "hd_activity_form", // Formulaire d'activité en cours
   messageTemplates: "hd_message_templates", // Templates de messages par activité
+  exteriorHotels: "hd_exterior_hotels", // Liste des hôtels avec RDV à l'extérieur
 };
 
 export const WEEKDAYS = [
