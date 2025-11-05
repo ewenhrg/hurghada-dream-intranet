@@ -1,4 +1,6 @@
-export function ConfirmDialog({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirmer", cancelText = "Annuler", type = "warning" }) {
+import { memo } from "react";
+
+export const ConfirmDialog = memo(({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirmer", cancelText = "Annuler", type = "warning" }) => {
   if (!isOpen) return null;
 
   const bgColors = {
@@ -49,5 +51,7 @@ export function ConfirmDialog({ isOpen, onClose, onConfirm, title, message, conf
       </div>
     </div>
   );
-}
+});
+
+ConfirmDialog.displayName = "ConfirmDialog";
 

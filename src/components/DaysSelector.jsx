@@ -1,6 +1,7 @@
+import { memo } from "react";
 import { WEEKDAYS } from "../constants";
 
-export function DaysSelector({ value = [], onChange }) {
+export const DaysSelector = memo(({ value = [], onChange }) => {
   const safe = Array.isArray(value) && value.length === 7 ? value : [false, false, false, false, false, false, false];
   return (
     <div className="flex flex-wrap gap-2">
@@ -20,5 +21,7 @@ export function DaysSelector({ value = [], onChange }) {
       ))}
     </div>
   );
-}
+});
+
+DaysSelector.displayName = "DaysSelector";
 

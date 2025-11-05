@@ -1,21 +1,11 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, memo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
+import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, loadLS, cleanPhoneNumber } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
-
-// Options d'extra pour Speed Boat uniquement
-const SPEED_BOAT_EXTRAS = [
-  { id: "", label: "— Aucun extra —", priceAdult: 0, priceChild: 0 },
-  { id: "hula_hula", label: "HULA HULA", priceAdult: 10, priceChild: 5 },
-  { id: "orange_bay", label: "ORANGE BAY", priceAdult: 10, priceChild: 5 },
-  { id: "eden_beach", label: "EDEN BEACH", priceAdult: 15, priceChild: 10 },
-  { id: "eden_lunch", label: "EDEN + LUNCH", priceAdult: 30, priceChild: 15 },
-  { id: "ozeria", label: "OZERIA", priceAdult: 25, priceChild: 15 },
-  { id: "ozeria_lunch", label: "OZERIA + LUNCH", priceAdult: 45, priceChild: 25 },
-];
 
 export function QuotesPage({ activities, quotes, setQuotes, user }) {
   const blankItemMemo = useCallback(() => ({

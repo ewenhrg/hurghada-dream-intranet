@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { NEIGHBORHOODS } from "../constants";
 import { TextInput, NumberInput } from "./ui";
 
-export function TransfersEditor({ value = {}, onChange }) {
+export const TransfersEditor = memo(({ value = {}, onChange }) => {
   return (
     <div className="space-y-3">
       {NEIGHBORHOODS.map((n) => {
@@ -109,5 +110,7 @@ export function TransfersEditor({ value = {}, onChange }) {
       })}
     </div>
   );
-}
+});
+
+TransfersEditor.displayName = "TransfersEditor";
 
