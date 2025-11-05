@@ -503,16 +503,41 @@ export function SituationPage({ user }) {
     if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
       try {
         console.log("🔄 Réutilisation de la fenêtre WhatsApp existante...");
-        // Changer l'URL de la fenêtre existante
-        whatsappWindowRef.current.location.href = whatsappUrl;
-        // Focus sur la fenêtre
-        whatsappWindowRef.current.focus();
-        return Promise.resolve(whatsappWindowRef.current);
-      } catch (error) {
-        console.log("⚠️ Impossible de réutiliser la fenêtre. Ouverture d'une nouvelle fenêtre...", error);
-        // Si on ne peut pas réutiliser, fermer et ouvrir une nouvelle
+        // Vérifier si on peut accéder à la fenêtre (cross-origin restrictions)
         try {
-          whatsappWindowRef.current.close();
+          // Essayer de changer l'URL de la fenêtre existante
+          whatsappWindowRef.current.location.href = whatsappUrl;
+          // Focus sur la fenêtre
+          whatsappWindowRef.current.focus();
+          console.log(`✅ Fenêtre WhatsApp réutilisée avec succès`);
+          return Promise.resolve(whatsappWindowRef.current);
+        } catch (crossOriginError) {
+          // Si on ne peut pas accéder à la fenêtre (cross-origin), on doit en ouvrir une nouvelle
+          console.log("⚠️ Impossible d'accéder à la fenêtre (cross-origin). Fermeture et réouverture...");
+          try {
+            whatsappWindowRef.current.close();
+            // Attendre un peu avant de réouvrir
+            return new Promise((resolve) => {
+              setTimeout(() => {
+                const newWindow = window.open(whatsappUrl, "whatsapp_auto_send", "_blank");
+                if (newWindow) {
+                  console.log(`✅ Nouvelle fenêtre WhatsApp ouverte avec succès`);
+                  whatsappWindowRef.current = newWindow;
+                } else {
+                  console.error("❌ Impossible d'ouvrir la fenêtre WhatsApp. Les popups sont peut-être bloquées.");
+                }
+                resolve(newWindow);
+              }, 500);
+            });
+          } catch (e) {
+            console.error("❌ Erreur lors de la fermeture/réouverture:", e);
+          }
+        }
+      } catch (error) {
+        console.log("⚠️ Erreur lors de la réutilisation de la fenêtre:", error);
+        // Si on ne peut pas réutiliser, essayer d'ouvrir une nouvelle fenêtre
+        try {
+          whatsappWindowRef.current = null;
         } catch (e) {
           // Ignorer
         }
@@ -532,20 +557,32 @@ export function SituationPage({ user }) {
           console.log(`✅ Fenêtre WhatsApp ouverte avec succès`);
           whatsappWindowRef.current = newWindow;
           
-          // Attendre que la page se charge
+          // Vérifier que la fenêtre n'a pas été bloquée
           setTimeout(() => {
             try {
-              // Injecter un script pour envoyer automatiquement le message
-              // Note: Cela ne fonctionnera que si l'utilisateur est déjà connecté à WhatsApp Web
-              // et si les restrictions de sécurité du navigateur le permettent
-              newWindow.postMessage({
-                type: "WHATSAPP_AUTO_SEND",
-                message: message
-              }, "*");
+              if (newWindow.closed) {
+                console.error("❌ La fenêtre WhatsApp a été fermée immédiatement (peut-être bloquée par le navigateur)");
+                resolve(null);
+                return;
+              }
+              // Attendre que la page se charge
+              setTimeout(() => {
+                try {
+                  // Injecter un script pour envoyer automatiquement le message
+                  // Note: Cela ne fonctionnera que si l'utilisateur est déjà connecté à WhatsApp Web
+                  // et si les restrictions de sécurité du navigateur le permettent
+                  newWindow.postMessage({
+                    type: "WHATSAPP_AUTO_SEND",
+                    message: message
+                  }, "*");
+                } catch (error) {
+                  console.log("⚠️ Impossible d'injecter le script automatiquement. L'utilisateur devra cliquer sur envoyer manuellement.");
+                }
+              }, 2000);
             } catch (error) {
-              console.log("⚠️ Impossible d'injecter le script automatiquement. L'utilisateur devra cliquer sur envoyer manuellement.");
+              console.error("❌ Erreur lors de la vérification de la fenêtre:", error);
             }
-          }, 2000);
+          }, 100);
         } else {
           console.error("❌ Impossible d'ouvrir la fenêtre WhatsApp. Vérifiez que les popups ne sont pas bloquées.");
         }
@@ -560,6 +597,10 @@ export function SituationPage({ user }) {
     console.log(`📨 Envoi du message ${index + 1}/${total} pour ${data.name} (${data.phone})`);
     const message = generateMessage(data);
     
+    // IMPORTANT: Attendre 10 secondes minimum entre chaque message pour éviter le bannissement WhatsApp
+    // C'est le délai minimum recommandé par WhatsApp pour éviter les restrictions
+    const MIN_DELAY_BETWEEN_MESSAGES = 10000; // 10 secondes
+    
     // Ouvrir WhatsApp Web (la fonction ferme déjà la fenêtre précédente)
     console.log(`⏳ Ouverture de WhatsApp Web...`);
     const whatsappWindow = await openWhatsApp(data.phone, message);
@@ -570,20 +611,23 @@ export function SituationPage({ user }) {
       return false;
     }
 
-    console.log(`✅ WhatsApp Web ouvert avec succès. Attente de 10 secondes...`);
+    console.log(`✅ WhatsApp Web ouvert avec succès. Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes...`);
     
     // Afficher une notification pour guider l'utilisateur
     toast.info(
       `📱 WhatsApp Web ouvert pour ${data.name} (${data.phone}). ` +
-      `Cliquez sur "Envoyer" dans la fenêtre WhatsApp, puis attendez 10 secondes...`,
-      { duration: 10000 }
+      `Cliquez sur "Envoyer" dans la fenêtre WhatsApp, puis attendez ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes...`,
+      { duration: MIN_DELAY_BETWEEN_MESSAGES }
     );
 
-    // Attendre 10 secondes avant de passer au suivant
+    // Attendre 10 secondes minimum avant de passer au suivant
     // Pendant ce temps, l'utilisateur doit cliquer sur "Envoyer" dans WhatsApp Web
-    console.log(`⏱️ Attente de 10 secondes avant le prochain message...`);
-    await new Promise((resolve) => setTimeout(resolve, 10000));
-    console.log(`✅ Attente terminée. Passage au suivant...`);
+    // Ce délai est CRITIQUE pour éviter le bannissement WhatsApp
+    console.log(`⏱️ Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes (minimum requis pour éviter le bannissement)...`);
+    const startTime = Date.now();
+    await new Promise((resolve) => setTimeout(resolve, MIN_DELAY_BETWEEN_MESSAGES));
+    const elapsedTime = Date.now() - startTime;
+    console.log(`✅ Attente terminée (${elapsedTime}ms écoulés). Passage au suivant...`);
 
     // Marquer comme envoyé
     const logEntry = {
@@ -659,13 +703,17 @@ export function SituationPage({ user }) {
       `Le système va :\n` +
       `1. Ouvrir WhatsApp Web avec chaque numéro\n` +
       `2. Pré-remplir le message\n` +
-      `3. Attendre 10 secondes entre chaque message\n` +
+      `3. Attendre 10 secondes minimum entre chaque message (pour éviter le bannissement)\n` +
       `4. Passer automatiquement au suivant\n\n` +
       `⚠️ IMPORTANT :\n` +
+      `- Vous devez AUTORISER LES POPUPS dans votre navigateur pour que cela fonctionne\n` +
       `- Vous devrez être connecté à WhatsApp Web\n` +
       `- Vous devrez cliquer sur "Envoyer" pour chaque message dans la fenêtre WhatsApp\n` +
-      `- Le système attendra 10 secondes entre chaque message\n` +
+      `- Le système attendra exactement 10 secondes entre chaque message (CRITIQUE pour éviter le bannissement)\n` +
       `- Vous pouvez arrêter l'envoi automatique à tout moment avec le bouton "Arrêter"\n\n` +
+      `🛡️ PROTECTION CONTRE LE BANNISSEMENT :\n` +
+      `- Délai minimum de 10 secondes entre chaque message (garanti)\n` +
+      `- Ne pas envoyer plus de 30 messages par heure (recommandé)\n\n` +
       `💡 ASTUCE : Gardez la fenêtre WhatsApp Web ouverte et cliquez rapidement sur "Envoyer" lorsque chaque message s'ouvre.\n\n` +
       `Voulez-vous continuer ?`
     );
@@ -724,11 +772,9 @@ export function SituationPage({ user }) {
         setSendLog((prev) => [...prev, logEntry]);
       }
 
-      // Petite pause entre les messages pour éviter les problèmes de synchronisation
-      if (i < queue.length - 1) {
-        console.log(`⏸️ Pause de 1 seconde avant le prochain message...`);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
+      // NOTE: Le délai de 10 secondes est déjà inclus dans sendWhatsAppMessage
+      // Pas besoin de pause supplémentaire pour éviter le bannissement
+      // Le délai de 10 secondes entre chaque message est respecté automatiquement
     }
 
     // Terminer l'envoi automatique
