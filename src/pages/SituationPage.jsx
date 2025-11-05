@@ -34,7 +34,12 @@ export function SituationPage({ user, activities = [] }) {
   // État pour la gestion des hôtels avec RDV à l'extérieur
   const [showHotelsModal, setShowHotelsModal] = useState(false);
   const [exteriorHotels, setExteriorHotels] = useState(() => {
-    return loadLS(LS_KEYS.exteriorHotels, []);
+    const saved = loadLS(LS_KEYS.exteriorHotels, []);
+    // Migration : convertir les anciens strings en objets si nécessaire
+    if (saved.length > 0 && typeof saved[0] === 'string') {
+      return saved.map(name => ({ name, hasBeachBoats: false }));
+    }
+    return saved;
   });
   const [newHotel, setNewHotel] = useState("");
 
@@ -97,21 +102,45 @@ export function SituationPage({ user, activities = [] }) {
     
     const hotelName = newHotel.trim();
     const hotelLower = hotelName.toLowerCase();
-    if (exteriorHotels.some(h => h.toLowerCase() === hotelLower)) {
+    // Vérifier si l'hôtel existe déjà (gérer les objets et les strings pour la migration)
+    const hotelExists = exteriorHotels.some(h => {
+      const hName = typeof h === 'string' ? h : h.name;
+      return hName.toLowerCase() === hotelLower;
+    });
+    
+    if (hotelExists) {
       toast.error("Cet hôtel est déjà dans la liste");
       return;
     }
     
-    setExteriorHotels([...exteriorHotels, hotelName]);
+    setExteriorHotels([...exteriorHotels, { name: hotelName, hasBeachBoats: false }]);
     toast.success(`Hôtel "${hotelName}" ajouté`);
     setNewHotel("");
   };
   
-  const handleDeleteHotel = (hotel) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir retirer "${hotel}" de la liste ?`)) {
-      setExteriorHotels(exteriorHotels.filter(h => h !== hotel));
-      toast.success(`Hôtel "${hotel}" retiré`);
+  const handleDeleteHotel = (hotelName) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir retirer "${hotelName}" de la liste ?`)) {
+      setExteriorHotels(exteriorHotels.filter(h => {
+        const hName = typeof h === 'string' ? h : h.name;
+        return hName !== hotelName;
+      }));
+      toast.success(`Hôtel "${hotelName}" retiré`);
     }
+  };
+  
+  // Toggle la case "bateaux sur la plage" pour un hôtel
+  const handleToggleBeachBoats = (hotelName) => {
+    setExteriorHotels(exteriorHotels.map(h => {
+      const hName = typeof h === 'string' ? h : h.name;
+      if (hName === hotelName) {
+        // Si c'est un string, convertir en objet
+        if (typeof h === 'string') {
+          return { name: h, hasBeachBoats: true };
+        }
+        return { ...h, hasBeachBoats: !h.hasBeachBoats };
+      }
+      return h;
+    }));
   };
   
   // Fonction pour calculer la similarité entre deux chaînes (distance de Levenshtein simplifiée)
@@ -167,20 +196,33 @@ export function SituationPage({ user, activities = [] }) {
     return matrix[str2.length][str1.length];
   };
   
-  // Vérifier si un hôtel est dans la liste (tolérant aux fautes d'orthographe)
-  const isExteriorHotel = (hotelName) => {
-    if (!hotelName || !exteriorHotels.length) return false;
+  // Trouver un hôtel dans la liste (tolérant aux fautes d'orthographe) et retourner l'objet complet
+  const findHotelInList = (hotelName) => {
+    if (!hotelName || !exteriorHotels.length) return null;
     
     const hotelClean = hotelName.trim();
     const hotelLower = hotelClean.toLowerCase();
     
+    // Fonction helper pour obtenir le nom de l'hôtel (gérer migration string -> objet)
+    const getHotelName = (h) => typeof h === 'string' ? h.trim() : h.name.trim();
+    
     // 1. Recherche exacte (insensible à la casse)
-    const exactMatch = exteriorHotels.find(h => h.trim().toLowerCase() === hotelLower);
-    if (exactMatch) return true;
+    const exactMatch = exteriorHotels.find(h => {
+      const hName = getHotelName(h);
+      return hName.toLowerCase() === hotelLower;
+    });
+    if (exactMatch) {
+      // Convertir en objet si c'est un string
+      if (typeof exactMatch === 'string') {
+        return { name: exactMatch, hasBeachBoats: false };
+      }
+      return exactMatch;
+    }
     
     // 2. Recherche avec correspondance partielle (si un nom contient l'autre)
     const partialMatch = exteriorHotels.find(h => {
-      const hLower = h.trim().toLowerCase();
+      const hName = getHotelName(h);
+      const hLower = hName.toLowerCase();
       // Vérifier si les mots clés principaux sont présents
       const hotelWords = hotelLower.split(/\s+/).filter(w => w.length > 3);
       const hWords = hLower.split(/\s+/).filter(w => w.length > 3);
@@ -196,16 +238,36 @@ export function SituationPage({ user, activities = [] }) {
       
       return false;
     });
-    if (partialMatch) return true;
+    if (partialMatch) {
+      // Convertir en objet si c'est un string
+      if (typeof partialMatch === 'string') {
+        return { name: partialMatch, hasBeachBoats: false };
+      }
+      return partialMatch;
+    }
     
     // 3. Recherche avec similarité (distance de Levenshtein)
     // Seuil de similarité : 0.75 (75% de similarité minimum)
     const similarityMatch = exteriorHotels.find(h => {
-      const similarity = calculateSimilarity(hotelClean, h);
+      const hName = getHotelName(h);
+      const similarity = calculateSimilarity(hotelClean, hName);
       return similarity >= 0.75;
     });
     
-    return !!similarityMatch;
+    if (similarityMatch) {
+      // Convertir en objet si c'est un string
+      if (typeof similarityMatch === 'string') {
+        return { name: similarityMatch, hasBeachBoats: false };
+      }
+      return similarityMatch;
+    }
+    
+    return null;
+  };
+  
+  // Vérifier si un hôtel est dans la liste (pour compatibilité)
+  const isExteriorHotel = (hotelName) => {
+    return findHotelInList(hotelName) !== null;
   };
 
   // Obtenir le template par défaut pour une activité
@@ -244,6 +306,43 @@ Hurghada Dream`;
     }
     
     return null;
+  };
+  
+  // Valider un numéro de téléphone
+  const validatePhoneNumber = (phone) => {
+    if (!phone || phone.trim() === "") {
+      return { valid: false, error: "Numéro manquant" };
+    }
+    
+    // Nettoyer le numéro (enlever espaces, tirets, etc.)
+    const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
+    
+    // Vérifier la longueur minimale (au moins 8 chiffres pour un numéro valide)
+    if (cleanPhone.length < 8) {
+      return { valid: false, error: `Trop court (${cleanPhone.length} chiffres au lieu de 8 minimum)` };
+    }
+    
+    // Vérifier si c'est un numéro international (commence par +)
+    if (cleanPhone.startsWith("+")) {
+      // Numéro international : doit avoir au moins 10 chiffres après le +
+      const digitsOnly = cleanPhone.substring(1).replace(/\D/g, "");
+      if (digitsOnly.length < 8) {
+        return { valid: false, error: `Numéro international trop court (${digitsOnly.length} chiffres)` };
+      }
+      return { valid: true, error: null };
+    }
+    
+    // Vérifier que ce sont bien des chiffres
+    if (!/^\d+$/.test(cleanPhone)) {
+      return { valid: false, error: "Contient des caractères invalides" };
+    }
+    
+    // Vérifier la longueur (8-15 chiffres pour un numéro standard)
+    if (cleanPhone.length < 8 || cleanPhone.length > 15) {
+      return { valid: false, error: `Longueur invalide (${cleanPhone.length} chiffres)` };
+    }
+    
+    return { valid: true, error: null };
   };
 
   // Extraire le nom du client (sans le téléphone)
@@ -581,12 +680,17 @@ Hurghada Dream`;
           const phone = extractPhoneFromName(nameStr);
           const clientName = extractNameFromField(nameStr);
 
+          // Valider le numéro de téléphone
+          const phoneValidation = phone ? validatePhoneNumber(phone) : { valid: false, error: "Numéro manquant" };
+          
           return {
             id: `row-${index}`,
             invoiceN: String(invoiceN || ""),
             date: String(date || ""),
             name: clientName || "Client",
             phone: phone || "",
+            phoneValid: phoneValidation.valid,
+            phoneError: phoneValidation.error,
             hotel: String(hotel || ""),
             roomNo: String(roomNo || ""),
             adults: Number(pax) || 0,
@@ -620,6 +724,32 @@ Hurghada Dream`;
           setDetectedColumns([]);
         }
 
+        // Vérifier les numéros de téléphone invalides
+        const invalidPhones = mappedData.filter(d => !d.phoneValid);
+        
+        if (invalidPhones.length > 0) {
+          const invalidCount = invalidPhones.length;
+          const missingCount = invalidPhones.filter(d => !d.phone || d.phone.trim() === "").length;
+          const errorCount = invalidCount - missingCount;
+          
+          let alertMessage = `⚠️ ${invalidCount} numéro(s) de téléphone invalide(s) détecté(s) :\n`;
+          if (missingCount > 0) {
+            alertMessage += `- ${missingCount} numéro(s) manquant(s)\n`;
+          }
+          if (errorCount > 0) {
+            alertMessage += `- ${errorCount} numéro(s) avec erreur(s)\n\n`;
+          }
+          alertMessage += "Les lignes avec des numéros invalides sont marquées en rouge dans le tableau.";
+          
+          toast.error(alertMessage, { duration: 8000 });
+          
+          // Afficher les détails dans la console
+          console.warn("⚠️ Numéros de téléphone invalides détectés :");
+          invalidPhones.forEach((data, idx) => {
+            console.warn(`${idx + 1}. ${data.name} - ${data.phone || "MANQUANT"} - Erreur: ${data.phoneError || "Numéro manquant"}`);
+          });
+        }
+        
         setExcelData(mappedData);
         setShowPreview(false);
         setSendLog([]);
@@ -678,9 +808,19 @@ Hurghada Dream`;
       
       // Ajouter le message RDV selon l'hôtel
       if (data.hotel) {
-        const rdvMessage = isExteriorHotel(data.hotel)
-          ? "📍 Rendez-vous à l'extérieur de l'hôtel."
-          : "📍 Rendez-vous devant la réception de l'hôtel.";
+        const hotelInfo = findHotelInList(data.hotel);
+        let rdvMessage;
+        
+        if (hotelInfo) {
+          if (hotelInfo.hasBeachBoats) {
+            rdvMessage = `📍 Rendez-vous directement à la marina du ${data.hotel}.`;
+          } else {
+            rdvMessage = "📍 Rendez-vous à l'extérieur de l'hôtel.";
+          }
+        } else {
+          rdvMessage = "📍 Rendez-vous devant la réception de l'hôtel.";
+        }
+        
         message += "\n\n" + rdvMessage;
       }
       
@@ -717,9 +857,19 @@ Hurghada Dream`;
     
     // Ajouter le message RDV selon l'hôtel
     if (data.hotel) {
-      const rdvMessage = isExteriorHotel(data.hotel)
-        ? "📍 Rendez-vous à l'extérieur de l'hôtel."
-        : "📍 Rendez-vous devant la réception de l'hôtel.";
+      const hotelInfo = findHotelInList(data.hotel);
+      let rdvMessage;
+      
+      if (hotelInfo) {
+        if (hotelInfo.hasBeachBoats) {
+          rdvMessage = `📍 Rendez-vous directement à la marina du ${data.hotel}.`;
+        } else {
+          rdvMessage = "📍 Rendez-vous à l'extérieur de l'hôtel.";
+        }
+      } else {
+        rdvMessage = "📍 Rendez-vous devant la réception de l'hôtel.";
+      }
+      
       parts.push("");
       parts.push(rdvMessage);
     }
@@ -920,9 +1070,9 @@ Hurghada Dream`;
       return;
     }
 
-    // Vérifier les numéros de téléphone
-    const dataWithPhone = excelData.filter((data) => data.phone && !data.messageSent);
-    const dataWithoutPhone = excelData.filter((data) => !data.phone);
+    // Vérifier les numéros de téléphone (valides seulement)
+    const dataWithPhone = excelData.filter((data) => data.phone && data.phoneValid && !data.messageSent);
+    const dataWithoutPhone = excelData.filter((data) => !data.phone || !data.phoneValid);
 
     if (dataWithoutPhone.length > 0) {
       const confirm = window.confirm(
@@ -973,29 +1123,49 @@ Hurghada Dream`;
   const startAutoSending = async (queue) => {
     isAutoSendingRef.current = true;
     
-    console.log(`🚀 Démarrage de l'envoi automatique de ${queue.length} messages`);
+    // Filtrer les numéros invalides
+    const validQueue = queue.filter((data) => data.phone && data.phoneValid);
+    const invalidQueue = queue.filter((data) => !data.phone || !data.phoneValid);
     
-    for (let i = 0; i < queue.length; i++) {
+    if (invalidQueue.length > 0) {
+      toast.warning(`⚠️ ${invalidQueue.length} ligne(s) avec numéro invalide seront ignorées.`, { duration: 5000 });
+      console.warn(`⚠️ ${invalidQueue.length} ligne(s) avec numéro invalide ignorées :`);
+      invalidQueue.forEach((data) => {
+        console.warn(`  - ${data.name}: ${data.phone || "MANQUANT"} - ${data.phoneError || "Numéro manquant"}`);
+      });
+    }
+    
+    if (validQueue.length === 0) {
+      toast.error("Aucun numéro de téléphone valide trouvé. Impossible d'envoyer les messages.");
+      isAutoSendingRef.current = false;
+      setAutoSending(false);
+      setSending(false);
+      return;
+    }
+    
+    console.log(`🚀 Démarrage de l'envoi automatique de ${validQueue.length} messages (${invalidQueue.length} ignorés)`);
+    
+    for (let i = 0; i < validQueue.length; i++) {
       if (!isAutoSendingRef.current) {
         // Si l'utilisateur a arrêté l'envoi
         console.log(`⏹️ Envoi arrêté par l'utilisateur à l'index ${i}`);
         break;
       }
 
-      console.log(`\n🔄 ========== DÉBUT DU MESSAGE ${i + 1}/${queue.length} ==========`);
+      console.log(`\n🔄 ========== DÉBUT DU MESSAGE ${i + 1}/${validQueue.length} ==========`);
       
       setCurrentIndex(i + 1);
-      setRemainingCount(queue.length - i - 1);
+      setRemainingCount(validQueue.length - i - 1);
 
-      const data = queue[i];
+      const data = validQueue[i];
       const message = generateMessage(data);
 
-      console.log(`📤 Envoi ${i + 1}/${queue.length} : ${data.name} (${data.phone})`);
-      toast.info(`Envoi ${i + 1}/${queue.length} : ${data.name} (${data.phone})`);
+      console.log(`📤 Envoi ${i + 1}/${validQueue.length} : ${data.name} (${data.phone})`);
+      toast.info(`Envoi ${i + 1}/${validQueue.length} : ${data.name} (${data.phone})`);
 
       try {
         console.log(`⏳ Appel de sendWhatsAppMessage pour le message ${i + 1}...`);
-        const result = await sendWhatsAppMessage(data, i, queue.length);
+        const result = await sendWhatsAppMessage(data, i, validQueue.length);
         console.log(`✅ Message ${i + 1} traité avec résultat:`, result);
         
         if (!result) {
@@ -1017,7 +1187,7 @@ Hurghada Dream`;
         setSendLog((prev) => [...prev, logEntry]);
       }
 
-      console.log(`✅ ========== FIN DU MESSAGE ${i + 1}/${queue.length} ==========\n`);
+      console.log(`✅ ========== FIN DU MESSAGE ${i + 1}/${validQueue.length} ==========\n`);
       
       // NOTE: Le délai de 10 secondes est déjà inclus dans sendWhatsAppMessage
       // Pas besoin de pause supplémentaire pour éviter le bannissement
@@ -1086,9 +1256,9 @@ Hurghada Dream`;
       return;
     }
 
-    // Vérifier les numéros de téléphone
-    const dataWithPhone = excelData.filter((data) => data.phone);
-    const dataWithoutPhone = excelData.filter((data) => !data.phone);
+    // Vérifier les numéros de téléphone (valides seulement)
+    const dataWithPhone = excelData.filter((data) => data.phone && data.phoneValid);
+    const dataWithoutPhone = excelData.filter((data) => !data.phone || !data.phoneValid);
 
     if (dataWithoutPhone.length > 0) {
       const confirm = window.confirm(
@@ -1165,11 +1335,12 @@ Hurghada Dream`;
   // Statistiques
   const stats = useMemo(() => {
     const total = excelData.length;
-    const withPhone = excelData.filter((d) => d.phone).length;
-    const withoutPhone = total - withPhone;
+    const withPhone = excelData.filter((d) => d.phone && d.phoneValid).length;
+    const withoutPhone = excelData.filter((d) => !d.phone || !d.phoneValid).length;
+    const invalidPhones = excelData.filter((d) => d.phone && !d.phoneValid).length;
     const sent = excelData.filter((d) => d.messageSent).length;
     
-    return { total, withPhone, withoutPhone, sent };
+    return { total, withPhone, withoutPhone, invalidPhones, sent };
   }, [excelData]);
 
   return (
@@ -1263,6 +1434,9 @@ Hurghada Dream`;
             <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-4">
               <p className="text-xs text-slate-600 mb-1">Sans téléphone</p>
               <p className="text-2xl font-bold text-amber-600">{stats.withoutPhone}</p>
+              {stats.invalidPhones > 0 && (
+                <p className="text-[10px] text-red-600 mt-1">⚠️ {stats.invalidPhones} invalide(s)</p>
+              )}
             </div>
             <div className="bg-emerald-50/50 border border-emerald-200 rounded-lg p-4">
               <p className="text-xs text-slate-600 mb-1">Messages envoyés</p>
@@ -1294,16 +1468,31 @@ Hurghada Dream`;
                     key={row.id}
                     className={`border-b border-slate-100 hover:bg-slate-50/50 ${
                       row.messageSent ? "bg-emerald-50/30" : ""
+                    } ${
+                      !row.phoneValid ? "bg-red-50/50 border-l-4 border-l-red-500" : ""
                     }`}
                   >
                     <td className="px-4 py-2 text-xs text-slate-700">{row.invoiceN}</td>
                     <td className="px-4 py-2 text-xs text-slate-700">{row.date}</td>
                     <td className="px-4 py-2 text-xs font-medium text-slate-900">{row.name}</td>
-                    <td className="px-4 py-2 text-xs text-slate-700">
+                    <td className={`px-4 py-2 text-xs ${
+                      !row.phoneValid 
+                        ? "text-red-600 font-semibold" 
+                        : row.phone 
+                          ? "text-blue-600 font-medium" 
+                          : "text-amber-600"
+                    }`}>
                       {row.phone ? (
-                        <span className="text-blue-600 font-medium">{row.phone}</span>
+                        <>
+                          <span>{row.phone}</span>
+                          {!row.phoneValid && row.phoneError && (
+                            <span className="block text-[10px] text-red-500 mt-1" title={row.phoneError}>
+                              ⚠️ {row.phoneError}
+                            </span>
+                          )}
+                        </>
                       ) : (
-                        <span className="text-amber-600">⚠️ Non trouvé</span>
+                        <span>⚠️ Non trouvé</span>
                       )}
                     </td>
                     <td className="px-4 py-2 text-xs text-slate-700">{row.hotel}</td>
@@ -1663,20 +1852,36 @@ Hurghada Dream`;
                     <h4 className="text-sm font-semibold text-slate-700 mb-3">
                       Liste des hôtels ({exteriorHotels.length})
                     </h4>
-                    {exteriorHotels.map((hotel, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
-                      >
-                        <span className="text-sm font-medium text-slate-900">{hotel}</span>
-                        <button
-                          onClick={() => handleDeleteHotel(hotel)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                    {exteriorHotels.map((hotel, index) => {
+                      const hotelName = typeof hotel === 'string' ? hotel : hotel.name;
+                      const hasBeachBoats = typeof hotel === 'string' ? false : (hotel.hasBeachBoats || false);
+                      
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
                         >
-                          🗑️ Supprimer
-                        </button>
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-3 flex-1">
+                            <span className="text-sm font-medium text-slate-900 flex-1">{hotelName}</span>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={hasBeachBoats}
+                                onChange={() => handleToggleBeachBoats(hotelName)}
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                              <span className="text-xs text-slate-600">🚤 Bateaux sur la plage</span>
+                            </label>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteHotel(hotelName)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded-lg text-sm font-medium transition-colors ml-2"
+                          >
+                            🗑️ Supprimer
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-slate-500">
