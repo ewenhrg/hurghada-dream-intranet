@@ -490,20 +490,45 @@ export function SituationPage({ user }) {
 
   // Fermer la fenêtre WhatsApp précédente de manière synchrone
   const closePreviousWindow = async () => {
-    if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
+    if (whatsappWindowRef.current) {
       try {
-        console.log("🔒 Fermeture de la fenêtre WhatsApp précédente...");
-        whatsappWindowRef.current.close();
+        const wasClosed = whatsappWindowRef.current.closed;
+        console.log(`🔒 Vérification de la fenêtre précédente: closed=${wasClosed}`);
+        
+        if (!wasClosed) {
+          console.log("🔒 Fermeture de la fenêtre WhatsApp précédente...");
+          whatsappWindowRef.current.close();
+          
+          // Attendre un peu pour vérifier que la fermeture est effective
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          
+          // Vérifier que la fenêtre est bien fermée
+          try {
+            if (whatsappWindowRef.current.closed) {
+              console.log("✅ Fenêtre précédente fermée avec succès");
+            } else {
+              console.warn("⚠️ La fenêtre n'est peut-être pas complètement fermée, mais on continue...");
+            }
+          } catch (e) {
+            console.log("✅ Fenêtre fermée (impossible de vérifier, mais c'est probablement OK)");
+          }
+        } else {
+          console.log("✅ Fenêtre précédente déjà fermée");
+        }
+        
         whatsappWindowRef.current = null;
-        // Attendre que la fermeture soit effective
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        console.log("✅ Fenêtre précédente fermée");
+        
+        // Attendre un peu plus pour que la fermeture soit complètement effective
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        console.log("✅ Délai de fermeture terminé, prêt pour la nouvelle fenêtre");
       } catch (error) {
-        console.log("⚠️ Erreur lors de la fermeture de la fenêtre précédente:", error);
+        console.error("❌ Erreur lors de la fermeture de la fenêtre précédente:", error);
         whatsappWindowRef.current = null;
         // Attendre quand même pour éviter les conflits
         await new Promise((resolve) => setTimeout(resolve, 1500));
       }
+    } else {
+      console.log("ℹ️ Aucune fenêtre précédente à fermer");
     }
   };
 
@@ -517,38 +542,49 @@ export function SituationPage({ user }) {
     const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
     
     console.log(`📱 Ouverture de WhatsApp Web pour ${phone}...`);
+    console.log(`📱 URL: ${whatsappUrl.substring(0, 50)}...`);
     
     // IMPORTANT: Fermer la fenêtre précédente AVANT d'ouvrir la nouvelle
+    console.log("⏳ Fermeture de la fenêtre précédente...");
     await closePreviousWindow();
+    console.log("✅ Fenêtre précédente fermée, prêt pour ouvrir la nouvelle");
     
     // Attendre un peu avant d'ouvrir la nouvelle fenêtre pour éviter les conflits
+    console.log("⏳ Attente de 500ms avant l'ouverture...");
     await new Promise((resolve) => setTimeout(resolve, 500));
     
     // Ouvrir WhatsApp Web dans un nouvel onglet
     // Utiliser "_blank" sans nom spécifique pour éviter les conflits avec les service workers
+    console.log("📂 Tentative d'ouverture de la nouvelle fenêtre...");
     const newWindow = window.open(whatsappUrl, "_blank");
     
     if (newWindow) {
-      console.log(`✅ Fenêtre WhatsApp ouverte avec succès`);
+      console.log(`✅ window.open() a retourné une fenêtre`);
       whatsappWindowRef.current = newWindow;
       
       // Vérifier que la fenêtre n'a pas été bloquée après un court délai
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      console.log("⏳ Attente de 300ms pour vérifier la fenêtre...");
+      await new Promise((resolve) => setTimeout(resolve, 300));
       
       try {
         if (newWindow.closed) {
           console.error("❌ La fenêtre WhatsApp a été fermée immédiatement (peut-être bloquée par le navigateur)");
+          whatsappWindowRef.current = null;
           return null;
         }
-        console.log("✅ Fenêtre WhatsApp vérifiée et ouverte");
+        console.log("✅ Fenêtre WhatsApp vérifiée et ouverte correctement");
+        return newWindow;
       } catch (error) {
         console.error("❌ Erreur lors de la vérification de la fenêtre:", error);
+        // On retourne quand même la fenêtre car elle existe
+        return newWindow;
       }
     } else {
-      console.error("❌ Impossible d'ouvrir la fenêtre WhatsApp. Vérifiez que les popups ne sont pas bloquées.");
+      console.error("❌ window.open() a retourné null - Impossible d'ouvrir la fenêtre WhatsApp");
+      console.error("❌ Vérifiez que les popups ne sont pas bloquées dans votre navigateur");
+      whatsappWindowRef.current = null;
+      return null;
     }
-    
-    return newWindow;
   };
 
   // Envoyer un message via WhatsApp Web automatiquement
@@ -687,6 +723,8 @@ export function SituationPage({ user }) {
         break;
       }
 
+      console.log(`\n🔄 ========== DÉBUT DU MESSAGE ${i + 1}/${queue.length} ==========`);
+      
       setCurrentIndex(i + 1);
       setRemainingCount(queue.length - i - 1);
 
@@ -697,11 +735,16 @@ export function SituationPage({ user }) {
       toast.info(`Envoi ${i + 1}/${queue.length} : ${data.name} (${data.phone})`);
 
       try {
-        console.log(`⏳ Attente de l'envoi du message ${i + 1}...`);
-        await sendWhatsAppMessage(data, i, queue.length);
-        console.log(`✅ Message ${i + 1} envoyé avec succès`);
+        console.log(`⏳ Appel de sendWhatsAppMessage pour le message ${i + 1}...`);
+        const result = await sendWhatsAppMessage(data, i, queue.length);
+        console.log(`✅ Message ${i + 1} traité avec résultat:`, result);
+        
+        if (!result) {
+          console.warn(`⚠️ sendWhatsAppMessage a retourné false pour le message ${i + 1}, mais on continue...`);
+        }
       } catch (error) {
-        console.error(`❌ Erreur lors de l'envoi du message ${i + 1}:`, error);
+        console.error(`❌ ERREUR lors de l'envoi du message ${i + 1}:`, error);
+        console.error(`Stack trace:`, error.stack);
         const logEntry = {
           id: data.id,
           name: data.name,
@@ -715,6 +758,8 @@ export function SituationPage({ user }) {
         setSendLog((prev) => [...prev, logEntry]);
       }
 
+      console.log(`✅ ========== FIN DU MESSAGE ${i + 1}/${queue.length} ==========\n`);
+      
       // NOTE: Le délai de 10 secondes est déjà inclus dans sendWhatsAppMessage
       // Pas besoin de pause supplémentaire pour éviter le bannissement
       // Le délai de 10 secondes entre chaque message est respecté automatiquement
