@@ -515,7 +515,20 @@ Hurghada Dream`;
   const generateMessage = (data) => {
     // Vérifier si un template existe pour cette activité
     const activityName = data.trip || "";
-    const template = messageTemplates[activityName];
+    
+    // Rechercher le template de manière insensible à la casse
+    let template = messageTemplates[activityName];
+    
+    // Si pas trouvé exactement, chercher avec une correspondance insensible à la casse
+    if (!template) {
+      const lowerActivityName = activityName.toLowerCase().trim();
+      const matchingKey = Object.keys(messageTemplates).find(
+        key => key.toLowerCase().trim() === lowerActivityName
+      );
+      if (matchingKey) {
+        template = messageTemplates[matchingKey];
+      }
+    }
     
     // Si un template personnalisé existe, l'utiliser
     if (template && template.trim() !== "") {
