@@ -2,8 +2,9 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { PrimaryBtn, GhostBtn, Section, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
-import { LS_KEYS } from "../constants";
+import { LS_KEYS, SITE_KEY } from "../constants";
 import { loadLS, saveLS } from "../utils";
+import { supabase } from "../lib/supabase";
 
 export function SituationPage({ user, activities = [] }) {
   const [excelData, setExcelData] = useState([]);
@@ -49,6 +50,9 @@ export function SituationPage({ user, activities = [] }) {
     const saved = loadLS("hd_rows_with_marina", []);
     return new Set(saved);
   });
+  
+  // État pour l'édition des cellules du tableau
+  const [editingCell, setEditingCell] = useState(null); // { rowId: string, field: string }
 
   // Sauvegarder les templates dans localStorage
   useEffect(() => {
@@ -466,6 +470,59 @@ Hurghada Dream`;
 
     // Traiter les colonnes d'heure
     if (isTimeColumn) {
+      // Si c'est déjà une string formatée (ex: "08:30", "8h30", "8:30", "08h30", "08.30", etc.)
+      if (typeof value === "string") {
+        const strValue = value.trim();
+        
+        // Essayer de parser les différents formats d'heure en string
+        // Format 1: "08:30" ou "8:30"
+        const matchColon = strValue.match(/^(\d{1,2}):(\d{2})$/);
+        if (matchColon) {
+          const h = parseInt(matchColon[1], 10);
+          const m = parseInt(matchColon[2], 10);
+          if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+            return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+          }
+        }
+        
+        // Format 2: "08h30" ou "8h30" ou "08h30m" ou "8h30m"
+        const matchH = strValue.match(/^(\d{1,2})h(\d{1,2})(?:m)?$/i);
+        if (matchH) {
+          const h = parseInt(matchH[1], 10);
+          const m = parseInt(matchH[2], 10);
+          if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+            return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+          }
+        }
+        
+        // Format 3: "08.30" ou "8.30"
+        const matchDot = strValue.match(/^(\d{1,2})\.(\d{2})$/);
+        if (matchDot) {
+          const h = parseInt(matchDot[1], 10);
+          const m = parseInt(matchDot[2], 10);
+          if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+            return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+          }
+        }
+        
+        // Format 4: Juste un nombre (ex: "830" pour 8h30)
+        const matchNumber = strValue.match(/^(\d{1,4})$/);
+        if (matchNumber) {
+          const num = parseInt(matchNumber[1], 10);
+          if (num >= 0 && num < 2400) {
+            const h = Math.floor(num / 100);
+            const m = num % 100;
+            if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+              return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+            }
+          }
+        }
+        
+        // Si aucun format ne correspond, retourner la valeur telle quelle
+        return strValue;
+      }
+      
+      // Si c'est un nombre, traiter comme une heure Excel
       let hours = 0;
       let minutes = 0;
       
@@ -475,7 +532,7 @@ Hurghada Dream`;
         hours = Math.floor(totalSeconds / 3600);
         const remainingSeconds = totalSeconds % 3600;
         minutes = Math.floor(remainingSeconds / 60);
-      } else if (numValue >= 1) {
+      } else if (numValue >= 1 && numValue < 1000000) {
         // C'est une date+heure combinée, extraire seulement la partie heure
         const datePart = Math.floor(numValue);
         const timePart = numValue - datePart;
@@ -483,10 +540,21 @@ Hurghada Dream`;
         hours = Math.floor(totalSeconds / 3600);
         const remainingSeconds = totalSeconds % 3600;
         minutes = Math.floor(remainingSeconds / 60);
+      } else {
+        // Peut-être un nombre représentant l'heure directement (ex: 830 pour 8h30)
+        if (numValue >= 0 && numValue < 2400) {
+          hours = Math.floor(numValue / 100);
+          minutes = numValue % 100;
+        }
       }
 
       // Formater l'heure en HH:MM
+      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
       return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+      }
+      
+      // Si l'heure n'est pas valide, retourner la valeur originale
+      return String(value);
     }
 
     // Si c'est un nombre qui pourrait être une date (pas de colonne spécifiée)
@@ -734,7 +802,7 @@ Hurghada Dream`;
 
           // Valider le numéro de téléphone
           const phoneValidation = phone ? validatePhoneNumber(phone) : { valid: false, error: "Numéro manquant" };
-          
+
           return {
             id: `row-${index}`,
             invoiceN: String(invoiceN || ""),
@@ -1069,71 +1137,98 @@ Hurghada Dream`;
     console.log(`📱 Changement de l'URL WhatsApp pour ${phone}...`);
     console.log(`📱 URL: ${whatsappUrl.substring(0, 50)}...`);
     
-    // IMPORTANT: Utiliser TOUJOURS le même nom de fenêtre pour que le navigateur réutilise la même fenêtre
-    // Ne jamais ouvrir une nouvelle fenêtre, toujours réutiliser la même
-    const windowName = "whatsapp_auto_send";
-    
+    // IMPORTANT: Ne jamais ouvrir une nouvelle fenêtre, toujours réutiliser la même
     // Vérifier si la fenêtre existe déjà
-    if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
-      console.log("🔄 Fenêtre WhatsApp existe déjà, changement de l'URL...");
+    if (whatsappWindowRef.current) {
       try {
-        // Essayer de changer l'URL de la fenêtre existante
-        whatsappWindowRef.current.location.href = whatsappUrl;
-        whatsappWindowRef.current.focus();
-        console.log("✅ URL changée dans la fenêtre existante");
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        return whatsappWindowRef.current;
-      } catch (crossOriginError) {
-        // Si on ne peut pas changer l'URL (cross-origin), réutiliser avec window.open()
-        console.log("⚠️ Impossible de changer l'URL directement (cross-origin), réutilisation avec window.open()...");
-        const reusedWindow = window.open(whatsappUrl, windowName);
-        if (reusedWindow) {
-          whatsappWindowRef.current = reusedWindow;
-          console.log("✅ Fenêtre réutilisée avec window.open()");
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          return reusedWindow;
-        }
-      }
-    }
-    
-    // Si la fenêtre n'existe pas ou est fermée, ouvrir/réutiliser avec window.open()
-    // Le nom de fenêtre fixe garantit que le navigateur réutilisera la même fenêtre
-    console.log("📂 Ouverture/réutilisation de la fenêtre WhatsApp avec le nom fixe...");
-    
-    // Attendre un peu avant d'ouvrir pour éviter les conflits
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    
-    const newWindow = window.open(whatsappUrl, windowName);
-    
-    if (newWindow) {
-      console.log(`✅ Fenêtre WhatsApp ouverte/réutilisée avec succès`);
-      whatsappWindowRef.current = newWindow;
-      
-      // Attendre un peu pour que la fenêtre se charge
-      console.log("⏳ Attente de 1 seconde pour que la fenêtre se charge...");
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Vérifier si la fenêtre est fermée
-      try {
-        if (newWindow.closed) {
-          console.warn("⚠️ La fenêtre WhatsApp semble avoir été fermée après l'ouverture");
-          console.warn("⚠️ Mais on garde la référence pour la prochaine fois");
+        // Vérifier si la fenêtre est toujours ouverte
+        const isClosed = whatsappWindowRef.current.closed;
+        
+        if (!isClosed) {
+          console.log("🔄 Fenêtre WhatsApp existe déjà, changement de l'URL...");
+          try {
+            // Essayer de changer l'URL de la fenêtre existante
+            whatsappWindowRef.current.location.href = whatsappUrl;
+            whatsappWindowRef.current.focus();
+            console.log("✅ URL changée dans la fenêtre existante (même page)");
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            return whatsappWindowRef.current;
+          } catch (crossOriginError) {
+            // Si on ne peut pas changer l'URL (cross-origin), c'est normal avec WhatsApp Web
+            // WhatsApp Web bloque les changements d'URL depuis d'autres domaines pour des raisons de sécurité
+            // On ne peut pas changer automatiquement la conversation, mais on peut réutiliser la même fenêtre
+            console.log("⚠️ Impossible de changer l'URL directement (cross-origin WhatsApp)");
+            console.log("ℹ️ La fenêtre WhatsApp reste ouverte - l'utilisateur devra changer manuellement la conversation");
+            console.log(`ℹ️ URL à utiliser: ${whatsappUrl.substring(0, 80)}...`);
+            
+            // Ne pas ouvrir une nouvelle fenêtre, juste réutiliser celle qui existe
+            // L'utilisateur devra copier-coller l'URL ou changer manuellement la conversation
+            whatsappWindowRef.current.focus();
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            return whatsappWindowRef.current;
+          }
         } else {
-          console.log("✅ Fenêtre WhatsApp vérifiée et ouverte correctement");
+          console.log("⚠️ La fenêtre précédente a été fermée, ouverture d'une nouvelle fenêtre...");
+          // Si la fenêtre a été fermée, on doit en ouvrir une nouvelle
+          // Mais on utilisera toujours le même nom pour que le navigateur réutilise si possible
+          const windowName = "whatsapp_auto_send";
+          const newWindow = window.open(whatsappUrl, windowName);
+          if (newWindow) {
+            whatsappWindowRef.current = newWindow;
+            console.log("✅ Nouvelle fenêtre WhatsApp ouverte");
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            return newWindow;
+          }
         }
       } catch (error) {
-        console.error("❌ Erreur lors de la vérification de la fenêtre:", error);
+        console.error("❌ Erreur lors de la réutilisation de la fenêtre:", error);
+        // En cas d'erreur, essayer d'ouvrir une nouvelle fenêtre
+        const windowName = "whatsapp_auto_send";
+        const newWindow = window.open(whatsappUrl, windowName);
+        if (newWindow) {
+          whatsappWindowRef.current = newWindow;
+          console.log("✅ Fenêtre WhatsApp ouverte après erreur");
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          return newWindow;
+        }
       }
-      
-      return newWindow;
     } else {
-      console.error("❌ window.open() a retourné null - Impossible d'ouvrir la fenêtre WhatsApp");
-      console.error("❌ Le navigateur bloque probablement les popups automatiques");
-      console.error("❌ IMPORTANT: Vous devez autoriser les popups pour ce site");
-      console.error("❌ Instructions: Cliquez sur l'icône de cadenas dans la barre d'adresse → Autoriser les popups");
-      whatsappWindowRef.current = null;
-      return null;
+      // Si aucune fenêtre n'existe encore, ouvrir la première
+      console.log("📂 Ouverture de la première fenêtre WhatsApp...");
+      const windowName = "whatsapp_auto_send";
+      const newWindow = window.open(whatsappUrl, windowName);
+      
+      if (newWindow) {
+        console.log(`✅ Fenêtre WhatsApp ouverte avec succès`);
+        whatsappWindowRef.current = newWindow;
+        
+        // Attendre un peu pour que la fenêtre se charge
+        console.log("⏳ Attente de 1 seconde pour que la fenêtre se charge...");
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        
+        // Vérifier si la fenêtre est fermée
+        try {
+          if (newWindow.closed) {
+            console.warn("⚠️ La fenêtre WhatsApp semble avoir été fermée après l'ouverture");
+          } else {
+            console.log("✅ Fenêtre WhatsApp vérifiée et ouverte correctement");
+          }
+        } catch (error) {
+          console.error("❌ Erreur lors de la vérification de la fenêtre:", error);
+        }
+        
+        return newWindow;
+      } else {
+        console.error("❌ window.open() a retourné null - Impossible d'ouvrir la fenêtre WhatsApp");
+        console.error("❌ Le navigateur bloque probablement les popups automatiques");
+        console.error("❌ IMPORTANT: Vous devez autoriser les popups pour ce site");
+        console.error("❌ Instructions: Cliquez sur l'icône de cadenas dans la barre d'adresse → Autoriser les popups");
+        whatsappWindowRef.current = null;
+        return null;
+      }
     }
+    
+    return null;
   };
 
   // Envoyer un message via WhatsApp Web automatiquement
@@ -1390,6 +1485,125 @@ Hurghada Dream`;
 
     toast.warning("Envoi automatique arrêté.");
   };
+  
+  // Fonction pour gérer l'édition d'une cellule
+  const handleCellEdit = (rowId, field, value) => {
+    setExcelData((prev) =>
+      prev.map((row) => {
+        if (row.id === rowId) {
+          const updatedRow = { ...row, [field]: value };
+          
+          // Si on modifie le téléphone, revalider
+          if (field === "phone") {
+            const phoneValidation = value ? validatePhoneNumber(value) : { valid: false, error: "Numéro manquant" };
+            updatedRow.phoneValid = phoneValidation.valid;
+            updatedRow.phoneError = phoneValidation.error;
+          }
+          
+          // Si on modifie le nom, extraire le téléphone et le nom
+          if (field === "name") {
+            const nameStr = String(value || "");
+            const phone = extractPhoneFromName(nameStr);
+            const clientName = extractNameFromField(nameStr);
+            updatedRow.name = clientName || "Client";
+            updatedRow.phone = phone || updatedRow.phone;
+            if (updatedRow.phone) {
+              const phoneValidation = validatePhoneNumber(updatedRow.phone);
+              updatedRow.phoneValid = phoneValidation.valid;
+              updatedRow.phoneError = phoneValidation.error;
+            }
+          }
+          
+          return updatedRow;
+        }
+        return row;
+      })
+    );
+  };
+  
+  // Fonction pour sauvegarder une ligne modifiée en base de données
+  const handleSaveRowToDatabase = async (row) => {
+    if (!row.phone || !row.phoneValid) {
+      toast.warning("Veuillez d'abord corriger le numéro de téléphone avant de sauvegarder.");
+      return;
+    }
+    
+    try {
+      // Chercher si un devis existe déjà avec ce numéro de téléphone
+      const { data: existingQuotes, error: searchError } = await supabase
+        .from("quotes")
+        .select("*")
+        .eq("site_key", SITE_KEY)
+        .eq("client_phone", row.phone)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      
+      if (searchError) {
+        console.error("❌ Erreur lors de la recherche du devis:", searchError);
+        toast.error("Erreur lors de la recherche du devis existant.");
+        return;
+      }
+      
+      // Créer ou mettre à jour le devis
+      const quoteData = {
+        site_key: SITE_KEY,
+        client_name: row.name || "",
+        client_phone: row.phone || "",
+        client_hotel: row.hotel || "",
+        client_room: row.roomNo || "",
+        client_neighborhood: "",
+        notes: row.comment || "",
+        total: 0,
+        currency: "EUR",
+        items: JSON.stringify([
+          {
+            activityName: row.trip || "",
+            date: row.date || "",
+            adults: row.adults || 0,
+            children: row.children || 0,
+            babies: row.infants || 0,
+            ticketNumber: "",
+            paymentMethod: "",
+          },
+        ]),
+        created_by_name: user?.name || "",
+      };
+      
+      if (existingQuotes && existingQuotes.length > 0) {
+        // Mettre à jour le devis existant
+        const { error: updateError } = await supabase
+          .from("quotes")
+          .update(quoteData)
+          .eq("id", existingQuotes[0].id);
+        
+        if (updateError) {
+          console.error("❌ Erreur lors de la mise à jour du devis:", updateError);
+          toast.error("Erreur lors de la mise à jour du devis.");
+          return;
+        }
+        
+        toast.success("Devis mis à jour dans la base de données !");
+      } else {
+        // Créer un nouveau devis
+        const { data: newQuote, error: insertError } = await supabase
+          .from("quotes")
+          .insert(quoteData)
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error("❌ Erreur lors de la création du devis:", insertError);
+          toast.error("Erreur lors de la création du devis.");
+          return;
+        }
+        
+        toast.success("Devis créé et sauvegardé dans la base de données !");
+      }
+    } catch (error) {
+      console.error("❌ Erreur lors de la sauvegarde:", error);
+      toast.error("Erreur lors de la sauvegarde en base de données.");
+    }
+  };
 
   // Nettoyer lors du démontage du composant
   useEffect(() => {
@@ -1618,6 +1832,7 @@ Hurghada Dream`;
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Trip</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Heure</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase">Marina</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase">Actions</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase">Statut</th>
                 </tr>
               </thead>
@@ -1631,9 +1846,69 @@ Hurghada Dream`;
                       !row.phoneValid ? "bg-red-50/50 border-l-4 border-l-red-500" : ""
                     }`}
                   >
-                    <td className="px-4 py-2 text-xs text-slate-700">{row.invoiceN}</td>
-                    <td className="px-4 py-2 text-xs text-slate-700">{row.date}</td>
-                    <td className="px-4 py-2 text-xs font-medium text-slate-900">{row.name}</td>
+                    <td className="px-4 py-2 text-xs text-slate-700">
+                      {editingCell?.rowId === row.id && editingCell?.field === "invoiceN" ? (
+                        <TextInput
+                          value={row.invoiceN}
+                          onChange={(e) => handleCellEdit(row.id, "invoiceN", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "invoiceN" })}
+                        >
+                          {row.invoiceN}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-700">
+                      {editingCell?.rowId === row.id && editingCell?.field === "date" ? (
+                        <TextInput
+                          value={row.date}
+                          onChange={(e) => handleCellEdit(row.id, "date", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "date" })}
+                        >
+                          {row.date}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs font-medium text-slate-900">
+                      {editingCell?.rowId === row.id && editingCell?.field === "name" ? (
+                        <TextInput
+                          value={row.name}
+                          onChange={(e) => handleCellEdit(row.id, "name", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "name" })}
+                        >
+                          {row.name}
+                        </span>
+                      )}
+                    </td>
                     <td className={`px-4 py-2 text-xs ${
                       !row.phoneValid 
                         ? "text-red-600 font-semibold" 
@@ -1641,23 +1916,121 @@ Hurghada Dream`;
                           ? "text-blue-600 font-medium" 
                           : "text-amber-600"
                     }`}>
-                      {row.phone ? (
-                        <>
-                          <span>{row.phone}</span>
-                          {!row.phoneValid && row.phoneError && (
-                            <span className="block text-[10px] text-red-500 mt-1" title={row.phoneError}>
-                              ⚠️ {row.phoneError}
-                            </span>
-                          )}
-                        </>
+                      {editingCell?.rowId === row.id && editingCell?.field === "phone" ? (
+                        <TextInput
+                          value={row.phone}
+                          onChange={(e) => handleCellEdit(row.id, "phone", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
                       ) : (
-                        <span>⚠️ Non trouvé</span>
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "phone" })}
+                        >
+                      {row.phone ? (
+                            <>
+                              <span>{row.phone}</span>
+                              {!row.phoneValid && row.phoneError && (
+                                <span className="block text-[10px] text-red-500 mt-1" title={row.phoneError}>
+                                  ⚠️ {row.phoneError}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span>⚠️ Non trouvé</span>
+                          )}
+                        </span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-xs text-slate-700">{row.hotel}</td>
-                    <td className="px-4 py-2 text-xs text-slate-700">{row.roomNo}</td>
-                    <td className="px-4 py-2 text-xs text-slate-700">{row.trip}</td>
-                    <td className="px-4 py-2 text-xs font-semibold text-slate-900">{row.time}</td>
+                    <td className="px-4 py-2 text-xs text-slate-700">
+                      {editingCell?.rowId === row.id && editingCell?.field === "hotel" ? (
+                        <TextInput
+                          value={row.hotel}
+                          onChange={(e) => handleCellEdit(row.id, "hotel", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "hotel" })}
+                        >
+                          {row.hotel}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-700">
+                      {editingCell?.rowId === row.id && editingCell?.field === "roomNo" ? (
+                        <TextInput
+                          value={row.roomNo}
+                          onChange={(e) => handleCellEdit(row.id, "roomNo", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "roomNo" })}
+                        >
+                          {row.roomNo}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-700">
+                      {editingCell?.rowId === row.id && editingCell?.field === "trip" ? (
+                        <TextInput
+                          value={row.trip}
+                          onChange={(e) => handleCellEdit(row.id, "trip", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "trip" })}
+                        >
+                          {row.trip}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs font-semibold text-slate-900">
+                      {editingCell?.rowId === row.id && editingCell?.field === "time" ? (
+                        <TextInput
+                          value={row.time}
+                          onChange={(e) => handleCellEdit(row.id, "time", e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setEditingCell(null);
+                          }}
+                          className="w-full px-2 py-1 text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded"
+                          onClick={() => setEditingCell({ rowId: row.id, field: "time" })}
+                        >
+                          {row.time}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-2 text-center">
                       <label className="flex items-center justify-center cursor-pointer">
                         <input
@@ -1668,6 +2041,15 @@ Hurghada Dream`;
                           title="Bateau garé à la marina de cet hôtel"
                         />
                       </label>
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <button
+                        onClick={() => handleSaveRowToDatabase(row)}
+                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        title="Sauvegarder en base de données"
+                      >
+                        💾 Sauvegarder
+                      </button>
                     </td>
                     <td className="px-4 py-2 text-center">
                       {row.messageSent ? (
