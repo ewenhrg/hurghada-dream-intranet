@@ -90,7 +90,7 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
   // Sinon, utiliser le template par défaut
   const parts = [];
 
-  parts.push(`Bonjour ${data.name || "Client"},");
+  parts.push(`Bonjour ${data.name || "Client"},`);
   parts.push("");
   parts.push(`Votre pick-up pour ${data.trip || "l'activité"} est prévu le ${data.date || "la date"} à ${data.time || "l'heure"}.`);
 
