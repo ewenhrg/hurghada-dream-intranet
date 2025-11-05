@@ -452,8 +452,11 @@ Hurghada Dream`;
       const date = new Date(excelEpoch.getTime() + daysSince1900 * 24 * 60 * 60 * 1000);
       
       // Formater la date en format français
+      // IMPORTANT: Ajouter 1 jour car les messages sont pour le lendemain
       if (!isNaN(date.getTime())) {
-        return date.toLocaleDateString("fr-FR", {
+        const dateForMessage = new Date(date);
+        dateForMessage.setDate(dateForMessage.getDate() + 1); // Ajouter 1 jour
+        return dateForMessage.toLocaleDateString("fr-FR", {
           day: "2-digit",
           month: "2-digit",
           year: "numeric"
@@ -497,8 +500,11 @@ Hurghada Dream`;
       
       // Si la date est valide et raisonnable (entre 1900 et 2100), c'est probablement une date
       // Mais aussi vérifier que ce n'est pas un nombre trop petit (comme un numéro de chambre)
+      // IMPORTANT: Ajouter 1 jour car les messages sont pour le lendemain
       if (!isNaN(date.getTime()) && date.getFullYear() >= 1900 && date.getFullYear() <= 2100 && numValue > 1000) {
-        return date.toLocaleDateString("fr-FR", {
+        const dateForMessage = new Date(date);
+        dateForMessage.setDate(dateForMessage.getDate() + 1); // Ajouter 1 jour
+        return dateForMessage.toLocaleDateString("fr-FR", {
           day: "2-digit",
           month: "2-digit",
           year: "numeric"
@@ -688,7 +694,30 @@ Hurghada Dream`;
           const pax = findColumn(row, ["Pax", "pax", "Adults", "adults", "Adultes", "adultes"]) || 0;
           const ch = findColumn(row, ["Ch", "ch", "Children", "children", "Enfants", "enfants"]) || 0;
           const inf = findColumn(row, ["inf", "Inf", "Infants", "infants", "Bébés", "bébés", "Babies", "babies"]) || 0;
-          const trip = findColumn(row, ["Trip", "trip", "TRIP", "Activity", "activity", "ACTIVITY", "Activité", "activité", "ACTIVITÉ"]);
+          
+          // Chercher Trip avec plus de flexibilité (insensible à la casse, avec espaces, etc.)
+          // Essayer d'abord avec les noms exacts, puis avec des variations
+          let trip = findColumn(row, ["Trip", "trip", "TRIP", "Activity", "activity", "ACTIVITY", "Activité", "activité", "ACTIVITÉ"]);
+          
+          // Si pas trouvé, chercher dans toutes les colonnes avec une recherche partielle
+          if (!trip || trip.trim() === "") {
+            const allKeys = Object.keys(row);
+            const tripKey = allKeys.find(key => {
+              const keyLower = String(key || "").trim().toLowerCase();
+              // Chercher des variations de "trip" ou "activité"
+              return keyLower.includes("trip") || 
+                     keyLower.includes("activit") || 
+                     keyLower.includes("activity") ||
+                     keyLower === "trip" ||
+                     keyLower === "activité" ||
+                     keyLower === "activity";
+            });
+            if (tripKey) {
+              trip = row[tripKey];
+              console.log(`🔍 Trip trouvé via recherche partielle: colonne "${tripKey}" avec valeur "${trip}"`);
+            }
+          }
+          
           // Lire l'heure depuis "time" ou "Comment" (priorité à "time")
           const timeColumn = findColumn(row, ["time", "Time", "TIME", "heure", "Heure", "HEURE", "pickup", "Pickup", "PICKUP"]);
           const commentColumn = findColumn(row, ["Comment", "comment", "COMMENT", "Commentaire", "commentaire"]);
@@ -1037,33 +1066,47 @@ Hurghada Dream`;
     // Créer l'URL WhatsApp
     const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
     
-    console.log(`📱 Ouverture de WhatsApp Web pour ${phone}...`);
+    console.log(`📱 Changement de l'URL WhatsApp pour ${phone}...`);
     console.log(`📱 URL: ${whatsappUrl.substring(0, 50)}...`);
     
-    // Essayer de réutiliser la fenêtre précédente si elle existe
-    console.log("⏳ Tentative de réutilisation de la fenêtre précédente...");
-    const reusedWindow = await handlePreviousWindow(whatsappUrl);
+    // IMPORTANT: Utiliser TOUJOURS le même nom de fenêtre pour que le navigateur réutilise la même fenêtre
+    // Ne jamais ouvrir une nouvelle fenêtre, toujours réutiliser la même
+    const windowName = "whatsapp_auto_send";
     
-    if (reusedWindow) {
-      console.log("✅ Fenêtre réutilisée avec succès");
-      return reusedWindow;
+    // Vérifier si la fenêtre existe déjà
+    if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
+      console.log("🔄 Fenêtre WhatsApp existe déjà, changement de l'URL...");
+      try {
+        // Essayer de changer l'URL de la fenêtre existante
+        whatsappWindowRef.current.location.href = whatsappUrl;
+        whatsappWindowRef.current.focus();
+        console.log("✅ URL changée dans la fenêtre existante");
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        return whatsappWindowRef.current;
+      } catch (crossOriginError) {
+        // Si on ne peut pas changer l'URL (cross-origin), réutiliser avec window.open()
+        console.log("⚠️ Impossible de changer l'URL directement (cross-origin), réutilisation avec window.open()...");
+        const reusedWindow = window.open(whatsappUrl, windowName);
+        if (reusedWindow) {
+          whatsappWindowRef.current = reusedWindow;
+          console.log("✅ Fenêtre réutilisée avec window.open()");
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return reusedWindow;
+        }
+      }
     }
     
-    // Si on ne peut pas réutiliser, ouvrir/réutiliser la fenêtre avec un nom fixe
-    console.log("📂 Ouverture/réutilisation de la fenêtre WhatsApp...");
+    // Si la fenêtre n'existe pas ou est fermée, ouvrir/réutiliser avec window.open()
+    // Le nom de fenêtre fixe garantit que le navigateur réutilisera la même fenêtre
+    console.log("📂 Ouverture/réutilisation de la fenêtre WhatsApp avec le nom fixe...");
     
-    // Attendre un peu avant d'ouvrir la nouvelle fenêtre pour éviter les conflits
+    // Attendre un peu avant d'ouvrir pour éviter les conflits
     await new Promise((resolve) => setTimeout(resolve, 500));
     
-    // IMPORTANT: Utiliser TOUJOURS le même nom de fenêtre pour que le navigateur réutilise la même fenêtre
-    // Même si la fenêtre précédente est fermée, window.open() avec le même nom devrait la réouvrir
-    const windowName = "whatsapp_auto_send";
-    console.log(`📂 Utilisation du nom de fenêtre: "${windowName}"`);
-    
-    const newWindow = window.open(whatsappUrl, windowName, "_blank");
+    const newWindow = window.open(whatsappUrl, windowName);
     
     if (newWindow) {
-      console.log(`✅ window.open() a retourné une fenêtre`);
+      console.log(`✅ Fenêtre WhatsApp ouverte/réutilisée avec succès`);
       whatsappWindowRef.current = newWindow;
       
       // Attendre un peu pour que la fenêtre se charge
@@ -1098,11 +1141,12 @@ Hurghada Dream`;
     console.log(`📨 Envoi du message ${index + 1}/${total} pour ${data.name} (${data.phone})`);
     const message = generateMessage(data);
     
-    // IMPORTANT: Attendre 10 secondes minimum entre chaque message pour éviter le bannissement WhatsApp
+    // IMPORTANT: Attendre 15 secondes minimum entre chaque message pour éviter le bannissement WhatsApp
     // C'est le délai minimum recommandé par WhatsApp pour éviter les restrictions
-    const MIN_DELAY_BETWEEN_MESSAGES = 10000; // 10 secondes
+    // Augmenté à 15 secondes pour les connexions WiFi lentes
+    const MIN_DELAY_BETWEEN_MESSAGES = 15000; // 15 secondes
     // Délai supplémentaire pour la première ouverture de WhatsApp (pour laisser le temps à la page de charger)
-    const INITIAL_LOAD_DELAY = 5000; // 5 secondes supplémentaires pour le premier message
+    const INITIAL_LOAD_DELAY = 15000; // 15 secondes supplémentaires pour le premier message (WiFi lent)
     
     // Ouvrir WhatsApp Web (la fonction ferme déjà la fenêtre précédente)
     console.log(`⏳ Ouverture de WhatsApp Web...`);
@@ -1135,10 +1179,10 @@ Hurghada Dream`;
       { duration: MIN_DELAY_BETWEEN_MESSAGES }
     );
 
-    // Attendre 10 secondes minimum avant de passer au suivant
+    // Attendre 15 secondes minimum avant de passer au suivant
     // Pendant ce temps, l'utilisateur doit cliquer sur "Envoyer" dans WhatsApp Web
-    // Ce délai est CRITIQUE pour éviter le bannissement WhatsApp
-    console.log(`⏱️ Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes (minimum requis pour éviter le bannissement)...`);
+    // Ce délai est CRITIQUE pour éviter le bannissement WhatsApp et laisser le temps au WiFi lent
+    console.log(`⏱️ Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes (minimum requis pour éviter le bannissement et WiFi lent)...`);
     const startTime = Date.now();
     await new Promise((resolve) => setTimeout(resolve, MIN_DELAY_BETWEEN_MESSAGES));
     const elapsedTime = Date.now() - startTime;
@@ -1202,16 +1246,17 @@ Hurghada Dream`;
       `Le système va :\n` +
       `1. Ouvrir WhatsApp Web avec chaque numéro\n` +
       `2. Pré-remplir le message\n` +
-      `3. Attendre 10 secondes minimum entre chaque message (pour éviter le bannissement)\n` +
+      `3. Attendre 15 secondes minimum entre chaque message (pour éviter le bannissement et laisser le temps au WiFi lent)\n` +
       `4. Passer automatiquement au suivant\n\n` +
       `⚠️ IMPORTANT :\n` +
       `- Vous devez AUTORISER LES POPUPS dans votre navigateur pour que cela fonctionne\n` +
       `- Vous devrez être connecté à WhatsApp Web\n` +
       `- Vous devrez cliquer sur "Envoyer" pour chaque message dans la fenêtre WhatsApp\n` +
-      `- Le système attendra exactement 10 secondes entre chaque message (CRITIQUE pour éviter le bannissement)\n` +
+      `- Le système attendra exactement 15 secondes entre chaque message (CRITIQUE pour éviter le bannissement)\n` +
+      `- Le premier message attendra 15 secondes supplémentaires pour laisser WhatsApp charger (WiFi lent)\n` +
       `- Vous pouvez arrêter l'envoi automatique à tout moment avec le bouton "Arrêter"\n\n` +
       `🛡️ PROTECTION CONTRE LE BANNISSEMENT :\n` +
-      `- Délai minimum de 10 secondes entre chaque message (garanti)\n` +
+      `- Délai minimum de 15 secondes entre chaque message (garanti)\n` +
       `- Ne pas envoyer plus de 30 messages par heure (recommandé)\n\n` +
       `💡 ASTUCE : Gardez la fenêtre WhatsApp Web ouverte et cliquez rapidement sur "Envoyer" lorsque chaque message s'ouvre.\n\n` +
       `Voulez-vous continuer ?`
@@ -1302,9 +1347,9 @@ Hurghada Dream`;
 
       console.log(`✅ ========== FIN DU MESSAGE ${i + 1}/${validQueue.length} ==========\n`);
       
-      // NOTE: Le délai de 10 secondes est déjà inclus dans sendWhatsAppMessage
+      // NOTE: Le délai de 15 secondes est déjà inclus dans sendWhatsAppMessage
       // Pas besoin de pause supplémentaire pour éviter le bannissement
-      // Le délai de 10 secondes entre chaque message est respecté automatiquement
+      // Le délai de 15 secondes entre chaque message est respecté automatiquement
     }
 
     // Terminer l'envoi automatique
