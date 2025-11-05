@@ -499,59 +499,37 @@ export function SituationPage({ user }) {
     
     console.log(`📱 Ouverture de WhatsApp Web pour ${phone}...`);
     
-    // Réutiliser la même fenêtre si elle existe et n'est pas fermée
+    // Fermer la fenêtre précédente si elle existe pour éviter les conflits avec les service workers
     if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
       try {
-        console.log("🔄 Réutilisation de la fenêtre WhatsApp existante...");
-        // Vérifier si on peut accéder à la fenêtre (cross-origin restrictions)
-        try {
-          // Essayer de changer l'URL de la fenêtre existante
-          whatsappWindowRef.current.location.href = whatsappUrl;
-          // Focus sur la fenêtre
-          whatsappWindowRef.current.focus();
-          console.log(`✅ Fenêtre WhatsApp réutilisée avec succès`);
-          return Promise.resolve(whatsappWindowRef.current);
-        } catch (crossOriginError) {
-          // Si on ne peut pas accéder à la fenêtre (cross-origin), on doit en ouvrir une nouvelle
-          console.log("⚠️ Impossible d'accéder à la fenêtre (cross-origin). Fermeture et réouverture...");
-          try {
-            whatsappWindowRef.current.close();
-            // Attendre un peu avant de réouvrir
-            return new Promise((resolve) => {
-              setTimeout(() => {
-                const newWindow = window.open(whatsappUrl, "whatsapp_auto_send", "_blank");
-                if (newWindow) {
-                  console.log(`✅ Nouvelle fenêtre WhatsApp ouverte avec succès`);
-                  whatsappWindowRef.current = newWindow;
-                } else {
-                  console.error("❌ Impossible d'ouvrir la fenêtre WhatsApp. Les popups sont peut-être bloquées.");
-                }
-                resolve(newWindow);
-              }, 500);
-            });
-          } catch (e) {
-            console.error("❌ Erreur lors de la fermeture/réouverture:", e);
-          }
-        }
+        console.log("🔒 Fermeture de la fenêtre WhatsApp précédente...");
+        whatsappWindowRef.current.close();
+        // Attendre un peu pour que la fermeture soit effective
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            // Ouvrir une nouvelle fenêtre après fermeture de l'ancienne
+            const newWindow = window.open(whatsappUrl, "_blank");
+            if (newWindow) {
+              console.log(`✅ Nouvelle fenêtre WhatsApp ouverte avec succès`);
+              whatsappWindowRef.current = newWindow;
+            } else {
+              console.error("❌ Impossible d'ouvrir la fenêtre WhatsApp. Les popups sont peut-être bloquées.");
+            }
+            resolve(newWindow);
+          }, 1000); // Attendre 1 seconde pour que la fermeture soit bien effective
+        });
       } catch (error) {
-        console.log("⚠️ Erreur lors de la réutilisation de la fenêtre:", error);
-        // Si on ne peut pas réutiliser, essayer d'ouvrir une nouvelle fenêtre
-        try {
-          whatsappWindowRef.current = null;
-        } catch (e) {
-          // Ignorer
-        }
+        console.log("⚠️ Erreur lors de la fermeture de la fenêtre précédente:", error);
+        whatsappWindowRef.current = null;
       }
     }
     
     // Attendre un peu avant d'ouvrir la nouvelle fenêtre
     return new Promise((resolve) => {
       setTimeout(() => {
-        // Utiliser un nom fixe pour réutiliser la même fenêtre
-        const windowName = "whatsapp_auto_send";
-        
         // Ouvrir WhatsApp Web dans un nouvel onglet
-        const newWindow = window.open(whatsappUrl, windowName, "_blank");
+        // Utiliser "_blank" sans nom spécifique pour éviter les conflits avec les service workers
+        const newWindow = window.open(whatsappUrl, "_blank");
         
         if (newWindow) {
           console.log(`✅ Fenêtre WhatsApp ouverte avec succès`);
@@ -565,20 +543,7 @@ export function SituationPage({ user }) {
                 resolve(null);
                 return;
               }
-              // Attendre que la page se charge
-              setTimeout(() => {
-                try {
-                  // Injecter un script pour envoyer automatiquement le message
-                  // Note: Cela ne fonctionnera que si l'utilisateur est déjà connecté à WhatsApp Web
-                  // et si les restrictions de sécurité du navigateur le permettent
-                  newWindow.postMessage({
-                    type: "WHATSAPP_AUTO_SEND",
-                    message: message
-                  }, "*");
-                } catch (error) {
-                  console.log("⚠️ Impossible d'injecter le script automatiquement. L'utilisateur devra cliquer sur envoyer manuellement.");
-                }
-              }, 2000);
+              console.log("✅ Fenêtre WhatsApp vérifiée et ouverte");
             } catch (error) {
               console.error("❌ Erreur lors de la vérification de la fenêtre:", error);
             }
