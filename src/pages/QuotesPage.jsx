@@ -28,7 +28,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     extraAmount: "",
     slot: "",
     extraDolphin: false,
-    speedBoatExtra: "",
+    speedBoatExtra: [], // Array pour permettre plusieurs extras
     buggySimple: "",
     buggyFamily: "",
     yamaha250: "",
@@ -185,8 +185,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
           lineTotal += 20;
         }
 
-        // Extra Speed Boat (menu déroulant) : calcul basé sur adultes et enfants
-        if (it.speedBoatExtra) {
+        // Extra Speed Boat (plusieurs extras possibles) : calcul basé sur adultes et enfants
+        if (it.speedBoatExtra && Array.isArray(it.speedBoatExtra) && it.speedBoatExtra.length > 0) {
+          it.speedBoatExtra.forEach((extraId) => {
+            if (extraId) { // Ignorer les valeurs vides
+              const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === extraId);
+              if (selectedExtra) {
+                lineTotal += ad * selectedExtra.priceAdult;
+                lineTotal += ch * selectedExtra.priceChild;
+              }
+            }
+          });
+        }
+        // Compatibilité avec l'ancien format (string) si présent
+        else if (it.speedBoatExtra && typeof it.speedBoatExtra === "string" && it.speedBoatExtra !== "") {
           const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === it.speedBoatExtra);
           if (selectedExtra) {
             lineTotal += ad * selectedExtra.priceAdult;
@@ -410,7 +422,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         extraLabel: c.raw.extraLabel || "",
         extraAmount: Number(c.raw.extraAmount || 0),
         extraDolphin: c.raw.extraDolphin || false,
-        speedBoatExtra: c.raw.speedBoatExtra || "",
+        speedBoatExtra: Array.isArray(c.raw.speedBoatExtra) ? c.raw.speedBoatExtra : (c.raw.speedBoatExtra ? [c.raw.speedBoatExtra] : []),
         buggySimple: Number(c.raw.buggySimple || 0),
         buggyFamily: Number(c.raw.buggyFamily || 0),
         yamaha250: Number(c.raw.yamaha250 || 0),
@@ -694,21 +706,56 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                 </div>
               </div>
 
-              {/* extra - Menu déroulant pour Speed Boat, champs classiques pour les autres */}
+              {/* extra - Cases à cocher pour Speed Boat, champs classiques pour les autres */}
               {c.act && c.act.name.toLowerCase().includes("speed boat") ? (
                 <div>
-                  <p className="text-xs text-gray-500 mb-2">Extra</p>
-                  <select
-                    value={c.raw.speedBoatExtra || ""}
-                    onChange={(e) => setItem(idx, { speedBoatExtra: e.target.value })}
-                    className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
-                  >
-                    {SPEED_BOAT_EXTRAS.map((extra) => (
-                      <option key={extra.id} value={extra.id}>
-                        {extra.label} {extra.priceAdult > 0 && `(${extra.priceAdult}€/adt + ${extra.priceChild}€ enfant)`}
-                      </option>
-                    ))}
-                  </select>
+                  <p className="text-xs text-gray-500 mb-2">Extras (plusieurs sélections possibles)</p>
+                  <div className="space-y-2 border border-blue-200/50 rounded-xl p-3 bg-white">
+                    {SPEED_BOAT_EXTRAS.filter((extra) => extra.id !== "").map((extra) => {
+                      // Gérer la compatibilité avec l'ancien format (string) et le nouveau format (array)
+                      const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
+                        ? c.raw.speedBoatExtra 
+                        : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
+                          ? [c.raw.speedBoatExtra] 
+                          : []);
+                      const isChecked = currentExtras.includes(extra.id);
+                      
+                      return (
+                        <label key={extra.id} className="flex items-center gap-2 cursor-pointer hover:bg-blue-50/50 p-2 rounded-lg transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
+                                ? c.raw.speedBoatExtra 
+                                : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
+                                  ? [c.raw.speedBoatExtra] 
+                                  : []);
+                              
+                              if (e.target.checked) {
+                                // Ajouter l'extra s'il n'est pas déjà dans la liste
+                                if (!currentExtras.includes(extra.id)) {
+                                  setItem(idx, { speedBoatExtra: [...currentExtras, extra.id] });
+                                }
+                              } else {
+                                // Retirer l'extra de la liste
+                                setItem(idx, { speedBoatExtra: currentExtras.filter((id) => id !== extra.id) });
+                              }
+                            }}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-slate-700 flex-1">
+                            <span className="font-medium">{extra.label}</span>
+                            {extra.priceAdult > 0 && (
+                              <span className="text-xs text-slate-500 ml-2">
+                                ({extra.priceAdult}€/adt + {extra.priceChild}€ enfant)
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
                 <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">

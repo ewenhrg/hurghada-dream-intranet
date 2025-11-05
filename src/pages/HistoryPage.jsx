@@ -348,7 +348,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         extraLabel: item.extraLabel || "",
                         extraAmount: item.extraAmount || "",
                         extraDolphin: item.extraDolphin || false,
-                        speedBoatExtra: item.speedBoatExtra || "",
+                        speedBoatExtra: Array.isArray(item.speedBoatExtra) ? item.speedBoatExtra : (item.speedBoatExtra ? [item.speedBoatExtra] : []),
                         buggySimple: item.buggySimple !== undefined && item.buggySimple !== null ? item.buggySimple : 0,
                         buggyFamily: item.buggyFamily !== undefined && item.buggyFamily !== null ? item.buggyFamily : 0,
                         yamaha250: item.yamaha250 !== undefined && item.yamaha250 !== null ? item.yamaha250 : 0,
@@ -707,7 +707,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     extraAmount: "",
     slot: "",
     extraDolphin: false,
-    speedBoatExtra: "",
+    speedBoatExtra: [],
     buggySimple: "",
     buggyFamily: "",
     yamaha250: "",
@@ -758,13 +758,24 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           lineTotal += 20;
         }
 
-        // Extra Speed Boat (menu déroulant) : calcul basé sur adultes et enfants
+        // Extra Speed Boat (plusieurs extras possibles) : calcul basé sur adultes et enfants
         if (it.speedBoatExtra) {
-          const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === it.speedBoatExtra);
-          if (selectedExtra) {
-            lineTotal += ad * selectedExtra.priceAdult;
-            lineTotal += ch * selectedExtra.priceChild;
-          }
+          // Gérer le nouveau format (array) et l'ancien format (string) pour compatibilité
+          const extrasArray = Array.isArray(it.speedBoatExtra) 
+            ? it.speedBoatExtra 
+            : (typeof it.speedBoatExtra === "string" && it.speedBoatExtra !== "" 
+              ? [it.speedBoatExtra] 
+              : []);
+          
+          extrasArray.forEach((extraId) => {
+            if (extraId) { // Ignorer les valeurs vides
+              const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === extraId);
+              if (selectedExtra) {
+                lineTotal += ad * selectedExtra.priceAdult;
+                lineTotal += ch * selectedExtra.priceChild;
+              }
+            }
+          });
         }
       } else if (act && isBuggyActivity(act.name)) {
         // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy simple et family
@@ -869,7 +880,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         extraLabel: c.raw.extraLabel || "",
         extraAmount: Number(c.raw.extraAmount || 0),
         extraDolphin: c.raw.extraDolphin || false,
-        speedBoatExtra: c.raw.speedBoatExtra || "",
+        speedBoatExtra: Array.isArray(c.raw.speedBoatExtra) ? c.raw.speedBoatExtra : (c.raw.speedBoatExtra ? [c.raw.speedBoatExtra] : []),
         buggySimple: Number(c.raw.buggySimple || 0),
         buggyFamily: Number(c.raw.buggyFamily || 0),
         yamaha250: Number(c.raw.yamaha250 || 0),
@@ -1049,18 +1060,53 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   )}
                   {c.act && c.act.name.toLowerCase().includes("speed boat") ? (
                     <div className="md:col-span-2">
-                      <p className="text-xs text-gray-500 mb-1">Extra</p>
-                      <select
-                        value={c.raw.speedBoatExtra || ""}
-                        onChange={(e) => setItem(idx, { speedBoatExtra: e.target.value })}
-                        className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
-                      >
-                        {SPEED_BOAT_EXTRAS.map((extra) => (
-                          <option key={extra.id} value={extra.id}>
-                            {extra.label} {extra.priceAdult > 0 && `(${extra.priceAdult}€/adt + ${extra.priceChild}€ enfant)`}
-                          </option>
-                        ))}
-                      </select>
+                      <p className="text-xs text-gray-500 mb-1">Extras (plusieurs sélections possibles)</p>
+                      <div className="space-y-2 border border-blue-200/50 rounded-xl p-3 bg-white">
+                        {SPEED_BOAT_EXTRAS.filter((extra) => extra.id !== "").map((extra) => {
+                          // Gérer la compatibilité avec l'ancien format (string) et le nouveau format (array)
+                          const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
+                            ? c.raw.speedBoatExtra 
+                            : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
+                              ? [c.raw.speedBoatExtra] 
+                              : []);
+                          const isChecked = currentExtras.includes(extra.id);
+                          
+                          return (
+                            <label key={extra.id} className="flex items-center gap-2 cursor-pointer hover:bg-blue-50/50 p-2 rounded-lg transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
+                                    ? c.raw.speedBoatExtra 
+                                    : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
+                                      ? [c.raw.speedBoatExtra] 
+                                      : []);
+                                  
+                                  if (e.target.checked) {
+                                    // Ajouter l'extra s'il n'est pas déjà dans la liste
+                                    if (!currentExtras.includes(extra.id)) {
+                                      setItem(idx, { speedBoatExtra: [...currentExtras, extra.id] });
+                                    }
+                                  } else {
+                                    // Retirer l'extra de la liste
+                                    setItem(idx, { speedBoatExtra: currentExtras.filter((id) => id !== extra.id) });
+                                  }
+                                }}
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-slate-700 flex-1">
+                                <span className="font-medium">{extra.label}</span>
+                                {extra.priceAdult > 0 && (
+                                  <span className="text-xs text-slate-500 ml-2">
+                                    ({extra.priceAdult}€/adt + {extra.priceChild}€ enfant)
+                                  </span>
+                                )}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
                   ) : (
                     <>

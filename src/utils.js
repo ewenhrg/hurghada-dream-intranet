@@ -139,12 +139,23 @@ export function generateQuoteHTML(quote) {
         extrasInfo.push("🐬 Extra dauphin (+20€)");
       }
       
-      // Extra Speed Boat (menu déroulant)
+      // Extra Speed Boat (plusieurs extras possibles)
       if (item.speedBoatExtra) {
-        const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === item.speedBoatExtra);
-        if (selectedExtra && selectedExtra.id !== "") {
-          extrasInfo.push(`${selectedExtra.label} (+${selectedExtra.priceAdult}€/adt + ${selectedExtra.priceChild}€/enfant)`);
-        }
+        // Gérer le nouveau format (array) et l'ancien format (string) pour compatibilité
+        const extrasArray = Array.isArray(item.speedBoatExtra) 
+          ? item.speedBoatExtra 
+          : (typeof item.speedBoatExtra === "string" && item.speedBoatExtra !== "" 
+            ? [item.speedBoatExtra] 
+            : []);
+        
+        extrasArray.forEach((extraId) => {
+          if (extraId) { // Ignorer les valeurs vides
+            const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === extraId);
+            if (selectedExtra && selectedExtra.id !== "") {
+              extrasInfo.push(`${selectedExtra.label} (+${selectedExtra.priceAdult}€/adt + ${selectedExtra.priceChild}€/enfant)`);
+            }
+          }
+        });
       }
     }
     
