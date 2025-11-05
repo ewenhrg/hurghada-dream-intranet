@@ -639,7 +639,7 @@ Hurghada Dream`;
           // Normaliser le nom de colonne: enlever espaces, caractères spéciaux, mettre en minuscules
           const normalize = (str) => str?.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "";
           
-          // D'abord, chercher exactement (avec variations de casse et trim) - même si la valeur est vide
+          // D'abord, chercher exactement (avec variations de casse et trim)
           for (const name of possibleNames) {
             // Chercher exactement le nom (insensible à la casse, avec trim)
             const exactMatch = Object.keys(row).find(key => {
@@ -650,8 +650,11 @@ Hurghada Dream`;
             if (exactMatch) {
               const value = row[exactMatch];
               // Retourner la valeur même si elle est vide (string vide) car c'est la colonne correcte
+              // Convertir null/undefined en chaîne vide pour éviter les erreurs
               if (value !== undefined && value !== null) {
-                return value;
+                return String(value);
+              } else {
+                return ""; // Colonne trouvée mais valeur vide
               }
             }
           }
@@ -664,7 +667,9 @@ Hurghada Dream`;
               const value = row[key];
               // Retourner la valeur même si elle est vide
               if (value !== undefined && value !== null) {
-                return value;
+                return String(value);
+              } else {
+                return ""; // Colonne trouvée mais valeur vide
               }
             }
           }
@@ -683,7 +688,7 @@ Hurghada Dream`;
           const pax = findColumn(row, ["Pax", "pax", "Adults", "adults", "Adultes", "adultes"]) || 0;
           const ch = findColumn(row, ["Ch", "ch", "Children", "children", "Enfants", "enfants"]) || 0;
           const inf = findColumn(row, ["inf", "Inf", "Infants", "infants", "Bébés", "bébés", "Babies", "babies"]) || 0;
-          const trip = findColumn(row, ["Trip", "trip", "Activity", "activity", "Activité", "activité", "TRIP", "TRIP"]);
+          const trip = findColumn(row, ["Trip", "trip", "TRIP", "Activity", "activity", "ACTIVITY", "Activité", "activité", "ACTIVITÉ"]);
           // Lire l'heure depuis "time" ou "Comment" (priorité à "time")
           const timeColumn = findColumn(row, ["time", "Time", "TIME", "heure", "Heure", "HEURE", "pickup", "Pickup", "PICKUP"]);
           const commentColumn = findColumn(row, ["Comment", "comment", "COMMENT", "Commentaire", "commentaire"]);
@@ -714,8 +719,8 @@ Hurghada Dream`;
             adults: Number(pax) || 0,
             children: Number(ch) || 0,
             infants: Number(inf) || 0,
-            trip: String(trip || ""),
-            time: String(pickupTime || ""), // Utiliser la colonne K "Comment" comme heure de prise en charge
+            trip: String(trip || "").trim(),
+            time: String(pickupTime || "").trim(), // Utiliser la colonne "time" ou "Comment" comme heure de prise en charge
             comment: String(comment || ""),
             messageSent: false,
             messageSentAt: null,
@@ -752,6 +757,37 @@ Hurghada Dream`;
           setDetectedColumns(detectedColumns);
           console.log("📊 Colonnes détectées dans le fichier Excel:", detectedColumns);
           console.log("📋 Première ligne de données:", jsonDataNormalized[0]);
+          
+          // Debug pour Trip et time
+          const firstRow = jsonDataNormalized[0];
+          const tripColumn = Object.keys(firstRow).find(key => {
+            const keyLower = String(key || "").trim().toLowerCase();
+            return keyLower === "trip" || keyLower.includes("trip") || keyLower.includes("activit");
+          });
+          const timeColumn = Object.keys(firstRow).find(key => {
+            const keyLower = String(key || "").trim().toLowerCase();
+            return keyLower === "time" || keyLower === "heure" || keyLower.includes("time") || keyLower.includes("heure");
+          });
+          
+          if (tripColumn) {
+            console.log(`✅ Colonne Trip trouvée: "${tripColumn}" avec valeur: "${firstRow[tripColumn]}"`);
+          } else {
+            console.warn("⚠️ Colonne Trip non trouvée. Colonnes disponibles:", detectedColumns);
+          }
+          
+          if (timeColumn) {
+            console.log(`✅ Colonne time trouvée: "${timeColumn}" avec valeur: "${firstRow[timeColumn]}"`);
+          } else {
+            console.warn("⚠️ Colonne time non trouvée. Colonnes disponibles:", detectedColumns);
+          }
+          
+          // Debug pour les valeurs Trip détectées dans les premières lignes
+          if (filteredData.length > 0) {
+            console.log("📋 Exemple de valeurs Trip détectées dans les premières lignes:");
+            filteredData.slice(0, 3).forEach((row, idx) => {
+              console.log(`  Ligne ${idx + 1}: trip="${row.trip}" | time="${row.time}"`);
+            });
+          }
           
           // Avertir si aucune colonne valide n'est détectée
           if (detectedColumns.length === 0) {
