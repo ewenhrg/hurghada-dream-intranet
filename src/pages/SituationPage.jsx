@@ -19,6 +19,7 @@ export function SituationPage({ user, activities = [] }) {
   const messageQueueRef = useRef([]);
   const intervalRef = useRef(null);
   const isAutoSendingRef = useRef(false);
+  const isFirstMessageRef = useRef(true);
   
   // État pour la configuration des messages
   const [showConfigModal, setShowConfigModal] = useState(false);
@@ -638,10 +639,14 @@ Hurghada Dream`;
           // Normaliser le nom de colonne: enlever espaces, caractères spéciaux, mettre en minuscules
           const normalize = (str) => str?.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "";
           
-          // D'abord, chercher exactement (avec variations de casse) - même si la valeur est vide
+          // D'abord, chercher exactement (avec variations de casse et trim) - même si la valeur est vide
           for (const name of possibleNames) {
-            // Chercher exactement le nom (insensible à la casse)
-            const exactMatch = Object.keys(row).find(key => key.toLowerCase() === name.toLowerCase());
+            // Chercher exactement le nom (insensible à la casse, avec trim)
+            const exactMatch = Object.keys(row).find(key => {
+              const keyTrimmed = String(key || "").trim();
+              const nameTrimmed = String(name || "").trim();
+              return keyTrimmed.toLowerCase() === nameTrimmed.toLowerCase();
+            });
             if (exactMatch) {
               const value = row[exactMatch];
               // Retourner la valeur même si elle est vide (string vide) car c'est la colonne correcte
@@ -678,10 +683,12 @@ Hurghada Dream`;
           const pax = findColumn(row, ["Pax", "pax", "Adults", "adults", "Adultes", "adultes"]) || 0;
           const ch = findColumn(row, ["Ch", "ch", "Children", "children", "Enfants", "enfants"]) || 0;
           const inf = findColumn(row, ["inf", "Inf", "Infants", "infants", "Bébés", "bébés", "Babies", "babies"]) || 0;
-          const trip = findColumn(row, ["Trip", "trip", "Activity", "activity", "Activité", "activité"]);
-          // La colonne K "Comment" contient l'heure de prise en charge
-          const pickupTime = findColumn(row, ["Comment", "comment"]);
-          // Ignorer la colonne J "time" - on ne la lit pas
+          const trip = findColumn(row, ["Trip", "trip", "Activity", "activity", "Activité", "activité", "TRIP", "TRIP"]);
+          // Lire l'heure depuis "time" ou "Comment" (priorité à "time")
+          const timeColumn = findColumn(row, ["time", "Time", "TIME", "heure", "Heure", "HEURE", "pickup", "Pickup", "PICKUP"]);
+          const commentColumn = findColumn(row, ["Comment", "comment", "COMMENT", "Commentaire", "commentaire"]);
+          // Utiliser "time" si disponible, sinon "Comment"
+          const pickupTime = timeColumn || commentColumn;
           const comment = findColumn(row, ["Notes", "notes", "Commentaire", "commentaire"]);
 
           // Convertir les valeurs en chaînes pour éviter les erreurs
@@ -715,6 +722,25 @@ Hurghada Dream`;
           };
         });
 
+        // Filtrer les lignes vides (sans nom, sans téléphone, sans trip, sans date, etc.)
+        const filteredData = mappedData.filter((row) => {
+          // Une ligne est considérée comme vide si elle n'a pas de nom OU de téléphone OU de trip OU de date
+          const hasName = row.name && row.name.trim() !== "" && row.name !== "Client";
+          const hasPhone = row.phone && row.phone.trim() !== "";
+          const hasTrip = row.trip && row.trip.trim() !== "";
+          const hasDate = row.date && row.date.trim() !== "";
+          const hasInvoice = row.invoiceN && row.invoiceN.trim() !== "";
+          
+          // Garder la ligne si elle a au moins un nom ET (téléphone OU trip OU date OU invoice)
+          return hasName && (hasPhone || hasTrip || hasDate || hasInvoice);
+        });
+
+        // Afficher le nombre de lignes vides supprimées
+        const emptyRowsCount = mappedData.length - filteredData.length;
+        if (emptyRowsCount > 0) {
+          console.log(`📋 ${emptyRowsCount} ligne(s) vide(s) supprimée(s) automatiquement`);
+        }
+
         // Afficher un debug des colonnes trouvées
         if (jsonDataNormalized.length > 0 && jsonDataNormalized[0]) {
           const detectedColumns = Object.keys(jsonDataNormalized[0] || {}).filter(col => 
@@ -735,8 +761,8 @@ Hurghada Dream`;
           setDetectedColumns([]);
         }
 
-        // Vérifier les numéros de téléphone invalides
-        const invalidPhones = mappedData.filter(d => !d.phoneValid);
+        // Vérifier les numéros de téléphone invalides (seulement sur les lignes non vides)
+        const invalidPhones = filteredData.filter(d => !d.phoneValid);
         
         if (invalidPhones.length > 0) {
           const invalidCount = invalidPhones.length;
@@ -761,12 +787,13 @@ Hurghada Dream`;
           });
         }
         
-        setExcelData(mappedData);
+        setExcelData(filteredData);
         setShowPreview(false);
         setSendLog([]);
         
-        if (mappedData.length > 0) {
-          toast.success(`${mappedData.length} ligne(s) chargée(s) depuis le fichier Excel`);
+        if (filteredData.length > 0) {
+          const message = `${filteredData.length} ligne(s) chargée(s) depuis le fichier Excel${emptyRowsCount > 0 ? ` (${emptyRowsCount} ligne(s) vide(s) supprimée(s))` : ""}`;
+          toast.success(message);
         }
       } catch (error) {
         console.error("Erreur lors de la lecture du fichier Excel:", error);
@@ -1038,6 +1065,8 @@ Hurghada Dream`;
     // IMPORTANT: Attendre 10 secondes minimum entre chaque message pour éviter le bannissement WhatsApp
     // C'est le délai minimum recommandé par WhatsApp pour éviter les restrictions
     const MIN_DELAY_BETWEEN_MESSAGES = 10000; // 10 secondes
+    // Délai supplémentaire pour la première ouverture de WhatsApp (pour laisser le temps à la page de charger)
+    const INITIAL_LOAD_DELAY = 5000; // 5 secondes supplémentaires pour le premier message
     
     // Ouvrir WhatsApp Web (la fonction ferme déjà la fenêtre précédente)
     console.log(`⏳ Ouverture de WhatsApp Web...`);
@@ -1047,6 +1076,18 @@ Hurghada Dream`;
       console.error(`❌ Impossible d'ouvrir WhatsApp Web pour ${data.phone}`);
       toast.error("Impossible d'ouvrir WhatsApp Web. Vérifiez que les popups ne sont pas bloquées.");
       return false;
+    }
+
+    // Si c'est le premier message, attendre plus longtemps pour laisser le temps à WhatsApp de charger complètement
+    if (isFirstMessageRef.current) {
+      console.log(`⏳ Premier message détecté. Attente supplémentaire de ${INITIAL_LOAD_DELAY / 1000} secondes pour laisser le temps à WhatsApp de charger...`);
+      toast.info(
+        `📱 Premier message : Attente de ${INITIAL_LOAD_DELAY / 1000} secondes pour laisser WhatsApp charger complètement...`,
+        { duration: INITIAL_LOAD_DELAY }
+      );
+      await new Promise((resolve) => setTimeout(resolve, INITIAL_LOAD_DELAY));
+      isFirstMessageRef.current = false;
+      console.log(`✅ Délai initial terminé. WhatsApp devrait être chargé maintenant.`);
     }
 
     console.log(`✅ WhatsApp Web ouvert avec succès. Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes...`);
@@ -1148,6 +1189,8 @@ Hurghada Dream`;
     setRemainingCount(dataWithPhone.length);
     setSending(true);
     setSendLog([]);
+    // Réinitialiser le flag du premier message
+    isFirstMessageRef.current = true;
 
     // Démarrer l'envoi automatique
     startAutoSending(dataWithPhone);
