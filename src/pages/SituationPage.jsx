@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { PrimaryBtn, GhostBtn, Section } from "../components/ui";
 import { toast } from "../utils/toast.js";
@@ -10,6 +10,13 @@ export function SituationPage({ user }) {
   const [sending, setSending] = useState(false);
   const [sendLog, setSendLog] = useState([]);
   const [detectedColumns, setDetectedColumns] = useState([]);
+  const [autoSending, setAutoSending] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [remainingCount, setRemainingCount] = useState(0);
+  const whatsappWindowRef = useRef(null);
+  const messageQueueRef = useRef([]);
+  const intervalRef = useRef(null);
+  const isAutoSendingRef = useRef(false);
 
   // Extraire le numéro de téléphone depuis le champ "Name"
   const extractPhoneFromName = (nameField) => {
@@ -481,7 +488,253 @@ export function SituationPage({ user }) {
     setShowPreview(true);
   };
 
-  // Simuler l'envoi des messages (à remplacer par un vrai service SMS/WhatsApp)
+  // Ouvrir WhatsApp Web avec le numéro et le message pré-rempli
+  const openWhatsApp = (phone, message) => {
+    // Nettoyer le numéro de téléphone (enlever les espaces, tirets, etc.)
+    const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
+    // Encoder le message pour l'URL
+    const encodedMessage = encodeURIComponent(message);
+    // Créer l'URL WhatsApp
+    const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
+    
+    // Ouvrir WhatsApp Web dans un nouvel onglet
+    const newWindow = window.open(whatsappUrl, "_blank");
+    
+    if (newWindow) {
+      whatsappWindowRef.current = newWindow;
+      
+      // Attendre que la page se charge, puis injecter le script d'envoi automatique
+      setTimeout(() => {
+        try {
+          // Injecter un script pour envoyer automatiquement le message
+          // Note: Cela ne fonctionnera que si l'utilisateur est déjà connecté à WhatsApp Web
+          // et si les restrictions de sécurité du navigateur le permettent
+          newWindow.postMessage({
+            type: "WHATSAPP_AUTO_SEND",
+            message: message
+          }, "*");
+        } catch (error) {
+          console.log("Impossible d'injecter le script automatiquement. L'utilisateur devra cliquer sur envoyer manuellement.");
+        }
+      }, 2000);
+    }
+    
+    return newWindow;
+  };
+
+  // Envoyer un message via WhatsApp Web automatiquement
+  const sendWhatsAppMessage = async (data, index, total) => {
+    const message = generateMessage(data);
+    
+    // Ouvrir WhatsApp Web
+    const whatsappWindow = openWhatsApp(data.phone, message);
+    
+    if (!whatsappWindow) {
+      toast.error("Impossible d'ouvrir WhatsApp Web. Vérifiez que les popups ne sont pas bloquées.");
+      return false;
+    }
+
+    // Afficher une notification pour guider l'utilisateur
+    toast.info(
+      `📱 WhatsApp Web ouvert pour ${data.name} (${data.phone}). ` +
+      `Cliquez sur "Envoyer" dans la fenêtre WhatsApp, puis attendez 10 secondes...`,
+      { duration: 5000 }
+    );
+
+    // Attendre 10 secondes avant de passer au suivant
+    // Pendant ce temps, l'utilisateur doit cliquer sur "Envoyer" dans WhatsApp Web
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+
+    // Marquer comme envoyé
+    const logEntry = {
+      id: data.id,
+      name: data.name,
+      phone: data.phone,
+      trip: data.trip,
+      time: data.time,
+      status: "success",
+      message: message,
+      sentAt: new Date().toISOString(),
+    };
+
+    setSendLog((prev) => [...prev, logEntry]);
+    
+    // Mettre à jour le statut dans excelData
+    setExcelData((prev) =>
+      prev.map((item) =>
+        item.id === data.id
+          ? { ...item, messageSent: true, messageSentAt: new Date().toISOString() }
+          : item
+      )
+    );
+
+    // Essayer de fermer la fenêtre WhatsApp après l'envoi
+    // Note: Certains navigateurs peuvent bloquer la fermeture automatique
+    try {
+      if (whatsappWindow && !whatsappWindow.closed) {
+        // Attendre un peu avant de fermer pour laisser le temps à l'utilisateur de voir le message envoyé
+        setTimeout(() => {
+          try {
+            if (whatsappWindow && !whatsappWindow.closed) {
+              whatsappWindow.close();
+            }
+          } catch (error) {
+            // Ignorer les erreurs de fermeture (peut être bloqué par le navigateur)
+            console.log("Impossible de fermer la fenêtre WhatsApp automatiquement. Fermez-la manuellement.");
+          }
+        }, 2000);
+      }
+    } catch (error) {
+      // Ignorer les erreurs
+    }
+
+    return true;
+  };
+
+  // Démarrer l'envoi automatique des messages
+  const handleAutoSendMessages = async () => {
+    if (excelData.length === 0) {
+      toast.warning("Aucune donnée à envoyer. Veuillez d'abord charger un fichier Excel.");
+      return;
+    }
+
+    // Vérifier les numéros de téléphone
+    const dataWithPhone = excelData.filter((data) => data.phone && !data.messageSent);
+    const dataWithoutPhone = excelData.filter((data) => !data.phone);
+
+    if (dataWithoutPhone.length > 0) {
+      const confirm = window.confirm(
+        `${dataWithoutPhone.length} ligne(s) n'ont pas de numéro de téléphone valide et seront ignorées. Voulez-vous continuer ?`
+      );
+      if (!confirm) return;
+    }
+
+    if (dataWithPhone.length === 0) {
+      toast.error("Aucun numéro de téléphone valide trouvé dans les données ou tous les messages ont déjà été envoyés.");
+      return;
+    }
+
+    const finalConfirm = window.confirm(
+      `Vous êtes sur le point d'envoyer ${dataWithPhone.length} message(s) automatiquement via WhatsApp Web.\n\n` +
+      `Le système va :\n` +
+      `1. Ouvrir WhatsApp Web avec chaque numéro\n` +
+      `2. Pré-remplir le message\n` +
+      `3. Attendre 10 secondes entre chaque message\n` +
+      `4. Passer automatiquement au suivant\n\n` +
+      `⚠️ IMPORTANT :\n` +
+      `- Vous devrez être connecté à WhatsApp Web\n` +
+      `- Vous devrez cliquer sur "Envoyer" pour chaque message dans la fenêtre WhatsApp\n` +
+      `- Le système attendra 10 secondes entre chaque message\n` +
+      `- Vous pouvez arrêter l'envoi automatique à tout moment avec le bouton "Arrêter"\n\n` +
+      `💡 ASTUCE : Gardez la fenêtre WhatsApp Web ouverte et cliquez rapidement sur "Envoyer" lorsque chaque message s'ouvre.\n\n` +
+      `Voulez-vous continuer ?`
+    );
+    if (!finalConfirm) return;
+
+    // Initialiser la queue
+    messageQueueRef.current = dataWithPhone;
+    setAutoSending(true);
+    setCurrentIndex(0);
+    setRemainingCount(dataWithPhone.length);
+    setSending(true);
+    setSendLog([]);
+
+    // Démarrer l'envoi automatique
+    startAutoSending(dataWithPhone);
+  };
+
+  // Fonction pour démarrer l'envoi automatique
+  const startAutoSending = async (queue) => {
+    isAutoSendingRef.current = true;
+    
+    for (let i = 0; i < queue.length; i++) {
+      if (!isAutoSendingRef.current) {
+        // Si l'utilisateur a arrêté l'envoi
+        break;
+      }
+
+      setCurrentIndex(i + 1);
+      setRemainingCount(queue.length - i - 1);
+
+      const data = queue[i];
+      const message = generateMessage(data);
+
+      toast.info(`Envoi ${i + 1}/${queue.length} : ${data.name} (${data.phone})`);
+
+      try {
+        await sendWhatsAppMessage(data, i, queue.length);
+      } catch (error) {
+        const logEntry = {
+          id: data.id,
+          name: data.name,
+          phone: data.phone,
+          trip: data.trip,
+          time: data.time,
+          status: "error",
+          error: error.message,
+          sentAt: new Date().toISOString(),
+        };
+        setSendLog((prev) => [...prev, logEntry]);
+      }
+
+      // Attendre 10 secondes avant le prochain message (déjà inclus dans sendWhatsAppMessage)
+    }
+
+    // Terminer l'envoi automatique
+    isAutoSendingRef.current = false;
+    setAutoSending(false);
+    setSending(false);
+    
+    // Attendre un peu pour que les logs soient mis à jour
+    setTimeout(() => {
+      const successCount = sendLog.filter((l) => l.status === "success").length;
+      const errorCount = sendLog.filter((l) => l.status === "error").length;
+      
+      toast.success(`Envoi terminé : ${successCount} message(s) envoyé(s)${errorCount > 0 ? `. ${errorCount} erreur(s).` : ""}`);
+    }, 500);
+  };
+
+  // Arrêter l'envoi automatique
+  const handleStopAutoSending = () => {
+    isAutoSendingRef.current = false;
+    setAutoSending(false);
+    setSending(false);
+    
+    // Fermer la fenêtre WhatsApp si elle est ouverte
+    if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
+      try {
+        whatsappWindowRef.current.close();
+      } catch (error) {
+        // Ignorer les erreurs
+      }
+    }
+
+    // Nettoyer l'intervalle
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    toast.warning("Envoi automatique arrêté.");
+  };
+
+  // Nettoyer lors du démontage du composant
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
+        try {
+          whatsappWindowRef.current.close();
+        } catch (error) {
+          // Ignorer les erreurs
+        }
+      }
+    };
+  }, []);
+
+  // Ancienne fonction pour l'envoi manuel (simulation)
   const handleSendMessages = async () => {
     if (excelData.length === 0) {
       toast.warning("Aucune donnée à envoyer. Veuillez d'abord charger un fichier Excel.");
@@ -718,12 +971,44 @@ export function SituationPage({ user }) {
           </div>
         )}
 
+        {/* Indicateur d'envoi automatique */}
+        {autoSending && (
+          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-lg mb-1">🔄 Envoi automatique en cours...</p>
+                <p className="text-sm opacity-90">
+                  Message {currentIndex} sur {currentIndex + remainingCount} • {remainingCount} restant(s)
+                </p>
+              </div>
+              <GhostBtn 
+                onClick={handleStopAutoSending}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+              >
+                ⏹️ Arrêter
+              </GhostBtn>
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
         {excelData.length > 0 && (
-          <div className="flex gap-3 justify-end">
-            <GhostBtn onClick={handlePreviewMessages}>📝 Prévisualiser les messages</GhostBtn>
-            <PrimaryBtn onClick={handleSendMessages} disabled={sending || stats.withPhone === 0}>
-              {sending ? "📤 Envoi en cours..." : "📤 Envoyer tous les messages"}
+          <div className="flex gap-3 justify-end flex-wrap">
+            <GhostBtn onClick={handlePreviewMessages} disabled={sending || autoSending}>
+              📝 Prévisualiser les messages
+            </GhostBtn>
+            <PrimaryBtn 
+              onClick={handleAutoSendMessages} 
+              disabled={sending || autoSending || stats.withPhone === 0}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+            >
+              {autoSending ? "🔄 Envoi automatique..." : "🚀 Envoyer automatiquement via WhatsApp"}
+            </PrimaryBtn>
+            <PrimaryBtn 
+              onClick={handleSendMessages} 
+              disabled={sending || autoSending || stats.withPhone === 0}
+            >
+              {sending ? "📤 Envoi en cours..." : "📤 Envoyer (simulation)"}
             </PrimaryBtn>
           </div>
         )}
