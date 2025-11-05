@@ -42,6 +42,12 @@ export function SituationPage({ user, activities = [] }) {
     return saved;
   });
   const [newHotel, setNewHotel] = useState("");
+  
+  // État pour stocker les lignes avec marina cochée
+  const [rowsWithMarina, setRowsWithMarina] = useState(() => {
+    const saved = loadLS("hd_rows_with_marina", []);
+    return new Set(saved);
+  });
 
   // Sauvegarder les templates dans localStorage
   useEffect(() => {
@@ -49,6 +55,11 @@ export function SituationPage({ user, activities = [] }) {
       saveLS(LS_KEYS.messageTemplates, messageTemplates);
     }
   }, [messageTemplates]);
+  
+  // Sauvegarder les lignes avec marina cochée
+  useEffect(() => {
+    saveLS("hd_rows_with_marina", Array.from(rowsWithMarina));
+  }, [rowsWithMarina]);
   
   // Sauvegarder la liste des hôtels dans localStorage
   useEffect(() => {
@@ -773,7 +784,19 @@ Hurghada Dream`;
     event.target.value = "";
   };
 
-  // Générer le message personnalisé
+  // Fonction pour cocher/décocher la marina pour une ligne
+  const handleToggleMarina = (rowId) => {
+    setRowsWithMarina((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(rowId)) {
+        newSet.delete(rowId);
+      } else {
+        newSet.add(rowId);
+      }
+      return newSet;
+    });
+  };
+  
   const generateMessage = (data) => {
     // Vérifier si un template existe pour cette activité
     const activityName = data.trip || "";
@@ -808,20 +831,25 @@ Hurghada Dream`;
       
       // Ajouter le message RDV selon l'hôtel
       if (data.hotel) {
-        const hotelInfo = findHotelInList(data.hotel);
-        let rdvMessage;
-        
-        if (hotelInfo) {
-          if (hotelInfo.hasBeachBoats) {
-            rdvMessage = `📍 Rendez-vous directement à la marina du ${data.hotel}.`;
-          } else {
-            rdvMessage = "📍 Rendez-vous à l'extérieur de l'hôtel.";
-          }
+        // Si la case marina est cochée pour cette ligne, utiliser le message marina
+        if (rowsWithMarina.has(data.id)) {
+          message += "\n\n📍 Rendez-vous directement à la marina de votre hôtel.";
         } else {
-          rdvMessage = "📍 Rendez-vous devant la réception de l'hôtel.";
+          const hotelInfo = findHotelInList(data.hotel);
+          let rdvMessage;
+          
+          if (hotelInfo) {
+            if (hotelInfo.hasBeachBoats) {
+              rdvMessage = `📍 Rendez-vous directement à la marina du ${data.hotel}.`;
+            } else {
+              rdvMessage = "📍 Rendez-vous à l'extérieur de l'hôtel.";
+            }
+          } else {
+            rdvMessage = "📍 Rendez-vous devant la réception de l'hôtel.";
+          }
+          
+          message += "\n\n" + rdvMessage;
         }
-        
-        message += "\n\n" + rdvMessage;
       }
       
       return message;
@@ -857,21 +885,27 @@ Hurghada Dream`;
     
     // Ajouter le message RDV selon l'hôtel
     if (data.hotel) {
-      const hotelInfo = findHotelInList(data.hotel);
-      let rdvMessage;
-      
-      if (hotelInfo) {
-        if (hotelInfo.hasBeachBoats) {
-          rdvMessage = `📍 Rendez-vous directement à la marina du ${data.hotel}.`;
-        } else {
-          rdvMessage = "📍 Rendez-vous à l'extérieur de l'hôtel.";
-        }
+      // Si la case marina est cochée pour cette ligne, utiliser le message marina
+      if (rowsWithMarina.has(data.id)) {
+        parts.push("");
+        parts.push("📍 Rendez-vous directement à la marina de votre hôtel.");
       } else {
-        rdvMessage = "📍 Rendez-vous devant la réception de l'hôtel.";
+        const hotelInfo = findHotelInList(data.hotel);
+        let rdvMessage;
+        
+        if (hotelInfo) {
+          if (hotelInfo.hasBeachBoats) {
+            rdvMessage = `📍 Rendez-vous directement à la marina du ${data.hotel}.`;
+          } else {
+            rdvMessage = "📍 Rendez-vous à l'extérieur de l'hôtel.";
+          }
+        } else {
+          rdvMessage = "📍 Rendez-vous devant la réception de l'hôtel.";
+        }
+        
+        parts.push("");
+        parts.push(rdvMessage);
       }
-      
-      parts.push("");
-      parts.push(rdvMessage);
     }
     
     parts.push("");
@@ -1459,6 +1493,7 @@ Hurghada Dream`;
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Chambre</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Trip</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Heure</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase">Marina</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase">Statut</th>
                 </tr>
               </thead>
@@ -1499,6 +1534,17 @@ Hurghada Dream`;
                     <td className="px-4 py-2 text-xs text-slate-700">{row.roomNo}</td>
                     <td className="px-4 py-2 text-xs text-slate-700">{row.trip}</td>
                     <td className="px-4 py-2 text-xs font-semibold text-slate-900">{row.time}</td>
+                    <td className="px-4 py-2 text-center">
+                      <label className="flex items-center justify-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={rowsWithMarina.has(row.id)}
+                          onChange={() => handleToggleMarina(row.id)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          title="Bateau garé à la marina de cet hôtel"
+                        />
+                      </label>
+                    </td>
                     <td className="px-4 py-2 text-center">
                       {row.messageSent ? (
                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
