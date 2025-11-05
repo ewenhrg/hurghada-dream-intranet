@@ -216,6 +216,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
           lineTotal = 300;
         }
         // Sinon, le prix reste à 0
+      } else if (act && act.name.toLowerCase().includes("aeroport") && act.name.toLowerCase().includes("4 pax")) {
+        // cas spécial HURGHADA - AEROPORT 4 pax
+        // Prix fixe : Aller simple = 20€, Aller retour = 40€
+        // Les adultes/enfants/bébés ne changent pas le prix
+        if (it.allerSimple) {
+          lineTotal = 20;
+        } else if (it.allerRetour) {
+          lineTotal = 40;
+        }
+        // Sinon, le prix reste à 0
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
@@ -744,6 +754,71 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                       />
                       <label htmlFor={`allerRetour-${idx}`} className="text-sm font-medium text-gray-700 cursor-pointer flex-1">
                         Aller retour (300€)
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {/* Champs adultes/enfants/bébés (informations uniquement, ne changent pas le prix) */}
+                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                    <div>
+                      <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
+                      <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 mb-2">
+                        Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""} (informations uniquement)
+                      </p>
+                      <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 mb-2">
+                        Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
+                      </p>
+                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                    </div>
+                  </div>
+                </>
+              ) : c.act && c.act.name.toLowerCase().includes("aeroport") && c.act.name.toLowerCase().includes("4 pax") ? (
+                <>
+                  {/* Message d'avertissement */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm font-semibold text-amber-900">⚠️ Attention : Maximum 4 personnes</p>
+                  </div>
+                  
+                  {/* Cases Aller simple et Aller retour */}
+                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                    <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
+                      <input
+                        type="checkbox"
+                        id={`allerSimple-${idx}`}
+                        checked={c.raw.allerSimple || false}
+                        onChange={(e) => {
+                          setItem(idx, { 
+                            allerSimple: e.target.checked,
+                            allerRetour: e.target.checked ? false : c.raw.allerRetour // Désactiver aller-retour si on coche aller simple
+                          });
+                        }}
+                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor={`allerSimple-${idx}`} className="text-sm font-medium text-gray-700 cursor-pointer flex-1">
+                        Aller simple (20€)
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
+                      <input
+                        type="checkbox"
+                        id={`allerRetour-${idx}`}
+                        checked={c.raw.allerRetour || false}
+                        onChange={(e) => {
+                          setItem(idx, { 
+                            allerRetour: e.target.checked,
+                            allerSimple: e.target.checked ? false : c.raw.allerSimple // Désactiver aller simple si on coche aller-retour
+                          });
+                        }}
+                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor={`allerRetour-${idx}`} className="text-sm font-medium text-gray-700 cursor-pointer flex-1">
+                        Aller retour (40€)
                       </label>
                     </div>
                   </div>
