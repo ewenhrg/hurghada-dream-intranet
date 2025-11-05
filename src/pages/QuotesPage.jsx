@@ -34,6 +34,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     yamaha250: "",
     ktm640: "",
     ktm530: "",
+    allerSimple: false, // Pour HURGHADA - LE CAIRE et HURGHADA - LOUXOR
+    allerRetour: false, // Pour HURGHADA - LE CAIRE et HURGHADA - LOUXOR
   }), []);
 
   // Charger le formulaire sauvegardé depuis localStorage
@@ -204,6 +206,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         const ktm530 = Number(it.ktm530 || 0);
         const prices = getMotoCrossPrices();
         lineTotal = yamaha250 * prices.yamaha250 + ktm640 * prices.ktm640 + ktm530 * prices.ktm530;
+      } else if (act && (act.name.toLowerCase().includes("hurghada - le caire") || act.name.toLowerCase().includes("hurghada - louxor"))) {
+        // cas spécial HURGHADA - LE CAIRE et HURGHADA - LOUXOR
+        // Prix fixe : Aller simple = 150€, Aller retour = 300€
+        // Les adultes/enfants/bébés ne changent pas le prix
+        if (it.allerSimple) {
+          lineTotal = 150;
+        } else if (it.allerRetour) {
+          lineTotal = 300;
+        }
+        // Sinon, le prix reste à 0
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
@@ -334,6 +346,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         yamaha250: Number(c.raw.yamaha250 || 0),
         ktm640: Number(c.raw.ktm640 || 0),
         ktm530: Number(c.raw.ktm530 || 0),
+        allerSimple: c.raw.allerSimple || false,
+        allerRetour: c.raw.allerRetour || false,
         neighborhood: client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
@@ -686,6 +700,71 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     <div>
                       <p className="text-xs text-gray-500 mb-2">KTM 530CC ({getMotoCrossPrices().ktm530}€)</p>
                       <NumberInput value={c.raw.ktm530 ?? ""} onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })} />
+                    </div>
+                  </div>
+                </>
+              ) : c.act && (c.act.name.toLowerCase().includes("hurghada - le caire") || c.act.name.toLowerCase().includes("hurghada - louxor")) ? (
+                <>
+                  {/* Message d'avertissement */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm font-semibold text-amber-900">⚠️ Attention : Maximum 7 personnes</p>
+                  </div>
+                  
+                  {/* Cases Aller simple et Aller retour */}
+                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                    <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
+                      <input
+                        type="checkbox"
+                        id={`allerSimple-${idx}`}
+                        checked={c.raw.allerSimple || false}
+                        onChange={(e) => {
+                          setItem(idx, { 
+                            allerSimple: e.target.checked,
+                            allerRetour: e.target.checked ? false : c.raw.allerRetour // Désactiver aller-retour si on coche aller simple
+                          });
+                        }}
+                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor={`allerSimple-${idx}`} className="text-sm font-medium text-gray-700 cursor-pointer flex-1">
+                        Aller simple (150€)
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
+                      <input
+                        type="checkbox"
+                        id={`allerRetour-${idx}`}
+                        checked={c.raw.allerRetour || false}
+                        onChange={(e) => {
+                          setItem(idx, { 
+                            allerRetour: e.target.checked,
+                            allerSimple: e.target.checked ? false : c.raw.allerSimple // Désactiver aller simple si on coche aller-retour
+                          });
+                        }}
+                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor={`allerRetour-${idx}`} className="text-sm font-medium text-gray-700 cursor-pointer flex-1">
+                        Aller retour (300€)
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {/* Champs adultes/enfants/bébés (informations uniquement, ne changent pas le prix) */}
+                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                    <div>
+                      <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
+                      <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 mb-2">
+                        Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""} (informations uniquement)
+                      </p>
+                      <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 mb-2">
+                        Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
+                      </p>
+                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
                     </div>
                   </div>
                 </>
