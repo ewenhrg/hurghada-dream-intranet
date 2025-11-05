@@ -497,53 +497,93 @@ export function SituationPage({ user }) {
     // Créer l'URL WhatsApp
     const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
     
-    // Ouvrir WhatsApp Web dans un nouvel onglet
-    const newWindow = window.open(whatsappUrl, "_blank");
+    console.log(`📱 Ouverture de WhatsApp Web pour ${phone}...`);
     
-    if (newWindow) {
-      whatsappWindowRef.current = newWindow;
-      
-      // Attendre que la page se charge, puis injecter le script d'envoi automatique
-      setTimeout(() => {
+    // Réutiliser la même fenêtre si elle existe et n'est pas fermée
+    if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
+      try {
+        console.log("🔄 Réutilisation de la fenêtre WhatsApp existante...");
+        // Changer l'URL de la fenêtre existante
+        whatsappWindowRef.current.location.href = whatsappUrl;
+        // Focus sur la fenêtre
+        whatsappWindowRef.current.focus();
+        return Promise.resolve(whatsappWindowRef.current);
+      } catch (error) {
+        console.log("⚠️ Impossible de réutiliser la fenêtre. Ouverture d'une nouvelle fenêtre...", error);
+        // Si on ne peut pas réutiliser, fermer et ouvrir une nouvelle
         try {
-          // Injecter un script pour envoyer automatiquement le message
-          // Note: Cela ne fonctionnera que si l'utilisateur est déjà connecté à WhatsApp Web
-          // et si les restrictions de sécurité du navigateur le permettent
-          newWindow.postMessage({
-            type: "WHATSAPP_AUTO_SEND",
-            message: message
-          }, "*");
-        } catch (error) {
-          console.log("Impossible d'injecter le script automatiquement. L'utilisateur devra cliquer sur envoyer manuellement.");
+          whatsappWindowRef.current.close();
+        } catch (e) {
+          // Ignorer
         }
-      }, 2000);
+      }
     }
     
-    return newWindow;
+    // Attendre un peu avant d'ouvrir la nouvelle fenêtre
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Utiliser un nom fixe pour réutiliser la même fenêtre
+        const windowName = "whatsapp_auto_send";
+        
+        // Ouvrir WhatsApp Web dans un nouvel onglet
+        const newWindow = window.open(whatsappUrl, windowName, "_blank");
+        
+        if (newWindow) {
+          console.log(`✅ Fenêtre WhatsApp ouverte avec succès`);
+          whatsappWindowRef.current = newWindow;
+          
+          // Attendre que la page se charge
+          setTimeout(() => {
+            try {
+              // Injecter un script pour envoyer automatiquement le message
+              // Note: Cela ne fonctionnera que si l'utilisateur est déjà connecté à WhatsApp Web
+              // et si les restrictions de sécurité du navigateur le permettent
+              newWindow.postMessage({
+                type: "WHATSAPP_AUTO_SEND",
+                message: message
+              }, "*");
+            } catch (error) {
+              console.log("⚠️ Impossible d'injecter le script automatiquement. L'utilisateur devra cliquer sur envoyer manuellement.");
+            }
+          }, 2000);
+        } else {
+          console.error("❌ Impossible d'ouvrir la fenêtre WhatsApp. Vérifiez que les popups ne sont pas bloquées.");
+        }
+        
+        resolve(newWindow);
+      }, 500); // Attendre 500ms avant d'ouvrir la nouvelle fenêtre
+    });
   };
 
   // Envoyer un message via WhatsApp Web automatiquement
   const sendWhatsAppMessage = async (data, index, total) => {
+    console.log(`📨 Envoi du message ${index + 1}/${total} pour ${data.name} (${data.phone})`);
     const message = generateMessage(data);
     
-    // Ouvrir WhatsApp Web
-    const whatsappWindow = openWhatsApp(data.phone, message);
+    // Ouvrir WhatsApp Web (la fonction ferme déjà la fenêtre précédente)
+    console.log(`⏳ Ouverture de WhatsApp Web...`);
+    const whatsappWindow = await openWhatsApp(data.phone, message);
     
     if (!whatsappWindow) {
+      console.error(`❌ Impossible d'ouvrir WhatsApp Web pour ${data.phone}`);
       toast.error("Impossible d'ouvrir WhatsApp Web. Vérifiez que les popups ne sont pas bloquées.");
       return false;
     }
 
+    console.log(`✅ WhatsApp Web ouvert avec succès. Attente de 10 secondes...`);
+    
     // Afficher une notification pour guider l'utilisateur
     toast.info(
       `📱 WhatsApp Web ouvert pour ${data.name} (${data.phone}). ` +
       `Cliquez sur "Envoyer" dans la fenêtre WhatsApp, puis attendez 10 secondes...`,
-      { duration: 5000 }
+      { duration: 10000 }
     );
 
     // Attendre 10 secondes avant de passer au suivant
     // Pendant ce temps, l'utilisateur doit cliquer sur "Envoyer" dans WhatsApp Web
+    console.log(`⏱️ Attente de 10 secondes avant le prochain message...`);
     await new Promise((resolve) => setTimeout(resolve, 10000));
+    console.log(`✅ Attente terminée. Passage au suivant...`);
 
     // Marquer comme envoyé
     const logEntry = {
@@ -582,7 +622,7 @@ export function SituationPage({ user }) {
             // Ignorer les erreurs de fermeture (peut être bloqué par le navigateur)
             console.log("Impossible de fermer la fenêtre WhatsApp automatiquement. Fermez-la manuellement.");
           }
-        }, 2000);
+        }, 1000);
       }
     } catch (error) {
       // Ignorer les erreurs
@@ -647,9 +687,12 @@ export function SituationPage({ user }) {
   const startAutoSending = async (queue) => {
     isAutoSendingRef.current = true;
     
+    console.log(`🚀 Démarrage de l'envoi automatique de ${queue.length} messages`);
+    
     for (let i = 0; i < queue.length; i++) {
       if (!isAutoSendingRef.current) {
         // Si l'utilisateur a arrêté l'envoi
+        console.log(`⏹️ Envoi arrêté par l'utilisateur à l'index ${i}`);
         break;
       }
 
@@ -659,11 +702,15 @@ export function SituationPage({ user }) {
       const data = queue[i];
       const message = generateMessage(data);
 
+      console.log(`📤 Envoi ${i + 1}/${queue.length} : ${data.name} (${data.phone})`);
       toast.info(`Envoi ${i + 1}/${queue.length} : ${data.name} (${data.phone})`);
 
       try {
+        console.log(`⏳ Attente de l'envoi du message ${i + 1}...`);
         await sendWhatsAppMessage(data, i, queue.length);
+        console.log(`✅ Message ${i + 1} envoyé avec succès`);
       } catch (error) {
+        console.error(`❌ Erreur lors de l'envoi du message ${i + 1}:`, error);
         const logEntry = {
           id: data.id,
           name: data.name,
@@ -677,10 +724,15 @@ export function SituationPage({ user }) {
         setSendLog((prev) => [...prev, logEntry]);
       }
 
-      // Attendre 10 secondes avant le prochain message (déjà inclus dans sendWhatsAppMessage)
+      // Petite pause entre les messages pour éviter les problèmes de synchronisation
+      if (i < queue.length - 1) {
+        console.log(`⏸️ Pause de 1 seconde avant le prochain message...`);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
     }
 
     // Terminer l'envoi automatique
+    console.log(`🏁 Fin de l'envoi automatique`);
     isAutoSendingRef.current = false;
     setAutoSending(false);
     setSending(false);
