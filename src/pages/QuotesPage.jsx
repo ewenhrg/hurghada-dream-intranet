@@ -206,7 +206,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         const ktm530 = Number(it.ktm530 || 0);
         const prices = getMotoCrossPrices();
         lineTotal = yamaha250 * prices.yamaha250 + ktm640 * prices.ktm640 + ktm530 * prices.ktm530;
-      } else if (act && (act.name.toLowerCase().includes("hurghada - le caire") || act.name.toLowerCase().includes("hurghada - louxor"))) {
+      } else if (act && (act.name.toLowerCase().includes("hurghada") && (act.name.toLowerCase().includes("le caire") || act.name.toLowerCase().includes("louxor")))) {
         // cas spécial HURGHADA - LE CAIRE et HURGHADA - LOUXOR
         // Prix fixe : Aller simple = 150€, Aller retour = 300€
         // Les adultes/enfants/bébés ne changent pas le prix
@@ -703,7 +703,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                     </div>
                   </div>
                 </>
-              ) : c.act && (c.act.name.toLowerCase().includes("hurghada - le caire") || c.act.name.toLowerCase().includes("hurghada - louxor")) ? (
+              ) : c.act && (c.act.name.toLowerCase().includes("hurghada") && (c.act.name.toLowerCase().includes("le caire") || c.act.name.toLowerCase().includes("louxor"))) ? (
                 <>
                   {/* Message d'avertissement */}
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
