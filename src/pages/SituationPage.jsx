@@ -2,7 +2,8 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { PrimaryBtn, GhostBtn, Section, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
-import { LS_KEYS, loadLS, saveLS } from "../utils";
+import { LS_KEYS } from "../constants";
+import { loadLS, saveLS } from "../utils";
 
 export function SituationPage({ user, activities = [] }) {
   const [excelData, setExcelData] = useState([]);
