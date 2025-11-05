@@ -490,36 +490,34 @@ export function SituationPage({ user }) {
 
   // Réutiliser ou fermer la fenêtre WhatsApp précédente
   const handlePreviousWindow = async (whatsappUrl) => {
-    if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
+    if (whatsappWindowRef.current) {
       try {
-        console.log("🔄 Tentative de réutilisation de la fenêtre WhatsApp existante...");
-        // Essayer de changer l'URL de la fenêtre existante
-        try {
-          whatsappWindowRef.current.location.href = whatsappUrl;
-          whatsappWindowRef.current.focus();
-          console.log("✅ Fenêtre WhatsApp réutilisée avec succès (URL changée)");
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          return whatsappWindowRef.current;
-        } catch (crossOriginError) {
-          // Si on ne peut pas changer l'URL (cross-origin), fermer et ouvrir une nouvelle
-          console.log("⚠️ Impossible de changer l'URL (cross-origin). Fermeture de la fenêtre...");
+        // Vérifier si la fenêtre est toujours ouverte
+        const isClosed = whatsappWindowRef.current.closed;
+        console.log(`🔒 Vérification de la fenêtre précédente: closed=${isClosed}`);
+        
+        if (!isClosed) {
+          console.log("🔄 Tentative de réutilisation de la fenêtre WhatsApp existante...");
+          // Essayer de changer l'URL de la fenêtre existante
           try {
-            whatsappWindowRef.current.close();
-            whatsappWindowRef.current = null;
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            console.log("✅ Fenêtre précédente fermée, prêt pour une nouvelle fenêtre");
-          } catch (e) {
-            console.error("❌ Erreur lors de la fermeture:", e);
-            whatsappWindowRef.current = null;
+            whatsappWindowRef.current.location.href = whatsappUrl;
+            whatsappWindowRef.current.focus();
+            console.log("✅ Fenêtre WhatsApp réutilisée avec succès (URL changée)");
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            return whatsappWindowRef.current;
+          } catch (crossOriginError) {
+            // Si on ne peut pas changer l'URL (cross-origin), on ne peut rien faire
+            console.log("⚠️ Impossible de changer l'URL (cross-origin). La fenêtre sera réutilisée avec window.open()");
+            // On ne ferme pas la fenêtre, on laisse window.open() avec le même nom la réutiliser
           }
+        } else {
+          console.log("ℹ️ La fenêtre précédente est fermée, mais on utilisera le même nom pour la réutiliser");
         }
       } catch (error) {
         console.error("❌ Erreur lors de la gestion de la fenêtre précédente:", error);
-        whatsappWindowRef.current = null;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     } else {
-      console.log("ℹ️ Aucune fenêtre précédente à réutiliser");
+      console.log("ℹ️ Aucune fenêtre précédente dans la référence");
     }
     return null;
   };
@@ -545,15 +543,17 @@ export function SituationPage({ user }) {
       return reusedWindow;
     }
     
-    // Si on ne peut pas réutiliser, ouvrir une nouvelle fenêtre
-    console.log("📂 Ouverture d'une nouvelle fenêtre WhatsApp...");
+    // Si on ne peut pas réutiliser, ouvrir/réutiliser la fenêtre avec un nom fixe
+    console.log("📂 Ouverture/réutilisation de la fenêtre WhatsApp...");
     
     // Attendre un peu avant d'ouvrir la nouvelle fenêtre pour éviter les conflits
     await new Promise((resolve) => setTimeout(resolve, 500));
     
-    // Utiliser un nom de fenêtre fixe pour réutiliser la même fenêtre à chaque fois
-    // Cela évite que le navigateur bloque les popups
+    // IMPORTANT: Utiliser TOUJOURS le même nom de fenêtre pour que le navigateur réutilise la même fenêtre
+    // Même si la fenêtre précédente est fermée, window.open() avec le même nom devrait la réouvrir
     const windowName = "whatsapp_auto_send";
+    console.log(`📂 Utilisation du nom de fenêtre: "${windowName}"`);
+    
     const newWindow = window.open(whatsappUrl, windowName, "_blank");
     
     if (newWindow) {
@@ -567,8 +567,8 @@ export function SituationPage({ user }) {
       // Vérifier si la fenêtre est fermée
       try {
         if (newWindow.closed) {
-          console.warn("⚠️ La fenêtre WhatsApp semble avoir été fermée, mais window.open() a réussi");
-          console.warn("⚠️ Cela peut être normal si l'utilisateur a fermé la fenêtre manuellement");
+          console.warn("⚠️ La fenêtre WhatsApp semble avoir été fermée après l'ouverture");
+          console.warn("⚠️ Mais on garde la référence pour la prochaine fois");
         } else {
           console.log("✅ Fenêtre WhatsApp vérifiée et ouverte correctement");
         }
@@ -580,8 +580,8 @@ export function SituationPage({ user }) {
     } else {
       console.error("❌ window.open() a retourné null - Impossible d'ouvrir la fenêtre WhatsApp");
       console.error("❌ Le navigateur bloque probablement les popups automatiques");
-      console.error("❌ Conseil: Autorisez les popups pour ce site dans les paramètres du navigateur");
-      console.error("❌ Ou assurez-vous qu'il n'y a pas trop de fenêtres ouvertes");
+      console.error("❌ IMPORTANT: Vous devez autoriser les popups pour ce site");
+      console.error("❌ Instructions: Cliquez sur l'icône de cadenas dans la barre d'adresse → Autoriser les popups");
       whatsappWindowRef.current = null;
       return null;
     }
