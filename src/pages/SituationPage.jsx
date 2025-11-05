@@ -562,26 +562,34 @@ export function SituationPage({ user }) {
       console.log(`✅ window.open() a retourné une fenêtre`);
       whatsappWindowRef.current = newWindow;
       
-      // Vérifier que la fenêtre n'a pas été bloquée après un court délai
-      console.log("⏳ Attente de 300ms pour vérifier la fenêtre...");
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Ne pas vérifier immédiatement si la fenêtre est fermée
+      // Attendre un peu pour que la fenêtre se charge
+      console.log("⏳ Attente de 1 seconde pour que la fenêtre se charge...");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       
+      // Vérifier si la fenêtre est fermée, mais ne pas retourner null si elle l'est
+      // car elle peut avoir été fermée par l'utilisateur ou pour une autre raison
+      // Ce qui compte c'est que window.open() a réussi
       try {
         if (newWindow.closed) {
-          console.error("❌ La fenêtre WhatsApp a été fermée immédiatement (peut-être bloquée par le navigateur)");
-          whatsappWindowRef.current = null;
-          return null;
+          console.warn("⚠️ La fenêtre WhatsApp semble avoir été fermée, mais window.open() a réussi");
+          console.warn("⚠️ Cela peut être normal si l'utilisateur a fermé la fenêtre manuellement");
+          // On retourne quand même la fenêtre car window.open() a réussi
+          // La prochaine fois, on ouvrira une nouvelle fenêtre
+          return newWindow;
+        } else {
+          console.log("✅ Fenêtre WhatsApp vérifiée et ouverte correctement");
         }
-        console.log("✅ Fenêtre WhatsApp vérifiée et ouverte correctement");
-        return newWindow;
       } catch (error) {
         console.error("❌ Erreur lors de la vérification de la fenêtre:", error);
         // On retourne quand même la fenêtre car elle existe
-        return newWindow;
       }
+      
+      return newWindow;
     } else {
       console.error("❌ window.open() a retourné null - Impossible d'ouvrir la fenêtre WhatsApp");
       console.error("❌ Vérifiez que les popups ne sont pas bloquées dans votre navigateur");
+      console.error("❌ Conseil: Autorisez les popups pour ce site dans les paramètres du navigateur");
       whatsappWindowRef.current = null;
       return null;
     }
