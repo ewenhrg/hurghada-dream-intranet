@@ -56,41 +56,6 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
     setShowModifyModal(true);
   }
 
-  async function handleUpdateComment(quote, itemIndex, comment) {
-    const updatedItems = [...quote.items];
-    updatedItems[itemIndex] = {
-      ...updatedItems[itemIndex],
-      modificationComment: comment,
-    };
-
-    const updatedQuote = {
-      ...quote,
-      items: updatedItems,
-    };
-
-    // Mettre à jour la liste des devis
-    const updatedQuotes = quotes.map((q) => (q.id === quote.id ? updatedQuote : q));
-    setQuotes(updatedQuotes);
-    saveLS(LS_KEYS.quotes, updatedQuotes);
-
-    // Mettre à jour dans Supabase si configuré
-    if (supabase) {
-      try {
-        const supabaseUpdate = {
-          items: JSON.stringify(updatedQuote.items),
-        };
-
-        await supabase
-          .from("quotes")
-          .update(supabaseUpdate)
-          .eq("site_key", SITE_KEY)
-          .eq("id", quote.supabase_id || quote.id);
-      } catch (err) {
-        console.warn("⚠️ Erreur lors de la mise à jour du commentaire dans Supabase:", err);
-      }
-    }
-  }
-
   async function handleConfirmModification() {
     if (!selectedQuote || selectedItemIndex === null) return;
 
@@ -272,8 +237,8 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
 
       <div className="space-y-3">
         {filteredQuotes.length === 0 ? (
-          <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-6 text-center">
-            <p className="text-sm text-gray-500">
+          <div className="hd-card hd-border-gradient text-center">
+            <p className="text-sm text-[rgba(71,85,105,0.75)]">
               {debouncedSearchPhone.trim() ? "Aucun devis trouvé pour ce numéro" : "Recherchez un devis par numéro de téléphone pour commencer"}
             </p>
           </div>
@@ -281,13 +246,13 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
           filteredQuotes.map((quote) => (
             <div
               key={quote.id}
-              className={`bg-white/95 rounded-2xl border ${
-                quote.isModified ? "border-amber-400 bg-amber-50/30" : "border-blue-100/60"
-              } shadow-md hover:shadow-lg transition-shadow duration-200 p-4`}
+              className={`hd-card hd-border-gradient transition-shadow duration-200 p-4 border-2 ${
+                quote.isModified ? "border-amber-200/70" : "border-blue-200/60"
+              }`}
             >
               {quote.isModified && (
                 <div className="mb-2">
-                  <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium border border-amber-300">
+                  <span className="tag-warning">
                     🔄 Modifié
                   </span>
                 </div>
@@ -316,81 +281,83 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                 {quote.items?.map((item, idx) => (
                   <div
                     key={idx}
-                    className={`p-3 rounded-xl border ${
-                      item.isCancelled
-                        ? "bg-red-50/50 border-red-200"
-                        : item.modifications && item.modifications.length > 0
-                        ? "bg-amber-50/50 border-amber-200"
-                        : "bg-blue-50/50 border-blue-100"
+                    className={`p-3 rounded-xl border transition-all duration-200 ${
+                      item.modifications?.length
+                        ? "border-[rgba(147,51,234,0.45)] bg-[rgba(147,51,234,0.08)]"
+                        : "border-[rgba(148,163,184,0.28)] bg-[rgba(248,250,252,0.85)]"
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className={`text-sm font-medium ${item.isCancelled ? "line-through text-gray-400" : ""}`}>
-                            {item.activityName || "Activité"}
-                          </p>
-                          {item.isCancelled && (
-                            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-medium">
-                              Annulé
-                            </span>
-                          )}
-                          {!item.isCancelled && item.modifications && item.modifications.length > 0 && (
-                            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-medium">
-                              Modifié
-                            </span>
-                          )}
-                        </div>
-                        <p className={`text-xs ${item.isCancelled ? "line-through text-gray-400" : "text-gray-500"}`}>
-                          {item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR") : ""} — Ticket:{" "}
-                          {item.ticketNumber || "—"}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">
+                          {item.activityName || "Activité ?"}
                         </p>
-                        <p className={`text-xs ${item.isCancelled ? "line-through text-gray-400" : "text-gray-500"}`}>
-                          {currencyNoCents(Math.round(item.lineTotal || 0), quote.currency)}
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-2 flex-1 max-w-xs">
-                        <TextInput
-                          placeholder="Commentaire..."
-                          value={item.modificationComment || ""}
-                          onChange={(e) => {
-                            // Mise à jour immédiate dans l'état local pour l'affichage
-                            const updatedItems = [...quote.items];
-                            updatedItems[idx] = {
-                              ...updatedItems[idx],
-                              modificationComment: e.target.value,
-                            };
-                            const updatedQuote = {
-                              ...quote,
-                              items: updatedItems,
-                            };
-                            const updatedQuotes = quotes.map((q) => (q.id === quote.id ? updatedQuote : q));
-                            setQuotes(updatedQuotes);
-                          }}
-                          onBlur={(e) => {
-                            // Sauvegarder quand on quitte le champ
-                            handleUpdateComment(quote, idx, e.target.value);
-                          }}
-                          className="text-xs"
-                          disabled={item.isCancelled}
-                        />
-                        {!item.isCancelled && (
-                          <div className="flex gap-2">
-                            <GhostBtn
-                              onClick={() => handleModifyActivity(quote, idx)}
-                              className="text-xs px-3 py-1"
-                            >
-                              Modifier
-                            </GhostBtn>
-                            <GhostBtn
-                              onClick={() => handleCancelActivity(quote, idx)}
-                              className="text-xs px-3 py-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                            >
-                              Annuler
-                            </GhostBtn>
-                          </div>
+                        {item.isCancelled && (
+                          <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-medium">
+                            Annulé
+                          </span>
+                        )}
+                        {!item.isCancelled && item.modifications && item.modifications.length > 0 && (
+                          <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-medium">
+                            Modifié
+                          </span>
                         )}
                       </div>
+                      <div className="text-right">
+                        <span className="text-xs font-semibold text-[#4338ca]">
+                          {currencyNoCents(item.lineTotal, quote.currency)}
+                        </span>
+                        {item.paymentMethod && (
+                          <p className="text-[10px] text-[rgba(71,85,105,0.65)]">
+                            {item.paymentMethod === "cash" ? "Espèces" : "Carte"}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <p className={`text-xs ${item.isCancelled ? "line-through text-gray-400" : "text-gray-500"}`}>
+                      {item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR") : ""} — Ticket:{" "}
+                      {item.ticketNumber || "—"}
+                    </p>
+                    <p className={`text-xs ${item.isCancelled ? "line-through text-gray-400" : "text-gray-500"}`}>
+                      {currencyNoCents(Math.round(item.lineTotal || 0), quote.currency)}
+                    </p>
+                    {item.modifications?.length > 0 && (
+                      <div className="mt-3 space-y-1">
+                        <p className="text-xs font-semibold text-[#6d28d9]">Modifications :</p>
+                        {item.modifications.map((mod, mIdx) => (
+                          <div
+                            key={mIdx}
+                            className="text-xs rounded-lg px-2 py-1 bg-[rgba(147,51,234,0.12)] text-[#7c3aed] border border-[rgba(147,51,234,0.35)]"
+                          >
+                            {mod}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2 mt-4">
+                      {!item.isCancelled && (
+                        <>
+                          <GhostBtn
+                            size="sm"
+                            onClick={() => handleModifyActivity(quote, idx)}
+                            className="text-[#4338ca] border-[rgba(79,70,229,0.35)] hover:bg-[rgba(79,70,229,0.08)]"
+                          >
+                            ✏️ Modifier
+                          </GhostBtn>
+                          <GhostBtn
+                            size="sm"
+                            onClick={() => handleCancelActivity(quote, idx)}
+                            className="text-[#dc2626] border-[rgba(239,68,68,0.35)] hover:bg-[rgba(239,68,68,0.12)]"
+                          >
+                            🚫 Annuler
+                          </GhostBtn>
+                        </>
+                      )}
+                      {item.isCancelled && (
+                        <span className="tag-danger inline-flex items-center gap-1 text-xs">
+                          ✅ Annulation enregistrée
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}

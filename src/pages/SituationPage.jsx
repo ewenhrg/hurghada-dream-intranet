@@ -48,18 +48,20 @@ const VirtualizedRow = memo(({ index, style, data }) => {
     "grid",
     "items-center",
     "border-b",
-    "border-slate-100",
-    "hover:bg-slate-50/50",
+    "border-[rgba(226,232,240,0.6)]",
+    "bg-[rgba(255,255,255,0.92)]",
+    "hover:bg-[rgba(79,70,229,0.06)]",
+    "transition-colors",
   ];
 
   if (row.messageSent) {
-    rowClasses.push("bg-emerald-50/30");
+    rowClasses.push("bg-[rgba(16,185,129,0.12)]", "border-l-4", "border-l-[rgba(16,185,129,0.45)]");
   }
   if (!row.phoneValid) {
-    rowClasses.push("bg-red-50/50", "border-l-4", "border-l-red-500");
+    rowClasses.push("bg-[rgba(239,68,68,0.12)]", "border-l-4", "border-l-[rgba(239,68,68,0.55)]");
   }
 
-  const cellBase = "px-4 py-2 text-xs";
+  const cellBase = "px-4 py-2 text-xs text-[rgba(71,85,105,0.88)]";
 
   const handleCellClick = (field) => {
     setEditingCell({ rowId: row.id, field });
@@ -141,10 +143,10 @@ const VirtualizedRow = memo(({ index, style, data }) => {
       <div
         className={`${cellBase} ${
           !row.phoneValid
-            ? "text-red-600 font-semibold"
+            ? "text-[#dc2626] font-semibold"
             : row.phone
-            ? "text-blue-600 font-medium"
-            : "text-amber-600"
+            ? "text-[#4338ca] font-medium"
+            : "text-[#b45309]"
         }`}
       >
         {isEditing("phone") ? (
@@ -268,18 +270,18 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             type="checkbox"
             checked={rowsWithMarina.has(row.id)}
             onChange={() => handleToggleMarina(row.id)}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            className="w-4 h-4 text-[#4338ca] border-[rgba(148,163,184,0.6)] rounded focus:ring-[#4f46e5]/40"
             title="Bateau garé à la marina de cet hôtel"
           />
         </label>
       </div>
       <div className="px-4 py-2 text-center">
         {row.messageSent ? (
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+          <span className="tag-success inline-flex items-center gap-1">
             ✓ Envoyé
           </span>
         ) : (
-          <span className="text-xs text-slate-400">—</span>
+          <span className="text-xs text-[rgba(148,163,184,0.9)]">—</span>
         )}
       </div>
     </div>
@@ -415,7 +417,7 @@ export function SituationPage({ activities = [] }) {
   }, [isSupabaseConfigured]);
 
   useEffect(() => {
-    saveLS(LS_KEYS.messageTemplates, messageTemplates);
+      saveLS(LS_KEYS.messageTemplates, messageTemplates);
 
     if (!settingsLoaded || !isSupabaseConfigured) return;
 
@@ -489,12 +491,12 @@ export function SituationPage({ activities = [] }) {
       }
     };
   }, [exteriorHotels, settingsLoaded, isSupabaseConfigured]);
-
+  
   // Sauvegarder les lignes avec marina cochée
   useEffect(() => {
     saveLS("hd_rows_with_marina", Array.from(rowsWithMarina));
   }, [rowsWithMarina]);
-  
+
   // Ouvrir la configuration pour une activité
   const handleOpenConfig = (activityName) => {
     const template = messageTemplates[activityName] || "";
@@ -582,7 +584,7 @@ export function SituationPage({ activities = [] }) {
       return h;
     }));
   };
-  
+
   // Lire le fichier Excel
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -953,7 +955,7 @@ export function SituationPage({ activities = [] }) {
     overscan: 8,
   });
   const virtualRows = rowVirtualizer.getVirtualItems();
-
+  
   // Wrapper pour generateMessage avec contexte local
   const generateMessageWithContext = (data) => {
     return generateMessage(data, messageTemplates, rowsWithMarina, exteriorHotels);
@@ -1496,7 +1498,7 @@ export function SituationPage({ activities = [] }) {
               <p className="text-xs text-slate-600 mb-1">Sans téléphone</p>
               <p className="text-2xl font-bold text-amber-600">{stats.withoutPhone}</p>
               {stats.invalidPhones > 0 && (
-                <p className="text-[10px] text-red-600 mt-1">⚠️ {stats.invalidPhones} invalide(s)</p>
+                <p className="text-[11px] text-[#dc2626] mt-1 font-semibold">⚠️ {stats.invalidPhones} invalide(s)</p>
               )}
             </div>
             <div className="bg-emerald-50/50 border border-emerald-200 rounded-lg p-4">
@@ -1669,7 +1671,7 @@ export function SituationPage({ activities = [] }) {
         {showConfigModal && (
           <Suspense
             fallback={
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-2xl shadow-2xl p-6 text-sm font-medium text-slate-700">
                   Chargement de la configuration...
                 </div>
@@ -1695,7 +1697,7 @@ export function SituationPage({ activities = [] }) {
         {showHotelsModal && (
           <Suspense
             fallback={
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-2xl shadow-2xl p-6 text-sm font-medium text-slate-700">
                   Chargement de la liste des hôtels...
                 </div>

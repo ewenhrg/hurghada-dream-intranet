@@ -93,7 +93,7 @@ export default function MessageTemplatesModal({
                     <GhostBtn
                       size="sm"
                       onClick={() => onDeleteTemplate(editingTemplate.activity)}
-                      className="text-red-600 hover:bg-red-50"
+                      className="text-[#dc2626] border-[rgba(239,68,68,0.35)] hover:bg-[rgba(239,68,68,0.12)]"
                     >
                       🗑️ Supprimer
                     </GhostBtn>
@@ -145,7 +145,7 @@ export default function MessageTemplatesModal({
                       <GhostBtn
                         size="sm"
                         onClick={() => onDeleteTemplate(activityName)}
-                        className="text-red-600 hover:bg-red-50"
+                        className="text-[#dc2626] border-[rgba(239,68,68,0.35)] hover:bg-[rgba(239,68,68,0.12)]"
                       >
                         🗑️ Supprimer
                       </GhostBtn>

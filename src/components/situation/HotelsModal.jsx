@@ -69,7 +69,7 @@ export default function HotelsModal({
                     </div>
                     <button
                       onClick={() => onDeleteHotel(hotelName)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded-lg text-sm font-medium transition-colors ml-2"
+                      className="text-[#dc2626] border border-[rgba(239,68,68,0.35)] hover:bg-[rgba(239,68,68,0.12)] px-3 py-1 rounded-lg text-sm font-medium transition-colors ml-2"
                     >
                       🗑️ Supprimer
                     </button>

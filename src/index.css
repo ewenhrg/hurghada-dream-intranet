@@ -15,6 +15,13 @@
   --hd-secondary: #7c3aed;
   --hd-accent: #0ea5e9;
   --hd-success: #10b981;
+  --hd-success-strong: #059669;
+  --hd-warning: #f59e0b;
+  --hd-warning-strong: #d97706;
+  --hd-danger: #ef4444;
+  --hd-danger-strong: #dc2626;
+  --hd-info: #0ea5e9;
+  --hd-info-strong: #0284c7;
   --hd-border: rgba(148, 163, 184, 0.28);
   --hd-border-strong: rgba(79, 70, 229, 0.35);
   --hd-surface: rgba(255, 255, 255, 0.88);
@@ -132,6 +139,26 @@ button {
 .tag-accent {
   background: rgba(14, 165, 233, 0.12);
   color: rgba(14, 165, 233, 0.95);
+}
+
+.tag-success {
+  background: rgba(16, 185, 129, 0.14);
+  color: var(--hd-success-strong);
+}
+
+.tag-warning {
+  background: rgba(245, 158, 11, 0.18);
+  color: var(--hd-warning-strong);
+}
+
+.tag-danger {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--hd-danger-strong);
+}
+
+.tag-info {
+  background: rgba(14, 165, 233, 0.18);
+  color: var(--hd-info-strong);
 }
 
 ::selection {

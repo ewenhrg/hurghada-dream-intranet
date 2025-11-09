@@ -227,30 +227,27 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       </div>
       <div className="space-y-3">
         {filtered.map((d) => {
-          // Utiliser les valeurs pré-calculées
           const allTicketsFilled = d.allTicketsFilled;
           const hasTickets = d.hasTickets;
-
-          // Déterminer la couleur en fonction du statut - palette moderne
-          const borderColor = allTicketsFilled 
-            ? "border-emerald-300 bg-emerald-50/60" 
-            : "border-amber-300 bg-amber-50/60";
           
           return (
-            <div key={d.id} className={`rounded-2xl border-2 ${borderColor} shadow-lg hover:shadow-xl transition-all duration-200 p-5 bg-white/95 backdrop-blur-sm`}>
-              {/* Badge de statut */}
+            <div
+              key={d.id}
+              className={`hd-card hd-border-gradient border-2 transition-all duration-200 p-5 ${
+                allTicketsFilled ? "border-emerald-200/70" : "border-amber-200/70"
+              }`}
+            >
               <div className="flex items-center gap-2 mb-2">
-                {allTicketsFilled ? (
-                  <span className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-full text-xs font-semibold shadow-md border border-emerald-400">
-                    ✅ Payé
-                  </span>
-                ) : (
-                  <span className="px-3 py-1.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full text-xs font-semibold shadow-md border border-amber-400">
-                    ⏳ En attente
-                  </span>
-                )}
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm border ${
+                  allTicketsFilled
+                    ? "bg-[rgba(16,185,129,0.14)] text-[#047857] border-[#34d399]/40"
+                    : "bg-[rgba(245,158,11,0.18)] text-[#b45309] border-[#fbbf24]/45"
+                }`}
+                >
+                  {allTicketsFilled ? "✅ Payé" : "⏳ En attente"}
+                </span>
                 {d.isModified && (
-                  <span className="px-3 py-1.5 bg-gradient-to-r from-purple-400 to-indigo-500 text-white rounded-full text-xs font-semibold shadow-md border border-purple-400">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold shadow-sm border bg-[rgba(147,51,234,0.15)] text-[#6d28d9] border-[rgba(129,140,248,0.35)]">
                     🔄 Modifié
                   </span>
                 )}
@@ -265,9 +262,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     {d.client?.phone || "Tél ?"} — {d.client?.hotel || "Hôtel ?"} ({d.client?.room || "ch ?"})
                   </p>
                   {hasTickets && (
-                    <p className="text-xs text-emerald-600 font-semibold mt-1">
-                      ✅ Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
-                    </p>
+                    <span className="tag-success">
+                      🎫 Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
+                    </span>
                   )}
                   <div className="mt-2 space-y-1">
                     {d.items.map((li, i) => (
