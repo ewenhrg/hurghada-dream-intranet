@@ -527,9 +527,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen relative bg-[rgba(248,250,252,0.4)]">
+    <div className="min-h-screen relative bg-[rgba(248,250,252,0.4)] overflow-x-hidden">
       {/* HEADER */}
-      <header className="fixed top-0 left-0 right-0 z-50 pt-4 pb-3 px-3 sm:px-6 bg-[rgba(248,250,252,0.78)] backdrop-blur-xl shadow-[0_18px_48px_-32px_rgba(15,23,42,0.55)]">
+      <header className="fixed top-0 left-0 right-0 w-full z-50 pt-4 pb-3 px-3 sm:px-6 bg-[rgba(248,250,252,0.85)] backdrop-blur-xl shadow-[0_18px_48px_-32px_rgba(15,23,42,0.55)]">
         <div
           className={`glass-nav mx-auto flex flex-wrap items-center justify-between gap-4 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"} px-4 py-4 rounded-2xl`}
         >

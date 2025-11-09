@@ -340,13 +340,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     </div>
                     <div className="flex flex-wrap justify-end gap-2">
                       <GhostBtn
-                        size="sm"
-                        variant={allTicketsFilled ? "success" : "primary"}
-                        className={
-                          allTicketsFilled
-                            ? "rounded-md bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-[0_18px_32px_-18px_rgba(16,185,129,0.55)]"
-                            : "rounded-md bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-[0_18px_32px_-18px_rgba(37,99,235,0.55)]"
-                        }
+                        variant="success"
+                        className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-emerald-500 shadow-[0_18px_32px_-18px_rgba(16,185,129,0.55)] ${
+                          allTicketsFilled ? "bg-emerald-600 hover:bg-emerald-700" : "bg-emerald-500 hover:bg-emerald-600"
+                        }`}
                         onClick={() => {
                           setSelectedQuote(d);
                           const existingTickets = {};
@@ -363,8 +360,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         {allTicketsFilled ? "✅ Tickets" : "💰 Payer"}
                       </GhostBtn>
                       <GhostBtn
-                        size="sm"
-                        className="rounded-md bg-indigo-500 text-white border-indigo-500 hover:bg-indigo-600 shadow-[0_18px_32px_-18px_rgba(99,102,241,0.5)]"
+                        className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-indigo-500 bg-indigo-500 hover:bg-indigo-600 shadow-[0_18px_32px_-18px_rgba(99,102,241,0.5)]"
                         onClick={() => {
                           const htmlContent = generateQuoteHTML(d);
                           const clientPhone = d.client?.phone || "";
@@ -384,9 +380,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       </GhostBtn>
                       {!allTicketsFilled && (
                         <GhostBtn
-                          size="sm"
                           variant="warning"
-                          className="rounded-md bg-amber-500 text-white border-amber-500 hover:bg-amber-600 shadow-[0_18px_32px_-18px_rgba(245,158,11,0.55)]"
+                          className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-amber-500 bg-amber-500 hover:bg-amber-600 shadow-[0_18px_32px_-18px_rgba(245,158,11,0.55)]"
                           onClick={() => {
                             setSelectedQuote(d);
                             setEditClient({ ...d.client });
@@ -423,9 +418,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       )}
                       {user?.canDeleteQuote && (
                         <GhostBtn
-                          size="sm"
                           variant="danger"
-                          className="rounded-md bg-red-500 text-white border-red-500 hover:bg-red-600 shadow-[0_18px_32px_-18px_rgba(239,68,68,0.55)]"
+                          className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-red-500 bg-red-500 hover:bg-red-600 shadow-[0_18px_32px_-18px_rgba(239,68,68,0.55)]"
                           onClick={async () => {
                             if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
                               const updatedQuotes = quotes.filter((quote) => quote.id !== d.id);
