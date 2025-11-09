@@ -1,13 +1,13 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber } from "../utils";
+import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
 
-export function QuotesPage({ activities, quotes, setQuotes, user }) {
+export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft }) {
   const blankItemMemo = useCallback(() => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
@@ -28,40 +28,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     allerRetour: false, // Pour HURGHADA - LE CAIRE et HURGHADA - LOUXOR
   }), []);
 
-  // Charger le formulaire sauvegardé depuis localStorage
-  // Utiliser un flag dans sessionStorage pour distinguer un vrai rechargement d'un changement d'onglet
-  const [isPageReload] = useState(() => {
-    // Vérifier si c'est un rechargement de page (F5 ou refresh)
-    const navigationEntry = performance.getEntriesByType('navigation')[0];
-    const isReload = navigationEntry && navigationEntry.type === 'reload';
-    
-    // Vérifier si le flag de session existe (défini lors du montage précédent dans cette session)
-    const wasMounted = sessionStorage.getItem('quotesPageMounted') === 'true';
-    
-    // Si c'est un vrai rechargement (F5), supprimer la sauvegarde
-    if (isReload) {
-      localStorage.removeItem(LS_KEYS.quoteForm);
-      // Marquer que la page est montée après rechargement
-      sessionStorage.setItem('quotesPageMounted', 'true');
-      return true;
-    }
-    
-    // Si le flag n'existe pas, c'est la première fois dans cette session (ou nouveau navigateur/onglet)
-    // Mais on veut quand même restaurer les données si elles existent
-    // On ne supprime PAS la sauvegarde ici, on la conservera
-    if (!wasMounted) {
-      sessionStorage.setItem('quotesPageMounted', 'true');
-    }
-    
-    // Si le flag existe et ce n'est pas un rechargement, c'est juste un changement d'onglet
-    // Ne PAS supprimer la sauvegarde, elle sera restaurée
-    return false;
-  });
-
-  // Toujours charger le formulaire sauvegardé (sauf lors d'un vrai rechargement F5)
-  // Les données seront restaurées lors du changement d'onglet
-  const savedForm = !isPageReload ? loadLS(LS_KEYS.quoteForm, null) : null;
-  const defaultClient = savedForm?.client || {
+  const defaultClient = draft?.client || {
     name: "",
     phone: "",
     hotel: "",
@@ -71,56 +38,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     departureDate: "",
   };
   
-  const defaultItems = savedForm?.items && savedForm.items.length > 0 ? savedForm.items : [blankItemMemo()];
-  const defaultNotes = savedForm?.notes || "";
-
-  const [client, setClient] = useState(defaultClient);
-  const [items, setItems] = useState(defaultItems);
-  const [notes, setNotes] = useState(defaultNotes);
+  const [client, setClient] = useState(() => defaultClient);
+  const [items, setItems] = useState(() => (draft?.items && draft.items.length > 0 ? draft.items : [blankItemMemo()]));
+  const [notes, setNotes] = useState(() => draft?.notes || "");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [ticketNumbers, setTicketNumbers] = useState({});
   const [paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" }
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Référence pour le timeout de sauvegarde debounce
-  const saveTimeoutRef = useRef(null);
 
-  // Sauvegarder le formulaire dans localStorage avec debounce (300ms)
-  // Les données seront conservées lors du changement d'onglet et restaurées au retour
+  // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
-    // Marquer que la page est montée pour éviter de supprimer la sauvegarde lors du prochain montage
-    sessionStorage.setItem('quotesPageMounted', 'true');
-    
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
+    if (setDraft) {
+      setDraft({
+        client,
+        items,
+        notes,
+      });
     }
-    
-    saveTimeoutRef.current = setTimeout(() => {
-      // Sauvegarder les données dans localStorage
-      // Ces données seront restaurées si l'utilisateur change d'onglet puis revient
-      saveLS(LS_KEYS.quoteForm, {
-        client,
-        items,
-        notes,
-      });
-    }, 300);
-
-    return () => {
-      // Sauvegarder immédiatement au démontage du composant pour ne pas perdre les données
-      // C'est important lors du changement d'onglet - les données doivent être sauvegardées
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      // Sauvegarder immédiatement les données actuelles avant de démonter le composant
-      // Cela garantit que même si l'utilisateur change rapidement d'onglet, les données sont sauvegardées
-      saveLS(LS_KEYS.quoteForm, {
-        client,
-        items,
-        notes,
-      });
-    };
-  }, [client, items, notes]);
+  }, [client, items, notes, setDraft]);
 
   const setItem = useCallback((i, patch) => {
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -500,7 +436,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
     }
 
     // Réinitialiser le formulaire après création réussie
-    setClient({
+    const resetClient = {
       name: "",
       phone: "",
       hotel: "",
@@ -508,12 +444,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
       neighborhood: "",
       arrivalDate: "",
       departureDate: "",
-    });
-    setItems([blankItemMemo()]);
+    };
+    setClient(resetClient);
+    const resetItems = [blankItemMemo()];
+    setItems(resetItems);
     setNotes("");
     
-    // Supprimer le formulaire sauvegardé
-    localStorage.removeItem(LS_KEYS.quoteForm);
+    // Réinitialiser le brouillon global
+    if (setDraft) {
+      setDraft(null);
+    }
 
     setIsSubmitting(false);
     window.scrollTo({ top: 0, behavior: "smooth" });

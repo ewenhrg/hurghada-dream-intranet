@@ -22,6 +22,7 @@ export default function App() {
   // Forcer la lecture uniquement depuis Supabase, ignorer le localStorage local
   const [activities, setActivities] = useState(() => getDefaultActivities());
   const [quotes, setQuotes] = useState(() => loadLS(LS_KEYS.quotes, []));
+  const [quoteDraft, setQuoteDraft] = useState(() => loadLS(LS_KEYS.quoteForm, null));
   const [remoteEnabled, setRemoteEnabled] = useState(false);
   const [user, setUser] = useState(null);
   const { language, setLanguage } = useLanguage();
@@ -199,6 +200,19 @@ export default function App() {
       clearInterval(interval);
     };
   }, []);
+
+  // Persister le brouillon de devis (ou le nettoyer) dès qu'il change
+  useEffect(() => {
+    if (quoteDraft) {
+      saveLS(LS_KEYS.quoteForm, quoteDraft);
+    } else {
+      try {
+        localStorage.removeItem(LS_KEYS.quoteForm);
+      } catch (error) {
+        console.warn("Impossible de supprimer le brouillon de devis du localStorage", error);
+      }
+    }
+  }, [quoteDraft]);
 
   // Synchronisation initiale unique des devis depuis Supabase au chargement de la page
   useEffect(() => {
@@ -645,7 +659,14 @@ export default function App() {
                 </div>
               </div>
               <div className="hd-card p-8 md:p-10 lg:p-12">
-                <QuotesPage activities={activities} quotes={quotes} setQuotes={setQuotes} user={user} />
+                <QuotesPage
+                  activities={activities}
+                  quotes={quotes}
+                  setQuotes={setQuotes}
+                  user={user}
+                  draft={quoteDraft}
+                  setDraft={setQuoteDraft}
+                />
               </div>
             </section>
           )}
