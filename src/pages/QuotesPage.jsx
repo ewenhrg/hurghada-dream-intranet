@@ -58,6 +58,29 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
   }, [client, items, notes, setDraft]);
 
+  useEffect(() => {
+    if (selectedQuote) {
+      setClient({
+        ...selectedQuote.client,
+        arrivalDate: selectedQuote.clientArrivalDate || selectedQuote.client?.arrivalDate || "",
+        departureDate: selectedQuote.clientDepartureDate || selectedQuote.client?.departureDate || "",
+      });
+      setItems(
+        selectedQuote.items?.length
+          ? selectedQuote.items.map((item) => ({
+              ...item,
+              speedBoatExtra: Array.isArray(item.speedBoatExtra)
+                ? item.speedBoatExtra
+                : item.speedBoatExtra
+                  ? [item.speedBoatExtra]
+                  : [],
+            }))
+          : [blankItemMemo()]
+      );
+      setNotes(selectedQuote.notes || "");
+    }
+  }, [selectedQuote, blankItemMemo]);
+
   const setItem = useCallback((i, patch) => {
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   }, []);
@@ -69,6 +92,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const removeItem = useCallback((i) => {
     setItems((prev) => prev.filter((_, idx) => idx !== i));
   }, []);
+  
+  const resetQuoteForm = useCallback(() => {
+    const emptyClient = {
+      name: "",
+      phone: "",
+      hotel: "",
+      room: "",
+      neighborhood: "",
+      arrivalDate: "",
+      departureDate: "",
+    };
+    setClient(emptyClient);
+    setItems([blankItemMemo()]);
+    setNotes("");
+    setTicketNumbers({});
+    setPaymentMethods({});
+    if (setDraft) {
+      setDraft(null);
+    }
+  }, [blankItemMemo, setDraft]);
 
   // Trier les activités par ordre alphabétique pour le menu déroulant
   const sortedActivities = useMemo(() => {
@@ -436,24 +479,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
 
     // Réinitialiser le formulaire après création réussie
-    const resetClient = {
-      name: "",
-      phone: "",
-      hotel: "",
-      room: "",
-      neighborhood: "",
-      arrivalDate: "",
-      departureDate: "",
-    };
-    setClient(resetClient);
-    const resetItems = [blankItemMemo()];
-    setItems(resetItems);
-    setNotes("");
-    
-    // Réinitialiser le brouillon global
-    if (setDraft) {
-      setDraft(null);
-    }
+    resetQuoteForm();
 
     setIsSubmitting(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -503,6 +529,24 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           }}
           className="space-y-8"
         >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-gray-500 font-medium">
+            Les modifications sont sauvegardées automatiquement en brouillon.
+          </p>
+          <GhostBtn
+            type="button"
+            variant="danger"
+            size="sm"
+            onClick={() => {
+              if (window.confirm("Supprimer toutes les activités et les infos client ?")) {
+                resetQuoteForm();
+                toast.success("Formulaire réinitialisé.");
+              }
+            }}
+          >
+            🧹 Tout effacer
+          </GhostBtn>
+        </div>
         {/* Infos client */}
         <div className="grid md:grid-cols-5 gap-6 md:gap-7 lg:gap-8">
           <div>
@@ -917,7 +961,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         onChange={(e) => {
                           setItem(idx, { 
                             allerRetour: e.target.checked,
-                            allerSimple: e.target.checked ? false : c.raw.allerSimple // Désactiver aller simple si on coche aller-retour
+                            allerSimple: e.target.checked ? false : c.raw.allerRetour // Désactiver aller simple si on coche aller-retour
                           });
                         }}
                         className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -1047,7 +1091,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         onChange={(e) => {
                           setItem(idx, { 
                             allerRetour: e.target.checked,
-                            allerSimple: e.target.checked ? false : c.raw.allerSimple // Désactiver aller simple si on coche aller-retour
+                            allerSimple: e.target.checked ? false : c.raw.allerRetour // Désactiver aller simple si on coche aller-retour
                           });
                         }}
                         className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -1177,7 +1221,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         onChange={(e) => {
                           setItem(idx, { 
                             allerRetour: e.target.checked,
-                            allerSimple: e.target.checked ? false : c.raw.allerSimple // Désactiver aller simple si on coche aller-retour
+                            allerSimple: e.target.checked ? false : c.raw.allerRetour // Désactiver aller simple si on coche aller-retour
                           });
                         }}
                         className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"

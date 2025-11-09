@@ -111,7 +111,7 @@ export const Section = memo(({ title, subtitle, right, children }) => (
         <h2 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-slate-900 mb-1.5 bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent">
           {title}
         </h2>
-        {subtitle && <p className="text-sm font-medium text-[rgba(71,85,105,0.85)] leading-relaxed">{subtitle}</p>}
+        {subtitle && <p className="text-sm font-medium text-white/70 leading-relaxed drop-shadow-[0_6px_12px_rgba(7,13,31,0.55)]">{subtitle}</p>}
       </div>
       {right && <div className="flex-shrink-0">{right}</div>}
     </div>

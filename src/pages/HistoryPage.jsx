@@ -384,7 +384,11 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                           className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-amber-500 bg-amber-500 hover:bg-amber-600 shadow-[0_18px_32px_-18px_rgba(245,158,11,0.55)]"
                           onClick={() => {
                             setSelectedQuote(d);
-                            setEditClient({ ...d.client });
+                            setEditClient({
+                              ...d.client,
+                              arrivalDate: d.client?.arrivalDate || "",
+                              departureDate: d.client?.departureDate || "",
+                            });
                             setEditItems(
                               d.items.map((item) => ({
                                 activityId: item.activityId || "",
@@ -701,6 +705,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   client_hotel: updatedQuote.client.hotel || "",
                   client_room: updatedQuote.client.room || "",
                   client_neighborhood: updatedQuote.client.neighborhood || "",
+                  client_arrival_date: updatedQuote.client.arrivalDate || "",
+                  client_departure_date: updatedQuote.client.departureDate || "",
                   notes: updatedQuote.notes || "",
                   total: updatedQuote.total,
                   currency: updatedQuote.currency,
@@ -775,6 +781,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     ktm640: "",
     ktm530: "",
   });
+
+  const sortedActivities = useMemo(() => {
+    return [...activities].sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr", { sensitivity: "base" }));
+  }, [activities]);
 
   function setItem(i, patch) {
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -929,6 +939,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     const updatedQuote = {
       ...quote,
       client: cleanedClient,
+      clientArrivalDate: cleanedClient.arrivalDate || "",
+      clientDepartureDate: cleanedClient.departureDate || "",
       notes: notes.trim(),
       createdByName: quote.createdByName || "", // Garder le créateur original
       items: validComputed.map((c) => ({
@@ -1039,7 +1051,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
                     >
                       <option value="">— Choisir —</option>
-                      {activities.map((a) => (
+                      {sortedActivities.map((a) => (
                         <option key={a.id} value={a.id}>
                           {a.name}
                         </option>

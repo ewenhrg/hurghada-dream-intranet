@@ -10,6 +10,8 @@
   --hd-text: #0f172a;
   --hd-muted: #475569;
   --hd-muted-light: #64748b;
+  --hd-text-inverse: #e2e8f0;
+  --hd-muted-inverse: rgba(226, 232, 240, 0.7);
   --hd-primary: #4f46e5;
   --hd-primary-strong: #4338ca;
   --hd-secondary: #7c3aed;
@@ -26,7 +28,7 @@
   --hd-border-strong: rgba(79, 70, 229, 0.35);
   --hd-surface: rgba(255, 255, 255, 0.88);
   --hd-surface-strong: rgba(255, 255, 255, 0.94);
-  --hd-bg-gradient: radial-gradient(120% 140% at 0% 0%, #eef2ff 0%, #f8fafc 35%, #edfaff 70%, #f8fbff 100%);
+  --hd-bg-gradient: radial-gradient(140% 160% at 15% -10%, #1f2937 0%, #111827 45%, #0d1629 70%, #070d1f 100%);
 }
 
 *, *::before, *::after {
@@ -38,7 +40,7 @@ html, body {
   padding: 0;
   min-height: 100%;
   font-family: var(--hd-font-sans);
-  color: var(--hd-text);
+  color: var(--hd-text-inverse);
   background: var(--hd-bg-gradient);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -54,9 +56,10 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(80% 80% at 20% 0%, rgba(79, 70, 229, 0.08), transparent 55%),
-    radial-gradient(60% 70% at 90% 10%, rgba(14, 165, 233, 0.08), transparent 60%),
-    radial-gradient(65% 75% at 50% 100%, rgba(124, 58, 237, 0.07), transparent 60%);
+  background:
+    radial-gradient(70% 90% at 20% 5%, rgba(79, 70, 229, 0.25), transparent 60%),
+    radial-gradient(55% 75% at 90% 0%, rgba(14, 165, 233, 0.22), transparent 65%),
+    radial-gradient(65% 80% at 50% 100%, rgba(124, 58, 237, 0.2), transparent 70%);
   z-index: -1;
 }
 
@@ -67,7 +70,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 p, span, li, label {
-  color: var(--hd-muted);
+  color: var(--hd-muted-inverse);
 }
 
 a {
@@ -91,6 +94,14 @@ button {
   box-shadow: 0 24px 60px -30px rgba(15, 23, 42, 0.35);
   backdrop-filter: blur(18px);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  color: var(--hd-text);
+}
+
+.hd-card p,
+.hd-card span,
+.hd-card li,
+.hd-card label {
+  color: var(--hd-muted);
 }
 
 .hd-card:hover {
@@ -110,6 +121,7 @@ button {
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(135deg, rgba(79, 70, 229, 0.55), rgba(14, 165, 233, 0.45));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -117,10 +129,10 @@ button {
 }
 
 .glass-nav {
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.26);
-  box-shadow: 0 20px 45px -25px rgba(15, 23, 42, 0.25);
-  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.78), rgba(30, 41, 59, 0.72));
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 20px 45px -25px rgba(7, 13, 31, 0.55);
+  backdrop-filter: blur(20px);
 }
 
 .badge-soft {
@@ -129,8 +141,8 @@ button {
   gap: 0.35rem;
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(14, 165, 233, 0.08));
-  color: var(--hd-primary-strong);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(14, 165, 233, 0.14));
+  color: var(--hd-text-inverse);
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.02em;

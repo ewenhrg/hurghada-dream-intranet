@@ -555,9 +555,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[rgba(248,250,252,0.4)] overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-transparent overflow-hidden">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 pt-4 pb-3 px-3 sm:px-6 bg-[rgba(248,250,252,0.92)] backdrop-blur-xl shadow-[0_18px_48px_-32px_rgba(15,23,42,0.55)]">
+      <header className="sticky top-0 z-50 pt-4 pb-3 px-3 sm:px-6 bg-[rgba(7,13,31,0.9)] backdrop-blur-xl shadow-[0_24px_60px_-32px_rgba(7,13,31,0.65)]">
         <div
           className={`glass-nav mx-auto flex flex-wrap items-center justify-between gap-4 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"} px-4 py-4 rounded-2xl`}
         >
@@ -582,7 +582,7 @@ export default function App() {
               <h1 className="text-[1.05rem] font-semibold tracking-[-0.03em] bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent">
                 {t("header.title")}
               </h1>
-              <p className="text-[11px] font-medium text-[rgba(71,85,105,0.8)]">{t("header.subtitle")}</p>
+              <p className="text-[11px] font-medium text-white/65">{t("header.subtitle")}</p>
               {user && (
                 <span className="badge-soft">
                   <span>👤</span>
@@ -595,13 +595,13 @@ export default function App() {
           </div>
           <div className="flex items-center gap-3">
             {/* Sélecteur de langue */}
-            <div className="flex items-center gap-2 rounded-xl border border-[rgba(148,163,184,0.28)] bg-[rgba(255,255,255,0.9)] px-2.5 py-1.5 shadow-[0_14px_28px_-20px_rgba(15,23,42,0.35)]">
+            <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-2.5 py-1.5 shadow-[0_14px_28px_-20px_rgba(7,13,31,0.45)]">
               <button
                 onClick={() => setLanguage("fr")}
                 className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-colors ${
                   language === "fr"
                     ? "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white shadow-[0_14px_28px_-16px_rgba(79,70,229,0.55)]"
-                    : "text-slate-600 hover:text-[#4338ca] hover:bg-white"
+                    : "text-white/70 hover:text-[#a5b4fc] hover:bg-white/10"
                 }`}
               >
                 FR
@@ -611,7 +611,7 @@ export default function App() {
                 className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-colors ${
                   language === "en"
                     ? "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white shadow-[0_14px_28px_-16px_rgba(79,70,229,0.55)]"
-                    : "text-slate-600 hover:text-[#4338ca] hover:bg-white"
+                    : "text-white/70 hover:text-[#a5b4fc] hover:bg-white/10"
                 }`}
               >
                 EN
@@ -669,7 +669,9 @@ export default function App() {
 
       {/* CONTENU CENTRÉ */}
       <main className="flex-1 overflow-y-auto px-3 sm:px-6 py-10">
-        <div className={`mx-auto space-y-10 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
+        <div
+          className={`mx-auto space-y-10 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"} bg-white/5 border border-white/10 rounded-[32px] p-6 sm:p-8 shadow-[0_30px_60px_-35px_rgba(15,23,42,0.65)] backdrop-blur-2xl`}
+        >
           <Suspense fallback={<PageLoader />}>
           {tab === "devis" && (
             <section className="space-y-6">
@@ -753,7 +755,7 @@ export default function App() {
         </div>
       </main>
 
-      <footer className={`mx-auto px-4 py-8 text-[11px] text-slate-600 border-t border-slate-200/80 mt-10 font-medium tracking-wide ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
+      <footer className={`mx-auto px-4 py-8 text-[11px] text-white/65 border-t border-white/10 mt-10 font-medium tracking-wide ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
         Données stockées en local + Supabase (si dispo). Site interne Hurghada Dream.
       </footer>
     </div>
