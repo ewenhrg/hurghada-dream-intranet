@@ -110,7 +110,7 @@ export function LoginPage({ onSuccess }) {
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             Accès sécurisé
           </span>
-          <h1 className="text-3xl md:text-5xl font-semibold leading-tight tracking-tight">
+          <h1 className="text-3xl md:text-5xl font-semibold leading-tight tracking-tight text-white">
             Le cockpit digital de <span className="text-transparent bg-gradient-to-r from-[#38bdf8] via-[#7c3aed] to-[#f472b6] bg-clip-text">Hurghada Dream</span> pour orchestrer devis, activités et équipes.
           </h1>
           <p className="text-base md:text-lg text-white/75 max-w-2xl mx-auto lg:ml-0">
@@ -121,7 +121,7 @@ export function LoginPage({ onSuccess }) {
             {[
               { title: "1 seul code", desc: "Profils et autorisations gérés automatiquement." },
               { title: "Vision globale", desc: "Devis, activités, tickets et utilisateurs centralisés." },
-              { title: "Résilience totale", desc: "Mode hors-ligne + réplication cloud instantanée." },
+              { title: "Pense à te déconnecter", desc: "Merci de quitter l'intranet en fin de session." },
             ].map((feature) => (
               <div key={feature.title} className="rounded-2xl border border-white/15 bg-white/5 backdrop-blur-md p-4 shadow-[0_24px_45px_-30px_rgba(15,23,42,0.65)]">
                 <p className="text-sm font-semibold text-white">{feature.title}</p>
@@ -132,7 +132,7 @@ export function LoginPage({ onSuccess }) {
 
           <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 text-sm text-white/60">
             <div>
-              <span className="font-semibold text-white">Support 24/7 :</span> +20 109 000 000
+              <span className="font-semibold text-white">Support 24/7 :</span> +33 6 19 92 14 49
             </div>
             <div className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
