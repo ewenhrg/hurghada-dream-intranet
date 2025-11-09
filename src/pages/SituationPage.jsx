@@ -8,8 +8,7 @@ import { extractPhoneFromName, validatePhoneNumber, extractNameFromField } from 
 import { convertExcelValue, findColumn } from "../utils/excelParser";
 import { generateMessage, getDefaultTemplate } from "../utils/messageGenerator";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
-import AutoSizer from "react-virtualized-auto-sizer";
-import { List } from "react-window";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 const MessageTemplatesModal = lazy(() => import("../components/situation/MessageTemplatesModal"));
 const HotelsModal = lazy(() => import("../components/situation/HotelsModal"));
@@ -946,6 +945,15 @@ export function SituationPage({ activities = [] }) {
     [excelData, editingCell, handleCellEdit, handleToggleMarina, rowsWithMarina]
   );
 
+  const tableBodyRef = useRef(null);
+  const rowVirtualizer = useVirtualizer({
+    count: excelData.length,
+    getScrollElement: () => tableBodyRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 8,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+
   // Wrapper pour generateMessage avec contexte local
   const generateMessageWithContext = (data) => {
     return generateMessage(data, messageTemplates, rowsWithMarina, exteriorHotels);
@@ -1516,20 +1524,29 @@ export function SituationPage({ activities = [] }) {
                   </div>
                 ))}
               </div>
-              <div className="h-[60vh]">
-                <AutoSizer>
-                  {({ height, width }) => (
-                    <List
-                      height={height}
-                      width={width}
-                      itemCount={excelData.length}
-                      itemSize={ROW_HEIGHT}
-                      rowProps={listItemData}
-                    >
-                      {VirtualizedRow}
-                    </List>
-                  )}
-                </AutoSizer>
+              <div className="h-[60vh]" ref={tableBodyRef}>
+                <div
+                  style={{
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    position: "relative",
+                  }}
+                >
+                  {virtualRows.map((virtualRow) => (
+                    <VirtualizedRow
+                      key={virtualRow.key}
+                      index={virtualRow.index}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        transform: `translateY(${virtualRow.start}px)`,
+                        height: `${virtualRow.size}px`,
+                      }}
+                      data={listItemData}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           </div>
