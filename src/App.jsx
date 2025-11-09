@@ -6,15 +6,15 @@ import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
 import { useLanguage } from "./contexts/LanguageContext";
 import { useTranslation } from "./hooks/useTranslation";
+import PageLoader from "./components/PageLoader";
 
-// Lazy loading des pages pour optimiser le chargement initial
-const ActivitiesPage = lazy(() => import("./pages/ActivitiesPage").then(module => ({ default: module.ActivitiesPage })));
-const QuotesPage = lazy(() => import("./pages/QuotesPage").then(module => ({ default: module.QuotesPage })));
-const HistoryPage = lazy(() => import("./pages/HistoryPage").then(module => ({ default: module.HistoryPage })));
-const UsersPage = lazy(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
-const TicketPage = lazy(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
-const ModificationsPage = lazy(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
-const SituationPage = lazy(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
+const ActivitiesPage = lazy(() => import("./pages/ActivitiesPage"));
+const QuotesPage = lazy(() => import("./pages/QuotesPage"));
+const HistoryPage = lazy(() => import("./pages/HistoryPage"));
+const UsersPage = lazy(() => import("./pages/UsersPage"));
+const TicketPage = lazy(() => import("./pages/TicketPage"));
+const ModificationsPage = lazy(() => import("./pages/ModificationsPage"));
+const SituationPage = lazy(() => import("./pages/SituationPage"));
 
 export default function App() {
   const [ok, setOk] = useState(false);
@@ -498,6 +498,30 @@ export default function App() {
     };
   }, [quotes]);
 
+  useEffect(() => {
+    if (!ok) return;
+
+    const preload = async () => {
+      try {
+        await Promise.all([
+          import("./pages/QuotesPage"),
+          import("./pages/ActivitiesPage"),
+          import("./pages/HistoryPage"),
+          import("./pages/TicketPage"),
+          import("./pages/ModificationsPage"),
+          import("./pages/SituationPage"),
+          import("./pages/UsersPage"),
+        ]);
+      } catch (error) {
+        console.warn("Préchargement des pages échoué", error);
+      }
+    };
+
+    const timer = setTimeout(preload, 200);
+
+    return () => clearTimeout(timer);
+  }, [ok]);
+
   if (!ok) {
         return <LoginPage onSuccess={handleLoginSuccess} />;
   }
@@ -597,7 +621,7 @@ export default function App() {
 
       {/* CONTENU CENTRÉ */}
       <main className={`mx-auto px-4 py-8 space-y-8 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
-        <Suspense fallback={<div className="flex items-center justify-center p-8"><p className="text-gray-500">Chargement...</p></div>}>
+        <Suspense fallback={<PageLoader />}>
           {tab === "devis" && (
             <section className="space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
