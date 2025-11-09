@@ -1524,7 +1524,7 @@ export function SituationPage({ activities = [] }) {
                       width={width}
                       itemCount={excelData.length}
                       itemSize={ROW_HEIGHT}
-                      itemData={listItemData}
+                      rowProps={listItemData}
                     >
                       {VirtualizedRow}
                     </List>
