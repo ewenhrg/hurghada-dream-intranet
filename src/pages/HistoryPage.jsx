@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currency, currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, uuid, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
+import { currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -606,7 +606,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           notes={editNotes}
           setNotes={setEditNotes}
           activities={activities}
-          user={user}
           editModalRef={editModalRef}
           editModalContainerRef={editModalContainerRef}
           onClose={() => {
@@ -686,7 +685,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 }
 
 // Composant modale de modification de devis
-function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, onClose, onSave, user, editModalRef, editModalContainerRef }) {
+function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, onClose, onSave, editModalRef, editModalContainerRef }) {
   const blankItem = () => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),

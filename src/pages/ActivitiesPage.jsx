@@ -7,7 +7,7 @@ import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
 import { toast } from "../utils/toast.js";
 
-export function ActivitiesPage({ activities, setActivities, remoteEnabled, user }) {
+export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDay, setSelectedDay] = useState("");
   

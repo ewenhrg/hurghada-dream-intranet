@@ -70,7 +70,10 @@ export function emptyTransfers() {
 export function saveLS(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
+  } catch (error) {
+    // localStorage peut échouer (mode privé, quota, etc.)
+    console.warn("saveLS: impossible d'écrire dans localStorage", error);
+  }
 }
 
 export function loadLS(key, fallback) {

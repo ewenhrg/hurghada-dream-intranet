@@ -111,7 +111,7 @@ export default function App() {
       if (!supabase) return;
     try {
       // Vérifier si Supabase est configuré (pas un stub)
-      const { data: testData, error: testError } = await supabase.from("activities").select("id").limit(1);
+      const { error: testError } = await supabase.from("activities").select("id").limit(1);
       
       // Si pas d'erreur de connexion/config, Supabase est disponible
       if (!testError || testError.code !== "PGRST116") {
@@ -156,7 +156,7 @@ export default function App() {
           };
 
           // Ajouter UNIQUEMENT les activités Supabase (source de vérité absolue)
-          supabaseActivitiesMap.forEach((supabaseActivity, supabaseId) => {
+          supabaseActivitiesMap.forEach((supabaseActivity) => {
             const key = getUniqueKey(supabaseActivity);
             if (!uniqueKeys.has(key)) {
               supabaseActivities.push(supabaseActivity);
@@ -284,7 +284,7 @@ export default function App() {
             const merged = [];
 
             // Ajouter TOUS les devis Supabase (source de vérité absolue)
-            supabaseQuotesMap.forEach((supabaseQuote, supabaseId) => {
+            supabaseQuotesMap.forEach((supabaseQuote) => {
               merged.push(supabaseQuote);
             });
 
@@ -343,20 +343,6 @@ export default function App() {
   // Synchronisation en temps réel des devis via Supabase Realtime
   useEffect(() => {
     if (!supabase || !remoteEnabled) return;
-
-    // Fonction pour faire correspondre un devis Supabase avec un devis local
-    const findMatchingLocalQuote = (supabaseQuote, localQuotes) => {
-      const supabasePhone = supabaseQuote.client_phone || "";
-      const supabaseCreatedAt = supabaseQuote.created_at || "";
-      
-      return localQuotes.find((localQuote) => {
-        const localPhone = localQuote.client?.phone || "";
-        const localCreatedAt = localQuote.createdAt || "";
-        
-        // Correspondre par téléphone et date de création
-        return localPhone === supabasePhone && localCreatedAt === supabaseCreatedAt;
-      });
-    };
 
     // Fonction pour convertir un devis Supabase en format local
     const convertSupabaseQuoteToLocal = (row) => {
@@ -645,7 +631,7 @@ export default function App() {
               )
             }
           >
-            <ActivitiesPage activities={activities} setActivities={setActivities} remoteEnabled={remoteEnabled} user={user} />
+            <ActivitiesPage activities={activities} setActivities={setActivities} user={user} />
           </Section>
         )}
 
@@ -671,12 +657,12 @@ export default function App() {
         )}
 
         {tab === "situation" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
-          <SituationPage user={user} activities={activities} />
+          <SituationPage activities={activities} />
         )}
 
           {tab === "users" && (user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
             <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")}>
-              <UsersPage user={user} />
+              <UsersPage />
             </Section>
           )}
         </Suspense>

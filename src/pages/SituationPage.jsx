@@ -1,15 +1,14 @@
-import { useState, useMemo, useRef, useEffect, memo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { PrimaryBtn, GhostBtn, Section, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { LS_KEYS } from "../constants";
 import { loadLS, saveLS } from "../utils";
 import { extractPhoneFromName, validatePhoneNumber, extractNameFromField } from "../utils/phoneUtils";
-import { findHotelInList } from "../utils/hotelMatcher";
 import { convertExcelValue, findColumn } from "../utils/excelParser";
 import { generateMessage, getDefaultTemplate } from "../utils/messageGenerator";
 
-export function SituationPage({ user, activities = [] }) {
+export function SituationPage({ activities = [] }) {
   const [excelData, setExcelData] = useState([]);
   const [previewMessages, setPreviewMessages] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -162,11 +161,6 @@ export function SituationPage({ user, activities = [] }) {
     }));
   };
   
-  // Helper pour trouver un hôtel dans la liste (avec contexte des exteriorHotels)
-  const findHotelInListWithContext = (hotelName) => {
-    return findHotelInList(hotelName, exteriorHotels);
-  };
-
   // Lire le fichier Excel
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -505,44 +499,10 @@ export function SituationPage({ user, activities = [] }) {
     setShowPreview(true);
   };
 
-  // Réutiliser ou fermer la fenêtre WhatsApp précédente
-  const handlePreviousWindow = async (whatsappUrl) => {
-    if (whatsappWindowRef.current) {
-      try {
-        // Vérifier si la fenêtre est toujours ouverte
-        const isClosed = whatsappWindowRef.current.closed;
-        console.log(`🔒 Vérification de la fenêtre précédente: closed=${isClosed}`);
-        
-        if (!isClosed) {
-          console.log("🔄 Tentative de réutilisation de la fenêtre WhatsApp existante...");
-          // Essayer de changer l'URL de la fenêtre existante
-          try {
-            whatsappWindowRef.current.location.href = whatsappUrl;
-            whatsappWindowRef.current.focus();
-            console.log("✅ Fenêtre WhatsApp réutilisée avec succès (URL changée)");
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            return whatsappWindowRef.current;
-          } catch (crossOriginError) {
-            // Si on ne peut pas changer l'URL (cross-origin), on ne peut rien faire
-            console.log("⚠️ Impossible de changer l'URL (cross-origin). La fenêtre sera réutilisée avec window.open()");
-            // On ne ferme pas la fenêtre, on laisse window.open() avec le même nom la réutiliser
-          }
-        } else {
-          console.log("ℹ️ La fenêtre précédente est fermée, mais on utilisera le même nom pour la réutiliser");
-        }
-      } catch (error) {
-        console.error("❌ Erreur lors de la gestion de la fenêtre précédente:", error);
-      }
-    } else {
-      console.log("ℹ️ Aucune fenêtre précédente dans la référence");
-    }
-    return null;
-  };
-
   // Ouvrir WhatsApp Web avec le numéro et le message pré-rempli
   const openWhatsApp = async (phone, message) => {
     // Nettoyer le numéro de téléphone (enlever les espaces, tirets, etc.)
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
+    const cleanPhone = phone.replace(/[\s-()]/g, "");
     // Encoder le message pour l'URL
     const encodedMessage = encodeURIComponent(message);
     // Créer l'URL WhatsApp
@@ -578,6 +538,7 @@ export function SituationPage({ user, activities = [] }) {
           }
         } catch (error) {
           console.log("✅ Fenêtre WhatsApp ouverte/réutilisée");
+          console.debug("Détail de l'erreur de vérification de fenêtre:", error);
         }
       }
       
@@ -588,7 +549,7 @@ export function SituationPage({ user, activities = [] }) {
       try {
         whatsappWindow.focus();
       } catch (error) {
-        // Ignorer les erreurs de focus
+        console.debug("Focus WhatsApp impossible:", error);
       }
       
       return whatsappWindow;
@@ -782,7 +743,6 @@ export function SituationPage({ user, activities = [] }) {
       setRemainingCount(validQueue.length - i - 1);
 
       const data = validQueue[i];
-      const message = generateMessage(data);
 
       console.log(`📤 Envoi ${i + 1}/${validQueue.length} : ${data.name} (${data.phone})`);
       toast.info(`Envoi ${i + 1}/${validQueue.length} : ${data.name} (${data.phone})`);
@@ -844,7 +804,7 @@ export function SituationPage({ user, activities = [] }) {
       try {
         whatsappWindowRef.current.close();
       } catch (error) {
-        // Ignorer les erreurs
+        console.debug("Impossible de fermer la fenêtre WhatsApp:", error);
       }
     }
 
@@ -902,7 +862,7 @@ export function SituationPage({ user, activities = [] }) {
         try {
           whatsappWindowRef.current.close();
         } catch (error) {
-          // Ignorer les erreurs
+          console.debug("Impossible de fermer la fenêtre WhatsApp au démontage:", error);
         }
       }
     };

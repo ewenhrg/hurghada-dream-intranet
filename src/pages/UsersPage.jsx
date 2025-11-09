@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 
-export function UsersPage({ user }) {
+export function UsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -128,7 +128,7 @@ export function UsersPage({ user }) {
 
       if (editingUser) {
         // Modifier un utilisateur existant
-        const { data, error } = await supabase.from("users").update(userData).eq("id", editingUser.id).select().single();
+        const { error } = await supabase.from("users").update(userData).eq("id", editingUser.id).select().single();
 
         if (error) {
           console.error("Erreur lors de la modification de l'utilisateur:", error);
@@ -141,7 +141,7 @@ export function UsersPage({ user }) {
         }
       } else {
         // Créer un nouvel utilisateur
-        const { data, error } = await supabase.from("users").insert(userData).select().single();
+        const { error } = await supabase.from("users").insert(userData).select().single();
 
         if (error) {
           console.error("Erreur lors de la création de l'utilisateur:", error);

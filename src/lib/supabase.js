@@ -12,12 +12,10 @@ function getEnv(key) {
     return import.meta.env[key];
   }
   // CRA
-  if (
-    typeof process !== "undefined" &&
-    process.env &&
-    Object.prototype.hasOwnProperty.call(process.env, key)
-  ) {
-    return process.env[key];
+  const globalProcess =
+    typeof globalThis !== "undefined" && globalThis.process ? globalThis.process : undefined;
+  if (globalProcess && globalProcess.env && Object.prototype.hasOwnProperty.call(globalProcess.env, key)) {
+    return globalProcess.env[key];
   }
   // fallback window
   if (typeof window !== "undefined" && window.__ENV__ && window.__ENV__[key]) {

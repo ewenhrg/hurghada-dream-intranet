@@ -37,7 +37,7 @@ export function validatePhoneNumber(phone) {
   }
   
   // Nettoyer le numéro (enlever espaces, tirets, etc.)
-  const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
+  const cleanPhone = phone.replace(/[\s-()]/g, "");
   
   // Vérifier la longueur minimale (au moins 8 chiffres pour un numéro valide)
   if (cleanPhone.length < 8) {

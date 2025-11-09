@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { calculateCardPrice, cleanPhoneNumber, exportTicketsToCSV, saveLS, loadLS } from "../utils";
+import { cleanPhoneNumber, exportTicketsToCSV, saveLS } from "../utils";
 import { PrimaryBtn, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
