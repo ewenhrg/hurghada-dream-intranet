@@ -658,7 +658,7 @@ export default function App() {
                 size="sm"
                 variant="danger"
                 onClick={handleLogout}
-                className="rounded-xl font-semibold"
+                className="rounded-xl font-semibold !bg-red-500 !text-white !border-red-500 hover:!bg-red-600 shadow-[0_16px_32px_-20px_rgba(239,68,68,0.55)]"
               >
                 🚪 Déconnexion
               </GhostBtn>

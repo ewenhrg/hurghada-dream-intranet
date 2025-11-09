@@ -463,16 +463,19 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   }
 
   return (
-    <div className="relative">
+    <div className="relative lg:flex lg:items-start lg:gap-10">
       {/* Modale des dates utilisées - collante à gauche */}
       {usedDates.length > 0 && (
-        <div className="sticky left-4 top-4 w-64 z-50 hidden md:block self-start">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-lg">
-            <h3 className="text-sm font-semibold text-amber-900 mb-3">📅 Dates utilisées</h3>
-            <div className="space-y-3">
+        <aside className="hidden lg:block lg:sticky lg:top-28 xl:top-32 w-72 flex-shrink-0">
+          <div className="bg-amber-50/95 border border-amber-200 rounded-2xl p-5 shadow-[0_24px_55px_-30px_rgba(180,83,9,0.55)]">
+            <h3 className="text-sm font-semibold text-amber-900 mb-3 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" />
+              Dates utilisées ({usedDates.length})
+            </h3>
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
               {usedDates.map(([date, activities]) => (
-                <div key={date} className="bg-white/50 rounded-xl p-3 border border-amber-100">
-                  <p className="text-xs font-medium text-amber-900 mb-2">
+                <div key={date} className="bg-white/70 rounded-xl p-3 border border-amber-100 shadow-[0_16px_28px_-26px_rgba(217,119,6,0.35)]">
+                  <p className="text-xs font-semibold text-amber-900 mb-2">
                     {new Date(date + "T12:00:00").toLocaleDateString("fr-FR")}
                   </p>
                   <ul className="space-y-1">
@@ -486,10 +489,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ))}
             </div>
           </div>
-        </div>
+        </aside>
       )}
 
-      <div className="space-y-10">
+      <div className="flex-1 space-y-10">
         <form 
           onSubmit={handleCreateQuote} 
           onKeyDown={(e) => {
