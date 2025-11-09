@@ -270,7 +270,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       {d.createdByName && <span className="ml-2 text-[#0284c7] font-semibold">• {d.createdByName}</span>}
                     </p>
                     <p className="text-sm text-slate-800 font-medium">
-                      {d.client?.phone || "Tél ?"} — {d.client?.hotel || "Hôtel ?"} ({d.client?.room || "ch ?"})
+                      {d.client?.phone || "Tél ?"} — {d.client?.hotel || "Hôtel ?"}
+                      {d.client?.room ? ` (${d.client.room})` : ""}
                     </p>
                     {hasTickets && (
                       <span className="tag-success inline-flex items-center gap-1">
@@ -278,14 +279,20 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-col items-end gap-1 text-right min-w-[140px]">
-                    <span className="tag-info inline-flex items-center gap-1 text-xs">
-                      {d.trip || "Activité ?"}
-                    </span>
-                    <span className="text-[11px] uppercase tracking-wide text-[rgba(71,85,105,0.65)]">
-                      Invoice {d.invoiceN || "N/A"}
-                    </span>
-                  </div>
+                  {(d.trip && d.trip.trim() && d.trip !== "Activité ?") || (d.invoiceN && d.invoiceN !== "N/A") ? (
+                    <div className="flex flex-col items-end gap-1 text-right min-w-[140px]">
+                      {d.trip && d.trip.trim() && d.trip !== "Activité ?" && (
+                        <span className="tag-info inline-flex items-center gap-1 text-xs">
+                          {d.trip}
+                        </span>
+                      )}
+                      {d.invoiceN && d.invoiceN !== "N/A" && (
+                        <span className="text-[11px] uppercase tracking-wide text-[rgba(71,85,105,0.65)]">
+                          Invoice {d.invoiceN}
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex flex-col gap-4 pt-3 border-t border-white/40 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex-1 space-y-2">
@@ -335,6 +342,11 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       <GhostBtn
                         size="sm"
                         variant={allTicketsFilled ? "success" : "primary"}
+                        className={
+                          allTicketsFilled
+                            ? "rounded-md bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-[0_18px_32px_-18px_rgba(16,185,129,0.55)]"
+                            : "rounded-md bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-[0_18px_32px_-18px_rgba(37,99,235,0.55)]"
+                        }
                         onClick={() => {
                           setSelectedQuote(d);
                           const existingTickets = {};
@@ -352,6 +364,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       </GhostBtn>
                       <GhostBtn
                         size="sm"
+                        className="rounded-md bg-indigo-500 text-white border-indigo-500 hover:bg-indigo-600 shadow-[0_18px_32px_-18px_rgba(99,102,241,0.5)]"
                         onClick={() => {
                           const htmlContent = generateQuoteHTML(d);
                           const clientPhone = d.client?.phone || "";
@@ -373,6 +386,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         <GhostBtn
                           size="sm"
                           variant="warning"
+                          className="rounded-md bg-amber-500 text-white border-amber-500 hover:bg-amber-600 shadow-[0_18px_32px_-18px_rgba(245,158,11,0.55)]"
                           onClick={() => {
                             setSelectedQuote(d);
                             setEditClient({ ...d.client });
@@ -411,6 +425,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         <GhostBtn
                           size="sm"
                           variant="danger"
+                          className="rounded-md bg-red-500 text-white border-red-500 hover:bg-red-600 shadow-[0_18px_32px_-18px_rgba(239,68,68,0.55)]"
                           onClick={async () => {
                             if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
                               const updatedQuotes = quotes.filter((quote) => quote.id !== d.id);

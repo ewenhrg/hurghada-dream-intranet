@@ -11,7 +11,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
   const blankItemMemo = useCallback(() => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
-    adults: 2,
+    adults: "",
     children: 0,
     babies: 0,
     extraLabel: "",
