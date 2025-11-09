@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
+import { currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -247,8 +247,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                 }`}
               />
               <span className="absolute inset-0 pointer-events-none bg-gradient-to-br from-white/0 via-white/10 to-white/0" />
-              <div className="relative space-y-2">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="relative space-y-3">
+                <div className="flex items-center gap-2">
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm border ${
                     allTicketsFilled
                       ? "bg-[rgba(16,185,129,0.14)] text-[#047857] border-[#34d399]/40"
@@ -263,7 +263,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 space-y-1">
                     <p className="text-xs text-[rgba(71,85,105,0.7)]">
                       {new Date(d.createdAt).toLocaleString("fr-FR")}
@@ -278,13 +278,178 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       </span>
                     )}
                   </div>
-                  <div className="text-right flex flex-col items-end gap-1">
+                  <div className="flex flex-col items-end gap-1 text-right min-w-[140px]">
                     <span className="tag-info inline-flex items-center gap-1 text-xs">
                       {d.trip || "Activité ?"}
                     </span>
                     <span className="text-[11px] uppercase tracking-wide text-[rgba(71,85,105,0.65)]">
                       Invoice {d.invoiceN || "N/A"}
                     </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-4 pt-3 border-t border-white/40 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex-1 space-y-2">
+                    <div className="space-y-2">
+                      {d.items.map((li, i) => (
+                        <div
+                          key={i}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/60 bg-white/80 px-4 py-2 shadow-sm"
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-slate-800">
+                              {li.activityName || "Activité ?"}
+                            </span>
+                            <span className="text-xs text-[rgba(71,85,105,0.75)]">
+                              {li.date ? new Date(li.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?"} — {li.adults ?? 0} adt / {li.children ?? 0} enf
+                            </span>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="text-sm font-semibold text-slate-700">
+                              {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
+                            </span>
+                            {li.ticketNumber && li.ticketNumber.trim() !== "" && (
+                              <span className="tag-success inline-flex items-center gap-1">
+                                🎫 {li.ticketNumber}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {d.notes && d.notes.trim() !== "" && (
+                      <p className="text-xs text-[rgba(71,85,105,0.75)] bg-white/75 border border-white/60 rounded-xl px-4 py-2 shadow-sm">
+                        📝 {d.notes}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-3 min-w-[220px]">
+                    <div className="text-right">
+                      <p className="text-base font-semibold text-slate-900">
+                        Espèces: {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
+                      </p>
+                      <p className="text-sm text-[rgba(71,85,105,0.8)]">
+                        Carte: {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <GhostBtn
+                        size="sm"
+                        variant={allTicketsFilled ? "success" : "primary"}
+                        onClick={() => {
+                          setSelectedQuote(d);
+                          const existingTickets = {};
+                          const existingPaymentMethods = {};
+                          d.items?.forEach((item, idx) => {
+                            existingTickets[idx] = item.ticketNumber || "";
+                            existingPaymentMethods[idx] = item.paymentMethod || "";
+                          });
+                          setTicketNumbers(existingTickets);
+                          setPaymentMethods(existingPaymentMethods);
+                          setShowPaymentModal(true);
+                        }}
+                      >
+                        {allTicketsFilled ? "✅ Tickets" : "💰 Payer"}
+                      </GhostBtn>
+                      <GhostBtn
+                        size="sm"
+                        onClick={() => {
+                          const htmlContent = generateQuoteHTML(d);
+                          const clientPhone = d.client?.phone || "";
+                          const fileName = `Devis - ${clientPhone}`;
+                          const newWindow = window.open();
+                          if (newWindow) {
+                            newWindow.document.write(htmlContent);
+                            newWindow.document.title = fileName;
+                            newWindow.document.close();
+                            setTimeout(() => {
+                              newWindow.print();
+                            }, 500);
+                          }
+                        }}
+                      >
+                        🖨️ Imprimer
+                      </GhostBtn>
+                      {!allTicketsFilled && (
+                        <GhostBtn
+                          size="sm"
+                          variant="warning"
+                          onClick={() => {
+                            setSelectedQuote(d);
+                            setEditClient({ ...d.client });
+                            setEditItems(
+                              d.items.map((item) => ({
+                                activityId: item.activityId || "",
+                                date: item.date || new Date().toISOString().slice(0, 10),
+                                adults: item.adults !== undefined && item.adults !== null ? item.adults : 2,
+                                children: item.children !== undefined && item.children !== null ? item.children : 0,
+                                babies: item.babies !== undefined && item.babies !== null ? item.babies : 0,
+                                extraLabel: item.extraLabel || "",
+                                extraAmount: item.extraAmount || "",
+                                extraDolphin: item.extraDolphin || false,
+                                speedBoatExtra: Array.isArray(item.speedBoatExtra)
+                                  ? item.speedBoatExtra
+                                  : item.speedBoatExtra
+                                    ? [item.speedBoatExtra]
+                                    : [],
+                                buggySimple: item.buggySimple !== undefined && item.buggySimple !== null ? item.buggySimple : 0,
+                                buggyFamily: item.buggyFamily !== undefined && item.buggyFamily !== null ? item.buggyFamily : 0,
+                                yamaha250: item.yamaha250 !== undefined && item.yamaha250 !== null ? item.yamaha250 : 0,
+                                ktm640: item.ktm640 !== undefined && item.ktm640 !== null ? item.ktm640 : 0,
+                                ktm530: item.ktm530 !== undefined && item.ktm530 !== null ? item.ktm530 : 0,
+                                slot: item.slot || "",
+                                ticketNumber: item.ticketNumber || "",
+                              }))
+                            );
+                            setEditNotes(d.notes || "");
+                            setShowEditModal(true);
+                          }}
+                        >
+                          ✏️ Modifier
+                        </GhostBtn>
+                      )}
+                      {user?.canDeleteQuote && (
+                        <GhostBtn
+                          size="sm"
+                          variant="danger"
+                          onClick={async () => {
+                            if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
+                              const updatedQuotes = quotes.filter((quote) => quote.id !== d.id);
+                              setQuotes(updatedQuotes);
+                              saveLS(LS_KEYS.quotes, updatedQuotes);
+
+                              if (supabase) {
+                                try {
+                                  let deleteQuery = supabase
+                                    .from("quotes")
+                                    .delete()
+                                    .eq("site_key", SITE_KEY);
+
+                                  if (d.supabase_id) {
+                                    deleteQuery = deleteQuery.eq("id", d.supabase_id);
+                                  } else {
+                                    deleteQuery = deleteQuery
+                                      .eq("client_phone", d.client?.phone || "")
+                                      .eq("created_at", d.createdAt);
+                                  }
+
+                                  const { error: deleteError } = await deleteQuery;
+
+                                  if (deleteError) {
+                                    console.warn("⚠️ Erreur suppression Supabase:", deleteError);
+                                  } else {
+                                    console.log("✅ Devis supprimé de Supabase!");
+                                  }
+                                } catch (deleteErr) {
+                                  console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
+                                }
+                              }
+                            }
+                          }}
+                        >
+                          🗑️ Supprimer
+                        </GhostBtn>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
