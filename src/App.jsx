@@ -8,13 +8,13 @@ import { useLanguage } from "./contexts/LanguageContext";
 import { useTranslation } from "./hooks/useTranslation";
 import PageLoader from "./components/PageLoader";
 
-const ActivitiesPage = lazy(() => import("./pages/ActivitiesPage"));
-const QuotesPage = lazy(() => import("./pages/QuotesPage"));
-const HistoryPage = lazy(() => import("./pages/HistoryPage"));
-const UsersPage = lazy(() => import("./pages/UsersPage"));
-const TicketPage = lazy(() => import("./pages/TicketPage"));
-const ModificationsPage = lazy(() => import("./pages/ModificationsPage"));
-const SituationPage = lazy(() => import("./pages/SituationPage"));
+const ActivitiesPage = lazy(() => import("./pages/ActivitiesPage").then(module => ({ default: module.ActivitiesPage })));
+const QuotesPage = lazy(() => import("./pages/QuotesPage").then(module => ({ default: module.QuotesPage })));
+const HistoryPage = lazy(() => import("./pages/HistoryPage").then(module => ({ default: module.HistoryPage })));
+const UsersPage = lazy(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
+const TicketPage = lazy(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
+const ModificationsPage = lazy(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
+const SituationPage = lazy(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
 
 export default function App() {
   const [ok, setOk] = useState(false);
