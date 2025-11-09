@@ -33,6 +33,22 @@ export function convertExcelValue(value, columnName = "") {
     }
   }
 
+  // Helper pour formater une fraction de jour Excel en HH:MM avec arrondi à la minute la plus proche
+  const formatTimeFromFraction = (fraction) => {
+    if (typeof fraction !== "number" || !isFinite(fraction)) {
+      return null;
+    }
+    const minutesInDay = 24 * 60;
+    const totalMinutes = Math.round(fraction * minutesInDay);
+    const normalizedMinutes = ((totalMinutes % minutesInDay) + minutesInDay) % minutesInDay;
+    const hours = Math.floor(normalizedMinutes / 60);
+    const minutes = normalizedMinutes % 60;
+    if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    }
+    return null;
+  };
+
   // Si c'est déjà une string, vérifier si c'est un nombre en string
   const numValue = typeof value === "number" ? value : parseFloat(value);
   
@@ -155,36 +171,31 @@ export function convertExcelValue(value, columnName = "") {
     }
     
     // Si c'est un nombre, traiter comme une heure Excel
-    let hours = 0;
-    let minutes = 0;
-    
     if (numValue < 1) {
       // C'est juste une heure (fraction de jour)
-      const totalSeconds = numValue * 24 * 60 * 60;
-      hours = Math.floor(totalSeconds / 3600);
-      const remainingSeconds = totalSeconds % 3600;
-      minutes = Math.floor(remainingSeconds / 60);
+      const formatted = formatTimeFromFraction(numValue);
+      if (formatted) {
+        return formatted;
+      }
     } else if (numValue >= 1 && numValue < 1000000) {
       // C'est une date+heure combinée, extraire seulement la partie heure
       const datePart = Math.floor(numValue);
       const timePart = numValue - datePart;
-      const totalSeconds = timePart * 24 * 60 * 60;
-      hours = Math.floor(totalSeconds / 3600);
-      const remainingSeconds = totalSeconds % 3600;
-      minutes = Math.floor(remainingSeconds / 60);
+      const formatted = formatTimeFromFraction(timePart);
+      if (formatted) {
+        return formatted;
+      }
     } else {
       // Peut-être un nombre représentant l'heure directement (ex: 830 pour 8h30)
       if (numValue >= 0 && numValue < 2400) {
-        hours = Math.floor(numValue / 100);
-        minutes = numValue % 100;
+        const hours = Math.floor(numValue / 100);
+        const minutes = numValue % 100;
+        if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+          return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+        }
       }
     }
 
-    // Formater l'heure en HH:MM
-    if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-    }
-    
     // Si l'heure n'est pas valide, retourner la valeur originale
     return String(value);
   }
@@ -214,14 +225,9 @@ export function convertExcelValue(value, columnName = "") {
 
   // Si c'est un nombre qui pourrait être une heure (fraction de jour)
   if (!isDateColumn && !isTimeColumn && numValue > 0 && numValue < 1) {
-    const totalSeconds = numValue * 24 * 60 * 60;
-    const hours = Math.floor(totalSeconds / 3600);
-    const remainingSeconds = totalSeconds % 3600;
-    const minutes = Math.floor(remainingSeconds / 60);
-    
-    // Si l'heure est valide (entre 00:00 et 23:59), c'est probablement une heure
-    if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    const formatted = formatTimeFromFraction(numValue);
+    if (formatted) {
+      return formatted;
     }
   }
 
