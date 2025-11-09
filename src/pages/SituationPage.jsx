@@ -9,14 +9,13 @@ import { convertExcelValue, findColumn } from "../utils/excelParser";
 import { generateMessage, getDefaultTemplate } from "../utils/messageGenerator";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import AutoSizer from "react-virtualized-auto-sizer";
-import * as ReactWindow from "react-window";
+import { List } from "react-window";
 
 const MessageTemplatesModal = lazy(() => import("../components/situation/MessageTemplatesModal"));
 const HotelsModal = lazy(() => import("../components/situation/HotelsModal"));
 
 const GRID_TEMPLATE = "140px 120px 180px 170px 160px 140px 180px 120px 80px 120px";
 const ROW_HEIGHT = 64;
-const List = ReactWindow.FixedSizeList;
 const TABLE_HEADERS = [
   "Invoice N",
   "Date",
