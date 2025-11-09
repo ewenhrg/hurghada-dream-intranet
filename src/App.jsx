@@ -107,6 +107,20 @@ export default function App() {
     setOk(true);
   }
 
+  function handleLogout() {
+    try {
+      sessionStorage.removeItem("hd_ok");
+      sessionStorage.removeItem("hd_user");
+      sessionStorage.removeItem("quotesPageMounted");
+    } catch (error) {
+      console.warn("Erreur lors de la suppression des informations de session:", error);
+    }
+    setUser(null);
+    setQuoteDraft(null);
+    setTab("devis");
+    setOk(false);
+  }
+
   // fonction de synchronisation Supabase
   async function syncWithSupabase() {
       if (!supabase) return;
@@ -638,6 +652,17 @@ export default function App() {
                 </Pill>
               )}
             </nav>
+            {user && (
+              <GhostBtn
+                type="button"
+                size="sm"
+                variant="danger"
+                onClick={handleLogout}
+                className="rounded-xl font-semibold"
+              >
+                🚪 Déconnexion
+              </GhostBtn>
+            )}
           </div>
         </div>
       </header>
