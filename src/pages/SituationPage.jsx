@@ -902,6 +902,38 @@ export function SituationPage({ activities = [] }) {
     });
   }, []);
   
+  const handleCellEdit = useCallback((rowId, field, value) => {
+    setExcelData((prev) =>
+      prev.map((row) => {
+        if (row.id === rowId) {
+          const updatedRow = { ...row, [field]: value };
+          
+          if (field === "phone") {
+            const phoneValidation = value ? validatePhoneNumber(value) : { valid: false, error: "Numéro manquant" };
+            updatedRow.phoneValid = phoneValidation.valid;
+            updatedRow.phoneError = phoneValidation.error;
+          }
+          
+          if (field === "name") {
+            const nameStr = String(value || "");
+            const phone = extractPhoneFromName(nameStr);
+            const clientName = extractNameFromField(nameStr);
+            updatedRow.name = clientName || "Client";
+            updatedRow.phone = phone || updatedRow.phone;
+            if (updatedRow.phone) {
+              const phoneValidation = validatePhoneNumber(updatedRow.phone);
+              updatedRow.phoneValid = phoneValidation.valid;
+              updatedRow.phoneError = phoneValidation.error;
+            }
+          }
+          
+          return updatedRow;
+        }
+        return row;
+      })
+    );
+  }, [setExcelData]);
+  
   const listItemData = useMemo(
     () => ({
       excelData,
@@ -1253,41 +1285,6 @@ export function SituationPage({ activities = [] }) {
 
     toast.warning("Envoi automatique arrêté.");
   };
-  
-  // Fonction pour gérer l'édition d'une cellule dans le tableau
-  const handleCellEdit = useCallback((rowId, field, value) => {
-    setExcelData((prev) =>
-      prev.map((row) => {
-        if (row.id === rowId) {
-          const updatedRow = { ...row, [field]: value };
-          
-          // Si on modifie le téléphone, revalider
-          if (field === "phone") {
-            const phoneValidation = value ? validatePhoneNumber(value) : { valid: false, error: "Numéro manquant" };
-            updatedRow.phoneValid = phoneValidation.valid;
-            updatedRow.phoneError = phoneValidation.error;
-          }
-          
-          // Si on modifie le nom, extraire le téléphone et le nom
-          if (field === "name") {
-            const nameStr = String(value || "");
-            const phone = extractPhoneFromName(nameStr);
-            const clientName = extractNameFromField(nameStr);
-            updatedRow.name = clientName || "Client";
-            updatedRow.phone = phone || updatedRow.phone;
-            if (updatedRow.phone) {
-              const phoneValidation = validatePhoneNumber(updatedRow.phone);
-              updatedRow.phoneValid = phoneValidation.valid;
-              updatedRow.phoneError = phoneValidation.error;
-            }
-          }
-          
-          return updatedRow;
-        }
-        return row;
-      })
-    );
-  }, [setExcelData]);
   
   // Nettoyer lors du démontage du composant
   useEffect(() => {
