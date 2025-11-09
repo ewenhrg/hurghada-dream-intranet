@@ -527,10 +527,12 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
       {/* HEADER */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/95 border-b border-slate-200/80 shadow-lg">
-        <div className={`mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
+      <header className="sticky top-0 z-40 pt-6 pb-3">
+        <div
+          className={`glass-nav mx-auto flex flex-wrap items-center justify-between gap-4 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"} px-4 py-4 rounded-2xl`}
+        >
           <div className="flex items-center gap-3.5">
             <img 
               src="/logo.png" 
@@ -548,33 +550,40 @@ export default function App() {
                 }
               }}
             />
-            <div>
-              <h1 className="text-base font-bold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">{t("header.title")}</h1>
-              <p className="text-[10px] text-slate-600 font-medium mt-0.5">{t("header.subtitle")}</p>
+            <div className="space-y-1">
+              <h1 className="text-[1.05rem] font-semibold tracking-[-0.03em] bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent">
+                {t("header.title")}
+              </h1>
+              <p className="text-[11px] font-medium text-[rgba(71,85,105,0.8)]">{t("header.subtitle")}</p>
               {user && (
-                <p className="text-[10px] text-blue-600 mt-1 font-semibold">👤 {t("header.connected")} : {user.name}</p>
+                <span className="badge-soft">
+                  <span>👤</span>
+                  <span>
+                    {t("header.connected")} : {user.name}
+                  </span>
+                </span>
               )}
             </div>
           </div>
           <div className="flex items-center gap-3">
             {/* Sélecteur de langue */}
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1">
+            <div className="flex items-center gap-2 rounded-xl border border-[rgba(148,163,184,0.28)] bg-[rgba(255,255,255,0.9)] px-2.5 py-1.5 shadow-[0_14px_28px_-20px_rgba(15,23,42,0.35)]">
               <button
                 onClick={() => setLanguage("fr")}
-                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-colors ${
                   language === "fr"
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white shadow-[0_14px_28px_-16px_rgba(79,70,229,0.55)]"
+                    : "text-slate-600 hover:text-[#4338ca] hover:bg-white"
                 }`}
               >
                 FR
               </button>
               <button
                 onClick={() => setLanguage("en")}
-                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-colors ${
                   language === "en"
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white shadow-[0_14px_28px_-16px_rgba(79,70,229,0.55)]"
+                    : "text-slate-600 hover:text-[#4338ca] hover:bg-white"
                 }`}
               >
                 EN
@@ -620,17 +629,23 @@ export default function App() {
       </header>
 
       {/* CONTENU CENTRÉ */}
-      <main className={`mx-auto px-4 py-8 space-y-8 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
+      <main
+        className={`mx-auto px-4 py-10 space-y-10 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}
+      >
         <Suspense fallback={<PageLoader />}>
           {tab === "devis" && (
             <section className="space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-1.5">{t("page.devis.title")}</h2>
-                  <p className="text-sm text-slate-600 font-medium leading-relaxed">{t("page.devis.subtitle")}</p>
+                  <h2 className="text-[1.75rem] font-semibold tracking-[-0.03em] mb-1.5 bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent">
+                    {t("page.devis.title")}
+                  </h2>
+                  <p className="text-sm text-[rgba(71,85,105,0.85)] font-medium leading-relaxed">
+                    {t("page.devis.subtitle")}
+                  </p>
                 </div>
               </div>
-              <div className="rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/80 p-8 md:p-10 lg:p-12 transition-all duration-300">
+              <div className="hd-card p-8 md:p-10 lg:p-12">
                 <QuotesPage activities={activities} quotes={quotes} setQuotes={setQuotes} user={user} />
               </div>
             </section>
@@ -686,7 +701,7 @@ export default function App() {
 
           {tab === "users" && (user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
             <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")}>
-              <UsersPage />
+              <UsersPage user={user} />
             </Section>
           )}
         </Suspense>

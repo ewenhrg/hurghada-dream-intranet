@@ -99,8 +99,8 @@ export function LoginPage({ onSuccess }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 flex items-center justify-center p-4">
-      <div className="bg-white/98 rounded-2xl shadow-2xl border border-slate-200/80 backdrop-blur-xl p-8 md:p-10 w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="hd-card hd-border-gradient w-full max-w-md p-8 md:p-10 relative overflow-hidden">
         <div className="text-center mb-8">
           <img 
             src="/logo.png" 
@@ -111,17 +111,17 @@ export function LoginPage({ onSuccess }) {
               e.target.style.display = 'none';
             }}
           />
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent mb-3">
             Hurghada Dream
           </h1>
-          <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed">
+          <p className="text-[rgba(71,85,105,0.85)] text-sm md:text-base font-medium leading-relaxed">
             Veuillez entrer votre code d'accès pour continuer
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="code" className="block text-sm font-semibold text-slate-700 mb-2.5">
+            <label htmlFor="code" className="block text-sm font-semibold text-[rgba(71,85,105,0.9)] mb-2.5">
               Code d'accès
             </label>
             <input
@@ -133,14 +133,14 @@ export function LoginPage({ onSuccess }) {
                 setError("");
               }}
               placeholder="Entrez votre code (6 chiffres)"
-              className="w-full rounded-lg border border-slate-300/80 bg-white/95 backdrop-blur-sm px-4 py-3 text-center text-lg font-semibold tracking-widest focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all duration-200 shadow-sm hover:border-slate-400/80 hover:shadow"
+              className="w-full rounded-xl border border-[rgba(148,163,184,0.25)] bg-[rgba(255,255,255,0.9)] px-4 py-3 text-center text-lg font-semibold tracking-[0.6em] text-slate-900 focus:border-[rgba(79,70,229,0.65)] focus:ring-2 focus:ring-[rgba(79,70,229,0.25)] focus:outline-none transition-all duration-200 shadow-[0_18px_35px_-26px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.35)]"
               maxLength={6}
               autoFocus
             />
           </div>
 
           {error && (
-            <div className="bg-red-50/95 border border-red-200/80 text-red-700 px-4 py-3 rounded-lg text-sm font-medium shadow-sm">
+            <div className="rounded-xl border border-red-200/70 bg-red-50/85 text-red-700 px-4 py-3 text-sm font-medium shadow-[0_12px_24px_-20px_rgba(220,38,38,0.4)]">
               {error}
             </div>
           )}
@@ -148,17 +148,17 @@ export function LoginPage({ onSuccess }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0"
+            className="w-full inline-flex items-center justify-center bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] hover:from-[#4338ca] hover:via-[#4c37ff] hover:to-[#0891b2] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-[0_22px_48px_-20px_rgba(79,70,229,0.8)] hover:-translate-y-[2px] active:translate-y-0"
           >
             {loading ? "Connexion..." : "Accéder"}
           </button>
         </form>
 
         <div className="mt-7 text-center space-y-1.5">
-          <p className="text-xs text-slate-600 font-medium">
+          <p className="text-xs text-[rgba(71,85,105,0.7)] font-medium">
             Système de gestion interne
           </p>
-          <p className="text-[10px] text-slate-500 tracking-wide">
+          <p className="text-[10px] text-[rgba(99,102,241,0.65)] tracking-[0.25em] uppercase font-semibold">
             accéder website by Ewen
           </p>
         </div>
