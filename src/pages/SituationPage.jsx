@@ -219,8 +219,9 @@ export function SituationPage({ activities = [] }) {
           console.log("📊 En-têtes détectés:", headers);
           
           if (headers.length > 0) {
-            // Filtrer les colonnes à ignorer : J (index 9), L (index 11), M (index 12), N (index 13)
-            const columnsToIgnore = [9, 11, 12, 13];
+            // Filtrer les colonnes à ignorer : M (index 12) et N (index 13)
+            // ⚠️ Conserver les colonnes "Trip" (index 9) et "Comment" (index 11) pour récupérer l'activité et l'heure
+            const columnsToIgnore = [12, 13];
             const filteredHeaders = headers
               .map((header, index) => ({ header, index }))
               .filter(({ index }) => !columnsToIgnore.includes(index))
