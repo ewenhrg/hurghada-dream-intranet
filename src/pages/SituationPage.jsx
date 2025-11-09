@@ -2,11 +2,12 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { PrimaryBtn, GhostBtn, Section, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
-import { LS_KEYS } from "../constants";
+import { LS_KEYS, SITE_KEY } from "../constants";
 import { loadLS, saveLS } from "../utils";
 import { extractPhoneFromName, validatePhoneNumber, extractNameFromField } from "../utils/phoneUtils";
 import { convertExcelValue, findColumn } from "../utils/excelParser";
 import { generateMessage, getDefaultTemplate } from "../utils/messageGenerator";
+import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 
 export function SituationPage({ activities = [] }) {
   const [excelData, setExcelData] = useState([]);
@@ -56,13 +57,143 @@ export function SituationPage({ activities = [] }) {
   // État pour l'édition des cellules du tableau
   const [editingCell, setEditingCell] = useState(null); // { rowId: string, field: string }
 
-  // Sauvegarder les templates dans localStorage
+  const isSupabaseConfigured = __SUPABASE_DEBUG__?.isConfigured;
+  const [settingsLoaded, setSettingsLoaded] = useState(!isSupabaseConfigured);
+  const messageTemplatesSaveTimeoutRef = useRef(null);
+  const exteriorHotelsSaveTimeoutRef = useRef(null);
+
   useEffect(() => {
-    if (messageTemplates && Object.keys(messageTemplates).length >= 0) {
-      saveLS(LS_KEYS.messageTemplates, messageTemplates);
+    if (!isSupabaseConfigured) {
+      setSettingsLoaded(true);
+      return;
     }
-  }, [messageTemplates]);
-  
+
+    let cancelled = false;
+
+    async function fetchSettings() {
+      try {
+        const { data, error } = await supabase
+          .from("message_settings")
+          .select("settings_type, payload")
+          .eq("site_key", SITE_KEY);
+
+        if (!error && Array.isArray(data) && !cancelled) {
+          const templatesRow = data.find((row) => row.settings_type === "message_templates");
+          if (templatesRow && templatesRow.payload && typeof templatesRow.payload === "object") {
+            setMessageTemplates(templatesRow.payload);
+            saveLS(LS_KEYS.messageTemplates, templatesRow.payload);
+          }
+
+          const hotelsRow = data.find((row) => row.settings_type === "exterior_hotels");
+          if (hotelsRow && Array.isArray(hotelsRow.payload) && !cancelled) {
+            const normalizedHotels = hotelsRow.payload.map((hotel) => {
+              if (typeof hotel === "string") {
+                return { name: hotel, hasBeachBoats: false };
+              }
+              return {
+                name: hotel?.name || "",
+                hasBeachBoats: Boolean(hotel?.hasBeachBoats),
+              };
+            }).filter((hotel) => hotel.name.trim() !== "");
+
+            setExteriorHotels(normalizedHotels);
+            saveLS(LS_KEYS.exteriorHotels, normalizedHotels);
+          }
+        } else if (error) {
+          console.warn("⚠️ Impossible de charger les paramètres Supabase:", error);
+        }
+      } catch (fetchError) {
+        console.warn("⚠️ Erreur lors du chargement des paramètres Supabase:", fetchError);
+      } finally {
+        if (!cancelled) {
+          setSettingsLoaded(true);
+        }
+      }
+    }
+
+    fetchSettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSupabaseConfigured]);
+
+  useEffect(() => {
+    saveLS(LS_KEYS.messageTemplates, messageTemplates);
+
+    if (!settingsLoaded || !isSupabaseConfigured) return;
+
+    if (messageTemplatesSaveTimeoutRef.current) {
+      clearTimeout(messageTemplatesSaveTimeoutRef.current);
+    }
+
+    messageTemplatesSaveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from("message_settings")
+          .upsert(
+            {
+              site_key: SITE_KEY,
+              settings_type: "message_templates",
+              payload: messageTemplates,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "site_key,settings_type" }
+          );
+
+        if (error) {
+          console.warn("⚠️ Impossible de sauvegarder les templates sur Supabase:", error);
+        }
+      } catch (saveError) {
+        console.warn("⚠️ Erreur lors de la sauvegarde des templates sur Supabase:", saveError);
+      }
+    }, 400);
+
+    return () => {
+      if (messageTemplatesSaveTimeoutRef.current) {
+        clearTimeout(messageTemplatesSaveTimeoutRef.current);
+      }
+    };
+  }, [messageTemplates, settingsLoaded, isSupabaseConfigured]);
+
+  useEffect(() => {
+    saveLS(LS_KEYS.exteriorHotels, exteriorHotels);
+
+    if (!settingsLoaded || !isSupabaseConfigured) return;
+
+    if (exteriorHotelsSaveTimeoutRef.current) {
+      clearTimeout(exteriorHotelsSaveTimeoutRef.current);
+    }
+
+    exteriorHotelsSaveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from("message_settings")
+          .upsert(
+            {
+              site_key: SITE_KEY,
+              settings_type: "exterior_hotels",
+              payload: exteriorHotels,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "site_key,settings_type" }
+          );
+
+        if (error) {
+          console.warn("⚠️ Impossible de sauvegarder les hôtels sur Supabase:", error);
+        }
+      } catch (saveError) {
+        console.warn("⚠️ Erreur lors de la sauvegarde des hôtels sur Supabase:", saveError);
+      }
+    }, 400);
+
+    return () => {
+      if (exteriorHotelsSaveTimeoutRef.current) {
+        clearTimeout(exteriorHotelsSaveTimeoutRef.current);
+      }
+    };
+  }, [exteriorHotels, settingsLoaded, isSupabaseConfigured]);
+
   // Sauvegarder les lignes avec marina cochée
   useEffect(() => {
     saveLS("hd_rows_with_marina", Array.from(rowsWithMarina));
