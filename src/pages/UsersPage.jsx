@@ -345,7 +345,7 @@ export function UsersPage() {
           </div>
 
           <div className="flex gap-3 justify-end pt-4 border-t">
-            <GhostBtn type="button" onClick={resetForm}>
+            <GhostBtn type="button" onClick={resetForm} variant="neutral">
               Annuler
             </GhostBtn>
             <PrimaryBtn type="submit" disabled={loading}>
@@ -439,7 +439,7 @@ export function UsersPage() {
                         </GhostBtn>
                         <GhostBtn
                           onClick={() => handleDelete(u.id, u.name)}
-                          className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                          variant="danger"
                           size="sm"
                         >
                           🗑️ Supprimer

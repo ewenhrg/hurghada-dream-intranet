@@ -628,8 +628,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
             <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-7 md:p-9 lg:p-10 space-y-6 md:space-y-7 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
-                <GhostBtn type="button" onClick={() => removeItem(idx)}>
-                  Supprimer
+                <GhostBtn type="button" onClick={() => removeItem(idx)} variant="danger">
+                  🗑️ Supprimer
                 </GhostBtn>
               </div>
               <div className="grid md:grid-cols-5 gap-6 md:gap-7 lg:gap-8 items-end">
@@ -1169,7 +1169,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                         onChange={(e) => {
                           setItem(idx, { 
                             allerRetour: e.target.checked,
-                            allerSimple: e.target.checked ? false : c.raw.allerSimple // Désactiver aller simple si on coche aller-retour
+                            allerSimple: e.target.checked ? false : c.raw.allerRetour // Désactiver aller simple si on coche aller-retour
                           });
                         }}
                         className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -1299,7 +1299,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
                         onChange={(e) => {
                           setItem(idx, { 
                             allerRetour: e.target.checked,
-                            allerSimple: e.target.checked ? false : c.raw.allerSimple // Désactiver aller simple si on coche aller-retour
+                            allerSimple: e.target.checked ? false : c.raw.allerRetour // Désactiver aller simple si on coche aller-retour
                           });
                         }}
                         className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -1383,8 +1383,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user }) {
         </div>
 
         <div className="flex items-center justify-between">
-          <GhostBtn type="button" onClick={addItem}>
-            + Ajouter une autre activité
+          <GhostBtn type="button" onClick={addItem} variant="primary">
+            ➕ Ajouter une activité
           </GhostBtn>
           <div className="text-right">
             <p className="text-xs text-gray-500">Total</p>

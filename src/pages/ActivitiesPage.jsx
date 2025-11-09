@@ -498,12 +498,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                     <td className="px-3 py-2 text-gray-500">{a.notes || "—"}</td>
                     <td className="px-3 py-2 text-right">
                       <div className="flex gap-2 justify-end">
-                        {user?.canEditActivity && (
-                          <GhostBtn onClick={() => handleEdit(a)}>Modifier</GhostBtn>
-                        )}
-                        {user?.canDeleteActivity && (
-                          <GhostBtn onClick={() => handleDelete(a.id)}>Supprimer</GhostBtn>
-                        )}
+                        <GhostBtn onClick={() => handleEdit(a)} variant="primary">
+                          Modifier
+                        </GhostBtn>
+                        <GhostBtn onClick={() => handleDelete(a.id)} variant="danger">
+                          Supprimer
+                        </GhostBtn>
                       </div>
                     </td>
                   </tr>

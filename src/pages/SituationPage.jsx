@@ -49,16 +49,19 @@ const VirtualizedRow = memo(({ index, style, data }) => {
     "items-center",
     "border-b",
     "border-[rgba(226,232,240,0.6)]",
-    "bg-[rgba(255,255,255,0.92)]",
-    "hover:bg-[rgba(79,70,229,0.06)]",
+    "bg-[rgba(255,255,255,0.95)]",
+    "hover:bg-[rgba(79,70,229,0.08)]",
     "transition-colors",
+    "relative",
   ];
-
+ 
+  let statusAccent = "";
   if (row.messageSent) {
-    rowClasses.push("bg-[rgba(16,185,129,0.12)]", "border-l-4", "border-l-[rgba(16,185,129,0.45)]");
-  }
-  if (!row.phoneValid) {
-    rowClasses.push("bg-[rgba(239,68,68,0.12)]", "border-l-4", "border-l-[rgba(239,68,68,0.55)]");
+    rowClasses.push("bg-[rgba(16,185,129,0.12)]", "border-l-4", "border-l-[rgba(16,185,129,0.55)]");
+    statusAccent = "from-emerald-400/80 to-teal-400/80";
+  } else if (!row.phoneValid) {
+    rowClasses.push("bg-[rgba(239,68,68,0.12)]", "border-l-4", "border-l-[rgba(239,68,68,0.65)]");
+    statusAccent = "from-rose-400/85 to-red-400/80";
   }
 
   const cellBase = "px-4 py-2 text-xs text-[rgba(71,85,105,0.88)]";
@@ -77,6 +80,9 @@ const VirtualizedRow = memo(({ index, style, data }) => {
       }}
       className={rowClasses.join(" ")}
     >
+      {statusAccent && (
+        <span className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${statusAccent}`} />
+      )}
       <div className={`${cellBase} text-slate-700`}>
         {isEditing("invoiceN") ? (
           <TextInput
@@ -277,12 +283,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
       </div>
       <div className="px-4 py-2 text-center">
         {row.messageSent ? (
-          <span className="tag-success inline-flex items-center gap-1">
-            ✓ Envoyé
-          </span>
-        ) : (
+          <span className="tag-success inline-flex items-center gap-1">✓ Envoyé</span>
+         ) : !row.phoneValid ? (
+          <span className="tag-danger inline-flex items-center gap-1">⚠️ À corriger</span>
+         ) : (
           <span className="text-xs text-[rgba(148,163,184,0.9)]">—</span>
-        )}
+         )}
       </div>
     </div>
   );
@@ -1412,10 +1418,10 @@ export function SituationPage({ activities = [] }) {
       subtitle="Chargez un fichier Excel et envoyez automatiquement les messages de rappel aux clients"
       right={
         <div className="flex gap-2">
-          <GhostBtn onClick={() => setShowHotelsModal(true)}>
+          <GhostBtn onClick={() => setShowHotelsModal(true)} variant="info">
             🏨 Hôtels extérieur
           </GhostBtn>
-          <GhostBtn onClick={() => setShowConfigModal(true)}>
+          <GhostBtn onClick={() => setShowConfigModal(true)} variant="primary">
             ⚙️ Configurer les messages
           </GhostBtn>
         </div>
@@ -1577,22 +1583,23 @@ export function SituationPage({ activities = [] }) {
         {/* Actions */}
         {excelData.length > 0 && (
           <div className="flex gap-3 justify-end flex-wrap">
-            <GhostBtn onClick={handlePreviewMessages} disabled={sending || autoSending}>
+            <GhostBtn onClick={handlePreviewMessages} disabled={sending || autoSending} variant="info">
               📝 Prévisualiser les messages
             </GhostBtn>
             <PrimaryBtn 
-              onClick={handleAutoSendMessages} 
-              disabled={sending || autoSending || stats.withPhone === 0}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-            >
-              {autoSending ? "🔄 Envoi automatique..." : "🚀 Envoyer automatiquement via WhatsApp"}
-            </PrimaryBtn>
-            <PrimaryBtn 
-              onClick={handleSendMessages} 
-              disabled={sending || autoSending || stats.withPhone === 0}
-            >
-              {sending ? "📤 Envoi en cours..." : "📤 Envoyer (simulation)"}
-            </PrimaryBtn>
+               onClick={handleAutoSendMessages} 
+               disabled={sending || autoSending || stats.withPhone === 0}
+               variant="success"
+             >
+               {autoSending ? "🔄 Envoi automatique..." : "🚀 Envoyer automatiquement via WhatsApp"}
+             </PrimaryBtn>
+             <PrimaryBtn 
+               onClick={handleSendMessages} 
+               disabled={sending || autoSending || stats.withPhone === 0}
+               variant="info"
+             >
+               {sending ? "📤 Envoi en cours..." : "📤 Envoyer (simulation)"}
+             </PrimaryBtn>
           </div>
         )}
 

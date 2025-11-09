@@ -67,12 +67,14 @@ export default function HotelsModal({
                         <span className="text-xs text-slate-600">🚤 Bateaux sur la plage</span>
                       </label>
                     </div>
-                    <button
+                    <GhostBtn
+                      variant="danger"
+                      size="sm"
                       onClick={() => onDeleteHotel(hotelName)}
-                      className="text-[#dc2626] border border-[rgba(239,68,68,0.35)] hover:bg-[rgba(239,68,68,0.12)] px-3 py-1 rounded-lg text-sm font-medium transition-colors ml-2"
+                      className="px-3 py-1 rounded-lg text-sm font-medium transition-colors ml-2"
                     >
                       🗑️ Supprimer
-                    </button>
+                    </GhostBtn>
                   </div>
                 );
               })}

@@ -337,18 +337,10 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                     <div className="flex flex-wrap items-center gap-2 mt-4">
                       {!item.isCancelled && (
                         <>
-                          <GhostBtn
-                            size="sm"
-                            onClick={() => handleModifyActivity(quote, idx)}
-                            className="text-[#4338ca] border-[rgba(79,70,229,0.35)] hover:bg-[rgba(79,70,229,0.08)]"
-                          >
+                          <GhostBtn size="sm" variant="primary" onClick={() => handleModifyActivity(quote, idx)}>
                             ✏️ Modifier
                           </GhostBtn>
-                          <GhostBtn
-                            size="sm"
-                            onClick={() => handleCancelActivity(quote, idx)}
-                            className="text-[#dc2626] border-[rgba(239,68,68,0.35)] hover:bg-[rgba(239,68,68,0.12)]"
-                          >
+                          <GhostBtn size="sm" variant="danger" onClick={() => handleCancelActivity(quote, idx)}>
                             🚫 Annuler
                           </GhostBtn>
                         </>
@@ -445,7 +437,7 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
               >
                 Annuler
               </GhostBtn>
-              <PrimaryBtn onClick={handleConfirmModification}>
+              <PrimaryBtn onClick={handleConfirmModification} variant={modifyType === "cancel" ? "danger" : "primary"}>
                 {modifyType === "cancel" ? "Confirmer l'annulation" : "Confirmer la modification"}
               </PrimaryBtn>
             </div>

@@ -86,14 +86,14 @@ export default function MessageTemplatesModal({
                   Template de message pour "{editingTemplate.activity}"
                 </label>
                 <div className="flex gap-2">
-                  <GhostBtn size="sm" onClick={onUseDefaultTemplate}>
+                  <GhostBtn size="sm" onClick={onUseDefaultTemplate} variant="primary">
                     📋 Template par défaut
                   </GhostBtn>
                   {messageTemplates[editingTemplate.activity] && (
                     <GhostBtn
                       size="sm"
                       onClick={() => onDeleteTemplate(editingTemplate.activity)}
-                      className="text-[#dc2626] border-[rgba(239,68,68,0.35)] hover:bg-[rgba(239,68,68,0.12)]"
+                      variant="danger"
                     >
                       🗑️ Supprimer
                     </GhostBtn>
@@ -145,7 +145,7 @@ export default function MessageTemplatesModal({
                       <GhostBtn
                         size="sm"
                         onClick={() => onDeleteTemplate(activityName)}
-                        className="text-[#dc2626] border-[rgba(239,68,68,0.35)] hover:bg-[rgba(239,68,68,0.12)]"
+                        variant="danger"
                       >
                         🗑️ Supprimer
                       </GhostBtn>

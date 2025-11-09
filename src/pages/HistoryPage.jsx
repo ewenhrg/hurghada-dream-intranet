@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
+import { currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -229,162 +229,62 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         {filtered.map((d) => {
           const allTicketsFilled = d.allTicketsFilled;
           const hasTickets = d.hasTickets;
-          
+
           return (
             <div
               key={d.id}
-              className={`hd-card hd-border-gradient border-2 transition-all duration-200 p-5 ${
-                allTicketsFilled ? "border-emerald-200/70" : "border-amber-200/70"
+              className={`relative overflow-hidden rounded-2xl border transition-all duration-200 p-5 pl-7 ${
+                allTicketsFilled
+                  ? "border-[rgba(16,185,129,0.45)] bg-[rgba(234, 255, 247, 0.92)]"
+                  : "border-[rgba(245,158,11,0.45)] bg-[rgba(255, 247, 230, 0.94)]"
               }`}
             >
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm border ${
+              <span
+                className={`absolute inset-y-0 left-0 w-1.5 ${
                   allTicketsFilled
-                    ? "bg-[rgba(16,185,129,0.14)] text-[#047857] border-[#34d399]/40"
-                    : "bg-[rgba(245,158,11,0.18)] text-[#b45309] border-[#fbbf24]/45"
+                    ? "bg-gradient-to-b from-emerald-400 via-emerald-500 to-teal-400"
+                    : "bg-gradient-to-b from-amber-400 via-amber-500 to-orange-400"
                 }`}
-                >
-                  {allTicketsFilled ? "✅ Payé" : "⏳ En attente"}
-                </span>
-                {d.isModified && (
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold shadow-sm border bg-[rgba(147,51,234,0.15)] text-[#6d28d9] border-[rgba(129,140,248,0.35)]">
-                    🔄 Modifié
+              />
+              <span className="absolute inset-0 pointer-events-none bg-gradient-to-br from-white/0 via-white/10 to-white/0" />
+              <div className="relative space-y-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm border ${
+                    allTicketsFilled
+                      ? "bg-[rgba(16,185,129,0.14)] text-[#047857] border-[#34d399]/40"
+                      : "bg-[rgba(245,158,11,0.18)] text-[#b45309] border-[#fbbf24]/45"
+                  }`}
+                  >
+                    {allTicketsFilled ? "✅ Payé" : "⏳ En attente"}
                   </span>
-                )}
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500">
-                    {new Date(d.createdAt).toLocaleString("fr-FR")}
-                    {d.createdByName && <span className="ml-2 text-cyan-600 font-medium">• Créé par {d.createdByName}</span>}
-                  </p>
-                  <p className="text-sm text-slate-700">
-                    {d.client?.phone || "Tél ?"} — {d.client?.hotel || "Hôtel ?"} ({d.client?.room || "ch ?"})
-                  </p>
-                  {hasTickets && (
-                    <span className="tag-success">
-                      🎫 Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
+                  {d.isModified && (
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold shadow-sm border bg-[rgba(147,51,234,0.15)] text-[#6d28d9] border-[rgba(129,140,248,0.35)]">
+                      🔄 Modifié
                     </span>
                   )}
-                  <div className="mt-2 space-y-1">
-                    {d.items.map((li, i) => (
-                      <div key={i} className="text-xs text-slate-500">
-                        {li.activityName} — {new Date(li.date + "T12:00:00").toLocaleDateString("fr-FR")}
-                        {li.ticketNumber && <span className="text-emerald-600 font-semibold ml-2">🎫 {li.ticketNumber}</span>}
-                      </div>
-                    ))}
-                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-right mr-3">
-                    <p className="text-base font-semibold text-slate-900">Espèces: {currencyNoCents(d.totalCash || Math.round(d.total), d.currency)}</p>
-                    <p className="text-sm text-slate-600">Carte: {currencyNoCents(d.totalCard || calculateCardPrice(d.total), d.currency)}</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 space-y-1">
+                    <p className="text-xs text-[rgba(71,85,105,0.7)]">
+                      {new Date(d.createdAt).toLocaleString("fr-FR")}
+                      {d.createdByName && <span className="ml-2 text-[#0284c7] font-semibold">• {d.createdByName}</span>}
+                    </p>
+                    <p className="text-sm text-slate-800 font-medium">
+                      {d.client?.phone || "Tél ?"} — {d.client?.hotel || "Hôtel ?"} ({d.client?.room || "ch ?"})
+                    </p>
+                    {hasTickets && (
+                      <span className="tag-success inline-flex items-center gap-1">
+                        🎫 Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex gap-2 flex-wrap">
-                <GhostBtn
-                  onClick={() => {
-                    setSelectedQuote(d);
-                    // Initialiser les numéros de ticket existants
-                    const existingTickets = {};
-                    const existingPaymentMethods = {};
-                    d.items?.forEach((item, idx) => {
-                      existingTickets[idx] = item.ticketNumber || "";
-                      existingPaymentMethods[idx] = item.paymentMethod || "";
-                    });
-                    setTicketNumbers(existingTickets);
-                    setPaymentMethods(existingPaymentMethods);
-                    setShowPaymentModal(true);
-                  }}
-                  className={allTicketsFilled ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100" : "hover:bg-cyan-50 hover:border-cyan-300"}
-                >
-                  {allTicketsFilled ? "✅ Payé" : "💰 Payer"}
-                </GhostBtn>
-                <GhostBtn
-                  onClick={() => {
-                    // Générer le devis en HTML et l'ouvrir dans une nouvelle fenêtre
-                    const htmlContent = generateQuoteHTML(d);
-                    const clientPhone = d.client?.phone || "";
-                    const fileName = `Devis - ${clientPhone}`;
-                    const newWindow = window.open();
-                    if (newWindow) {
-                      newWindow.document.write(htmlContent);
-                      // Définir le titre pour le nom du fichier PDF avant de fermer le document
-                      newWindow.document.title = fileName;
-                      newWindow.document.close();
-                      // Après un court délai, proposer l'impression
-                      setTimeout(() => {
-                        newWindow.print();
-                      }, 500);
-                    }
-                  }}
-                >
-                  🖨️ Imprimer
-                </GhostBtn>
-                {!allTicketsFilled && (
-                  <GhostBtn
-                    onClick={() => {
-                      // Ouvrir la modale de modification
-                      setSelectedQuote(d);
-                      setEditClient({ ...d.client });
-                      setEditItems(d.items.map((item) => ({
-                        activityId: item.activityId || "",
-                        date: item.date || new Date().toISOString().slice(0, 10),
-                        adults: item.adults !== undefined && item.adults !== null ? item.adults : 2,
-                        children: item.children !== undefined && item.children !== null ? item.children : 0,
-                        babies: item.babies !== undefined && item.babies !== null ? item.babies : 0,
-                        extraLabel: item.extraLabel || "",
-                        extraAmount: item.extraAmount || "",
-                        extraDolphin: item.extraDolphin || false,
-                        speedBoatExtra: Array.isArray(item.speedBoatExtra) ? item.speedBoatExtra : (item.speedBoatExtra ? [item.speedBoatExtra] : []),
-                        buggySimple: item.buggySimple !== undefined && item.buggySimple !== null ? item.buggySimple : 0,
-                        buggyFamily: item.buggyFamily !== undefined && item.buggyFamily !== null ? item.buggyFamily : 0,
-                        yamaha250: item.yamaha250 !== undefined && item.yamaha250 !== null ? item.yamaha250 : 0,
-                        ktm640: item.ktm640 !== undefined && item.ktm640 !== null ? item.ktm640 : 0,
-                        ktm530: item.ktm530 !== undefined && item.ktm530 !== null ? item.ktm530 : 0,
-                        slot: item.slot || "",
-                        ticketNumber: item.ticketNumber || "", // Préserver le ticketNumber existant
-                      })));
-                      setEditNotes(d.notes || "");
-                      setShowEditModal(true);
-                    }}
-                  >
-                    ✏️ Modifier
-                  </GhostBtn>
-                )}
-                {user?.canDeleteQuote && (
-                  <GhostBtn
-                    onClick={async () => {
-                      if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
-                        const updatedQuotes = quotes.filter((quote) => quote.id !== d.id);
-                        setQuotes(updatedQuotes);
-                        saveLS(LS_KEYS.quotes, updatedQuotes);
-
-                        // Supprimer de Supabase si configuré
-                        if (supabase) {
-                          try {
-                            const { error: deleteError } = await supabase
-                              .from("quotes")
-                              .delete()
-                              .eq("site_key", SITE_KEY)
-                              .eq("client_phone", d.client?.phone || "")
-                              .eq("created_at", d.createdAt);
-                            
-                            if (deleteError) {
-                              console.warn("⚠️ Erreur suppression Supabase:", deleteError);
-                            } else {
-                              console.log("✅ Devis supprimé de Supabase!");
-                            }
-                          } catch (deleteErr) {
-                            console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
-                          }
-                        }
-                      }
-                    }}
-                    className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                  >
-                    🗑️ Supprimer
-                  </GhostBtn>
-                )}
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <span className="tag-info inline-flex items-center gap-1 text-xs">
+                      {d.trip || "Activité ?"}
+                    </span>
+                    <span className="text-[11px] uppercase tracking-wide text-[rgba(71,85,105,0.65)]">
+                      Invoice {d.invoiceN || "N/A"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -510,6 +410,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                 Annuler
               </GhostBtn>
               <PrimaryBtn
+                variant="success"
                 onClick={async () => {
                   // Vérifier que tous les tickets sont renseignés
                   const allFilled = selectedQuote.items?.every((_, idx) => ticketNumbers[idx]?.trim());
