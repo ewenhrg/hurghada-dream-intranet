@@ -527,9 +527,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen relative bg-[rgba(248,250,252,0.4)] overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-[rgba(248,250,252,0.4)] overflow-hidden">
       {/* HEADER */}
-      <header className="fixed top-0 left-0 right-0 w-full z-50 pt-4 pb-3 px-3 sm:px-6 bg-[rgba(248,250,252,0.85)] backdrop-blur-xl shadow-[0_18px_48px_-32px_rgba(15,23,42,0.55)]">
+      <header className="sticky top-0 z-50 pt-4 pb-3 px-3 sm:px-6 bg-[rgba(248,250,252,0.92)] backdrop-blur-xl shadow-[0_18px_48px_-32px_rgba(15,23,42,0.55)]">
         <div
           className={`glass-nav mx-auto flex flex-wrap items-center justify-between gap-4 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"} px-4 py-4 rounded-2xl`}
         >
@@ -629,10 +629,9 @@ export default function App() {
       </header>
 
       {/* CONTENU CENTRÉ */}
-      <main
-        className={`mx-auto px-4 pt-36 sm:pt-40 pb-12 space-y-10 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}
-      >
-        <Suspense fallback={<PageLoader />}>
+      <main className="flex-1 overflow-y-auto px-3 sm:px-6 py-10">
+        <div className={`mx-auto space-y-10 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
+          <Suspense fallback={<PageLoader />}>
           {tab === "devis" && (
             <section className="space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
@@ -704,7 +703,8 @@ export default function App() {
               <UsersPage user={user} />
             </Section>
           )}
-        </Suspense>
+          </Suspense>
+        </div>
       </main>
 
       <footer className={`mx-auto px-4 py-8 text-[11px] text-slate-600 border-t border-slate-200/80 mt-10 font-medium tracking-wide ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
