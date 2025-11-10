@@ -18,6 +18,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [ticketNumbers, setTicketNumbers] = useState({});
   const [paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" }
   
+  // Vérifier si l'utilisateur peut modifier les activités (seulement Léa et Ewen)
+  const canModifyActivities = user?.name === "Léa" || user?.name === "Ewen";
+  
   // Références pour le conteneur de la modale de paiement
   const paymentModalRef = useRef(null);
   const paymentModalContainerRef = useRef(null);
@@ -378,7 +381,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       >
                         🖨️ Imprimer
                       </GhostBtn>
-                      {!allTicketsFilled && (
+                      {!allTicketsFilled && canModifyActivities && (
                         <GhostBtn
                           variant="warning"
                           className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-amber-500 bg-amber-500 hover:bg-amber-600 shadow-[0_18px_32px_-18px_rgba(245,158,11,0.55)]"
@@ -682,6 +685,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           notes={editNotes}
           setNotes={setEditNotes}
           activities={activities}
+          user={user}
+          canModifyActivities={canModifyActivities}
           editModalRef={editModalRef}
           editModalContainerRef={editModalContainerRef}
           onClose={() => {
@@ -763,7 +768,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 }
 
 // Composant modale de modification de devis
-function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, onClose, onSave, editModalRef, editModalContainerRef }) {
+function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, user, canModifyActivities, onClose, onSave, editModalRef, editModalContainerRef }) {
   const blankItem = () => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
@@ -1037,9 +1042,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-4 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
-                  <GhostBtn type="button" onClick={() => removeItem(idx)}>
-                    Supprimer
-                  </GhostBtn>
+                  {canModifyActivities ? (
+                    <GhostBtn type="button" onClick={() => removeItem(idx)}>
+                      Supprimer
+                    </GhostBtn>
+                  ) : (
+                    <p className="text-xs text-gray-400">Non modifiable</p>
+                  )}
                 </div>
                 {/* Première ligne : Activité et Date */}
                 <div className="grid md:grid-cols-3 gap-3">
@@ -1048,7 +1057,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     <select
                       value={c.raw.activityId || ""}
                       onChange={(e) => setItem(idx, { activityId: e.target.value })}
-                      className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+                      disabled={!canModifyActivities}
+                      className={`w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm ${!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}`}
                     >
                       <option value="">— Choisir —</option>
                       {sortedActivities.map((a) => (
@@ -1060,7 +1070,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Date</p>
-                    <TextInput type="date" value={c.raw.date} onChange={(e) => setItem(idx, { date: e.target.value })} />
+                    <TextInput 
+                      type="date" 
+                      value={c.raw.date} 
+                      onChange={(e) => setItem(idx, { date: e.target.value })}
+                      disabled={!canModifyActivities}
+                      className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
+                    />
                     {c.act && !c.available && (
                       <p className="text-[10px] text-amber-700 mt-1">⚠️ activité pas dispo ce jour-là</p>
                     )}
@@ -1070,19 +1086,34 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 <div className="grid md:grid-cols-3 gap-3 bg-cyan-50/50 p-4 rounded-xl border-2 border-cyan-200">
                   <div>
                     <p className="text-xs text-gray-700 font-semibold mb-2">👥 Adultes</p>
-                    <NumberInput value={c.raw.adults || 0} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+                    <NumberInput 
+                      value={c.raw.adults || 0} 
+                      onChange={(e) => setItem(idx, { adults: e.target.value })}
+                      disabled={!canModifyActivities}
+                      className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
+                    />
                   </div>
                   <div>
                     <p className="text-xs text-gray-700 font-semibold mb-2">
                       👶 Enfants{c.act?.ageChild ? <span className="text-gray-500 ml-1">({c.act.ageChild})</span> : ""}
                     </p>
-                    <NumberInput value={c.raw.children || 0} onChange={(e) => setItem(idx, { children: e.target.value })} />
+                    <NumberInput 
+                      value={c.raw.children || 0} 
+                      onChange={(e) => setItem(idx, { children: e.target.value })}
+                      disabled={!canModifyActivities}
+                      className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
+                    />
                   </div>
                   <div>
                     <p className="text-xs text-gray-700 font-semibold mb-2">
                       🍼 Bébés{c.act?.ageBaby ? <span className="text-gray-500 ml-1">({c.act.ageBaby})</span> : ""}
                     </p>
-                    <NumberInput value={c.raw.babies || 0} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                    <NumberInput 
+                      value={c.raw.babies || 0} 
+                      onChange={(e) => setItem(idx, { babies: e.target.value })}
+                      disabled={!canModifyActivities}
+                      className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
+                    />
                   </div>
                 </div>
                 {/* Champs spécifiques pour Buggy */}
@@ -1090,11 +1121,21 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   <div className="grid md:grid-cols-2 gap-3 mt-3">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
-                      <NumberInput value={c.raw.buggySimple ?? ""} onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })} />
+                      <NumberInput 
+                        value={c.raw.buggySimple ?? ""} 
+                        onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })}
+                        disabled={!canModifyActivities}
+                        className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
+                      />
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Buggy Family ({getBuggyPrices(c.act.name).family}€)</p>
-                      <NumberInput value={c.raw.buggyFamily ?? ""} onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })} />
+                      <NumberInput 
+                        value={c.raw.buggyFamily ?? ""} 
+                        onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })}
+                        disabled={!canModifyActivities}
+                        className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
+                      />
                     </div>
                   </div>
                 )}
@@ -1103,15 +1144,30 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   <div className="grid md:grid-cols-3 gap-3 mt-3">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
-                      <NumberInput value={c.raw.yamaha250 ?? ""} onChange={(e) => setItem(idx, { yamaha250: e.target.value === "" ? "" : e.target.value })} />
+                      <NumberInput 
+                        value={c.raw.yamaha250 ?? ""} 
+                        onChange={(e) => setItem(idx, { yamaha250: e.target.value === "" ? "" : e.target.value })}
+                        disabled={!canModifyActivities}
+                        className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
+                      />
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">KTM640CC ({getMotoCrossPrices().ktm640}€)</p>
-                      <NumberInput value={c.raw.ktm640 ?? ""} onChange={(e) => setItem(idx, { ktm640: e.target.value === "" ? "" : e.target.value })} />
+                      <NumberInput 
+                        value={c.raw.ktm640 ?? ""} 
+                        onChange={(e) => setItem(idx, { ktm640: e.target.value === "" ? "" : e.target.value })}
+                        disabled={!canModifyActivities}
+                        className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
+                      />
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">KTM 530CC ({getMotoCrossPrices().ktm530}€)</p>
-                      <NumberInput value={c.raw.ktm530 ?? ""} onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })} />
+                      <NumberInput 
+                        value={c.raw.ktm530 ?? ""} 
+                        onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })}
+                        disabled={!canModifyActivities}
+                        className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
+                      />
                     </div>
                   </div>
                 )}
@@ -1122,7 +1178,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <select
                         value={c.raw.slot || ""}
                         onChange={(e) => setItem(idx, { slot: e.target.value })}
-                        className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+                        disabled={!canModifyActivities}
+                        className={`w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm ${!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}`}
                       >
                         <option value="">—</option>
                         {c.transferInfo.morningEnabled && <option value="morning">Matin ({c.transferInfo.morningTime})</option>}
@@ -1145,11 +1202,12 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           const isChecked = currentExtras.includes(extra.id);
                           
                           return (
-                            <label key={extra.id} className="flex items-center gap-2 cursor-pointer hover:bg-blue-50/50 p-2 rounded-lg transition-colors">
+                            <label key={extra.id} className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${canModifyActivities ? "cursor-pointer hover:bg-blue-50/50" : "cursor-not-allowed opacity-60"}`}>
                               <input
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={(e) => {
+                                  if (!canModifyActivities) return;
                                   const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
                                     ? c.raw.speedBoatExtra 
                                     : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
@@ -1166,6 +1224,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                                     setItem(idx, { speedBoatExtra: currentExtras.filter((id) => id !== extra.id) });
                                   }
                                 }}
+                                disabled={!canModifyActivities}
                                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                               />
                               <span className="text-sm text-slate-700 flex-1">
@@ -1185,11 +1244,21 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     <>
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Extra (label)</p>
-                        <TextInput value={c.raw.extraLabel || ""} onChange={(e) => setItem(idx, { extraLabel: e.target.value })} />
+                        <TextInput 
+                          value={c.raw.extraLabel || ""} 
+                          onChange={(e) => setItem(idx, { extraLabel: e.target.value })}
+                          disabled={!canModifyActivities}
+                          className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
+                        />
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Extra (montant)</p>
-                        <NumberInput value={c.raw.extraAmount || ""} onChange={(e) => setItem(idx, { extraAmount: e.target.value })} />
+                        <NumberInput 
+                          value={c.raw.extraAmount || ""} 
+                          onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
+                          disabled={!canModifyActivities}
+                          className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
+                        />
                       </div>
                     </>
                   )}
@@ -1202,9 +1271,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       id={`edit-extraDolphin-${idx}`}
                       checked={c.raw.extraDolphin || false}
                       onChange={(e) => setItem(idx, { extraDolphin: e.target.checked })}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      disabled={!canModifyActivities}
+                      className={`w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${!canModifyActivities ? "opacity-60 cursor-not-allowed" : ""}`}
                     />
-                    <label htmlFor={`edit-extraDolphin-${idx}`} className="text-sm text-gray-700 cursor-pointer">
+                    <label htmlFor={`edit-extraDolphin-${idx}`} className={`text-sm text-gray-700 ${canModifyActivities ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`}>
                       Extra dauphin 20€
                     </label>
                   </div>
@@ -1232,9 +1302,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           </div>
 
           <div className="flex items-center justify-between">
-            <GhostBtn type="button" onClick={addItem}>
-              + Ajouter une autre activité
-            </GhostBtn>
+            {canModifyActivities ? (
+              <GhostBtn type="button" onClick={addItem}>
+                + Ajouter une autre activité
+              </GhostBtn>
+            ) : (
+              <p className="text-xs text-gray-400">Vous n'avez pas la permission d'ajouter des activités</p>
+            )}
             <div className="text-right">
               <p className="text-xs text-gray-500">Total</p>
               <p className="text-xl font-bold">Espèces: {currencyNoCents(grandTotalCash, grandCurrency)}</p>
@@ -1248,13 +1322,21 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               placeholder="Infos supplémentaires : langue du guide, pick-up, etc."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              disabled={!canModifyActivities}
+              className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
             />
           </div>
         </div>
 
         <div className="flex gap-3 justify-end mt-6 pt-4 border-t">
           <GhostBtn onClick={onClose}>Annuler</GhostBtn>
-          <PrimaryBtn onClick={handleSave}>Enregistrer les modifications</PrimaryBtn>
+          <PrimaryBtn 
+            onClick={handleSave}
+            disabled={!canModifyActivities}
+            className={!canModifyActivities ? "opacity-60 cursor-not-allowed" : ""}
+          >
+            Enregistrer les modifications
+          </PrimaryBtn>
         </div>
       </div>
     </div>
