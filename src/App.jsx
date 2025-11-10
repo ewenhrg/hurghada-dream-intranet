@@ -697,7 +697,7 @@ export default function App() {
         )}
 
         {tab === "situation" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
-          <SituationPage activities={activities} />
+          <SituationPage activities={activities} user={user} />
         )}
 
         {tab === "stopsale" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (

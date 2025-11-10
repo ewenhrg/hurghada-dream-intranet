@@ -295,7 +295,7 @@ const VirtualizedRow = memo(({ index, style, data }) => {
 });
 VirtualizedRow.displayName = "VirtualizedRow";
 
-export function SituationPage({ activities = [] }) {
+export function SituationPage({ activities = [], user }) {
   const [excelData, setExcelData] = useState([]);
   const [previewMessages, setPreviewMessages] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -1696,6 +1696,7 @@ export function SituationPage({ activities = [] }) {
               onDeleteTemplate={handleDeleteTemplate}
               onUseDefaultTemplate={handleUseDefaultTemplate}
               onClose={() => setShowConfigModal(false)}
+              user={user}
             />
           </Suspense>
         )}
