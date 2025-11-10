@@ -7,6 +7,137 @@ import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
 
+// Composant compact pour afficher les stop sales et push sales
+function StopPushSalesSummary({ stopSales, pushSales, activities }) {
+  const [expanded, setExpanded] = useState(false);
+  const totalCount = stopSales.length + pushSales.length;
+
+  // Grouper par date pour un affichage plus compact
+  const stopSalesByDate = useMemo(() => {
+    const grouped = {};
+    stopSales.forEach((stop) => {
+      if (!grouped[stop.date]) {
+        grouped[stop.date] = [];
+      }
+      grouped[stop.date].push(stop);
+    });
+    return grouped;
+  }, [stopSales]);
+
+  const pushSalesByDate = useMemo(() => {
+    const grouped = {};
+    pushSales.forEach((push) => {
+      if (!grouped[push.date]) {
+        grouped[push.date] = [];
+      }
+      grouped[push.date].push(push);
+    });
+    return grouped;
+  }, [pushSales]);
+
+  if (totalCount === 0) return null;
+
+  return (
+    <div className="bg-gradient-to-r from-red-50 to-green-50 border-2 border-red-200 rounded-xl p-3 shadow-md">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between gap-2 text-left"
+      >
+        <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🛑</span>
+            {stopSales.length > 0 && (
+              <span className="text-xs font-bold bg-red-500 text-white px-2 py-1 rounded-full">
+                {stopSales.length}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">✅</span>
+            {pushSales.length > 0 && (
+              <span className="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">
+                {pushSales.length}
+              </span>
+            )}
+          </div>
+          <span className="text-sm font-semibold text-gray-700">
+            {totalCount} activité{totalCount > 1 ? "s" : ""} en Stop/Push Sale
+          </span>
+        </div>
+        <span className="text-gray-500 text-sm">
+          {expanded ? "▼ Réduire" : "▶ Voir les détails"}
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="mt-3 space-y-3 pt-3 border-t border-red-200/50">
+          {/* Stop Sales */}
+          {stopSales.length > 0 && (
+            <div>
+              <h4 className="text-xs font-bold text-red-900 mb-2 flex items-center gap-2">
+                <span>🛑</span> Stop Sales ({stopSales.length})
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto">
+                {Object.entries(stopSalesByDate)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([date, stops]) => (
+                    <div key={date} className="bg-white/90 rounded-lg p-2 border border-red-200">
+                      <p className="text-xs font-semibold text-red-900 mb-1">
+                        {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </p>
+                      <div className="space-y-1">
+                        {stops.map((stop, idx) => (
+                          <p key={idx} className="text-xs text-red-700 truncate" title={stop.activityName}>
+                            • {stop.activityName}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Push Sales */}
+          {pushSales.length > 0 && (
+            <div>
+              <h4 className="text-xs font-bold text-green-900 mb-2 flex items-center gap-2">
+                <span>✅</span> Push Sales ({pushSales.length})
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto">
+                {Object.entries(pushSalesByDate)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([date, pushes]) => (
+                    <div key={date} className="bg-white/90 rounded-lg p-2 border border-green-200">
+                      <p className="text-xs font-semibold text-green-900 mb-1">
+                        {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </p>
+                      <div className="space-y-1">
+                        {pushes.map((push, idx) => (
+                          <p key={idx} className="text-xs text-green-700 truncate" title={push.activityName}>
+                            • {push.activityName}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft }) {
   const [stopSales, setStopSales] = useState([]);
   const [pushSales, setPushSales] = useState([]);
@@ -627,55 +758,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       )}
 
       <div className="flex-1 space-y-10">
-        {/* Section Stop Sales et Push Sales - Visible pour tous les vendeurs */}
+        {/* Section Stop Sales et Push Sales - Compacte et repliable */}
         {(formattedStopSales.length > 0 || formattedPushSales.length > 0) && (
-          <div className="space-y-4">
-            {/* Stop Sales */}
-            {formattedStopSales.length > 0 && (
-              <div className="bg-red-50/90 border-2 border-red-300 rounded-2xl p-5 shadow-[0_24px_55px_-30px_rgba(239,68,68,0.55)]">
-                <h3 className="text-base font-bold text-red-900 mb-3 flex items-center gap-2">
-                  <span className="text-xl">🛑</span>
-                  Stop Sales - Activités bloquées à la vente ({formattedStopSales.length})
-                </h3>
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {formattedStopSales.map((stop, idx) => (
-                    <div key={idx} className="bg-white/80 rounded-xl p-3 border border-red-200 shadow-sm">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-red-900">{stop.activityName}</p>
-                          <p className="text-xs text-red-700 mt-1">{stop.formattedDate}</p>
-                        </div>
-                        <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded">BLOQUÉ</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Push Sales */}
-            {formattedPushSales.length > 0 && (
-              <div className="bg-green-50/90 border-2 border-green-300 rounded-2xl p-5 shadow-[0_24px_55px_-30px_rgba(34,197,94,0.55)]">
-                <h3 className="text-base font-bold text-green-900 mb-3 flex items-center gap-2">
-                  <span className="text-xl">✅</span>
-                  Push Sales - Activités ouvertes exceptionnellement ({formattedPushSales.length})
-                </h3>
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {formattedPushSales.map((push, idx) => (
-                    <div key={idx} className="bg-white/80 rounded-xl p-3 border border-green-200 shadow-sm">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-green-900">{push.activityName}</p>
-                          <p className="text-xs text-green-700 mt-1">{push.formattedDate}</p>
-                        </div>
-                        <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded">OUVERT</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <StopPushSalesSummary 
+            stopSales={formattedStopSales} 
+            pushSales={formattedPushSales}
+            activities={activities}
+          />
         )}
 
         <form 
