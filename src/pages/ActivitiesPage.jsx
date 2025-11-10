@@ -292,7 +292,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     localStorage.removeItem(LS_KEYS.activityForm);
   }
 
-  function handleDelete(id) {
+  async function handleDelete(id) {
     if (!canModifyActivities) {
       toast.warning("Seuls Léa et Ewen peuvent supprimer les activités.");
       return;
