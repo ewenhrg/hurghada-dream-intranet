@@ -228,6 +228,25 @@ select:not([class*="rounded"]):hover {
   display: none;  /* Chrome, Safari and Opera */
 }
 
+/* Scrollbar fine pour la modale des dates utilisées */
+.scrollbar-thin-amber::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin-amber::-webkit-scrollbar-track {
+  background: #fef3c7;
+  border-radius: 10px;
+}
+
+.scrollbar-thin-amber::-webkit-scrollbar-thumb {
+  background: #fcd34d;
+  border-radius: 10px;
+}
+
+.scrollbar-thin-amber::-webkit-scrollbar-thumb:hover {
+  background: #fbbf24;
+}
+
 /* Optimisations pour mobile */
 @media (max-width: 768px) {
   .glass-nav {

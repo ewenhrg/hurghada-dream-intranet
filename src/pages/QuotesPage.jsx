@@ -728,16 +728,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   }
 
   return (
-    <div className="relative lg:flex lg:items-start lg:gap-10">
-      {/* Modale des dates utilisées - collante à gauche */}
+    <div className="relative">
+      {/* Modale des dates utilisées - fixe sur le côté gauche, sans affecter la largeur du contenu */}
       {usedDates.length > 0 && (
-        <aside className="hidden lg:block lg:sticky lg:top-28 xl:top-32 w-72 flex-shrink-0">
-          <div className="bg-amber-50/95 border border-amber-200 rounded-2xl p-5 shadow-[0_24px_55px_-30px_rgba(180,83,9,0.55)]">
+        <aside className="hidden lg:block fixed left-4 top-32 xl:top-36 w-72 z-40">
+          <div className="bg-amber-50/95 backdrop-blur-sm border border-amber-200 rounded-2xl p-4 md:p-5 shadow-[0_24px_55px_-30px_rgba(180,83,9,0.55)]">
             <h3 className="text-sm font-semibold text-amber-900 mb-3 flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" />
               Dates utilisées ({usedDates.length})
             </h3>
-            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 scrollbar-thin-amber" style={{ scrollbarWidth: 'thin', scrollbarColor: '#fcd34d #fef3c7' }}>
               {usedDates.map(([date, activities]) => (
                 <div key={date} className="bg-white/70 rounded-xl p-3 border border-amber-100 shadow-[0_16px_28px_-26px_rgba(217,119,6,0.35)]">
                   <p className="text-xs font-semibold text-amber-900 mb-2">
@@ -757,7 +757,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </aside>
       )}
 
-      <div className="flex-1 space-y-10">
+      <div className="w-full space-y-10">
         {/* Section Stop Sales et Push Sales - Compacte et repliable */}
         {(formattedStopSales.length > 0 || formattedPushSales.length > 0) && (
           <StopPushSalesSummary 
