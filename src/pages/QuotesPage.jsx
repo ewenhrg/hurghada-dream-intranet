@@ -775,9 +775,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               e.preventDefault();
             }
           }}
-          className="space-y-8"
+          className="space-y-4 md:space-y-8"
         >
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-3">
           <p className="text-xs text-gray-500 font-medium">
             Les modifications sont sauvegardées automatiquement en brouillon.
           </p>
@@ -791,12 +791,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 toast.success("Formulaire réinitialisé.");
               }
             }}
+            className="w-full sm:w-auto"
           >
             🧹 Tout effacer
           </GhostBtn>
         </div>
         {/* Infos client */}
-        <div className="grid md:grid-cols-5 gap-6 md:gap-7 lg:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
           <div>
             <p className="text-xs text-gray-500 mb-2">Client</p>
             <TextInput value={client.name} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} />
@@ -838,7 +839,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Dates séjour */}
-        <div className="grid md:grid-cols-2 gap-6 md:gap-7 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
           <div>
             <p className="text-xs text-gray-500 mb-2">Date d'arrivée</p>
             <TextInput 
@@ -860,15 +861,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         {/* Lignes */}
         <div className="space-y-6 md:space-y-7">
           {computed.map((c, idx) => (
-            <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-7 md:p-9 lg:p-10 space-y-6 md:space-y-7 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
+            <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-xl md:rounded-2xl p-4 md:p-7 lg:p-10 space-y-4 md:space-y-6 lg:space-y-7 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
                 <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
-                <GhostBtn type="button" onClick={() => removeItem(idx)} variant="danger">
+                <GhostBtn type="button" onClick={() => removeItem(idx)} variant="danger" className="w-full sm:w-auto">
                   🗑️ Supprimer
                 </GhostBtn>
               </div>
-              <div className="grid md:grid-cols-5 gap-6 md:gap-7 lg:gap-8 items-end">
-                <div className="md:col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 lg:gap-8 items-end">
+                <div className="sm:col-span-2 md:col-span-2">
                   <p className="text-xs text-gray-500 mb-2">Activité</p>
                   <select
                     value={c.raw.activityId}
@@ -993,7 +994,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                 </div>
               ) : (
-                <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                   <div className="md:col-span-2">
                     <p className="text-xs text-gray-500 mb-2">Extra (ex: photos, bateau privé…)</p>
                     <TextInput
@@ -1015,7 +1016,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               {/* passagers - Champs spéciaux pour activités buggy */}
               {c.act && isBuggyActivity(c.act.name) ? (
                 <>
-                  <div className="grid md:grid-cols-2 gap-6 md:gap-7 lg:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-500 mb-2">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
                       <NumberInput value={c.raw.buggySimple ?? ""} onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })} />
@@ -1025,7 +1026,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <NumberInput value={c.raw.buggyFamily ?? ""} onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-6 md:gap-7 lg:gap-8 mt-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 lg:gap-8 mt-4 md:mt-6">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
                       <NumberInput value={c.raw.adults ?? ""} onChange={(e) => setItem(idx, { adults: e.target.value === "" ? "" : e.target.value })} />
@@ -1040,7 +1041,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 </>
               ) : c.act && isMotoCrossActivity(c.act.name) ? (
                 <>
-                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-500 mb-2">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
                       <NumberInput value={c.raw.yamaha250 ?? ""} onChange={(e) => setItem(idx, { yamaha250: e.target.value === "" ? "" : e.target.value })} />
@@ -1063,7 +1064,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
-                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
                       <input
                         type="checkbox"
@@ -1101,7 +1102,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Champs adultes/enfants/bébés (informations uniquement, ne changent pas le prix) */}
-                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
                       <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
@@ -1128,7 +1129,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
-                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
                       <input
                         type="checkbox"
@@ -1166,7 +1167,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Champs adultes/enfants/bébés (informations uniquement, ne changent pas le prix) */}
-                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
                       <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
@@ -1193,7 +1194,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
-                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
                       <input
                         type="checkbox"
@@ -1231,7 +1232,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Champs adultes/enfants/bébés (informations uniquement, ne changent pas le prix) */}
-                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
                       <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
@@ -1258,7 +1259,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
-                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
                       <input
                         type="checkbox"
@@ -1296,7 +1297,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Champs adultes/enfants/bébés (informations uniquement, ne changent pas le prix) */}
-                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
                       <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
@@ -1323,7 +1324,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
-                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
                       <input
                         type="checkbox"
@@ -1361,7 +1362,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Champs adultes/enfants/bébés (informations uniquement, ne changent pas le prix) */}
-                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
                       <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
@@ -1388,7 +1389,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
-                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
                       <input
                         type="checkbox"
@@ -1426,7 +1427,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Champs adultes/enfants/bébés (informations uniquement, ne changent pas le prix) */}
-                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
                       <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
@@ -1453,7 +1454,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
-                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
                       <input
                         type="checkbox"
@@ -1491,7 +1492,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Champs adultes/enfants/bébés (informations uniquement, ne changent pas le prix) */}
-                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
                       <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
@@ -1518,7 +1519,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
-                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
                       <input
                         type="checkbox"
@@ -1556,7 +1557,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                   
                   {/* Champs adultes/enfants/bébés (informations uniquement, ne changent pas le prix) */}
-                  <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
                       <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
@@ -1576,7 +1577,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                 </>
               ) : (
-                <div className="grid md:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                   <div>
                     <p className="text-xs text-gray-500 mb-2">Adultes</p>
                     <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
@@ -1627,14 +1628,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           ))}
         </div>
 
-        <div className="flex items-center justify-between">
-          <GhostBtn type="button" onClick={addItem} variant="primary">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <GhostBtn type="button" onClick={addItem} variant="primary" className="w-full sm:w-auto">
             ➕ Ajouter une activité
           </GhostBtn>
-          <div className="text-right">
+          <div className="text-left sm:text-right w-full sm:w-auto">
             <p className="text-xs text-gray-500">Total</p>
-            <p className="text-xl font-bold">Espèces: {currencyNoCents(grandTotalCash, grandCurrency)}</p>
-            <p className="text-lg font-semibold text-gray-700">Carte: {currencyNoCents(grandTotalCard, grandCurrency)}</p>
+            <p className="text-lg md:text-xl font-bold">Espèces: {currencyNoCents(grandTotalCash, grandCurrency)}</p>
+            <p className="text-base md:text-lg font-semibold text-gray-700">Carte: {currencyNoCents(grandTotalCard, grandCurrency)}</p>
           </div>
         </div>
 
@@ -1658,10 +1659,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
       {/* Modale de paiement */}
       {showPaymentModal && selectedQuote && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Enregistrer les numéros de ticket</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
+          <div className="bg-white rounded-xl md:rounded-2xl border border-blue-100/50 shadow-2xl p-4 md:p-6 max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <h3 className="text-base md:text-lg font-semibold">Enregistrer les numéros de ticket</h3>
               <button
                 onClick={() => {
                   setShowPaymentModal(false);
@@ -1669,7 +1670,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   setTicketNumbers({});
                   setPaymentMethods({});
                 }}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 ×
               </button>
@@ -1752,7 +1753,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ))}
             </div>
 
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 md:mt-6 pt-4 border-t">
               <GhostBtn
                 onClick={() => {
                   setShowPaymentModal(false);
@@ -1760,10 +1761,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   setTicketNumbers({});
                   setPaymentMethods({});
                 }}
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
                 Annuler
               </GhostBtn>
               <PrimaryBtn
+                className="w-full sm:w-auto order-1 sm:order-2"
                 onClick={async () => {
                   // Vérifier que tous les tickets sont renseignés
                   const allFilled = selectedQuote.items?.every((_, idx) => ticketNumbers[idx]?.trim());

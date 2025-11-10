@@ -477,10 +477,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
       {/* Modale de paiement */}
       {showPaymentModal && selectedQuote && (
-        <div ref={paymentModalContainerRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div ref={paymentModalRef} className="bg-white rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Enregistrer les numéros de ticket</h3>
+        <div ref={paymentModalContainerRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
+          <div ref={paymentModalRef} className="bg-white rounded-xl md:rounded-2xl border border-blue-100/50 shadow-2xl p-4 md:p-6 max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <h3 className="text-base md:text-lg font-semibold">Enregistrer les numéros de ticket</h3>
               <button
                 onClick={() => {
                   setShowPaymentModal(false);
@@ -488,7 +488,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   setTicketNumbers({});
                   setPaymentMethods({});
                 }}
-                className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+                className="text-slate-400 hover:text-slate-600 text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 ×
               </button>
@@ -579,7 +579,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
               ))}
             </div>
 
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 md:mt-6 pt-4 border-t">
               <GhostBtn
                 onClick={() => {
                   setShowPaymentModal(false);
@@ -587,10 +587,12 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   setTicketNumbers({});
                   setPaymentMethods({});
                 }}
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
                 Annuler
               </GhostBtn>
               <PrimaryBtn
+                className="w-full sm:w-auto order-1 sm:order-2"
                 variant="success"
                 onClick={async () => {
                   // Vérifier que tous les tickets sont renseignés
@@ -984,18 +986,18 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
   }
 
   return (
-    <div ref={editModalContainerRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div ref={editModalRef} className="bg-white rounded-2xl border border-blue-100/50 shadow-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Modifier le devis</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">
+    <div ref={editModalContainerRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
+      <div ref={editModalRef} className="bg-white rounded-xl md:rounded-2xl border border-blue-100/50 shadow-2xl p-4 md:p-6 max-w-4xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-3 md:mb-4">
+          <h3 className="text-base md:text-lg font-semibold">Modifier le devis</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl md:text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center">
             ×
           </button>
         </div>
 
         <div className="space-y-5">
           {/* Infos client - Modifiables par tous */}
-          <div className="grid md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
             <div>
               <p className="text-xs text-gray-500 mb-1">Client</p>
               <TextInput value={client.name || ""} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} />
@@ -1047,7 +1049,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   </GhostBtn>
                 </div>
                 {/* Première ligne : Activité et Date - Modifiables par tous */}
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="md:col-span-2">
                     <p className="text-xs text-gray-500 mb-1">Activité</p>
                     <select
@@ -1076,7 +1078,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   </div>
                 </div>
                 {/* Deuxième ligne : Nombre de personnes - Modifiables par tous */}
-                <div className="grid md:grid-cols-3 gap-3 bg-cyan-50/50 p-4 rounded-xl border-2 border-cyan-200">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-cyan-50/50 p-3 md:p-4 rounded-xl border-2 border-cyan-200">
                   <div>
                     <p className="text-xs text-gray-700 font-semibold mb-2">👥 Adultes</p>
                     <NumberInput 
@@ -1105,7 +1107,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 </div>
                 {/* Champs spécifiques pour Buggy - Modifiables par tous */}
                 {c.act && isBuggyActivity(c.act.name) && (
-                  <div className="grid md:grid-cols-2 gap-3 mt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
                       <NumberInput 
@@ -1124,7 +1126,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 )}
                 {/* Champs spécifiques pour MotoCross - Modifiables par tous */}
                 {c.act && isMotoCrossActivity(c.act.name) && (
-                  <div className="grid md:grid-cols-3 gap-3 mt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-3">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
                       <NumberInput 
@@ -1149,7 +1151,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   </div>
                 )}
                 {/* Créneaux et Extras - Modifiables par tous */}
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {c.transferInfo && (
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Créneau</p>
@@ -1292,9 +1294,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           </div>
         </div>
 
-        <div className="flex gap-3 justify-end mt-6 pt-4 border-t">
-          <GhostBtn onClick={onClose}>Annuler</GhostBtn>
-          <PrimaryBtn onClick={handleSave}>
+        <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 md:mt-6 pt-4 border-t">
+          <GhostBtn onClick={onClose} className="w-full sm:w-auto">Annuler</GhostBtn>
+          <PrimaryBtn onClick={handleSave} className="w-full sm:w-auto">
             Enregistrer les modifications
           </PrimaryBtn>
         </div>

@@ -503,48 +503,48 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-transparent overflow-hidden">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 pt-4 pb-3 px-3 sm:px-6 bg-[rgba(7,13,31,0.9)] backdrop-blur-xl shadow-[0_24px_60px_-32px_rgba(7,13,31,0.65)]">
+      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6 bg-[rgba(7,13,31,0.9)] backdrop-blur-xl shadow-[0_24px_60px_-32px_rgba(7,13,31,0.65)]">
         <div
-          className={`glass-nav mx-auto flex flex-wrap items-center justify-between gap-4 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"} px-4 py-4 rounded-2xl`}
+          className={`glass-nav mx-auto flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between gap-3 md:gap-4 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`}
         >
-          <div className="flex items-center gap-3.5">
+          <div className="flex items-center gap-2 md:gap-3.5 w-full md:w-auto">
             <img 
               src="/logo.png" 
               alt="Hurghada Dream Logo" 
-              className="w-12 h-12 object-contain rounded-lg shadow-md border border-slate-200/60"
+              className="w-10 h-10 md:w-12 md:h-12 object-contain rounded-lg shadow-md border border-slate-200/60 flex-shrink-0"
               onError={(e) => {
                 // Fallback si le logo n'existe pas - afficher HD
                 e.target.style.display = 'none';
                 const parent = e.target.parentElement;
                 if (parent && !parent.querySelector('.fallback-logo')) {
                   const fallback = document.createElement('div');
-                  fallback.className = 'fallback-logo w-12 h-12 rounded-lg bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white grid place-items-center font-bold text-base shadow-md';
+                  fallback.className = 'fallback-logo w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white grid place-items-center font-bold text-sm md:text-base shadow-md flex-shrink-0';
                   fallback.textContent = 'HD';
                   parent.appendChild(fallback);
                 }
               }}
             />
-            <div className="space-y-1">
-              <h1 className="text-[1.05rem] font-semibold tracking-[-0.03em] bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent">
+            <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
+              <h1 className="text-base md:text-[1.05rem] font-semibold tracking-[-0.03em] bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent truncate">
                 {t("header.title")}
               </h1>
-              <p className="text-[11px] font-medium text-white/65">{t("header.subtitle")}</p>
+              <p className="text-[10px] md:text-[11px] font-medium text-white/65 hidden md:block">{t("header.subtitle")}</p>
               {user && (
-                <span className="badge-soft">
+                <span className="badge-soft text-[10px] md:text-[11px] px-2 py-1 md:px-2.5 md:py-1.5">
                   <span>👤</span>
-                  <span>
+                  <span className="truncate max-w-[120px] md:max-w-none">
                     {t("header.connected")} : {user.name}
                   </span>
                 </span>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-between md:justify-end">
             {/* Sélecteur de langue */}
-            <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-2.5 py-1.5 shadow-[0_14px_28px_-20px_rgba(7,13,31,0.45)]">
+            <div className="flex items-center gap-1.5 md:gap-2 rounded-xl border border-white/15 bg-white/10 px-2 md:px-2.5 py-1.5 shadow-[0_14px_28px_-20px_rgba(7,13,31,0.45)]">
               <button
                 onClick={() => setLanguage("fr")}
-                className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-colors ${
+                className={`px-2 md:px-2.5 py-1.5 text-[10px] md:text-[11px] font-semibold rounded-lg transition-colors min-h-[36px] min-w-[36px] md:min-h-[44px] md:min-w-[44px] ${
                   language === "fr"
                     ? "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white shadow-[0_14px_28px_-16px_rgba(79,70,229,0.55)]"
                     : "text-white/70 hover:text-[#a5b4fc] hover:bg-white/10"
@@ -554,7 +554,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setLanguage("en")}
-                className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-colors ${
+                className={`px-2 md:px-2.5 py-1.5 text-[10px] md:text-[11px] font-semibold rounded-lg transition-colors min-h-[36px] min-w-[36px] md:min-h-[44px] md:min-w-[44px] ${
                   language === "en"
                     ? "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white shadow-[0_14px_28px_-16px_rgba(79,70,229,0.55)]"
                     : "text-white/70 hover:text-[#a5b4fc] hover:bg-white/10"
@@ -563,45 +563,47 @@ export default function App() {
                 EN
               </button>
             </div>
-            <nav className="flex gap-2.5 flex-wrap">
-              <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
-                {t("nav.devis")}
-              </Pill>
-              {user?.canAccessActivities !== false && (
-              <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
-                {t("nav.activities")}
-              </Pill>
-              )}
-              {user?.canAccessHistory !== false && (
-              <Pill active={tab === "history"} onClick={() => setTab("history")}>
-                {t("nav.history")}
+            <nav className="flex gap-2 md:gap-2.5 overflow-x-auto flex-1 md:flex-initial pb-1 md:pb-0 scrollbar-hide">
+              <div className="flex gap-2 md:gap-2.5 min-w-max">
+                <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
+                  {t("nav.devis")}
                 </Pill>
-              )}
-              {user?.canAccessTickets !== false && (
-                <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
-                  {t("nav.tickets")}
+                {user?.canAccessActivities !== false && (
+                <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
+                  {t("nav.activities")}
                 </Pill>
-              )}
-              {(user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
-                <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
-                  {t("nav.modifications")}
-                </Pill>
-              )}
-              {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
-                <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
-                  {t("nav.situation")}
-                </Pill>
-              )}
-              {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
-                <Pill active={tab === "stopsale"} onClick={() => setTab("stopsale")}>
-                  🛑 Stop/Push Sale
-                </Pill>
-              )}
-              {(user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
-                <Pill active={tab === "users"} onClick={() => setTab("users")}>
-                  {t("nav.users")}
-                </Pill>
-              )}
+                )}
+                {user?.canAccessHistory !== false && (
+                <Pill active={tab === "history"} onClick={() => setTab("history")}>
+                  {t("nav.history")}
+                  </Pill>
+                )}
+                {user?.canAccessTickets !== false && (
+                  <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
+                    {t("nav.tickets")}
+                  </Pill>
+                )}
+                {(user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
+                  <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
+                    {t("nav.modifications")}
+                  </Pill>
+                )}
+                {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
+                  <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
+                    {t("nav.situation")}
+                  </Pill>
+                )}
+                {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
+                  <Pill active={tab === "stopsale"} onClick={() => setTab("stopsale")}>
+                    🛑 Stop/Push
+                  </Pill>
+                )}
+                {(user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
+                  <Pill active={tab === "users"} onClick={() => setTab("users")}>
+                    {t("nav.users")}
+                  </Pill>
+                )}
+              </div>
             </nav>
             {user && (
               <GhostBtn
@@ -609,9 +611,10 @@ export default function App() {
                 size="sm"
                 variant="danger"
                 onClick={handleLogout}
-                className="rounded-xl font-semibold !bg-red-500 !text-white !border-red-500 hover:!bg-red-600 shadow-[0_16px_32px_-20px_rgba(239,68,68,0.55)]"
+                className="rounded-xl font-semibold !bg-red-500 !text-white !border-red-500 hover:!bg-red-600 shadow-[0_16px_32px_-20px_rgba(239,68,68,0.55)] flex-shrink-0"
               >
-                🚪 Déconnexion
+                <span className="hidden md:inline">🚪 Déconnexion</span>
+                <span className="md:hidden">🚪</span>
               </GhostBtn>
             )}
           </div>
@@ -619,9 +622,9 @@ export default function App() {
       </header>
 
       {/* CONTENU CENTRÉ */}
-      <main className="flex-1 overflow-y-auto px-3 sm:px-6 py-10">
+      <main className="flex-1 overflow-y-auto px-2 md:px-3 lg:px-6 py-4 md:py-10">
         <div
-          className={`mx-auto space-y-10 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"} bg-white/5 border border-white/10 rounded-[32px] p-6 sm:p-8 shadow-[0_30px_60px_-35px_rgba(15,23,42,0.65)] backdrop-blur-2xl`}
+          className={`mx-auto space-y-6 md:space-y-10 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"} bg-white/5 border border-white/10 rounded-2xl md:rounded-[32px] p-4 md:p-6 lg:p-8 shadow-[0_30px_60px_-35px_rgba(15,23,42,0.65)] backdrop-blur-2xl`}
         >
           <Suspense fallback={<PageLoader />}>
           {tab === "devis" && (

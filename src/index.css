@@ -218,9 +218,21 @@ select:not([class*="rounded"]):hover {
   background: linear-gradient(180deg, rgba(79, 70, 229, 0.7), rgba(14, 165, 233, 0.6));
 }
 
+/* Cacher la scrollbar tout en gardant le scroll (pour navigation mobile) */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Optimisations pour mobile */
 @media (max-width: 768px) {
   .glass-nav {
     border-radius: 1rem;
+    padding: 0.75rem;
   }
 
   table {
@@ -229,9 +241,95 @@ select:not([class*="rounded"]):hover {
 
   .hd-card {
     border-radius: 1rem;
+    padding: 1rem;
   }
 
+  /* S'assurer que les inputs ont au moins 16px pour éviter le zoom sur iOS */
   input, textarea, select {
-    font-size: 16px;
+    font-size: 16px !important;
+    min-height: 44px; /* Taille minimale pour le tactile */
+  }
+
+  /* Boutons plus grands sur mobile */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1rem;
+  }
+
+  /* Espacements réduits sur mobile */
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+  }
+
+  /* Améliorer la lisibilité sur petit écran */
+  body {
+    font-size: 14px;
+  }
+
+  /* Scrollbars plus fines sur mobile */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/* Optimisations pour très petits écrans (phones) */
+@media (max-width: 480px) {
+  .glass-nav {
+    border-radius: 0.75rem;
+    padding: 0.5rem;
+  }
+
+  .hd-card {
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  h1 {
+    font-size: 1.25rem;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+  }
+
+  h3 {
+    font-size: 1rem;
+  }
+
+  body {
+    font-size: 13px;
+  }
+
+  /* Réduire les espacements sur très petits écrans */
+  .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+
+  .space-y-4 > * + * {
+    margin-top: 0.75rem;
+  }
+}
+
+/* Améliorer le touch target sur mobile */
+@media (hover: none) and (pointer: coarse) {
+  button, a, input[type="checkbox"], input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Améliorer les interactions tactiles */
+  button:active, a:active {
+    opacity: 0.7;
+    transform: scale(0.98);
   }
 }
