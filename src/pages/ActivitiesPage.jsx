@@ -11,6 +11,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDay, setSelectedDay] = useState("");
   
+  // Vérifier si l'utilisateur peut modifier/supprimer les activités (seulement Léa et Ewen)
+  const canModifyActivities = user?.name === "Léa" || user?.name === "Ewen";
+  
   // Charger le formulaire sauvegardé depuis localStorage
   const [isPageReload] = useState(() => {
     const navigationEntry = performance.getEntriesByType('navigation')[0];
@@ -91,8 +94,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }, [form, showForm, editingId]);
 
   function handleEdit(activity) {
-    if (!user?.canEditActivity) {
-      toast.warning("Vous n'avez pas la permission de modifier des activités.");
+    if (!canModifyActivities) {
+      toast.warning("Seuls Léa et Ewen peuvent modifier les activités.");
       return;
     }
     setForm({
@@ -120,8 +123,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     const isEditing = editingId !== null;
     
     // Vérifier les permissions
-    if (isEditing && !user?.canEditActivity) {
-      toast.warning("Vous n'avez pas la permission de modifier des activités.");
+    if (isEditing && !canModifyActivities) {
+      toast.warning("Seuls Léa et Ewen peuvent modifier les activités.");
       return;
     }
     if (!isEditing && !user?.canAddActivity) {
@@ -290,8 +293,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }
 
   function handleDelete(id) {
-    if (!user?.canDeleteActivity) {
-      toast.warning("Vous n'avez pas la permission de supprimer des activités.");
+    if (!canModifyActivities) {
+      toast.warning("Seuls Léa et Ewen peuvent supprimer les activités.");
       return;
     }
     if (!window.confirm("Supprimer cette activité ?")) return;
@@ -511,7 +514,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   <th className="text-left px-3 py-2">Bébé</th>
                   <th className="text-left px-3 py-2">Jours</th>
                   <th className="text-left px-3 py-2">Notes</th>
-                  {(user?.canEditActivity || user?.canDeleteActivity) && (
+                  {canModifyActivities && (
                     <th className="text-right px-3 py-2">Action</th>
                   )}
                 </tr>
@@ -538,19 +541,15 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                       </div>
                     </td>
                     <td className="px-3 py-2 text-gray-500">{a.notes || "—"}</td>
-                    {(user?.canEditActivity || user?.canDeleteActivity) && (
+                    {canModifyActivities && (
                       <td className="px-3 py-2 text-right">
                         <div className="flex gap-2 justify-end">
-                          {user?.canEditActivity && (
-                            <GhostBtn onClick={() => handleEdit(a)} variant="primary">
-                              Modifier
-                            </GhostBtn>
-                          )}
-                          {user?.canDeleteActivity && (
-                            <GhostBtn onClick={() => handleDelete(a.id)} variant="danger">
-                              Supprimer
-                            </GhostBtn>
-                          )}
+                          <GhostBtn onClick={() => handleEdit(a)} variant="primary">
+                            Modifier
+                          </GhostBtn>
+                          <GhostBtn onClick={() => handleDelete(a.id)} variant="danger">
+                            Supprimer
+                          </GhostBtn>
                         </div>
                       </td>
                     )}
@@ -558,7 +557,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 ))}
                 {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
                   <tr>
-                    <td colSpan={(user?.canEditActivity || user?.canDeleteActivity) ? 7 : 6} className="px-3 py-4 text-center text-gray-400 text-sm">
+                    <td colSpan={canModifyActivities ? 7 : 6} className="px-3 py-4 text-center text-gray-400 text-sm">
                       Aucune activité dans cette catégorie.
                     </td>
                   </tr>
