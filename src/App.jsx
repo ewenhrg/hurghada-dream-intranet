@@ -15,6 +15,7 @@ const UsersPage = lazy(() => import("./pages/UsersPage").then(module => ({ defau
 const TicketPage = lazy(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
 const ModificationsPage = lazy(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
 const SituationPage = lazy(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
+const StopSalePage = lazy(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
 
 export default function App() {
   const [ok, setOk] = useState(false);
@@ -646,6 +647,11 @@ export default function App() {
                   {t("nav.situation")}
                 </Pill>
               )}
+              {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
+                <Pill active={tab === "stopsale"} onClick={() => setTab("stopsale")}>
+                  🛑 Stop/Push Sale
+                </Pill>
+              )}
               {(user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
                 <Pill active={tab === "users"} onClick={() => setTab("users")}>
                   {t("nav.users")}
@@ -744,6 +750,12 @@ export default function App() {
 
         {tab === "situation" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
           <SituationPage activities={activities} />
+        )}
+
+        {tab === "stopsale" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
+          <Section title="Stop Sale & Push Sale" subtitle="Gérez les arrêts de vente et les ouvertures exceptionnelles">
+            <StopSalePage activities={activities} user={user} />
+          </Section>
         )}
 
           {tab === "users" && (user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (

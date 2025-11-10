@@ -8,6 +8,9 @@ import { toast } from "../utils/toast.js";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
 
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft }) {
+  const [stopSales, setStopSales] = useState([]);
+  const [pushSales, setPushSales] = useState([]);
+
   const blankItemMemo = useCallback(() => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
@@ -113,6 +116,42 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
   }, [blankItemMemo, setDraft]);
 
+  // Charger les stop sales et push sales depuis Supabase
+  useEffect(() => {
+    async function loadStopSalesAndPushSales() {
+      if (!supabase) return;
+      try {
+        // Charger les stop sales
+        const { data: stopSalesData, error: stopSalesError } = await supabase
+          .from("stop_sales")
+          .select("*")
+          .eq("site_key", SITE_KEY);
+
+        if (!stopSalesError && stopSalesData) {
+          setStopSales(stopSalesData || []);
+        }
+
+        // Charger les push sales
+        const { data: pushSalesData, error: pushSalesError } = await supabase
+          .from("push_sales")
+          .select("*")
+          .eq("site_key", SITE_KEY);
+
+        if (!pushSalesError && pushSalesData) {
+          setPushSales(pushSalesData || []);
+        }
+      } catch (err) {
+        console.error("Erreur lors du chargement des stop sales/push sales:", err);
+      }
+    }
+
+    loadStopSalesAndPushSales();
+    
+    // Recharger toutes les 5 secondes pour avoir les données à jour
+    const interval = setInterval(loadStopSalesAndPushSales, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Trier les activités par ordre alphabétique pour le menu déroulant
   const sortedActivities = useMemo(() => {
     return [...activities].sort((a, b) => {
@@ -126,7 +165,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     return items.map((it) => {
       const act = activities.find((a) => a.id === it.activityId);
       const weekday = it.date ? new Date(it.date + "T12:00:00").getDay() : null;
-      const available = act && weekday != null ? !!act.availableDays?.[weekday] : true;
+      const baseAvailable = act && weekday != null ? !!act.availableDays?.[weekday] : true;
+      
+      // Vérifier les stop sales et push sales
+      let isStopSale = false;
+      let isPushSale = false;
+      if (act && it.date) {
+        // Vérifier si cette activité/date est en stop sale
+        isStopSale = stopSales.some(
+          (s) => s.activity_id === act.id && s.date === it.date
+        );
+        // Vérifier si cette activité/date est en push sale
+        isPushSale = pushSales.some(
+          (p) => p.activity_id === act.id && p.date === it.date
+        );
+      }
+      
+      // Disponibilité finale : disponible si push sale OU (baseAvailable ET pas de stop sale)
+      const available = isPushSale || (baseAvailable && !isStopSale);
+      
       const transferInfo = act && client.neighborhood ? act.transfers?.[client.neighborhood] || null : null;
 
       let lineTotal = 0;
@@ -309,13 +366,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         act,
         weekday,
         available,
+        baseAvailable,
+        isStopSale,
+        isPushSale,
         transferInfo,
         lineTotal,
         pickupTime,
         currency: currencyCode,
       };
     });
-  }, [items, activities, client.neighborhood]);
+  }, [items, activities, client.neighborhood, stopSales, pushSales]);
 
   const grandCurrency = computed.find((c) => c.currency)?.currency || "EUR";
   const grandTotal = computed.reduce((s, c) => s + (c.lineTotal || 0), 0);
@@ -358,10 +418,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
-    const notAvailable = validComputed.filter((c) => c.weekday != null && !c.available);
+    // Vérifier les stop sales
+    const stopSaleItems = validComputed.filter((c) => c.isStopSale);
+    if (stopSaleItems.length > 0) {
+      toast.error(
+        `${stopSaleItems.length} activité(s) sont en STOP SALE pour cette date. Le devis ne peut pas être créé.`,
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
+    const notAvailable = validComputed.filter((c) => c.weekday != null && !c.baseAvailable && !c.isPushSale);
     if (notAvailable.length) {
       toast.warning(
-        `${notAvailable.length} activité(s) sont hors-dispo ce jour-là. Le devis est quand même créé (date exceptionnelle).`,
+        `${notAvailable.length} activité(s) sont hors-dispo ce jour-là. Le devis est quand même créé (date exceptionnelle ou push sale).`,
       );
     }
 
@@ -638,7 +708,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 <div>
                   <p className="text-xs text-gray-500 mb-2">Date</p>
                   <TextInput type="date" value={c.raw.date} onChange={(e) => setItem(idx, { date: e.target.value })} />
-                  {c.act && !c.available && (
+                  {c.act && c.isStopSale && (
+                    <p className="text-[10px] text-red-700 font-semibold mt-2">
+                      🛑 STOP SALE : Cette activité est bloquée à la vente pour cette date
+                    </p>
+                  )}
+                  {c.act && c.isPushSale && (
+                    <p className="text-[10px] text-green-700 font-semibold mt-2">
+                      ✅ PUSH SALE : Cette activité est ouverte exceptionnellement pour cette date
+                    </p>
+                  )}
+                  {c.act && !c.isStopSale && !c.isPushSale && !c.baseAvailable && (
                     <p className="text-[10px] text-amber-700 mt-2">
                       ⚠️ activité pas dispo ce jour-là (on peut quand même créer)
                     </p>
