@@ -161,6 +161,44 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     });
   }, [activities]);
 
+  // Formater les stop sales avec les noms d'activités
+  const formattedStopSales = useMemo(() => {
+    return stopSales
+      .map((stop) => {
+        const activity = activities.find((a) => a.id === stop.activity_id);
+        return {
+          ...stop,
+          activityName: activity?.name || stop.activity_id,
+          formattedDate: new Date(stop.date + "T12:00:00").toLocaleDateString("fr-FR", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+        };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [stopSales, activities]);
+
+  // Formater les push sales avec les noms d'activités
+  const formattedPushSales = useMemo(() => {
+    return pushSales
+      .map((push) => {
+        const activity = activities.find((a) => a.id === push.activity_id);
+        return {
+          ...push,
+          activityName: activity?.name || push.activity_id,
+          formattedDate: new Date(push.date + "T12:00:00").toLocaleDateString("fr-FR", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+        };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [pushSales, activities]);
+
   const computed = useMemo(() => {
     return items.map((it) => {
       const act = activities.find((a) => a.id === it.activityId);
@@ -589,6 +627,57 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       )}
 
       <div className="flex-1 space-y-10">
+        {/* Section Stop Sales et Push Sales - Visible pour tous les vendeurs */}
+        {(formattedStopSales.length > 0 || formattedPushSales.length > 0) && (
+          <div className="space-y-4">
+            {/* Stop Sales */}
+            {formattedStopSales.length > 0 && (
+              <div className="bg-red-50/90 border-2 border-red-300 rounded-2xl p-5 shadow-[0_24px_55px_-30px_rgba(239,68,68,0.55)]">
+                <h3 className="text-base font-bold text-red-900 mb-3 flex items-center gap-2">
+                  <span className="text-xl">🛑</span>
+                  Stop Sales - Activités bloquées à la vente ({formattedStopSales.length})
+                </h3>
+                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                  {formattedStopSales.map((stop, idx) => (
+                    <div key={idx} className="bg-white/80 rounded-xl p-3 border border-red-200 shadow-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-red-900">{stop.activityName}</p>
+                          <p className="text-xs text-red-700 mt-1">{stop.formattedDate}</p>
+                        </div>
+                        <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded">BLOQUÉ</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Push Sales */}
+            {formattedPushSales.length > 0 && (
+              <div className="bg-green-50/90 border-2 border-green-300 rounded-2xl p-5 shadow-[0_24px_55px_-30px_rgba(34,197,94,0.55)]">
+                <h3 className="text-base font-bold text-green-900 mb-3 flex items-center gap-2">
+                  <span className="text-xl">✅</span>
+                  Push Sales - Activités ouvertes exceptionnellement ({formattedPushSales.length})
+                </h3>
+                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                  {formattedPushSales.map((push, idx) => (
+                    <div key={idx} className="bg-white/80 rounded-xl p-3 border border-green-200 shadow-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-green-900">{push.activityName}</p>
+                          <p className="text-xs text-green-700 mt-1">{push.formattedDate}</p>
+                        </div>
+                        <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded">OUVERT</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <form 
           onSubmit={handleCreateQuote} 
           onKeyDown={(e) => {

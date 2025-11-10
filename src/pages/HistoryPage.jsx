@@ -381,7 +381,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       >
                         🖨️ Imprimer
                       </GhostBtn>
-                      {!allTicketsFilled && canModifyActivities && (
+                      {!allTicketsFilled && (
                         <GhostBtn
                           variant="warning"
                           className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-amber-500 bg-amber-500 hover:bg-amber-600 shadow-[0_18px_32px_-18px_rgba(245,158,11,0.55)]"
@@ -994,7 +994,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         </div>
 
         <div className="space-y-5">
-          {/* Infos client */}
+          {/* Infos client - Modifiables par tous */}
           <div className="grid md:grid-cols-5 gap-3">
             <div>
               <p className="text-xs text-gray-500 mb-1">Client</p>
@@ -1050,10 +1050,12 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     <p className="text-xs text-gray-400">Non modifiable</p>
                   )}
                 </div>
-                {/* Première ligne : Activité et Date */}
+                {/* Première ligne : Activité et Date - Modifiables uniquement par Léa et Ewen */}
                 <div className="grid md:grid-cols-3 gap-3">
                   <div className="md:col-span-2">
-                    <p className="text-xs text-gray-500 mb-1">Activité</p>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Activité {!canModifyActivities && <span className="text-gray-400 text-[10px]">(Non modifiable)</span>}
+                    </p>
                     <select
                       value={c.raw.activityId || ""}
                       onChange={(e) => setItem(idx, { activityId: e.target.value })}
@@ -1069,7 +1071,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     </select>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Date</p>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Date {!canModifyActivities && <span className="text-gray-400 text-[10px]">(Non modifiable)</span>}
+                    </p>
                     <TextInput 
                       type="date" 
                       value={c.raw.date} 
@@ -1082,15 +1086,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     )}
                   </div>
                 </div>
-                {/* Deuxième ligne : Nombre de personnes - TOUJOURS VISIBLE */}
+                {/* Deuxième ligne : Nombre de personnes - Modifiables par tous */}
                 <div className="grid md:grid-cols-3 gap-3 bg-cyan-50/50 p-4 rounded-xl border-2 border-cyan-200">
                   <div>
                     <p className="text-xs text-gray-700 font-semibold mb-2">👥 Adultes</p>
                     <NumberInput 
                       value={c.raw.adults || 0} 
                       onChange={(e) => setItem(idx, { adults: e.target.value })}
-                      disabled={!canModifyActivities}
-                      className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
                     />
                   </div>
                   <div>
@@ -1100,8 +1102,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     <NumberInput 
                       value={c.raw.children || 0} 
                       onChange={(e) => setItem(idx, { children: e.target.value })}
-                      disabled={!canModifyActivities}
-                      className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
                     />
                   </div>
                   <div>
@@ -1111,12 +1111,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     <NumberInput 
                       value={c.raw.babies || 0} 
                       onChange={(e) => setItem(idx, { babies: e.target.value })}
-                      disabled={!canModifyActivities}
-                      className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
                     />
                   </div>
                 </div>
-                {/* Champs spécifiques pour Buggy */}
+                {/* Champs spécifiques pour Buggy - Modifiables par tous */}
                 {c.act && isBuggyActivity(c.act.name) && (
                   <div className="grid md:grid-cols-2 gap-3 mt-3">
                     <div>
@@ -1124,8 +1122,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <NumberInput 
                         value={c.raw.buggySimple ?? ""} 
                         onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })}
-                        disabled={!canModifyActivities}
-                        className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
                       />
                     </div>
                     <div>
@@ -1133,13 +1129,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <NumberInput 
                         value={c.raw.buggyFamily ?? ""} 
                         onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })}
-                        disabled={!canModifyActivities}
-                        className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
                       />
                     </div>
                   </div>
                 )}
-                {/* Champs spécifiques pour MotoCross */}
+                {/* Champs spécifiques pour MotoCross - Modifiables par tous */}
                 {c.act && isMotoCrossActivity(c.act.name) && (
                   <div className="grid md:grid-cols-3 gap-3 mt-3">
                     <div>
@@ -1147,8 +1141,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <NumberInput 
                         value={c.raw.yamaha250 ?? ""} 
                         onChange={(e) => setItem(idx, { yamaha250: e.target.value === "" ? "" : e.target.value })}
-                        disabled={!canModifyActivities}
-                        className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
                       />
                     </div>
                     <div>
@@ -1156,8 +1148,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <NumberInput 
                         value={c.raw.ktm640 ?? ""} 
                         onChange={(e) => setItem(idx, { ktm640: e.target.value === "" ? "" : e.target.value })}
-                        disabled={!canModifyActivities}
-                        className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
                       />
                     </div>
                     <div>
@@ -1165,12 +1155,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <NumberInput 
                         value={c.raw.ktm530 ?? ""} 
                         onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })}
-                        disabled={!canModifyActivities}
-                        className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
                       />
                     </div>
                   </div>
                 )}
+                {/* Créneaux et Extras - Modifiables par tous */}
                 <div className="grid md:grid-cols-3 gap-3">
                   {c.transferInfo && (
                     <div>
@@ -1178,8 +1167,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <select
                         value={c.raw.slot || ""}
                         onChange={(e) => setItem(idx, { slot: e.target.value })}
-                        disabled={!canModifyActivities}
-                        className={`w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm ${!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}`}
+                        className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
                       >
                         <option value="">—</option>
                         {c.transferInfo.morningEnabled && <option value="morning">Matin ({c.transferInfo.morningTime})</option>}
@@ -1202,12 +1190,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           const isChecked = currentExtras.includes(extra.id);
                           
                           return (
-                            <label key={extra.id} className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${canModifyActivities ? "cursor-pointer hover:bg-blue-50/50" : "cursor-not-allowed opacity-60"}`}>
+                            <label key={extra.id} className="flex items-center gap-2 p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-50/50">
                               <input
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={(e) => {
-                                  if (!canModifyActivities) return;
                                   const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
                                     ? c.raw.speedBoatExtra 
                                     : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
@@ -1224,7 +1211,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                                     setItem(idx, { speedBoatExtra: currentExtras.filter((id) => id !== extra.id) });
                                   }
                                 }}
-                                disabled={!canModifyActivities}
                                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                               />
                               <span className="text-sm text-slate-700 flex-1">
@@ -1247,8 +1233,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         <TextInput 
                           value={c.raw.extraLabel || ""} 
                           onChange={(e) => setItem(idx, { extraLabel: e.target.value })}
-                          disabled={!canModifyActivities}
-                          className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
                         />
                       </div>
                       <div>
@@ -1256,14 +1240,12 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         <NumberInput 
                           value={c.raw.extraAmount || ""} 
                           onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
-                          disabled={!canModifyActivities}
-                          className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
                         />
                       </div>
                     </>
                   )}
                 </div>
-                {/* Extra dauphin (uniquement pour Speed Boat) */}
+                {/* Extra dauphin (uniquement pour Speed Boat) - Modifiable par tous */}
                 {c.act && c.act.name.toLowerCase().includes("speed boat") && (
                   <div className="flex items-center gap-2 mt-2">
                     <input
@@ -1271,10 +1253,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       id={`edit-extraDolphin-${idx}`}
                       checked={c.raw.extraDolphin || false}
                       onChange={(e) => setItem(idx, { extraDolphin: e.target.checked })}
-                      disabled={!canModifyActivities}
-                      className={`w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${!canModifyActivities ? "opacity-60 cursor-not-allowed" : ""}`}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
-                    <label htmlFor={`edit-extraDolphin-${idx}`} className={`text-sm text-gray-700 ${canModifyActivities ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`}>
+                    <label htmlFor={`edit-extraDolphin-${idx}`} className="text-sm text-gray-700 cursor-pointer">
                       Extra dauphin 20€
                     </label>
                   </div>
@@ -1322,19 +1303,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               placeholder="Infos supplémentaires : langue du guide, pick-up, etc."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              disabled={!canModifyActivities}
-              className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
             />
           </div>
         </div>
 
         <div className="flex gap-3 justify-end mt-6 pt-4 border-t">
           <GhostBtn onClick={onClose}>Annuler</GhostBtn>
-          <PrimaryBtn 
-            onClick={handleSave}
-            disabled={!canModifyActivities}
-            className={!canModifyActivities ? "opacity-60 cursor-not-allowed" : ""}
-          >
+          <PrimaryBtn onClick={handleSave}>
             Enregistrer les modifications
           </PrimaryBtn>
         </div>
