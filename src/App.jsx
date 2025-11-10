@@ -508,18 +508,34 @@ export default function App() {
         return <LoginPage onSuccess={handleLoginSuccess} />;
   }
 
+  // Calculer la largeur maximale pour le header et le footer
+  const maxWidthClass = (tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl";
+  // Calculer le padding pour le main
+  const mainPaddingClass = tab === "devis" ? "px-0" : "px-2 md:px-3 lg:px-6";
+  // Construire les className complets
+  const headerNavClassName = "glass-nav mx-auto flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between gap-3 md:gap-4 " + maxWidthClass + " px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl";
+  const mainClassName = "flex-1 overflow-y-auto py-4 md:py-10 " + mainPaddingClass;
+  const footerClassName = "mx-auto px-4 py-8 border-t mt-10 font-medium tracking-wide " + maxWidthClass;
+  const contentContainerClassName = "mx-auto space-y-6 md:space-y-10 " + maxWidthClass + " rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-2xl";
+  // Construire les className pour les boutons de langue
+  const langButtonBaseClass = "px-2 md:px-2.5 py-1.5 font-semibold rounded-lg transition-colors";
+  const langButtonActiveClass = "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white";
+  const langButtonInactiveClass = "hover:text-[#a5b4fc]";
+  const langButtonFrClassName = langButtonBaseClass + " " + (language === "fr" ? langButtonActiveClass : langButtonInactiveClass);
+  const langButtonEnClassName = langButtonBaseClass + " " + (language === "en" ? langButtonActiveClass : langButtonInactiveClass);
+  const footerText = "support 7 sur 7 = +33619921449";
+
   return (
     <div className="min-h-screen flex flex-col bg-transparent overflow-hidden">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6 bg-[rgba(7,13,31,0.9)] backdrop-blur-xl shadow-[0_24px_60px_-32px_rgba(7,13,31,0.65)]">
-        <div
-          className={`glass-nav mx-auto flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between gap-3 md:gap-4 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`}
-        >
+      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6 backdrop-blur-xl" style={{ backgroundColor: 'rgba(7,13,31,0.9)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
+        <div className={headerNavClassName}>
           <div className="flex items-center gap-2 md:gap-3.5 w-full md:w-auto">
             <img 
               src="/logo.png" 
               alt="Hurghada Dream Logo" 
-              className="w-10 h-10 md:w-12 md:h-12 object-contain rounded-lg shadow-md border border-slate-200/60 flex-shrink-0"
+              className="w-10 h-10 md:w-12 md:h-12 object-contain rounded-lg shadow-md border flex-shrink-0"
+              style={{ borderColor: 'rgba(226, 232, 240, 0.6)' }}
               onError={(e) => {
                 // Fallback si le logo n'existe pas - afficher HD
                 e.target.style.display = 'none';
@@ -533,14 +549,14 @@ export default function App() {
               }}
             />
             <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
-              <h1 className="text-base md:text-[1.05rem] font-semibold tracking-[-0.03em] bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent truncate">
+              <h1 className="text-base font-semibold bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent truncate" style={{ letterSpacing: '-0.03em', fontSize: '1.05rem' }}>
                 {t("header.title")}
               </h1>
-              <p className="text-[10px] md:text-[11px] font-medium text-white/65 hidden md:block">{t("header.subtitle")}</p>
+              <p className="font-medium hidden md:block" style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.6875rem' }}>{t("header.subtitle")}</p>
               {user && (
-                <span className="badge-soft text-[10px] md:text-[11px] px-2 py-1 md:px-2.5 md:py-1.5">
+                <span className="badge-soft px-2 py-1 md:px-2.5 md:py-1.5" style={{ fontSize: '0.6875rem' }}>
                   <span>👤</span>
-                  <span className="truncate max-w-[120px] md:max-w-none">
+                  <span className="truncate" style={{ maxWidth: '120px' }}>
                     {t("header.connected")} : {user.name}
                   </span>
                 </span>
@@ -549,24 +565,71 @@ export default function App() {
           </div>
           <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-between md:justify-end">
             {/* Sélecteur de langue */}
-            <div className="flex items-center gap-1.5 md:gap-2 rounded-xl border border-white/15 bg-white/10 px-2 md:px-2.5 py-1.5 shadow-[0_14px_28px_-20px_rgba(7,13,31,0.45)]">
+            <div 
+              className="flex items-center gap-1.5 md:gap-2 rounded-xl border px-2 md:px-2.5 py-1.5"
+              style={{
+                borderColor: 'rgba(255, 255, 255, 0.15)',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 14px 28px -20px rgba(7, 13, 31, 0.45)'
+              }}
+            >
               <button
                 onClick={() => setLanguage("fr")}
-                className={`px-2 md:px-2.5 py-1.5 text-[10px] md:text-[11px] font-semibold rounded-lg transition-colors min-h-[36px] min-w-[36px] md:min-h-[44px] md:min-w-[44px] ${
-                  language === "fr"
-                    ? "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white shadow-[0_14px_28px_-16px_rgba(79,70,229,0.55)]"
-                    : "text-white/70 hover:text-[#a5b4fc] hover:bg-white/10"
-                }`}
+                  className={langButtonFrClassName}
+                  style={language === "fr" 
+                    ? { 
+                        boxShadow: '0 14px 28px -16px rgba(79,70,229,0.55)',
+                        fontSize: '0.625rem',
+                        minHeight: '36px',
+                        minWidth: '36px'
+                      }
+                    : { 
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontSize: '0.625rem',
+                        minHeight: '36px',
+                        minWidth: '36px'
+                      }
+                  }
+                  onMouseEnter={(e) => {
+                    if (language !== "fr") {
+                      e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (language !== "fr") {
+                      e.target.style.backgroundColor = 'transparent';
+                    }
+                  }}
               >
                 FR
               </button>
               <button
                 onClick={() => setLanguage("en")}
-                className={`px-2 md:px-2.5 py-1.5 text-[10px] md:text-[11px] font-semibold rounded-lg transition-colors min-h-[36px] min-w-[36px] md:min-h-[44px] md:min-w-[44px] ${
-                  language === "en"
-                    ? "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white shadow-[0_14px_28px_-16px_rgba(79,70,229,0.55)]"
-                    : "text-white/70 hover:text-[#a5b4fc] hover:bg-white/10"
-                }`}
+                className={langButtonEnClassName}
+                style={language === "en"
+                  ? { 
+                      boxShadow: '0 14px 28px -16px rgba(79,70,229,0.55)',
+                      fontSize: '0.625rem',
+                      minHeight: '36px',
+                      minWidth: '36px'
+                    }
+                  : { 
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      fontSize: '0.625rem',
+                      minHeight: '36px',
+                      minWidth: '36px'
+                    }
+                }
+                onMouseEnter={(e) => {
+                  if (language !== "en") {
+                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (language !== "en") {
+                    e.target.style.backgroundColor = 'transparent';
+                  }
+                }}
               >
                 EN
               </button>
@@ -619,7 +682,8 @@ export default function App() {
                 size="sm"
                 variant="danger"
                 onClick={handleLogout}
-                className="rounded-xl font-semibold !bg-red-500 !text-white !border-red-500 hover:!bg-red-600 shadow-[0_16px_32px_-20px_rgba(239,68,68,0.55)] flex-shrink-0"
+                className="rounded-xl font-semibold !bg-red-500 !text-white !border-red-500 hover:!bg-red-600 flex-shrink-0"
+                style={{ boxShadow: '0 16px 32px -20px rgba(239,68,68,0.55)' }}
               >
                 <span className="hidden md:inline">🚪 Déconnexion</span>
                 <span className="md:hidden">🚪</span>
@@ -630,22 +694,35 @@ export default function App() {
       </header>
 
       {/* CONTENU CENTRÉ */}
-      <main className={`flex-1 overflow-y-auto py-4 md:py-10 ${tab === "devis" ? "px-0" : "px-2 md:px-3 lg:px-6"}`}>
+      <main className={mainClassName}>
         {tab === "devis" ? (
           <div className="flex items-start gap-4 lg:gap-6">
             {/* Modale des dates utilisées - sticky sur le côté gauche, en dehors du conteneur principal */}
             {usedDates.length > 0 && (
               <aside className="hidden lg:block sticky top-24 xl:top-28 w-72 flex-shrink-0 self-start pl-4">
-                <div className="bg-amber-50/95 backdrop-blur-sm border border-amber-200 rounded-2xl p-4 md:p-5 shadow-[0_24px_55px_-30px_rgba(180,83,9,0.55)]">
+                <div 
+                  className="backdrop-blur-sm border border-amber-200 rounded-2xl p-4 md:p-5"
+                  style={{
+                    backgroundColor: 'rgba(255, 251, 235, 0.95)',
+                    boxShadow: '0 24px 55px -30px rgba(180, 83, 9, 0.55)'
+                  }}
+                >
                   <h3 className="text-sm font-semibold text-amber-900 mb-3 flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" />
                     Dates utilisées ({usedDates.length})
                   </h3>
-                  <div className="space-y-3 max-h-[calc(100vh-180px)] overflow-y-auto pr-1 scrollbar-thin-amber" style={{ scrollbarWidth: 'thin', scrollbarColor: '#fcd34d #fef3c7' }}>
+                  <div className="space-y-3 overflow-y-auto pr-1 scrollbar-thin-amber" style={{ scrollbarWidth: 'thin', scrollbarColor: '#fcd34d #fef3c7', maxHeight: '80vh' }}>
                     {usedDates.map(([date, activities]) => (
-                      <div key={date} className="bg-white/70 rounded-xl p-3 border border-amber-100 shadow-[0_16px_28px_-26px_rgba(217,119,6,0.35)]">
+                      <div 
+                        key={date} 
+                        className="rounded-xl p-3 border border-amber-100"
+                        style={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                          boxShadow: '0 16px 28px -26px rgba(217, 119, 6, 0.35)'
+                        }}
+                      >
                         <p className="text-xs font-semibold text-amber-900 mb-2">
-                          {new Date(date + "T12:00:00").toLocaleDateString("fr-FR")}
+                          {new Date(date + "T12:00:00").toLocaleDateString('fr-FR')}
                         </p>
                         <ul className="space-y-1">
                           {activities.map((activity, idx) => (
@@ -662,15 +739,23 @@ export default function App() {
             )}
             {/* Conteneur principal pour le formulaire de devis */}
             <div className="flex-1 min-w-0 mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
-              <div className="space-y-6 md:space-y-10 bg-white/5 border border-white/10 rounded-2xl md:rounded-[32px] p-4 md:p-6 lg:p-8 shadow-[0_30px_60px_-35px_rgba(15,23,42,0.65)] backdrop-blur-2xl">
+              <div 
+                className="space-y-6 md:space-y-10 rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-2xl"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 30px 60px -35px rgba(15, 23, 42, 0.65)',
+                  borderRadius: '2rem'
+                }}
+              >
                 <Suspense fallback={<PageLoader />}>
                   <section className="space-y-6">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <h2 className="text-[1.75rem] font-semibold tracking-[-0.03em] mb-1.5 bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent">
+                        <h2 className="font-semibold mb-1.5 bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent" style={{ fontSize: '1.75rem', letterSpacing: '-0.03em' }}>
                           {t("page.devis.title")}
                         </h2>
-                        <p className="text-sm text-[rgba(71,85,105,0.85)] font-medium leading-relaxed">
+                        <p className="text-sm font-medium leading-relaxed" style={{ color: 'rgba(71, 85, 105, 0.85)' }}>
                           {t("page.devis.subtitle")}
                         </p>
                       </div>
@@ -693,8 +778,14 @@ export default function App() {
           </div>
         ) : (
           <div
-            className={`mx-auto space-y-6 md:space-y-10 ${(tab === "situation") ? "max-w-7xl" : "max-w-6xl"} bg-white/5 border border-white/10 rounded-2xl md:rounded-[32px] p-4 md:p-6 lg:p-8 shadow-[0_30px_60px_-35px_rgba(15,23,42,0.65)] backdrop-blur-2xl`}
-            style={{ paddingLeft: '0.5rem', paddingRight: '0.5rem' }}
+            className={contentContainerClassName}
+            style={{ 
+              paddingLeft: '0.5rem', 
+              paddingRight: '0.5rem',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 30px 60px -35px rgba(15, 23, 42, 0.65)'
+            }}
           >
             <Suspense fallback={<PageLoader />}>
 
@@ -761,8 +852,8 @@ export default function App() {
         </div>
       </main>
 
-      <footer className={`mx-auto px-4 py-8 text-[11px] text-white/65 border-t border-white/10 mt-10 font-medium tracking-wide ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
-        support 7/7 = +33619921449
+      <footer className={footerClassName} style={{ color: 'rgba(255, 255, 255, 0.65)', borderTopColor: 'rgba(255, 255, 255, 0.1)', fontSize: '0.6875rem' }}>
+        {footerText}
       </footer>
     </div>
   );

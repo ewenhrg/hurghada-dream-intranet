@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     // Optimisations de build - utiliser esbuild (plus rapide, déjà inclus)
-    minify: 'esbuild',
+    minify: 'terser',
     rollupOptions: {
       output: {
         // Optimiser le code splitting pour réduire la taille du bundle initial
