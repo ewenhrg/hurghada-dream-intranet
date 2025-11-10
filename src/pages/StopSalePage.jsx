@@ -234,13 +234,6 @@ export function StopSalePage({ activities, user }) {
     }
   }
 
-  // Filtrer les activités par recherche
-  const filteredActivities = useMemo(() => {
-    if (!searchQuery.trim()) return activities;
-    const query = searchQuery.toLowerCase().trim();
-    return activities.filter((a) => (a.name || "").toLowerCase().includes(query));
-  }, [activities, searchQuery]);
-
   // Filtrer les stop sales et push sales par recherche
   const filteredStopSales = useMemo(() => {
     if (!searchQuery.trim()) return stopSales;
@@ -262,10 +255,6 @@ export function StopSalePage({ activities, user }) {
     );
   }, [pushSales, searchQuery]);
 
-  // Trier les activités par nom
-  const sortedActivities = useMemo(() => {
-    return [...filteredActivities].sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr", { sensitivity: "base" }));
-  }, [filteredActivities]);
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -316,16 +305,6 @@ export function StopSalePage({ activities, user }) {
               </p>
             </div>
 
-            {/* Recherche d'activité */}
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Rechercher une activité</p>
-              <TextInput
-                placeholder="Rechercher par nom..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
             {/* Sélection d'activité */}
             <div>
               <p className="text-xs text-gray-500 mb-1">Activité</p>
@@ -335,7 +314,7 @@ export function StopSalePage({ activities, user }) {
                 className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
               >
                 <option value="">— Choisir une activité —</option>
-                {sortedActivities.map((a) => (
+                {activities.sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr", { sensitivity: "base" })).map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
                   </option>
