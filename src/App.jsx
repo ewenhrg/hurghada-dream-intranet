@@ -768,7 +768,7 @@ export default function App() {
       </main>
 
       <footer className={`mx-auto px-4 py-8 text-[11px] text-white/65 border-t border-white/10 mt-10 font-medium tracking-wide ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"}`}>
-        Données stockées en local + Supabase (si dispo). Site interne Hurghada Dream.
+        support 7/7 = +33619921449
       </footer>
     </div>
   );
