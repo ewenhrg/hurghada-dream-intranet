@@ -99,19 +99,25 @@ export function TicketPage({ quotes, setQuotes, user }) {
       filtered = filtered.filter((row) => !row.isCancelled);
     }
     
-    // Filtre par recherche (numéro de ticket ou téléphone)
+    // Filtre par recherche (numéro de ticket, téléphone, nom ou prénom)
     if (debouncedSearchQuery.trim()) {
-      const searchTerm = debouncedSearchQuery.replace(/\D/g, ""); // Extraire uniquement les chiffres
+      const searchTerm = debouncedSearchQuery.toLowerCase().trim();
+      const searchTermNumbers = searchTerm.replace(/\D/g, ""); // Extraire uniquement les chiffres pour ticket/téléphone
+      
       filtered = filtered.filter((row) => {
-        // Rechercher dans le numéro de ticket
+        // Rechercher dans le numéro de ticket (chiffres uniquement)
         const ticketNum = row.ticket.replace(/\D/g, "");
-        const ticketMatch = ticketNum.includes(searchTerm);
+        const ticketMatch = searchTermNumbers && ticketNum.includes(searchTermNumbers);
         
-        // Rechercher dans le numéro de téléphone
+        // Rechercher dans le numéro de téléphone (chiffres uniquement)
         const phoneNum = row.clientPhone.replace(/\D/g, "");
-        const phoneMatch = phoneNum.includes(searchTerm);
+        const phoneMatch = searchTermNumbers && phoneNum.includes(searchTermNumbers);
         
-        return ticketMatch || phoneMatch;
+        // Rechercher dans le nom/prénom du client (texte)
+        const clientName = (row.clientName || "").toLowerCase();
+        const nameMatch = clientName.includes(searchTerm);
+        
+        return ticketMatch || phoneMatch || nameMatch;
       });
     }
     
@@ -362,9 +368,9 @@ export function TicketPage({ quotes, setQuotes, user }) {
         <div className="space-y-4">
           {/* Barre de recherche */}
           <div>
-            <p className="text-xs text-gray-500 mb-1">Rechercher par numéro de ticket ou téléphone</p>
+            <p className="text-xs text-gray-500 mb-1">Rechercher par numéro de ticket, téléphone, nom ou prénom</p>
             <TextInput
-              placeholder="Ex: 163400 ou +20123456789"
+              placeholder="Ex: 163400, +20123456789, Jean, Dupont"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
