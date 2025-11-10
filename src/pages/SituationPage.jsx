@@ -13,8 +13,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 const MessageTemplatesModal = lazy(() => import("../components/situation/MessageTemplatesModal"));
 const HotelsModal = lazy(() => import("../components/situation/HotelsModal"));
 
-const GRID_TEMPLATE = "140px 120px 180px 170px 160px 140px 180px 120px 80px 120px";
-const ROW_HEIGHT = 64;
+const GRID_TEMPLATE = "100px 90px 130px 140px 120px 90px 130px 80px 60px 90px";
+const ROW_HEIGHT = 36;
 const TABLE_HEADERS = [
   "Invoice N",
   "Date",
@@ -64,7 +64,7 @@ const VirtualizedRow = memo(({ index, style, data }) => {
     statusAccent = "from-rose-400/85 to-red-400/80";
   }
 
-  const cellBase = "px-4 py-2 text-xs text-[rgba(71,85,105,0.88)]";
+  const cellBase = "px-2 py-1 text-[10px] text-[rgba(71,85,105,0.88)]";
 
   const handleCellClick = (field) => {
     setEditingCell({ rowId: row.id, field });
@@ -92,12 +92,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-2 py-1 text-xs"
+            className="w-full px-1 py-0.5 text-[10px]"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded inline-flex min-h-[26px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
             onClick={() => handleCellClick("invoiceN")}
           >
             {row.invoiceN}
@@ -113,12 +113,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-2 py-1 text-xs"
+            className="w-full px-1 py-0.5 text-[10px]"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded inline-flex min-h-[26px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
             onClick={() => handleCellClick("date")}
           >
             {row.date}
@@ -134,12 +134,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-2 py-1 text-xs"
+            className="w-full px-1 py-0.5 text-[10px]"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded inline-flex min-h-[26px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
             onClick={() => handleCellClick("name")}
           >
             {row.name}
@@ -163,12 +163,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-2 py-1 text-xs"
+            className="w-full px-1 py-0.5 text-[10px]"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded inline-flex min-h-[26px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
             onClick={() => handleCellClick("phone")}
           >
             {row.phone ? (
@@ -195,12 +195,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-2 py-1 text-xs"
+            className="w-full px-1 py-0.5 text-[10px]"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded inline-flex min-h-[26px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
             onClick={() => handleCellClick("hotel")}
           >
             {row.hotel}
@@ -216,12 +216,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-2 py-1 text-xs"
+            className="w-full px-1 py-0.5 text-[10px]"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded inline-flex min-h-[26px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
             onClick={() => handleCellClick("roomNo")}
           >
             {row.roomNo}
@@ -237,12 +237,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-2 py-1 text-xs"
+            className="w-full px-1 py-0.5 text-[10px]"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded inline-flex min-h-[26px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
             onClick={() => handleCellClick("trip")}
           >
             {row.trip}
@@ -258,12 +258,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-2 py-1 text-xs"
+            className="w-full px-1 py-0.5 text-[10px]"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded inline-flex min-h-[26px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
             onClick={() => handleCellClick("time")}
           >
             {row.time}
@@ -1517,9 +1517,9 @@ export function SituationPage({ activities = [] }) {
         {/* Tableau des données */}
         {excelData.length > 0 && (
           <div className="overflow-x-auto">
-            <div className="min-w-[1100px] border border-slate-200 rounded-lg shadow-sm bg-white">
+            <div className="min-w-[990px] border border-slate-200 rounded-lg shadow-sm bg-white">
               <div
-                className="grid text-left text-xs font-semibold uppercase text-white"
+                className="grid text-left text-[10px] font-semibold uppercase text-white"
                 style={{
                   gridTemplateColumns: GRID_TEMPLATE,
                   backgroundImage:
@@ -1527,12 +1527,12 @@ export function SituationPage({ activities = [] }) {
                 }}
               >
                 {TABLE_HEADERS.map((header) => (
-                  <div key={header} className="px-4 py-3">
+                  <div key={header} className="px-2 py-2">
                     {header}
                   </div>
                 ))}
               </div>
-              <div className="h-[60vh]" ref={tableBodyRef}>
+              <div className="max-h-[calc(100vh-320px)] overflow-y-auto" ref={tableBodyRef}>
                 <div
                   style={{
                     height: `${rowVirtualizer.getTotalSize()}px`,
