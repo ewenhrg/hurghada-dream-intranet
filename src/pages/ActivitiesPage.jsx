@@ -91,6 +91,10 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }, [form, showForm, editingId]);
 
   function handleEdit(activity) {
+    if (!user?.canEditActivity) {
+      toast.warning("Vous n'avez pas la permission de modifier des activités.");
+      return;
+    }
     setForm({
       name: activity.name || "",
       category: activity.category || "desert",
@@ -114,6 +118,16 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     if (!form.name.trim()) return;
 
     const isEditing = editingId !== null;
+    
+    // Vérifier les permissions
+    if (isEditing && !user?.canEditActivity) {
+      toast.warning("Vous n'avez pas la permission de modifier des activités.");
+      return;
+    }
+    if (!isEditing && !user?.canAddActivity) {
+      toast.warning("Vous n'avez pas la permission d'ajouter des activités.");
+      return;
+    }
     // Trouver l'activité en cours de modification pour récupérer son supabase_id
     const existingActivity = isEditing ? activities.find((a) => a.id === editingId) : null;
     const supabaseId = existingActivity?.supabase_id;
@@ -276,10 +290,36 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }
 
   function handleDelete(id) {
+    if (!user?.canDeleteActivity) {
+      toast.warning("Vous n'avez pas la permission de supprimer des activités.");
+      return;
+    }
     if (!window.confirm("Supprimer cette activité ?")) return;
+    
+    const activityToDelete = activities.find((a) => a.id === id);
     const next = activities.filter((a) => a.id !== id);
     setActivities(next);
     saveLS(LS_KEYS.activities, next);
+    
+    // Supprimer de Supabase si configuré
+    if (supabase && activityToDelete?.supabase_id) {
+      try {
+        const { error } = await supabase
+          .from("activities")
+          .delete()
+          .eq("id", activityToDelete.supabase_id);
+        
+        if (error) {
+          console.error("❌ Erreur lors de la suppression dans Supabase:", error);
+          toast.error("Erreur lors de la suppression dans Supabase. L'activité a été supprimée localement.");
+        } else {
+          console.log("✅ Activité supprimée de Supabase avec succès!");
+        }
+      } catch (err) {
+        console.error("❌ Exception lors de la suppression dans Supabase:", err);
+        toast.error("Exception lors de la suppression dans Supabase. L'activité a été supprimée localement.");
+      }
+    }
   }
 
   // Filtrer les activités par recherche et par jour
@@ -471,7 +511,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   <th className="text-left px-3 py-2">Bébé</th>
                   <th className="text-left px-3 py-2">Jours</th>
                   <th className="text-left px-3 py-2">Notes</th>
-                  <th className="text-right px-3 py-2">Action</th>
+                  {(user?.canEditActivity || user?.canDeleteActivity) && (
+                    <th className="text-right px-3 py-2">Action</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -496,21 +538,27 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                       </div>
                     </td>
                     <td className="px-3 py-2 text-gray-500">{a.notes || "—"}</td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex gap-2 justify-end">
-                        <GhostBtn onClick={() => handleEdit(a)} variant="primary">
-                          Modifier
-                        </GhostBtn>
-                        <GhostBtn onClick={() => handleDelete(a.id)} variant="danger">
-                          Supprimer
-                        </GhostBtn>
-                      </div>
-                    </td>
+                    {(user?.canEditActivity || user?.canDeleteActivity) && (
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex gap-2 justify-end">
+                          {user?.canEditActivity && (
+                            <GhostBtn onClick={() => handleEdit(a)} variant="primary">
+                              Modifier
+                            </GhostBtn>
+                          )}
+                          {user?.canDeleteActivity && (
+                            <GhostBtn onClick={() => handleDelete(a.id)} variant="danger">
+                              Supprimer
+                            </GhostBtn>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
                   <tr>
-                    <td colSpan={7} className="px-3 py-4 text-center text-gray-400 text-sm">
+                    <td colSpan={(user?.canEditActivity || user?.canDeleteActivity) ? 7 : 6} className="px-3 py-4 text-center text-gray-400 text-sm">
                       Aucune activité dans cette catégorie.
                     </td>
                   </tr>
