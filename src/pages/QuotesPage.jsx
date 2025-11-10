@@ -138,7 +138,7 @@ function StopPushSalesSummary({ stopSales, pushSales, activities }) {
   );
 }
 
-export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft }) {
+export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
   const [stopSales, setStopSales] = useState([]);
   const [pushSales, setPushSales] = useState([]);
 
@@ -567,6 +567,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     return Array.from(datesMap.entries()).sort((a, b) => new Date(b[0]) - new Date(a[0]));
   }, [computed]);
 
+  // Notifier le parent des dates utilisées
+  useEffect(() => {
+    if (onUsedDatesChange) {
+      onUsedDatesChange(usedDates);
+    }
+  }, [usedDates, onUsedDatesChange]);
+
   async function handleCreateQuote(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -728,36 +735,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   }
 
   return (
-    <div className="relative">
-      {/* Modale des dates utilisées - fixe sur le côté gauche, sans affecter la largeur du contenu */}
-      {usedDates.length > 0 && (
-        <aside className="hidden lg:block fixed left-4 top-32 xl:top-36 w-72 z-40">
-          <div className="bg-amber-50/95 backdrop-blur-sm border border-amber-200 rounded-2xl p-4 md:p-5 shadow-[0_24px_55px_-30px_rgba(180,83,9,0.55)]">
-            <h3 className="text-sm font-semibold text-amber-900 mb-3 flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" />
-              Dates utilisées ({usedDates.length})
-            </h3>
-            <div className="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 scrollbar-thin-amber" style={{ scrollbarWidth: 'thin', scrollbarColor: '#fcd34d #fef3c7' }}>
-              {usedDates.map(([date, activities]) => (
-                <div key={date} className="bg-white/70 rounded-xl p-3 border border-amber-100 shadow-[0_16px_28px_-26px_rgba(217,119,6,0.35)]">
-                  <p className="text-xs font-semibold text-amber-900 mb-2">
-                    {new Date(date + "T12:00:00").toLocaleDateString("fr-FR")}
-                  </p>
-                  <ul className="space-y-1">
-                    {activities.map((activity, idx) => (
-                      <li key={idx} className="text-xs text-amber-800">
-                        • {activity}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
-      )}
-
-      <div className="w-full space-y-10">
+    <div className="space-y-10">
         {/* Section Stop Sales et Push Sales - Compacte et repliable */}
         {(formattedStopSales.length > 0 || formattedPushSales.length > 0) && (
           <StopPushSalesSummary 

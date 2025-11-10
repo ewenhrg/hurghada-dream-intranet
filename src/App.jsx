@@ -27,8 +27,16 @@ export default function App() {
   const [quoteDraft, setQuoteDraft] = useState(() => loadLS(LS_KEYS.quoteForm, null));
   const [remoteEnabled, setRemoteEnabled] = useState(false);
   const [user, setUser] = useState(null);
+  const [usedDates, setUsedDates] = useState([]);
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
+
+  // Réinitialiser les dates utilisées quand on change d'onglet
+  useEffect(() => {
+    if (tab !== "devis") {
+      setUsedDates([]);
+    }
+  }, [tab]);
 
   // Vérifier si l'utilisateur est déjà connecté
   useEffect(() => {
@@ -622,37 +630,74 @@ export default function App() {
       </header>
 
       {/* CONTENU CENTRÉ */}
-      <main className="flex-1 overflow-y-auto px-2 md:px-3 lg:px-6 py-4 md:py-10">
-        <div
-          className={`mx-auto space-y-6 md:space-y-10 ${(tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl"} bg-white/5 border border-white/10 rounded-2xl md:rounded-[32px] p-4 md:p-6 lg:p-8 shadow-[0_30px_60px_-35px_rgba(15,23,42,0.65)] backdrop-blur-2xl`}
-        >
-          <Suspense fallback={<PageLoader />}>
-          {tab === "devis" && (
-            <section className="space-y-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-[1.75rem] font-semibold tracking-[-0.03em] mb-1.5 bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent">
-                    {t("page.devis.title")}
-                  </h2>
-                  <p className="text-sm text-[rgba(71,85,105,0.85)] font-medium leading-relaxed">
-                    {t("page.devis.subtitle")}
-                  </p>
+      <main className={`flex-1 overflow-y-auto py-4 md:py-10 ${tab === "devis" ? "px-0" : "px-2 md:px-3 lg:px-6"}`}>
+        {tab === "devis" ? (
+          <div className="flex items-start gap-4 lg:gap-6">
+            {/* Modale des dates utilisées - sticky sur le côté gauche, en dehors du conteneur principal */}
+            {usedDates.length > 0 && (
+              <aside className="hidden lg:block sticky top-24 xl:top-28 w-72 flex-shrink-0 self-start pl-4">
+                <div className="bg-amber-50/95 backdrop-blur-sm border border-amber-200 rounded-2xl p-4 md:p-5 shadow-[0_24px_55px_-30px_rgba(180,83,9,0.55)]">
+                  <h3 className="text-sm font-semibold text-amber-900 mb-3 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" />
+                    Dates utilisées ({usedDates.length})
+                  </h3>
+                  <div className="space-y-3 max-h-[calc(100vh-180px)] overflow-y-auto pr-1 scrollbar-thin-amber" style={{ scrollbarWidth: 'thin', scrollbarColor: '#fcd34d #fef3c7' }}>
+                    {usedDates.map(([date, activities]) => (
+                      <div key={date} className="bg-white/70 rounded-xl p-3 border border-amber-100 shadow-[0_16px_28px_-26px_rgba(217,119,6,0.35)]">
+                        <p className="text-xs font-semibold text-amber-900 mb-2">
+                          {new Date(date + "T12:00:00").toLocaleDateString("fr-FR")}
+                        </p>
+                        <ul className="space-y-1">
+                          {activities.map((activity, idx) => (
+                            <li key={idx} className="text-xs text-amber-800">
+                              • {activity}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              </aside>
+            )}
+            {/* Conteneur principal pour le formulaire de devis */}
+            <div className="flex-1 min-w-0 mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
+              <div className="space-y-6 md:space-y-10 bg-white/5 border border-white/10 rounded-2xl md:rounded-[32px] p-4 md:p-6 lg:p-8 shadow-[0_30px_60px_-35px_rgba(15,23,42,0.65)] backdrop-blur-2xl">
+                <Suspense fallback={<PageLoader />}>
+                  <section className="space-y-6">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-[1.75rem] font-semibold tracking-[-0.03em] mb-1.5 bg-gradient-to-r from-[#4f46e5] via-[#5b3ffd] to-[#0ea5e9] bg-clip-text text-transparent">
+                          {t("page.devis.title")}
+                        </h2>
+                        <p className="text-sm text-[rgba(71,85,105,0.85)] font-medium leading-relaxed">
+                          {t("page.devis.subtitle")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="hd-card p-8 md:p-10 lg:p-12">
+                      <QuotesPage
+                        activities={activities}
+                        quotes={quotes}
+                        setQuotes={setQuotes}
+                        user={user}
+                        draft={quoteDraft}
+                        setDraft={setQuoteDraft}
+                        onUsedDatesChange={setUsedDates}
+                      />
+                    </div>
+                  </section>
+                </Suspense>
               </div>
-              <div className="hd-card p-8 md:p-10 lg:p-12">
-                <QuotesPage
-                  activities={activities}
-                  quotes={quotes}
-                  setQuotes={setQuotes}
-                  user={user}
-                  draft={quoteDraft}
-                  setDraft={setQuoteDraft}
-                />
-              </div>
-            </section>
-          )}
+            </div>
+          </div>
+        ) : (
+          <div
+            className={`mx-auto space-y-6 md:space-y-10 ${(tab === "situation") ? "max-w-7xl" : "max-w-6xl"} bg-white/5 border border-white/10 rounded-2xl md:rounded-[32px] p-4 md:p-6 lg:p-8 shadow-[0_30px_60px_-35px_rgba(15,23,42,0.65)] backdrop-blur-2xl px-2 md:px-3 lg:px-6`}
+          >
+            <Suspense fallback={<PageLoader />}>
 
-          {tab === "activities" && user?.canAccessActivities !== false && (
+            {tab === "activities" && user?.canAccessActivities !== false && (
             <Section
               title={t("page.activities.title")}
               subtitle={t("page.activities.subtitle")}
