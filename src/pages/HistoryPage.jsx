@@ -109,7 +109,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     }
   }, [showEditModal]);
 
-  // Fonction pour supprimer automatiquement les devis non payés de plus de 5 jours
+  // Fonction pour supprimer automatiquement les devis non payés de plus de 20 jours
   useEffect(() => {
     // Ne pas exécuter si quotes est vide
     if (!quotes || quotes.length === 0) {
@@ -118,7 +118,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
     const cleanupOldUnpaidQuotes = async () => {
       const now = new Date();
-      const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000); // 5 jours en millisecondes
+      const twentyDaysAgo = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000); // 20 jours en millisecondes
       
       // Identifier les devis à supprimer
       const quotesToDelete = quotes.filter((quote) => {
@@ -128,17 +128,17 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           return false; // Le devis est payé, ne pas le supprimer
         }
         
-        // Vérifier si le devis a été créé il y a plus de 5 jours
+        // Vérifier si le devis a été créé il y a plus de 20 jours
         const createdAt = new Date(quote.createdAt);
         if (isNaN(createdAt.getTime())) {
           return false; // Date invalide, ne pas supprimer
         }
         
-        return createdAt < fiveDaysAgo;
+        return createdAt < twentyDaysAgo;
       });
 
       if (quotesToDelete.length > 0) {
-        console.log(`🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de 5 jours`);
+        console.log(`🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de 20 jours`);
         
         // Supprimer de la liste locale
         const remainingQuotes = quotes.filter((quote) => 
