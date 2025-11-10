@@ -1,7 +1,8 @@
-import { useEffect, useState, useRef, lazy, Suspense } from "react";
+import { useEffect, useState, useRef, lazy, Suspense, useMemo, useCallback } from "react";
 import { supabase } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
 import { uuid, emptyTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
+import { configureUserPermissions, loadUserFromSession } from "./utils/userPermissions";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
 import { useLanguage } from "./contexts/LanguageContext";
@@ -33,82 +34,24 @@ export default function App() {
   useEffect(() => {
     const already = sessionStorage.getItem("hd_ok") === "1";
     if (already) {
-      const userStr = sessionStorage.getItem("hd_user");
-      if (userStr) {
-        try {
-          const userData = JSON.parse(userStr);
-          // S'assurer que les valeurs par défaut sont correctes pour l'accès aux pages
-          if (userData.canAccessActivities === undefined) userData.canAccessActivities = true;
-          if (userData.canAccessHistory === undefined) userData.canAccessHistory = true;
-          if (userData.canAccessTickets === undefined) userData.canAccessTickets = true;
-          // Donner tous les accès à Léa sauf canResetData
-          if (userData.name === "Léa") {
-            userData.canDeleteQuote = true;
-            userData.canAddActivity = true;
-            userData.canEditActivity = true;
-            userData.canDeleteActivity = true;
-            userData.canAccessActivities = true;
-            userData.canAccessHistory = true;
-            userData.canAccessTickets = true;
-            userData.canAccessModifications = true;
-            userData.canAccessSituation = true;
-            userData.canAccessUsers = true;
-            userData.canResetData = false; // Ne pas donner l'accès au reset
-          }
-          // Donner tous les accès à Ewen
-          if (userData.name === "Ewen") {
-            userData.canAccessModifications = true;
-            userData.canAccessSituation = true;
-            userData.canAccessUsers = true;
-          }
-          setUser(userData);
-        } catch (e) {
-          console.error("Erreur lors de la lecture des données utilisateur:", e);
-        }
+      const userData = loadUserFromSession();
+      if (userData) {
+        setUser(userData);
       }
       setOk(true);
     }
   }, []);
 
   // Fonction pour mettre à jour les permissions utilisateur après connexion
-  function handleLoginSuccess() {
-    const userStr = sessionStorage.getItem("hd_user");
-    if (userStr) {
-      try {
-        const userData = JSON.parse(userStr);
-        // S'assurer que les valeurs par défaut sont correctes pour l'accès aux pages
-        if (userData.canAccessActivities === undefined) userData.canAccessActivities = true;
-        if (userData.canAccessHistory === undefined) userData.canAccessHistory = true;
-        if (userData.canAccessTickets === undefined) userData.canAccessTickets = true;
-        // Donner tous les accès à Léa sauf canResetData
-        if (userData.name === "Léa") {
-          userData.canDeleteQuote = true;
-          userData.canAddActivity = true;
-          userData.canEditActivity = true;
-          userData.canDeleteActivity = true;
-          userData.canAccessActivities = true;
-          userData.canAccessHistory = true;
-          userData.canAccessTickets = true;
-          userData.canAccessModifications = true;
-          userData.canAccessSituation = true;
-          userData.canAccessUsers = true;
-          userData.canResetData = false; // Ne pas donner l'accès au reset
-        }
-        // Donner tous les accès à Ewen
-        if (userData.name === "Ewen") {
-          userData.canAccessModifications = true;
-          userData.canAccessSituation = true;
-          userData.canAccessUsers = true;
-        }
-        setUser(userData);
-      } catch (e) {
-        console.error("Erreur lors de la lecture des données utilisateur:", e);
-      }
+  const handleLoginSuccess = useCallback(() => {
+    const userData = loadUserFromSession();
+    if (userData) {
+      setUser(userData);
     }
     setOk(true);
-  }
+  }, []);
 
-  function handleLogout() {
+  const handleLogout = useCallback(() => {
     try {
       sessionStorage.removeItem("hd_ok");
       sessionStorage.removeItem("hd_user");
@@ -120,11 +63,12 @@ export default function App() {
     setQuoteDraft(null);
     setTab("devis");
     setOk(false);
-  }
+  }, []);
 
-  // fonction de synchronisation Supabase
-  async function syncWithSupabase() {
-      if (!supabase) return;
+  // fonction de synchronisation Supabase - mémoïsée avec useCallback
+  // Note: setActivities et setRemoteEnabled sont des setters stables de React, pas besoin de dépendances
+  const syncWithSupabase = useCallback(async () => {
+    if (!supabase) return;
     try {
       // Vérifier si Supabase est configuré (pas un stub)
       const { error: testError } = await supabase.from("activities").select("id").limit(1);
@@ -168,7 +112,7 @@ export default function App() {
 
           // Fonction pour créer une clé unique d'une activité
           const getUniqueKey = (activity) => {
-            return `${activity.site_key || SITE_KEY}_${activity.name}_${activity.category || 'desert'}`;
+            return `${SITE_KEY}_${activity.name}_${activity.category || 'desert'}`;
           };
 
           // Ajouter UNIQUEMENT les activités Supabase (source de vérité absolue)
@@ -198,23 +142,24 @@ export default function App() {
     } catch (err) {
       console.warn("Erreur synchronisation Supabase:", err);
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // charger supabase au montage et synchronisation des activités toutes les 3 secondes
+  // charger supabase au montage et synchronisation des activités toutes les 10 secondes (optimisé)
   useEffect(() => {
     // Synchronisation immédiate
     syncWithSupabase();
 
-    // Synchronisation des activités toutes les 3 secondes (pas les devis pour éviter les doublons)
+    // Synchronisation des activités toutes les 10 secondes (optimisé: réduit de 3s à 10s pour moins de charge)
     const interval = setInterval(() => {
       syncWithSupabase();
-    }, 3000);
+    }, 10000);
 
     // Nettoyer l'intervalle au démontage
     return () => {
       clearInterval(interval);
     };
-  }, []);
+  }, [syncWithSupabase]);
 
   // Persister le brouillon de devis (ou le nettoyer) dès qu'il change
   useEffect(() => {

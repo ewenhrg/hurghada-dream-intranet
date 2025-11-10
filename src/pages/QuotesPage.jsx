@@ -278,8 +278,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
     loadStopSalesAndPushSales();
     
-    // Recharger toutes les 5 secondes pour avoir les données à jour
-    const interval = setInterval(loadStopSalesAndPushSales, 5000);
+    // Recharger toutes les 10 secondes pour avoir les données à jour (optimisé: réduit de 5s à 10s)
+    const interval = setInterval(loadStopSalesAndPushSales, 10000);
     return () => clearInterval(interval);
   }, []);
 
