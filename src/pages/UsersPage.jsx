@@ -243,7 +243,7 @@ export function UsersPage() {
                   onChange={(e) => setForm((f) => ({ ...f, canDeleteQuote: e.target.checked }))}
                   className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span className="text-sm text-gray-700">Peut supprimer des devis</span>
+                <span className="text-sm text-gray-700">Peut supprimer des devis dans la page Historique</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
