@@ -18,8 +18,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [ticketNumbers, setTicketNumbers] = useState({});
   const [paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" }
   
-  // Vérifier si l'utilisateur peut modifier les activités (seulement Léa et Ewen)
-  const canModifyActivities = user?.name === "Léa" || user?.name === "Ewen";
+  // Tous les utilisateurs peuvent maintenant modifier les activités
+  const canModifyActivities = true;
   
   // Références pour le conteneur de la modale de paiement
   const paymentModalRef = useRef(null);
@@ -1042,25 +1042,18 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-4 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
-                  {canModifyActivities ? (
-                    <GhostBtn type="button" onClick={() => removeItem(idx)}>
-                      Supprimer
-                    </GhostBtn>
-                  ) : (
-                    <p className="text-xs text-gray-400">Non modifiable</p>
-                  )}
+                  <GhostBtn type="button" onClick={() => removeItem(idx)}>
+                    Supprimer
+                  </GhostBtn>
                 </div>
-                {/* Première ligne : Activité et Date - Modifiables uniquement par Léa et Ewen */}
+                {/* Première ligne : Activité et Date - Modifiables par tous */}
                 <div className="grid md:grid-cols-3 gap-3">
                   <div className="md:col-span-2">
-                    <p className="text-xs text-gray-500 mb-1">
-                      Activité {!canModifyActivities && <span className="text-gray-400 text-[10px]">(Non modifiable)</span>}
-                    </p>
+                    <p className="text-xs text-gray-500 mb-1">Activité</p>
                     <select
                       value={c.raw.activityId || ""}
                       onChange={(e) => setItem(idx, { activityId: e.target.value })}
-                      disabled={!canModifyActivities}
-                      className={`w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm ${!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}`}
+                      className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
                     >
                       <option value="">— Choisir —</option>
                       {sortedActivities.map((a) => (
@@ -1071,15 +1064,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     </select>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">
-                      Date {!canModifyActivities && <span className="text-gray-400 text-[10px]">(Non modifiable)</span>}
-                    </p>
+                    <p className="text-xs text-gray-500 mb-1">Date</p>
                     <TextInput 
                       type="date" 
                       value={c.raw.date} 
                       onChange={(e) => setItem(idx, { date: e.target.value })}
-                      disabled={!canModifyActivities}
-                      className={!canModifyActivities ? "bg-slate-100 cursor-not-allowed opacity-60" : ""}
                     />
                     {c.act && !c.available && (
                       <p className="text-[10px] text-amber-700 mt-1">⚠️ activité pas dispo ce jour-là</p>
@@ -1283,13 +1272,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           </div>
 
           <div className="flex items-center justify-between">
-            {canModifyActivities ? (
-              <GhostBtn type="button" onClick={addItem}>
-                + Ajouter une autre activité
-              </GhostBtn>
-            ) : (
-              <p className="text-xs text-gray-400">Vous n'avez pas la permission d'ajouter des activités</p>
-            )}
+            <GhostBtn type="button" onClick={addItem}>
+              + Ajouter une autre activité
+            </GhostBtn>
             <div className="text-right">
               <p className="text-xs text-gray-500">Total</p>
               <p className="text-xl font-bold">Espèces: {currencyNoCents(grandTotalCash, grandCurrency)}</p>
