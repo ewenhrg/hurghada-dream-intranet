@@ -693,7 +693,8 @@ export default function App() {
           </div>
         ) : (
           <div
-            className={`mx-auto space-y-6 md:space-y-10 ${(tab === "situation") ? "max-w-7xl" : "max-w-6xl"} bg-white/5 border border-white/10 rounded-2xl md:rounded-[32px] p-4 md:p-6 lg:p-8 shadow-[0_30px_60px_-35px_rgba(15,23,42,0.65)] backdrop-blur-2xl px-2 md:px-3 lg:px-6`}
+            className={`mx-auto space-y-6 md:space-y-10 ${(tab === "situation") ? "max-w-7xl" : "max-w-6xl"} bg-white/5 border border-white/10 rounded-2xl md:rounded-[32px] p-4 md:p-6 lg:p-8 shadow-[0_30px_60px_-35px_rgba(15,23,42,0.65)] backdrop-blur-2xl`}
+            style={{ paddingLeft: '0.5rem', paddingRight: '0.5rem' }}
           >
             <Suspense fallback={<PageLoader />}>
 
