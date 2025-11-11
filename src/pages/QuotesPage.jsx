@@ -23,6 +23,32 @@ function ColoredDatePicker({ value, onChange, activity, stopSales, pushSales }) 
     }
   }, [value]);
 
+  // Convertir YYYY-MM-DD vers DD/MM/YYYY pour l'affichage
+  const formatDateForDisplay = (dateStr) => {
+    if (!dateStr) return "";
+    const [year, month, day] = dateStr.split("-");
+    return `${day}/${month}/${year}`;
+  };
+
+  // Convertir DD/MM/YYYY vers YYYY-MM-DD pour le stockage
+  const parseDateFromDisplay = (dateStr) => {
+    if (!dateStr) return "";
+    // Supprimer les espaces et séparateurs multiples
+    const cleaned = dateStr.trim().replace(/[\/\s-]+/g, "/");
+    const parts = cleaned.split("/");
+    
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      // Vérifier que c'est une date valide
+      if (day && month && year && day.length <= 2 && month.length <= 2 && year.length === 4) {
+        return `${year}-${month}-${day}`;
+      }
+    }
+    return dateStr; // Retourner tel quel si le format n'est pas valide
+  };
+
   const getDayStatus = useCallback((date) => {
     if (!activity) return null; // Pas d'activité sélectionnée
     
@@ -160,11 +186,13 @@ function ColoredDatePicker({ value, onChange, activity, stopSales, pushSales }) 
         <div className="flex-1 relative">
           <TextInput
             type="text"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
+            value={formatDateForDisplay(value)}
+            onChange={(e) => {
+              const parsed = parseDateFromDisplay(e.target.value);
+              onChange(parsed);
+            }}
             onFocus={() => activity && setShowCalendar(true)}
-            placeholder="YYYY-MM-DD"
-            pattern="\d{4}-\d{2}-\d{2}"
+            placeholder="JJ/MM/AAAA"
             className="w-full"
           />
           {/* Masquer le picker natif en utilisant un input text au lieu de date */}
