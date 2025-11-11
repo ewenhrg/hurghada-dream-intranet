@@ -167,7 +167,7 @@ export function UsersPage() {
 
   // Supprimer un utilisateur
   async function handleDelete(userId, userName) {
-    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur "${userName}" ?`)) {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur "${userName}" ?\n\nCette action est irréversible et supprimera définitivement l'utilisateur et toutes ses données.`)) {
       return;
     }
 

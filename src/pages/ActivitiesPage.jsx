@@ -297,9 +297,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       toast.warning("Seuls Léa et Ewen peuvent supprimer les activités.");
       return;
     }
-    if (!window.confirm("Supprimer cette activité ?")) return;
-    
     const activityToDelete = activities.find((a) => a.id === id);
+    const activityName = activityToDelete?.name || "cette activité";
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer l'activité "${activityName}" ?\n\nCette action est irréversible et supprimera définitivement l'activité.`)) return;
     const next = activities.filter((a) => a.id !== id);
     setActivities(next);
     saveLS(LS_KEYS.activities, next);

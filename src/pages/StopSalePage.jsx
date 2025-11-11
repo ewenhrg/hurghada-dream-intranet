@@ -202,7 +202,8 @@ export function StopSalePage({ activities, user }) {
       return;
     }
 
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet élément ?")) {
+    const elementType = isStopSale ? "stop sale" : "push sale";
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer ce ${elementType} ?\n\nCette action est irréversible.`)) {
       return;
     }
 

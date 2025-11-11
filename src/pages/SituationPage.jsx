@@ -527,7 +527,7 @@ export function SituationPage({ activities = [], user }) {
 
   // Supprimer un template
   const handleDeleteTemplate = (activityName) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le template pour "${activityName}" ?`)) {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le template pour "${activityName}" ?\n\nCette action est irréversible.`)) {
       const newTemplates = { ...messageTemplates };
       delete newTemplates[activityName];
       setMessageTemplates(newTemplates);
@@ -561,7 +561,7 @@ export function SituationPage({ activities = [], user }) {
   };
   
   const handleDeleteHotel = (hotelName) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir retirer "${hotelName}" de la liste ?`)) {
+    if (window.confirm(`Êtes-vous sûr de vouloir retirer "${hotelName}" de la liste des hôtels extérieurs ?\n\nCette action est irréversible.`)) {
       setExteriorHotels(exteriorHotels.filter(h => {
         const hName = typeof h === 'string' ? h : h.name;
         return hName !== hotelName;

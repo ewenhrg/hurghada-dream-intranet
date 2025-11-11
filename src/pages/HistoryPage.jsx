@@ -428,7 +428,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                           variant="danger"
                           className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-red-500 bg-red-500 hover:bg-red-600 shadow-[0_18px_32px_-18px_rgba(239,68,68,0.55)]"
                           onClick={async () => {
-                            if (window.confirm("Êtes-vous sûr de vouloir supprimer ce devis ?")) {
+                            const clientInfo = d.client?.name ? `${d.client.name}${d.client?.phone ? ` (${d.client.phone})` : ''}` : 'ce devis';
+                            const totalInfo = d.total ? ` (Total: ${Math.round(d.total)}€)` : '';
+                            
+                            if (window.confirm(`Êtes-vous sûr de vouloir supprimer le devis de ${clientInfo}${totalInfo} ?\n\nCette action est irréversible et supprimera définitivement le devis.`)) {
                               const updatedQuotes = quotes.filter((quote) => quote.id !== d.id);
                               setQuotes(updatedQuotes);
                               saveLS(LS_KEYS.quotes, updatedQuotes);

@@ -224,8 +224,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   }, [blankItemMemo]);
   
   const removeItem = useCallback((i) => {
-    setItems((prev) => prev.filter((_, idx) => idx !== i));
-  }, []);
+    const itemToRemove = items[i];
+    const activityName = activities.find(a => a.id === itemToRemove?.activityId)?.name || "cette activité";
+    
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${activityName}" de ce devis ?\n\nCette action est irréversible.`)) {
+      setItems((prev) => prev.filter((_, idx) => idx !== i));
+      toast.success("Activité supprimée du devis.");
+    }
+  }, [items, activities]);
   
   const resetQuoteForm = useCallback(() => {
     const emptyClient = {
@@ -764,7 +770,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             variant="danger"
             size="sm"
             onClick={() => {
-              if (window.confirm("Supprimer toutes les activités et les infos client ?")) {
+              if (window.confirm("Êtes-vous sûr de vouloir tout effacer ?\n\nCette action supprimera toutes les activités et les informations client du formulaire.\n\nCette action est irréversible.")) {
                 resetQuoteForm();
                 toast.success("Formulaire réinitialisé.");
               }
