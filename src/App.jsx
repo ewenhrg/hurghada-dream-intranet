@@ -513,10 +513,10 @@ export default function App() {
   // Calculer le padding pour le main
   const mainPaddingClass = tab === "devis" ? "px-0" : "px-2 md:px-3 lg:px-6";
   // Construire les className complets
-  const headerNavClassName = "glass-nav mx-auto flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between gap-3 md:gap-4 " + maxWidthClass + " px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl";
-  const mainClassName = "flex-1 overflow-y-auto py-4 md:py-10 " + mainPaddingClass;
-  const footerClassName = "mx-auto px-4 py-8 border-t mt-10 font-medium tracking-wide " + maxWidthClass;
-  const contentContainerClassName = "mx-auto space-y-6 md:space-y-10 " + maxWidthClass + " rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-2xl";
+  const headerNavClassName = `glass-nav mx-auto flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between gap-3 md:gap-4 ${maxWidthClass} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`;
+  const mainClassName = `flex-1 overflow-y-auto py-4 md:py-10 ${mainPaddingClass}`;
+  const footerClassName = `mx-auto px-4 py-8 border-t mt-10 font-medium tracking-wide ${maxWidthClass}`;
+  const contentContainerClassName = `mx-auto space-y-6 md:space-y-10 ${maxWidthClass} rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-2xl`;
   // Construire les className pour les boutons de langue
   const langButtonBaseClass = "px-2 md:px-2.5 py-1.5 font-semibold rounded-lg transition-colors";
   const langButtonActiveClass = "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white";
@@ -666,7 +666,7 @@ export default function App() {
                 )}
                 {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
                   <Pill active={tab === "stopsale"} onClick={() => setTab("stopsale")}>
-                    🛑 Stop/Push
+                    🛑 Stop &amp; Push
                   </Pill>
                 )}
                 {(user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
@@ -794,18 +794,20 @@ export default function App() {
               title={t("page.activities.title")}
               subtitle={t("page.activities.subtitle")}
               right={
-                user?.canResetData && (
+                user?.canResetData ? (
                 <GhostBtn
                   onClick={() => {
-                    if (!window.confirm("Réinitialiser les données locales ?")) return;
-                      const defaultActivities = getDefaultActivities();
+                    if (!window.confirm("Réinitialiser les données locales ?")) {
+                      return;
+                    }
+                    const defaultActivities = getDefaultActivities();
                     setActivities(defaultActivities);
                     saveLS(LS_KEYS.activities, defaultActivities);
                 }}
               >
                 {t("btn.reset")}
               </GhostBtn>
-              )
+              ) : null
             }
           >
             <ActivitiesPage activities={activities} setActivities={setActivities} user={user} />
@@ -838,7 +840,7 @@ export default function App() {
         )}
 
         {tab === "stopsale" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
-          <Section title="Stop Sale & Push Sale" subtitle="Gérez les arrêts de vente et les ouvertures exceptionnelles">
+          <Section title="Stop Sale &amp; Push Sale" subtitle="Gérez les arrêts de vente et les ouvertures exceptionnelles">
             <StopSalePage activities={activities} user={user} />
           </Section>
         )}
@@ -850,9 +852,17 @@ export default function App() {
           )}
           </Suspense>
         </div>
+        )}
       </main>
 
-      <footer className={footerClassName} style={{ color: 'rgba(255, 255, 255, 0.65)', borderTopColor: 'rgba(255, 255, 255, 0.1)', fontSize: '0.6875rem' }}>
+      <footer 
+        className={footerClassName} 
+        style={{ 
+          color: 'rgba(255, 255, 255, 0.65)', 
+          borderTopColor: 'rgba(255, 255, 255, 0.1)', 
+          fontSize: '0.6875rem' 
+        }}
+      >
         {footerText}
       </footer>
     </div>

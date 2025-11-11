@@ -1650,7 +1650,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 }}
                 className="text-gray-400 hover:text-gray-600 text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
-                ×
+                &times;
               </button>
             </div>
 
@@ -1815,7 +1815,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }
