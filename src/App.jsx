@@ -28,6 +28,7 @@ export default function App() {
   const [remoteEnabled, setRemoteEnabled] = useState(false);
   const [user, setUser] = useState(null);
   const [usedDates, setUsedDates] = useState([]);
+  const [showDatesModal, setShowDatesModal] = useState(false);
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
 
@@ -697,47 +698,6 @@ export default function App() {
       <main className={mainClassName}>
         {tab === "devis" ? (
           <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
-              {/* Bandeau sticky pour les dates utilisées - reste visible pendant le scroll */}
-              {usedDates.length > 0 && (
-                <div 
-                  className="sticky top-2 z-40 mb-4 md:mb-6 rounded-xl border border-amber-200/50 backdrop-blur-md"
-                  style={{
-                    backgroundColor: 'rgba(255, 251, 235, 0.98)',
-                    boxShadow: '0 4px 20px -8px rgba(180, 83, 9, 0.4)',
-                    backdropFilter: 'blur(12px)'
-                  }}
-                >
-                  <div className="p-3 md:p-4">
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                        <h3 className="text-sm font-semibold text-amber-900">
-                          Dates déjà utilisées ({usedDates.length})
-                        </h3>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto scrollbar-thin-amber" style={{ scrollbarWidth: 'thin', scrollbarColor: '#fcd34d #fef3c7' }}>
-                      {usedDates.map(([date, activities]) => (
-                        <div
-                          key={date}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-200 flex-shrink-0"
-                          style={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            boxShadow: '0 2px 8px -4px rgba(217, 119, 6, 0.3)'
-                          }}
-                        >
-                          <span className="text-xs font-semibold text-amber-900 whitespace-nowrap">
-                            {new Date(date + "T12:00:00").toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
-                          </span>
-                          <span className="text-xs text-amber-700 truncate max-w-[200px]" title={activities.join(', ')}>
-                            {activities.join(', ')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
               
               <div 
                 className="space-y-6 md:space-y-10 rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-2xl"
@@ -774,6 +734,101 @@ export default function App() {
                   </section>
                 </Suspense>
               </div>
+              
+              {/* Bouton flottant pour voir les dates utilisées */}
+              {usedDates.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setShowDatesModal(true)}
+                    className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                    style={{
+                      backgroundColor: 'rgba(251, 191, 36, 0.95)',
+                      boxShadow: '0 8px 24px -8px rgba(180, 83, 9, 0.6)',
+                      backdropFilter: 'blur(12px)'
+                    }}
+                    title="Voir les dates utilisées"
+                  >
+                    <div className="relative">
+                      <span className="text-2xl">📅</span>
+                      <span 
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                        style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)' }}
+                      >
+                        {usedDates.length}
+                      </span>
+                    </div>
+                  </button>
+                  
+                  {/* Modale des dates utilisées */}
+                  {showDatesModal && (
+                    <div 
+                      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+                      onClick={() => setShowDatesModal(false)}
+                    >
+                      <div 
+                        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div 
+                          className="px-6 py-4 border-b flex items-center justify-between"
+                          style={{ backgroundColor: 'rgba(255, 251, 235, 0.5)' }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                            <h3 className="text-lg font-semibold text-amber-900">
+                              Dates déjà utilisées ({usedDates.length})
+                            </h3>
+                          </div>
+                          <button
+                            onClick={() => setShowDatesModal(false)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-amber-100 transition-colors"
+                          >
+                            <span className="text-xl text-amber-700">×</span>
+                          </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1">
+                          <div className="space-y-4">
+                            {usedDates.map(([date, activities]) => (
+                              <div
+                                key={date}
+                                className="rounded-xl p-4 border border-amber-200"
+                                style={{
+                                  backgroundColor: 'rgba(255, 251, 235, 0.5)',
+                                  boxShadow: '0 2px 8px -4px rgba(217, 119, 6, 0.2)'
+                                }}
+                              >
+                                <p className="text-sm font-semibold text-amber-900 mb-2">
+                                  {new Date(date + "T12:00:00").toLocaleDateString('fr-FR', { 
+                                    weekday: 'long', 
+                                    day: 'numeric', 
+                                    month: 'long' 
+                                  })}
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {activities.map((activity, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="px-3 py-1 rounded-lg text-xs font-medium"
+                                      style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                        color: 'rgba(180, 83, 9, 0.9)',
+                                        border: '1px solid rgba(217, 119, 6, 0.3)'
+                                      }}
+                                    >
+                                      {activity}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
           </div>
         ) : (
           <div
