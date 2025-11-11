@@ -768,6 +768,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           activities={activities}
           user={user}
           canModifyActivities={canModifyActivities}
+          stopSales={stopSales}
+          pushSales={pushSales}
           editModalRef={editModalRef}
           editModalContainerRef={editModalContainerRef}
           onClose={() => {
@@ -849,7 +851,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 }
 
 // Composant modale de modification de devis
-function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, user, canModifyActivities, onClose, onSave, editModalRef, editModalContainerRef }) {
+function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, user, canModifyActivities, stopSales = [], pushSales = [], onClose, onSave, editModalRef, editModalContainerRef }) {
   const blankItem = () => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
