@@ -26,7 +26,12 @@ function ColoredDatePicker({ value, onChange, activity, stopSales, pushSales }) 
   const getDayStatus = useCallback((date) => {
     if (!activity) return null; // Pas d'activité sélectionnée
     
-    const dateStr = date.toISOString().slice(0, 10);
+    // Utiliser une méthode qui ne dépend pas du fuseau horaire
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
     const weekday = date.getDay();
     const baseAvailable = activity.availableDays?.[weekday] === true;
     
@@ -88,7 +93,11 @@ function ColoredDatePicker({ value, onChange, activity, stopSales, pushSales }) 
       toast.warning("Veuillez d'abord sélectionner une activité");
       return;
     }
-    const dateStr = date.toISOString().slice(0, 10);
+    // Utiliser une méthode qui ne dépend pas du fuseau horaire
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
     onChange(dateStr);
     setShowCalendar(false);
   };
@@ -105,7 +114,12 @@ function ColoredDatePicker({ value, onChange, activity, stopSales, pushSales }) 
     const baseClasses = "w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg cursor-pointer transition-all hover:scale-110 ";
     const today = new Date();
     const isToday = day.date.toDateString() === today.toDateString();
-    const isSelected = value && day.date.toISOString().slice(0, 10) === value;
+    // Comparer les dates sans dépendre du fuseau horaire
+    const year = day.date.getFullYear();
+    const month = String(day.date.getMonth() + 1).padStart(2, '0');
+    const dayNum = String(day.date.getDate()).padStart(2, '0');
+    const dayDateStr = `${year}-${month}-${dayNum}`;
+    const isSelected = value && dayDateStr === value;
     
     if (!day.isCurrentMonth) {
       return baseClasses + "text-gray-300 cursor-not-allowed";
@@ -143,12 +157,18 @@ function ColoredDatePicker({ value, onChange, activity, stopSales, pushSales }) 
   return (
     <div className="relative">
       <div className="flex gap-2">
-        <TextInput
-          type="date"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-1"
-        />
+        <div className="flex-1 relative">
+          <TextInput
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onFocus={() => activity && setShowCalendar(true)}
+            placeholder="YYYY-MM-DD"
+            pattern="\d{4}-\d{2}-\d{2}"
+            className="w-full"
+          />
+          {/* Masquer le picker natif en utilisant un input text au lieu de date */}
+        </div>
         {activity && (
           <button
             type="button"
