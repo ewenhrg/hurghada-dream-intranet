@@ -124,9 +124,9 @@ export function TicketPage({ quotes, setQuotes, user }) {
     return filtered;
   }, [allTicketRows, showModifiedOrCancelled, debouncedSearchQuery]);
 
-  // Définir 20 pages fixes avec des tranches de 50 tickets chacune
+  // Définir 120 pages fixes avec des tranches de 50 tickets chacune
   const pages = useMemo(() => {
-    const TOTAL_PAGES = 20;
+    const TOTAL_PAGES = 120;
     const TICKETS_PER_PAGE = 50;
     const START_TICKET = 163401; // Première page commence à 163401
     
