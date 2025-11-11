@@ -514,7 +514,7 @@ export default function App() {
   const mainPaddingClass = tab === "devis" ? "px-0" : "px-2 md:px-3 lg:px-6";
   // Construire les className complets
   const headerNavClassName = `glass-nav mx-auto flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between gap-3 md:gap-4 ${maxWidthClass} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`;
-  const mainClassName = `flex-1 py-4 md:py-10 ${mainPaddingClass}`;
+  const mainClassName = `flex-1 overflow-y-auto py-4 md:py-10 ${mainPaddingClass}`;
   const footerClassName = `mx-auto px-4 py-8 border-t mt-10 font-medium tracking-wide ${maxWidthClass}`;
   const contentContainerClassName = `mx-auto space-y-6 md:space-y-10 ${maxWidthClass} rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-2xl`;
   // Construire les className pour les boutons de langue
@@ -696,49 +696,48 @@ export default function App() {
       {/* CONTENU CENTRÉ */}
       <main className={mainClassName}>
         {tab === "devis" ? (
-          <div className="flex gap-4 lg:gap-6" style={{ minHeight: '100%' }}>
-            {/* Modale des dates utilisées - sur le côté gauche, suit le scroll */}
-            {usedDates.length > 0 && (
-              <aside className="hidden lg:block w-72 flex-shrink-0 pl-4">
+          <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
+              {/* Bandeau d'alerte pour les dates utilisées */}
+              {usedDates.length > 0 && (
                 <div 
-                  className="backdrop-blur-sm border border-amber-200 rounded-2xl p-4 md:p-5"
+                  className="mb-4 md:mb-6 rounded-xl border border-amber-200/50 backdrop-blur-sm"
                   style={{
                     backgroundColor: 'rgba(255, 251, 235, 0.95)',
-                    boxShadow: '0 24px 55px -30px rgba(180, 83, 9, 0.55)'
+                    boxShadow: '0 4px 20px -8px rgba(180, 83, 9, 0.4)'
                   }}
                 >
-                  <h3 className="text-sm font-semibold text-amber-900 mb-3 flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" />
-                    Dates utilisées ({usedDates.length})
-                  </h3>
-                  <div className="space-y-3 overflow-y-auto pr-1 scrollbar-thin-amber" style={{ scrollbarWidth: 'thin', scrollbarColor: '#fcd34d #fef3c7', maxHeight: '80vh' }}>
-                    {usedDates.map(([date, activities]) => (
-                      <div 
-                        key={date} 
-                        className="rounded-xl p-3 border border-amber-100"
-                        style={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                          boxShadow: '0 16px 28px -26px rgba(217, 119, 6, 0.35)'
-                        }}
-                      >
-                        <p className="text-xs font-semibold text-amber-900 mb-2">
-                          {new Date(date + "T12:00:00").toLocaleDateString('fr-FR')}
-                        </p>
-                        <ul className="space-y-1">
-                          {activities.map((activity, idx) => (
-                            <li key={idx} className="text-xs text-amber-800">
-                              • {activity}
-                            </li>
-                          ))}
-                        </ul>
+                  <div className="p-3 md:p-4">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                        <h3 className="text-sm font-semibold text-amber-900">
+                          Dates déjà utilisées ({usedDates.length})
+                        </h3>
                       </div>
-                    ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {usedDates.map(([date, activities]) => (
+                        <div
+                          key={date}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-200"
+                          style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                            boxShadow: '0 2px 8px -4px rgba(217, 119, 6, 0.3)'
+                          }}
+                        >
+                          <span className="text-xs font-semibold text-amber-900">
+                            {new Date(date + "T12:00:00").toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+                          </span>
+                          <span className="text-xs text-amber-700">
+                            {activities.join(', ')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </aside>
-            )}
-            {/* Conteneur principal pour le formulaire de devis */}
-            <div className="flex-1 min-w-0 mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
+              )}
+              
               <div 
                 className="space-y-6 md:space-y-10 rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-2xl"
                 style={{
@@ -774,7 +773,6 @@ export default function App() {
                   </section>
                 </Suspense>
               </div>
-            </div>
           </div>
         ) : (
           <div
