@@ -34,6 +34,68 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [editItems, setEditItems] = useState([]);
   const [editNotes, setEditNotes] = useState("");
   
+  // État pour le bouton "remonter en haut"
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
+  
+  // États pour les stop sales et push sales
+  const [stopSales, setStopSales] = useState([]);
+  const [pushSales, setPushSales] = useState([]);
+  
+  // Charger les stop sales et push sales depuis Supabase
+  useEffect(() => {
+    async function loadStopSalesAndPushSales() {
+      if (!supabase) return;
+      try {
+        // Charger les stop sales
+        const { data: stopSalesData, error: stopSalesError } = await supabase
+          .from("stop_sales")
+          .select("*")
+          .eq("site_key", SITE_KEY);
+
+        if (!stopSalesError && stopSalesData) {
+          setStopSales(stopSalesData || []);
+        }
+
+        // Charger les push sales
+        const { data: pushSalesData, error: pushSalesError } = await supabase
+          .from("push_sales")
+          .select("*")
+          .eq("site_key", SITE_KEY);
+
+        if (!pushSalesError && pushSalesData) {
+          setPushSales(pushSalesData || []);
+        }
+      } catch (err) {
+        console.error("Erreur lors du chargement des stop sales/push sales:", err);
+      }
+    }
+
+    loadStopSalesAndPushSales();
+    
+    // Recharger toutes les 10 secondes pour avoir les données à jour
+    const interval = setInterval(loadStopSalesAndPushSales, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Écouter le scroll pour afficher/masquer le bouton "remonter en haut"
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
+      setShowScrollToTop(scrollY > 300); // Afficher le bouton après 300px de scroll
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Fonction pour remonter en haut de la page
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  };
+
   // Mémoriser le calcul des tickets remplis pour éviter de le refaire à chaque render
   const quotesWithStatus = useMemo(() => {
     return quotes.map((d) => ({
@@ -474,6 +536,22 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         })}
         {filtered.length === 0 && <p className="text-xs text-slate-400 text-center py-6">Aucun devis trouvé.</p>}
       </div>
+
+      {/* Bouton "Remonter en haut" */}
+      {showScrollToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+          style={{
+            backgroundColor: 'rgba(79, 70, 229, 0.95)',
+            boxShadow: '0 8px 24px -8px rgba(79, 70, 229, 0.6)',
+            backdropFilter: 'blur(12px)'
+          }}
+          title="Remonter en haut"
+        >
+          <span className="text-2xl text-white">↑</span>
+        </button>
+      )}
 
       {/* Modale de paiement */}
       {showPaymentModal && selectedQuote && (
@@ -1067,10 +1145,12 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Date</p>
-                    <TextInput 
-                      type="date" 
-                      value={c.raw.date} 
-                      onChange={(e) => setItem(idx, { date: e.target.value })}
+                    <ColoredDatePicker
+                      value={c.raw.date}
+                      onChange={(date) => setItem(idx, { date })}
+                      activity={c.act}
+                      stopSales={stopSales}
+                      pushSales={pushSales}
                     />
                     {c.act && !c.available && (
                       <p className="text-[10px] text-amber-700 mt-1">⚠️ activité pas dispo ce jour-là</p>
