@@ -697,13 +697,14 @@ export default function App() {
       <main className={mainClassName}>
         {tab === "devis" ? (
           <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
-              {/* Bandeau d'alerte pour les dates utilisées */}
+              {/* Bandeau sticky pour les dates utilisées - reste visible pendant le scroll */}
               {usedDates.length > 0 && (
                 <div 
-                  className="mb-4 md:mb-6 rounded-xl border border-amber-200/50 backdrop-blur-sm"
+                  className="sticky top-2 z-40 mb-4 md:mb-6 rounded-xl border border-amber-200/50 backdrop-blur-md"
                   style={{
-                    backgroundColor: 'rgba(255, 251, 235, 0.95)',
-                    boxShadow: '0 4px 20px -8px rgba(180, 83, 9, 0.4)'
+                    backgroundColor: 'rgba(255, 251, 235, 0.98)',
+                    boxShadow: '0 4px 20px -8px rgba(180, 83, 9, 0.4)',
+                    backdropFilter: 'blur(12px)'
                   }}
                 >
                   <div className="p-3 md:p-4">
@@ -715,20 +716,20 @@ export default function App() {
                         </h3>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto scrollbar-thin-amber" style={{ scrollbarWidth: 'thin', scrollbarColor: '#fcd34d #fef3c7' }}>
                       {usedDates.map(([date, activities]) => (
                         <div
                           key={date}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-200"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-200 flex-shrink-0"
                           style={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
                             boxShadow: '0 2px 8px -4px rgba(217, 119, 6, 0.3)'
                           }}
                         >
-                          <span className="text-xs font-semibold text-amber-900">
+                          <span className="text-xs font-semibold text-amber-900 whitespace-nowrap">
                             {new Date(date + "T12:00:00").toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                           </span>
-                          <span className="text-xs text-amber-700">
+                          <span className="text-xs text-amber-700 truncate max-w-[200px]" title={activities.join(', ')}>
                             {activities.join(', ')}
                           </span>
                         </div>
