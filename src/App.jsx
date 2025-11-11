@@ -699,7 +699,7 @@ export default function App() {
           <div className="flex items-start gap-4 lg:gap-6">
             {/* Modale des dates utilisées - sur le côté gauche, suit le scroll */}
             {usedDates.length > 0 && (
-              <aside className="hidden lg:block w-72 flex-shrink-0 self-start pl-4">
+              <aside className="hidden lg:block w-72 flex-shrink-0 pl-4">
                 <div 
                   className="backdrop-blur-sm border border-amber-200 rounded-2xl p-4 md:p-5"
                   style={{
