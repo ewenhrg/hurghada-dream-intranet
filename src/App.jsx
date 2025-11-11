@@ -696,7 +696,7 @@ export default function App() {
       {/* CONTENU CENTRÉ */}
       <main className={mainClassName}>
         {tab === "devis" ? (
-          <div className="flex items-start gap-4 lg:gap-6">
+          <div className="flex gap-4 lg:gap-6">
             {/* Modale des dates utilisées - sur le côté gauche, suit le scroll */}
             {usedDates.length > 0 && (
               <aside className="hidden lg:block w-72 flex-shrink-0 pl-4">
