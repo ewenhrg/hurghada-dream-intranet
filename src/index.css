@@ -70,38 +70,42 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(70% 90% at 20% 5%, rgba(79, 70, 229, 0.3), transparent 60%),
-    radial-gradient(55% 75% at 90% 0%, rgba(14, 165, 233, 0.28), transparent 65%),
-    radial-gradient(65% 80% at 50% 100%, rgba(124, 58, 237, 0.25), transparent 70%);
+    radial-gradient(70% 90% at 20% 5%, rgba(79, 70, 229, 0.25), transparent 60%),
+    radial-gradient(55% 75% at 90% 0%, rgba(14, 165, 233, 0.22), transparent 65%),
+    radial-gradient(65% 80% at 50% 100%, rgba(124, 58, 237, 0.2), transparent 70%);
   z-index: -1;
-  animation: gradientShift 20s ease infinite;
+  will-change: opacity;
 }
 
-@keyframes gradientShift {
-  0%, 100% {
-    opacity: 1;
+/* Désactiver les animations pour les utilisateurs qui préfèrent les réduire */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  50% {
-    opacity: 0.8;
+  
+  body::before {
+    animation: none !important;
   }
 }
 
-/* Animations globales */
+/* Animations globales optimisées */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateX(-20px);
+    transform: translateX(-10px);
   }
   to {
     opacity: 1;
@@ -109,39 +113,13 @@ body::before {
   }
 }
 
+/* Animations désactivées par défaut pour performance - activées uniquement si nécessaire */
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
   }
   50% {
-    opacity: 0.7;
-  }
-}
-
-@keyframes glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(79, 70, 229, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(79, 70, 229, 0.6), 0 0 40px rgba(14, 165, 233, 0.4);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
+    opacity: 0.85;
   }
 }
 
@@ -151,7 +129,7 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--hd-text);
   font-weight: 600;
   line-height: 1.2;
-  animation: fadeIn 0.6s ease-out;
+  /* Animation désactivée par défaut pour performance */
 }
 
 h1 {
@@ -198,38 +176,15 @@ button {
   background: var(--hd-surface);
   border: 1px solid var(--hd-border);
   border-radius: 1.25rem;
-  box-shadow: 
-    0 24px 60px -30px rgba(15, 23, 42, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-  backdrop-filter: blur(20px);
+  box-shadow: 0 24px 60px -30px rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(18px);
   transition: 
-    transform var(--hd-transition-base),
-    box-shadow var(--hd-transition-base),
+    transform var(--hd-transition-fast),
+    box-shadow var(--hd-transition-fast),
     border-color var(--hd-transition-fast);
   color: var(--hd-text);
-  animation: fadeIn 0.5s ease-out;
   position: relative;
-  overflow: hidden;
-}
-
-.hd-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
-  transition: left 0.5s ease;
-}
-
-.hd-card:hover::before {
-  left: 100%;
+  will-change: transform;
 }
 
 .hd-card p,
@@ -240,11 +195,8 @@ button {
 }
 
 .hd-card:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 
-    0 32px 80px -28px rgba(79, 70, 229, 0.5),
-    0 0 0 1px rgba(79, 70, 229, 0.2) inset,
-    0 0 40px rgba(79, 70, 229, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 28px 70px -28px rgba(79, 70, 229, 0.4);
   border-color: var(--hd-border-hover);
 }
 
@@ -261,37 +213,24 @@ button {
   padding: 1px;
   background: linear-gradient(
     135deg,
-    rgba(79, 70, 229, 0.65),
-    rgba(124, 58, 237, 0.55),
-    rgba(14, 165, 233, 0.5)
+    rgba(79, 70, 229, 0.55),
+    rgba(14, 165, 233, 0.45)
   );
-  background-size: 200% 200%;
-  animation: gradientBorder 3s ease infinite;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
-  transition: opacity var(--hd-transition-base);
+  transition: opacity var(--hd-transition-fast);
 }
 
 .hd-border-gradient:hover::before {
   opacity: 1;
   background: linear-gradient(
     135deg,
-    rgba(79, 70, 229, 0.8),
-    rgba(124, 58, 237, 0.7),
-    rgba(14, 165, 233, 0.65)
+    rgba(79, 70, 229, 0.7),
+    rgba(14, 165, 233, 0.6)
   );
-}
-
-@keyframes gradientBorder {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
 }
 
 .glass-nav {
@@ -307,89 +246,89 @@ button {
   gap: 0.35rem;
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(14, 165, 233, 0.18));
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(14, 165, 233, 0.14));
   color: var(--hd-text-inverse);
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  box-shadow: 0 4px 12px -4px rgba(79, 70, 229, 0.3);
-  transition: all var(--hd-transition-fast);
-  animation: fadeIn 0.4s ease-out;
+  box-shadow: 0 2px 8px -2px rgba(79, 70, 229, 0.25);
+  transition: transform var(--hd-transition-fast), box-shadow var(--hd-transition-fast);
+  will-change: transform;
 }
 
 .badge-soft:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 6px 16px -4px rgba(79, 70, 229, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.35);
 }
 
 .tag-accent {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(56, 189, 248, 0.15));
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(56, 189, 248, 0.12));
   color: var(--hd-accent-light);
-  border: 1px solid rgba(14, 165, 233, 0.3);
-  box-shadow: 0 2px 8px -2px rgba(14, 165, 233, 0.25);
-  transition: all var(--hd-transition-fast);
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  box-shadow: 0 1px 4px -2px rgba(14, 165, 233, 0.2);
+  transition: transform var(--hd-transition-fast), box-shadow var(--hd-transition-fast);
+  will-change: transform;
 }
 
 .tag-accent:hover {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(56, 189, 248, 0.22));
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px -2px rgba(14, 165, 233, 0.35);
+  box-shadow: 0 2px 8px -2px rgba(14, 165, 233, 0.3);
+}
+
+.tag-success,
+.tag-warning,
+.tag-danger,
+.tag-info {
+  transition: transform var(--hd-transition-fast), box-shadow var(--hd-transition-fast);
+  will-change: transform;
 }
 
 .tag-success {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(52, 211, 153, 0.16));
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(52, 211, 153, 0.12));
   color: var(--hd-success-strong);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  box-shadow: 0 2px 8px -2px rgba(16, 185, 129, 0.25);
-  transition: all var(--hd-transition-fast);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 1px 4px -2px rgba(16, 185, 129, 0.2);
 }
 
 .tag-success:hover {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(52, 211, 153, 0.24));
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 2px 8px -2px rgba(16, 185, 129, 0.3);
 }
 
 .tag-warning {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.24), rgba(251, 191, 36, 0.2));
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(251, 191, 36, 0.15));
   color: var(--hd-warning-strong);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  box-shadow: 0 2px 8px -2px rgba(245, 158, 11, 0.3);
-  transition: all var(--hd-transition-fast);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 1px 4px -2px rgba(245, 158, 11, 0.25);
 }
 
 .tag-warning:hover {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.32), rgba(251, 191, 36, 0.28));
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px -2px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 2px 8px -2px rgba(245, 158, 11, 0.35);
 }
 
 .tag-danger {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.24), rgba(248, 113, 113, 0.2));
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(248, 113, 113, 0.15));
   color: var(--hd-danger-strong);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  box-shadow: 0 2px 8px -2px rgba(239, 68, 68, 0.3);
-  transition: all var(--hd-transition-fast);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  box-shadow: 0 1px 4px -2px rgba(239, 68, 68, 0.25);
 }
 
 .tag-danger:hover {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.32), rgba(248, 113, 113, 0.28));
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px -2px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 2px 8px -2px rgba(239, 68, 68, 0.35);
 }
 
 .tag-info {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.24), rgba(56, 189, 248, 0.2));
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(56, 189, 248, 0.15));
   color: var(--hd-info-strong);
-  border: 1px solid rgba(14, 165, 233, 0.35);
-  box-shadow: 0 2px 8px -2px rgba(14, 165, 233, 0.3);
-  transition: all var(--hd-transition-fast);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  box-shadow: 0 1px 4px -2px rgba(14, 165, 233, 0.25);
 }
 
 .tag-info:hover {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.32), rgba(56, 189, 248, 0.28));
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px -2px rgba(14, 165, 233, 0.4);
+  box-shadow: 0 2px 8px -2px rgba(14, 165, 233, 0.35);
 }
 
 ::selection {
@@ -413,16 +352,13 @@ select:not([class*="rounded"]) {
 select:not([class*="rounded"]):focus {
   border-color: var(--hd-primary);
   box-shadow: 
-    0 0 0 3px rgba(79, 70, 229, 0.2),
-    0 16px 28px -22px rgba(15, 23, 42, 0.4),
-    0 0 20px rgba(79, 70, 229, 0.15);
-  transform: translateY(-1px);
+    0 0 0 2px rgba(79, 70, 229, 0.2),
+    0 16px 28px -22px rgba(15, 23, 42, 0.4);
 }
 
 select:not([class*="rounded"]):hover {
   border-color: var(--hd-border-hover);
   box-shadow: 0 14px 26px -20px rgba(15, 23, 42, 0.35);
-  transform: translateY(-1px);
 }
 
 ::-webkit-scrollbar {
@@ -580,37 +516,50 @@ select:not([class*="rounded"]):hover {
   }
 }
 
-/* Classes utilitaires pour animations */
+/* Classes utilitaires pour animations - optimisées */
 .animate-fade-in {
-  animation: fadeIn 0.6s ease-out;
+  animation: fadeIn 0.3s ease-out;
+  will-change: opacity;
 }
 
 .animate-slide-in {
-  animation: slideIn 0.5s ease-out;
+  animation: slideIn 0.3s ease-out;
+  will-change: transform, opacity;
 }
 
+/* Animations désactivées par défaut pour performance */
 .animate-pulse-slow {
-  animation: pulse 3s ease-in-out infinite;
+  /* Désactivé pour performance */
 }
 
 .animate-glow {
-  animation: glow 2s ease-in-out infinite;
+  /* Désactivé pour performance */
 }
 
 .animate-float {
-  animation: float 3s ease-in-out infinite;
+  /* Désactivé pour performance */
 }
 
-/* Effet de chargement shimmer */
+/* Effet de chargement shimmer - simplifié */
+@keyframes shimmer {
+  0% {
+    background-position: -500px 0;
+  }
+  100% {
+    background-position: 500px 0;
+  }
+}
+
 .loading-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.2) 50%,
-    rgba(255, 255, 255, 0.1) 100%
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.08) 100%
   );
-  background-size: 1000px 100%;
-  animation: shimmer 2s infinite;
+  background-size: 500px 100%;
+  animation: shimmer 1.5s infinite;
+  will-change: background-position;
 }
 
 /* Focus visible amélioré */
@@ -620,13 +569,17 @@ select:not([class*="rounded"]):hover {
   border-radius: 4px;
 }
 
-/* Transitions globales pour les éléments interactifs */
+/* Transitions globales optimisées pour les éléments interactifs */
 button, a, input, select, textarea {
-  transition: all var(--hd-transition-fast);
+  transition: transform var(--hd-transition-fast), opacity var(--hd-transition-fast), box-shadow var(--hd-transition-fast);
+}
+
+button:not(:disabled) {
+  will-change: transform;
 }
 
 button:not(:disabled):hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 button:not(:disabled):active {
