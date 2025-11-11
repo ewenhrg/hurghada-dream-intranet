@@ -334,11 +334,8 @@ export function SituationPage({ activities = [], user }) {
   });
   const [newHotel, setNewHotel] = useState("");
   
-  // État pour stocker les lignes avec marina cochée
-  const [rowsWithMarina, setRowsWithMarina] = useState(() => {
-    const saved = loadLS("hd_rows_with_marina", []);
-    return new Set(saved);
-  });
+  // État pour stocker les lignes avec marina cochée (non sauvegardé, réinitialisé à chaque import)
+  const [rowsWithMarina, setRowsWithMarina] = useState(() => new Set());
   
   // État pour l'édition des cellules du tableau
   const [editingCell, setEditingCell] = useState(null); // { rowId: string, field: string }
@@ -498,10 +495,7 @@ export function SituationPage({ activities = [], user }) {
     };
   }, [exteriorHotels, settingsLoaded, isSupabaseConfigured]);
   
-  // Sauvegarder les lignes avec marina cochée
-  useEffect(() => {
-    saveLS("hd_rows_with_marina", Array.from(rowsWithMarina));
-  }, [rowsWithMarina]);
+  // Les cases marina ne sont plus sauvegardées - elles sont réinitialisées à chaque import
 
   // Ouvrir la configuration pour une activité
   const handleOpenConfig = (activityName) => {
@@ -873,6 +867,7 @@ export function SituationPage({ activities = [], user }) {
         }
         
         setExcelData(filteredData);
+        setRowsWithMarina(new Set()); // Réinitialiser toutes les cases marina à chaque nouvel import
         setShowPreview(false);
         setSendLog([]);
         
