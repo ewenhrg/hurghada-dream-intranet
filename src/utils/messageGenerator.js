@@ -49,6 +49,27 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
   
   // Si un template personnalisé existe, l'utiliser
   if (template && template.trim() !== "") {
+    // Déterminer le message RDV selon l'hôtel (à mettre en haut)
+    let rdvMessageTop = "";
+    if (data.hotel) {
+      // Si la case marina est cochée pour cette ligne, utiliser le message marina
+      if (rowsWithMarina.has(data.id)) {
+        rdvMessageTop = "📍 Rendez-vous directement à la marina de votre hôtel.\n\n";
+      } else {
+        const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
+        
+        if (hotelInfo) {
+          if (hotelInfo.hasBeachBoats) {
+            rdvMessageTop = `📍 Rendez-vous directement à la marina du ${data.hotel}.\n\n`;
+          } else {
+            rdvMessageTop = "📍 Rendez-vous à l'extérieur de l'hôtel.\n\n";
+          }
+        } else {
+          rdvMessageTop = "📍 Rendez-vous devant la réception de l'hôtel.\n\n";
+        }
+      }
+    }
+    
     // Remplacer les variables dans le template
     let message = template
       .replace(/\{name\}/g, data.name || "Client")
@@ -61,34 +82,33 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
       .replace(/\{children\}/g, String(data.children || 0))
       .replace(/\{infants\}/g, String(data.infants || 0));
     
-    // Ajouter le message RDV selon l'hôtel
-    if (data.hotel) {
-      // Si la case marina est cochée pour cette ligne, utiliser le message marina
-      if (rowsWithMarina.has(data.id)) {
-        message += "\n\n📍 Rendez-vous directement à la marina de votre hôtel.";
-      } else {
-        const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
-        let rdvMessage;
-        
-        if (hotelInfo) {
-          if (hotelInfo.hasBeachBoats) {
-            rdvMessage = `📍 Rendez-vous directement à la marina du ${data.hotel}.`;
-          } else {
-            rdvMessage = "📍 Rendez-vous à l'extérieur de l'hôtel.";
-          }
-        } else {
-          rdvMessage = "📍 Rendez-vous devant la réception de l'hôtel.";
-        }
-        
-        message += "\n\n" + rdvMessage;
-      }
-    }
-    
-    return message;
+    // Ajouter le message RDV en haut du message
+    return rdvMessageTop + message;
   }
   
   // Sinon, utiliser le template par défaut
   const parts = [];
+
+  // Déterminer le message RDV selon l'hôtel (à mettre en haut)
+  if (data.hotel) {
+    // Si la case marina est cochée pour cette ligne, utiliser le message marina
+    if (rowsWithMarina.has(data.id)) {
+      parts.push("📍 Rendez-vous directement à la marina de votre hôtel.");
+    } else {
+      const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
+      
+      if (hotelInfo) {
+        if (hotelInfo.hasBeachBoats) {
+          parts.push(`📍 Rendez-vous directement à la marina du ${data.hotel}.`);
+        } else {
+          parts.push("📍 Rendez-vous à l'extérieur de l'hôtel.");
+        }
+      } else {
+        parts.push("📍 Rendez-vous devant la réception de l'hôtel.");
+      }
+    }
+    parts.push("");
+  }
 
   parts.push(`Bonjour ${data.name || "Client"},`);
   parts.push("");
@@ -113,31 +133,6 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
 
   parts.push("");
   parts.push("Merci de vous présenter à l'heure indiquée.");
-  
-  // Ajouter le message RDV selon l'hôtel
-  if (data.hotel) {
-    // Si la case marina est cochée pour cette ligne, utiliser le message marina
-    if (rowsWithMarina.has(data.id)) {
-      parts.push("");
-      parts.push("📍 Rendez-vous directement à la marina de votre hôtel.");
-    } else {
-      const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
-      let rdvMessage;
-      
-      if (hotelInfo) {
-        if (hotelInfo.hasBeachBoats) {
-          rdvMessage = `📍 Rendez-vous directement à la marina du ${data.hotel}.`;
-        } else {
-          rdvMessage = "📍 Rendez-vous à l'extérieur de l'hôtel.";
-        }
-      } else {
-        rdvMessage = "📍 Rendez-vous devant la réception de l'hôtel.";
-      }
-      
-      parts.push("");
-      parts.push(rdvMessage);
-    }
-  }
   
   parts.push("");
   parts.push("Cordialement,");
