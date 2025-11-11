@@ -430,56 +430,56 @@ export function TicketPage({ quotes, setQuotes, user }) {
       </div>
 
       {/* Tableau */}
-      <div style={{ width: '100%', overflowX: 'visible' }}>
-        <table className="border-collapse bg-white" style={{ border: '1px solid #ddd', width: '100%', tableLayout: 'auto' }}>
+      <div className="overflow-x-auto" style={{ width: '100%' }}>
+        <table className="border-collapse bg-white" style={{ border: '1px solid #ddd', width: '100%', tableLayout: 'fixed' }}>
           <thead>
             <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #333' }}>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '30px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '2%' }}>
                 {/* Colonne pour les logos modifiés/annulés */}
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '70px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '5%' }}>
                 Ticket
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '90px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '6%' }}>
                 Date
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '140px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '10%' }}>
                 Prénom + Téléphone
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '120px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '8%' }}>
                 Hôtel
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '80px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '5%' }}>
                 Chambre
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', minWidth: '60px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '4%' }}>
                 Adultes
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', minWidth: '60px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '4%' }}>
                 Enfants
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', minWidth: '60px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '4%' }}>
                 Bébés
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '150px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '12%' }}>
                 Activité
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '120px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '8%' }}>
                 Heure prise en charge
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '120px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '8%' }}>
                 Commentaire
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '11px', minWidth: '90px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '11px', width: '6%' }}>
                 Prix activité
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '11px', minWidth: '90px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '11px', width: '6%' }}>
                 Prix transfert
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '120px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '8%' }}>
                 Méthode de paiement
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '100px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '6%' }}>
                 Vendeur
               </th>
             </tr>
@@ -521,7 +521,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                       {!row.isEmpty && row.isModified && '🔄'}
                       {!row.isEmpty && row.isCancelled && '❌'}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.isEmpty ? row.ticketNum : row.ticket}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
@@ -551,7 +551,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "clientName" ? (
                         <input
                           type="text"
@@ -575,7 +575,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "hotel" ? (
                         <input
                           type="text"
@@ -599,7 +599,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "room" ? (
                         <input
                           type="text"
@@ -695,7 +695,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "activityName" ? (
                         <input
                           type="text"
@@ -719,7 +719,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "pickupTime" ? (
                         <input
                           type="text"
@@ -743,7 +743,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "comment" ? (
                         <input
                           type="text"
@@ -767,16 +767,16 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontSize: '11px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.isEmpty ? "" : (row.activityPrice ? `${Math.round(row.activityPrice)}€` : "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontSize: '11px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.isEmpty ? "" : (row.transferTotal ? `${Math.round(row.transferTotal)}€` : "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.isEmpty ? "" : (row.paymentMethod || "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.isEmpty ? "" : (row.sellerName || "")}
                     </td>
                   </tr>
