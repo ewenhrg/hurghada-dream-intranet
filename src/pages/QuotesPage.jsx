@@ -7,6 +7,242 @@ import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
 
+// Composant calendrier personnalisé avec jours colorés
+function ColoredDatePicker({ value, onChange, activity, stopSales, pushSales }) {
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const date = value ? new Date(value + "T12:00:00") : new Date();
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  });
+
+  // Mettre à jour le mois affiché quand la valeur change
+  useEffect(() => {
+    if (value) {
+      const date = new Date(value + "T12:00:00");
+      setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    }
+  }, [value]);
+
+  const getDayStatus = useCallback((date) => {
+    if (!activity) return null; // Pas d'activité sélectionnée
+    
+    const dateStr = date.toISOString().slice(0, 10);
+    const weekday = date.getDay();
+    const baseAvailable = activity.availableDays?.[weekday] === true;
+    
+    // Vérifier stop sales et push sales
+    const isStopSale = stopSales.some(s => s.activity_id === activity.id && s.date === dateStr);
+    const isPushSale = pushSales.some(p => p.activity_id === activity.id && p.date === dateStr);
+    
+    if (isStopSale) return 'stop-sale';
+    if (isPushSale) return 'push-sale';
+    if (baseAvailable) return 'available';
+    return 'unavailable';
+  }, [activity, stopSales, pushSales]);
+
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    
+    // Jours du mois précédent (pour compléter la première semaine)
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month - 1, prevMonthLastDay - i),
+        isCurrentMonth: false
+      });
+    }
+    
+    // Jours du mois actuel
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push({
+        date: new Date(year, month, day),
+        isCurrentMonth: true
+      });
+    }
+    
+    // Jours du mois suivant (pour compléter la dernière semaine)
+    const remainingDays = 42 - days.length; // 6 semaines * 7 jours
+    for (let day = 1; day <= remainingDays; day++) {
+      days.push({
+        date: new Date(year, month + 1, day),
+        isCurrentMonth: false
+      });
+    }
+    
+    return days;
+  };
+
+  const days = useMemo(() => getDaysInMonth(currentMonth), [currentMonth]);
+  const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+  const dayNames = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+
+  const handleDateClick = (date) => {
+    if (!activity) {
+      toast.warning("Veuillez d'abord sélectionner une activité");
+      return;
+    }
+    const dateStr = date.toISOString().slice(0, 10);
+    onChange(dateStr);
+    setShowCalendar(false);
+  };
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
+  const getDayClassName = (day, status) => {
+    const baseClasses = "w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg cursor-pointer transition-all hover:scale-110 ";
+    const today = new Date();
+    const isToday = day.date.toDateString() === today.toDateString();
+    const isSelected = value && day.date.toISOString().slice(0, 10) === value;
+    
+    if (!day.isCurrentMonth) {
+      return baseClasses + "text-gray-300 cursor-not-allowed";
+    }
+    
+    let colorClasses = "";
+    switch (status) {
+      case 'available':
+        colorClasses = "bg-green-100 text-green-800 border-2 border-green-400 hover:bg-green-200";
+        break;
+      case 'unavailable':
+        colorClasses = "bg-red-100 text-red-800 border-2 border-red-400 hover:bg-red-200";
+        break;
+      case 'stop-sale':
+        colorClasses = "bg-red-500 text-white border-2 border-red-700 hover:bg-red-600 animate-pulse";
+        break;
+      case 'push-sale':
+        colorClasses = "bg-green-500 text-white border-2 border-green-700 hover:bg-green-600";
+        break;
+      default:
+        colorClasses = "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200";
+    }
+    
+    if (isSelected) {
+      colorClasses += " ring-4 ring-blue-400 ring-offset-2";
+    }
+    
+    if (isToday) {
+      colorClasses += " font-bold";
+    }
+    
+    return baseClasses + colorClasses;
+  };
+
+  return (
+    <div className="relative">
+      <div className="flex gap-2">
+        <TextInput
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1"
+        />
+        {activity && (
+          <button
+            type="button"
+            onClick={() => setShowCalendar(!showCalendar)}
+            className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-semibold"
+            title="Ouvrir le calendrier avec disponibilités"
+          >
+            📅
+          </button>
+        )}
+      </div>
+      
+      {showCalendar && activity && (
+        <>
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setShowCalendar(false)}
+          />
+          <div className="absolute z-50 mt-2 bg-white rounded-xl shadow-2xl border-2 border-gray-200 p-4 w-[320px]">
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={prevMonth}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                ‹
+              </button>
+              <h3 className="text-lg font-bold text-gray-800">
+                {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+              </h3>
+              <button
+                onClick={nextMonth}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                ›
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {dayNames.map(day => (
+                <div key={day} className="text-center text-xs font-semibold text-gray-600 py-1">
+                  {day}
+                </div>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1">
+              {days.map((day, idx) => {
+                const status = getDayStatus(day.date);
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => day.isCurrentMonth && handleDateClick(day.date)}
+                    className={getDayClassName(day, status)}
+                    disabled={!day.isCurrentMonth}
+                    title={
+                      !day.isCurrentMonth ? "" :
+                      status === 'available' ? "Disponible" :
+                      status === 'unavailable' ? "Non disponible" :
+                      status === 'stop-sale' ? "STOP SALE" :
+                      status === 'push-sale' ? "PUSH SALE" : ""
+                    }
+                  >
+                    {day.date.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-gray-200 space-y-2 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-100 border-2 border-green-400 rounded"></div>
+                <span>Disponible</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-100 border-2 border-red-400 rounded"></div>
+                <span>Non disponible</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-500 border-2 border-red-700 rounded animate-pulse"></div>
+                <span>STOP SALE</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-500 border-2 border-green-700 rounded"></div>
+                <span>PUSH SALE</span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // Composant compact pour afficher les stop sales et push sales
 function StopPushSalesSummary({ stopSales, pushSales, activities }) {
   const [expanded, setExpanded] = useState(false);
@@ -38,33 +274,33 @@ function StopPushSalesSummary({ stopSales, pushSales, activities }) {
   if (totalCount === 0) return null;
 
   return (
-    <div className="bg-gradient-to-r from-red-50 to-green-50 border-2 border-red-200 rounded-xl p-3 shadow-md">
+    <div className="bg-gradient-to-r from-red-50 via-amber-50 to-green-50 border-2 border-red-400 rounded-xl p-4 shadow-lg">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between gap-2 text-left"
+        className="w-full flex items-center justify-between gap-3 text-left hover:opacity-90 transition-opacity"
       >
-        <div className="flex items-center gap-3 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">🛑</span>
+        <div className="flex items-center gap-4 flex-1">
+          <div className="flex items-center gap-2 bg-red-500/10 px-3 py-2 rounded-lg border-2 border-red-400">
+            <span className="text-2xl">🛑</span>
             {stopSales.length > 0 && (
-              <span className="text-xs font-bold bg-red-500 text-white px-2 py-1 rounded-full">
+              <span className="text-sm font-bold bg-red-600 text-white px-3 py-1 rounded-full shadow-md">
                 {stopSales.length}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-lg">✅</span>
+          <div className="flex items-center gap-2 bg-green-500/10 px-3 py-2 rounded-lg border-2 border-green-400">
+            <span className="text-2xl">✅</span>
             {pushSales.length > 0 && (
-              <span className="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">
+              <span className="text-sm font-bold bg-green-600 text-white px-3 py-1 rounded-full shadow-md">
                 {pushSales.length}
               </span>
             )}
           </div>
-          <span className="text-sm font-semibold text-gray-700">
+          <span className="text-base font-bold text-gray-800">
             {totalCount} activité{totalCount > 1 ? "s" : ""} en Stop/Push Sale
           </span>
         </div>
-        <span className="text-gray-500 text-sm">
+        <span className="text-gray-600 text-sm font-semibold bg-white/80 px-3 py-2 rounded-lg border border-gray-300">
           {expanded ? "▼ Réduire" : "▶ Voir les détails"}
         </span>
       </button>
@@ -74,24 +310,24 @@ function StopPushSalesSummary({ stopSales, pushSales, activities }) {
           {/* Stop Sales */}
           {stopSales.length > 0 && (
             <div>
-              <h4 className="text-xs font-bold text-red-900 mb-2 flex items-center gap-2">
-                <span>🛑</span> Stop Sales ({stopSales.length})
+              <h4 className="text-base font-bold text-red-900 mb-3 flex items-center gap-2 bg-red-100 px-3 py-2 rounded-lg border-2 border-red-400">
+                <span className="text-xl">🛑</span> Stop Sales ({stopSales.length})
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto">
                 {Object.entries(stopSalesByDate)
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([date, stops]) => (
-                    <div key={date} className="bg-white/90 rounded-lg p-2 border border-red-200">
-                      <p className="text-xs font-semibold text-red-900 mb-1">
+                    <div key={date} className="bg-white rounded-lg p-3 border-2 border-red-300 shadow-md hover:shadow-lg transition-shadow">
+                      <p className="text-sm font-bold text-red-900 mb-2">
                         {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
                           weekday: "short",
                           day: "numeric",
                           month: "short",
                         })}
                       </p>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         {stops.map((stop, idx) => (
-                          <p key={idx} className="text-xs text-red-700 truncate" title={stop.activityName}>
+                          <p key={idx} className="text-xs font-medium text-red-800 truncate" title={stop.activityName}>
                             • {stop.activityName}
                           </p>
                         ))}
@@ -105,24 +341,24 @@ function StopPushSalesSummary({ stopSales, pushSales, activities }) {
           {/* Push Sales */}
           {pushSales.length > 0 && (
             <div>
-              <h4 className="text-xs font-bold text-green-900 mb-2 flex items-center gap-2">
-                <span>✅</span> Push Sales ({pushSales.length})
+              <h4 className="text-base font-bold text-green-900 mb-3 flex items-center gap-2 bg-green-100 px-3 py-2 rounded-lg border-2 border-green-400">
+                <span className="text-xl">✅</span> Push Sales ({pushSales.length})
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto">
                 {Object.entries(pushSalesByDate)
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([date, pushes]) => (
-                    <div key={date} className="bg-white/90 rounded-lg p-2 border border-green-200">
-                      <p className="text-xs font-semibold text-green-900 mb-1">
+                    <div key={date} className="bg-white rounded-lg p-3 border-2 border-green-300 shadow-md hover:shadow-lg transition-shadow">
+                      <p className="text-sm font-bold text-green-900 mb-2">
                         {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
                           weekday: "short",
                           day: "numeric",
                           month: "short",
                         })}
                       </p>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         {pushes.map((push, idx) => (
-                          <p key={idx} className="text-xs text-green-700 truncate" title={push.activityName}>
+                          <p key={idx} className="text-xs font-medium text-green-800 truncate" title={push.activityName}>
                             • {push.activityName}
                           </p>
                         ))}
@@ -870,21 +1106,57 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-2">Date</p>
-                  <TextInput type="date" value={c.raw.date} onChange={(e) => setItem(idx, { date: e.target.value })} />
+                  <ColoredDatePicker
+                    value={c.raw.date}
+                    onChange={(date) => setItem(idx, { date })}
+                    activity={c.act}
+                    stopSales={stopSales}
+                    pushSales={pushSales}
+                  />
                   {c.act && c.isStopSale && (
-                    <p className="text-[10px] text-red-700 font-semibold mt-2">
-                      🛑 STOP SALE : Cette activité est bloquée à la vente pour cette date
-                    </p>
+                    <div className="mt-3 p-3 rounded-lg border-2 border-red-500 bg-gradient-to-r from-red-50 to-red-100/80 shadow-md animate-pulse">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">🛑</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-red-900 leading-tight">
+                            STOP SALE
+                          </p>
+                          <p className="text-xs text-red-800 mt-0.5">
+                            Cette activité est bloquée à la vente pour cette date
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )}
                   {c.act && c.isPushSale && (
-                    <p className="text-[10px] text-green-700 font-semibold mt-2">
-                      ✅ PUSH SALE : Cette activité est ouverte exceptionnellement pour cette date
-                    </p>
+                    <div className="mt-3 p-3 rounded-lg border-2 border-green-500 bg-gradient-to-r from-green-50 to-emerald-50 shadow-md">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">✅</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-green-900 leading-tight">
+                            PUSH SALE
+                          </p>
+                          <p className="text-xs text-green-800 mt-0.5">
+                            Cette activité est ouverte exceptionnellement pour cette date
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )}
                   {c.act && !c.isStopSale && !c.isPushSale && !c.baseAvailable && (
-                    <p className="text-[10px] text-amber-700 mt-2">
-                      ⚠️ activité pas dispo ce jour-là (on peut quand même créer)
-                    </p>
+                    <div className="mt-3 p-3 rounded-lg border-2 border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 shadow-md">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">⚠️</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-amber-900 leading-tight">
+                            Activité non disponible
+                          </p>
+                          <p className="text-xs text-amber-800 mt-0.5">
+                            Pas disponible ce jour-là (on peut quand même créer)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
                 <div>
@@ -1043,8 +1315,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ) : c.act && (c.act.name.toLowerCase().includes("hurghada") && (c.act.name.toLowerCase().includes("le caire") || c.act.name.toLowerCase().includes("louxor"))) ? (
                 <>
                   {/* Message d'avertissement */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm font-semibold text-amber-900">⚠️ Attention : Maximum 7 personnes</p>
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-400 rounded-lg p-4 mb-4 shadow-md">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">⚠️</span>
+                      <p className="text-base font-bold text-amber-900">Attention : Maximum 7 personnes</p>
+                    </div>
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
@@ -1108,8 +1383,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ) : c.act && c.act.name.toLowerCase().includes("soma bay") && c.act.name.toLowerCase().includes("aeroport") && c.act.name.toLowerCase().includes("7") ? (
                 <>
                   {/* Message d'avertissement */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm font-semibold text-amber-900">⚠️ Attention : Maximum 7 personnes</p>
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-400 rounded-lg p-4 mb-4 shadow-md">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">⚠️</span>
+                      <p className="text-base font-bold text-amber-900">Attention : Maximum 7 personnes</p>
+                    </div>
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
@@ -1173,8 +1451,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ) : c.act && c.act.name.toLowerCase().includes("soma bay") && c.act.name.toLowerCase().includes("aeroport") && c.act.name.toLowerCase().includes("4") ? (
                 <>
                   {/* Message d'avertissement */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm font-semibold text-amber-900">⚠️ Attention : Maximum 4 personnes</p>
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-400 rounded-lg p-4 mb-4 shadow-md">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">⚠️</span>
+                      <p className="text-base font-bold text-amber-900">Attention : Maximum 4 personnes</p>
+                    </div>
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
@@ -1238,8 +1519,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ) : c.act && c.act.name.toLowerCase().includes("hors zone") && (c.act.name.toLowerCase().includes("aeroport") || c.act.name.toLowerCase().includes("aerport")) && c.act.name.toLowerCase().includes("7") ? (
                 <>
                   {/* Message d'avertissement */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm font-semibold text-amber-900">⚠️ Attention : Maximum 7 personnes</p>
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-400 rounded-lg p-4 mb-4 shadow-md">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">⚠️</span>
+                      <p className="text-base font-bold text-amber-900">Attention : Maximum 7 personnes</p>
+                    </div>
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
@@ -1303,8 +1587,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ) : c.act && c.act.name.toLowerCase().includes("hors zone") && (c.act.name.toLowerCase().includes("aeroport") || c.act.name.toLowerCase().includes("aerport")) && c.act.name.toLowerCase().includes("4") ? (
                 <>
                   {/* Message d'avertissement */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm font-semibold text-amber-900">⚠️ Attention : Maximum 4 personnes</p>
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-400 rounded-lg p-4 mb-4 shadow-md">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">⚠️</span>
+                      <p className="text-base font-bold text-amber-900">Attention : Maximum 4 personnes</p>
+                    </div>
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
@@ -1368,8 +1655,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ) : c.act && c.act.name.toLowerCase().includes("aeroport") && c.act.name.toLowerCase().includes("7") ? (
                 <>
                   {/* Message d'avertissement */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm font-semibold text-amber-900">⚠️ Attention : Maximum 7 personnes</p>
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-400 rounded-lg p-4 mb-4 shadow-md">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">⚠️</span>
+                      <p className="text-base font-bold text-amber-900">Attention : Maximum 7 personnes</p>
+                    </div>
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
@@ -1433,8 +1723,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ) : c.act && c.act.name.toLowerCase().includes("soma bay") && (c.act.name.toLowerCase().includes("aeroport") || c.act.name.toLowerCase().includes("aerport")) && c.act.name.toLowerCase().includes("4") ? (
                 <>
                   {/* Message d'avertissement */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm font-semibold text-amber-900">⚠️ Attention : Maximum 4 personnes</p>
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-400 rounded-lg p-4 mb-4 shadow-md">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">⚠️</span>
+                      <p className="text-base font-bold text-amber-900">Attention : Maximum 4 personnes</p>
+                    </div>
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
@@ -1498,8 +1791,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ) : c.act && c.act.name.toLowerCase().includes("aeroport") && c.act.name.toLowerCase().includes("4") ? (
                 <>
                   {/* Message d'avertissement */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm font-semibold text-amber-900">⚠️ Attention : Maximum 4 personnes</p>
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-400 rounded-lg p-4 mb-4 shadow-md">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">⚠️</span>
+                      <p className="text-base font-bold text-amber-900">Attention : Maximum 4 personnes</p>
+                    </div>
                   </div>
                   
                   {/* Cases Aller simple et Aller retour */}
