@@ -430,56 +430,56 @@ export function TicketPage({ quotes, setQuotes, user }) {
       </div>
 
       {/* Tableau */}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse bg-white" style={{ border: '1px solid #ddd' }}>
+      <div style={{ width: '100%', overflowX: 'visible' }}>
+        <table className="border-collapse bg-white" style={{ border: '1px solid #ddd', width: '100%', tableLayout: 'auto' }}>
           <thead>
             <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #333' }}>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontWeight: 'bold', fontSize: '12px', width: '30px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '30px' }}>
                 {/* Colonne pour les logos modifiés/annulés */}
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '70px' }}>
                 Ticket
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '90px' }}>
                 Date
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '140px' }}>
                 Prénom + Téléphone
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '120px' }}>
                 Hôtel
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '80px' }}>
                 Chambre
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', minWidth: '60px' }}>
                 Adultes
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', minWidth: '60px' }}>
                 Enfants
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', minWidth: '60px' }}>
                 Bébés
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '150px' }}>
                 Activité
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '120px' }}>
                 Heure prise en charge
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '120px' }}>
                 Commentaire
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '11px', minWidth: '90px' }}>
                 Prix activité
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '11px', minWidth: '90px' }}>
                 Prix transfert
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '120px' }}>
                 Méthode de paiement
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', minWidth: '100px' }}>
                 Vendeur
               </th>
             </tr>
@@ -487,7 +487,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
           <tbody>
             {currentPageData.rows.length === 0 ? (
               <tr>
-                <td colSpan="16" style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
+                <td colSpan="16" style={{ padding: '12px', textAlign: 'center', color: '#666', fontSize: '11px' }}>
                   Aucun ticket disponible. Les tickets apparaîtront automatiquement lorsque tous les numéros de ticket d'un devis seront renseignés.
                 </td>
               </tr>
@@ -507,9 +507,9 @@ export function TicketPage({ quotes, setQuotes, user }) {
                     <td 
                       style={{ 
                         border: '1px solid #ddd', 
-                        padding: '8px', 
+                        padding: '6px', 
                         textAlign: 'center',
-                        fontSize: '16px',
+                        fontSize: '14px',
                         userSelect: 'none',
                         WebkitUserSelect: 'none',
                         MozUserSelect: 'none',
@@ -521,10 +521,10 @@ export function TicketPage({ quotes, setQuotes, user }) {
                       {!row.isEmpty && row.isModified && '🔄'}
                       {!row.isEmpty && row.isCancelled && '❌'}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
                       {row.isEmpty ? row.ticketNum : row.ticket}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "date" ? (
                         <input
                           type="date"
@@ -537,7 +537,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
                           }}
-                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          style={{ width: '100%', padding: '3px', fontSize: '11px', border: '1px solid #2563eb', borderRadius: '4px' }}
                           autoFocus
                         />
                       ) : (
@@ -551,7 +551,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "clientName" ? (
                         <input
                           type="text"
@@ -561,7 +561,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
                           }}
-                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          style={{ width: '100%', padding: '3px', fontSize: '11px', border: '1px solid #2563eb', borderRadius: '4px' }}
                           autoFocus
                         />
                       ) : (
@@ -575,7 +575,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "hotel" ? (
                         <input
                           type="text"
@@ -585,7 +585,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
                           }}
-                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          style={{ width: '100%', padding: '3px', fontSize: '11px', border: '1px solid #2563eb', borderRadius: '4px' }}
                           autoFocus
                         />
                       ) : (
@@ -599,7 +599,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "room" ? (
                         <input
                           type="text"
@@ -609,7 +609,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
                           }}
-                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          style={{ width: '100%', padding: '3px', fontSize: '11px', border: '1px solid #2563eb', borderRadius: '4px' }}
                           autoFocus
                         />
                       ) : (
@@ -623,7 +623,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontSize: '11px' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "adults" ? (
                         <input
                           type="number"
@@ -633,7 +633,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
                           }}
-                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px', textAlign: 'center' }}
+                          style={{ width: '100%', padding: '3px', fontSize: '11px', border: '1px solid #2563eb', borderRadius: '4px', textAlign: 'center' }}
                           autoFocus
                         />
                       ) : (
@@ -647,7 +647,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontSize: '11px' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "children" ? (
                         <input
                           type="number"
@@ -657,7 +657,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
                           }}
-                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px', textAlign: 'center' }}
+                          style={{ width: '100%', padding: '3px', fontSize: '11px', border: '1px solid #2563eb', borderRadius: '4px', textAlign: 'center' }}
                           autoFocus
                         />
                       ) : (
@@ -671,7 +671,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontSize: '11px' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "babies" ? (
                         <input
                           type="number"
@@ -681,7 +681,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
                           }}
-                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px', textAlign: 'center' }}
+                          style={{ width: '100%', padding: '3px', fontSize: '11px', border: '1px solid #2563eb', borderRadius: '4px', textAlign: 'center' }}
                           autoFocus
                         />
                       ) : (
@@ -695,7 +695,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "activityName" ? (
                         <input
                           type="text"
@@ -705,7 +705,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
                           }}
-                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          style={{ width: '100%', padding: '3px', fontSize: '11px', border: '1px solid #2563eb', borderRadius: '4px' }}
                           autoFocus
                         />
                       ) : (
@@ -719,7 +719,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "pickupTime" ? (
                         <input
                           type="text"
@@ -729,7 +729,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
                           }}
-                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          style={{ width: '100%', padding: '3px', fontSize: '11px', border: '1px solid #2563eb', borderRadius: '4px' }}
                           autoFocus
                         />
                       ) : (
@@ -743,7 +743,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "comment" ? (
                         <input
                           type="text"
@@ -753,7 +753,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
                           }}
-                          style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #2563eb', borderRadius: '4px' }}
+                          style={{ width: '100%', padding: '3px', fontSize: '11px', border: '1px solid #2563eb', borderRadius: '4px' }}
                           autoFocus
                         />
                       ) : (
@@ -767,16 +767,16 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontSize: '11px' }}>
                       {row.isEmpty ? "" : (row.activityPrice ? `${Math.round(row.activityPrice)}€` : "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'right', fontSize: '11px' }}>
                       {row.isEmpty ? "" : (row.transferTotal ? `${Math.round(row.transferTotal)}€` : "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
                       {row.isEmpty ? "" : (row.paymentMethod || "")}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', fontSize: '13px' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
                       {row.isEmpty ? "" : (row.sellerName || "")}
                     </td>
                   </tr>
