@@ -342,9 +342,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       </p>
                     </div>
                     <div className="flex flex-wrap justify-end gap-2">
-                      <GhostBtn
-                        variant="success"
-                        className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-emerald-500 shadow-[0_18px_32px_-18px_rgba(16,185,129,0.55)] ${
+                      <button
+                        className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-emerald-500 shadow-[0_18px_32px_-18px_rgba(16,185,129,0.55)] transition-all duration-200 min-h-[44px] ${
                           allTicketsFilled ? "bg-emerald-600 hover:bg-emerald-700" : "bg-emerald-500 hover:bg-emerald-600"
                         }`}
                         onClick={() => {
@@ -361,9 +360,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         }}
                       >
                         {allTicketsFilled ? "✅ Tickets" : "💰 Payer"}
-                      </GhostBtn>
-                      <GhostBtn
-                        className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-indigo-500 bg-indigo-500 hover:bg-indigo-600 shadow-[0_18px_32px_-18px_rgba(99,102,241,0.5)]"
+                      </button>
+                      <button
+                        className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-indigo-500 bg-indigo-500 hover:bg-indigo-600 shadow-[0_18px_32px_-18px_rgba(99,102,241,0.5)] transition-all duration-200 min-h-[44px]"
                         onClick={() => {
                           const htmlContent = generateQuoteHTML(d);
                           const clientPhone = d.client?.phone || "";
@@ -380,11 +379,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         }}
                       >
                         🖨️ Imprimer
-                      </GhostBtn>
+                      </button>
                       {!allTicketsFilled && (
-                        <GhostBtn
-                          variant="warning"
-                          className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-amber-500 bg-amber-500 hover:bg-amber-600 shadow-[0_18px_32px_-18px_rgba(245,158,11,0.55)]"
+                        <button
+                          className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-amber-500 bg-amber-500 hover:bg-amber-600 shadow-[0_18px_32px_-18px_rgba(245,158,11,0.55)] transition-all duration-200 min-h-[44px]"
                           onClick={() => {
                             setSelectedQuote(d);
                             setEditClient({
@@ -421,12 +419,11 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                           }}
                         >
                           ✏️ Modifier
-                        </GhostBtn>
+                        </button>
                       )}
                       {user?.canDeleteQuote && (
-                        <GhostBtn
-                          variant="danger"
-                          className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-red-500 bg-red-500 hover:bg-red-600 shadow-[0_18px_32px_-18px_rgba(239,68,68,0.55)]"
+                        <button
+                          className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-red-500 bg-red-500 hover:bg-red-600 shadow-[0_18px_32px_-18px_rgba(239,68,68,0.55)] transition-all duration-200 min-h-[44px]"
                           onClick={async () => {
                             const clientInfo = d.client?.name ? `${d.client.name}${d.client?.phone ? ` (${d.client.phone})` : ''}` : 'ce devis';
                             const totalInfo = d.total ? ` (Total: ${Math.round(d.total)}€)` : '';
@@ -466,7 +463,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                           }}
                         >
                           🗑️ Supprimer
-                        </GhostBtn>
+                        </button>
                       )}
                     </div>
                   </div>
