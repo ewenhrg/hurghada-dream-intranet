@@ -114,7 +114,11 @@ function ColoredDatePicker({ value, onChange, activity, stopSales, pushSales }) 
   const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
   const dayNames = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
-  const handleDateClick = (date) => {
+  const handleDateClick = (date, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!activity) {
       toast.warning("Veuillez d'abord sélectionner une activité");
       return;
@@ -218,7 +222,12 @@ function ColoredDatePicker({ value, onChange, activity, stopSales, pushSales }) 
           <div className="absolute z-50 mt-2 bg-white rounded-xl shadow-2xl border-2 border-gray-200 p-4 w-[320px]">
             <div className="flex items-center justify-between mb-4">
               <button
-                onClick={prevMonth}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  prevMonth();
+                }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 ‹
@@ -227,7 +236,12 @@ function ColoredDatePicker({ value, onChange, activity, stopSales, pushSales }) 
                 {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
               </h3>
               <button
-                onClick={nextMonth}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nextMonth();
+                }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 ›
@@ -249,7 +263,13 @@ function ColoredDatePicker({ value, onChange, activity, stopSales, pushSales }) 
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => day.isCurrentMonth && handleDateClick(day.date)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (day.isCurrentMonth) {
+                        handleDateClick(day.date, e);
+                      }
+                    }}
                     className={getDayClassName(day, status)}
                     disabled={!day.isCurrentMonth}
                     title={
