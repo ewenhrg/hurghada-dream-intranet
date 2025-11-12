@@ -333,9 +333,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
+    // Fonction helper pour vérifier si une activité est une plongée
+    const isDivingActivity = (activityName) => {
+      if (!activityName) return false;
+      const nameLower = activityName.toLowerCase();
+      return nameLower.includes('plongée') || nameLower.includes('plongee') || nameLower.includes('diving');
+    };
+
+    // Fonction helper pour vérifier si une date respecte la règle des 2 jours minimum avant le départ (pour la plongée)
+    const isDateSafeForDiving = (dateStr) => {
+      const activityDate = new Date(dateStr + "T12:00:00");
+      const diffTime = departure.getTime() - activityDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 2; // Au moins 2 jours entre l'activité et le départ
+    };
+
     // Remplir les dates pour toutes les activités en tenant compte des jours disponibles
     let datesAssigned = 0;
     const usedDates = new Set(); // Pour éviter d'assigner la même date plusieurs fois si possible
+    const divingActivitiesWithoutDate = []; // Pour les activités de plongée qui n'ont pas pu être assignées
     
     const updatedItems = items.map((item, idx) => {
       // Si pas d'activité sélectionnée, ne pas assigner de date
@@ -363,6 +379,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         return item;
       }
 
+      // Vérifier si c'est une activité de plongée
+      const isDiving = isDivingActivity(activity.name);
+
       // Vérifier les jours disponibles de l'activité
       const availableDays = activity.availableDays || [false, false, false, false, false, false, false];
       const hasNoDaysDefined = availableDays.every(day => day === false);
@@ -373,6 +392,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       // D'abord, chercher une date disponible et non utilisée
       if (!hasNoDaysDefined) {
         for (const dateInfo of allDates) {
+          // Pour la plongée, vérifier aussi la règle des 2 jours minimum
+          if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
+            continue; // Skip cette date pour la plongée
+          }
+          
           if (availableDays[dateInfo.dayOfWeek] === true && !usedDates.has(dateInfo.date)) {
             assignedDate = dateInfo.date;
             usedDates.add(dateInfo.date);
@@ -384,6 +408,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         // Si aucune date disponible non utilisée, prendre la première date disponible même si déjà utilisée
         if (!assignedDate) {
           for (const dateInfo of allDates) {
+            // Pour la plongée, vérifier aussi la règle des 2 jours minimum
+            if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
+              continue; // Skip cette date pour la plongée
+            }
+            
             if (availableDays[dateInfo.dayOfWeek] === true) {
               assignedDate = dateInfo.date;
               datesAssigned++;
@@ -396,6 +425,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       // Si aucune date disponible trouvée (activité sans jours définis), utiliser la première date non utilisée
       if (!assignedDate) {
         for (const dateInfo of allDates) {
+          // Pour la plongée, vérifier aussi la règle des 2 jours minimum
+          if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
+            continue; // Skip cette date pour la plongée
+          }
+          
           if (!usedDates.has(dateInfo.date)) {
             assignedDate = dateInfo.date;
             usedDates.add(dateInfo.date);
@@ -408,6 +442,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           if (!hasNoDaysDefined) {
             // Chercher n'importe quelle date disponible pour cette activité
             for (const dateInfo of allDates) {
+              // Pour la plongée, vérifier aussi la règle des 2 jours minimum
+              if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
+                continue; // Skip cette date pour la plongée
+              }
+              
               if (availableDays[dateInfo.dayOfWeek] === true) {
                 assignedDate = dateInfo.date;
                 datesAssigned++;
@@ -415,12 +454,28 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               }
             }
           }
-          // Si toujours pas de date, utiliser la première date de la période
+          // Si toujours pas de date, utiliser la première date de la période (sauf pour la plongée)
           if (!assignedDate && allDates.length > 0) {
-            assignedDate = allDates[0].date;
-            datesAssigned++;
+            if (!isDiving) {
+              assignedDate = allDates[0].date;
+              datesAssigned++;
+            } else {
+              // Pour la plongée, chercher la dernière date possible qui respecte la règle des 2 jours
+              for (let i = allDates.length - 1; i >= 0; i--) {
+                if (isDateSafeForDiving(allDates[i].date)) {
+                  assignedDate = allDates[i].date;
+                  datesAssigned++;
+                  break;
+                }
+              }
+            }
           }
         }
+      }
+
+      // Si c'est une activité de plongée et qu'aucune date n'a pu être assignée, noter cela
+      if (isDiving && !assignedDate) {
+        divingActivitiesWithoutDate.push(activity.name);
       }
 
       return { ...item, date: assignedDate || item.date };
@@ -448,7 +503,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
     // Afficher les messages
     if (datesAssigned > 0) {
+      let message = "";
+      let hasWarnings = false;
+      
       if (actualConflicts.length > 0) {
+        hasWarnings = true;
         // Construire le message d'avertissement avec les conflits
         const conflictMessages = actualConflicts.map(([date, activities]) => {
           const dateFormatted = new Date(date + "T12:00:00").toLocaleDateString('fr-FR', { 
@@ -459,16 +518,30 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           const activityNames = activities.map(a => a.name).join(', ');
           return `le ${dateFormatted} : ${activityNames}`;
         });
-
-        toast.warning(
-          `⚠️ Attention : ${datesAssigned} date(s) assignée(s), mais des conflits détectés. Faire un choix entre ${conflictMessages.join(' | ')}`,
-          { duration: 8000 }
-        );
+        message = `⚠️ Attention : ${datesAssigned} date(s) assignée(s), mais des conflits détectés. Faire un choix entre ${conflictMessages.join(' | ')}`;
       } else {
-        toast.success(`${datesAssigned} date(s) assignée(s) automatiquement en tenant compte des jours disponibles !`);
+        message = `${datesAssigned} date(s) assignée(s) automatiquement en tenant compte des jours disponibles !`;
+      }
+      
+      // Ajouter un avertissement pour les activités de plongée non assignées
+      if (divingActivitiesWithoutDate.length > 0) {
+        hasWarnings = true;
+        const divingNames = divingActivitiesWithoutDate.join(', ');
+        message += ` ⚠️ ATTENTION SÉCURITÉ : Les activités de plongée (${divingNames}) n'ont pas pu être assignées car il faut un minimum de 2 jours entre la plongée et le départ (risque de décompression).`;
+      }
+      
+      if (hasWarnings) {
+        toast.warning(message, { duration: 10000 });
+      } else {
+        toast.success(message);
       }
     } else {
-      toast.warning("Aucune date n'a pu être assignée. Vérifiez les jours disponibles des activités.");
+      let message = "Aucune date n'a pu être assignée. Vérifiez les jours disponibles des activités.";
+      if (divingActivitiesWithoutDate.length > 0) {
+        const divingNames = divingActivitiesWithoutDate.join(', ');
+        message += ` ⚠️ ATTENTION SÉCURITÉ : Les activités de plongée (${divingNames}) nécessitent un minimum de 2 jours entre la plongée et le départ.`;
+      }
+      toast.warning(message, { duration: 10000 });
     }
   }, [client.arrivalDate, client.departureDate, autoFillDates, activities, items]);
 
