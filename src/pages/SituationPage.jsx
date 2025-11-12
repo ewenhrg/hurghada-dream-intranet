@@ -1068,7 +1068,10 @@ export function SituationPage({ activities = [], user }) {
   // Envoyer un message via WhatsApp Web automatiquement
   const sendWhatsAppMessage = async (data, index, total) => {
     console.log(`📨 Envoi du message ${index + 1}/${total} pour ${data.name} (${data.phone})`);
-    const message = generateMessageWithContext(data);
+    
+    // Utiliser le message modifié depuis previewMessages s'il existe, sinon générer le message
+    const previewMessage = previewMessages.find((msg) => msg.id === data.id);
+    const message = previewMessage?.message || generateMessageWithContext(data);
     
     // IMPORTANT: Attendre 15 secondes minimum entre chaque message pour éviter le bannissement WhatsApp
     // C'est le délai minimum recommandé par WhatsApp pour éviter les restrictions
@@ -1369,7 +1372,9 @@ export function SituationPage({ activities = [], user }) {
     // Simuler l'envoi des messages
     for (let i = 0; i < dataWithPhone.length; i++) {
       const data = dataWithPhone[i];
-      const message = generateMessageWithContext(data);
+      // Utiliser le message modifié depuis previewMessages s'il existe, sinon générer le message
+      const previewMessage = previewMessages.find((msg) => msg.id === data.id);
+      const message = previewMessage?.message || generateMessageWithContext(data);
 
       try {
         // TODO: Remplacer par un vrai service d'envoi (Twilio, WhatsApp API, etc.)
@@ -1625,7 +1630,7 @@ export function SituationPage({ activities = [], user }) {
           <div className="border border-blue-200 rounded-xl p-6 bg-blue-50/30">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Prévisualisation des messages</h3>
             <div className="space-y-4 max-h-96 overflow-y-auto">
-              {previewMessages.map((msg) => (
+              {previewMessages.map((msg, index) => (
                 <div
                   key={msg.id}
                   className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm"
@@ -1643,9 +1648,16 @@ export function SituationPage({ activities = [], user }) {
                       <span className="text-xs text-amber-600">⚠️ Pas de téléphone</span>
                     )}
                   </div>
-                  <pre className="text-xs text-slate-700 bg-slate-50 p-3 rounded border border-slate-200 whitespace-pre-wrap font-sans">
-                    {msg.message}
-                  </pre>
+                  <textarea
+                    value={msg.message}
+                    onChange={(e) => {
+                      const updatedMessages = [...previewMessages];
+                      updatedMessages[index] = { ...updatedMessages[index], message: e.target.value };
+                      setPreviewMessages(updatedMessages);
+                    }}
+                    className="w-full text-xs text-slate-700 bg-slate-50 p-3 rounded border border-slate-200 whitespace-pre-wrap font-sans resize-y min-h-[100px]"
+                    rows={6}
+                  />
                 </div>
               ))}
             </div>
