@@ -735,12 +735,36 @@ export default function App() {
                 </Suspense>
               </div>
               
-              {/* Bouton flottant pour voir les dates utilisées */}
-              {usedDates.length > 0 && (
-                <>
+              {/* Boutons flottants : remonter en haut et dates utilisées */}
+              <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+                {/* Bouton "Remonter en haut" - Toujours visible */}
+                <button
+                  onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                  className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                  style={{
+                    backgroundColor: 'rgba(59, 130, 246, 0.95)',
+                    boxShadow: '0 8px 24px -8px rgba(37, 99, 235, 0.6)',
+                    backdropFilter: 'blur(12px)'
+                  }}
+                  title="Remonter en haut"
+                  aria-label="Remonter en haut de la page"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                  </svg>
+                </button>
+
+                {/* Bouton flottant pour voir les dates utilisées */}
+                {usedDates.length > 0 && (
                   <button
                     onClick={() => setShowDatesModal(true)}
-                    className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                    className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
                     style={{
                       backgroundColor: 'rgba(251, 191, 36, 0.95)',
                       boxShadow: '0 8px 24px -8px rgba(180, 83, 9, 0.6)',
@@ -758,9 +782,11 @@ export default function App() {
                       </span>
                     </div>
                   </button>
-                  
-                  {/* Modale des dates utilisées */}
-                  {showDatesModal && (
+                )}
+              </div>
+
+              {/* Modale des dates utilisées */}
+              {usedDates.length > 0 && showDatesModal && (
                     <div 
                       className="fixed inset-0 z-50 flex items-center justify-center p-4"
                       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
@@ -826,8 +852,6 @@ export default function App() {
                         </div>
                       </div>
                     </div>
-                  )}
-                </>
               )}
           </div>
         ) : (
