@@ -893,9 +893,36 @@ export default function App() {
         )}
 
         {tab === "history" && user?.canAccessHistory !== false && (
-          <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")}>
-            <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
-          </Section>
+          <>
+            <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")}>
+              <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
+            </Section>
+            
+            {/* Bouton "Remonter en haut" pour la page historique */}
+            <div className="fixed bottom-6 right-6 z-50">
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.95)',
+                  boxShadow: '0 8px 24px -8px rgba(37, 99, 235, 0.6)',
+                  backdropFilter: 'blur(12px)'
+                }}
+                title="Remonter en haut"
+                aria-label="Remonter en haut de la page"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+              </button>
+            </div>
+          </>
         )}
 
         {tab === "tickets" && user?.canAccessTickets !== false && (
