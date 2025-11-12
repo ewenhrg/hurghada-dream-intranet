@@ -348,6 +348,42 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return diffDays >= 2; // Au moins 2 jours entre l'activité et le départ
     };
 
+    // Fonction helper pour vérifier si une date/activité est en stop sale
+    const isStopSale = (activityId, dateStr) => {
+      return stopSales.some(
+        (s) => s.activity_id === activityId && s.date === dateStr
+      );
+    };
+
+    // Fonction helper pour vérifier si une date/activité est en push sale
+    const isPushSale = (activityId, dateStr) => {
+      return pushSales.some(
+        (p) => p.activity_id === activityId && p.date === dateStr
+      );
+    };
+
+    // Fonction helper pour vérifier si une date est disponible pour une activité
+    // (disponible si push sale OU (disponible normalement ET pas de stop sale))
+    const isDateAvailableForActivity = (activityId, dateStr, dayOfWeek, availableDays) => {
+      // Vérifier si c'est un push sale (toujours disponible)
+      if (isPushSale(activityId, dateStr)) {
+        return true;
+      }
+      
+      // Vérifier si c'est un stop sale (jamais disponible sauf si push sale)
+      if (isStopSale(activityId, dateStr)) {
+        return false;
+      }
+      
+      // Sinon, vérifier la disponibilité normale selon les jours disponibles
+      if (availableDays && dayOfWeek != null) {
+        return availableDays[dayOfWeek] === true;
+      }
+      
+      // Si pas de jours définis, considérer comme disponible
+      return true;
+    };
+
     // Remplir les dates pour toutes les activités en tenant compte des jours disponibles
     let datesAssigned = 0;
     const usedDates = new Set(); // Pour éviter d'assigner la même date plusieurs fois si possible
@@ -363,18 +399,23 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       const activity = activities.find(a => a.id === item.activityId);
       
       if (!activity) {
-        // Si l'activité n'existe pas, utiliser la première date disponible non utilisée
+        // Si l'activité n'existe pas, utiliser la première date disponible non utilisée qui n'est pas en stop sale
         for (const dateInfo of allDates) {
-          if (!usedDates.has(dateInfo.date)) {
-            usedDates.add(dateInfo.date);
+          // Ne pas utiliser les dates en stop sale (sauf si push sale)
+          if (!isStopSale(item.activityId, dateInfo.date) || isPushSale(item.activityId, dateInfo.date)) {
+            if (!usedDates.has(dateInfo.date)) {
+              usedDates.add(dateInfo.date);
+              datesAssigned++;
+              return { ...item, date: dateInfo.date };
+            }
+          }
+        }
+        // Si toutes les dates sont utilisées ou en stop sale, chercher n'importe quelle date disponible
+        for (const dateInfo of allDates) {
+          if (!isStopSale(item.activityId, dateInfo.date) || isPushSale(item.activityId, dateInfo.date)) {
             datesAssigned++;
             return { ...item, date: dateInfo.date };
           }
-        }
-        // Si toutes les dates sont utilisées, utiliser quand même la première
-        if (allDates.length > 0) {
-          datesAssigned++;
-          return { ...item, date: allDates[0].date };
         }
         return item;
       }
@@ -390,46 +431,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       let assignedDate = null;
       
       // D'abord, chercher une date disponible et non utilisée
-      if (!hasNoDaysDefined) {
-        for (const dateInfo of allDates) {
-          // Pour la plongée, vérifier aussi la règle des 2 jours minimum
-          if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
-            continue; // Skip cette date pour la plongée
-          }
-          
-          if (availableDays[dateInfo.dayOfWeek] === true && !usedDates.has(dateInfo.date)) {
-            assignedDate = dateInfo.date;
-            usedDates.add(dateInfo.date);
-            datesAssigned++;
-            break;
-          }
+      for (const dateInfo of allDates) {
+        // Pour la plongée, vérifier aussi la règle des 2 jours minimum
+        if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
+          continue; // Skip cette date pour la plongée
         }
         
-        // Si aucune date disponible non utilisée, prendre la première date disponible même si déjà utilisée
-        if (!assignedDate) {
-          for (const dateInfo of allDates) {
-            // Pour la plongée, vérifier aussi la règle des 2 jours minimum
-            if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
-              continue; // Skip cette date pour la plongée
-            }
-            
-            if (availableDays[dateInfo.dayOfWeek] === true) {
-              assignedDate = dateInfo.date;
-              datesAssigned++;
-              break;
-            }
-          }
-        }
-      }
-
-      // Si aucune date disponible trouvée (activité sans jours définis), utiliser la première date non utilisée
-      if (!assignedDate) {
-        for (const dateInfo of allDates) {
-          // Pour la plongée, vérifier aussi la règle des 2 jours minimum
-          if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
-            continue; // Skip cette date pour la plongée
-          }
-          
+        // Vérifier si la date est disponible (push sale OU (disponible normalement ET pas de stop sale))
+        if (isDateAvailableForActivity(activity.id, dateInfo.date, dateInfo.dayOfWeek, availableDays)) {
           if (!usedDates.has(dateInfo.date)) {
             assignedDate = dateInfo.date;
             usedDates.add(dateInfo.date);
@@ -437,37 +446,56 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             break;
           }
         }
-        // Si toutes les dates sont utilisées, utiliser quand même la première date disponible pour cette activité
-        if (!assignedDate) {
-          if (!hasNoDaysDefined) {
-            // Chercher n'importe quelle date disponible pour cette activité
-            for (const dateInfo of allDates) {
-              // Pour la plongée, vérifier aussi la règle des 2 jours minimum
-              if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
-                continue; // Skip cette date pour la plongée
-              }
-              
-              if (availableDays[dateInfo.dayOfWeek] === true) {
-                assignedDate = dateInfo.date;
-                datesAssigned++;
-                break;
-              }
+      }
+      
+      // Si aucune date disponible non utilisée, prendre la première date disponible même si déjà utilisée
+      if (!assignedDate) {
+        for (const dateInfo of allDates) {
+          // Pour la plongée, vérifier aussi la règle des 2 jours minimum
+          if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
+            continue; // Skip cette date pour la plongée
+          }
+          
+          // Vérifier si la date est disponible (push sale OU (disponible normalement ET pas de stop sale))
+          if (isDateAvailableForActivity(activity.id, dateInfo.date, dateInfo.dayOfWeek, availableDays)) {
+            assignedDate = dateInfo.date;
+            datesAssigned++;
+            break;
+          }
+        }
+      }
+
+      // Si aucune date disponible trouvée (activité sans jours définis), utiliser la première date non utilisée qui n'est pas en stop sale
+      if (!assignedDate) {
+        for (const dateInfo of allDates) {
+          // Pour la plongée, vérifier aussi la règle des 2 jours minimum
+          if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
+            continue; // Skip cette date pour la plongée
+          }
+          
+          // Ne pas utiliser les dates en stop sale (sauf si push sale)
+          if (!isStopSale(activity.id, dateInfo.date) || isPushSale(activity.id, dateInfo.date)) {
+            if (!usedDates.has(dateInfo.date)) {
+              assignedDate = dateInfo.date;
+              usedDates.add(dateInfo.date);
+              datesAssigned++;
+              break;
             }
           }
-          // Si toujours pas de date, utiliser la première date de la période (sauf pour la plongée)
-          if (!assignedDate && allDates.length > 0) {
-            if (!isDiving) {
-              assignedDate = allDates[0].date;
+        }
+        // Si toutes les dates sont utilisées ou en stop sale, chercher n'importe quelle date disponible
+        if (!assignedDate) {
+          for (const dateInfo of allDates) {
+            // Pour la plongée, vérifier aussi la règle des 2 jours minimum
+            if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
+              continue; // Skip cette date pour la plongée
+            }
+            
+            // Vérifier si la date est disponible (push sale OU (disponible normalement ET pas de stop sale))
+            if (isDateAvailableForActivity(activity.id, dateInfo.date, dateInfo.dayOfWeek, availableDays)) {
+              assignedDate = dateInfo.date;
               datesAssigned++;
-            } else {
-              // Pour la plongée, chercher la dernière date possible qui respecte la règle des 2 jours
-              for (let i = allDates.length - 1; i >= 0; i--) {
-                if (isDateSafeForDiving(allDates[i].date)) {
-                  assignedDate = allDates[i].date;
-                  datesAssigned++;
-                  break;
-                }
-              }
+              break;
             }
           }
         }
@@ -543,7 +571,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       }
       toast.warning(message, { duration: 10000 });
     }
-  }, [client.arrivalDate, client.departureDate, autoFillDates, activities, items]);
+  }, [client.arrivalDate, client.departureDate, autoFillDates, activities, items, stopSales, pushSales]);
 
   // Formater les stop sales avec les noms d'activités
   const formattedStopSales = useMemo(() => {
