@@ -403,22 +403,70 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             break;
           }
         }
-        // Si toutes les dates sont utilisées, utiliser quand même la première
-        if (!assignedDate && allDates.length > 0) {
-          assignedDate = allDates[0].date;
-          datesAssigned++;
+        // Si toutes les dates sont utilisées, utiliser quand même la première date disponible pour cette activité
+        if (!assignedDate) {
+          if (!hasNoDaysDefined) {
+            // Chercher n'importe quelle date disponible pour cette activité
+            for (const dateInfo of allDates) {
+              if (availableDays[dateInfo.dayOfWeek] === true) {
+                assignedDate = dateInfo.date;
+                datesAssigned++;
+                break;
+              }
+            }
+          }
+          // Si toujours pas de date, utiliser la première date de la période
+          if (!assignedDate && allDates.length > 0) {
+            assignedDate = allDates[0].date;
+            datesAssigned++;
+          }
         }
       }
 
       return { ...item, date: assignedDate || item.date };
     });
 
+    // Détecter les conflits (activités avec la même date)
+    const conflictsByDate = {};
+    updatedItems.forEach((item, idx) => {
+      if (item.date && item.activityId) {
+        const activity = activities.find(a => a.id === item.activityId);
+        const activityName = activity?.name || `Activité ${idx + 1}`;
+        
+        if (!conflictsByDate[item.date]) {
+          conflictsByDate[item.date] = [];
+        }
+        conflictsByDate[item.date].push({ idx, name: activityName });
+      }
+    });
+
+    // Filtrer pour ne garder que les dates avec conflits (plus d'une activité)
+    const actualConflicts = Object.entries(conflictsByDate).filter(([date, activities]) => activities.length > 1);
+
     // Mettre à jour les items
     setItems(updatedItems);
 
-    // Afficher le message
+    // Afficher les messages
     if (datesAssigned > 0) {
-      toast.success(`${datesAssigned} date(s) assignée(s) automatiquement en tenant compte des jours disponibles !`);
+      if (actualConflicts.length > 0) {
+        // Construire le message d'avertissement avec les conflits
+        const conflictMessages = actualConflicts.map(([date, activities]) => {
+          const dateFormatted = new Date(date + "T12:00:00").toLocaleDateString('fr-FR', { 
+            weekday: 'long', 
+            day: 'numeric', 
+            month: 'long' 
+          });
+          const activityNames = activities.map(a => a.name).join(', ');
+          return `le ${dateFormatted} : ${activityNames}`;
+        });
+
+        toast.warning(
+          `⚠️ Attention : ${datesAssigned} date(s) assignée(s), mais des conflits détectés. Faire un choix entre ${conflictMessages.join(' | ')}`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.success(`${datesAssigned} date(s) assignée(s) automatiquement en tenant compte des jours disponibles !`);
+      }
     } else {
       toast.warning("Aucune date n'a pu être assignée. Vérifiez les jours disponibles des activités.");
     }
