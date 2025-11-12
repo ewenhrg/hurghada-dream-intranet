@@ -181,6 +181,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const [ticketNumbers, setTicketNumbers] = useState({});
   const [paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" }
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
 
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
@@ -580,6 +581,22 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       onUsedDatesChange(usedDates);
     }
   }, [usedDates, onUsedDatesChange]);
+
+  // Détecter le scroll pour afficher/masquer le bouton "remonter en haut"
+  useEffect(() => {
+    const handleScroll = () => {
+      // Afficher le bouton si on a scrollé de plus de 300px
+      setShowScrollToTop(window.scrollY > 300);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Fonction pour remonter en haut de la page
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   async function handleCreateQuote(e) {
     e.preventDefault();
@@ -1881,6 +1898,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             </div>
           </div>
         </div>
+      )}
+
+      {/* Bouton "Remonter en haut" - Fixe en bas à droite */}
+      {showScrollToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg transition-all duration-300 hover:scale-110 flex items-center justify-center"
+          aria-label="Remonter en haut de la page"
+          title="Remonter en haut"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        </button>
       )}
     </div>
   );

@@ -542,15 +542,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       {showScrollToTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+          className="fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95 bg-indigo-600 hover:bg-indigo-700 text-white"
           style={{
-            backgroundColor: 'rgba(79, 70, 229, 0.95)',
-            boxShadow: '0 8px 24px -8px rgba(79, 70, 229, 0.6)',
-            backdropFilter: 'blur(12px)'
+            boxShadow: '0 4px 16px rgba(79, 70, 229, 0.5)',
           }}
           title="Remonter en haut"
         >
-          <span className="text-2xl text-white">↑</span>
+          <span className="text-xl font-bold">↑</span>
         </button>
       )}
 
