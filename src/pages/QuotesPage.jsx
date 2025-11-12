@@ -338,8 +338,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     const usedDates = new Set(); // Pour éviter d'assigner la même date plusieurs fois si possible
     
     const updatedItems = items.map((item, idx) => {
-      // Si l'activité a déjà une date et qu'on ne force pas, la garder
-      if (item.date && !autoFillDates) {
+      // Si pas d'activité sélectionnée, ne pas assigner de date
+      if (!item.activityId) {
         return item;
       }
 
@@ -347,7 +347,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       const activity = activities.find(a => a.id === item.activityId);
       
       if (!activity) {
-        // Si pas d'activité sélectionnée, utiliser la première date disponible non utilisée
+        // Si l'activité n'existe pas, utiliser la première date disponible non utilisée
         for (const dateInfo of allDates) {
           if (!usedDates.has(dateInfo.date)) {
             usedDates.add(dateInfo.date);
@@ -356,9 +356,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           }
         }
         // Si toutes les dates sont utilisées, utiliser quand même la première
-        const dateIndex = Math.min(idx, allDates.length - 1);
-        datesAssigned++;
-        return { ...item, date: allDates[dateIndex].date };
+        if (allDates.length > 0) {
+          datesAssigned++;
+          return { ...item, date: allDates[0].date };
+        }
+        return item;
       }
 
       // Vérifier les jours disponibles de l'activité
@@ -391,7 +393,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         }
       }
 
-      // Si aucune date disponible trouvée (activité sans jours définis ou tous les jours disponibles), utiliser la première date non utilisée
+      // Si aucune date disponible trouvée (activité sans jours définis), utiliser la première date non utilisée
       if (!assignedDate) {
         for (const dateInfo of allDates) {
           if (!usedDates.has(dateInfo.date)) {
