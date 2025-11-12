@@ -28,6 +28,7 @@ export const CATEGORIES = [
   { key: "aquatique", label: "Aquatique" },
   { key: "exploration_bien_etre", label: "Exploration / Bien-être" },
   { key: "luxor_caire", label: "LOUXOR & LE CAIRE" },
+  { key: "marsa_alam", label: "Marsa Alam" },
   { key: "transfert", label: "TRANSFERT" },
 ];
 
