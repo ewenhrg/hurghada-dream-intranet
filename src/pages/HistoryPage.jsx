@@ -13,6 +13,19 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending", "modified"
+  
+  // États pour la recherche avancée
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [searchName, setSearchName] = useState("");
+  const [searchHotel, setSearchHotel] = useState("");
+  const [searchTicket, setSearchTicket] = useState("");
+  const [searchDateFrom, setSearchDateFrom] = useState("");
+  const [searchDateTo, setSearchDateTo] = useState("");
+  
+  // Debounce pour les recherches avancées
+  const debouncedSearchName = useDebounce(searchName, 300);
+  const debouncedSearchHotel = useDebounce(searchHotel, 300);
+  const debouncedSearchTicket = useDebounce(searchTicket, 300);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
@@ -129,8 +142,51 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       result = result.filter((d) => (d.client?.phone || "").replace(/\D+/g, "").includes(needle));
     }
     
+    // Recherche avancée - Nom de client
+    if (debouncedSearchName.trim()) {
+      const nameLower = debouncedSearchName.toLowerCase().trim();
+      result = result.filter((d) => 
+        (d.client?.name || "").toLowerCase().includes(nameLower)
+      );
+    }
+    
+    // Recherche avancée - Hôtel
+    if (debouncedSearchHotel.trim()) {
+      const hotelLower = debouncedSearchHotel.toLowerCase().trim();
+      result = result.filter((d) => 
+        (d.client?.hotel || "").toLowerCase().includes(hotelLower)
+      );
+    }
+    
+    // Recherche avancée - Numéro de ticket
+    if (debouncedSearchTicket.trim()) {
+      const ticketLower = debouncedSearchTicket.toLowerCase().trim();
+      result = result.filter((d) => 
+        d.items?.some((item) => 
+          (item.ticketNumber || "").toLowerCase().includes(ticketLower)
+        )
+      );
+    }
+    
+    // Recherche avancée - Date de création (du... au...)
+    if (searchDateFrom) {
+      const fromDate = new Date(searchDateFrom + "T00:00:00");
+      result = result.filter((d) => {
+        const quoteDate = new Date(d.createdAt);
+        return quoteDate >= fromDate;
+      });
+    }
+    
+    if (searchDateTo) {
+      const toDate = new Date(searchDateTo + "T23:59:59");
+      result = result.filter((d) => {
+        const quoteDate = new Date(d.createdAt);
+        return quoteDate <= toDate;
+      });
+    }
+    
     return result;
-  }, [debouncedQ, quotesWithStatus, statusFilter]);
+  }, [debouncedQ, debouncedSearchName, debouncedSearchHotel, debouncedSearchTicket, searchDateFrom, searchDateTo, quotesWithStatus, statusFilter]);
 
   // Scroller en haut de la modale de paiement et de la page quand elle s'ouvre
   useEffect(() => {
@@ -251,46 +307,161 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
   return (
     <div className="p-4 md:p-6 space-y-4">
-      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-        <div className="flex flex-col gap-2 max-w-md">
-          <TextInput
-            placeholder="Rechercher par numéro de téléphone"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="w-full"
-          />
-                  <p className="text-xs text-amber-700 flex items-center gap-1">
-            <span>⚠️</span>
-            <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
-          </p>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+          <div className="flex flex-col gap-2 max-w-md">
+            <TextInput
+              placeholder="Rechercher par numéro de téléphone"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="w-full"
+            />
+            <p className="text-xs text-amber-700 flex items-center gap-1">
+              <span>⚠️</span>
+              <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
+            </p>
+          </div>
+          <div className="flex gap-2 items-center">
+            <Pill
+              active={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
+            >
+              Tous
+            </Pill>
+            <Pill
+              active={statusFilter === "paid"}
+              onClick={() => setStatusFilter("paid")}
+            >
+              Payés
+            </Pill>
+            <Pill
+              active={statusFilter === "pending"}
+              onClick={() => setStatusFilter("pending")}
+            >
+              En attente
+            </Pill>
+            <Pill
+              active={statusFilter === "modified"}
+              onClick={() => setStatusFilter("modified")}
+            >
+              Modifié
+            </Pill>
+          </div>
         </div>
-        <div className="flex gap-2 items-center">
-          <Pill
-            active={statusFilter === "all"}
-            onClick={() => setStatusFilter("all")}
+        
+        {/* Recherche avancée */}
+        <div className="border border-blue-200/50 rounded-xl bg-blue-50/30">
+          <button
+            onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+            className="w-full flex items-center justify-between gap-3 p-3 hover:bg-blue-50/50 transition-colors rounded-xl"
           >
-            Tous
-          </Pill>
-          <Pill
-            active={statusFilter === "paid"}
-            onClick={() => setStatusFilter("paid")}
-          >
-            Payés
-          </Pill>
-          <Pill
-            active={statusFilter === "pending"}
-            onClick={() => setStatusFilter("pending")}
-          >
-            En attente
-          </Pill>
-          <Pill
-            active={statusFilter === "modified"}
-            onClick={() => setStatusFilter("modified")}
-          >
-            Modifié
-          </Pill>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🔍</span>
+              <span className="font-semibold text-sm text-gray-700">Recherche avancée</span>
+              {(debouncedSearchName || debouncedSearchHotel || debouncedSearchTicket || searchDateFrom || searchDateTo) && (
+                <span className="px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">
+                  Active
+                </span>
+              )}
+            </div>
+            <span className="text-gray-600 text-sm">
+              {showAdvancedSearch ? "▼ Réduire" : "▶ Développer"}
+            </span>
+          </button>
+          
+          {showAdvancedSearch && (
+            <div className="p-4 pt-0 space-y-3 border-t border-blue-200/50 mt-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div>
+                  <p className="text-xs text-gray-600 mb-1 font-medium">Nom du client</p>
+                  <TextInput
+                    placeholder="Rechercher par nom..."
+                    value={searchName}
+                    onChange={(e) => setSearchName(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 mb-1 font-medium">Hôtel</p>
+                  <TextInput
+                    placeholder="Rechercher par hôtel..."
+                    value={searchHotel}
+                    onChange={(e) => setSearchHotel(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 mb-1 font-medium">Numéro de ticket</p>
+                  <TextInput
+                    placeholder="Rechercher par ticket..."
+                    value={searchTicket}
+                    onChange={(e) => setSearchTicket(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-600 mb-1 font-medium">Date de création (du)</p>
+                  <TextInput
+                    type="date"
+                    value={searchDateFrom}
+                    onChange={(e) => setSearchDateFrom(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 mb-1 font-medium">Date de création (au)</p>
+                  <TextInput
+                    type="date"
+                    value={searchDateTo}
+                    onChange={(e) => setSearchDateTo(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              
+              {(debouncedSearchName || debouncedSearchHotel || debouncedSearchTicket || searchDateFrom || searchDateTo) && (
+                <div className="flex justify-end">
+                  <GhostBtn
+                    onClick={() => {
+                      setSearchName("");
+                      setSearchHotel("");
+                      setSearchTicket("");
+                      setSearchDateFrom("");
+                      setSearchDateTo("");
+                    }}
+                    variant="danger"
+                    size="sm"
+                  >
+                    🧹 Réinitialiser les filtres
+                  </GhostBtn>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+      
+      {/* Indicateur du nombre de résultats */}
+      <div className="flex items-center justify-between text-sm">
+        <p className="text-gray-600">
+          {filtered.length === 0 ? (
+            <span className="text-amber-600">Aucun devis trouvé</span>
+          ) : filtered.length === 1 ? (
+            <span className="text-blue-600 font-semibold">1 devis trouvé</span>
+          ) : (
+            <span className="text-blue-600 font-semibold">{filtered.length} devis trouvés</span>
+          )}
+          {quotes.length !== filtered.length && (
+            <span className="text-gray-500 ml-2">
+              (sur {quotes.length} total)
+            </span>
+          )}
+        </p>
+      </div>
+      
       <div className="space-y-3">
         {filtered.map((d) => {
           const allTicketsFilled = d.allTicketsFilled;
