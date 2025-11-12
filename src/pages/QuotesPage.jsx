@@ -181,6 +181,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const [ticketNumbers, setTicketNumbers] = useState({});
   const [paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" }
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // États pour la recherche d'activités (par ligne)
+  const [activitySearchQueries, setActivitySearchQueries] = useState({}); // { index: "query" }
+  
+  // État pour les suggestions de dates automatiques
+  const [autoFillDates, setAutoFillDates] = useState(false);
 
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
@@ -230,6 +236,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${activityName}" de ce devis ?\n\nCette action est irréversible.`)) {
       setItems((prev) => prev.filter((_, idx) => idx !== i));
+      // Nettoyer les recherches pour réindexer correctement
+      setActivitySearchQueries((prev) => {
+        const newQueries = {};
+        Object.keys(prev).forEach((key) => {
+          const keyNum = parseInt(key);
+          if (keyNum < i) {
+            newQueries[keyNum] = prev[key];
+          } else if (keyNum > i) {
+            newQueries[keyNum - 1] = prev[key];
+          }
+          // keyNum === i est supprimé
+        });
+        return newQueries;
+      });
       toast.success("Activité supprimée du devis.");
     }
   }, [items, activities]);
@@ -249,6 +269,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     setNotes("");
     setTicketNumbers({});
     setPaymentMethods({});
+    setActivitySearchQueries({});
     if (setDraft) {
       setDraft(null);
     }
@@ -298,6 +319,136 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return nameA.localeCompare(nameB, "fr");
     });
   }, [activities]);
+
+  // Fonction pour obtenir les activités filtrées pour une ligne donnée
+  const getFilteredActivitiesForLine = useCallback((lineIndex) => {
+    const searchQuery = (activitySearchQueries[lineIndex] || "").toLowerCase().trim();
+    if (!searchQuery) {
+      return sortedActivities;
+    }
+    return sortedActivities.filter((a) => 
+      (a.name || "").toLowerCase().includes(searchQuery)
+    );
+  }, [sortedActivities, activitySearchQueries]);
+
+  // Fonction pour remplir automatiquement les dates des activités
+  const handleAutoFillDates = useCallback(() => {
+    if (!client.arrivalDate || !client.departureDate) {
+      toast.warning("Veuillez renseigner les dates d'arrivée et de départ du client.");
+      return;
+    }
+
+    const arrival = new Date(client.arrivalDate);
+    const departure = new Date(client.departureDate);
+    
+    if (arrival > departure) {
+      toast.warning("La date d'arrivée doit être antérieure à la date de départ.");
+      return;
+    }
+
+    // Générer toutes les dates entre l'arrivée et le départ avec leur jour de la semaine
+    const allDates = [];
+    const currentDate = new Date(arrival);
+    while (currentDate <= departure) {
+      const dateStr = new Date(currentDate).toISOString().slice(0, 10);
+      const dayOfWeek = currentDate.getDay(); // 0 = dimanche, 1 = lundi, etc.
+      allDates.push({ date: dateStr, dayOfWeek });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    if (allDates.length === 0) {
+      toast.warning("Aucune date disponible entre l'arrivée et le départ.");
+      return;
+    }
+
+    // Remplir les dates pour toutes les activités en tenant compte des jours disponibles
+    setItems((prev) => {
+      const usedDates = new Set(); // Pour éviter d'assigner la même date plusieurs fois si possible
+      let datesAssigned = 0;
+      
+      const updatedItems = prev.map((item, idx) => {
+      // Si l'activité a déjà une date et qu'on ne force pas, la garder
+      if (item.date && !autoFillDates) {
+        return item;
+      }
+
+      // Trouver l'activité correspondante
+      const activity = activities.find(a => a.id === item.activityId);
+      
+      if (!activity) {
+        // Si pas d'activité sélectionnée, utiliser la première date disponible non utilisée
+        for (const dateInfo of allDates) {
+          if (!usedDates.has(dateInfo.date)) {
+            usedDates.add(dateInfo.date);
+            datesAssigned++;
+            return { ...item, date: dateInfo.date };
+          }
+        }
+        // Si toutes les dates sont utilisées, utiliser quand même la première
+        const dateIndex = Math.min(idx, allDates.length - 1);
+        datesAssigned++;
+        return { ...item, date: allDates[dateIndex].date };
+      }
+
+      // Vérifier les jours disponibles de l'activité
+      const availableDays = activity.availableDays || [false, false, false, false, false, false, false];
+      
+      // Trouver une date disponible pour cette activité (priorité aux dates non encore utilisées)
+      let assignedDate = null;
+      
+      // D'abord, chercher une date disponible et non utilisée
+      for (const dateInfo of allDates) {
+        if (availableDays[dateInfo.dayOfWeek] === true && !usedDates.has(dateInfo.date)) {
+          assignedDate = dateInfo.date;
+          usedDates.add(dateInfo.date);
+          datesAssigned++;
+          break;
+        }
+      }
+      
+      // Si aucune date disponible non utilisée, prendre la première date disponible même si déjà utilisée
+      if (!assignedDate) {
+        for (const dateInfo of allDates) {
+          if (availableDays[dateInfo.dayOfWeek] === true) {
+            assignedDate = dateInfo.date;
+            datesAssigned++;
+            break;
+          }
+        }
+      }
+
+      // Si aucune date disponible trouvée (activité sans jours définis), utiliser la première date non utilisée
+      if (!assignedDate) {
+        for (const dateInfo of allDates) {
+          if (!usedDates.has(dateInfo.date)) {
+            assignedDate = dateInfo.date;
+            usedDates.add(dateInfo.date);
+            datesAssigned++;
+            break;
+          }
+        }
+        // Si toutes les dates sont utilisées, utiliser quand même la première
+        if (!assignedDate && allDates.length > 0) {
+          assignedDate = allDates[0].date;
+          datesAssigned++;
+        }
+      }
+
+        return { ...item, date: assignedDate || item.date };
+      });
+
+      // Afficher le message après la mise à jour
+      setTimeout(() => {
+        if (datesAssigned > 0) {
+          toast.success(`${datesAssigned} date(s) assignée(s) automatiquement en tenant compte des jours disponibles !`);
+        } else {
+          toast.warning("Aucune date n'a pu être assignée. Vérifiez les jours disponibles des activités.");
+        }
+      }, 100);
+
+      return updatedItems;
+    });
+  }, [client.arrivalDate, client.departureDate, autoFillDates, activities]);
 
   // Formater les stop sales avec les noms d'activités
   const formattedStopSales = useMemo(() => {
@@ -835,11 +986,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-2">Date de départ</p>
-            <TextInput 
-              type="date" 
-              value={client.departureDate || ""} 
-              onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
-            />
+            <div className="flex gap-2">
+              <TextInput 
+                type="date" 
+                value={client.departureDate || ""} 
+                onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
+                className="flex-1"
+              />
+              {client.arrivalDate && client.departureDate && (
+                <GhostBtn
+                  type="button"
+                  onClick={handleAutoFillDates}
+                  variant="primary"
+                  size="sm"
+                  title="Remplir automatiquement les dates des activités avec les dates du séjour"
+                >
+                  📅 Auto-dates
+                </GhostBtn>
+              )}
+            </div>
           </div>
         </div>
 
@@ -856,18 +1021,57 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 lg:gap-8 items-end">
                 <div className="sm:col-span-2 md:col-span-2">
                   <p className="text-xs text-gray-500 mb-2">Activité</p>
-                  <select
-                    value={c.raw.activityId}
-                    onChange={(e) => setItem(idx, { activityId: e.target.value })}
-                    className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
-                  >
-                    <option value="">— Choisir —</option>
-                    {sortedActivities.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="space-y-2">
+                    <TextInput
+                      placeholder="🔍 Rechercher une activité..."
+                      value={activitySearchQueries[idx] || ""}
+                      onChange={(e) => {
+                        setActivitySearchQueries((prev) => ({
+                          ...prev,
+                          [idx]: e.target.value,
+                        }));
+                      }}
+                      className="w-full"
+                    />
+                    <select
+                      value={c.raw.activityId}
+                      onChange={(e) => {
+                        setItem(idx, { activityId: e.target.value });
+                        // Effacer la recherche après sélection
+                        setActivitySearchQueries((prev) => ({
+                          ...prev,
+                          [idx]: "",
+                        }));
+                      }}
+                      className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="">— Choisir —</option>
+                      {getFilteredActivitiesForLine(idx).map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                      {getFilteredActivitiesForLine(idx).length === 0 && (
+                        <option value="" disabled>
+                          Aucune activité trouvée
+                        </option>
+                      )}
+                    </select>
+                    {activitySearchQueries[idx] && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActivitySearchQueries((prev) => ({
+                            ...prev,
+                            [idx]: "",
+                          }));
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        ✕ Effacer la recherche
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-2">Date</p>
