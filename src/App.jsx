@@ -899,7 +899,7 @@ export default function App() {
             </Section>
             
             {/* Bouton "Remonter en haut" pour la page historique */}
-            <div className="fixed bottom-6 right-6 z-50">
+            <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
               <button
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                 className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
