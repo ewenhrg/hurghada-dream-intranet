@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, lazy, Suspense, useMemo, useCallback } from "react";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
 import { uuid, emptyTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
@@ -17,8 +18,12 @@ const TicketPage = lazy(() => import("./pages/TicketPage").then(module => ({ def
 const ModificationsPage = lazy(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
 const SituationPage = lazy(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
 const StopSalePage = lazy(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
+const DemandesPage = lazy(() => import("./pages/DemandesPage").then(module => ({ default: module.DemandesPage })));
+const RequestPage = lazy(() => import("./pages/RequestPage").then(module => ({ default: module.RequestPage })));
 
 export default function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [ok, setOk] = useState(false);
   const [tab, setTab] = useState("devis");
   // Forcer la lecture uniquement depuis Supabase, ignorer le localStorage local
@@ -31,6 +36,20 @@ export default function App() {
   const [showDatesModal, setShowDatesModal] = useState(false);
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
+
+  // Fonction pour convertir une demande en devis
+  const handleConvertRequestToQuote = useCallback((requestData) => {
+    // Pré-remplir le formulaire de devis avec les données de la demande
+    setQuoteDraft({
+      client: requestData.client,
+      items: requestData.items,
+      notes: requestData.notes || "",
+    });
+    
+    // Basculer vers l'onglet devis
+    setTab("devis");
+    navigate("/");
+  }, [navigate]);
 
   // Réinitialiser les dates utilisées quand on change d'onglet
   useEffect(() => {
@@ -505,6 +524,15 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [ok]);
 
+  // Si on est sur la route publique /request/:token, afficher RequestPage sans authentification
+  if (location.pathname.startsWith("/request/")) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <RequestPage />
+      </Suspense>
+    );
+  }
+
   if (!ok) {
         return <LoginPage onSuccess={handleLoginSuccess} />;
   }
@@ -675,6 +703,9 @@ export default function App() {
                     {t("nav.users")}
                   </Pill>
                 )}
+                <Pill active={tab === "demandes"} onClick={() => setTab("demandes")}>
+                  📋 Demandes
+                </Pill>
               </div>
             </nav>
             {user && (
@@ -920,6 +951,17 @@ export default function App() {
         {tab === "stopsale" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
           <Section title="Stop Sale &amp; Push Sale" subtitle="Gérez les arrêts de vente et les ouvertures exceptionnelles">
             <StopSalePage activities={activities} user={user} />
+          </Section>
+        )}
+
+        {tab === "demandes" && (
+          <Section title="📋 Demandes clients" subtitle="Gérer les demandes de devis de vos clients">
+            <Suspense fallback={<PageLoader />}>
+              <DemandesPage 
+                activities={activities} 
+                onConvertToQuote={handleConvertRequestToQuote}
+              />
+            </Suspense>
           </Section>
         )}
 
