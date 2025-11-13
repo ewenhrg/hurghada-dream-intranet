@@ -4,7 +4,7 @@ import { SITE_KEY, NEIGHBORHOODS } from "../constants";
 import { uuid, currency } from "../utils";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
-import { generateRequestLink } from "../utils/tokenGenerator";
+import { generateRequestLink, generateRequestToken } from "../utils/tokenGenerator";
 
 export function DemandesPage({ activities, onConvertToQuote }) {
   const [requests, setRequests] = useState([]);
@@ -12,6 +12,8 @@ export function DemandesPage({ activities, onConvertToQuote }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending"); // pending, converted, all
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [generatedLink, setGeneratedLink] = useState("");
+  const [showLinkModal, setShowLinkModal] = useState(false);
 
   // Charger les demandes depuis Supabase
   useEffect(() => {
@@ -205,6 +207,26 @@ export function DemandesPage({ activities, onConvertToQuote }) {
     toast.success("Lien copié dans le presse-papiers !");
   };
 
+  // Générer un nouveau lien unique
+  const handleGenerateNewLink = () => {
+    const token = generateRequestToken();
+    const link = generateRequestLink(token);
+    setGeneratedLink(link);
+    setShowLinkModal(true);
+    
+    // Copier automatiquement dans le presse-papiers
+    navigator.clipboard.writeText(link);
+    toast.success("Nouveau lien généré et copié !");
+  };
+
+  // Copier le lien généré
+  const copyGeneratedLink = () => {
+    if (generatedLink) {
+      navigator.clipboard.writeText(generatedLink);
+      toast.success("Lien copié dans le presse-papiers !");
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-4 md:p-6 flex items-center justify-center min-h-[400px]">
@@ -225,7 +247,10 @@ export function DemandesPage({ activities, onConvertToQuote }) {
             Gérez les demandes de devis de vos clients
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <PrimaryBtn onClick={handleGenerateNewLink} className="whitespace-nowrap">
+            🔗 Créer un lien unique
+          </PrimaryBtn>
           <button
             onClick={() => setStatusFilter("pending")}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
