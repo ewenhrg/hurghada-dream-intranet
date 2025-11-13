@@ -13,7 +13,6 @@ export function DemandesPage({ activities, onConvertToQuote }) {
   const [statusFilter, setStatusFilter] = useState("pending"); // pending, converted, all
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [generatedLink, setGeneratedLink] = useState("");
-  const [showLinkModal, setShowLinkModal] = useState(false);
 
   // Charger les demandes depuis Supabase
   useEffect(() => {
@@ -212,7 +211,6 @@ export function DemandesPage({ activities, onConvertToQuote }) {
     const token = generateRequestToken();
     const link = generateRequestLink(token);
     setGeneratedLink(link);
-    setShowLinkModal(true);
     
     // Copier automatiquement dans le presse-papiers
     navigator.clipboard.writeText(link);
@@ -283,6 +281,32 @@ export function DemandesPage({ activities, onConvertToQuote }) {
           </button>
         </div>
       </div>
+
+      {/* Affichage du lien généré */}
+      {generatedLink && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-4 shadow-md">
+          <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-700 mb-1">Lien unique généré :</p>
+              <div className="bg-white rounded-lg border border-blue-200 px-4 py-2">
+                <code className="text-sm text-blue-900 break-all">{generatedLink}</code>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <PrimaryBtn onClick={copyGeneratedLink} className="whitespace-nowrap">
+                📋 Copier
+              </PrimaryBtn>
+              <GhostBtn
+                onClick={() => setGeneratedLink("")}
+                variant="danger"
+                className="whitespace-nowrap"
+              >
+                ✕ Fermer
+              </GhostBtn>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Barre de recherche */}
       <div className="bg-white rounded-xl border border-blue-100/60 p-4 shadow-md">
