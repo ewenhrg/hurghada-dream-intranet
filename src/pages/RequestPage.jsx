@@ -19,10 +19,10 @@ export function RequestPage() {
     selectedActivities: [],
   });
   const [expandedCategories, setExpandedCategories] = useState(() => {
-    // Par défaut, toutes les catégories sont ouvertes
+    // Par défaut, toutes les catégories sont fermées
     const initial = {};
     CATEGORIES.forEach((cat) => {
-      initial[cat.key] = true;
+      initial[cat.key] = false;
     });
     return initial;
   });
