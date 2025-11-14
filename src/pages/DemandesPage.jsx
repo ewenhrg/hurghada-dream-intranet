@@ -115,7 +115,7 @@ export function DemandesPage({ activities, onConvertToQuote }) {
         children: selectedActivity.children || 0,
         babies: selectedActivity.babies || 0,
         extraLabel: "",
-        extraAmount: selectedActivity.extraAmount || "",
+        extraAmount: "",
         slot: "",
         extraDolphin: false,
         speedBoatExtra: [],

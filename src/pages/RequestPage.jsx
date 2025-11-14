@@ -116,7 +116,6 @@ export function RequestPage() {
               adults: "",
               children: 0,
               babies: 0,
-              extraAmount: "",
             },
           ],
         };
@@ -130,17 +129,6 @@ export function RequestPage() {
       selectedActivities: prev.selectedActivities.map((a) =>
         a.activityId === activityId
           ? { ...a, [field]: field === "adults" ? value : Number(value) || 0 }
-          : a
-      ),
-    }));
-  };
-
-  const updateActivityExtra = (activityId, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      selectedActivities: prev.selectedActivities.map((a) =>
-        a.activityId === activityId
-          ? { ...a, extraAmount: value }
           : a
       ),
     }));
@@ -500,30 +488,6 @@ export function RequestPage() {
                                       placeholder="0"
                                     />
                                   </div>
-                                </div>
-                                {/* Champ Extra pour ajuster le prix */}
-                                <div className="mt-3 pt-3 border-t border-blue-200">
-                                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                                    Extra (montant à ajouter ou soustraire) :
-                                  </label>
-                                  <div className="flex items-center gap-2">
-                                    <input
-                                      type="number"
-                                      step="0.01"
-                                      value={selectedActivity?.extraAmount || ""}
-                                      onChange={(e) =>
-                                        updateActivityExtra(activityId, e.target.value)
-                                      }
-                                      className="flex-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
-                                      placeholder="0.00"
-                                    />
-                                    <span className="text-xs text-gray-500 whitespace-nowrap">
-                                      € (positif = +, négatif = -)
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Utilisez un nombre positif pour augmenter le prix, négatif pour le diminuer
-                                  </p>
                                 </div>
                               </>
                             )}
