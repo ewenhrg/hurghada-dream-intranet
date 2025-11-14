@@ -118,7 +118,9 @@ export function DemandesPage({ activities, onConvertToQuote }) {
         extraAmount: "",
         slot: "",
         extraDolphin: false,
-        speedBoatExtra: [],
+        speedBoatExtra: Array.isArray(selectedActivity.speedBoatExtra) 
+          ? selectedActivity.speedBoatExtra 
+          : [],
         buggySimple: "",
         buggyFamily: "",
         yamaha250: "",

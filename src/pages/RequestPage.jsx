@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, NEIGHBORHOODS } from "../constants";
+import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { TextInput, PrimaryBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 
@@ -116,6 +117,7 @@ export function RequestPage() {
               adults: "",
               children: 0,
               babies: 0,
+              speedBoatExtra: [],
             },
           ],
         };
@@ -131,6 +133,36 @@ export function RequestPage() {
           ? { ...a, [field]: field === "adults" ? value : Number(value) || 0 }
           : a
       ),
+    }));
+  };
+
+  // Vérifier si une activité est Speed Boat
+  const isSpeedBoatActivity = (activityName) => {
+    return activityName?.toLowerCase().includes("speed boat") || 
+           activityName?.toLowerCase().includes("speedboat");
+  };
+
+  // Gérer la sélection des extras Speed Boat
+  const handleSpeedBoatExtraToggle = (activityId, extraId) => {
+    setFormData((prev) => ({
+      ...prev,
+      selectedActivities: prev.selectedActivities.map((a) => {
+        if (a.activityId?.toString() === activityId?.toString()) {
+          const currentExtras = Array.isArray(a.speedBoatExtra) ? a.speedBoatExtra : [];
+          if (extraId === "") {
+            // Si "Aucun extra" est sélectionné, vider le tableau
+            return { ...a, speedBoatExtra: [] };
+          }
+          if (currentExtras.includes(extraId)) {
+            // Retirer l'extra
+            return { ...a, speedBoatExtra: currentExtras.filter((id) => id !== extraId) };
+          } else {
+            // Ajouter l'extra
+            return { ...a, speedBoatExtra: [...currentExtras, extraId] };
+          }
+        }
+        return a;
+      }),
     }));
   };
 
@@ -486,6 +518,44 @@ export function RequestPage() {
                                     className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
                                     placeholder="0"
                                   />
+                                </div>
+                              </div>
+                            )}
+                            {/* Extras Speed Boat */}
+                            {isSelected && isSpeedBoatActivity(activity.name) && (
+                              <div className="mt-4 pt-3 border-t border-blue-200">
+                                <label className="block text-xs font-medium text-gray-700 mb-2">
+                                  Extras Speed Boat :
+                                </label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {SPEED_BOAT_EXTRAS.filter((extra) => extra.id !== "").map((extra) => {
+                                    const currentExtras = Array.isArray(selectedActivity?.speedBoatExtra) 
+                                      ? selectedActivity.speedBoatExtra 
+                                      : [];
+                                    const isExtraSelected = currentExtras.includes(extra.id);
+                                    
+                                    return (
+                                      <label
+                                        key={extra.id}
+                                        className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isExtraSelected}
+                                          onChange={() => handleSpeedBoatExtraToggle(activityId, extra.id)}
+                                          className="w-4 h-4 text-blue-600 rounded"
+                                        />
+                                        <div className="flex-1">
+                                          <span className="text-xs font-medium text-gray-900">
+                                            {extra.label}
+                                          </span>
+                                          <span className="text-xs text-gray-500 ml-2">
+                                            (+{extra.priceAdult}€/adulte, +{extra.priceChild}€/enfant)
+                                          </span>
+                                        </div>
+                                      </label>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             )}
