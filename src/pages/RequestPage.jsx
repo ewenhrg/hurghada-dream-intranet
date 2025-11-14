@@ -18,7 +18,14 @@ export function RequestPage() {
     departureDate: "",
     selectedActivities: [],
   });
-  const [expandedCategories, setExpandedCategories] = useState({});
+  const [expandedCategories, setExpandedCategories] = useState(() => {
+    // Par défaut, toutes les catégories sont ouvertes
+    const initial = {};
+    CATEGORIES.forEach((cat) => {
+      initial[cat.key] = true;
+    });
+    return initial;
+  });
 
   // Charger les activités disponibles
   useEffect(() => {
@@ -134,24 +141,34 @@ export function RequestPage() {
   // Grouper les activités par catégorie et les trier alphabétiquement
   const activitiesByCategory = useMemo(() => {
     const grouped = {};
+    
+    // Initialiser toutes les catégories avec un tableau vide
     CATEGORIES.forEach((cat) => {
       grouped[cat.key] = [];
     });
+    
+    // Grouper les activités par catégorie
     activities.forEach((activity) => {
       const category = activity.category || "desert";
-      if (!grouped[category]) {
-        grouped[category] = [];
+      // S'assurer que la catégorie existe, sinon utiliser "desert"
+      const validCategory = CATEGORIES.some(cat => cat.key === category) ? category : "desert";
+      if (!grouped[validCategory]) {
+        grouped[validCategory] = [];
       }
-      grouped[category].push(activity);
+      grouped[validCategory].push(activity);
     });
+    
     // Trier les activités alphabétiquement dans chaque catégorie
     Object.keys(grouped).forEach((categoryKey) => {
-      grouped[categoryKey].sort((a, b) => {
-        const nameA = (a.name || "").toLowerCase();
-        const nameB = (b.name || "").toLowerCase();
-        return nameA.localeCompare(nameB, "fr");
-      });
+      if (grouped[categoryKey].length > 0) {
+        grouped[categoryKey].sort((a, b) => {
+          const nameA = (a.name || "").toLowerCase();
+          const nameB = (b.name || "").toLowerCase();
+          return nameA.localeCompare(nameB, "fr");
+        });
+      }
     });
+    
     return grouped;
   }, [activities]);
 
@@ -398,34 +415,46 @@ export function RequestPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {CATEGORIES.map((category) => {
+                  {CATEGORIES.filter((category) => {
+                    // Afficher seulement les catégories qui ont des activités
                     const categoryActivities = activitiesByCategory[category.key] || [];
-                    if (categoryActivities.length === 0) return null;
-
-                    const isExpanded = expandedCategories[category.key] !== false; // Par défaut ouvert
+                    return categoryActivities.length > 0;
+                  }).map((category) => {
+                    const categoryActivities = activitiesByCategory[category.key] || [];
+                    const isExpanded = expandedCategories[category.key] === true;
                     const selectedCount = categoryActivities.filter((activity) =>
                       formData.selectedActivities.some(
                         (a) => a.activityId?.toString() === activity.id?.toString()
                       )
                     ).length;
 
+                    // Icônes par catégorie
+                    const categoryIcons = {
+                      desert: "🏜️",
+                      aquatique: "🌊",
+                      exploration_bien_etre: "🧘",
+                      luxor_caire: "🏛️",
+                      marsa_alam: "🐠",
+                      transfert: "🚗",
+                    };
+
                     return (
                       <div
                         key={category.key}
-                        className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden"
+                        className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                       >
                         <button
                           type="button"
                           onClick={() => toggleCategory(category.key)}
                           className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
                         >
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xl">{category.key === "desert" ? "🏜️" : category.key === "aquatique" ? "🌊" : category.key === "exploration_bien_etre" ? "🧘" : category.key === "luxor_caire" ? "🏛️" : category.key === "marsa_alam" ? "🐠" : "🚗"}</span>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-2xl">{categoryIcons[category.key] || "📋"}</span>
                             <h3 className="text-lg font-bold text-gray-900">
                               {category.label}
                             </h3>
-                            <span className="text-sm text-gray-500">
-                              ({categoryActivities.length} activité{categoryActivities.length > 1 ? "s" : ""})
+                            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                              {categoryActivities.length} activité{categoryActivities.length > 1 ? "s" : ""}
                             </span>
                             {selectedCount > 0 && (
                               <span className="bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
@@ -433,7 +462,7 @@ export function RequestPage() {
                               </span>
                             )}
                           </div>
-                          <span className="text-gray-400 text-xl">
+                          <span className="text-gray-400 text-xl font-bold ml-2">
                             {isExpanded ? "▼" : "▶"}
                           </span>
                         </button>
