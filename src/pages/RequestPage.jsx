@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { SITE_KEY } from "../constants";
+import { SITE_KEY, CATEGORIES } from "../constants";
 import { TextInput, PrimaryBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 
@@ -14,11 +14,11 @@ export function RequestPage() {
     clientName: "",
     clientPhone: "",
     clientHotel: "",
-    clientRoom: "",
     arrivalDate: "",
     departureDate: "",
     selectedActivities: [],
   });
+  const [expandedCategories, setExpandedCategories] = useState({});
 
   // Charger les activités disponibles
   useEffect(() => {
@@ -74,7 +74,6 @@ export function RequestPage() {
             clientName: data.client_name || "",
             clientPhone: data.client_phone || "",
             clientHotel: data.client_hotel || "",
-            clientRoom: data.client_room || "",
             arrivalDate: data.arrival_date || "",
             departureDate: data.departure_date || "",
             selectedActivities: Array.isArray(data.selected_activities) ? data.selected_activities : [],
@@ -132,6 +131,30 @@ export function RequestPage() {
     }));
   };
 
+  // Grouper les activités par catégorie
+  const activitiesByCategory = useMemo(() => {
+    const grouped = {};
+    CATEGORIES.forEach((cat) => {
+      grouped[cat.key] = [];
+    });
+    activities.forEach((activity) => {
+      const category = activity.category || "desert";
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(activity);
+    });
+    return grouped;
+  }, [activities]);
+
+  // Toggle l'expansion d'une catégorie
+  const toggleCategory = (categoryKey) => {
+    setExpandedCategories((prev) => ({
+      ...prev,
+      [categoryKey]: !prev[categoryKey],
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -175,7 +198,7 @@ export function RequestPage() {
         client_name: formData.clientName.trim(),
         client_phone: formData.clientPhone.trim(),
         client_hotel: formData.clientHotel.trim(),
-        client_room: formData.clientRoom.trim(),
+        client_room: "",
         client_neighborhood: "",
         arrival_date: formData.arrivalDate,
         departure_date: formData.departureDate,
@@ -313,19 +336,6 @@ export function RequestPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-800 mb-2">
-                    Chambre
-                  </label>
-                  <TextInput
-                    value={formData.clientRoom}
-                    onChange={(e) =>
-                      setFormData({ ...formData, clientRoom: e.target.value })
-                    }
-                    placeholder="Numéro de chambre"
-                    className="text-base"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-800 mb-2">
                     Date d'arrivée <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -379,118 +389,163 @@ export function RequestPage() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {activities.map((activity) => {
-                    // Les activités chargées depuis Supabase ont directement l'ID Supabase dans 'id'
-                    const activityId = activity.id?.toString();
-                    const isSelected = formData.selectedActivities.some(
-                      (a) => a.activityId?.toString() === activityId
-                    );
-                    const selectedActivity = formData.selectedActivities.find(
-                      (a) => a.activityId?.toString() === activityId
-                    );
+                <div className="space-y-3">
+                  {CATEGORIES.map((category) => {
+                    const categoryActivities = activitiesByCategory[category.key] || [];
+                    if (categoryActivities.length === 0) return null;
+
+                    const isExpanded = expandedCategories[category.key] !== false; // Par défaut ouvert
+                    const selectedCount = categoryActivities.filter((activity) =>
+                      formData.selectedActivities.some(
+                        (a) => a.activityId?.toString() === activity.id?.toString()
+                      )
+                    ).length;
 
                     return (
                       <div
-                        key={activity.id}
-                        className={`border-2 rounded-2xl p-5 transition-all duration-200 ${
-                          isSelected
-                            ? "border-blue-500 bg-blue-50 shadow-md"
-                            : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
-                        }`}
+                        key={category.key}
+                        className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden"
                       >
-                        <div className="flex items-start gap-4">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => handleActivityToggle(activityId)}
-                            className="mt-1 w-6 h-6 text-blue-600 rounded border-2 border-gray-300 focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <h3 className="text-lg font-bold text-gray-900">
-                                {activity.name}
-                              </h3>
-                              {activity.price_adult && (
-                                <span className="text-base font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">
-                                  {activity.price_adult}€ / adulte
-                                </span>
-                              )}
-                            </div>
-                            {activity.notes && (
-                              <p className="text-sm text-gray-600 mb-4 bg-gray-50 p-2 rounded-lg">
-                                {activity.notes}
-                              </p>
-                            )}
-                            {isSelected && (
-                              <div className="mt-4 pt-4 border-t-2 border-blue-200">
-                                <p className="text-sm font-semibold text-gray-700 mb-3">
-                                  Nombre de personnes :
-                                </p>
-                                <div className="grid md:grid-cols-3 gap-4">
-                                  <div>
-                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
-                                      👥 Adultes <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      required
-                                      value={selectedActivity?.adults || ""}
-                                      onChange={(e) =>
-                                        updateActivityQuantity(
-                                          activityId,
-                                          "adults",
-                                          e.target.value
-                                        )
-                                      }
-                                      className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                                      placeholder="0"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
-                                      👶 Enfants
-                                    </label>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={selectedActivity?.children || 0}
-                                      onChange={(e) =>
-                                        updateActivityQuantity(
-                                          activityId,
-                                          "children",
-                                          e.target.value
-                                        )
-                                      }
-                                      className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                                      placeholder="0"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
-                                      🍼 Bébés
-                                    </label>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={selectedActivity?.babies || 0}
-                                      onChange={(e) =>
-                                        updateActivityQuantity(
-                                          activityId,
-                                          "babies",
-                                          e.target.value
-                                        )
-                                      }
-                                      className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                                      placeholder="0"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleCategory(category.key)}
+                          className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{category.key === "desert" ? "🏜️" : category.key === "aquatique" ? "🌊" : category.key === "exploration_bien_etre" ? "🧘" : category.key === "luxor_caire" ? "🏛️" : category.key === "marsa_alam" ? "🐠" : "🚗"}</span>
+                            <h3 className="text-lg font-bold text-gray-900">
+                              {category.label}
+                            </h3>
+                            <span className="text-sm text-gray-500">
+                              ({categoryActivities.length} activité{categoryActivities.length > 1 ? "s" : ""})
+                            </span>
+                            {selectedCount > 0 && (
+                              <span className="bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                                {selectedCount} sélectionnée{selectedCount > 1 ? "s" : ""}
+                              </span>
                             )}
                           </div>
-                        </div>
+                          <span className="text-gray-400 text-xl">
+                            {isExpanded ? "▼" : "▶"}
+                          </span>
+                        </button>
+                        {isExpanded && (
+                          <div className="border-t border-gray-200 p-4 space-y-3 bg-gray-50">
+                            {categoryActivities.map((activity) => {
+                              const activityId = activity.id?.toString();
+                              const isSelected = formData.selectedActivities.some(
+                                (a) => a.activityId?.toString() === activityId
+                              );
+                              const selectedActivity = formData.selectedActivities.find(
+                                (a) => a.activityId?.toString() === activityId
+                              );
+
+                              return (
+                                <div
+                                  key={activity.id}
+                                  className={`border-2 rounded-xl p-4 transition-all duration-200 ${
+                                    isSelected
+                                      ? "border-blue-500 bg-blue-50 shadow-md"
+                                      : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+                                  }`}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => handleActivityToggle(activityId)}
+                                      className="mt-1 w-5 h-5 text-blue-600 rounded border-2 border-gray-300 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                    />
+                                    <div className="flex-1">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <h4 className="text-base font-bold text-gray-900">
+                                          {activity.name}
+                                        </h4>
+                                        {activity.price_adult && (
+                                          <span className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                                            {activity.price_adult}€ / adulte
+                                          </span>
+                                        )}
+                                      </div>
+                                      {activity.notes && (
+                                        <p className="text-xs text-gray-600 mb-3 bg-gray-50 p-2 rounded-lg">
+                                          {activity.notes}
+                                        </p>
+                                      )}
+                                      {isSelected && (
+                                        <div className="mt-3 pt-3 border-t-2 border-blue-200">
+                                          <p className="text-xs font-semibold text-gray-700 mb-2">
+                                            Nombre de personnes :
+                                          </p>
+                                          <div className="grid grid-cols-3 gap-2">
+                                            <div>
+                                              <label className="block text-xs font-semibold text-gray-800 mb-1">
+                                                👥 Adultes <span className="text-red-500">*</span>
+                                              </label>
+                                              <input
+                                                type="number"
+                                                min="1"
+                                                required
+                                                value={selectedActivity?.adults || ""}
+                                                onChange={(e) =>
+                                                  updateActivityQuantity(
+                                                    activityId,
+                                                    "adults",
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full rounded-lg border-2 border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                                                placeholder="0"
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-xs font-semibold text-gray-800 mb-1">
+                                                👶 Enfants
+                                              </label>
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                value={selectedActivity?.children || 0}
+                                                onChange={(e) =>
+                                                  updateActivityQuantity(
+                                                    activityId,
+                                                    "children",
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full rounded-lg border-2 border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                                                placeholder="0"
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-xs font-semibold text-gray-800 mb-1">
+                                                🍼 Bébés
+                                              </label>
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                value={selectedActivity?.babies || 0}
+                                                onChange={(e) =>
+                                                  updateActivityQuantity(
+                                                    activityId,
+                                                    "babies",
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full rounded-lg border-2 border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                                                placeholder="0"
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
