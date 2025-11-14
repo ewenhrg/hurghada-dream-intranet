@@ -131,7 +131,7 @@ export function RequestPage() {
     }));
   };
 
-  // Grouper les activités par catégorie
+  // Grouper les activités par catégorie et les trier alphabétiquement
   const activitiesByCategory = useMemo(() => {
     const grouped = {};
     CATEGORIES.forEach((cat) => {
@@ -143,6 +143,14 @@ export function RequestPage() {
         grouped[category] = [];
       }
       grouped[category].push(activity);
+    });
+    // Trier les activités alphabétiquement dans chaque catégorie
+    Object.keys(grouped).forEach((categoryKey) => {
+      grouped[categoryKey].sort((a, b) => {
+        const nameA = (a.name || "").toLowerCase();
+        const nameB = (b.name || "").toLowerCase();
+        return nameA.localeCompare(nameB, "fr");
+      });
     });
     return grouped;
   }, [activities]);
