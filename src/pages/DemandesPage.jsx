@@ -115,12 +115,10 @@ export function DemandesPage({ activities, onConvertToQuote }) {
         children: selectedActivity.children || 0,
         babies: selectedActivity.babies || 0,
         extraLabel: "",
-        extraAmount: "",
+        extraAmount: selectedActivity.extraAmount || "",
         slot: "",
         extraDolphin: false,
-        speedBoatExtra: Array.isArray(selectedActivity.speedBoatExtra) 
-          ? selectedActivity.speedBoatExtra 
-          : [],
+        speedBoatExtra: [],
         buggySimple: "",
         buggyFamily: "",
         yamaha250: "",

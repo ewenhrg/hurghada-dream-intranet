@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, NEIGHBORHOODS } from "../constants";
-import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { TextInput, PrimaryBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 
@@ -117,7 +116,7 @@ export function RequestPage() {
               adults: "",
               children: 0,
               babies: 0,
-              speedBoatExtra: [],
+              extraAmount: "",
             },
           ],
         };
@@ -136,33 +135,14 @@ export function RequestPage() {
     }));
   };
 
-  // Vérifier si une activité est Speed Boat
-  const isSpeedBoatActivity = (activityName) => {
-    return activityName?.toLowerCase().includes("speed boat") || 
-           activityName?.toLowerCase().includes("speedboat");
-  };
-
-  // Gérer la sélection des extras Speed Boat
-  const handleSpeedBoatExtraToggle = (activityId, extraId) => {
+  const updateActivityExtra = (activityId, value) => {
     setFormData((prev) => ({
       ...prev,
-      selectedActivities: prev.selectedActivities.map((a) => {
-        if (a.activityId?.toString() === activityId?.toString()) {
-          const currentExtras = Array.isArray(a.speedBoatExtra) ? a.speedBoatExtra : [];
-          if (extraId === "") {
-            // Si "Aucun extra" est sélectionné, vider le tableau
-            return { ...a, speedBoatExtra: [] };
-          }
-          if (currentExtras.includes(extraId)) {
-            // Retirer l'extra
-            return { ...a, speedBoatExtra: currentExtras.filter((id) => id !== extraId) };
-          } else {
-            // Ajouter l'extra
-            return { ...a, speedBoatExtra: [...currentExtras, extraId] };
-          }
-        }
-        return a;
-      }),
+      selectedActivities: prev.selectedActivities.map((a) =>
+        a.activityId === activityId
+          ? { ...a, extraAmount: value }
+          : a
+      ),
     }));
   };
 
@@ -460,104 +440,92 @@ export function RequestPage() {
                               </p>
                             )}
                             {isSelected && (
-                              <div className="grid md:grid-cols-3 gap-3 mt-3 pt-3 border-t border-blue-200">
-                                <div>
+                              <>
+                                <div className="grid md:grid-cols-3 gap-3 mt-3 pt-3 border-t border-blue-200">
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Adultes <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      required
+                                      value={selectedActivity?.adults || ""}
+                                      onChange={(e) =>
+                                        updateActivityQuantity(
+                                          activityId,
+                                          "adults",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Enfants
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={selectedActivity?.children || 0}
+                                      onChange={(e) =>
+                                        updateActivityQuantity(
+                                          activityId,
+                                          "children",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Bébés
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={selectedActivity?.babies || 0}
+                                      onChange={(e) =>
+                                        updateActivityQuantity(
+                                          activityId,
+                                          "babies",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                </div>
+                                {/* Champ Extra pour ajuster le prix */}
+                                <div className="mt-3 pt-3 border-t border-blue-200">
                                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                                    Adultes <span className="text-red-500">*</span>
+                                    Extra (montant à ajouter ou soustraire) :
                                   </label>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    required
-                                    value={selectedActivity?.adults || ""}
-                                    onChange={(e) =>
-                                      updateActivityQuantity(
-                                        activityId,
-                                        "adults",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
-                                    placeholder="0"
-                                  />
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={selectedActivity?.extraAmount || ""}
+                                      onChange={(e) =>
+                                        updateActivityExtra(activityId, e.target.value)
+                                      }
+                                      className="flex-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
+                                      placeholder="0.00"
+                                    />
+                                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                                      € (positif = +, négatif = -)
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Utilisez un nombre positif pour augmenter le prix, négatif pour le diminuer
+                                  </p>
                                 </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                                    Enfants
-                                  </label>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={selectedActivity?.children || 0}
-                                    onChange={(e) =>
-                                      updateActivityQuantity(
-                                        activityId,
-                                        "children",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
-                                    placeholder="0"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                                    Bébés
-                                  </label>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={selectedActivity?.babies || 0}
-                                    onChange={(e) =>
-                                      updateActivityQuantity(
-                                        activityId,
-                                        "babies",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
-                                    placeholder="0"
-                                  />
-                                </div>
-                              </div>
-                            )}
-                            {/* Extras Speed Boat */}
-                            {isSelected && isSpeedBoatActivity(activity.name) && (
-                              <div className="mt-4 pt-3 border-t border-blue-200">
-                                <label className="block text-xs font-medium text-gray-700 mb-2">
-                                  Extras Speed Boat :
-                                </label>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                  {SPEED_BOAT_EXTRAS.filter((extra) => extra.id !== "").map((extra) => {
-                                    const currentExtras = Array.isArray(selectedActivity?.speedBoatExtra) 
-                                      ? selectedActivity.speedBoatExtra 
-                                      : [];
-                                    const isExtraSelected = currentExtras.includes(extra.id);
-                                    
-                                    return (
-                                      <label
-                                        key={extra.id}
-                                        className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={isExtraSelected}
-                                          onChange={() => handleSpeedBoatExtraToggle(activityId, extra.id)}
-                                          className="w-4 h-4 text-blue-600 rounded"
-                                        />
-                                        <div className="flex-1">
-                                          <span className="text-xs font-medium text-gray-900">
-                                            {extra.label}
-                                          </span>
-                                          <span className="text-xs text-gray-500 ml-2">
-                                            (+{extra.priceAdult}€/adulte, +{extra.priceChild}€/enfant)
-                                          </span>
-                                        </div>
-                                      </label>
-                                    );
-                                  })}
-                                </div>
-                              </div>
+                              </>
                             )}
                           </div>
                         </div>
