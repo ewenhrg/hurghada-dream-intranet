@@ -795,11 +795,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         }
       }
 
-      // extra (pour les autres activités, pas Speed Boat)
-      if (!act || !act.name.toLowerCase().includes("speed boat")) {
-        if (it.extraAmount) {
-          lineTotal += Number(it.extraAmount || 0);
-        }
+      // extra (montant à ajouter ou soustraire pour toutes les activités)
+      if (it.extraAmount) {
+        lineTotal += Number(it.extraAmount || 0);
       }
 
       const pickupTime =
@@ -1257,71 +1255,111 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
               {/* extra - Cases à cocher pour Speed Boat, champs classiques pour les autres */}
               {c.act && c.act.name.toLowerCase().includes("speed boat") ? (
-                <div>
-                  <p className="text-xs text-gray-500 mb-2">Extras (plusieurs sélections possibles)</p>
-                  <div className="space-y-2 border border-blue-200/50 rounded-xl p-3 bg-white">
-                    {SPEED_BOAT_EXTRAS.filter((extra) => extra.id !== "").map((extra) => {
-                      // Gérer la compatibilité avec l'ancien format (string) et le nouveau format (array)
-                      const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
-                        ? c.raw.speedBoatExtra 
-                        : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
-                          ? [c.raw.speedBoatExtra] 
-                          : []);
-                      const isChecked = currentExtras.includes(extra.id);
-                      
-                      return (
-                        <label key={extra.id} className="flex items-center gap-2 cursor-pointer hover:bg-blue-50/50 p-2 rounded-lg transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
-                                ? c.raw.speedBoatExtra 
-                                : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
-                                  ? [c.raw.speedBoatExtra] 
-                                  : []);
-                              
-                              if (e.target.checked) {
-                                // Ajouter l'extra s'il n'est pas déjà dans la liste
-                                if (!currentExtras.includes(extra.id)) {
-                                  setItem(idx, { speedBoatExtra: [...currentExtras, extra.id] });
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">Extras (plusieurs sélections possibles)</p>
+                    <div className="space-y-2 border border-blue-200/50 rounded-xl p-3 bg-white">
+                      {SPEED_BOAT_EXTRAS.filter((extra) => extra.id !== "").map((extra) => {
+                        // Gérer la compatibilité avec l'ancien format (string) et le nouveau format (array)
+                        const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
+                          ? c.raw.speedBoatExtra 
+                          : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
+                            ? [c.raw.speedBoatExtra] 
+                            : []);
+                        const isChecked = currentExtras.includes(extra.id);
+                        
+                        return (
+                          <label key={extra.id} className="flex items-center gap-2 cursor-pointer hover:bg-blue-50/50 p-2 rounded-lg transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
+                                  ? c.raw.speedBoatExtra 
+                                  : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
+                                    ? [c.raw.speedBoatExtra] 
+                                    : []);
+                                
+                                if (e.target.checked) {
+                                  // Ajouter l'extra s'il n'est pas déjà dans la liste
+                                  if (!currentExtras.includes(extra.id)) {
+                                    setItem(idx, { speedBoatExtra: [...currentExtras, extra.id] });
+                                  }
+                                } else {
+                                  // Retirer l'extra de la liste
+                                  setItem(idx, { speedBoatExtra: currentExtras.filter((id) => id !== extra.id) });
                                 }
-                              } else {
-                                // Retirer l'extra de la liste
-                                setItem(idx, { speedBoatExtra: currentExtras.filter((id) => id !== extra.id) });
-                              }
-                            }}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-slate-700 flex-1">
-                            <span className="font-medium">{extra.label}</span>
-                            {extra.priceAdult > 0 && (
-                              <span className="text-xs text-slate-500 ml-2">
-                                ({extra.priceAdult}€/adt + {extra.priceChild}€ enfant)
-                              </span>
-                            )}
-                          </span>
-                        </label>
-                      );
-                    })}
+                              }}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-slate-700 flex-1">
+                              <span className="font-medium">{extra.label}</span>
+                              {extra.priceAdult > 0 && (
+                                <span className="text-xs text-slate-500 ml-2">
+                                  ({extra.priceAdult}€/adt + {extra.priceChild}€ enfant)
+                                </span>
+                              )}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {/* Champ Extra pour ajuster le prix manuellement */}
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">Extra (montant à ajouter ou soustraire)</p>
+                    <div className="flex items-center gap-2">
+                      <NumberInput
+                        value={c.raw.extraAmount || ""}
+                        onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
+                        placeholder="0.00"
+                        className="flex-1"
+                      />
+                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                        € (positif = +, négatif = -)
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Utilisez un nombre positif pour augmenter le prix, négatif pour le diminuer
+                    </p>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
-                  <div className="md:col-span-2">
-                    <p className="text-xs text-gray-500 mb-2">Extra (ex: photos, bateau privé…)</p>
-                    <TextInput
-                      placeholder="Libellé extra"
-                      value={c.raw.extraLabel}
-                      onChange={(e) => setItem(idx, { extraLabel: e.target.value })}
-                    />
+                <div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-4">
+                    <div className="md:col-span-2">
+                      <p className="text-xs text-gray-500 mb-2">Extra (ex: photos, bateau privé…)</p>
+                      <TextInput
+                        placeholder="Libellé extra"
+                        value={c.raw.extraLabel}
+                        onChange={(e) => setItem(idx, { extraLabel: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-2">Montant Extra</p>
+                      <NumberInput
+                        value={c.raw.extraAmount}
+                        onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
+                      />
+                    </div>
                   </div>
+                  {/* Champ Extra simplifié pour ajuster le prix */}
                   <div>
-                    <p className="text-xs text-gray-500 mb-2">Montant Extra</p>
-                    <NumberInput
-                      value={c.raw.extraAmount}
-                      onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
-                    />
+                    <p className="text-xs text-gray-500 mb-2">Extra (montant à ajouter ou soustraire)</p>
+                    <div className="flex items-center gap-2">
+                      <NumberInput
+                        value={c.raw.extraAmount || ""}
+                        onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
+                        placeholder="0.00"
+                        className="flex-1"
+                      />
+                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                        € (positif = +, négatif = -)
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Utilisez un nombre positif pour augmenter le prix, négatif pour le diminuer
+                    </p>
                   </div>
                 </div>
               )}
