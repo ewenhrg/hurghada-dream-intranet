@@ -616,6 +616,31 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [pushSales, activities]);
 
+  // Sélectionner automatiquement le créneau s'il n'y en a qu'un seul disponible
+  useEffect(() => {
+    if (!client.neighborhood || items.length === 0) return;
+
+    items.forEach((it, idx) => {
+      if (!it.activityId || it.slot) return; // Ignorer si pas d'activité ou slot déjà défini
+
+      const act = activities.find((a) => a.id === it.activityId);
+      if (!act || !act.transfers || !act.transfers[client.neighborhood]) return;
+
+      const transferInfo = act.transfers[client.neighborhood];
+      
+      // Compter les créneaux disponibles
+      const availableSlots = [];
+      if (transferInfo.morningEnabled) availableSlots.push("morning");
+      if (transferInfo.afternoonEnabled) availableSlots.push("afternoon");
+      if (transferInfo.eveningEnabled) availableSlots.push("evening");
+
+      // Si un seul créneau est disponible, le sélectionner automatiquement
+      if (availableSlots.length === 1) {
+        setItem(idx, { slot: availableSlots[0] });
+      }
+    });
+  }, [items, activities, client.neighborhood, setItem]);
+
   const computed = useMemo(() => {
     return items.map((it) => {
       const act = activities.find((a) => a.id === it.activityId);
