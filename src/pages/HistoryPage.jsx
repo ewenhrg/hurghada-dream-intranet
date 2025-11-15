@@ -1105,6 +1105,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
             }
           });
         }
+
+        // extra (montant à ajouter ou soustraire - uniquement pour Speed Boat)
+        if (it.extraAmount) {
+          lineTotal += Number(it.extraAmount || 0);
+        }
       } else if (act && isBuggyActivity(act.name)) {
         // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy simple et family
         const buggySimple = Number(it.buggySimple || 0);
@@ -1137,11 +1142,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         } else {
           lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
         }
-      }
-
-      // extra (montant à ajouter ou soustraire pour toutes les activités)
-      if (it.extraAmount) {
-        lineTotal += Number(it.extraAmount || 0);
       }
 
       const pickupTime =
@@ -1505,24 +1505,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       </div>
                     </>
                   )}
-                  {/* Champ Extra simplifié pour ajuster le prix (toutes les activités) */}
-                  <div className="md:col-span-3 mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">Extra (montant à ajouter ou soustraire)</p>
-                    <div className="flex items-center gap-2">
-                      <NumberInput
-                        value={c.raw.extraAmount || ""}
-                        onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
-                        placeholder="0.00"
-                        className="flex-1"
-                      />
-                      <span className="text-xs text-gray-500 whitespace-nowrap">
-                        € (positif = +, négatif = -)
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Utilisez un nombre positif pour augmenter le prix, négatif pour le diminuer
-                    </p>
-                  </div>
                 </div>
                 {/* Extra dauphin (uniquement pour Speed Boat) - Modifiable par tous */}
                 {c.act && c.act.name.toLowerCase().includes("speed boat") && (

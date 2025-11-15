@@ -319,9 +319,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
 
     // Générer toutes les dates entre l'arrivée et le départ avec leur jour de la semaine
+    // Exclure le jour d'arrivée et le jour de départ
     const allDates = [];
     const currentDate = new Date(arrival);
-    while (currentDate <= departure) {
+    currentDate.setDate(currentDate.getDate() + 1); // Commencer le jour après l'arrivée
+    const departureMinusOne = new Date(departure);
+    departureMinusOne.setDate(departureMinusOne.getDate() - 1); // Terminer le jour avant le départ
+    
+    while (currentDate <= departureMinusOne) {
       const dateStr = new Date(currentDate).toISOString().slice(0, 10);
       const dayOfWeek = currentDate.getDay(); // 0 = dimanche, 1 = lundi, etc.
       allDates.push({ date: dateStr, dayOfWeek });
@@ -329,7 +334,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
 
     if (allDates.length === 0) {
-      toast.warning("Aucune date disponible entre l'arrivée et le départ.");
+      toast.warning("Aucune date disponible entre l'arrivée et le départ (les jours d'arrivée et de départ sont exclus).");
       return;
     }
 
@@ -681,6 +686,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             lineTotal += ch * selectedExtra.priceChild;
           }
         }
+
+        // extra (montant à ajouter ou soustraire - uniquement pour Speed Boat)
+        if (it.extraAmount) {
+          lineTotal += Number(it.extraAmount || 0);
+        }
       } else if (act && isBuggyActivity(act.name)) {
         // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy simple et family
         const buggySimple = Number(it.buggySimple || 0);
@@ -793,11 +803,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         } else {
           lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
         }
-      }
-
-      // extra (montant à ajouter ou soustraire pour toutes les activités)
-      if (it.extraAmount) {
-        lineTotal += Number(it.extraAmount || 0);
       }
 
       const pickupTime =
@@ -1342,24 +1347,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
                       />
                     </div>
-                  </div>
-                  {/* Champ Extra simplifié pour ajuster le prix */}
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">Extra (montant à ajouter ou soustraire)</p>
-                    <div className="flex items-center gap-2">
-                      <NumberInput
-                        value={c.raw.extraAmount || ""}
-                        onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
-                        placeholder="0.00"
-                        className="flex-1"
-                      />
-                      <span className="text-xs text-gray-500 whitespace-nowrap">
-                        € (positif = +, négatif = -)
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Utilisez un nombre positif pour augmenter le prix, négatif pour le diminuer
-                    </p>
                   </div>
                 </div>
               )}
