@@ -300,9 +300,17 @@ export function RequestPage() {
             <h1 className="text-3xl md:text-4xl font-bold mb-3">
               📋 Demande de devis
             </h1>
-            <p className="text-blue-100 text-lg">
+            <p className="text-blue-100 text-lg mb-4">
               Remplissez ce formulaire pour recevoir un devis personnalisé
             </p>
+            <a
+              href="https://tapkit.me/catalogues-activites"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-white text-blue-600 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all duration-200 transform hover:scale-105"
+            >
+              📖 NOTRE CATALOGUE
+            </a>
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 md:p-10 space-y-8">
