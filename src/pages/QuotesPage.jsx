@@ -712,10 +712,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           }
         }
 
-        // extra (montant à ajouter ou soustraire - uniquement pour Speed Boat)
-        if (it.extraAmount) {
-          lineTotal += Number(it.extraAmount || 0);
-        }
       } else if (act && isBuggyActivity(act.name)) {
         // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy simple et family
         const buggySimple = Number(it.buggySimple || 0);
@@ -813,6 +809,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
         lineTotal += Number(it.babies || 0) * Number(act.priceBaby || 0);
+        
       }
 
       // supplément transfert PAR ADULTE (sauf pour les activités buggy et moto cross où on utilise les quantités spécifiques)
@@ -827,6 +824,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           lineTotal += Number(transferInfo.surcharge || 0) * totalMotos;
         } else {
           lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
+        }
+      }
+
+      // extra (montant à ajouter ou soustraire) - s'applique à toutes les activités
+      if (it.extraAmount !== undefined && it.extraAmount !== null && it.extraAmount !== "") {
+        const extraAmountValue = Number(it.extraAmount);
+        if (!isNaN(extraAmountValue)) {
+          lineTotal += extraAmountValue;
         }
       }
 
