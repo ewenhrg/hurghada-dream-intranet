@@ -326,8 +326,8 @@ export function RequestPage() {
                 </p>
                 <div className="flex justify-center items-center text-xs sm:text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">📧</span>
-                    <span className="text-blue-600 font-semibold">Nous vous contacterons par téléphone</span>
+                    <span className="text-lg">💬</span>
+                    <span className="text-blue-600 font-semibold">sur WhatsApp</span>
                   </div>
                 </div>
               </div>
