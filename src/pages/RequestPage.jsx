@@ -324,14 +324,10 @@ export function RequestPage() {
                 <p className="text-gray-700 text-sm sm:text-base font-medium mb-4">
                   Votre demande de devis a été enregistrée et sera traitée dans les plus brefs délais.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center text-xs sm:text-sm text-gray-600">
+                <div className="flex justify-center items-center text-xs sm:text-sm">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">📧</span>
-                    <span>Nous vous contacterons par téléphone</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">⏰</span>
-                    <span>Sous 24-48 heures</span>
+                    <span className="text-blue-600 font-semibold">Nous vous contacterons par téléphone</span>
                   </div>
                 </div>
               </div>
