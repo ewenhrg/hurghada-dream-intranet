@@ -867,17 +867,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         
       }
 
-      // supplément transfert PAR ADULTE (sauf pour les activités buggy et moto cross où on utilise les quantités spécifiques)
+      // supplément transfert PAR ADULTE
       if (transferInfo && transferInfo.surcharge) {
-        if (act && isBuggyActivity(act.name)) {
-          // Pour les activités buggy, le supplément est calculé sur le nombre total de buggys
-          const totalBuggys = Number(it.buggySimple || 0) + Number(it.buggyFamily || 0);
-          lineTotal += Number(transferInfo.surcharge || 0) * totalBuggys;
-        } else if (act && isMotoCrossActivity(act.name)) {
+        if (act && isMotoCrossActivity(act.name)) {
           // Pour MOTO CROSS, le supplément est calculé sur le nombre total de motos
           const totalMotos = Number(it.yamaha250 || 0) + Number(it.ktm640 || 0) + Number(it.ktm530 || 0);
           lineTotal += Number(transferInfo.surcharge || 0) * totalMotos;
         } else {
+          // Pour toutes les autres activités (y compris buggy), le supplément est calculé sur le nombre d'adultes
           lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
         }
       }
