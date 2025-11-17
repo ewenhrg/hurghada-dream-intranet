@@ -63,6 +63,7 @@ export function RequestPage() {
   const [formData, setFormData] = useState({
     clientName: "",
     clientPhone: "",
+    clientEmail: "",
     clientHotel: "",
     arrivalDate: "",
     departureDate: "",
@@ -130,6 +131,7 @@ export function RequestPage() {
           setFormData({
             clientName: data.client_name || "",
             clientPhone: data.client_phone || "",
+            clientEmail: data.client_email || "",
             clientHotel: data.client_hotel || "",
             arrivalDate: data.arrival_date || "",
             departureDate: data.departure_date || "",
@@ -242,6 +244,16 @@ export function RequestPage() {
       toast.error("Veuillez saisir votre numéro de téléphone.");
       return;
     }
+    if (!formData.clientEmail.trim()) {
+      toast.error("Veuillez saisir votre adresse email.");
+      return;
+    }
+    // Validation basique de l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.clientEmail.trim())) {
+      toast.error("Veuillez saisir une adresse email valide.");
+      return;
+    }
     if (!formData.arrivalDate) {
       toast.error("Veuillez sélectionner votre date d'arrivée.");
       return;
@@ -272,6 +284,7 @@ export function RequestPage() {
         token: token || crypto.randomUUID(),
         client_name: formData.clientName.trim(),
         client_phone: formData.clientPhone.trim(),
+        client_email: formData.clientEmail.trim(),
         client_hotel: formData.clientHotel.trim(),
         client_room: "",
         client_neighborhood: "",
@@ -540,6 +553,32 @@ export function RequestPage() {
                     }
                     aria-required="true"
                     aria-describedby="tooltip-phone"
+                    className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                  />
+                </div>
+                <div className="transform transition-all duration-300 hover:scale-[1.02]">
+                  <label htmlFor="clientEmail" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true"></span>
+                    Adresse email <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
+                    <Tooltip 
+                      text="Indiquez votre adresse email. Nous vous enverrons une confirmation de votre demande par email."
+                      id="tooltip-email"
+                    />
+                  </label>
+                  <TextInput
+                    id="clientEmail"
+                    name="clientEmail"
+                    required
+                    type="email"
+                    inputMode="email"
+                    disabled={requestSubmitted}
+                    value={formData.clientEmail}
+                    onChange={(e) =>
+                      setFormData({ ...formData, clientEmail: e.target.value })
+                    }
+                    placeholder="votre.email@exemple.com"
+                    aria-required="true"
+                    aria-describedby="tooltip-email"
                     className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                   />
                 </div>
