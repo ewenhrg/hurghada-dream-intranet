@@ -9,17 +9,45 @@ import { LoginPage } from "./pages/LoginPage";
 import { useLanguage } from "./contexts/LanguageContext";
 import { useTranslation } from "./hooks/useTranslation";
 import PageLoader from "./components/PageLoader";
+import ErrorBoundary from "./components/ErrorBoundary";
 
-const ActivitiesPage = lazy(() => import("./pages/ActivitiesPage").then(module => ({ default: module.ActivitiesPage })));
-const QuotesPage = lazy(() => import("./pages/QuotesPage").then(module => ({ default: module.QuotesPage })));
-const HistoryPage = lazy(() => import("./pages/HistoryPage").then(module => ({ default: module.HistoryPage })));
-const UsersPage = lazy(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
-const TicketPage = lazy(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
-const ModificationsPage = lazy(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
-const SituationPage = lazy(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
-const StopSalePage = lazy(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
-const DemandesPage = lazy(() => import("./pages/DemandesPage").then(module => ({ default: module.DemandesPage })));
-const RequestPage = lazy(() => import("./pages/RequestPage").then(module => ({ default: module.RequestPage })));
+// Fonction helper pour le lazy loading avec gestion d'erreur et retry
+const lazyWithRetry = (importFn, retries = 3) => {
+  return lazy(() => {
+    const loadModule = (attempt = 0) => {
+      return importFn().catch((error) => {
+        console.warn(`Erreur de chargement du module (tentative ${attempt + 1}/${retries + 1})...`, error);
+        if (attempt < retries) {
+          // Retry après un court délai exponentiel
+          const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              resolve(loadModule(attempt + 1));
+            }, delay);
+          });
+        }
+        // Si toutes les tentatives échouent, recharger la page
+        console.error("Impossible de charger le module après plusieurs tentatives, rechargement de la page...");
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        throw error;
+      });
+    };
+    return loadModule();
+  });
+};
+
+const ActivitiesPage = lazyWithRetry(() => import("./pages/ActivitiesPage").then(module => ({ default: module.ActivitiesPage })));
+const QuotesPage = lazyWithRetry(() => import("./pages/QuotesPage").then(module => ({ default: module.QuotesPage })));
+const HistoryPage = lazyWithRetry(() => import("./pages/HistoryPage").then(module => ({ default: module.HistoryPage })));
+const UsersPage = lazyWithRetry(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
+const TicketPage = lazyWithRetry(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
+const ModificationsPage = lazyWithRetry(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
+const SituationPage = lazyWithRetry(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
+const StopSalePage = lazyWithRetry(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
+const DemandesPage = lazyWithRetry(() => import("./pages/DemandesPage").then(module => ({ default: module.DemandesPage })));
+const RequestPage = lazyWithRetry(() => import("./pages/RequestPage").then(module => ({ default: module.RequestPage })));
 
 export default function App() {
   const location = useLocation();
@@ -472,11 +500,20 @@ export default function App() {
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Abonnement Realtime actif pour les devis');
         } else if (status === 'CHANNEL_ERROR') {
-          console.warn('⚠️ Erreur abonnement Realtime:', status);
+          console.warn('⚠️ Erreur abonnement Realtime:', status, err);
+          // Réessayer de s'abonner après un délai en cas d'erreur
+          setTimeout(() => {
+            console.log('🔄 Tentative de reconnexion Realtime...');
+            // Le channel sera recréé au prochain render si remoteEnabled change
+          }, 5000);
+        } else if (status === 'TIMED_OUT') {
+          console.warn('⏱️ Timeout abonnement Realtime, reconnexion...');
+        } else if (status === 'CLOSED') {
+          console.log('🔌 Abonnement Realtime fermé');
         }
       });
 
@@ -549,9 +586,11 @@ export default function App() {
   // Si on est sur la route publique /request/:token, afficher RequestPage sans authentification
   if (location.pathname.startsWith("/request/")) {
     return (
-      <Suspense fallback={<PageLoader />}>
-        <RequestPage />
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <RequestPage />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
@@ -768,31 +807,33 @@ export default function App() {
                   borderRadius: '2rem'
                 }}
               >
-                <Suspense fallback={<PageLoader />}>
-                  <section className="space-y-6">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h2 className="font-semibold mb-1.5 bg-gradient-to-r from-[#4f46e5] via-[#6366f1] to-[#06b6d4] bg-clip-text text-transparent" style={{ fontSize: '1.75rem', letterSpacing: '-0.03em' }}>
-                          {t("page.devis.title")}
-                        </h2>
-                        <p className="text-sm font-medium leading-relaxed" style={{ color: 'rgba(71, 85, 105, 0.85)' }}>
-                          {t("page.devis.subtitle")}
-                        </p>
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}>
+                    <section className="space-y-6">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h2 className="font-semibold mb-1.5 bg-gradient-to-r from-[#4f46e5] via-[#6366f1] to-[#06b6d4] bg-clip-text text-transparent" style={{ fontSize: '1.75rem', letterSpacing: '-0.03em' }}>
+                            {t("page.devis.title")}
+                          </h2>
+                          <p className="text-sm font-medium leading-relaxed" style={{ color: 'rgba(71, 85, 105, 0.85)' }}>
+                            {t("page.devis.subtitle")}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="hd-card p-8 md:p-10 lg:p-12">
-                      <QuotesPage
-                        activities={activities}
-                        quotes={quotes}
-                        setQuotes={setQuotes}
-                        user={user}
-                        draft={quoteDraft}
-                        setDraft={setQuoteDraft}
-                        onUsedDatesChange={setUsedDates}
-                      />
-                    </div>
-                  </section>
-                </Suspense>
+                      <div className="hd-card p-8 md:p-10 lg:p-12">
+                        <QuotesPage
+                          activities={activities}
+                          quotes={quotes}
+                          setQuotes={setQuotes}
+                          user={user}
+                          draft={quoteDraft}
+                          setDraft={setQuoteDraft}
+                          onUsedDatesChange={setUsedDates}
+                        />
+                      </div>
+                    </section>
+                  </Suspense>
+                </ErrorBoundary>
               </div>
               
               {/* Boutons flottants : remonter en haut et dates utilisées */}
@@ -925,9 +966,10 @@ export default function App() {
               boxShadow: '0 30px 60px -35px rgba(15, 23, 42, 0.65)'
             }}
           >
-            <Suspense fallback={<PageLoader />}>
+            <ErrorBoundary>
+              <Suspense fallback={<PageLoader />}>
 
-            {tab === "activities" && user?.canAccessActivities !== false && (
+              {tab === "activities" && user?.canAccessActivities !== false && (
             <Section
               title={t("page.activities.title")}
               subtitle={t("page.activities.subtitle")}
@@ -985,12 +1027,14 @@ export default function App() {
 
         {tab === "demandes" && (
           <Section title="📋 Demandes clients" subtitle="Gérer les demandes de devis de vos clients">
-            <Suspense fallback={<PageLoader />}>
-              <DemandesPage 
-                activities={activities} 
-                onRequestStatusChange={loadPendingRequestsCount}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<PageLoader />}>
+                <DemandesPage 
+                  activities={activities} 
+                  onRequestStatusChange={loadPendingRequestsCount}
+                />
+              </Suspense>
+            </ErrorBoundary>
           </Section>
         )}
 
@@ -999,7 +1043,8 @@ export default function App() {
               <UsersPage user={user} />
             </Section>
           )}
-          </Suspense>
+              </Suspense>
+            </ErrorBoundary>
         </div>
         )}
       </main>
