@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -9,7 +9,7 @@ import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrice
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 
 // Composant compact pour afficher les stop sales et push sales
-function StopPushSalesSummary({ stopSales, pushSales, activities }) {
+const StopPushSalesSummary = memo(function StopPushSalesSummary({ stopSales, pushSales, activities }) {
   const [expanded, setExpanded] = useState(false);
   const totalCount = stopSales.length + pushSales.length;
 
@@ -143,6 +143,36 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const [stopSales, setStopSales] = useState([]);
   const [pushSales, setPushSales] = useState([]);
 
+  // Map des activités pour des recherches O(1) au lieu de O(n)
+  const activitiesMap = useMemo(() => {
+    const map = new Map();
+    activities.forEach((activity) => {
+      if (activity.id) map.set(activity.id, activity);
+      if (activity.supabase_id) map.set(activity.supabase_id, activity);
+    });
+    return map;
+  }, [activities]);
+
+  // Map des stop sales pour des recherches O(1) : clé = "activityId_date"
+  const stopSalesMap = useMemo(() => {
+    const map = new Map();
+    stopSales.forEach((stop) => {
+      const key = `${stop.activity_id}_${stop.date}`;
+      map.set(key, stop);
+    });
+    return map;
+  }, [stopSales]);
+
+  // Map des push sales pour des recherches O(1) : clé = "activityId_date"
+  const pushSalesMap = useMemo(() => {
+    const map = new Map();
+    pushSales.forEach((push) => {
+      const key = `${push.activity_id}_${push.date}`;
+      map.set(key, push);
+    });
+    return map;
+  }, [pushSales]);
+
   const blankItemMemo = useCallback(() => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
@@ -242,13 +272,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   
   const removeItem = useCallback((i) => {
     const itemToRemove = items[i];
-    const activityName = activities.find(a => a.id === itemToRemove?.activityId)?.name || "cette activité";
+    const activityName = activitiesMap.get(itemToRemove?.activityId)?.name || "cette activité";
     
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${activityName}" de ce devis ?\n\nCette action est irréversible.`)) {
       setItems((prev) => prev.filter((_, idx) => idx !== i));
       toast.success("Activité supprimée du devis.");
     }
-  }, [items, activities]);
+  }, [items, activitiesMap]);
   
   const resetQuoteForm = useCallback(() => {
     const emptyClient = {
@@ -279,18 +309,18 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       try {
         const today = new Date().toISOString().split('T')[0]; // Date d'aujourd'hui au format YYYY-MM-DD
 
-        // Charger les stop sales
-        const { data: stopSalesData, error: stopSalesError } = await supabase
-          .from("stop_sales")
-          .select("*")
-          .eq("site_key", SITE_KEY);
+        // Charger les stop sales et push sales en parallèle pour améliorer les performances
+        const [stopSalesResult, pushSalesResult] = await Promise.all([
+          supabase.from("stop_sales").select("*").eq("site_key", SITE_KEY),
+          supabase.from("push_sales").select("*").eq("site_key", SITE_KEY),
+        ]);
 
-        if (!stopSalesError && stopSalesData) {
-          // Filtrer et supprimer les stop sales dont la date est passée
+        // Traiter les stop sales
+        if (!stopSalesResult.error && stopSalesResult.data) {
           const validStopSales = [];
           const expiredStopSales = [];
 
-          stopSalesData.forEach((stopSale) => {
+          stopSalesResult.data.forEach((stopSale) => {
             if (stopSale.date < today) {
               expiredStopSales.push(stopSale.id);
             } else {
@@ -298,29 +328,24 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             }
           });
 
-          // Supprimer les stop sales expirés de Supabase
+          // Supprimer les stop sales expirés de Supabase (en arrière-plan, ne pas bloquer)
           if (expiredStopSales.length > 0) {
-            await supabase
+            supabase
               .from("stop_sales")
               .delete()
-              .in("id", expiredStopSales);
+              .in("id", expiredStopSales)
+              .catch((err) => console.warn("Erreur suppression stop sales expirés:", err));
           }
 
           setStopSales(validStopSales);
         }
 
-        // Charger les push sales
-        const { data: pushSalesData, error: pushSalesError } = await supabase
-          .from("push_sales")
-          .select("*")
-          .eq("site_key", SITE_KEY);
-
-        if (!pushSalesError && pushSalesData) {
-          // Filtrer et supprimer les push sales dont la date est passée
+        // Traiter les push sales
+        if (!pushSalesResult.error && pushSalesResult.data) {
           const validPushSales = [];
           const expiredPushSales = [];
 
-          pushSalesData.forEach((pushSale) => {
+          pushSalesResult.data.forEach((pushSale) => {
             if (pushSale.date < today) {
               expiredPushSales.push(pushSale.id);
             } else {
@@ -328,12 +353,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             }
           });
 
-          // Supprimer les push sales expirés de Supabase
+          // Supprimer les push sales expirés de Supabase (en arrière-plan, ne pas bloquer)
           if (expiredPushSales.length > 0) {
-            await supabase
+            supabase
               .from("push_sales")
               .delete()
-              .in("id", expiredPushSales);
+              .in("id", expiredPushSales)
+              .catch((err) => console.warn("Erreur suppression push sales expirés:", err));
           }
 
           setPushSales(validPushSales);
@@ -345,8 +371,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
     loadStopSalesAndPushSales();
     
-    // Recharger toutes les 10 secondes pour avoir les données à jour (optimisé: réduit de 5s à 10s)
-    const interval = setInterval(loadStopSalesAndPushSales, 10000);
+    // Recharger toutes les 30 secondes pour avoir les données à jour (optimisé: réduit de 10s à 30s)
+    const interval = setInterval(loadStopSalesAndPushSales, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -410,18 +436,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return diffDays >= 2; // Au moins 2 jours entre l'activité et le départ
     };
 
-    // Fonction helper pour vérifier si une date/activité est en stop sale
+    // Fonction helper pour vérifier si une date/activité est en stop sale (optimisé avec Map O(1))
     const isStopSale = (activityId, dateStr) => {
-      return stopSales.some(
-        (s) => s.activity_id === activityId && s.date === dateStr
-      );
+      const key = `${activityId}_${dateStr}`;
+      return stopSalesMap.has(key);
     };
 
-    // Fonction helper pour vérifier si une date/activité est en push sale
+    // Fonction helper pour vérifier si une date/activité est en push sale (optimisé avec Map O(1))
     const isPushSale = (activityId, dateStr) => {
-      return pushSales.some(
-        (p) => p.activity_id === activityId && p.date === dateStr
-      );
+      const key = `${activityId}_${dateStr}`;
+      return pushSalesMap.has(key);
     };
 
     // Fonction helper pour vérifier si une date est disponible pour une activité
@@ -457,8 +481,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         return item;
       }
 
-      // Trouver l'activité correspondante
-      const activity = activities.find(a => a.id === item.activityId);
+      // Trouver l'activité correspondante (optimisé avec Map O(1))
+      const activity = activitiesMap.get(item.activityId);
       
       if (!activity) {
         // Si l'activité n'existe pas, utiliser la première date disponible non utilisée qui n'est pas en stop sale
@@ -575,7 +599,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     const conflictsByDate = {};
     updatedItems.forEach((item, idx) => {
       if (item.date && item.activityId) {
-        const activity = activities.find(a => a.id === item.activityId);
+        const activity = activitiesMap.get(item.activityId);
         const activityName = activity?.name || `Activité ${idx + 1}`;
         
         if (!conflictsByDate[item.date]) {
@@ -633,13 +657,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       }
       toast.warning(message, { duration: 10000 });
     }
-  }, [client.arrivalDate, client.departureDate, autoFillDates, activities, items, stopSales, pushSales]);
+  }, [client.arrivalDate, client.departureDate, autoFillDates, activitiesMap, items, stopSalesMap, pushSalesMap]);
 
-  // Formater les stop sales avec les noms d'activités
+  // Formater les stop sales avec les noms d'activités (optimisé avec Map)
   const formattedStopSales = useMemo(() => {
     return stopSales
       .map((stop) => {
-        const activity = activities.find((a) => a.id === stop.activity_id);
+        const activity = activitiesMap.get(stop.activity_id);
         return {
           ...stop,
           activityName: activity?.name || stop.activity_id,
@@ -652,13 +676,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         };
       })
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [stopSales, activities]);
+  }, [stopSales, activitiesMap]);
 
-  // Formater les push sales avec les noms d'activités
+  // Formater les push sales avec les noms d'activités (optimisé avec Map)
   const formattedPushSales = useMemo(() => {
     return pushSales
       .map((push) => {
-        const activity = activities.find((a) => a.id === push.activity_id);
+        const activity = activitiesMap.get(push.activity_id);
         return {
           ...push,
           activityName: activity?.name || push.activity_id,
@@ -671,7 +695,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         };
       })
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [pushSales, activities]);
+  }, [pushSales, activitiesMap]);
 
   // Sélectionner automatiquement le créneau s'il n'y en a qu'un seul disponible
   useEffect(() => {
@@ -680,7 +704,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     items.forEach((it, idx) => {
       if (!it.activityId || it.slot) return; // Ignorer si pas d'activité ou slot déjà défini
 
-      const act = activities.find((a) => a.id === it.activityId);
+      const act = activitiesMap.get(it.activityId);
       if (!act || !act.transfers || !act.transfers[client.neighborhood]) return;
 
       const transferInfo = act.transfers[client.neighborhood];
@@ -696,26 +720,22 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         setItem(idx, { slot: availableSlots[0] });
       }
     });
-  }, [items, activities, client.neighborhood, setItem]);
+  }, [items, activitiesMap, client.neighborhood, setItem]);
 
   const computed = useMemo(() => {
     return items.map((it) => {
-      const act = activities.find((a) => a.id === it.activityId);
+      // Recherche optimisée O(1) avec Map au lieu de O(n) avec find
+      const act = activitiesMap.get(it.activityId);
       const weekday = it.date ? new Date(it.date + "T12:00:00").getDay() : null;
       const baseAvailable = act && weekday != null ? !!act.availableDays?.[weekday] : true;
       
-      // Vérifier les stop sales et push sales
+      // Vérifier les stop sales et push sales (optimisé avec Maps O(1))
       let isStopSale = false;
       let isPushSale = false;
       if (act && it.date) {
-        // Vérifier si cette activité/date est en stop sale
-        isStopSale = stopSales.some(
-          (s) => s.activity_id === act.id && s.date === it.date
-        );
-        // Vérifier si cette activité/date est en push sale
-        isPushSale = pushSales.some(
-          (p) => p.activity_id === act.id && p.date === it.date
-        );
+        const key = `${act.id}_${it.date}`;
+        isStopSale = stopSalesMap.has(key);
+        isPushSale = pushSalesMap.has(key);
       }
       
       // Disponibilité finale : disponible si push sale OU (baseAvailable ET pas de stop sale)
@@ -912,7 +932,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         currency: currencyCode,
       };
     });
-  }, [items, activities, client.neighborhood, stopSales, pushSales]);
+  }, [items, activitiesMap, client.neighborhood, stopSalesMap, pushSalesMap]);
 
   const grandCurrency = computed.find((c) => c.currency)?.currency || "EUR";
   const grandTotal = computed.reduce((s, c) => s + (c.lineTotal || 0), 0);

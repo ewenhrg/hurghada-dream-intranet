@@ -67,6 +67,16 @@ export default function App() {
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
 
+  // Map des activités pour des recherches O(1) au lieu de O(n)
+  const activitiesMap = useMemo(() => {
+    const map = new Map();
+    activities.forEach((activity) => {
+      if (activity.id) map.set(activity.id, activity);
+      if (activity.supabase_id) map.set(activity.supabase_id, activity);
+    });
+    return map;
+  }, [activities]);
+
   // Réinitialiser les dates utilisées quand on change d'onglet
   useEffect(() => {
     if (tab !== "devis") {
@@ -215,12 +225,10 @@ export default function App() {
     const items = [];
     if (request.selected_activities && Array.isArray(request.selected_activities)) {
       request.selected_activities.forEach((selectedActivity) => {
-        // Trouver l'activité correspondante
-        const activity = activities.find(
-          (a) => 
-            a.id?.toString() === selectedActivity.activityId?.toString() ||
-            a.supabase_id?.toString() === selectedActivity.activityId?.toString()
-        );
+        // Trouver l'activité correspondante (optimisé avec Map pour O(1))
+        const activityId = selectedActivity.activityId?.toString();
+        const activity = activitiesMap.get(activityId) || 
+          activities.find((a) => a.supabase_id?.toString() === activityId);
 
         if (activity) {
           // Créer un item de devis à partir de l'activité sélectionnée
@@ -313,10 +321,10 @@ export default function App() {
 
     // Mettre à jour le draft et changer d'onglet
     setQuoteDraft(draft);
-    setTab("devis");
+         setTab("devis");
     
     toast.success("Demande chargée dans le formulaire de devis !");
-  }, [activities, loadPendingRequestsCount]);
+  }, [activitiesMap, activities, loadPendingRequestsCount]);
 
   // charger supabase au montage et synchronisation des activités toutes les 10 secondes (optimisé)
   useEffect(() => {
