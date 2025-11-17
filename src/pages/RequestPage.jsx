@@ -547,6 +547,10 @@ export function RequestPage() {
               ) : (
                 <div className="space-y-2 sm:space-y-3">
                   {CATEGORIES.filter((category) => {
+                    // Exclure la catégorie transfert
+                    if (category.key === "transfert") {
+                      return false;
+                    }
                     // Afficher seulement les catégories qui ont des activités
                     const categoryActivities = activitiesByCategory[category.key] || [];
                     return categoryActivities.length > 0;
