@@ -538,7 +538,7 @@ export function RequestPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, clientPhone: e.target.value })
                     }
-                    placeholder="+33 6 12 34 56 78"
+                    placeholder="Ex: 33607070707"
                     aria-required="true"
                     aria-describedby="tooltip-phone"
                     className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"

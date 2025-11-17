@@ -1157,7 +1157,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 // Nettoyer automatiquement le numéro de téléphone (supprimer espaces, parenthèses, etc.)
                 const cleaned = cleanPhoneNumber(e.target.value);
                 setClient((c) => ({ ...c, phone: cleaned }));
-              }} 
+              }}
+              placeholder="Ex: 33607070707"
             />
           </div>
           <div>
