@@ -236,8 +236,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   }, []);
   
   const addItem = useCallback(() => {
-    setItems((prev) => [...prev, blankItemMemo()]);
-  }, [blankItemMemo]);
+    setItems((prev) => [...prev, { ...blankItemMemo(), adults: globalAdults || "" }]);
+  }, [blankItemMemo, globalAdults]);
   
   const removeItem = useCallback((i) => {
     const itemToRemove = items[i];
