@@ -314,7 +314,10 @@ export function RequestPage() {
             .update(requestData)
             .eq("id", existing.id);
           
-          if (error) throw error;
+          if (error) {
+            console.error("Erreur détaillée Supabase:", error);
+            throw error;
+          }
           toast.success("Votre demande a été mise à jour avec succès !");
           setRequestSubmitted(true);
         } else {
@@ -323,7 +326,10 @@ export function RequestPage() {
             .from("client_requests")
             .insert(requestData);
           
-          if (error) throw error;
+          if (error) {
+            console.error("Erreur détaillée Supabase:", error);
+            throw error;
+          }
           toast.success("Votre demande a été envoyée avec succès !");
           setRequestSubmitted(true);
         }
@@ -333,13 +339,17 @@ export function RequestPage() {
           .from("client_requests")
           .insert(requestData);
         
-        if (error) throw error;
+        if (error) {
+          console.error("Erreur détaillée Supabase:", error);
+          throw error;
+        }
         toast.success("Votre demande a été envoyée avec succès !");
         setRequestSubmitted(true);
       }
     } catch (error) {
       console.error("Erreur lors de l'envoi de la demande:", error);
-      toast.error("Une erreur est survenue. Veuillez réessayer.");
+      const errorMessage = error?.message || error?.details || error?.hint || "Une erreur s'est produite lors de l'envoi de votre demande.";
+      toast.error(`Erreur: ${errorMessage}. Veuillez réessayer ou contacter le support.`);
     } finally {
       setSubmitting(false);
     }
