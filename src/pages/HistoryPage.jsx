@@ -1065,7 +1065,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       const currencyCode = act?.currency || "EUR";
 
       // cas spécial Speed Boat
-      if (act && act.name.toLowerCase().includes("speed boat")) {
+      if (act && act.name && act.name.toLowerCase().includes("speed boat")) {
         const ad = Number(it.adults || 0);
         const ch = Number(it.children || 0);
 
@@ -1417,7 +1417,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       </select>
                     </div>
                   )}
-                  {c.act && c.act.name.toLowerCase().includes("speed boat") ? (
+                  {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") ? (
                     <div className="md:col-span-2 space-y-3">
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Extras (plusieurs sélections possibles)</p>
@@ -1507,7 +1507,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   )}
                 </div>
                 {/* Extra dauphin (uniquement pour Speed Boat) - Modifiable par tous */}
-                {c.act && c.act.name.toLowerCase().includes("speed boat") && (
+                {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") && (
                   <div className="flex items-center gap-2 mt-2">
                     <input
                       type="checkbox"

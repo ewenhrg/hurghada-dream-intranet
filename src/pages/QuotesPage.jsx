@@ -670,7 +670,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       const currencyCode = act?.currency || "EUR";
 
       // cas spécial Speed Boat
-      if (act && act.name.toLowerCase().includes("speed boat")) {
+      if (act && act.name && act.name.toLowerCase().includes("speed boat")) {
         const ad = Number(it.adults || 0);
         const ch = Number(it.children || 0);
 
@@ -1289,7 +1289,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               </div>
 
               {/* extra - Cases à cocher pour Speed Boat, champs classiques pour les autres */}
-              {c.act && c.act.name.toLowerCase().includes("speed boat") ? (
+              {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") ? (
                 <div className="space-y-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-2">Extras (plusieurs sélections possibles)</p>
@@ -1366,14 +1366,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <p className="text-xs text-gray-500 mb-2">Extra (ex: photos, bateau privé…)</p>
                       <TextInput
                         placeholder="Libellé extra"
-                        value={c.raw.extraLabel}
+                        value={c.raw.extraLabel || ""}
                         onChange={(e) => setItem(idx, { extraLabel: e.target.value })}
                       />
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-2">Montant Extra</p>
                       <NumberInput
-                        value={c.raw.extraAmount}
+                        value={c.raw.extraAmount || ""}
                         onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
                       />
                     </div>
@@ -1990,7 +1990,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               )}
 
               {/* Extra dauphin (uniquement pour Speed Boat) */}
-              {c.act && c.act.name.toLowerCase().includes("speed boat") && (
+              {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") && (
                 <div className="flex items-center gap-2 mt-2">
                   <input
                     type="checkbox"
