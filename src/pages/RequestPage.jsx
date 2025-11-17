@@ -254,6 +254,10 @@ export function RequestPage() {
       toast.error("Veuillez saisir une adresse email valide.");
       return;
     }
+    if (!formData.clientHotel.trim()) {
+      toast.error("Veuillez saisir votre hôtel.");
+      return;
+    }
     if (!formData.arrivalDate) {
       toast.error("Veuillez sélectionner votre date d'arrivée.");
       return;
@@ -586,21 +590,23 @@ export function RequestPage() {
                 <div className="transform transition-all duration-300 hover:scale-[1.02]">
                   <label htmlFor="clientHotel" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" aria-hidden="true"></span>
-                    Hôtel
+                    Hôtel <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
                     <Tooltip 
-                      text="Indiquez le nom de votre hôtel si vous en avez déjà réservé un. Cela nous aidera à organiser les transferts si nécessaire."
+                      text="Indiquez le nom de votre hôtel. Cela nous aidera à organiser les transferts si nécessaire."
                       id="tooltip-hotel"
                     />
                   </label>
                   <TextInput
                     id="clientHotel"
                     name="clientHotel"
+                    required
                     disabled={requestSubmitted}
                     value={formData.clientHotel}
                     onChange={(e) =>
                       setFormData({ ...formData, clientHotel: e.target.value })
                     }
                     placeholder="Nom de votre hôtel"
+                    aria-required="true"
                     aria-describedby="tooltip-hotel"
                     className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                   />
