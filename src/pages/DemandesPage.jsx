@@ -5,7 +5,7 @@ import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { generateRequestLink, generateRequestToken } from "../utils/tokenGenerator";
 
-export function DemandesPage({ activities, onRequestStatusChange }) {
+export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteFromRequest }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -313,6 +313,14 @@ export function DemandesPage({ activities, onRequestStatusChange }) {
 
                   {/* Actions */}
                   <div className="flex flex-col gap-2 md:min-w-[200px]">
+                    {onCreateQuoteFromRequest && (
+                      <PrimaryBtn
+                        onClick={() => onCreateQuoteFromRequest(request)}
+                        className="w-full"
+                      >
+                        ✏️ Créer un devis
+                      </PrimaryBtn>
+                    )}
                     <GhostBtn
                       onClick={() => copyRequestLink(request.token)}
                       variant="primary"

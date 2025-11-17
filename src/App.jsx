@@ -10,6 +10,7 @@ import { useLanguage } from "./contexts/LanguageContext";
 import { useTranslation } from "./hooks/useTranslation";
 import PageLoader from "./components/PageLoader";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { toast } from "./utils/toast.js";
 
 // Fonction helper pour le lazy loading avec gestion d'erreur et retry
 const lazyWithRetry = (importFn, retries = 3) => {
@@ -205,6 +206,92 @@ export default function App() {
       console.warn("Erreur lors du chargement du nombre de demandes:", err);
     }
   }, [ok]);
+
+  // Fonction pour créer un devis à partir d'une demande
+  const handleCreateQuoteFromRequest = useCallback((request) => {
+    if (!request) return;
+
+    // Convertir les activités sélectionnées de la demande en items de devis
+    const items = [];
+    if (request.selected_activities && Array.isArray(request.selected_activities)) {
+      request.selected_activities.forEach((selectedActivity) => {
+        // Trouver l'activité correspondante
+        const activity = activities.find(
+          (a) => 
+            a.id?.toString() === selectedActivity.activityId?.toString() ||
+            a.supabase_id?.toString() === selectedActivity.activityId?.toString()
+        );
+
+        if (activity) {
+          // Créer un item de devis à partir de l'activité sélectionnée
+          const item = {
+            activityId: activity.id || activity.supabase_id || selectedActivity.activityId,
+            date: selectedActivity.date || new Date().toISOString().slice(0, 10),
+            adults: selectedActivity.adults || "",
+            children: selectedActivity.children || 0,
+            babies: selectedActivity.babies || 0,
+            extraLabel: selectedActivity.extraLabel || "",
+            extraAmount: selectedActivity.extraAmount || "",
+            slot: selectedActivity.slot || "",
+            extraDolphin: selectedActivity.extraDolphin || false,
+            speedBoatExtra: selectedActivity.speedBoatExtra || [],
+            buggySimple: selectedActivity.buggySimple || "",
+            buggyFamily: selectedActivity.buggyFamily || "",
+            yamaha250: selectedActivity.yamaha250 || "",
+            ktm640: selectedActivity.ktm640 || "",
+            ktm530: selectedActivity.ktm530 || "",
+            allerSimple: selectedActivity.allerSimple || false,
+            allerRetour: selectedActivity.allerRetour || false,
+          };
+          items.push(item);
+        }
+      });
+    }
+
+    // Si aucune activité n'a été trouvée, créer un item vide
+    if (items.length === 0) {
+      items.push({
+        activityId: "",
+        date: new Date().toISOString().slice(0, 10),
+        adults: "",
+        children: 0,
+        babies: 0,
+        extraLabel: "",
+        extraAmount: "",
+        slot: "",
+        extraDolphin: false,
+        speedBoatExtra: [],
+        buggySimple: "",
+        buggyFamily: "",
+        yamaha250: "",
+        ktm640: "",
+        ktm530: "",
+        allerSimple: false,
+        allerRetour: false,
+      });
+    }
+
+    // Créer le draft avec les informations du client
+    const draft = {
+      client: {
+        name: request.client_name || "",
+        phone: request.client_phone || "",
+        hotel: request.client_hotel || "",
+        room: request.client_room || "",
+        neighborhood: request.client_neighborhood || "",
+        arrivalDate: request.arrival_date || "",
+        departureDate: request.departure_date || "",
+      },
+      items: items,
+      notes: request.notes || "",
+    };
+
+    // Mettre à jour le draft et changer d'onglet
+    setQuoteDraft(draft);
+    setTab("devis");
+    
+    toast.success("Demande chargée dans le formulaire de devis !");
+  }, [activities]);
 
   // charger supabase au montage et synchronisation des activités toutes les 10 secondes (optimisé)
   useEffect(() => {
@@ -1032,6 +1119,7 @@ export default function App() {
                 <DemandesPage 
                   activities={activities} 
                   onRequestStatusChange={loadPendingRequestsCount}
+                  onCreateQuoteFromRequest={handleCreateQuoteFromRequest}
                 />
               </Suspense>
             </ErrorBoundary>
