@@ -208,7 +208,7 @@ export default function App() {
   }, [ok]);
 
   // Fonction pour créer un devis à partir d'une demande
-  const handleCreateQuoteFromRequest = useCallback((request) => {
+  const handleCreateQuoteFromRequest = useCallback(async (request) => {
     if (!request) return;
 
     // Convertir les activités sélectionnées de la demande en items de devis
@@ -286,12 +286,36 @@ export default function App() {
       notes: request.notes || "",
     };
 
+    // Supprimer la demande de Supabase
+    if (supabase && request.id) {
+      try {
+        const { error } = await supabase
+          .from("client_requests")
+          .delete()
+          .eq("id", request.id)
+          .eq("site_key", SITE_KEY);
+
+        if (error) {
+          console.warn("Erreur lors de la suppression de la demande:", error);
+          // Continuer quand même même si la suppression échoue
+        } else {
+          // Mettre à jour le compteur de demandes en attente
+          if (loadPendingRequestsCount) {
+            loadPendingRequestsCount();
+          }
+        }
+      } catch (err) {
+        console.warn("Exception lors de la suppression de la demande:", err);
+        // Continuer quand même même si la suppression échoue
+      }
+    }
+
     // Mettre à jour le draft et changer d'onglet
     setQuoteDraft(draft);
     setTab("devis");
     
     toast.success("Demande chargée dans le formulaire de devis !");
-  }, [activities]);
+  }, [activities, loadPendingRequestsCount]);
 
   // charger supabase au montage et synchronisation des activités toutes les 10 secondes (optimisé)
   useEffect(() => {

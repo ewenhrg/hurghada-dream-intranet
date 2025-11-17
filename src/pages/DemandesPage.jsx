@@ -109,6 +109,45 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
     }
   };
 
+  // Supprimer une demande
+  const handleDeleteRequest = async (requestId) => {
+    if (!supabase) {
+      toast.error("Impossible de supprimer la demande.");
+      return;
+    }
+
+    // Demander confirmation
+    const confirmed = window.confirm(
+      "Êtes-vous sûr de vouloir supprimer cette demande ? Cette action est irréversible."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from("client_requests")
+        .delete()
+        .eq("id", requestId)
+        .eq("site_key", SITE_KEY);
+
+      if (error) {
+        console.error("Erreur lors de la suppression de la demande:", error);
+        toast.error("Impossible de supprimer la demande.");
+      } else {
+        toast.success("Demande supprimée avec succès.");
+        // Recharger les demandes
+        loadRequests();
+        // Mettre à jour le compteur de demandes en attente
+        if (onRequestStatusChange) {
+          onRequestStatusChange();
+        }
+      }
+    } catch (err) {
+      console.error("Exception lors de la suppression de la demande:", err);
+      toast.error("Erreur lors de la suppression de la demande.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-4 md:p-6 flex items-center justify-center min-h-[400px]">
@@ -327,6 +366,13 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
                       className="w-full"
                     >
                       🔗 Copier le lien
+                    </GhostBtn>
+                    <GhostBtn
+                      onClick={() => handleDeleteRequest(request.id)}
+                      variant="danger"
+                      className="w-full"
+                    >
+                      🗑️ Supprimer
                     </GhostBtn>
                   </div>
                 </div>
