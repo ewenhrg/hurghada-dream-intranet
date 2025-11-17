@@ -63,6 +63,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
       (r) =>
         r.client_name?.toLowerCase().includes(query) ||
         r.client_phone?.toLowerCase().includes(query) ||
+        r.client_email?.toLowerCase().includes(query) ||
         r.client_hotel?.toLowerCase().includes(query)
     );
   }, [requests, searchQuery]);
@@ -224,7 +225,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
       {/* Barre de recherche */}
       <div className="bg-white rounded-xl border border-blue-100/60 p-4 shadow-md">
         <TextInput
-          placeholder="Rechercher par nom, téléphone ou hôtel..."
+          placeholder="Rechercher par nom, téléphone, email ou hôtel..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -262,6 +263,11 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
                         <p className="text-sm text-gray-600">
                           📞 {request.client_phone || "Non renseigné"}
                         </p>
+                        {request.client_email && (
+                          <p className="text-sm text-gray-600">
+                            📧 {request.client_email}
+                          </p>
+                        )}
                       </div>
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
