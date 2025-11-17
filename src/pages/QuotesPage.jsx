@@ -4,6 +4,7 @@ import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { toast } from "../utils/toast.js";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -219,6 +220,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   // État pour le nombre d'adultes global
   const [globalAdults, setGlobalAdults] = useState("");
 
+  // États pour les confirmations
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState({ isOpen: false, index: null, activityName: "" });
+  const [confirmResetForm, setConfirmResetForm] = useState(false);
+
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
     if (setDraft) {
@@ -273,12 +278,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const removeItem = useCallback((i) => {
     const itemToRemove = items[i];
     const activityName = activitiesMap.get(itemToRemove?.activityId)?.name || "cette activité";
-    
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${activityName}" de ce devis ?\n\nCette action est irréversible.`)) {
-      setItems((prev) => prev.filter((_, idx) => idx !== i));
+    setConfirmDeleteItem({ isOpen: true, index: i, activityName });
+  }, [items, activitiesMap]);
+
+  const handleConfirmDeleteItem = useCallback(() => {
+    if (confirmDeleteItem.index !== null) {
+      setItems((prev) => prev.filter((_, idx) => idx !== confirmDeleteItem.index));
       toast.success("Activité supprimée du devis.");
     }
-  }, [items, activitiesMap]);
+    setConfirmDeleteItem({ isOpen: false, index: null, activityName: "" });
+  }, [confirmDeleteItem.index]);
   
   const resetQuoteForm = useCallback(() => {
     const emptyClient = {
@@ -1152,12 +1161,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             type="button"
             variant="danger"
             size="sm"
-            onClick={() => {
-              if (window.confirm("Êtes-vous sûr de vouloir tout effacer ?\n\nCette action supprimera toutes les activités et les informations client du formulaire.\n\nCette action est irréversible.")) {
-                resetQuoteForm();
-                toast.success("Formulaire réinitialisé.");
-              }
-            }}
+            onClick={() => setConfirmResetForm(true)}
             className="w-full sm:w-auto"
           >
             🧹 Tout effacer
@@ -2343,6 +2347,33 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           </div>
         </div>
       )}
+
+      {/* Dialogs de confirmation */}
+      <ConfirmDialog
+        isOpen={confirmDeleteItem.isOpen}
+        onClose={() => setConfirmDeleteItem({ isOpen: false, index: null, activityName: "" })}
+        onConfirm={handleConfirmDeleteItem}
+        title="Supprimer l'activité"
+        message={`Êtes-vous sûr de vouloir supprimer "${confirmDeleteItem.activityName}" de ce devis ?\n\nCette action est irréversible.`}
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        type="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={confirmResetForm}
+        onClose={() => setConfirmResetForm(false)}
+        onConfirm={() => {
+          resetQuoteForm();
+          toast.success("Formulaire réinitialisé.");
+          setConfirmResetForm(false);
+        }}
+        title="Tout effacer"
+        message="Êtes-vous sûr de vouloir tout effacer ?\n\nCette action supprimera toutes les activités et les informations client du formulaire.\n\nCette action est irréversible."
+        confirmText="Effacer"
+        cancelText="Annuler"
+        type="danger"
+      />
     </div>
   );
 }

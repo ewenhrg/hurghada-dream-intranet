@@ -51,6 +51,31 @@ export function cleanPhoneNumber(phone) {
   return phone.replace(/\D+/g, "");
 }
 
+// Sanitizer pour protéger contre XSS (échapper les caractères HTML)
+export function sanitizeInput(input) {
+  if (typeof input !== 'string') return input;
+  const div = document.createElement('div');
+  div.textContent = input;
+  return div.innerHTML;
+}
+
+// Valider et nettoyer un email
+export function sanitizeEmail(email) {
+  if (!email || typeof email !== 'string') return '';
+  // Retirer les espaces et convertir en minuscules
+  const cleaned = email.trim().toLowerCase();
+  // Validation basique
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(cleaned) ? cleaned : '';
+}
+
+// Valider et nettoyer un nom (enlever les caractères dangereux)
+export function sanitizeName(name) {
+  if (!name || typeof name !== 'string') return '';
+  // Garder uniquement lettres, espaces, tirets, apostrophes et caractères accentués
+  return name.trim().replace(/[^a-zA-ZÀ-ÿ\s'-]/g, '').slice(0, 100);
+}
+
 export function emptyTransfers() {
   const obj = {};
   NEIGHBORHOODS.forEach((n) => {
