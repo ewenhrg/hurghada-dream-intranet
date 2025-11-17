@@ -348,7 +348,28 @@ export function RequestPage() {
       }
     } catch (error) {
       console.error("Erreur lors de l'envoi de la demande:", error);
-      const errorMessage = error?.message || error?.details || error?.hint || "Une erreur s'est produite lors de l'envoi de votre demande.";
+      console.error("Détails de l'erreur:", {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code,
+        fullError: error
+      });
+      
+      // Construire un message d'erreur plus détaillé
+      let errorMessage = "Une erreur s'est produite lors de l'envoi de votre demande.";
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.details) {
+        errorMessage = error.details;
+      } else if (error?.hint) {
+        errorMessage = error.hint;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.toString) {
+        errorMessage = error.toString();
+      }
+      
       toast.error(`Erreur: ${errorMessage}. Veuillez réessayer ou contacter le support.`);
     } finally {
       setSubmitting(false);
