@@ -1,17 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, NEIGHBORHOODS } from "../constants";
-import { uuid, currency } from "../utils";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { generateRequestLink, generateRequestToken } from "../utils/tokenGenerator";
 
-export function DemandesPage({ activities, onConvertToQuote, onRequestStatusChange }) {
+export function DemandesPage({ activities, onRequestStatusChange }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending"); // pending, converted, all
-  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("pending"); // pending, all
   const [generatedLink, setGeneratedLink] = useState("");
 
   // Charger les demandes depuis Supabase
@@ -84,128 +82,6 @@ export function DemandesPage({ activities, onConvertToQuote, onRequestStatusChan
     return activity?.name || `Activité (ID: ${activityId})`;
   };
 
-  // Créer un devis à partir d'une demande
-  const handleCreateQuote = (request) => {
-    if (!request.selected_activities || request.selected_activities.length === 0) {
-      toast.error("Cette demande ne contient aucune activité.");
-      return;
-    }
-
-    // Convertir les activités sélectionnées en items de devis
-    const items = request.selected_activities.map((selectedActivity) => {
-      // Chercher l'activité correspondante
-      let activity = activities.find(
-        (a) => a.id?.toString() === selectedActivity.activityId?.toString()
-      );
-      
-      // Si pas trouvé par ID local, chercher par supabase_id
-      if (!activity) {
-        activity = activities.find(
-          (a) => a.supabase_id?.toString() === selectedActivity.activityId?.toString()
-        );
-      }
-
-      // Utiliser l'ID local de l'activité trouvée, ou l'ID fourni en dernier recours
-      const activityId = activity?.id || selectedActivity.activityId;
-
-      return {
-        activityId: activityId,
-        date: new Date().toISOString().slice(0, 10), // Date par défaut (à modifier manuellement)
-        adults: selectedActivity.adults || "",
-        children: selectedActivity.children || 0,
-        babies: selectedActivity.babies || 0,
-        extraLabel: "",
-        extraAmount: "",
-        slot: "",
-        extraDolphin: false,
-        speedBoatExtra: [],
-        buggySimple: "",
-        buggyFamily: "",
-        yamaha250: "",
-        ktm640: "",
-        ktm530: "",
-        allerSimple: false,
-        allerRetour: false,
-      };
-    });
-
-    // Préparer les données client
-    const client = {
-      name: request.client_name || "",
-      phone: request.client_phone || "",
-      hotel: request.client_hotel || "",
-      room: request.client_room || "",
-      neighborhood: request.client_neighborhood || "",
-      arrivalDate: request.arrival_date || "",
-      departureDate: request.departure_date || "",
-    };
-
-    // Appeler la fonction de callback pour créer le devis
-    if (onConvertToQuote) {
-      onConvertToQuote({ client, items, notes: request.notes || "" });
-      
-      // Marquer la demande comme convertie
-      markAsConverted(request.id);
-      
-      toast.success("Devis créé avec succès ! Les informations ont été pré-remplies.");
-    }
-  };
-
-  // Marquer une demande comme convertie
-  async function markAsConverted(requestId) {
-    if (!supabase) return;
-
-    try {
-      const { error } = await supabase
-        .from("client_requests")
-        .update({ status: "converted", converted_at: new Date().toISOString() })
-        .eq("id", requestId);
-
-      if (error) {
-        console.error("Erreur lors de la mise à jour du statut:", error);
-      } else {
-        // Recharger les demandes
-        loadRequests();
-        // Notifier le parent pour mettre à jour le compteur
-        if (onRequestStatusChange) {
-          onRequestStatusChange();
-        }
-      }
-    } catch (err) {
-      console.error("Exception lors de la mise à jour du statut:", err);
-    }
-  }
-
-  // Supprimer une demande
-  async function handleDelete(requestId) {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette demande ?")) {
-      return;
-    }
-
-    if (!supabase) return;
-
-    try {
-      const { error } = await supabase
-        .from("client_requests")
-        .delete()
-        .eq("id", requestId);
-
-      if (error) {
-        console.error("Erreur lors de la suppression:", error);
-        toast.error("Erreur lors de la suppression de la demande.");
-      } else {
-        toast.success("Demande supprimée avec succès.");
-        loadRequests();
-        // Notifier le parent pour mettre à jour le compteur
-        if (onRequestStatusChange) {
-          onRequestStatusChange();
-        }
-      }
-    } catch (err) {
-      console.error("Exception lors de la suppression:", err);
-      toast.error("Erreur lors de la suppression de la demande.");
-    }
-  }
 
   // Copier le lien de la demande
   const copyRequestLink = (token) => {
@@ -266,16 +142,6 @@ export function DemandesPage({ activities, onConvertToQuote, onRequestStatusChan
             }`}
           >
             En attente ({requests.filter((r) => r.status === "pending").length})
-          </button>
-          <button
-            onClick={() => setStatusFilter("converted")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              statusFilter === "converted"
-                ? "bg-green-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-          >
-            Converties ({requests.filter((r) => r.status === "converted").length})
           </button>
           <button
             onClick={() => setStatusFilter("all")}
@@ -342,7 +208,7 @@ export function DemandesPage({ activities, onConvertToQuote, onRequestStatusChan
               className={`bg-white rounded-xl border-2 shadow-md overflow-hidden ${
                 request.status === "pending"
                   ? "border-blue-200"
-                  : "border-green-200 bg-green-50/30"
+                  : "border-gray-200 bg-gray-50/30"
               }`}
             >
               <div className="p-4 md:p-6">
@@ -362,10 +228,10 @@ export function DemandesPage({ activities, onConvertToQuote, onRequestStatusChan
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           request.status === "pending"
                             ? "bg-blue-100 text-blue-800"
-                            : "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
                         }`}
                       >
-                        {request.status === "pending" ? "En attente" : "Convertie"}
+                        {request.status === "pending" ? "En attente" : request.status}
                       </span>
                     </div>
 
@@ -447,27 +313,12 @@ export function DemandesPage({ activities, onConvertToQuote, onRequestStatusChan
 
                   {/* Actions */}
                   <div className="flex flex-col gap-2 md:min-w-[200px]">
-                    {request.status === "pending" && (
-                      <PrimaryBtn
-                        onClick={() => handleCreateQuote(request)}
-                        className="w-full"
-                      >
-                        📝 Créer un devis
-                      </PrimaryBtn>
-                    )}
                     <GhostBtn
                       onClick={() => copyRequestLink(request.token)}
                       variant="primary"
                       className="w-full"
                     >
                       🔗 Copier le lien
-                    </GhostBtn>
-                    <GhostBtn
-                      onClick={() => handleDelete(request.id)}
-                      variant="danger"
-                      className="w-full"
-                    >
-                      🗑️ Supprimer
                     </GhostBtn>
                   </div>
                 </div>

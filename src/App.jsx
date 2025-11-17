@@ -38,20 +38,6 @@ export default function App() {
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
 
-  // Fonction pour convertir une demande en devis
-  const handleConvertRequestToQuote = useCallback((requestData) => {
-    // Pré-remplir le formulaire de devis avec les données de la demande
-    setQuoteDraft({
-      client: requestData.client,
-      items: requestData.items,
-      notes: requestData.notes || "",
-    });
-    
-    // Basculer vers l'onglet devis
-    setTab("devis");
-    navigate("/");
-  }, [navigate]);
-
   // Réinitialiser les dates utilisées quand on change d'onglet
   useEffect(() => {
     if (tab !== "devis") {
@@ -1002,7 +988,6 @@ export default function App() {
             <Suspense fallback={<PageLoader />}>
               <DemandesPage 
                 activities={activities} 
-                onConvertToQuote={handleConvertRequestToQuote}
                 onRequestStatusChange={loadPendingRequestsCount}
               />
             </Suspense>
