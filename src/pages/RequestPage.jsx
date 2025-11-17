@@ -5,6 +5,55 @@ import { SITE_KEY, CATEGORIES } from "../constants";
 import { TextInput, PrimaryBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 
+// Composant Tooltip pour l'aide contextuelle avec amélioration mobile et accessibilité
+function Tooltip({ text, children, id, position = "top" }) {
+  const [isVisible, setIsVisible] = useState(false);
+  
+  return (
+    <div className="relative inline-flex items-center">
+      <button
+        type="button"
+        className="inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors touch-manipulation"
+        onMouseEnter={() => setIsVisible(true)}
+        onMouseLeave={() => setIsVisible(false)}
+        onFocus={() => setIsVisible(true)}
+        onBlur={() => setIsVisible(false)}
+        onTouchStart={() => setIsVisible(!isVisible)}
+        onClick={() => setIsVisible(!isVisible)}
+        aria-label={`Aide: ${text}`}
+        aria-describedby={id}
+        aria-expanded={isVisible}
+        aria-haspopup="true"
+      >
+        <span className="text-xs sm:text-sm font-bold">?</span>
+      </button>
+      {isVisible && (
+        <div
+          id={id}
+          role="tooltip"
+          className={`absolute z-50 ${
+            position === "top" 
+              ? "bottom-full mb-2 left-1/2 transform -translate-x-1/2" 
+              : "top-full mt-2 left-1/2 transform -translate-x-1/2"
+          } w-64 sm:w-72 md:w-80 p-3 bg-gray-900 text-white text-xs sm:text-sm rounded-lg shadow-xl pointer-events-none`}
+        >
+          <div className="relative">
+            <p className="leading-relaxed">{text}</p>
+            {/* Flèche pointant vers le bouton */}
+            <div className={`absolute ${
+              position === "top" ? "top-full -mt-1" : "bottom-full -mb-1"
+            } left-1/2 transform -translate-x-1/2`}>
+              <div className={`w-0 h-0 border-l-4 border-r-4 ${
+                position === "top" ? "border-t-4 border-t-gray-900" : "border-b-4 border-b-gray-900"
+              } border-transparent`}></div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function RequestPage() {
   const { token } = useParams();
   const [loading, setLoading] = useState(true);
@@ -420,7 +469,13 @@ export function RequestPage() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8" style={{ pointerEvents: requestSubmitted ? 'none' : 'auto', opacity: requestSubmitted ? 0.5 : 1 }}>
+          <form 
+            onSubmit={handleSubmit} 
+            className="p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8" 
+            style={{ pointerEvents: requestSubmitted ? 'none' : 'auto', opacity: requestSubmitted ? 0.5 : 1 }}
+            aria-label="Formulaire de demande de devis"
+            noValidate
+          >
             {/* Informations personnelles */}
             <div className="bg-gradient-to-br from-blue-50/80 via-indigo-50/80 to-purple-50/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-5 sm:p-6 md:p-8 border-2 border-blue-100/50 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
               {/* Effet de brillance au survol */}
@@ -436,11 +491,17 @@ export function RequestPage() {
               </div>
               <div className="grid md:grid-cols-2 gap-4 sm:gap-5 relative z-10">
                 <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                  <label className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                    Nom complet <span className="text-red-500 font-bold">*</span>
+                  <label htmlFor="clientName" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" aria-hidden="true"></span>
+                    Nom complet <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
+                    <Tooltip 
+                      text="Indiquez votre nom complet tel qu'il apparaît sur votre pièce d'identité. Cela nous permettra de vous identifier facilement."
+                      id="tooltip-name"
+                    />
                   </label>
                   <TextInput
+                    id="clientName"
+                    name="clientName"
                     required
                     disabled={requestSubmitted}
                     value={formData.clientName}
@@ -448,47 +509,71 @@ export function RequestPage() {
                       setFormData({ ...formData, clientName: e.target.value })
                     }
                     placeholder="Votre nom complet"
-                    className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-required="true"
+                    aria-describedby="tooltip-name"
+                    className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                   />
                 </div>
                 <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                  <label className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                    Téléphone <span className="text-red-500 font-bold">*</span>
+                  <label htmlFor="clientPhone" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" aria-hidden="true"></span>
+                    Téléphone <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
+                    <Tooltip 
+                      text="Indiquez votre numéro de téléphone avec l'indicatif pays (ex: +33 pour la France). Nous vous contacterons sur ce numéro pour confirmer votre réservation."
+                      id="tooltip-phone"
+                    />
                   </label>
                   <TextInput
+                    id="clientPhone"
+                    name="clientPhone"
                     required
                     type="tel"
+                    inputMode="tel"
                     disabled={requestSubmitted}
                     value={formData.clientPhone}
                     onChange={(e) =>
                       setFormData({ ...formData, clientPhone: e.target.value })
                     }
                     placeholder="+33 6 12 34 56 78"
-                    className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-required="true"
+                    aria-describedby="tooltip-phone"
+                    className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                   />
                 </div>
                 <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                  <label className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                  <label htmlFor="clientHotel" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" aria-hidden="true"></span>
                     Hôtel
+                    <Tooltip 
+                      text="Indiquez le nom de votre hôtel si vous en avez déjà réservé un. Cela nous aidera à organiser les transferts si nécessaire."
+                      id="tooltip-hotel"
+                    />
                   </label>
                   <TextInput
+                    id="clientHotel"
+                    name="clientHotel"
                     disabled={requestSubmitted}
                     value={formData.clientHotel}
                     onChange={(e) =>
                       setFormData({ ...formData, clientHotel: e.target.value })
                     }
                     placeholder="Nom de votre hôtel"
-                    className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-describedby="tooltip-hotel"
+                    className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                   />
                 </div>
                 <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                  <label className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                    Date d'arrivée <span className="text-red-500 font-bold">*</span>
+                  <label htmlFor="arrivalDate" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true"></span>
+                    Date d'arrivée <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
+                    <Tooltip 
+                      text="Sélectionnez la date de votre arrivée à Hurghada. Cette date nous permettra de planifier vos activités."
+                      id="tooltip-arrival"
+                    />
                   </label>
                   <input
+                    id="arrivalDate"
+                    name="arrivalDate"
                     required
                     type="date"
                     disabled={requestSubmitted}
@@ -496,15 +581,24 @@ export function RequestPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, arrivalDate: e.target.value })
                     }
-                    className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 sm:py-3.5 text-base sm:text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    min={new Date().toISOString().split('T')[0]}
+                    aria-required="true"
+                    aria-describedby="tooltip-arrival"
+                    className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 sm:py-3.5 text-base sm:text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                   />
                 </div>
                 <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                  <label className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                    Date de départ <span className="text-red-500 font-bold">*</span>
+                  <label htmlFor="departureDate" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true"></span>
+                    Date de départ <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
+                    <Tooltip 
+                      text="Sélectionnez la date de votre départ. Cette date doit être postérieure à votre date d'arrivée. Elle nous permettra de planifier vos activités jusqu'à votre départ."
+                      id="tooltip-departure"
+                    />
                   </label>
                   <input
+                    id="departureDate"
+                    name="departureDate"
                     required
                     type="date"
                     disabled={requestSubmitted}
@@ -512,8 +606,11 @@ export function RequestPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, departureDate: e.target.value })
                     }
-                    min={formData.arrivalDate}
-                    className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 sm:py-3.5 text-base sm:text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    min={formData.arrivalDate || new Date().toISOString().split('T')[0]}
+                    aria-required="true"
+                    aria-describedby="tooltip-departure"
+                    aria-invalid={formData.departureDate && formData.arrivalDate && formData.departureDate < formData.arrivalDate}
+                    className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 sm:py-3.5 text-base sm:text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                   />
                 </div>
               </div>
@@ -582,7 +679,10 @@ export function RequestPage() {
                           type="button"
                           disabled={requestSubmitted}
                           onClick={() => toggleCategory(category.key)}
-                          className="w-full flex items-center justify-between p-4 sm:p-5 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50/50 transition-all duration-300 touch-manipulation group disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-expanded={isExpanded}
+                          aria-controls={`category-${category.key}`}
+                          aria-label={`${isExpanded ? 'Réduire' : 'Développer'} la catégorie ${category.label}`}
+                          className="w-full flex items-center justify-between p-4 sm:p-5 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50/50 transition-all duration-300 touch-manipulation group disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
                         >
                           <div className="flex items-center gap-3 sm:gap-4 flex-wrap flex-1 min-w-0">
                             <span className="text-2xl sm:text-3xl flex-shrink-0 transform group-hover:scale-110 transition-transform duration-300">{categoryIcons[category.key] || "📋"}</span>
@@ -603,7 +703,12 @@ export function RequestPage() {
                           </span>
                         </button>
                         {isExpanded && (
-                          <div className="border-t border-gray-200 p-3 sm:p-4 space-y-2 sm:space-y-3 bg-gray-50">
+                          <div 
+                            id={`category-${category.key}`}
+                            role="region"
+                            aria-label={`Activités de la catégorie ${category.label}`}
+                            className="border-t border-gray-200 p-3 sm:p-4 space-y-2 sm:space-y-3 bg-gray-50"
+                          >
                             {categoryActivities.map((activity) => {
                               const activityId = activity.id?.toString();
                               const isSelected = formData.selectedActivities.some(
@@ -625,14 +730,20 @@ export function RequestPage() {
                                   <div className="flex items-start gap-3 sm:gap-4">
                                     <input
                                       type="checkbox"
+                                      id={`activity-${activityId}`}
                                       disabled={requestSubmitted}
                                       checked={isSelected}
                                       onChange={() => handleActivityToggle(activityId)}
+                                      aria-label={`Sélectionner l'activité ${activity.name}`}
+                                      aria-describedby={`activity-desc-${activityId}`}
                                       className="mt-1 w-6 h-6 sm:w-7 sm:h-7 text-blue-600 rounded-lg border-2 border-gray-300 focus:ring-4 focus:ring-blue-200 cursor-pointer touch-manipulation flex-shrink-0 transform hover:scale-110 transition-all duration-300 accent-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                     />
                                     <div className="flex-1 min-w-0">
                                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                                        <h4 className="text-sm sm:text-base font-extrabold text-gray-900 break-words leading-tight">
+                                        <h4 
+                                          id={`activity-desc-${activityId}`}
+                                          className="text-sm sm:text-base font-extrabold text-gray-900 break-words leading-tight"
+                                        >
                                           {activity.name}
                                         </h4>
                                         {activity.price_adult && (
@@ -675,8 +786,11 @@ export function RequestPage() {
                                               </label>
                                               <input
                                                 type="number"
+                                                id={`adults-${activityId}`}
+                                                name={`adults-${activityId}`}
                                                 min="1"
                                                 required
+                                                inputMode="numeric"
                                                 disabled={requestSubmitted}
                                                 value={selectedActivity?.adults || ""}
                                                 onChange={(e) =>
@@ -686,6 +800,8 @@ export function RequestPage() {
                                                     e.target.value
                                                   )
                                                 }
+                                                aria-label={`Nombre d'adultes pour ${activity.name}`}
+                                                aria-required="true"
                                                 className="w-full rounded-lg border-2 border-gray-200 bg-white px-3 py-2.5 text-base sm:text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all touch-manipulation shadow-sm hover:shadow-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                                 placeholder="0"
                                               />
@@ -701,7 +817,10 @@ export function RequestPage() {
                                               </label>
                                               <input
                                                 type="number"
+                                                id={`children-${activityId}`}
+                                                name={`children-${activityId}`}
                                                 min="0"
+                                                inputMode="numeric"
                                                 disabled={requestSubmitted}
                                                 value={selectedActivity?.children || 0}
                                                 onChange={(e) =>
@@ -711,6 +830,7 @@ export function RequestPage() {
                                                     e.target.value
                                                   )
                                                 }
+                                                aria-label={`Nombre d'enfants pour ${activity.name}`}
                                                 className="w-full rounded-lg border-2 border-gray-200 bg-white px-3 py-2.5 text-base sm:text-sm focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all touch-manipulation shadow-sm hover:shadow-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                                 placeholder="0"
                                               />
@@ -726,7 +846,10 @@ export function RequestPage() {
                                               </label>
                                               <input
                                                 type="number"
+                                                id={`babies-${activityId}`}
+                                                name={`babies-${activityId}`}
                                                 min="0"
+                                                inputMode="numeric"
                                                 disabled={requestSubmitted}
                                                 value={selectedActivity?.babies || 0}
                                                 onChange={(e) =>
@@ -736,6 +859,7 @@ export function RequestPage() {
                                                     e.target.value
                                                   )
                                                 }
+                                                aria-label={`Nombre de bébés pour ${activity.name}`}
                                                 className="w-full rounded-lg border-2 border-gray-200 bg-white px-3 py-2.5 text-base sm:text-sm focus:border-pink-500 focus:ring-4 focus:ring-pink-100 transition-all touch-manipulation shadow-sm hover:shadow-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                                 placeholder="0"
                                               />
@@ -762,7 +886,9 @@ export function RequestPage() {
               <PrimaryBtn 
                 type="submit" 
                 disabled={submitting || requestSubmitted}
-                className="w-full sm:w-auto px-8 sm:px-12 py-4 sm:py-5 text-base sm:text-lg font-extrabold rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 touch-manipulation border-2 border-white/20 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={submitting ? "Envoi de la demande en cours" : "Envoyer la demande de devis"}
+                aria-busy={submitting}
+                className="w-full sm:w-auto px-8 sm:px-12 py-4 sm:py-5 text-base sm:text-lg font-extrabold rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 touch-manipulation border-2 border-white/20 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-2"
               >
                 {/* Effet de brillance au survol */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%]"></div>

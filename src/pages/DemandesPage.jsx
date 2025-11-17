@@ -6,7 +6,7 @@ import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { generateRequestLink, generateRequestToken } from "../utils/tokenGenerator";
 
-export function DemandesPage({ activities, onConvertToQuote }) {
+export function DemandesPage({ activities, onConvertToQuote, onRequestStatusChange }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -166,6 +166,10 @@ export function DemandesPage({ activities, onConvertToQuote }) {
       } else {
         // Recharger les demandes
         loadRequests();
+        // Notifier le parent pour mettre à jour le compteur
+        if (onRequestStatusChange) {
+          onRequestStatusChange();
+        }
       }
     } catch (err) {
       console.error("Exception lors de la mise à jour du statut:", err);
@@ -192,6 +196,10 @@ export function DemandesPage({ activities, onConvertToQuote }) {
       } else {
         toast.success("Demande supprimée avec succès.");
         loadRequests();
+        // Notifier le parent pour mettre à jour le compteur
+        if (onRequestStatusChange) {
+          onRequestStatusChange();
+        }
       }
     } catch (err) {
       console.error("Exception lors de la suppression:", err);

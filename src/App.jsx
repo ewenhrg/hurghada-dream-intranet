@@ -34,6 +34,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [usedDates, setUsedDates] = useState([]);
   const [showDatesModal, setShowDatesModal] = useState(false);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
 
@@ -173,6 +174,24 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fonction pour charger le nombre de demandes en attente
+  const loadPendingRequestsCount = useCallback(async () => {
+    if (!supabase || !ok) return;
+    try {
+      const { count, error } = await supabase
+        .from("client_requests")
+        .select("*", { count: "exact", head: true })
+        .eq("site_key", SITE_KEY)
+        .eq("status", "pending");
+
+      if (!error) {
+        setPendingRequestsCount(count || 0);
+      }
+    } catch (err) {
+      console.warn("Erreur lors du chargement du nombre de demandes:", err);
+    }
+  }, [ok]);
+
   // charger supabase au montage et synchronisation des activités toutes les 10 secondes (optimisé)
   useEffect(() => {
     // Synchronisation immédiate
@@ -188,6 +207,23 @@ export default function App() {
       clearInterval(interval);
     };
   }, [syncWithSupabase]);
+
+  // Charger le nombre de demandes en attente au montage et périodiquement
+  useEffect(() => {
+    if (!ok) return;
+    
+    // Charger immédiatement
+    loadPendingRequestsCount();
+
+    // Recharger toutes les 10 secondes
+    const interval = setInterval(() => {
+      loadPendingRequestsCount();
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [ok, loadPendingRequestsCount]);
 
   // Persister le brouillon de devis (ou le nettoyer) dès qu'il change
   useEffect(() => {
@@ -704,7 +740,14 @@ export default function App() {
                   </Pill>
                 )}
                 <Pill active={tab === "demandes"} onClick={() => setTab("demandes")}>
-                  📋 Demandes
+                  <span className="flex items-center gap-2">
+                    <span>📋 Demandes</span>
+                    {pendingRequestsCount > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
+                        {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                      </span>
+                    )}
+                  </span>
                 </Pill>
               </div>
             </nav>
@@ -960,6 +1003,7 @@ export default function App() {
               <DemandesPage 
                 activities={activities} 
                 onConvertToQuote={handleConvertRequestToQuote}
+                onRequestStatusChange={loadPendingRequestsCount}
               />
             </Suspense>
           </Section>
