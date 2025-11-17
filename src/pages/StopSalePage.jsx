@@ -27,6 +27,8 @@ export function StopSalePage({ activities, user }) {
   async function loadStopSales() {
     if (!supabase) return;
     try {
+      const today = new Date().toISOString().split('T')[0]; // Date d'aujourd'hui au format YYYY-MM-DD
+
       const { data, error } = await supabase
         .from("stop_sales")
         .select("*")
@@ -36,7 +38,27 @@ export function StopSalePage({ activities, user }) {
       if (error) {
         console.error("Erreur lors du chargement des stop sales:", error);
       } else {
-        setStopSales(data || []);
+        // Filtrer et supprimer les stop sales dont la date est passée
+        const validStopSales = [];
+        const expiredStopSales = [];
+
+        (data || []).forEach((stopSale) => {
+          if (stopSale.date < today) {
+            expiredStopSales.push(stopSale.id);
+          } else {
+            validStopSales.push(stopSale);
+          }
+        });
+
+        // Supprimer les stop sales expirés de Supabase
+        if (expiredStopSales.length > 0) {
+          await supabase
+            .from("stop_sales")
+            .delete()
+            .in("id", expiredStopSales);
+        }
+
+        setStopSales(validStopSales);
       }
     } catch (err) {
       console.error("Exception lors du chargement des stop sales:", err);
@@ -46,6 +68,8 @@ export function StopSalePage({ activities, user }) {
   async function loadPushSales() {
     if (!supabase) return;
     try {
+      const today = new Date().toISOString().split('T')[0]; // Date d'aujourd'hui au format YYYY-MM-DD
+
       const { data, error } = await supabase
         .from("push_sales")
         .select("*")
@@ -55,7 +79,27 @@ export function StopSalePage({ activities, user }) {
       if (error) {
         console.error("Erreur lors du chargement des push sales:", error);
       } else {
-        setPushSales(data || []);
+        // Filtrer et supprimer les push sales dont la date est passée
+        const validPushSales = [];
+        const expiredPushSales = [];
+
+        (data || []).forEach((pushSale) => {
+          if (pushSale.date < today) {
+            expiredPushSales.push(pushSale.id);
+          } else {
+            validPushSales.push(pushSale);
+          }
+        });
+
+        // Supprimer les push sales expirés de Supabase
+        if (expiredPushSales.length > 0) {
+          await supabase
+            .from("push_sales")
+            .delete()
+            .in("id", expiredPushSales);
+        }
+
+        setPushSales(validPushSales);
       }
     } catch (err) {
       console.error("Exception lors du chargement des push sales:", err);
