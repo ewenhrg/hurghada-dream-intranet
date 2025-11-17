@@ -276,6 +276,7 @@ export default function App() {
       client: {
         name: request.client_name || "",
         phone: request.client_phone || "",
+        email: request.client_email || "",
         hotel: request.client_hotel || "",
         room: request.client_room || "",
         neighborhood: request.client_neighborhood || "",
@@ -403,6 +404,7 @@ export default function App() {
                 client: {
                   name: row.client_name || "",
                   phone: row.client_phone || "",
+                  email: row.client_email || "",
                   hotel: row.client_hotel || "",
                   room: row.client_room || "",
                   neighborhood: row.client_neighborhood || "",
@@ -525,6 +527,7 @@ export default function App() {
         client: {
           name: row.client_name || "",
           phone: row.client_phone || "",
+          email: row.client_email || "",
           hotel: row.client_hotel || "",
           room: row.client_room || "",
           neighborhood: row.client_neighborhood || "",

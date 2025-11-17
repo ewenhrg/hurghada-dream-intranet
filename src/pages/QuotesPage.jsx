@@ -166,6 +166,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const defaultClient = draft?.client || {
     name: "",
     phone: "",
+    email: "",
     hotel: "",
     room: "",
     neighborhood: "",
@@ -253,6 +254,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     const emptyClient = {
       name: "",
       phone: "",
+      email: "",
       hotel: "",
       room: "",
       neighborhood: "",
@@ -1036,6 +1038,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           site_key: SITE_KEY,
           client_name: q.client.name || "",
           client_phone: q.client.phone || "",
+          client_email: q.client.email || "",
           client_hotel: q.client.hotel || "",
           client_room: q.client.room || "",
           client_neighborhood: q.client.neighborhood || "",
@@ -1155,6 +1158,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 const cleaned = cleanPhoneNumber(e.target.value);
                 setClient((c) => ({ ...c, phone: cleaned }));
               }} 
+            />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-2">Email</p>
+            <TextInput 
+              type="email"
+              value={client.email || ""} 
+              onChange={(e) => setClient((c) => ({ ...c, email: e.target.value }))} 
+              placeholder="email@exemple.com"
             />
           </div>
           <div>
