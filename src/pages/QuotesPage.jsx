@@ -2,8 +2,7 @@ import { useState, useMemo, useEffect, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, generateJotformPaymentLink, copyToClipboard } from "../utils";
-import { getJotformBaseUrl } from "../constants";
+import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { toast } from "../utils/toast.js";
@@ -225,10 +224,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const [confirmDeleteItem, setConfirmDeleteItem] = useState({ isOpen: false, index: null, activityName: "" });
   const [confirmResetForm, setConfirmResetForm] = useState(false);
 
-  // État pour le lien Jotform généré
-  const [generatedJotformLink, setGeneratedJotformLink] = useState(null);
-  const [jotformBaseUrl, setJotformBaseUrl] = useState(() => getJotformBaseUrl());
-
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
     if (setDraft) {
@@ -311,7 +306,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     setTicketNumbers({});
     setPaymentMethods({});
     setGlobalAdults("");
-    setGeneratedJotformLink(null); // Réinitialiser le lien Jotform
     if (setDraft) {
       setDraft(null);
     }
@@ -1024,19 +1018,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       phone: cleanPhoneNumber(client.phone || ""),
     };
 
-    // Générer le lien Jotform si l'URL de base est configurée
-    const baseUrl = getJotformBaseUrl();
-    let jotformPaymentLink = null;
-    if (baseUrl) {
-      const tempQuote = {
-        client: cleanedClient,
-        total: validGrandTotal,
-        totalCard: calculateCardPrice(validGrandTotal),
-        notes: notes.trim(),
-      };
-      jotformPaymentLink = generateJotformPaymentLink(tempQuote, baseUrl);
-    }
-
     const q = {
       id: uuid(),
       createdAt: new Date().toISOString(),
@@ -1071,7 +1052,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       totalCash: Math.round(validGrandTotal),
       totalCard: calculateCardPrice(validGrandTotal),
       currency: validGrandCurrency,
-      jotformPaymentLink: jotformPaymentLink, // Ajouter le lien Jotform au devis
     };
 
     setQuotes((prev) => {
@@ -1142,25 +1122,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       console.warn("⚠️ Supabase non configuré - le devis n'est enregistré qu'en local");
     }
 
-    // Afficher le lien Jotform généré si disponible
-    if (q.jotformPaymentLink) {
-      setGeneratedJotformLink(q.jotformPaymentLink);
-      // Copier automatiquement le lien dans le presse-papiers après un court délai
-      setTimeout(async () => {
-        await copyToClipboard(q.jotformPaymentLink);
-        toast.success("Lien de paiement généré et copié dans le presse-papiers !");
-      }, 100);
-    }
-
-    // Réinitialiser le formulaire après création réussie (mais garder le lien affiché)
-    const linkToKeep = q.jotformPaymentLink;
+    // Réinitialiser le formulaire après création réussie
     resetQuoteForm();
-    if (linkToKeep) {
-      // Réafficher le lien après réinitialisation
-      setTimeout(() => {
-        setGeneratedJotformLink(linkToKeep);
-      }, 100);
-    }
 
     setIsSubmitting(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1169,51 +1132,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     toast.success("Devis créé avec succès ! Formulaire réinitialisé.");
   }
 
-  // Fonction pour générer le lien Jotform manuellement
-  const handleGenerateJotformLink = useCallback(() => {
-    const baseUrl = getJotformBaseUrl();
-    if (!baseUrl) {
-      toast.warning("Veuillez d'abord configurer l'URL de base du formulaire Jotform.");
-      return;
-    }
-
-    // Créer un devis temporaire avec les données actuelles du formulaire
-    const validComputed = computed.filter((c) => c.act && c.act.id);
-    if (validComputed.length === 0) {
-      toast.warning("Veuillez sélectionner au moins une activité.");
-      return;
-    }
-
-    const tempQuote = {
-      id: uuid(),
-      client: {
-        name: client.name || "",
-        email: client.email || "",
-        phone: client.phone || "",
-        hotel: client.hotel || "",
-      },
-      total: validComputed.reduce((s, c) => s + (c.lineTotal || 0), 0),
-      totalCard: calculateCardPrice(validComputed.reduce((s, c) => s + (c.lineTotal || 0), 0)),
-      notes: notes || "",
-    };
-
-    const paymentLink = generateJotformPaymentLink(tempQuote, baseUrl);
-    if (paymentLink) {
-      setGeneratedJotformLink(paymentLink);
-      copyToClipboard(paymentLink);
-      toast.success("Lien de paiement généré et copié dans le presse-papiers !");
-    }
-  }, [computed, client, notes]);
-
-  // Fonction pour copier le lien Jotform
-  const handleCopyJotformLink = useCallback(async (link) => {
-    const success = await copyToClipboard(link);
-    if (success) {
-      toast.success("Lien copié dans le presse-papiers !");
-    } else {
-      toast.error("Impossible de copier le lien.");
-    }
-  }, []);
 
   return (
     <div className="space-y-10">
@@ -2248,82 +2166,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         >
           {isSubmitting ? "Création en cours..." : "Créer le devis"}
         </PrimaryBtn>
-
-        {/* Configuration URL Jotform */}
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">💳</span>
-            <h3 className="text-sm font-semibold text-gray-800">Configuration Jotform</h3>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-2">
-              URL de base du formulaire Jotform (ex: https://form.jotform.com/XXXXX)
-            </label>
-            <div className="flex gap-2">
-              <TextInput
-                type="url"
-                value={jotformBaseUrl}
-                onChange={(e) => {
-                  const url = e.target.value;
-                  setJotformBaseUrl(url);
-                  if (url) {
-                    localStorage.setItem(LS_KEYS.jotformBaseUrl, url);
-                  } else {
-                    localStorage.removeItem(LS_KEYS.jotformBaseUrl);
-                  }
-                }}
-                placeholder="https://form.jotform.com/XXXXX"
-                className="flex-1"
-              />
-              <GhostBtn
-                onClick={handleGenerateJotformLink}
-                variant="primary"
-                className="whitespace-nowrap"
-              >
-                🔗 Générer lien
-              </GhostBtn>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Le lien sera généré automatiquement après création du devis si l'URL est configurée.
-            </p>
-          </div>
-        </div>
-
-        {/* Affichage du lien Jotform généré */}
-        {generatedJotformLink && (
-          <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">✅</span>
-              <h3 className="text-sm font-semibold text-gray-800">Lien de paiement généré</h3>
-            </div>
-            <div className="bg-white border border-green-200 rounded-lg p-3 break-all">
-              <p className="text-xs text-gray-600 mb-2">Lien Jotform :</p>
-              <a
-                href={generatedJotformLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
-              >
-                {generatedJotformLink}
-              </a>
-            </div>
-            <div className="flex gap-2">
-              <PrimaryBtn
-                onClick={() => handleCopyJotformLink(generatedJotformLink)}
-                variant="success"
-                className="flex-1"
-              >
-                📋 Copier le lien
-              </PrimaryBtn>
-              <GhostBtn
-                onClick={() => setGeneratedJotformLink(null)}
-                variant="neutral"
-              >
-                ✕ Fermer
-              </GhostBtn>
-            </div>
-          </div>
-        )}
       </form>
 
       {/* Modale de paiement */}

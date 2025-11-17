@@ -11,18 +11,7 @@ export const LS_KEYS = {
   activityForm: "hd_activity_form", // Formulaire d'activité en cours
   messageTemplates: "hd_message_templates", // Templates de messages par activité
   exteriorHotels: "hd_exterior_hotels", // Liste des hôtels avec RDV à l'extérieur
-  jotformBaseUrl: "hd_jotform_base_url", // URL de base du formulaire Jotform
 };
-
-// URL de base du formulaire Jotform (peut être configurée via localStorage)
-// Format attendu: https://form.jotform.com/XXXXX
-export function getJotformBaseUrl() {
-  if (typeof window !== "undefined") {
-    const saved = localStorage.getItem(LS_KEYS.jotformBaseUrl);
-    if (saved) return saved;
-  }
-  return ""; // Par défaut vide, doit être configuré
-}
 
 export const WEEKDAYS = [
   { key: 0, label: "Dim" },

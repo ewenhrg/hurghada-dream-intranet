@@ -2,8 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge, generateJotformPaymentLink, copyToClipboard } from "../utils";
-import { getJotformBaseUrl } from "../constants";
+import { currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -657,49 +656,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       >
                         🖨️ Imprimer
                       </button>
-                      {getJotformBaseUrl() && (
-                        <button
-                          className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-purple-500 bg-purple-500 hover:bg-purple-600 shadow-[0_18px_32px_-18px_rgba(147,51,234,0.5)] transition-all duration-200 min-h-[44px]"
-                          onClick={async () => {
-                            const baseUrl = getJotformBaseUrl();
-                            if (!baseUrl) {
-                              toast.warning("Veuillez d'abord configurer l'URL de base du formulaire Jotform dans la page Devis.");
-                              return;
-                            }
-
-                            // Utiliser le lien existant ou en générer un nouveau
-                            let paymentLink = d.jotformPaymentLink;
-                            if (!paymentLink) {
-                              paymentLink = generateJotformPaymentLink(d, baseUrl);
-                              if (paymentLink) {
-                                // Stocker le lien dans le devis
-                                const updatedQuotes = quotes.map((quote) => {
-                                  if (quote.id === d.id) {
-                                    return { ...quote, jotformPaymentLink: paymentLink };
-                                  }
-                                  return quote;
-                                });
-                                setQuotes(updatedQuotes);
-                                saveLS(LS_KEYS.quotes, updatedQuotes);
-                              }
-                            }
-
-                            if (paymentLink) {
-                              const success = await copyToClipboard(paymentLink);
-                              if (success) {
-                                toast.success("Lien de paiement copié dans le presse-papiers !");
-                                // Ouvrir le lien dans un nouvel onglet
-                                window.open(paymentLink, '_blank', 'noopener,noreferrer');
-                              } else {
-                                toast.error("Impossible de copier le lien.");
-                              }
-                            }
-                          }}
-                          title={d.jotformPaymentLink ? "Lien de paiement déjà généré - Cliquer pour copier et ouvrir" : "Générer le lien de paiement Jotform"}
-                        >
-                          💳 {d.jotformPaymentLink ? "Lien paiement" : "Générer paiement"}
-                        </button>
-                      )}
                       {!allTicketsFilled && (
                         <button
                           className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-amber-500 bg-amber-500 hover:bg-amber-600 shadow-[0_18px_32px_-18px_rgba(245,158,11,0.55)] transition-all duration-200 min-h-[44px]"

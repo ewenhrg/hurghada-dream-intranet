@@ -76,55 +76,6 @@ export function sanitizeName(name) {
   return name.trim().replace(/[^a-zA-ZÀ-ÿ\s'-]/g, '').slice(0, 100);
 }
 
-// Générer le lien de paiement Jotform avec les informations pré-remplies
-// IMPORTANT: Vous devez adapter les noms de champs (q3_name, q4_email, etc.) selon votre formulaire Jotform
-// Pour trouver les noms de vos champs dans Jotform:
-// 1. Ouvrez votre formulaire dans Jotform
-// 2. Cliquez sur "Settings" > "Form Options" > "Pre-fill"
-// 3. Les noms de champs sont affichés (format: q[N]_[fieldName])
-// 4. Adaptez les noms ci-dessous selon vos champs réels
-export function generateJotformPaymentLink(quote, jotformBaseUrl) {
-  if (!jotformBaseUrl || !quote) return "";
-  
-  try {
-    const url = new URL(jotformBaseUrl);
-    
-    // Ajouter les paramètres pour pré-remplir le formulaire
-    // ⚠️ ADAPTEZ CES NOMS DE CHAMPS selon votre formulaire Jotform réel
-    
-    // Informations client (exemples de noms de champs - à adapter)
-    if (quote.client?.name) {
-      url.searchParams.set("q3_name", quote.client.name); // Adaptez "q3_name" selon votre formulaire
-    }
-    if (quote.client?.email) {
-      url.searchParams.set("q4_email", quote.client.email); // Adaptez "q4_email" selon votre formulaire
-    }
-    if (quote.client?.phone) {
-      url.searchParams.set("q5_phone", quote.client.phone); // Adaptez "q5_phone" selon votre formulaire
-    }
-    if (quote.client?.hotel) {
-      url.searchParams.set("q6_hotel", quote.client.hotel); // Adaptez "q6_hotel" selon votre formulaire
-    }
-    
-    // Montant total (utiliser totalCard si disponible, sinon calculer)
-    const totalCard = quote.totalCard || (quote.total ? Math.ceil(quote.total * 1.03) : 0);
-    url.searchParams.set("q7_amount", totalCard.toString()); // Adaptez "q7_amount" selon votre formulaire
-    
-    // Informations supplémentaires (optionnel)
-    if (quote.id) {
-      url.searchParams.set("q8_quoteId", quote.id); // Adaptez "q8_quoteId" selon votre formulaire
-    }
-    if (quote.notes) {
-      url.searchParams.set("q9_notes", quote.notes); // Adaptez "q9_notes" selon votre formulaire
-    }
-    
-    return url.toString();
-  } catch (error) {
-    console.error("Erreur lors de la génération du lien Jotform:", error);
-    return jotformBaseUrl; // Retourner l'URL de base si erreur
-  }
-}
-
 // Copier du texte dans le presse-papiers
 export async function copyToClipboard(text) {
   try {
