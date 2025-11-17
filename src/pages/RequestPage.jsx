@@ -461,7 +461,11 @@ export function RequestPage() {
                 href="https://tapkit.me/catalogues-activites"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white text-blue-600 font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl shadow-xl hover:shadow-2xl hover:bg-blue-50 transition-all duration-300 transform hover:scale-110 active:scale-95 text-sm sm:text-base border-2 border-white/50"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.open("https://tapkit.me/catalogues-activites", "_blank", "noopener,noreferrer");
+                }}
+                className="inline-flex items-center gap-2 bg-white text-blue-600 font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl shadow-xl hover:shadow-2xl hover:bg-blue-50 transition-all duration-300 transform hover:scale-110 active:scale-95 text-sm sm:text-base border-2 border-white/50 cursor-pointer"
               >
                 <span className="text-lg">📖</span>
                 <span>NOTRE CATALOGUE</span>
