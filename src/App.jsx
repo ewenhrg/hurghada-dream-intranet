@@ -570,19 +570,28 @@ export default function App() {
             const newQuote = convertSupabaseQuoteToLocal(payload.new);
             
             setQuotes((prevQuotes) => {
-              // Chercher si le devis existe déjà localement par supabase_id
+              // Créer un Map pour des recherches O(1) au lieu de O(n)
+              const quotesMap = new Map();
+              prevQuotes.forEach((q, idx) => {
+                if (q.supabase_id) {
+                  quotesMap.set(`id_${q.supabase_id}`, idx);
+                }
+                const phoneDateKey = `${q.client?.phone || ''}_${q.createdAt}`;
+                if (phoneDateKey !== '_') {
+                  quotesMap.set(`phone_${phoneDateKey}`, idx);
+                }
+              });
+
+              // Chercher si le devis existe déjà localement (optimisé avec Map O(1))
               let existingIndex = -1;
               if (newQuote.supabase_id) {
-                existingIndex = prevQuotes.findIndex((q) => q.supabase_id === newQuote.supabase_id);
+                existingIndex = quotesMap.get(`id_${newQuote.supabase_id}`) ?? -1;
               }
               
               // Si pas trouvé par supabase_id, chercher par téléphone + date
               if (existingIndex === -1) {
                 const supabaseKey = `${payload.new.client_phone || ''}_${payload.new.created_at}`;
-                existingIndex = prevQuotes.findIndex((q) => {
-                  const localKey = `${q.client?.phone || ''}_${q.createdAt}`;
-                  return localKey !== '_' && localKey === supabaseKey;
-                });
+                existingIndex = quotesMap.get(`phone_${supabaseKey}`) ?? -1;
               }
 
               if (existingIndex >= 0) {
@@ -599,21 +608,27 @@ export default function App() {
               }
             });
           } else if (payload.eventType === 'DELETE') {
-            // Supprimer le devis local correspondant
+            // Supprimer le devis local correspondant (optimisé)
             setQuotes((prevQuotes) => {
               const deletedId = payload.old.id;
               const deletedPhone = payload.old.client_phone || "";
               const deletedCreatedAt = payload.old.created_at || "";
+              const deletedKey = `${deletedPhone}_${deletedCreatedAt}`;
               
+              // Filtrer en une seule passe (plus efficace que plusieurs vérifications)
               const filtered = prevQuotes.filter((q) => {
                 // Vérifier par ID Supabase si disponible
-                if (q.supabase_id && q.supabase_id === deletedId) {
+                if (q.supabase_id === deletedId) {
                   return false;
                 }
                 // Sinon vérifier par téléphone et date de création
-                const localPhone = q.client?.phone || "";
-                const localCreatedAt = q.createdAt || "";
-                return !(localPhone === deletedPhone && localCreatedAt === deletedCreatedAt);
+                if (deletedKey !== '_') {
+                  const localKey = `${q.client?.phone || ''}_${q.createdAt}`;
+                  if (localKey === deletedKey) {
+                    return false;
+                  }
+                }
+                return true;
               });
               
               saveLS(LS_KEYS.quotes, filtered);
