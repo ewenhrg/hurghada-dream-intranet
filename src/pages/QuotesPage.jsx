@@ -138,7 +138,7 @@ const StopPushSalesSummary = memo(function StopPushSalesSummary({ stopSales, pus
       )}
     </div>
   );
-}
+});
 
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
   const [stopSales, setStopSales] = useState([]);
