@@ -184,6 +184,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   
   // État pour les suggestions de dates automatiques
   const [autoFillDates, setAutoFillDates] = useState(false);
+  
+  // État pour le nombre d'adultes global
+  const [globalAdults, setGlobalAdults] = useState("");
 
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
@@ -203,19 +206,28 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         arrivalDate: selectedQuote.clientArrivalDate || selectedQuote.client?.arrivalDate || "",
         departureDate: selectedQuote.clientDepartureDate || selectedQuote.client?.departureDate || "",
       });
-      setItems(
-        selectedQuote.items?.length
-          ? selectedQuote.items.map((item) => ({
-              ...item,
-              speedBoatExtra: Array.isArray(item.speedBoatExtra)
-                ? item.speedBoatExtra
-                : item.speedBoatExtra
-                  ? [item.speedBoatExtra]
-                  : [],
-            }))
-          : [blankItemMemo()]
-      );
+      const quoteItems = selectedQuote.items?.length
+        ? selectedQuote.items.map((item) => ({
+            ...item,
+            speedBoatExtra: Array.isArray(item.speedBoatExtra)
+              ? item.speedBoatExtra
+              : item.speedBoatExtra
+                ? [item.speedBoatExtra]
+                : [],
+          }))
+        : [blankItemMemo()];
+      setItems(quoteItems);
       setNotes(selectedQuote.notes || "");
+      // Définir le nombre d'adultes global si toutes les activités ont le même nombre
+      if (quoteItems.length > 0) {
+        const firstAdults = quoteItems[0]?.adults || "";
+        const allSame = quoteItems.every((item) => (item.adults || "") === firstAdults);
+        if (allSame && firstAdults) {
+          setGlobalAdults(firstAdults);
+        } else {
+          setGlobalAdults("");
+        }
+      }
     }
   }, [selectedQuote, blankItemMemo]);
 
@@ -252,6 +264,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     setNotes("");
     setTicketNumbers({});
     setPaymentMethods({});
+    setGlobalAdults("");
     if (setDraft) {
       setDraft(null);
     }
@@ -1206,6 +1219,36 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   📅 Auto-dates
                 </GhostBtn>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Champ global pour le nombre d'adultes */}
+        <div className="mb-4 md:mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                👥 Nombre d'adultes (remplit automatiquement toutes les activités)
+              </label>
+              <NumberInput
+                value={globalAdults}
+                onChange={(e) => {
+                  const value = e.target.value === "" ? "" : e.target.value;
+                  setGlobalAdults(value);
+                  // Remplir automatiquement tous les champs adults de toutes les activités
+                  setItems((prev) =>
+                    prev.map((item) => ({
+                      ...item,
+                      adults: value,
+                    }))
+                  );
+                }}
+                placeholder="Ex: 2"
+                className="max-w-xs"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Vous pouvez toujours modifier individuellement le nombre d'adultes pour chaque activité ci-dessous
+              </p>
             </div>
           </div>
         </div>
