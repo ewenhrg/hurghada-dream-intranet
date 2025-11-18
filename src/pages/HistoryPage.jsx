@@ -392,10 +392,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         </div>
         
         {/* Recherche avancée */}
-        <div className="border border-blue-200/50 rounded-xl bg-blue-50/30">
+        <div className="border border-blue-200/60 rounded-xl bg-gradient-to-br from-blue-50/40 to-indigo-50/30 backdrop-blur-sm shadow-sm">
           <button
             onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-            className="w-full flex items-center justify-between gap-3 p-3 hover:bg-blue-50/50 transition-colors rounded-xl"
+            className="w-full flex items-center justify-between gap-3 p-3 hover:bg-blue-50/60 transition-all duration-200 rounded-xl"
           >
             <div className="flex items-center gap-2">
               <span className="text-lg">🔍</span>

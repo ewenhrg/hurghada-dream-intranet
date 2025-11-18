@@ -1269,7 +1269,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Champ global pour le nombre d'adultes */}
-        <div className="mb-4 md:mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
+        <div className="mb-4 md:mb-6 p-4 bg-gradient-to-br from-blue-50/90 to-indigo-50/80 rounded-xl border border-blue-200/60 shadow-lg backdrop-blur-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="flex-1">
               <label className="block text-sm font-semibold text-gray-700 mb-2">

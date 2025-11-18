@@ -20,7 +20,7 @@ export const TextInput = memo(({ className = "", ...props }) => (
   <input
     {...props}
     className={
-      "w-full rounded-xl border border-[rgba(148,163,184,0.3)] bg-[rgba(255,255,255,0.95)] px-3 md:px-4 py-3 md:py-2.75 text-base md:text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-150 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] " +
+      "w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] backdrop-blur-sm px-3 md:px-4 py-3 md:py-2.75 text-base md:text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] " +
       className
     }
   />
@@ -33,7 +33,7 @@ export const NumberInput = memo(({ className = "", ...props }) => (
     type="number"
     {...props}
     className={
-      "w-full rounded-xl border border-[rgba(148,163,184,0.3)] bg-[rgba(255,255,255,0.95)] px-3 md:px-4 py-3 md:py-2.75 text-base md:text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-150 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] " +
+      "w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] backdrop-blur-sm px-3 md:px-4 py-3 md:py-2.75 text-base md:text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] " +
       className
     }
   />
@@ -91,7 +91,7 @@ export const GhostBtn = memo(({ className = "", size, variant = "neutral", ...pr
     <button
       {...props}
       className={
-        "inline-flex items-center justify-center gap-2 rounded-xl font-semibold shadow-[0_14px_30px_-24px_rgba(15,23,42,0.4)] transition-transform duration-200 ease-out hover:-translate-y-[1px] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4f46e5]/20 bg-white/90 min-h-[44px] min-w-[44px] hover:shadow-[0_16px_32px_-24px_rgba(15,23,42,0.45)] " +
+        "inline-flex items-center justify-center gap-2 rounded-xl font-semibold border shadow-[0_14px_30px_-24px_rgba(15,23,42,0.4)] transition-all duration-200 ease-out hover:-translate-y-[1px] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4f46e5]/20 bg-white/95 backdrop-blur-sm min-h-[44px] min-w-[44px] hover:shadow-[0_16px_32px_-24px_rgba(15,23,42,0.45)] " +
         sizeClasses +
         " " +
         variantClass +
