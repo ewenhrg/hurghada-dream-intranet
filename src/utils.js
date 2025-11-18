@@ -171,7 +171,15 @@ export function generateQuoteHTML(quote) {
     month: "long",
     year: "numeric"
   });
-  const itemsHTML = quote.items.map((item, idx) => {
+  
+  // Trier les activités par date (ordre croissant)
+  const sortedItems = [...quote.items].sort((a, b) => {
+    const dateA = a.date ? new Date(a.date + "T12:00:00").getTime() : 0;
+    const dateB = b.date ? new Date(b.date + "T12:00:00").getTime() : 0;
+    return dateA - dateB;
+  });
+  
+  const itemsHTML = sortedItems.map((item, idx) => {
     const itemDate = new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR", {
       day: "2-digit",
       month: "long",

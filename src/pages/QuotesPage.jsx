@@ -1022,6 +1022,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       id: uuid(),
       createdAt: new Date().toISOString(),
       client: cleanedClient,
+      clientArrivalDate: cleanedClient.arrivalDate || "",
+      clientDepartureDate: cleanedClient.departureDate || "",
       notes: notes.trim(),
       createdByName: user?.name || "",
       items: validComputed.map((c) => ({
