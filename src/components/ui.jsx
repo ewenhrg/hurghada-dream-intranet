@@ -7,7 +7,7 @@ export const Pill = memo(({ active, children, ...props }) => (
       "px-4 md:px-6 py-2.5 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-transform duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8b5cf6]/50 min-h-[44px] min-w-[44px] flex items-center justify-center " +
       (active
         ? "bg-gradient-to-r from-[#4f46e5] via-[#6366f1] to-[#06b6d4] text-white shadow-[0_16px_32px_-16px_rgba(79,70,229,0.7)] hover:shadow-[0_18px_36px_-18px_rgba(79,70,229,0.75)] hover:-translate-y-[1px] active:scale-[0.98]"
-        : "bg-white/95 text-black border border-[rgba(148,163,184,0.35)] hover:border-[rgba(79,70,229,0.55)] hover:text-[#4338ca] hover:bg-white hover:shadow-[0_14px_24px_-20px_rgba(79,70,229,0.45)] hover:-translate-y-[1px] active:scale-[0.98]")
+        : "bg-white/95 text-[#000000] border border-[rgba(148,163,184,0.35)] hover:border-[rgba(79,70,229,0.55)] hover:text-[#4338ca] hover:bg-white hover:shadow-[0_14px_24px_-20px_rgba(79,70,229,0.45)] hover:-translate-y-[1px] active:scale-[0.98]")
     }
   >
     {children}
