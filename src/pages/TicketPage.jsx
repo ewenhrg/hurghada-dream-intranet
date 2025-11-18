@@ -431,7 +431,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
 
       {/* Tableau */}
       <div className="overflow-x-auto" style={{ width: '100%' }}>
-        <table className="border-collapse bg-white" style={{ border: '1px solid #ddd', width: '100%', tableLayout: 'fixed' }}>
+        <table className="border-collapse bg-white/95 backdrop-blur-sm" style={{ border: '1px solid rgba(148,163,184,0.3)', width: '100%', tableLayout: 'fixed' }}>
           <thead>
             <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #333' }}>
               <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '2%' }}>
@@ -795,8 +795,8 @@ export function TicketPage({ quotes, setQuotes, user }) {
             disabled={currentPage === 1}
             className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
               currentPage === 1
-                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                ? "bg-gray-100/80 text-gray-400 border-gray-200/60 cursor-not-allowed backdrop-blur-sm"
+                : "bg-white/95 backdrop-blur-sm text-gray-700 border-gray-300/60 hover:bg-gray-50/80 shadow-sm"
             }`}
           >
             ← Précédent
@@ -838,8 +838,8 @@ export function TicketPage({ quotes, setQuotes, user }) {
             disabled={currentPage === pages.length}
             className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
               currentPage === pages.length
-                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                ? "bg-gray-100/80 text-gray-400 border-gray-200/60 cursor-not-allowed backdrop-blur-sm"
+                : "bg-white/95 backdrop-blur-sm text-gray-700 border-gray-300/60 hover:bg-gray-50/80 shadow-sm"
             }`}
           >
             Suivant →
