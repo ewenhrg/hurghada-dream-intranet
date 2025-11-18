@@ -680,8 +680,118 @@ export default function App() {
 
     // Nettoyer l'abonnement au démontage
     return () => {
-      console.log('🔌 Déconnexion de l\'abonnement Realtime');
+      console.log('🔌 Déconnexion de l\'abonnement Realtime pour les devis');
       supabase.removeChannel(channel);
+    };
+  }, [remoteEnabled]);
+
+  // Synchronisation en temps réel des activités via Supabase Realtime
+  useEffect(() => {
+    if (!supabase || !remoteEnabled) return;
+
+    console.log("🔄 Abonnement Realtime aux activités...");
+
+    // Fonction pour convertir une activité Supabase en format local
+    const convertSupabaseActivityToLocal = (row) => {
+      return {
+        id: row.id?.toString() || uuid(),
+        supabase_id: row.id,
+        name: row.name || "",
+        category: row.category || "desert",
+        priceAdult: row.price_adult || 0,
+        priceChild: row.price_child || 0,
+        priceBaby: row.price_baby || 0,
+        ageChild: row.age_child || "",
+        ageBaby: row.age_baby || "",
+        currency: row.currency || "EUR",
+        availableDays: Array.isArray(row.available_days) && row.available_days.length === 7
+          ? row.available_days
+          : [false, false, false, false, false, false, false],
+        notes: row.notes || "",
+        transfers: row.transfers || emptyTransfers(),
+      };
+    };
+
+    // S'abonner aux changements sur la table activities
+    const activitiesChannel = supabase
+      .channel('activities-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'activities',
+          filter: `site_key=eq.${SITE_KEY}`,
+        },
+        async (payload) => {
+          console.log('📨 Changement Realtime activités reçu:', payload.eventType, payload);
+
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const newActivity = convertSupabaseActivityToLocal(payload.new);
+            
+            setActivities((prevActivities) => {
+              // Créer un Map pour des recherches O(1)
+              const activitiesMap = new Map();
+              prevActivities.forEach((a, idx) => {
+                if (a.supabase_id) {
+                  activitiesMap.set(a.supabase_id, idx);
+                }
+                if (a.id) {
+                  activitiesMap.set(a.id, idx);
+                }
+              });
+
+              // Chercher si l'activité existe déjà
+              let existingIndex = -1;
+              if (newActivity.supabase_id) {
+                existingIndex = activitiesMap.get(newActivity.supabase_id) ?? -1;
+              }
+              if (existingIndex === -1 && newActivity.id) {
+                existingIndex = activitiesMap.get(newActivity.id) ?? -1;
+              }
+
+              if (existingIndex >= 0) {
+                // Mettre à jour l'activité existante
+                const updated = [...prevActivities];
+                updated[existingIndex] = newActivity;
+                saveLS(LS_KEYS.activities, updated);
+                return updated;
+              } else {
+                // Ajouter la nouvelle activité
+                const updated = [newActivity, ...prevActivities];
+                saveLS(LS_KEYS.activities, updated);
+                return updated;
+              }
+            });
+          } else if (payload.eventType === 'DELETE') {
+            // Supprimer l'activité locale correspondante
+            setActivities((prevActivities) => {
+              const deletedId = payload.old.id;
+              const filtered = prevActivities.filter((a) => {
+                return a.supabase_id !== deletedId && a.id !== deletedId?.toString();
+              });
+              saveLS(LS_KEYS.activities, filtered);
+              return filtered;
+            });
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Abonnement Realtime actif pour les activités');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.warn('⚠️ Erreur abonnement Realtime activités:', status, err);
+        } else if (status === 'TIMED_OUT') {
+          console.warn('⏱️ Timeout abonnement Realtime activités, reconnexion...');
+        } else if (status === 'CLOSED') {
+          console.log('🔌 Abonnement Realtime activités fermé');
+        }
+      });
+
+    // Nettoyer l'abonnement au démontage
+    return () => {
+      console.log('🔌 Déconnexion de l\'abonnement Realtime pour les activités');
+      supabase.removeChannel(activitiesChannel);
     };
   }, [remoteEnabled]);
 
