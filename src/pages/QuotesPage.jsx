@@ -1,9 +1,12 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { uuid, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber } from "../utils";
+import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
+import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber } from "../utils";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { toast } from "../utils/toast.js";
 import { StopPushSalesSummary } from "../components/quotes/StopPushSalesSummary";
 import { PaymentModal } from "../components/quotes/PaymentModal";
