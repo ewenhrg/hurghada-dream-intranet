@@ -329,7 +329,17 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                             key={mIdx}
                             className="text-xs rounded-lg px-2 py-1 bg-[rgba(147,51,234,0.12)] text-[#7c3aed] border border-[rgba(147,51,234,0.35)]"
                           >
-                            {mod}
+                            {mod.type === "cancelled" ? (
+                              <>
+                                🚫 Annulé le {mod.date ? new Date(mod.date).toLocaleDateString("fr-FR") : ""} par {mod.modifiedBy || "Inconnu"}
+                              </>
+                            ) : mod.type === "modified" ? (
+                              <>
+                                ✏️ {mod.oldActivity || "Ancienne activité"} → {mod.newActivity || "Nouvelle activité"} le {mod.date ? new Date(mod.date).toLocaleDateString("fr-FR") : ""} par {mod.modifiedBy || "Inconnu"}
+                              </>
+                            ) : (
+                              JSON.stringify(mod)
+                            )}
                           </div>
                         ))}
                       </div>
