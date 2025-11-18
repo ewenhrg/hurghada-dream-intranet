@@ -348,124 +348,130 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   }, []); // Exécuter uniquement une fois au montage du composant
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-          <div className="flex flex-col gap-2 max-w-md">
-            <TextInput
-              placeholder="Rechercher par numéro de téléphone"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="w-full"
-            />
-            <p className="text-xs text-amber-700 flex items-center gap-1">
-              <span>⚠️</span>
-              <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
-            </p>
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
+      <div className="flex flex-col gap-5 md:gap-6">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-start md:items-center justify-between">
+          <div className="flex-1 max-w-md">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-800 mb-3 flex items-center gap-2">
+              <span className="text-2xl">📋</span>
+              Historique des devis
+            </h2>
+            <div className="space-y-2">
+              <TextInput
+                placeholder="Rechercher par numéro de téléphone..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="w-full text-base"
+              />
+              <p className="text-xs md:text-sm text-amber-700 bg-amber-50/80 px-3 py-2 rounded-lg border border-amber-200/60 flex items-center gap-2 font-medium">
+                <span className="text-base">⚠️</span>
+                <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
+              </p>
+            </div>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-wrap gap-2 md:gap-3">
             <Pill
               active={statusFilter === "all"}
               onClick={() => setStatusFilter("all")}
             >
-              Tous
+              📊 Tous
             </Pill>
             <Pill
               active={statusFilter === "paid"}
               onClick={() => setStatusFilter("paid")}
             >
-              Payés
+              ✅ Payés
             </Pill>
             <Pill
               active={statusFilter === "pending"}
               onClick={() => setStatusFilter("pending")}
             >
-              En attente
+              ⏳ En attente
             </Pill>
             <Pill
               active={statusFilter === "modified"}
               onClick={() => setStatusFilter("modified")}
             >
-              Modifié
+              🔄 Modifié
             </Pill>
           </div>
         </div>
         
         {/* Recherche avancée */}
-        <div className="border border-blue-200/60 rounded-xl bg-gradient-to-br from-blue-50/40 to-indigo-50/30 backdrop-blur-sm shadow-sm">
+        <div className="border-2 border-blue-200/60 rounded-2xl bg-gradient-to-br from-blue-50/90 to-indigo-50/70 backdrop-blur-sm shadow-lg">
           <button
             onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-            className="w-full flex items-center justify-between gap-3 p-3 hover:bg-blue-50/60 transition-all duration-200 rounded-xl"
+            className="w-full flex items-center justify-between gap-3 p-4 md:p-5 hover:bg-blue-50/60 transition-all duration-200 rounded-xl"
           >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🔍</span>
-              <span className="font-semibold text-sm text-gray-700">Recherche avancée</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xl">🔍</span>
+              <span className="font-bold text-sm md:text-base text-slate-800">Recherche avancée</span>
               {(debouncedSearchName || debouncedSearchHotel || debouncedSearchTicket || searchDateFrom || searchDateTo) && (
-                <span className="px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">
+                <span className="px-3 py-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold rounded-full shadow-md">
                   Active
                 </span>
               )}
             </div>
-            <span className="text-gray-600 text-sm">
+            <span className="text-slate-600 text-sm md:text-base font-semibold">
               {showAdvancedSearch ? "▼ Réduire" : "▶ Développer"}
             </span>
           </button>
           
           {showAdvancedSearch && (
-            <div className="p-4 pt-0 space-y-3 border-t border-blue-200/50 mt-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="p-5 md:p-6 pt-0 space-y-4 md:space-y-5 border-t-2 border-blue-200/60 mt-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
                 <div>
-                  <p className="text-xs text-gray-600 mb-1 font-medium">Nom du client</p>
+                  <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Nom du client</label>
                   <TextInput
                     placeholder="Rechercher par nom..."
                     value={searchName}
                     onChange={(e) => setSearchName(e.target.value)}
-                    className="w-full"
+                    className="w-full text-base"
                   />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600 mb-1 font-medium">Hôtel</p>
+                  <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Hôtel</label>
                   <TextInput
                     placeholder="Rechercher par hôtel..."
                     value={searchHotel}
                     onChange={(e) => setSearchHotel(e.target.value)}
-                    className="w-full"
+                    className="w-full text-base"
                   />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600 mb-1 font-medium">Numéro de ticket</p>
+                  <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Numéro de ticket</label>
                   <TextInput
                     placeholder="Rechercher par ticket..."
                     value={searchTicket}
                     onChange={(e) => setSearchTicket(e.target.value)}
-                    className="w-full"
+                    className="w-full text-base"
                   />
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                 <div>
-                  <p className="text-xs text-gray-600 mb-1 font-medium">Date de création (du)</p>
+                  <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Date de création (du)</label>
                   <TextInput
                     type="date"
                     value={searchDateFrom}
                     onChange={(e) => setSearchDateFrom(e.target.value)}
-                    className="w-full"
+                    className="w-full text-base"
                   />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600 mb-1 font-medium">Date de création (au)</p>
+                  <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Date de création (au)</label>
                   <TextInput
                     type="date"
                     value={searchDateTo}
                     onChange={(e) => setSearchDateTo(e.target.value)}
-                    className="w-full"
+                    className="w-full text-base"
                   />
                 </div>
               </div>
               
               {(debouncedSearchName || debouncedSearchHotel || debouncedSearchTicket || searchDateFrom || searchDateTo) && (
-                <div className="flex justify-end">
+                <div className="flex justify-end pt-2 border-t border-blue-200/60">
                   <GhostBtn
                     onClick={() => {
                       setSearchName("");
@@ -487,24 +493,27 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       </div>
       
       {/* Indicateur du nombre de résultats */}
-      <div className="flex items-center justify-between text-sm">
-        <p className="text-gray-600">
-          {filtered.length === 0 ? (
-            <span className="text-amber-600">Aucun devis trouvé</span>
-          ) : filtered.length === 1 ? (
-            <span className="text-blue-600 font-semibold">1 devis trouvé</span>
-          ) : (
-            <span className="text-blue-600 font-semibold">{filtered.length} devis trouvés</span>
-          )}
-          {quotes.length !== filtered.length && (
-            <span className="text-gray-500 ml-2">
-              (sur {quotes.length} total)
-            </span>
-          )}
-        </p>
+      <div className="flex items-center justify-between bg-gradient-to-r from-slate-50/90 to-blue-50/70 rounded-xl border-2 border-slate-200/60 p-4 md:p-5 shadow-md backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">📊</span>
+          <div>
+            {filtered.length === 0 ? (
+              <p className="text-amber-700 font-bold text-base md:text-lg">Aucun devis trouvé</p>
+            ) : filtered.length === 1 ? (
+              <p className="text-blue-700 font-bold text-base md:text-lg">1 devis trouvé</p>
+            ) : (
+              <p className="text-blue-700 font-bold text-base md:text-lg">{filtered.length} devis trouvés</p>
+            )}
+            {quotes.length !== filtered.length && (
+              <p className="text-slate-600 text-sm font-medium mt-1">
+                sur {quotes.length} total
+              </p>
+            )}
+          </div>
+        </div>
       </div>
       
-      <div className="space-y-3">
+      <div className="space-y-4 md:space-y-5">
         {filtered.map((d) => {
           const allTicketsFilled = d.allTicketsFilled;
           const hasTickets = d.hasTickets;
@@ -512,89 +521,94 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           return (
             <div
               key={d.id}
-              className={`relative overflow-hidden rounded-2xl border transition-all duration-200 p-5 pl-7 ${
+              className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-300 p-5 md:p-7 pl-7 md:pl-9 shadow-lg hover:shadow-xl ${
                 allTicketsFilled
-                  ? "border-[rgba(16,185,129,0.45)] bg-[rgba(234, 255, 247, 0.92)]"
-                  : "border-[rgba(245,158,11,0.45)] bg-[rgba(255, 247, 230, 0.94)]"
+                  ? "border-emerald-300/60 bg-gradient-to-br from-emerald-50/95 to-teal-50/90"
+                  : "border-amber-300/60 bg-gradient-to-br from-amber-50/95 to-orange-50/90"
               }`}
             >
               <span
-                className={`absolute inset-y-0 left-0 w-1.5 ${
+                className={`absolute inset-y-0 left-0 w-2 ${
                   allTicketsFilled
-                    ? "bg-gradient-to-b from-emerald-400 via-emerald-500 to-teal-400"
-                    : "bg-gradient-to-b from-amber-400 via-amber-500 to-orange-400"
+                    ? "bg-gradient-to-b from-emerald-400 via-emerald-500 to-teal-400 shadow-lg"
+                    : "bg-gradient-to-b from-amber-400 via-amber-500 to-orange-400 shadow-lg"
                 }`}
               />
               <span className="absolute inset-0 pointer-events-none bg-gradient-to-br from-white/0 via-white/10 to-white/0" />
-              <div className="relative space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm border ${
+              <div className="relative space-y-4 md:space-y-5">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                  <span className={`px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-md border-2 ${
                     allTicketsFilled
-                      ? "bg-[rgba(16,185,129,0.14)] text-[#047857] border-[#34d399]/40"
-                      : "bg-[rgba(245,158,11,0.18)] text-[#b45309] border-[#fbbf24]/45"
+                      ? "bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-900 border-emerald-300/60"
+                      : "bg-gradient-to-r from-amber-100 to-orange-100 text-amber-900 border-amber-300/60"
                   }`}
                   >
                     {allTicketsFilled ? "✅ Payé" : "⏳ En attente"}
                   </span>
                   {d.isModified && (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold shadow-sm border bg-[rgba(147,51,234,0.15)] text-[#6d28d9] border-[rgba(129,140,248,0.35)]">
+                    <span className="px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-900 border-purple-300/60">
                       🔄 Modifié
                     </span>
                   )}
+                  {hasTickets && (
+                    <span className="px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-900 border-blue-300/60">
+                      🎫 Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 space-y-1">
-                    <p className="text-xs text-[rgba(71,85,105,0.7)]">
-                      {new Date(d.createdAt).toLocaleString("fr-FR")}
-                      {d.createdByName && <span className="ml-2 text-[#0284c7] font-semibold">• {d.createdByName}</span>}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
+                  <div className="flex-1 space-y-2">
+                    <p className="text-xs md:text-sm text-slate-600 font-medium">
+                      📅 {new Date(d.createdAt).toLocaleString("fr-FR")}
+                      {d.createdByName && <span className="ml-2 text-blue-700 font-bold">• Créé par {d.createdByName}</span>}
                     </p>
-                    <p className="text-sm text-slate-800 font-medium">
-                      {d.client?.phone || "Tél ?"} — {d.client?.hotel || "Hôtel ?"}
-                      {d.client?.room ? ` (${d.client.room})` : ""}
+                    <p className="text-base md:text-lg text-slate-900 font-bold">
+                      📞 {d.client?.phone || "Tél ?"} — 🏨 {d.client?.hotel || "Hôtel ?"}
+                      {d.client?.room ? ` (Chambre ${d.client.room})` : ""}
                     </p>
-                    {hasTickets && (
-                      <span className="tag-success inline-flex items-center gap-1">
-                        🎫 Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
-                      </span>
+                    {d.client?.name && (
+                      <p className="text-sm md:text-base text-slate-700 font-semibold">
+                        👤 {d.client.name}
+                      </p>
                     )}
                   </div>
                   {(d.trip && d.trip.trim() && d.trip !== "Activité ?") || (d.invoiceN && d.invoiceN !== "N/A") ? (
-                    <div className="flex flex-col items-end gap-1 text-right min-w-[140px]">
+                    <div className="flex flex-col items-end gap-2 text-right min-w-[140px]">
                       {d.trip && d.trip.trim() && d.trip !== "Activité ?" && (
-                        <span className="tag-info inline-flex items-center gap-1 text-xs">
-                          {d.trip}
+                        <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-900 border-2 border-indigo-300/60 shadow-sm">
+                          ✈️ {d.trip}
                         </span>
                       )}
                       {d.invoiceN && d.invoiceN !== "N/A" && (
-                        <span className="text-[11px] uppercase tracking-wide text-[rgba(71,85,105,0.65)]">
-                          Invoice {d.invoiceN}
+                        <span className="text-xs md:text-sm uppercase tracking-wide text-slate-700 font-bold bg-slate-100 px-3 py-1.5 rounded-lg border-2 border-slate-300/60">
+                          📄 Invoice {d.invoiceN}
                         </span>
                       )}
                     </div>
                   ) : null}
                 </div>
-                <div className="flex flex-col gap-4 pt-3 border-t border-white/40 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="flex-1 space-y-2">
-                    <div className="space-y-2">
+                <div className="flex flex-col gap-5 md:gap-6 pt-4 md:pt-5 border-t-2 border-white/60 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex-1 space-y-3">
+                    <div className="space-y-2.5 md:space-y-3">
                       {d.items.map((li, i) => (
                         <div
                           key={i}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-md transition-all duration-200 hover:shadow-lg"
+                          className="flex flex-wrap items-center justify-between gap-3 md:gap-4 rounded-xl border-2 border-white/80 bg-white/95 backdrop-blur-sm px-4 md:px-5 py-3 md:py-4 shadow-lg transition-all duration-200 hover:shadow-xl hover:border-blue-200/60"
                         >
-                          <div className="flex flex-col">
-                            <span className="text-sm font-semibold text-slate-800">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm md:text-base font-bold text-slate-900">
                               {li.activityName || "Activité ?"}
                             </span>
-                            <span className="text-xs text-[rgba(71,85,105,0.75)]">
-                              {li.date ? new Date(li.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?"} — {li.adults ?? 0} adt / {li.children ?? 0} enf
+                            <span className="text-xs md:text-sm text-slate-600 font-medium">
+                              📅 {li.date ? new Date(li.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?"} — 👥 {li.adults ?? 0} adt / {li.children ?? 0} enf
                             </span>
                           </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <span className="text-sm font-semibold text-slate-700">
-                              {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
+                          <div className="flex flex-col items-end gap-2">
+                            <span className="text-base md:text-lg font-bold text-slate-900">
+                              💵 {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
                             </span>
                             {li.ticketNumber && li.ticketNumber.trim() !== "" && (
-                              <span className="tag-success inline-flex items-center gap-1">
+                              <span className="px-3 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-900 border-2 border-emerald-300/60 shadow-sm">
                                 🎫 {li.ticketNumber}
                               </span>
                             )}
@@ -603,24 +617,29 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       ))}
                     </div>
                     {d.notes && d.notes.trim() !== "" && (
-                      <p className="text-xs text-[rgba(71,85,105,0.75)] bg-white/85 backdrop-blur-sm border border-white/60 rounded-xl px-4 py-2 shadow-md">
-                        📝 {d.notes}
-                      </p>
+                      <div className="bg-white/90 backdrop-blur-sm border-2 border-white/80 rounded-xl px-4 md:px-5 py-3 md:py-4 shadow-md">
+                        <p className="text-xs md:text-sm text-slate-700 font-medium">
+                          📝 <span className="font-semibold">Notes :</span> {d.notes}
+                        </p>
+                      </div>
                     )}
                   </div>
-                  <div className="flex flex-col items-end gap-3 min-w-[220px]">
-                    <div className="text-right">
-                      <p className="text-base font-semibold text-slate-900">
-                        Espèces: {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
+                  <div className="flex flex-col items-end gap-4 min-w-[240px] bg-white/80 backdrop-blur-sm rounded-xl p-4 md:p-5 border-2 border-white/80 shadow-lg">
+                    <div className="text-right w-full">
+                      <p className="text-xs md:text-sm font-semibold text-slate-600 mb-1 uppercase tracking-wide">Total du devis</p>
+                      <p className="text-xl md:text-2xl font-bold text-slate-900 mb-1">
+                        💵 {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
                       </p>
-                      <p className="text-sm text-[rgba(71,85,105,0.8)]">
-                        Carte: {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
+                      <p className="text-lg md:text-xl font-semibold text-slate-700">
+                        💳 {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
                       </p>
                     </div>
-                    <div className="flex flex-wrap justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2 md:gap-3 w-full">
                       <button
-                        className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-emerald-500 shadow-[0_18px_32px_-18px_rgba(16,185,129,0.55)] transition-all duration-200 min-h-[44px] ${
-                          allTicketsFilled ? "bg-emerald-600 hover:bg-emerald-700" : "bg-emerald-500 hover:bg-emerald-600"
+                        className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95 ${
+                          allTicketsFilled 
+                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-500 hover:from-emerald-700 hover:to-teal-700" 
+                            : "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-400 hover:from-emerald-600 hover:to-teal-600"
                         }`}
                         onClick={() => {
                           setSelectedQuote(d);
@@ -638,7 +657,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         {allTicketsFilled ? "✅ Tickets" : "💰 Payer"}
                       </button>
                       <button
-                        className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-indigo-500 bg-indigo-500 hover:bg-indigo-600 shadow-[0_18px_32px_-18px_rgba(99,102,241,0.5)] transition-all duration-200 min-h-[44px]"
+                        className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
                         onClick={() => {
                           const htmlContent = generateQuoteHTML(d);
                           const clientPhone = d.client?.phone || "";
@@ -658,7 +677,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       </button>
                       {!allTicketsFilled && (
                         <button
-                          className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-amber-500 bg-amber-500 hover:bg-amber-600 shadow-[0_18px_32px_-18px_rgba(245,158,11,0.55)] transition-all duration-200 min-h-[44px]"
+                          className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-amber-500 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
                           onClick={() => {
                             setSelectedQuote(d);
                             setEditClient({
@@ -699,7 +718,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       )}
                       {user?.canDeleteQuote && (
                         <button
-                          className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white border border-red-500 bg-red-500 hover:bg-red-600 shadow-[0_18px_32px_-18px_rgba(239,68,68,0.55)] transition-all duration-200 min-h-[44px]"
+                          className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-red-500 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
                           onClick={async () => {
                             const clientInfo = d.client?.name ? `${d.client.name}${d.client?.phone ? ` (${d.client.phone})` : ''}` : 'ce devis';
                             const totalInfo = d.total ? ` (Total: ${Math.round(d.total)}€)` : '';
@@ -748,20 +767,28 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             </div>
           );
         })}
-        {filtered.length === 0 && <p className="text-xs text-slate-400 text-center py-6">Aucun devis trouvé.</p>}
+        {filtered.length === 0 && (
+          <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/70 rounded-2xl border-2 border-slate-200/60 p-12 md:p-16 text-center shadow-lg">
+            <div className="flex flex-col items-center gap-4">
+              <span className="text-5xl md:text-6xl">📭</span>
+              <p className="text-lg md:text-xl font-bold text-slate-700">Aucun devis trouvé</p>
+              <p className="text-sm md:text-base text-slate-500">Essayez de modifier vos critères de recherche</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bouton "Remonter en haut" */}
       {showScrollToTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95 bg-indigo-600 hover:bg-indigo-700 text-white"
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 md:w-16 md:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-2 border-white/20 backdrop-blur-sm"
           style={{
-            boxShadow: '0 4px 16px rgba(79, 70, 229, 0.5)',
+            boxShadow: '0 8px 24px rgba(79, 70, 229, 0.6)',
           }}
           title="Remonter en haut"
         >
-          <span className="text-xl font-bold">↑</span>
+          <span className="text-2xl md:text-3xl font-bold">↑</span>
         </button>
       )}
 
@@ -784,30 +811,29 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
               </button>
             </div>
 
-            <div className="space-y-4 mb-6">
+            <div className="space-y-4 md:space-y-5 mb-6">
               {selectedQuote.items?.map((item, idx) => (
-                <div key={idx} className="border border-cyan-100/60 rounded-xl p-4 bg-cyan-50/50 shadow-md">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="font-medium text-sm text-slate-900">{item.activityName}</p>
-                      <p className="text-xs text-slate-500">
-                        {new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")} — {item.adults} adulte(s),{" "}
-                        {item.children} enfant(s)
+                <div key={idx} className="border-2 border-blue-200/60 rounded-xl p-4 md:p-5 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 shadow-lg backdrop-blur-sm">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-4">
+                    <div className="flex-1">
+                      <p className="font-bold text-base md:text-lg text-slate-900 mb-1">{item.activityName}</p>
+                      <p className="text-xs md:text-sm text-slate-600 font-medium">
+                        📅 {new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")} — 👥 {item.adults} adulte(s), {item.children} enfant(s)
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-slate-900">Espèces: {currencyNoCents(Math.round(item.lineTotal), selectedQuote.currency)}</p>
-                      <p className="text-xs text-slate-600">Carte: {currencyNoCents(calculateCardPrice(item.lineTotal), selectedQuote.currency)}</p>
+                    <div className="text-right bg-white/80 rounded-lg px-3 py-2 border-2 border-blue-100/60">
+                      <p className="text-sm md:text-base font-bold text-slate-900">💵 {currencyNoCents(Math.round(item.lineTotal), selectedQuote.currency)}</p>
+                      <p className="text-xs md:text-sm text-slate-600 font-medium">💳 {currencyNoCents(calculateCardPrice(item.lineTotal), selectedQuote.currency)}</p>
                       {calculateTransferSurcharge(item) > 0 && (
-                        <p className="text-xs text-cyan-600 font-medium mt-1">
+                        <p className="text-xs text-cyan-700 font-bold mt-1">
                           🚗 Transfert: {currencyNoCents(calculateTransferSurcharge(item), selectedQuote.currency)}
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Numéro de ticket unique</p>
+                      <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2">Numéro de ticket unique</label>
                       <TextInput
                         placeholder="Ex: T-12345"
                         value={ticketNumbers[idx] || ""}
@@ -819,16 +845,18 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         }}
                         disabled={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? true : false}
                         readOnly={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? true : false}
-                        className={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? "bg-slate-100 cursor-not-allowed" : ""}
+                        className={`text-base ${user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? "bg-slate-100 cursor-not-allowed" : ""}`}
                       />
                       {user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() && (
-                        <p className="text-xs text-emerald-600 font-semibold mt-1">✅ Ticket verrouillé (non modifiable)</p>
+                        <p className="text-xs md:text-sm text-emerald-700 font-bold mt-2 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 inline-block">
+                          ✅ Ticket verrouillé (non modifiable)
+                        </p>
                       )}
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 mb-2">Méthode de paiement</p>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
+                      <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">Méthode de paiement</label>
+                      <div className="flex gap-4 md:gap-6">
+                        <label className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border-2 border-slate-200 hover:border-blue-300 transition-all">
                           <input
                             type="checkbox"
                             checked={paymentMethods[idx] === "cash" || item.paymentMethod === "cash"}
@@ -841,11 +869,11 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                               }
                             }}
                             disabled={item.paymentMethod && item.paymentMethod.trim() ? true : false}
-                            className="w-4 h-4 text-cyan-600 border-slate-300 rounded focus:ring-cyan-500"
+                            className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                           />
-                          <span className="text-sm text-slate-700">Cash</span>
+                          <span className="text-sm md:text-base text-slate-700 font-semibold">💵 Cash</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        <label className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border-2 border-slate-200 hover:border-blue-300 transition-all">
                           <input
                             type="checkbox"
                             checked={paymentMethods[idx] === "stripe" || item.paymentMethod === "stripe"}
@@ -858,9 +886,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                               }
                             }}
                             disabled={item.paymentMethod && item.paymentMethod.trim() ? true : false}
-                            className="w-4 h-4 text-cyan-600 border-slate-300 rounded focus:ring-cyan-500"
+                            className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                           />
-                          <span className="text-sm text-slate-700">Stripe</span>
+                          <span className="text-sm md:text-base text-slate-700 font-semibold">💳 Stripe</span>
                         </label>
                       </div>
                     </div>
@@ -1298,66 +1326,80 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
   }
 
   return (
-    <div ref={editModalContainerRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
-      <div ref={editModalRef} className="bg-white/98 backdrop-blur-md rounded-xl md:rounded-2xl border border-blue-100/60 shadow-2xl p-4 md:p-6 max-w-4xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-3 md:mb-4">
-          <h3 className="text-base md:text-lg font-semibold">Modifier le devis</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl md:text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center">
+    <div ref={editModalContainerRef} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 md:p-4">
+      <div ref={editModalRef} className="bg-white/98 backdrop-blur-md rounded-2xl border-2 border-blue-200/60 shadow-2xl p-5 md:p-7 max-w-4xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-5 md:mb-6 pb-4 border-b-2 border-slate-200/60">
+          <h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+            <span className="text-2xl">✏️</span>
+            Modifier le devis
+          </h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-3xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center transition-all hover:scale-110">
             ×
           </button>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-6 md:space-y-7">
           {/* Infos client - Modifiables par tous */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Client</p>
-              <TextInput value={client.name || ""} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Téléphone</p>
-              <TextInput 
-                value={client.phone || ""} 
-                onChange={(e) => {
-                  // Nettoyer automatiquement le numéro de téléphone (supprimer espaces, parenthèses, etc.)
-                  const cleaned = cleanPhoneNumber(e.target.value);
-                  setClient((c) => ({ ...c, phone: cleaned }));
-                }} 
-              />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Hôtel</p>
-              <TextInput value={client.hotel || ""} onChange={(e) => setClient((c) => ({ ...c, hotel: e.target.value }))} />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Chambre</p>
-              <TextInput value={client.room || ""} onChange={(e) => setClient((c) => ({ ...c, room: e.target.value }))} />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Quartier</p>
-              <select
-                value={client.neighborhood || ""}
-                onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
-                className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
-              >
-                <option value="">— Choisir —</option>
-                {NEIGHBORHOODS.map((n) => (
-                  <option key={n.key} value={n.key}>
-                    {n.label}
-                  </option>
-                ))}
-              </select>
+          <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/70 rounded-xl p-4 md:p-5 border-2 border-blue-200/60">
+            <h4 className="text-sm md:text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <span className="text-lg">👤</span>
+              Informations client
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Client</label>
+                <TextInput value={client.name || ""} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} className="text-base" />
+              </div>
+              <div>
+                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Téléphone</label>
+                <TextInput 
+                  value={client.phone || ""} 
+                  onChange={(e) => {
+                    // Nettoyer automatiquement le numéro de téléphone (supprimer espaces, parenthèses, etc.)
+                    const cleaned = cleanPhoneNumber(e.target.value);
+                    setClient((c) => ({ ...c, phone: cleaned }));
+                  }} 
+                  className="text-base"
+                />
+              </div>
+              <div>
+                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Hôtel</label>
+                <TextInput value={client.hotel || ""} onChange={(e) => setClient((c) => ({ ...c, hotel: e.target.value }))} className="text-base" />
+              </div>
+              <div>
+                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Chambre</label>
+                <TextInput value={client.room || ""} onChange={(e) => setClient((c) => ({ ...c, room: e.target.value }))} className="text-base" />
+              </div>
+              <div>
+                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Quartier</label>
+                <select
+                  value={client.neighborhood || ""}
+                  onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
+                  className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                >
+                  <option value="">— Choisir —</option>
+                  {NEIGHBORHOODS.map((n) => (
+                    <option key={n.key} value={n.key}>
+                      {n.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
           {/* Activités */}
-          <div className="space-y-4">
+          <div className="space-y-4 md:space-y-5">
+            <h4 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-2">
+              <span className="text-lg">🎯</span>
+              Activités
+            </h4>
             {computed.map((c, idx) => (
-              <div key={idx} className="bg-white/95 backdrop-blur-sm border border-blue-100/60 rounded-2xl p-4 space-y-3 shadow-md transition-all duration-200 hover:shadow-lg">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
-                  <GhostBtn type="button" onClick={() => removeItem(idx)}>
-                    Supprimer
+              <div key={idx} className="bg-gradient-to-br from-white/95 to-slate-50/80 backdrop-blur-sm border-2 border-blue-200/60 rounded-2xl p-4 md:p-5 space-y-4 shadow-lg transition-all duration-200 hover:shadow-xl">
+                <div className="flex items-center justify-between pb-3 border-b border-blue-200/60">
+                  <p className="text-sm md:text-base font-bold text-slate-800">🎯 Activité #{idx + 1}</p>
+                  <GhostBtn type="button" onClick={() => removeItem(idx)} variant="danger" size="sm">
+                    🗑️ Supprimer
                   </GhostBtn>
                 </div>
                 {/* Première ligne : Activité et Date - Modifiables par tous */}
