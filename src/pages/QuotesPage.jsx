@@ -1,144 +1,12 @@
-import { useState, useMemo, useEffect, useCallback, memo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber } from "../utils";
+import { uuid, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { toast } from "../utils/toast.js";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
-import { ColoredDatePicker } from "../components/ColoredDatePicker";
-
-// Composant compact pour afficher les stop sales et push sales
-const StopPushSalesSummary = memo(function StopPushSalesSummary({ stopSales, pushSales, activities }) {
-  const [expanded, setExpanded] = useState(false);
-  const totalCount = stopSales.length + pushSales.length;
-
-  // Grouper par date pour un affichage plus compact
-  const stopSalesByDate = useMemo(() => {
-    const grouped = {};
-    stopSales.forEach((stop) => {
-      if (!grouped[stop.date]) {
-        grouped[stop.date] = [];
-      }
-      grouped[stop.date].push(stop);
-    });
-    return grouped;
-  }, [stopSales]);
-
-  const pushSalesByDate = useMemo(() => {
-    const grouped = {};
-    pushSales.forEach((push) => {
-      if (!grouped[push.date]) {
-        grouped[push.date] = [];
-      }
-      grouped[push.date].push(push);
-    });
-    return grouped;
-  }, [pushSales]);
-
-  if (totalCount === 0) return null;
-
-  return (
-    <div className="bg-gradient-to-r from-red-50 via-amber-50 to-green-50 border-2 border-red-400 rounded-xl p-4 shadow-lg">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between gap-3 text-left hover:opacity-90 transition-opacity"
-      >
-        <div className="flex items-center gap-4 flex-1">
-          <div className="flex items-center gap-2 bg-red-500/10 px-3 py-2 rounded-lg border-2 border-red-400">
-            <span className="text-2xl">🛑</span>
-            {stopSales.length > 0 && (
-              <span className="text-sm font-bold bg-red-600 text-white px-3 py-1 rounded-full shadow-md">
-                {stopSales.length}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 bg-green-500/10 px-3 py-2 rounded-lg border-2 border-green-400">
-            <span className="text-2xl">✅</span>
-            {pushSales.length > 0 && (
-              <span className="text-sm font-bold bg-green-600 text-white px-3 py-1 rounded-full shadow-md">
-                {pushSales.length}
-              </span>
-            )}
-          </div>
-          <span className="text-base font-bold text-gray-800">
-            {totalCount} activité{totalCount > 1 ? "s" : ""} en Stop/Push Sale
-          </span>
-        </div>
-        <span className="text-gray-600 text-sm font-semibold bg-white/80 px-3 py-2 rounded-lg border border-gray-300">
-          {expanded ? "▼ Réduire" : "▶ Voir les détails"}
-        </span>
-      </button>
-
-      {expanded && (
-        <div className="mt-3 space-y-3 pt-3 border-t border-red-200/50">
-          {/* Stop Sales */}
-          {stopSales.length > 0 && (
-            <div>
-              <h4 className="text-base font-bold text-red-900 mb-3 flex items-center gap-2 bg-red-100 px-3 py-2 rounded-lg border-2 border-red-400">
-                <span className="text-xl">🛑</span> Stop Sales ({stopSales.length})
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto">
-                {Object.entries(stopSalesByDate)
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([date, stops]) => (
-                    <div key={date} className="bg-white/95 backdrop-blur-sm rounded-lg p-3 border-2 border-red-300 shadow-md hover:shadow-lg transition-all duration-200">
-                      <p className="text-sm font-bold text-red-900 mb-2">
-                        {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
-                          weekday: "short",
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </p>
-                      <div className="space-y-1.5">
-                        {stops.map((stop, idx) => (
-                          <p key={idx} className="text-xs font-medium text-red-800 truncate" title={stop.activityName}>
-                            • {stop.activityName}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          {/* Push Sales */}
-          {pushSales.length > 0 && (
-            <div>
-              <h4 className="text-base font-bold text-green-900 mb-3 flex items-center gap-2 bg-green-100 px-3 py-2 rounded-lg border-2 border-green-400">
-                <span className="text-xl">✅</span> Push Sales ({pushSales.length})
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto">
-                {Object.entries(pushSalesByDate)
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([date, pushes]) => (
-                    <div key={date} className="bg-white/95 backdrop-blur-sm rounded-lg p-3 border-2 border-green-300 shadow-md hover:shadow-lg transition-all duration-200">
-                      <p className="text-sm font-bold text-green-900 mb-2">
-                        {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
-                          weekday: "short",
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </p>
-                      <div className="space-y-1.5">
-                        {pushes.map((push, idx) => (
-                          <p key={idx} className="text-xs font-medium text-green-800 truncate" title={push.activityName}>
-                            • {push.activityName}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-});
+import { StopPushSalesSummary } from "../components/quotes/StopPushSalesSummary";
+import { PaymentModal } from "../components/quotes/PaymentModal";
 
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
   const [stopSales, setStopSales] = useState([]);
@@ -1165,9 +1033,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           }}
           className="space-y-4 md:space-y-8"
         >
-        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-3">
-          <p className="text-xs text-gray-500 font-medium">
-            Les modifications sont sauvegardées automatiquement en brouillon.
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-3 mb-2">
+          <p className="text-xs md:text-sm text-slate-600 font-medium bg-blue-50/50 px-3 py-2 rounded-lg border border-blue-100/60">
+            💾 Les modifications sont sauvegardées automatiquement en brouillon
           </p>
           <GhostBtn
             type="button"
@@ -1231,56 +1099,66 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Dates séjour */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Date d'arrivée</p>
-            <TextInput 
-              type="date" 
-              value={client.arrivalDate || ""} 
-              onChange={(e) => setClient((c) => ({ ...c, arrivalDate: e.target.value }))} 
-            />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Date de départ</p>
-            <div className="flex gap-2">
+        <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/60 rounded-2xl border border-indigo-200/60 p-5 md:p-6 lg:p-8 shadow-md backdrop-blur-sm">
+          <h3 className="text-base md:text-lg font-semibold text-slate-800 mb-4 md:mb-5 flex items-center gap-2">
+            <span className="text-xl">📅</span>
+            Dates du séjour
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+            <div>
+              <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Date d'arrivée</label>
               <TextInput 
                 type="date" 
-                value={client.departureDate || ""} 
-                onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
-                className="flex-1"
+                value={client.arrivalDate || ""} 
+                onChange={(e) => setClient((c) => ({ ...c, arrivalDate: e.target.value }))} 
               />
-              {client.arrivalDate && client.departureDate && (
-                <GhostBtn
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleAutoFillDates();
-                  }}
-                  variant="primary"
-                  size="sm"
-                  title="Remplir automatiquement les dates des activités avec les dates du séjour"
-                >
-                  📅 Auto-dates
-                </GhostBtn>
-              )}
+            </div>
+            <div>
+              <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Date de départ</label>
+              <div className="flex gap-2">
+                <TextInput 
+                  type="date" 
+                  value={client.departureDate || ""} 
+                  onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
+                  className="flex-1"
+                />
+                {client.arrivalDate && client.departureDate && (
+                  <GhostBtn
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleAutoFillDates();
+                    }}
+                    variant="primary"
+                    size="sm"
+                    title="Remplir automatiquement les dates des activités avec les dates du séjour"
+                    className="whitespace-nowrap"
+                  >
+                    📅 Auto-dates
+                  </GhostBtn>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Champ global pour le nombre d'adultes */}
-        <div className="mb-4 md:mb-6 p-4 bg-gradient-to-br from-blue-50/90 to-indigo-50/80 rounded-xl border border-blue-200/60 shadow-lg backdrop-blur-sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="mb-4 md:mb-6 p-5 md:p-6 bg-gradient-to-br from-emerald-50/90 to-teal-50/80 rounded-2xl border-2 border-emerald-300/60 shadow-lg backdrop-blur-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                👥 Nombre d'adultes (remplit automatiquement toutes les activités)
+              <label className="block text-sm md:text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <span className="text-2xl">👥</span>
+                Nombre d'adultes global
               </label>
+              <p className="text-xs md:text-sm text-slate-600 mb-3 font-medium">
+                Remplit automatiquement toutes les activités ci-dessous
+              </p>
               <NumberInput
                 value={globalAdults}
                 onChange={(e) => {
                   const value = e.target.value === "" ? "" : e.target.value;
                   setGlobalAdults(value);
-                  // Remplir automatiquement tous les champs adults de toutes les activités
                   setItems((prev) =>
                     prev.map((item) => ({
                       ...item,
@@ -1289,34 +1167,43 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   );
                 }}
                 placeholder="Ex: 2"
-                className="max-w-xs"
+                className="max-w-xs text-base font-semibold"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Vous pouvez toujours modifier individuellement le nombre d'adultes pour chaque activité ci-dessous
+              <p className="text-xs text-slate-500 mt-2 italic">
+                💡 Vous pouvez toujours modifier individuellement le nombre d'adultes pour chaque activité
               </p>
             </div>
           </div>
         </div>
 
         {/* Lignes */}
-        <div className="space-y-6 md:space-y-7">
+        <div className="space-y-6 md:space-y-8">
+          <h3 className="text-lg md:text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <span className="text-2xl">🎯</span>
+            Activités ({computed.length})
+          </h3>
           {computed.map((c, idx) => (
-            <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-xl md:rounded-2xl p-4 md:p-7 lg:p-10 space-y-4 md:space-y-6 lg:space-y-7 shadow-sm">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
-                <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
+            <div key={idx} className="bg-white/95 backdrop-blur-sm border-2 border-slate-200/60 rounded-2xl p-5 md:p-7 lg:p-9 space-y-5 md:space-y-6 lg:space-y-8 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-blue-300/60">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-1 pb-4 border-b border-slate-200/60">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-bold shadow-md">
+                    {idx + 1}
+                  </span>
+                  <p className="text-base md:text-lg font-bold text-slate-800">Activité #{idx + 1}</p>
+                </div>
                 <GhostBtn type="button" onClick={() => removeItem(idx)} variant="danger" className="w-full sm:w-auto">
                   🗑️ Supprimer
                 </GhostBtn>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 lg:gap-8 items-end">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-5 md:gap-6 lg:gap-8 items-end">
                 <div className="sm:col-span-2 md:col-span-2">
-                  <p className="text-xs text-gray-500 mb-2">Activité</p>
+                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2.5">Activité *</label>
                   <select
                     value={c.raw.activityId}
                     onChange={(e) => setItem(idx, { activityId: e.target.value })}
-                    className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
+                    className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                   >
-                    <option value="">— Choisir —</option>
+                    <option value="">— Sélectionner une activité —</option>
                     {sortedActivities.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.name}
@@ -1325,7 +1212,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </select>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-2">Date</p>
+                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2.5">Date *</label>
                   <ColoredDatePicker
                     value={c.raw.date}
                     onChange={(date) => setItem(idx, { date })}
@@ -1420,10 +1307,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
               {/* extra - Cases à cocher pour Speed Boat, champs classiques pour les autres */}
               {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") ? (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div>
-                    <p className="text-xs text-gray-500 mb-2">Extras (plusieurs sélections possibles)</p>
-                    <div className="space-y-2 border border-blue-200/50 rounded-xl p-3 bg-white/95 backdrop-blur-sm shadow-sm">
+                    <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">Extras Speed Boat (plusieurs sélections possibles)</label>
+                    <div className="space-y-2.5 border-2 border-blue-200/60 rounded-xl p-4 bg-gradient-to-br from-blue-50/60 to-indigo-50/40 backdrop-blur-sm shadow-md">
                       {SPEED_BOAT_EXTRAS.filter((extra) => extra.id !== "").map((extra) => {
                         // Gérer la compatibilité avec l'ancien format (string) et le nouveau format (array)
                         const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
@@ -1471,40 +1358,42 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                   </div>
                   {/* Champ Extra pour ajuster le prix manuellement */}
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">Extra (montant à ajouter ou soustraire)</p>
-                    <div className="flex items-center gap-2">
+                  <div className="bg-amber-50/60 border-2 border-amber-200/60 rounded-xl p-4">
+                    <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2.5">💰 Ajustement manuel du prix</label>
+                    <div className="flex items-center gap-3">
                       <NumberInput
                         value={c.raw.extraAmount || ""}
                         onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
                         placeholder="0.00"
-                        className="flex-1"
+                        className="flex-1 font-semibold"
                       />
-                      <span className="text-xs text-gray-500 whitespace-nowrap">
-                        € (positif = +, négatif = -)
+                      <span className="text-xs md:text-sm text-slate-600 font-semibold whitespace-nowrap">
+                        €
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Utilisez un nombre positif pour augmenter le prix, négatif pour le diminuer
+                    <p className="text-xs text-slate-600 mt-2 font-medium">
+                      💡 Positif = augmentation | Négatif = réduction
                     </p>
                   </div>
                 </div>
               ) : (
-                <div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-4">
+                <div className="bg-gradient-to-br from-purple-50/60 to-pink-50/40 border-2 border-purple-200/60 rounded-xl p-4 md:p-5">
+                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">✨ Options supplémentaires</label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
                     <div className="md:col-span-2">
-                      <p className="text-xs text-gray-500 mb-2">Extra (ex: photos, bateau privé…)</p>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">Libellé (ex: photos, bateau privé…)</label>
                       <TextInput
-                        placeholder="Libellé extra"
+                        placeholder="Description de l'extra"
                         value={c.raw.extraLabel || ""}
                         onChange={(e) => setItem(idx, { extraLabel: e.target.value })}
                       />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">Montant Extra</p>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">Montant (€)</label>
                       <NumberInput
                         value={c.raw.extraAmount || ""}
                         onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
+                        placeholder="0.00"
                       />
                     </div>
                   </div>
@@ -1513,47 +1402,49 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
               {/* passagers - Champs spéciaux pour activités buggy */}
               {c.act && isBuggyActivity(c.act.name) ? (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
+                <div className="bg-gradient-to-br from-orange-50/60 to-amber-50/40 border-2 border-orange-200/60 rounded-xl p-4 md:p-5">
+                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">🏍️ Configuration Buggy</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 mb-4">
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</label>
                       <NumberInput value={c.raw.buggySimple ?? ""} onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">Buggy Family ({getBuggyPrices(c.act.name).family}€)</p>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">Buggy Family ({getBuggyPrices(c.act.name).family}€)</label>
                       <NumberInput value={c.raw.buggyFamily ?? ""} onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 lg:gap-8 mt-4 md:mt-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 pt-4 border-t border-orange-200/60">
                     <div>
-                      <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
+                      <label className="block text-xs font-semibold text-slate-500 mb-2">👥 Adultes (info uniquement)</label>
                       <NumberInput value={c.raw.adults ?? ""} onChange={(e) => setItem(idx, { adults: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 mb-2">
-                        Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""} (informations uniquement)
-                      </p>
+                      <label className="block text-xs font-semibold text-slate-500 mb-2">
+                        👶 Enfants{c.act?.ageChild ? <span className="text-slate-400 ml-1">({c.act.ageChild})</span> : ""} (info uniquement)
+                      </label>
                       <NumberInput value={c.raw.children ?? ""} onChange={(e) => setItem(idx, { children: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>
-                </>
+                </div>
               ) : c.act && isMotoCrossActivity(c.act.name) ? (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
+                <div className="bg-gradient-to-br from-red-50/60 to-orange-50/40 border-2 border-red-200/60 rounded-xl p-4 md:p-5">
+                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">🏍️ Motos disponibles</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</label>
                       <NumberInput value={c.raw.yamaha250 ?? ""} onChange={(e) => setItem(idx, { yamaha250: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">KTM640CC ({getMotoCrossPrices().ktm640}€)</p>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">KTM640CC ({getMotoCrossPrices().ktm640}€)</label>
                       <NumberInput value={c.raw.ktm640 ?? ""} onChange={(e) => setItem(idx, { ktm640: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">KTM 530CC ({getMotoCrossPrices().ktm530}€)</p>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">KTM 530CC ({getMotoCrossPrices().ktm530}€)</label>
                       <NumberInput value={c.raw.ktm530 ?? ""} onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>
-                </>
+                </div>
               ) : c.act && (c.act.name.toLowerCase().includes("hurghada") && (c.act.name.toLowerCase().includes("le caire") || c.act.name.toLowerCase().includes("louxor"))) ? (
                 <>
                   {/* Message d'avertissement */}
@@ -2099,22 +1990,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                 </>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">Adultes</p>
-                    <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">
-                      Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""}
-                    </p>
-                    <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">
-                      Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""}
-                    </p>
-                    <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                <div className="bg-gradient-to-br from-slate-50/80 to-gray-50/60 border-2 border-slate-200/60 rounded-xl p-4 md:p-5">
+                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">👥 Participants</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">Adultes</label>
+                      <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">
+                        Enfants{c.act?.ageChild ? <span className="text-slate-500 ml-1 font-normal">({c.act.ageChild})</span> : ""}
+                      </label>
+                      <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">
+                        Bébés{c.act?.ageBaby ? <span className="text-slate-500 ml-1 font-normal">({c.act.ageBaby})</span> : ""}
+                      </label>
+                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} placeholder="0" />
+                    </div>
                   </div>
                 </div>
               )}
@@ -2135,14 +2029,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 </div>
               )}
 
-              <div className="flex items-center justify-between mt-1">
-                <p className="text-xs text-gray-500">Sous-total</p>
+              <div className="flex items-center justify-between mt-6 pt-5 border-t-2 border-slate-200/60 bg-gradient-to-r from-slate-50/60 to-blue-50/40 rounded-xl p-4">
+                <p className="text-sm md:text-base font-bold text-slate-700">Sous-total activité</p>
                 <div className="text-right">
-                  <p className="text-base font-semibold text-gray-900">
-                    Espèces: {currencyNoCents(Math.round(c.lineTotal), c.currency)}
+                  <p className="text-lg md:text-xl font-bold text-slate-900">
+                    💵 {currencyNoCents(Math.round(c.lineTotal), c.currency)}
                   </p>
-                  <p className="text-sm text-gray-600">
-                    Carte: {currencyNoCents(calculateCardPrice(c.lineTotal), c.currency)}
+                  <p className="text-sm md:text-base font-semibold text-slate-600">
+                    💳 {currencyNoCents(calculateCardPrice(c.lineTotal), c.currency)}
                   </p>
                 </div>
               </div>
@@ -2150,24 +2044,37 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <GhostBtn type="button" onClick={addItem} variant="primary" className="w-full sm:w-auto">
-            ➕ Ajouter une activité
-          </GhostBtn>
-          <div className="text-left sm:text-right w-full sm:w-auto">
-            <p className="text-xs text-gray-500">Total</p>
-            <p className="text-lg md:text-xl font-bold">Espèces: {currencyNoCents(grandTotalCash, grandCurrency)}</p>
-            <p className="text-base md:text-lg font-semibold text-gray-700">Carte: {currencyNoCents(grandTotalCard, grandCurrency)}</p>
+        <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/80 to-pink-50/70 border-2 border-indigo-300/60 rounded-2xl p-5 md:p-7 shadow-xl backdrop-blur-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+            <GhostBtn type="button" onClick={addItem} variant="primary" className="w-full sm:w-auto text-base font-bold px-6 py-3">
+              ➕ Ajouter une activité
+            </GhostBtn>
+            <div className="text-left sm:text-right w-full sm:w-auto bg-white/80 rounded-xl p-4 md:p-5 border-2 border-indigo-200/60 shadow-md">
+              <p className="text-xs md:text-sm font-semibold text-slate-600 mb-2 uppercase tracking-wide">Total du devis</p>
+              <p className="text-xl md:text-2xl font-bold text-slate-900 mb-1">
+                💵 {currencyNoCents(grandTotalCash, grandCurrency)}
+              </p>
+              <p className="text-lg md:text-xl font-semibold text-slate-700">
+                💳 {currencyNoCents(grandTotalCard, grandCurrency)}
+              </p>
+            </div>
           </div>
         </div>
 
-        <div>
-          <p className="text-xs text-gray-500 mb-2">Notes</p>
+        <div className="bg-gradient-to-br from-amber-50/80 to-yellow-50/60 border-2 border-amber-200/60 rounded-2xl p-5 md:p-6 shadow-md backdrop-blur-sm">
+          <label className="block text-sm md:text-base font-bold text-slate-700 mb-3 flex items-center gap-2">
+            <span className="text-xl">📝</span>
+            Notes et informations supplémentaires
+          </label>
           <TextInput
-            placeholder="Infos supplémentaires : langue du guide, pick-up, etc."
+            placeholder="Langue du guide, point de pick-up, demandes spéciales, etc."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            className="text-base"
           />
+          <p className="text-xs text-slate-500 mt-2 italic">
+            Ces informations seront incluses dans le devis final
+          </p>
         </div>
 
         <PrimaryBtn 
@@ -2180,185 +2087,19 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       </form>
 
       {/* Modale de paiement */}
-      {showPaymentModal && selectedQuote && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
-          <div className="bg-white/98 backdrop-blur-md rounded-xl md:rounded-2xl border border-blue-100/60 shadow-2xl p-4 md:p-6 max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-3 md:mb-4">
-              <h3 className="text-base md:text-lg font-semibold">Enregistrer les numéros de ticket</h3>
-              <button
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setSelectedQuote(null);
-                  setTicketNumbers({});
-                  setPaymentMethods({});
-                }}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
-              >
-                &times;
-              </button>
-            </div>
-
-            <div className="space-y-4 mb-6">
-              {selectedQuote.items?.map((item, idx) => (
-                <div key={idx} className="border border-blue-100/60 rounded-xl p-4 bg-blue-50/50 shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="font-medium text-sm">{item.activityName}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")} — {item.adults} adulte(s),{" "}
-                        {item.children} enfant(s)
-                      </p>
-                    </div>
-                    <p className="text-sm font-semibold">{currency(item.lineTotal, selectedQuote.currency)}</p>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Numéro de ticket unique</p>
-                      <TextInput
-                        placeholder="Ex: T-12345"
-                        value={ticketNumbers[idx] || ""}
-                        onChange={(e) => {
-                          setTicketNumbers((prev) => ({
-                            ...prev,
-                            [idx]: e.target.value,
-                          }));
-                        }}
-                        disabled={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? true : false}
-                        readOnly={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? true : false}
-                        className={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? "bg-gray-100 cursor-not-allowed" : ""}
-                      />
-                      {user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() && (
-                        <p className="text-xs text-green-600 mt-1">✅ Ticket verrouillé (non modifiable)</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-2">Méthode de paiement</p>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={paymentMethods[idx] === "cash" || item.paymentMethod === "cash"}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setPaymentMethods((prev) => ({
-                                  ...prev,
-                                  [idx]: "cash",
-                                }));
-                              }
-                            }}
-                            disabled={item.paymentMethod && item.paymentMethod.trim() ? true : false}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-700">Cash</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={paymentMethods[idx] === "stripe" || item.paymentMethod === "stripe"}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setPaymentMethods((prev) => ({
-                                  ...prev,
-                                  [idx]: "stripe",
-                                }));
-                              }
-                            }}
-                            disabled={item.paymentMethod && item.paymentMethod.trim() ? true : false}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-700">Stripe</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 md:mt-6 pt-4 border-t">
-              <GhostBtn
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setSelectedQuote(null);
-                  setTicketNumbers({});
-                  setPaymentMethods({});
-                }}
-                className="w-full sm:w-auto order-2 sm:order-1"
-              >
-                Annuler
-              </GhostBtn>
-              <PrimaryBtn
-                className="w-full sm:w-auto order-1 sm:order-2"
-                onClick={async () => {
-                  // Vérifier que tous les tickets sont renseignés
-                  const allFilled = selectedQuote.items?.every((_, idx) => ticketNumbers[idx]?.trim());
-                  if (!allFilled) {
-                    toast.warning("Veuillez renseigner tous les numéros de ticket.");
-                    return;
-                  }
-
-                  // Vérifier que toutes les méthodes de paiement sont sélectionnées
-                  const allPaymentMethodsSelected = selectedQuote.items?.every((_, idx) => {
-                    // Si le ticket existe déjà, garder la méthode existante, sinon vérifier que c'est renseigné
-                    if (selectedQuote.items[idx].paymentMethod && selectedQuote.items[idx].paymentMethod.trim()) {
-                      return true;
-                    }
-                    return paymentMethods[idx] === "cash" || paymentMethods[idx] === "stripe";
-                  });
-                  if (!allPaymentMethodsSelected) {
-                    toast.warning("Veuillez sélectionner une méthode de paiement pour chaque activité.");
-                    return;
-                  }
-
-                  // Mettre à jour le devis avec les numéros de ticket et les méthodes de paiement
-                  const updatedQuote = {
-                    ...selectedQuote,
-                    items: selectedQuote.items.map((item, idx) => ({
-                      ...item,
-                      ticketNumber: ticketNumbers[idx]?.trim() || "",
-                      paymentMethod: item.paymentMethod || paymentMethods[idx] || "",
-                    })),
-                  };
-
-                  const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? updatedQuote : q));
-                  setQuotes(updatedQuotes);
-                  saveLS(LS_KEYS.quotes, updatedQuotes);
-
-                  // Mettre à jour dans Supabase si configuré
-                  if (supabase) {
-                    try {
-                      const supabaseUpdate = {
-                        items: JSON.stringify(updatedQuote.items),
-                      };
-                      
-                      const { error: updateError } = await supabase
-                        .from("quotes")
-                        .update(supabaseUpdate)
-                        .eq("site_key", SITE_KEY)
-                        .eq("client_phone", updatedQuote.client.phone || "")
-                        .eq("created_at", updatedQuote.createdAt);
-                      
-                      if (updateError) {
-                        console.warn("⚠️ Erreur mise à jour Supabase:", updateError);
-                      }
-                    } catch (updateErr) {
-                      console.warn("⚠️ Erreur lors de la mise à jour Supabase:", updateErr);
-                    }
-                  }
-
-                  setShowPaymentModal(false);
-                  setSelectedQuote(null);
-                  setTicketNumbers({});
-                  setPaymentMethods({});
-                  toast.success("Numéros de ticket enregistrés avec succès !");
-                }}
-              >
-                Enregistrer les tickets
-              </PrimaryBtn>
-            </div>
-          </div>
-        </div>
-      )}
+      <PaymentModal
+        show={showPaymentModal}
+        selectedQuote={selectedQuote}
+        quotes={quotes}
+        setQuotes={setQuotes}
+        user={user}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setSelectedQuote(null);
+          setTicketNumbers({});
+          setPaymentMethods({});
+        }}
+      />
 
       {/* Dialogs de confirmation */}
       <ConfirmDialog
