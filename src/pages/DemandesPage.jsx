@@ -87,22 +87,25 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
   };
 
 
-  // Copier le lien de la demande
+  // Copier le lien générique (ou le lien spécifique si token fourni)
   const copyRequestLink = (token) => {
-    const link = generateRequestLink(token);
+    // Si un token est fourni, utiliser le lien spécifique, sinon utiliser le lien générique
+    const baseUrl = window.location.origin;
+    const link = token ? generateRequestLink(token) : `${baseUrl}/request`;
     navigator.clipboard.writeText(link);
     toast.success("Lien copié dans le presse-papiers !");
   };
 
-  // Générer un nouveau lien unique
+  // Générer un lien générique réutilisable pour tous
   const handleGenerateNewLink = () => {
-    const token = generateRequestToken();
-    const link = generateRequestLink(token);
+    // Lien générique sans token - peut être utilisé par tout le monde
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/request`;
     setGeneratedLink(link);
     
     // Copier automatiquement dans le presse-papiers
     navigator.clipboard.writeText(link);
-    toast.success("Nouveau lien généré et copié !");
+    toast.success("Lien générique généré et copié ! Ce lien peut être utilisé par tous les clients.");
   };
 
   // Copier le lien généré
@@ -174,7 +177,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
         </div>
         <div className="flex gap-2 flex-wrap">
           <PrimaryBtn onClick={handleGenerateNewLink} className="whitespace-nowrap">
-            🔗 Créer un lien unique
+            🔗 Générer le lien générique
           </PrimaryBtn>
           <Pill
             active={statusFilter === "pending"}
@@ -199,13 +202,19 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
 
       {/* Affichage du lien généré */}
       {generatedLink && (
-        <div className="bg-gradient-to-br from-blue-50/90 to-indigo-50/80 rounded-xl border border-blue-200/60 p-4 shadow-lg backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-blue-50/90 to-indigo-50/80 rounded-xl border-2 border-blue-200/60 p-4 md:p-5 shadow-lg backdrop-blur-sm">
           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-700 mb-1">Lien unique généré :</p>
-              <div className="bg-white/95 backdrop-blur-sm rounded-lg border border-blue-200/60 px-4 py-2 shadow-sm">
-                <code className="text-sm text-blue-900 break-all">{generatedLink}</code>
+              <p className="text-sm md:text-base font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <span className="text-lg">🔗</span>
+                Lien générique réutilisable :
+              </p>
+              <div className="bg-white/95 backdrop-blur-sm rounded-lg border-2 border-blue-200/60 px-4 py-3 shadow-sm">
+                <code className="text-sm md:text-base text-blue-900 break-all font-medium">{generatedLink}</code>
               </div>
+              <p className="text-xs md:text-sm text-gray-600 mt-2 font-medium">
+                💡 Ce lien peut être envoyé à tous vos clients. Chaque client pourra créer sa propre demande.
+              </p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
               <PrimaryBtn onClick={copyGeneratedLink} className="whitespace-nowrap">

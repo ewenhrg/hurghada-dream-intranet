@@ -285,6 +285,7 @@ export function RequestPage() {
     try {
       const requestData = {
         site_key: SITE_KEY,
+        // Si pas de token fourni, générer un UUID unique pour cette nouvelle demande
         token: token || crypto.randomUUID(),
         client_name: formData.clientName.trim(),
         client_phone: formData.clientPhone.trim(),

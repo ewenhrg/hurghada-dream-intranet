@@ -859,8 +859,8 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [ok]);
 
-  // Si on est sur la route publique /request/:token, afficher RequestPage sans authentification
-  if (location.pathname.startsWith("/request/")) {
+  // Si on est sur la route publique /request (avec ou sans token), afficher RequestPage sans authentification
+  if (location.pathname.startsWith("/request")) {
     return (
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
