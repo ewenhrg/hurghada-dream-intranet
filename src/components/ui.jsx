@@ -108,10 +108,10 @@ export const Section = memo(({ title, subtitle, right, children }) => (
   <section className="space-y-4 md:space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3 md:gap-4">
       <div className="flex-1 min-w-0">
-        <h2 className="text-xl md:text-[1.75rem] font-semibold tracking-[-0.03em] text-slate-900 mb-1 md:mb-1.5 bg-gradient-to-r from-[#4f46e5] via-[#6366f1] to-[#06b6d4] bg-clip-text text-transparent drop-shadow-[0_2px_4px_rgba(79,70,229,0.15)]">
+        <h2 className="text-xl md:text-[1.75rem] font-semibold tracking-[-0.03em] text-white mb-1 md:mb-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
           {title}
         </h2>
-        {subtitle && <p className="text-xs md:text-sm font-medium text-white/75 leading-relaxed drop-shadow-[0_6px_12px_rgba(7,13,31,0.55)]">{subtitle}</p>}
+        {subtitle && <p className="text-xs md:text-sm font-medium text-white/90 leading-relaxed drop-shadow-[0_6px_12px_rgba(7,13,31,0.55)]">{subtitle}</p>}
       </div>
       {right && <div className="flex-shrink-0 w-full md:w-auto">{right}</div>}
     </div>
