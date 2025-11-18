@@ -1423,7 +1423,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 <div className="space-y-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-2">Extras (plusieurs sélections possibles)</p>
-                    <div className="space-y-2 border border-blue-200/50 rounded-xl p-3 bg-white">
+                    <div className="space-y-2 border border-blue-200/50 rounded-xl p-3 bg-white/95 backdrop-blur-sm shadow-sm">
                       {SPEED_BOAT_EXTRAS.filter((extra) => extra.id !== "").map((extra) => {
                         // Gérer la compatibilité avec l'ancien format (string) et le nouveau format (array)
                         const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
