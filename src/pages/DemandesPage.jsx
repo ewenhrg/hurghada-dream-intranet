@@ -9,7 +9,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending"); // pending, all
+  const [statusFilter, setStatusFilter] = useState("pending"); // pending, converted, all
   const [generatedLink, setGeneratedLink] = useState("");
 
   // Charger les demandes depuis Supabase
@@ -34,9 +34,12 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
         .eq("site_key", SITE_KEY)
         .order("created_at", { ascending: false });
 
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
+      if (statusFilter === "pending") {
+        query = query.eq("status", "pending");
+      } else if (statusFilter === "converted") {
+        query = query.eq("status", "converted");
       }
+      // Si "all", on affiche toutes les demandes
 
       const { data, error } = await query;
 
@@ -177,13 +180,19 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
             active={statusFilter === "pending"}
             onClick={() => setStatusFilter("pending")}
           >
-            En attente ({requests.filter((r) => r.status === "pending").length})
+            ⏳ En attente ({requests.filter((r) => r.status === "pending").length})
+          </Pill>
+          <Pill
+            active={statusFilter === "converted"}
+            onClick={() => setStatusFilter("converted")}
+          >
+            ✅ Converties ({requests.filter((r) => r.status === "converted").length})
           </Pill>
           <Pill
             active={statusFilter === "all"}
             onClick={() => setStatusFilter("all")}
           >
-            Toutes ({requests.length})
+            📊 Toutes ({requests.length})
           </Pill>
         </div>
       </div>
@@ -237,9 +246,11 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
           {filteredRequests.map((request) => (
             <div
               key={request.id}
-              className={`bg-white/95 backdrop-blur-sm rounded-xl border shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg ${
+              className={`bg-white/95 backdrop-blur-sm rounded-xl border-2 shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg ${
                 request.status === "pending"
                   ? "border-blue-200/60"
+                  : request.status === "converted"
+                  ? "border-emerald-200/60 bg-emerald-50/30"
                   : "border-gray-200/60 bg-gray-50/40"
               }`}
             >
@@ -262,13 +273,19 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
                         )}
                       </div>
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
+                        className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm border-2 ${
                           request.status === "pending"
-                            ? "bg-gradient-to-r from-blue-100 to-blue-50 text-blue-800 border border-blue-200/50"
-                            : "bg-gradient-to-r from-gray-100 to-gray-50 text-gray-800 border border-gray-200/50"
+                            ? "bg-gradient-to-r from-blue-100 to-blue-50 text-blue-800 border-blue-200/50"
+                            : request.status === "converted"
+                            ? "bg-gradient-to-r from-emerald-100 to-emerald-50 text-emerald-800 border-emerald-200/50"
+                            : "bg-gradient-to-r from-gray-100 to-gray-50 text-gray-800 border-gray-200/50"
                         }`}
                       >
-                        {request.status === "pending" ? "En attente" : request.status}
+                        {request.status === "pending" 
+                          ? "⏳ En attente" 
+                          : request.status === "converted"
+                          ? "✅ Convertie en devis"
+                          : request.status || "Inconnu"}
                       </span>
                     </div>
 
@@ -335,28 +352,53 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
                         </div>
                       )}
 
-                    {/* Date de création */}
-                    <p className="text-xs text-gray-500">
-                      Demandé le{" "}
-                      {new Date(request.created_at).toLocaleDateString("fr-FR", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    {/* Date de création et conversion */}
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-500">
+                        📅 Demandé le{" "}
+                        {new Date(request.created_at).toLocaleDateString("fr-FR", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                      {request.status === "converted" && request.converted_at && (
+                        <p className="text-xs text-emerald-600 font-medium">
+                          ✅ Convertie en devis le{" "}
+                          {new Date(request.converted_at).toLocaleDateString("fr-FR", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          {request.converted_by && ` par ${request.converted_by}`}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Actions */}
                   <div className="flex flex-col gap-2 md:min-w-[200px]">
-                    {onCreateQuoteFromRequest && (
+                    {onCreateQuoteFromRequest && request.status !== "converted" && (
                       <PrimaryBtn
                         onClick={() => onCreateQuoteFromRequest(request)}
                         className="w-full"
                       >
                         ✏️ Créer un devis
                       </PrimaryBtn>
+                    )}
+                    {request.status === "converted" && (
+                      <div className="bg-emerald-50/80 border-2 border-emerald-200/60 rounded-lg p-3 text-center">
+                        <p className="text-xs font-bold text-emerald-800">
+                          ✅ Cette demande a été convertie en devis
+                        </p>
+                        <p className="text-xs text-emerald-700 mt-1">
+                          Consultez l'historique pour retrouver le devis
+                        </p>
+                      </div>
                     )}
                     <GhostBtn
                       onClick={() => copyRequestLink(request.token)}

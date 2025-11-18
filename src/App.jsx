@@ -295,27 +295,32 @@ export default function App() {
       notes: request.notes || "",
     };
 
-    // Supprimer la demande de Supabase
+    // Marquer la demande comme "convertie en devis" au lieu de la supprimer
     if (supabase && request.id) {
       try {
         const { error } = await supabase
           .from("client_requests")
-          .delete()
+          .update({ 
+            status: "converted",
+            converted_at: new Date().toISOString(),
+            converted_by: user?.name || ""
+          })
           .eq("id", request.id)
           .eq("site_key", SITE_KEY);
 
         if (error) {
-          console.warn("Erreur lors de la suppression de la demande:", error);
-          // Continuer quand même même si la suppression échoue
+          console.warn("Erreur lors de la mise à jour du statut de la demande:", error);
+          // Continuer quand même même si la mise à jour échoue
         } else {
+          console.log("✅ Demande marquée comme convertie en devis");
           // Mettre à jour le compteur de demandes en attente
           if (loadPendingRequestsCount) {
             loadPendingRequestsCount();
           }
         }
       } catch (err) {
-        console.warn("Exception lors de la suppression de la demande:", err);
-        // Continuer quand même même si la suppression échoue
+        console.warn("Exception lors de la mise à jour du statut de la demande:", err);
+        // Continuer quand même même si la mise à jour échoue
       }
     }
 
