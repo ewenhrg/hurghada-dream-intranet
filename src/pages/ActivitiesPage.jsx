@@ -361,11 +361,17 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }, [filteredActivities]);
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-600">
-          Ajoutez une activité, ses prix, ses jours, ses transferts (quartier, matin / après-midi).
-        </p>
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex-1">
+          <h2 className="text-xl md:text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+            <span className="text-2xl">🎯</span>
+            Gestion des activités
+          </h2>
+          <p className="text-sm md:text-base text-slate-600 font-medium">
+            Ajoutez une activité, ses prix, ses jours disponibles et ses transferts par quartier
+          </p>
+        </div>
         {user?.canAddActivity && (
           <PrimaryBtn
             onClick={() => {
@@ -385,185 +391,245 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               }
               setShowForm((s) => !s);
             }}
+            className="w-full sm:w-auto text-base font-bold px-6 py-3"
           >
-            {showForm ? "Annuler" : "Ajouter une activité"}
+            {showForm ? "❌ Annuler" : "➕ Ajouter une activité"}
           </PrimaryBtn>
         )}
       </div>
 
       {/* Filtres et recherche */}
-      <div className="grid md:grid-cols-2 gap-3 bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-100/60 p-4 shadow-md">
-        <div>
-          <p className="text-xs text-gray-500 mb-1">Rechercher une activité</p>
-          <TextInput
-            placeholder="Rechercher par nom ou notes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div>
-          <p className="text-xs text-gray-500 mb-1">Filtrer par jour</p>
-          <select
-            value={selectedDay}
-            onChange={(e) => setSelectedDay(e.target.value)}
-              className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
-          >
-            <option value="">Tous les jours</option>
-            {WEEKDAYS.map((day) => (
-              <option key={day.key} value={day.key}>
-                {day.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {showForm && (
-        <form onSubmit={handleCreate} className="space-y-4 bg-gradient-to-br from-blue-50/80 to-indigo-50/60 backdrop-blur-sm rounded-2xl p-4 border border-blue-100/60 shadow-lg">
-          <div className="grid md:grid-cols-2 gap-3">
+      <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/70 rounded-2xl border-2 border-slate-200/60 p-5 md:p-6 shadow-lg backdrop-blur-sm">
+        <h3 className="text-base md:text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <span className="text-xl">🔍</span>
+          Recherche et filtres
+        </h3>
+        <div className="grid md:grid-cols-2 gap-4 md:gap-5">
+          <div>
+            <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Rechercher une activité</label>
             <TextInput
-              placeholder="Nom de l'activité"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="Nom de l'activité ou notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="text-base"
             />
+          </div>
+          <div>
+            <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Filtrer par jour</label>
             <select
-              value={form.category}
-              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-              className="rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
+              value={selectedDay}
+              onChange={(e) => setSelectedDay(e.target.value)}
+              className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
             >
-              {CATEGORIES.map((c) => (
-                <option key={c.key} value={c.key}>
-                  {c.label}
+              <option value="">📅 Tous les jours</option>
+              {WEEKDAYS.map((day) => (
+                <option key={day.key} value={day.key}>
+                  {day.label}
                 </option>
               ))}
             </select>
           </div>
-          <div className="grid md:grid-cols-4 gap-3">
-            <div>
-              <NumberInput
-                placeholder="Prix adulte"
-                value={form.priceAdult}
-                onChange={(e) => setForm((f) => ({ ...f, priceAdult: e.target.value }))}
-              />
-            </div>
-            <div>
-              <NumberInput
-                placeholder="Prix enfant"
-                value={form.priceChild}
-                onChange={(e) => setForm((f) => ({ ...f, priceChild: e.target.value }))}
-              />
-              <TextInput
-                placeholder="Âge enfant (ex: 5-12 ans)"
-                value={form.ageChild}
-                onChange={(e) => setForm((f) => ({ ...f, ageChild: e.target.value }))}
-                className="mt-2"
-              />
-            </div>
-            <div>
-              <NumberInput
-                placeholder="Prix bébé"
-                value={form.priceBaby}
-                onChange={(e) => setForm((f) => ({ ...f, priceBaby: e.target.value }))}
-              />
-              <TextInput
-                placeholder="Âge bébé (ex: 0-4 ans)"
-                value={form.ageBaby}
-                onChange={(e) => setForm((f) => ({ ...f, ageBaby: e.target.value }))}
-                className="mt-2"
-              />
-            </div>
-            <div>
-              <TextInput
-                placeholder="Devise"
-                value={form.currency}
-                onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))}
-              />
+        </div>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleCreate} className="space-y-5 md:space-y-6 bg-gradient-to-br from-blue-50/90 via-indigo-50/80 to-purple-50/70 backdrop-blur-sm rounded-2xl p-5 md:p-7 border-2 border-blue-200/60 shadow-xl">
+          <div className="flex items-center gap-3 mb-4 pb-4 border-b-2 border-blue-200/60">
+            <span className="text-2xl">{editingId ? "✏️" : "➕"}</span>
+            <h3 className="text-lg md:text-xl font-bold text-slate-800">
+              {editingId ? "Modifier l'activité" : "Nouvelle activité"}
+            </h3>
+          </div>
+
+          <div className="bg-white/80 rounded-xl p-4 md:p-5 border-2 border-blue-100/60">
+            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">Informations de base</label>
+            <div className="grid md:grid-cols-2 gap-4 md:gap-5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-2">Nom de l'activité *</label>
+                <TextInput
+                  placeholder="Ex: Snorkeling"
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  className="text-base"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-2">Catégorie *</label>
+                <select
+                  value={form.category}
+                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                  className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c.key} value={c.key}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Jours disponibles</p>
+
+          <div className="bg-gradient-to-br from-emerald-50/80 to-teal-50/70 rounded-xl p-4 md:p-5 border-2 border-emerald-200/60">
+            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">💰 Tarification</label>
+            <div className="grid md:grid-cols-4 gap-4 md:gap-5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-2">Prix adulte</label>
+                <NumberInput
+                  placeholder="0.00"
+                  value={form.priceAdult}
+                  onChange={(e) => setForm((f) => ({ ...f, priceAdult: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-2">Prix enfant</label>
+                <NumberInput
+                  placeholder="0.00"
+                  value={form.priceChild}
+                  onChange={(e) => setForm((f) => ({ ...f, priceChild: e.target.value }))}
+                />
+                <TextInput
+                  placeholder="Âge (ex: 5-12 ans)"
+                  value={form.ageChild}
+                  onChange={(e) => setForm((f) => ({ ...f, ageChild: e.target.value }))}
+                  className="mt-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-2">Prix bébé</label>
+                <NumberInput
+                  placeholder="0.00"
+                  value={form.priceBaby}
+                  onChange={(e) => setForm((f) => ({ ...f, priceBaby: e.target.value }))}
+                />
+                <TextInput
+                  placeholder="Âge (ex: 0-4 ans)"
+                  value={form.ageBaby}
+                  onChange={(e) => setForm((f) => ({ ...f, ageBaby: e.target.value }))}
+                  className="mt-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-2">Devise</label>
+                <TextInput
+                  placeholder="EUR"
+                  value={form.currency}
+                  onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))}
+                  className="text-base font-semibold"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-amber-50/80 to-yellow-50/70 rounded-xl p-4 md:p-5 border-2 border-amber-200/60">
+            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">📅 Jours disponibles</label>
             <DaysSelector value={form.availableDays} onChange={(v) => setForm((f) => ({ ...f, availableDays: v }))} />
           </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-1">
-              Transferts par quartier (activer Matin / Après-midi / Soir et indiquer les heures et suppléments)
+
+          <div className="bg-gradient-to-br from-purple-50/80 to-pink-50/70 rounded-xl p-4 md:p-5 border-2 border-purple-200/60">
+            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">🚗 Transferts par quartier</label>
+            <p className="text-xs text-slate-600 mb-3 font-medium">
+              Activez Matin / Après-midi / Soir et indiquez les heures et suppléments pour chaque quartier
             </p>
             <TransfersEditor value={form.transfers} onChange={(v) => setForm((f) => ({ ...f, transfers: v }))} />
           </div>
-          <TextInput
-            placeholder="Notes (facultatif)"
-            value={form.notes}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-          />
-          <div className="flex justify-end">
-            <PrimaryBtn type="submit">{editingId ? "Modifier l'activité" : "Enregistrer"}</PrimaryBtn>
+
+          <div className="bg-slate-50/80 rounded-xl p-4 md:p-5 border-2 border-slate-200/60">
+            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2">📝 Notes (facultatif)</label>
+            <TextInput
+              placeholder="Informations supplémentaires, remarques..."
+              value={form.notes}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              className="text-base"
+            />
+          </div>
+
+          <div className="flex justify-end pt-4 border-t-2 border-blue-200/60">
+            <PrimaryBtn type="submit" className="text-base font-bold px-8 py-3">
+              {editingId ? "💾 Modifier l'activité" : "✅ Enregistrer"}
+            </PrimaryBtn>
           </div>
         </form>
       )}
 
       {CATEGORIES.map((cat) => (
-        <div key={cat.key} className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700">{cat.label}</h3>
-          <div className="rounded-xl border border-blue-100/60 bg-white/95 backdrop-blur-sm shadow-md overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-blue-50/70 text-gray-700 text-xs">
-                <tr>
-                  <th className="text-left px-3 py-2">Activité</th>
-                  <th className="text-left px-3 py-2">Adulte</th>
-                  <th className="text-left px-3 py-2">Enfant</th>
-                  <th className="text-left px-3 py-2">Bébé</th>
-                  <th className="text-left px-3 py-2">Jours</th>
-                  <th className="text-left px-3 py-2">Notes</th>
-                  {canModifyActivities && (
-                    <th className="text-right px-3 py-2">Action</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {(grouped[cat.key] || []).map((a) => (
-                  <tr key={a.id} className="border-t">
-                    <td className="px-3 py-2">{a.name}</td>
-                    <td className="px-3 py-2">{currency(a.priceAdult, a.currency)}</td>
-                    <td className="px-3 py-2">{currency(a.priceChild, a.currency)}</td>
-                    <td className="px-3 py-2">{currency(a.priceBaby, a.currency)}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex gap-1 flex-wrap">
-                        {WEEKDAYS.map((d, idx) =>
-                          a.availableDays?.[idx] ? (
-                            <span
-                              key={d.key}
-                              className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-medium"
-                            >
-                              {d.label}
-                            </span>
-                          ) : null,
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2 text-gray-500">{a.notes || "—"}</td>
+        <div key={cat.key} className="space-y-3 md:space-y-4">
+          <div className="flex items-center gap-3">
+            <h3 className="text-base md:text-lg font-bold text-slate-800 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-xl shadow-md">
+              {cat.label}
+            </h3>
+            <span className="text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+              {(grouped[cat.key] || []).length} activité{(grouped[cat.key] || []).length > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="rounded-2xl border-2 border-slate-200/60 bg-white/95 backdrop-blur-sm shadow-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm md:text-base">
+                <thead className="bg-gradient-to-r from-blue-50/90 to-indigo-50/80 text-slate-800 text-xs md:text-sm font-bold">
+                  <tr>
+                    <th className="text-left px-4 py-3 md:px-5 md:py-4">Activité</th>
+                    <th className="text-left px-4 py-3 md:px-5 md:py-4">💰 Adulte</th>
+                    <th className="text-left px-4 py-3 md:px-5 md:py-4">👶 Enfant</th>
+                    <th className="text-left px-4 py-3 md:px-5 md:py-4">🍼 Bébé</th>
+                    <th className="text-left px-4 py-3 md:px-5 md:py-4">📅 Jours</th>
+                    <th className="text-left px-4 py-3 md:px-5 md:py-4">📝 Notes</th>
                     {canModifyActivities && (
-                      <td className="px-3 py-2 text-right">
-                        <div className="flex gap-2 justify-end">
-                          <GhostBtn onClick={() => handleEdit(a)} variant="primary">
-                            Modifier
-                          </GhostBtn>
-                          <GhostBtn onClick={() => handleDelete(a.id)} variant="danger">
-                            Supprimer
-                          </GhostBtn>
-                        </div>
-                      </td>
+                      <th className="text-right px-4 py-3 md:px-5 md:py-4">⚙️ Actions</th>
                     )}
                   </tr>
-                ))}
-                {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
-                  <tr>
-                    <td colSpan={canModifyActivities ? 7 : 6} className="px-3 py-4 text-center text-gray-400 text-sm">
-                      Aucune activité dans cette catégorie.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(grouped[cat.key] || []).map((a, idx) => (
+                    <tr 
+                      key={a.id} 
+                      className={`border-t border-slate-200/60 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-blue-50/50`}
+                    >
+                      <td className="px-4 py-3 md:px-5 md:py-4 font-semibold text-slate-800">{a.name}</td>
+                      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceAdult, a.currency)}</td>
+                      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceChild, a.currency)}</td>
+                      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceBaby, a.currency)}</td>
+                      <td className="px-4 py-3 md:px-5 md:py-4">
+                        <div className="flex gap-1.5 flex-wrap">
+                          {WEEKDAYS.map((d, idx) =>
+                            a.availableDays?.[idx] ? (
+                              <span
+                                key={d.key}
+                                className="px-2.5 py-1 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 text-xs font-bold border border-green-300/60 shadow-sm"
+                              >
+                                {d.label}
+                              </span>
+                            ) : null,
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm">{a.notes || <span className="text-slate-400 italic">—</span>}</td>
+                      {canModifyActivities && (
+                        <td className="px-4 py-3 md:px-5 md:py-4 text-right">
+                          <div className="flex gap-2 justify-end">
+                            <GhostBtn onClick={() => handleEdit(a)} variant="primary" size="sm">
+                              ✏️ Modifier
+                            </GhostBtn>
+                            <GhostBtn onClick={() => handleDelete(a.id)} variant="danger" size="sm">
+                              🗑️ Supprimer
+                            </GhostBtn>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                  {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
+                    <tr>
+                      <td colSpan={canModifyActivities ? 7 : 6} className="px-4 py-8 md:py-10 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <span className="text-3xl">📭</span>
+                          <p className="text-slate-500 font-medium">Aucune activité dans cette catégorie</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       ))}
