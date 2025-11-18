@@ -398,6 +398,7 @@ export default function App() {
               }
               
               const createdAt = row.created_at || row.createdAt || new Date().toISOString();
+              const updatedAt = row.updated_at || row.updatedAt || createdAt;
               
               // Calculer isModified à partir de la présence de modifications
               // Soit dans quote.modifications, soit dans les items (item.modifications)
@@ -409,6 +410,7 @@ export default function App() {
                 id: row.id?.toString() || uuid(),
                 supabase_id: row.id,
                 createdAt: createdAt,
+                updated_at: updatedAt,
                 client: {
                   name: row.client_name || "",
                   phone: row.client_phone || "",
@@ -527,11 +529,13 @@ export default function App() {
       }
       
       const createdAt = row.created_at || row.createdAt || new Date().toISOString();
+      const updatedAt = row.updated_at || row.updatedAt || createdAt;
       
       return {
         id: row.id?.toString() || uuid(),
         supabase_id: row.id,
         createdAt: createdAt,
+        updated_at: updatedAt,
         client: {
           name: row.client_name || "",
           phone: row.client_phone || "",
@@ -595,11 +599,23 @@ export default function App() {
               }
 
               if (existingIndex >= 0) {
-                // Mettre à jour le devis existant (remplacer pour éviter les doublons)
-                const updated = [...prevQuotes];
-                updated[existingIndex] = newQuote;
-                saveLS(LS_KEYS.quotes, updated);
-                return updated;
+                // Mettre à jour le devis existant seulement si les données Supabase sont plus récentes
+                const existingQuote = prevQuotes[existingIndex];
+                const existingUpdatedAt = existingQuote.updated_at || existingQuote.createdAt;
+                const newUpdatedAt = payload.new.updated_at || payload.new.created_at || newQuote.createdAt;
+                
+                // Comparer les timestamps pour éviter d'écraser des modifications locales récentes
+                if (new Date(newUpdatedAt) >= new Date(existingUpdatedAt)) {
+                  // Les données Supabase sont plus récentes ou égales, mettre à jour
+                  const updated = [...prevQuotes];
+                  updated[existingIndex] = newQuote;
+                  saveLS(LS_KEYS.quotes, updated);
+                  return updated;
+                } else {
+                  // Les données locales sont plus récentes, garder les données locales
+                  console.log("⚠️ Ignoré mise à jour Realtime (données locales plus récentes)");
+                  return prevQuotes;
+                }
               } else {
                 // Ajouter le nouveau devis seulement s'il n'existe pas déjà
                 const updated = [newQuote, ...prevQuotes];

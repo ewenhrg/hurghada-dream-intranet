@@ -908,6 +908,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   // Mettre à jour le devis avec les numéros de ticket et les méthodes de paiement
                   const updatedQuote = {
                     ...selectedQuote,
+                    updated_at: new Date().toISOString(),
                     items: selectedQuote.items.map((item, idx) => ({
                       ...item,
                       ticketNumber: ticketNumbers[idx]?.trim() || "",
@@ -924,6 +925,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     try {
                       const supabaseUpdate = {
                         items: JSON.stringify(updatedQuote.items),
+                        updated_at: new Date().toISOString(),
                       };
                       
                       // Utiliser supabase_id en priorité pour identifier le devis à mettre à jour
@@ -942,13 +944,25 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                           .eq("created_at", updatedQuote.createdAt);
                       }
                       
-                      const { error: updateError } = await updateQuery;
+                      const { data, error: updateError } = await updateQuery.select();
                       
                       if (updateError) {
-                        console.warn("⚠️ Erreur mise à jour Supabase:", updateError);
+                        console.error("❌ Erreur mise à jour Supabase:", updateError);
+                        toast.error(`Erreur lors de la sauvegarde sur Supabase: ${updateError.message || 'Erreur inconnue'}. Les modifications sont sauvegardées localement.`);
+                      } else {
+                        console.log("✅ Devis mis à jour dans Supabase avec succès:", data);
+                        // Mettre à jour le supabase_id si ce n'était pas déjà fait
+                        const updatedData = Array.isArray(data) ? data[0] : data;
+                        if (updatedData && updatedData.id && !updatedQuote.supabase_id) {
+                          const finalUpdatedQuote = { ...updatedQuote, supabase_id: updatedData.id };
+                          const finalUpdatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? finalUpdatedQuote : q));
+                          setQuotes(finalUpdatedQuotes);
+                          saveLS(LS_KEYS.quotes, finalUpdatedQuotes);
+                        }
                       }
                     } catch (updateErr) {
-                      console.warn("⚠️ Erreur lors de la mise à jour Supabase:", updateErr);
+                      console.error("❌ Exception lors de la mise à jour Supabase:", updateErr);
+                      toast.error(`Exception lors de la sauvegarde sur Supabase: ${updateErr.message || 'Erreur inconnue'}. Les modifications sont sauvegardées localement.`);
                     }
                   }
 
@@ -991,7 +1005,11 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             setEditNotes("");
           }}
           onSave={async (updatedQuote) => {
-            const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? updatedQuote : q));
+            const finalUpdatedQuote = {
+              ...updatedQuote,
+              updated_at: new Date().toISOString(),
+            };
+            const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? finalUpdatedQuote : q));
             setQuotes(updatedQuotes);
             saveLS(LS_KEYS.quotes, updatedQuotes);
 
@@ -999,18 +1017,19 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             if (supabase) {
               try {
                 const supabaseUpdate = {
-                  client_name: updatedQuote.client.name || "",
-                  client_phone: updatedQuote.client.phone || "",
-                  client_hotel: updatedQuote.client.hotel || "",
-                  client_room: updatedQuote.client.room || "",
-                  client_neighborhood: updatedQuote.client.neighborhood || "",
-                  client_arrival_date: updatedQuote.client.arrivalDate || "",
-                  client_departure_date: updatedQuote.client.departureDate || "",
-                  notes: updatedQuote.notes || "",
-                  total: updatedQuote.total,
-                  currency: updatedQuote.currency,
-                  items: JSON.stringify(updatedQuote.items),
-                  created_by_name: updatedQuote.createdByName || "",
+                  client_name: finalUpdatedQuote.client.name || "",
+                  client_phone: finalUpdatedQuote.client.phone || "",
+                  client_hotel: finalUpdatedQuote.client.hotel || "",
+                  client_room: finalUpdatedQuote.client.room || "",
+                  client_neighborhood: finalUpdatedQuote.client.neighborhood || "",
+                  client_arrival_date: finalUpdatedQuote.client.arrivalDate || "",
+                  client_departure_date: finalUpdatedQuote.client.departureDate || "",
+                  notes: finalUpdatedQuote.notes || "",
+                  total: finalUpdatedQuote.total,
+                  currency: finalUpdatedQuote.currency,
+                  items: JSON.stringify(finalUpdatedQuote.items),
+                  created_by_name: finalUpdatedQuote.createdByName || "",
+                  updated_at: finalUpdatedQuote.updated_at,
                 };
 
                 // Utiliser supabase_id en priorité pour identifier le devis à mettre à jour
@@ -1029,22 +1048,25 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     .eq("created_at", selectedQuote.createdAt);
                 }
 
-                const { error: updateError } = await updateQuery;
+                const { data, error: updateError } = await updateQuery.select();
 
                 if (updateError) {
-                  console.warn("⚠️ Erreur mise à jour Supabase:", updateError);
+                  console.error("❌ Erreur mise à jour Supabase:", updateError);
+                  toast.error(`Erreur lors de la sauvegarde sur Supabase: ${updateError.message || 'Erreur inconnue'}. Les modifications sont sauvegardées localement.`);
                 } else {
-                  console.log("✅ Devis mis à jour dans Supabase!");
+                  console.log("✅ Devis mis à jour dans Supabase avec succès:", data);
                   // Mettre à jour le supabase_id dans le devis local si ce n'était pas déjà fait
-                  if (!updatedQuote.supabase_id && selectedQuote.supabase_id) {
-                    const finalUpdatedQuote = { ...updatedQuote, supabase_id: selectedQuote.supabase_id };
-                    const finalUpdatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? finalUpdatedQuote : q));
+                  const updatedData = Array.isArray(data) ? data[0] : data;
+                  if (updatedData && updatedData.id && !finalUpdatedQuote.supabase_id) {
+                    const quoteWithSupabaseId = { ...finalUpdatedQuote, supabase_id: updatedData.id };
+                    const finalUpdatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? quoteWithSupabaseId : q));
                     setQuotes(finalUpdatedQuotes);
                     saveLS(LS_KEYS.quotes, finalUpdatedQuotes);
                   }
                 }
               } catch (updateErr) {
-                console.warn("⚠️ Erreur lors de la mise à jour Supabase:", updateErr);
+                console.error("❌ Exception lors de la mise à jour Supabase:", updateErr);
+                toast.error(`Exception lors de la sauvegarde sur Supabase: ${updateErr.message || 'Erreur inconnue'}. Les modifications sont sauvegardées localement.`);
               }
             }
 
