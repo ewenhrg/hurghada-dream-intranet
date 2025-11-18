@@ -203,7 +203,7 @@ export function UsersPage() {
 
       {/* Formulaire de création/modification */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white/90 rounded-2xl border border-blue-100/60 p-6 space-y-4 shadow-md">
+        <form onSubmit={handleSubmit} className="bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-100/60 p-6 space-y-4 shadow-lg">
           <h4 className="text-base font-semibold text-gray-800">{editingUser ? "Modifier l'utilisateur" : "Créer un nouvel utilisateur"}</h4>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -356,7 +356,7 @@ export function UsersPage() {
       )}
 
       {/* Liste des utilisateurs */}
-      <div className="bg-white/90 rounded-2xl border border-blue-100/60 shadow-md overflow-hidden">
+      <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-100/60 shadow-lg overflow-hidden">
         <div className="p-4 border-b bg-blue-50/70">
           <h4 className="text-sm font-semibold text-gray-800">Liste des utilisateurs ({users.length})</h4>
         </div>

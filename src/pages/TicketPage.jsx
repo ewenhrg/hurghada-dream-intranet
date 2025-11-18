@@ -364,7 +364,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
   return (
     <>
       {/* Barre de recherche et filtres */}
-      <div className="bg-white/90 rounded-2xl border border-blue-100/60 p-4 shadow-sm mb-4">
+      <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-100/60 p-4 shadow-md mb-4">
         <div className="space-y-4">
           {/* Barre de recherche */}
           <div>
@@ -400,7 +400,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
               className={`px-4 py-2 text-sm rounded-xl border transition-colors ${
                 showModifiedOrCancelled
                   ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200"
-                  : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                  : "bg-white/95 backdrop-blur-sm text-gray-700 border-gray-200/60 hover:bg-gray-50/80 shadow-sm"
               }`}
             >
               {showModifiedOrCancelled ? "✅ Modifiés/Annulés" : "🔄 Modifiés/Annulés"}
