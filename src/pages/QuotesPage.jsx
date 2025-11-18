@@ -936,6 +936,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     // Envoyer à Supabase si configuré
     if (supabase) {
       try {
+        // Préparer les dates : convertir les chaînes vides en null pour Supabase
+        const arrivalDate = q.clientArrivalDate || q.client?.arrivalDate || "";
+        const departureDate = q.clientDepartureDate || q.client?.departureDate || "";
+        
         const supabaseData = {
           site_key: SITE_KEY,
           client_name: q.client.name || "",
@@ -944,8 +948,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           client_hotel: q.client.hotel || "",
           client_room: q.client.room || "",
           client_neighborhood: q.client.neighborhood || "",
-          client_arrival_date: q.clientArrivalDate || q.client?.arrivalDate || "",
-          client_departure_date: q.clientDepartureDate || q.client?.departureDate || "",
+          client_arrival_date: arrivalDate || null, // Convertir chaîne vide en null
+          client_departure_date: departureDate || null, // Convertir chaîne vide en null
           notes: q.notes || "",
           total: q.total,
           currency: q.currency,
