@@ -2038,9 +2038,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <p className="text-lg md:text-xl font-bold text-slate-900">
                     💵 {currencyNoCents(Math.round(c.lineTotal), c.currency)}
                   </p>
-                  <p className="text-sm md:text-base font-semibold text-slate-600">
-                    💳 {currencyNoCents(calculateCardPrice(c.lineTotal), c.currency)}
-                  </p>
                 </div>
               </div>
             </div>
