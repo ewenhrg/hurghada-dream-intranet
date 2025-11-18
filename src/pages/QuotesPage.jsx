@@ -1073,12 +1073,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           client_hotel: q.client.hotel || "",
           client_room: q.client.room || "",
           client_neighborhood: q.client.neighborhood || "",
+          client_arrival_date: q.clientArrivalDate || q.client?.arrivalDate || "",
+          client_departure_date: q.clientDepartureDate || q.client?.departureDate || "",
           notes: q.notes || "",
           total: q.total,
           currency: q.currency,
           items: JSON.stringify(q.items),
           created_by_name: q.createdByName || "",
           created_at: q.createdAt,
+          updated_at: q.createdAt, // Initialiser updated_at avec la date de création
         };
 
         console.log("🔄 Envoi du devis à Supabase:", supabaseData);
@@ -1104,7 +1107,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   return {
                     ...quote,
                     supabase_id: data.id,
-                    id: data.id.toString(), // Utiliser l'ID Supabase comme ID local
+                    updated_at: data.updated_at || data.created_at || quote.createdAt,
+                    // Garder l'ID local original pour éviter les problèmes de synchronisation
+                    // Le supabase_id sera utilisé pour les requêtes Supabase
                   };
                 }
                 return quote;
@@ -1112,6 +1117,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               saveLS(LS_KEYS.quotes, updated);
               return updated;
             });
+            toast.success("Devis créé et synchronisé avec succès !");
+          } else {
+            console.warn("⚠️ Supabase a retourné une réponse mais sans ID");
+            toast.warning("Devis créé localement mais problème de synchronisation avec Supabase.");
           }
         }
       } catch (err) {
