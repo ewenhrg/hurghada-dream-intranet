@@ -579,7 +579,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       {d.items.map((li, i) => (
                         <div
                           key={i}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/60 bg-white/80 px-4 py-2 shadow-sm"
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/60 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-md transition-all duration-200 hover:shadow-lg"
                         >
                           <div className="flex flex-col">
                             <span className="text-sm font-semibold text-slate-800">
@@ -603,7 +603,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       ))}
                     </div>
                     {d.notes && d.notes.trim() !== "" && (
-                      <p className="text-xs text-[rgba(71,85,105,0.75)] bg-white/75 border border-white/60 rounded-xl px-4 py-2 shadow-sm">
+                      <p className="text-xs text-[rgba(71,85,105,0.75)] bg-white/85 backdrop-blur-sm border border-white/60 rounded-xl px-4 py-2 shadow-md">
                         📝 {d.notes}
                       </p>
                     )}
@@ -768,7 +768,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       {/* Modale de paiement */}
       {showPaymentModal && selectedQuote && (
         <div ref={paymentModalContainerRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
-          <div ref={paymentModalRef} className="bg-white rounded-xl md:rounded-2xl border border-blue-100/50 shadow-2xl p-4 md:p-6 max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
+          <div ref={paymentModalRef} className="bg-white/98 backdrop-blur-md rounded-xl md:rounded-2xl border border-blue-100/60 shadow-2xl p-4 md:p-6 max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <h3 className="text-base md:text-lg font-semibold">Enregistrer les numéros de ticket</h3>
               <button
@@ -1299,7 +1299,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
 
   return (
     <div ref={editModalContainerRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
-      <div ref={editModalRef} className="bg-white rounded-xl md:rounded-2xl border border-blue-100/50 shadow-2xl p-4 md:p-6 max-w-4xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
+      <div ref={editModalRef} className="bg-white/98 backdrop-blur-md rounded-xl md:rounded-2xl border border-blue-100/60 shadow-2xl p-4 md:p-6 max-w-4xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3 md:mb-4">
           <h3 className="text-base md:text-lg font-semibold">Modifier le devis</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl md:text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center">
@@ -1338,7 +1338,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               <select
                 value={client.neighborhood || ""}
                 onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
-                className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
               >
                 <option value="">— Choisir —</option>
                 {NEIGHBORHOODS.map((n) => (
@@ -1353,7 +1353,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           {/* Activités */}
           <div className="space-y-4">
             {computed.map((c, idx) => (
-              <div key={idx} className="bg-white/90 border border-blue-100/60 rounded-2xl p-4 space-y-3 shadow-sm">
+              <div key={idx} className="bg-white/95 backdrop-blur-sm border border-blue-100/60 rounded-2xl p-4 space-y-3 shadow-md transition-all duration-200 hover:shadow-lg">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-gray-700">Activité #{idx + 1}</p>
                   <GhostBtn type="button" onClick={() => removeItem(idx)}>
@@ -1367,7 +1367,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     <select
                       value={c.raw.activityId || ""}
                       onChange={(e) => setItem(idx, { activityId: e.target.value })}
-                      className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+                      className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
                     >
                       <option value="">— Choisir —</option>
                       {sortedActivities.map((a) => (
@@ -1472,7 +1472,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <select
                         value={c.raw.slot || ""}
                         onChange={(e) => setItem(idx, { slot: e.target.value })}
-                        className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+                        className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
                       >
                         <option value="">—</option>
                         {c.transferInfo.morningEnabled && <option value="morning">Matin ({c.transferInfo.morningTime})</option>}

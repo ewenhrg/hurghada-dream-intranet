@@ -83,7 +83,7 @@ const StopPushSalesSummary = memo(function StopPushSalesSummary({ stopSales, pus
                 {Object.entries(stopSalesByDate)
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([date, stops]) => (
-                    <div key={date} className="bg-white rounded-lg p-3 border-2 border-red-300 shadow-md hover:shadow-lg transition-shadow">
+                    <div key={date} className="bg-white/95 backdrop-blur-sm rounded-lg p-3 border-2 border-red-300 shadow-md hover:shadow-lg transition-all duration-200">
                       <p className="text-sm font-bold text-red-900 mb-2">
                         {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
                           weekday: "short",
@@ -114,7 +114,7 @@ const StopPushSalesSummary = memo(function StopPushSalesSummary({ stopSales, pus
                 {Object.entries(pushSalesByDate)
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([date, pushes]) => (
-                    <div key={date} className="bg-white rounded-lg p-3 border-2 border-green-300 shadow-md hover:shadow-lg transition-shadow">
+                    <div key={date} className="bg-white/95 backdrop-blur-sm rounded-lg p-3 border-2 border-green-300 shadow-md hover:shadow-lg transition-all duration-200">
                       <p className="text-sm font-bold text-green-900 mb-2">
                         {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
                           weekday: "short",
@@ -1314,7 +1314,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <select
                     value={c.raw.activityId}
                     onChange={(e) => setItem(idx, { activityId: e.target.value })}
-                    className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+                    className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
                   >
                     <option value="">— Choisir —</option>
                     {sortedActivities.map((a) => (
@@ -1392,7 +1392,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <select
                     value={c.raw.slot}
                     onChange={(e) => setItem(idx, { slot: e.target.value })}
-                    className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+                    className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
                     disabled={!c.transferInfo || (!c.transferInfo.morningEnabled && !c.transferInfo.afternoonEnabled && !c.transferInfo.eveningEnabled)}
                   >
                     <option value="">— Choisir —</option>
