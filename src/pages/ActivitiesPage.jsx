@@ -392,7 +392,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       </div>
 
       {/* Filtres et recherche */}
-      <div className="grid md:grid-cols-2 gap-3 bg-white/90 rounded-2xl border border-blue-100/60 p-4 shadow-md">
+      <div className="grid md:grid-cols-2 gap-3 bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-100/60 p-4 shadow-md">
         <div>
           <p className="text-xs text-gray-500 mb-1">Rechercher une activité</p>
           <TextInput
@@ -406,7 +406,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           <select
             value={selectedDay}
             onChange={(e) => setSelectedDay(e.target.value)}
-              className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
           >
             <option value="">Tous les jours</option>
             {WEEKDAYS.map((day) => (
@@ -419,7 +419,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="space-y-4 bg-blue-50/50 rounded-2xl p-4 border border-blue-100/60 shadow-md">
+        <form onSubmit={handleCreate} className="space-y-4 bg-gradient-to-br from-blue-50/80 to-indigo-50/60 backdrop-blur-sm rounded-2xl p-4 border border-blue-100/60 shadow-lg">
           <div className="grid md:grid-cols-2 gap-3">
             <TextInput
               placeholder="Nom de l'activité"
@@ -429,7 +429,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             <select
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+              className="rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
             >
               {CATEGORIES.map((c) => (
                 <option key={c.key} value={c.key}>
@@ -504,7 +504,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       {CATEGORIES.map((cat) => (
         <div key={cat.key} className="space-y-2">
           <h3 className="text-sm font-semibold text-gray-700">{cat.label}</h3>
-          <div className="rounded-xl border border-blue-100/60 bg-white/90 shadow-sm overflow-hidden">
+          <div className="rounded-xl border border-blue-100/60 bg-white/95 backdrop-blur-sm shadow-md overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-blue-50/70 text-gray-700 text-xs">
                 <tr>

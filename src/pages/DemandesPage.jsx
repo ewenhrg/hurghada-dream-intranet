@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, NEIGHBORHOODS } from "../constants";
-import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
+import { TextInput, PrimaryBtn, GhostBtn, Pill } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { generateRequestLink, generateRequestToken } from "../utils/tokenGenerator";
 
@@ -164,8 +164,8 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
         <div className="flex-1">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Demandes clients</h2>
-          <p className="text-sm text-gray-600">
+          <h2 className="text-2xl font-bold text-white mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">Demandes clients</h2>
+          <p className="text-sm text-white/80">
             Gérez les demandes de devis de vos clients
           </p>
         </div>
@@ -173,36 +173,28 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
           <PrimaryBtn onClick={handleGenerateNewLink} className="whitespace-nowrap">
             🔗 Créer un lien unique
           </PrimaryBtn>
-          <button
+          <Pill
+            active={statusFilter === "pending"}
             onClick={() => setStatusFilter("pending")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              statusFilter === "pending"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
           >
             En attente ({requests.filter((r) => r.status === "pending").length})
-          </button>
-          <button
+          </Pill>
+          <Pill
+            active={statusFilter === "all"}
             onClick={() => setStatusFilter("all")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              statusFilter === "all"
-                ? "bg-gray-800 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
           >
             Toutes ({requests.length})
-          </button>
+          </Pill>
         </div>
       </div>
 
       {/* Affichage du lien généré */}
       {generatedLink && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-4 shadow-md">
+        <div className="bg-gradient-to-br from-blue-50/90 to-indigo-50/80 rounded-xl border border-blue-200/60 p-4 shadow-lg backdrop-blur-sm">
           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-700 mb-1">Lien unique généré :</p>
-              <div className="bg-white rounded-lg border border-blue-200 px-4 py-2">
+              <div className="bg-white/95 backdrop-blur-sm rounded-lg border border-blue-200/60 px-4 py-2 shadow-sm">
                 <code className="text-sm text-blue-900 break-all">{generatedLink}</code>
               </div>
             </div>
@@ -223,7 +215,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
       )}
 
       {/* Barre de recherche */}
-      <div className="bg-white rounded-xl border border-blue-100/60 p-4 shadow-md">
+      <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-blue-100/60 p-4 shadow-md">
         <TextInput
           placeholder="Rechercher par nom, téléphone, email ou hôtel..."
           value={searchQuery}
@@ -233,7 +225,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
 
       {/* Liste des demandes */}
       {filteredRequests.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200/60 p-8 text-center shadow-sm">
           <p className="text-gray-500">
             {searchQuery
               ? "Aucune demande ne correspond à votre recherche."
@@ -245,10 +237,10 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
           {filteredRequests.map((request) => (
             <div
               key={request.id}
-              className={`bg-white rounded-xl border-2 shadow-md overflow-hidden ${
+              className={`bg-white/95 backdrop-blur-sm rounded-xl border shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg ${
                 request.status === "pending"
-                  ? "border-blue-200"
-                  : "border-gray-200 bg-gray-50/30"
+                  ? "border-blue-200/60"
+                  : "border-gray-200/60 bg-gray-50/40"
               }`}
             >
               <div className="p-4 md:p-6">
@@ -270,10 +262,10 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
                         )}
                       </div>
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
                           request.status === "pending"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-gray-100 text-gray-800"
+                            ? "bg-gradient-to-r from-blue-100 to-blue-50 text-blue-800 border border-blue-200/50"
+                            : "bg-gradient-to-r from-gray-100 to-gray-50 text-gray-800 border border-gray-200/50"
                         }`}
                       >
                         {request.status === "pending" ? "En attente" : request.status}
@@ -320,7 +312,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
                             {request.selected_activities.map((selectedActivity, idx) => (
                               <div
                                 key={idx}
-                                className="bg-gray-50 rounded-lg p-2 text-sm"
+                                className="bg-gradient-to-r from-gray-50/80 to-blue-50/40 rounded-lg border border-gray-200/50 p-2 text-sm shadow-sm"
                               >
                                 <span className="font-medium">
                                   {getActivityName(selectedActivity.activityId)}
