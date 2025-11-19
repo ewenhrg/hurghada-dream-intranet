@@ -450,7 +450,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                               {li.activityName || "Activité ?"}
                             </span>
                             <span className="text-xs md:text-sm text-slate-600 font-medium">
-                              📅 {li.date ? new Date(li.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?"} — 👥 {li.adults ?? 0} adt / {li.children ?? 0} enf
+                              📅 {li.date ? new Date(li.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?"} — 👥 {li.adults ?? 0} adt / {li.children ?? 0} enf / {li.babies ?? 0} bébé(s)
                             </span>
                           </div>
                           <div className="flex flex-col items-end gap-2">
@@ -668,7 +668,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     <div className="flex-1">
                       <p className="font-bold text-base md:text-lg text-slate-900 mb-1">{item.activityName}</p>
                       <p className="text-xs md:text-sm text-slate-600 font-medium">
-                        📅 {new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")} — 👥 {item.adults} adulte(s), {item.children} enfant(s)
+                        📅 {new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")} — 👥 {item.adults} adulte(s), {item.children} enfant(s), {item.babies ?? 0} bébé(s)
                       </p>
                     </div>
                     <div className="text-right bg-white/80 rounded-lg px-3 py-2 border-2 border-blue-100/60">
