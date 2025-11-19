@@ -281,11 +281,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
-    // Générer toutes les dates entre l'arrivée et le départ avec leur jour de la semaine
+    // Obtenir la date d'aujourd'hui (sans l'heure)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculer la date de début : maximum entre (arrivée + 1) et (aujourd'hui + 1)
+    // Cela garantit qu'on ne propose jamais d'activités avant demain
+    const arrivalPlusOne = new Date(arrival);
+    arrivalPlusOne.setDate(arrivalPlusOne.getDate() + 1);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Utiliser la date la plus récente entre (arrivée + 1) et (aujourd'hui + 1)
+    const startDate = arrivalPlusOne > tomorrow ? arrivalPlusOne : tomorrow;
+
+    // Générer toutes les dates entre la date de début et le départ avec leur jour de la semaine
     // Exclure le jour d'arrivée et le jour de départ
     const allDates = [];
-    const currentDate = new Date(arrival);
-    currentDate.setDate(currentDate.getDate() + 1); // Commencer le jour après l'arrivée
+    const currentDate = new Date(startDate);
     const departureMinusOne = new Date(departure);
     departureMinusOne.setDate(departureMinusOne.getDate() - 1); // Terminer le jour avant le départ
     
@@ -297,7 +311,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
 
     if (allDates.length === 0) {
-      toast.warning("Aucune date disponible entre l'arrivée et le départ (les jours d'arrivée et de départ sont exclus).");
+      toast.warning("Aucune date disponible entre demain et le départ (les activités ne peuvent pas être programmées avant demain ni le jour du départ).");
       return;
     }
 
