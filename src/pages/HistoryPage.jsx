@@ -17,7 +17,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [ticketNumbers, setTicketNumbers] = useState({});
-  const [paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" }
+  const [stripeAmount, setStripeAmount] = useState("");
+  const [cashAmount, setCashAmount] = useState("");
   
   // Tous les utilisateurs peuvent maintenant modifier les activités
   const canModifyActivities = true;
@@ -465,13 +466,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         onClick={() => {
                           setSelectedQuote(d);
                           const existingTickets = {};
-                          const existingPaymentMethods = {};
                           d.items?.forEach((item, idx) => {
                             existingTickets[idx] = item.ticketNumber || "";
-                            existingPaymentMethods[idx] = item.paymentMethod || "";
                           });
                           setTicketNumbers(existingTickets);
-                          setPaymentMethods(existingPaymentMethods);
+                          // Initialiser les montants Stripe et Cash depuis le devis
+                          setStripeAmount(d.paidStripe ? d.paidStripe.toString() : "");
+                          setCashAmount(d.paidCash ? d.paidCash.toString() : "");
                           setShowPaymentModal(true);
                         }}
                       >
@@ -624,7 +625,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   setShowPaymentModal(false);
                   setSelectedQuote(null);
                   setTicketNumbers({});
-                  setPaymentMethods({});
+                  setStripeAmount("");
+                  setCashAmount("");
                 }}
                 className="text-slate-400 hover:text-slate-600 text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
@@ -674,48 +676,53 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         </p>
                       )}
                     </div>
-                    <div>
-                      <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">Méthode de paiement</label>
-                      <div className="flex gap-4 md:gap-6">
-                        <label className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border-2 border-slate-200 hover:border-blue-300 transition-all">
-                          <input
-                            type="checkbox"
-                            checked={paymentMethods[idx] === "cash" || item.paymentMethod === "cash"}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setPaymentMethods((prev) => ({
-                                  ...prev,
-                                  [idx]: "cash",
-                                }));
-                              }
-                            }}
-                            disabled={item.paymentMethod && item.paymentMethod.trim() ? true : false}
-                            className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm md:text-base text-slate-700 font-semibold">💵 Cash</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border-2 border-slate-200 hover:border-blue-300 transition-all">
-                          <input
-                            type="checkbox"
-                            checked={paymentMethods[idx] === "stripe" || item.paymentMethod === "stripe"}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setPaymentMethods((prev) => ({
-                                  ...prev,
-                                  [idx]: "stripe",
-                                }));
-                              }
-                            }}
-                            disabled={item.paymentMethod && item.paymentMethod.trim() ? true : false}
-                            className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm md:text-base text-slate-700 font-semibold">💳 Stripe</span>
-                        </label>
-                      </div>
-                    </div>
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Champs de saisie pour les montants Stripe et Cash */}
+            <div className="mt-6 pt-4 border-t border-slate-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2">
+                    💳 Montant payé en Stripe ({selectedQuote.currency || "EUR"})
+                  </label>
+                  <NumberInput
+                    placeholder="0"
+                    value={stripeAmount}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Permettre uniquement les nombres et un point décimal
+                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                        setStripeAmount(value);
+                      }
+                    }}
+                    className="text-base"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2">
+                    💵 Montant payé en Cash ({selectedQuote.currency || "EUR"})
+                  </label>
+                  <NumberInput
+                    placeholder="0"
+                    value={cashAmount}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Permettre uniquement les nombres et un point décimal
+                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                        setCashAmount(value);
+                      }
+                    }}
+                    className="text-base"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 md:mt-6 pt-4 border-t">
@@ -724,7 +731,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   setShowPaymentModal(false);
                   setSelectedQuote(null);
                   setTicketNumbers({});
-                  setPaymentMethods({});
+                  setStripeAmount("");
+                  setCashAmount("");
                 }}
                 className="w-full sm:w-auto order-2 sm:order-1"
               >
@@ -741,27 +749,23 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     return;
                   }
 
-                  // Vérifier que toutes les méthodes de paiement sont sélectionnées
-                  const allPaymentMethodsSelected = selectedQuote.items?.every((_, idx) => {
-                    // Si le ticket existe déjà, garder la méthode existante, sinon vérifier que c'est renseigné
-                    if (selectedQuote.items[idx].paymentMethod && selectedQuote.items[idx].paymentMethod.trim()) {
-                      return true;
-                    }
-                    return paymentMethods[idx] === "cash" || paymentMethods[idx] === "stripe";
-                  });
-                  if (!allPaymentMethodsSelected) {
-                    toast.warning("Veuillez sélectionner une méthode de paiement pour chaque activité.");
+                  // Vérifier qu'au moins un montant est renseigné
+                  const stripeValue = parseFloat(stripeAmount) || 0;
+                  const cashValue = parseFloat(cashAmount) || 0;
+                  if (stripeValue === 0 && cashValue === 0) {
+                    toast.warning("Veuillez renseigner au moins un montant (Stripe ou Cash).");
                     return;
                   }
 
-                  // Mettre à jour le devis avec les numéros de ticket et les méthodes de paiement
+                  // Mettre à jour le devis avec les numéros de ticket et les montants de paiement
                   const updatedQuote = {
                     ...selectedQuote,
                     updated_at: new Date().toISOString(),
+                    paidStripe: stripeValue,
+                    paidCash: cashValue,
                     items: selectedQuote.items.map((item, idx) => ({
                       ...item,
                       ticketNumber: ticketNumbers[idx]?.trim() || "",
-                      paymentMethod: item.paymentMethod || paymentMethods[idx] || "",
                     })),
                   };
 
@@ -774,6 +778,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     try {
                       const supabaseUpdate = {
                         items: JSON.stringify(updatedQuote.items),
+                        paid_stripe: stripeValue,
+                        paid_cash: cashValue,
                         updated_at: new Date().toISOString(),
                       };
                       
@@ -818,8 +824,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   setShowPaymentModal(false);
                   setSelectedQuote(null);
                   setTicketNumbers({});
-                  setPaymentMethods({});
-                  toast.success("Numéros de ticket enregistrés avec succès !");
+                  setStripeAmount("");
+                  setCashAmount("");
+                  toast.success("Numéros de ticket et montants enregistrés avec succès !");
                 }}
               >
                 Enregistrer les tickets
