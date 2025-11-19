@@ -1149,9 +1149,11 @@ export function SituationPage({ activities = [], user }) {
             whatsappWindowRef.current = reusedWindow;
             reusedWindow.focus();
             console.log("✅ Fenêtre WhatsApp réutilisée - URL mise à jour");
-            // Attente importante pour laisser WhatsApp charger la nouvelle conversation (8 secondes)
-            console.log("⏳ Attente de 8 secondes pour laisser WhatsApp charger la nouvelle conversation...");
-            await new Promise((resolve) => setTimeout(resolve, 8000));
+            // Attente importante pour laisser WhatsApp charger la nouvelle conversation (15 secondes)
+            // WhatsApp Web peut être lent à charger, surtout lors du changement de conversation
+            console.log("⏳ Attente de 15 secondes pour laisser WhatsApp charger complètement la nouvelle conversation...");
+            toast.info("⏳ Chargement de la conversation WhatsApp... (15 secondes)", { duration: 15000 });
+            await new Promise((resolve) => setTimeout(resolve, 15000));
             return reusedWindow;
           }
         } else {
@@ -1180,9 +1182,11 @@ export function SituationPage({ activities = [], user }) {
         console.log("✅ Fenêtre WhatsApp ouverte/réutilisée avec succès");
       }
       
-      // Attente pour laisser WhatsApp charger (8 secondes pour une nouvelle fenêtre)
-      console.log("⏳ Attente de 8 secondes pour laisser WhatsApp charger...");
-      await new Promise((resolve) => setTimeout(resolve, 8000));
+      // Attente pour laisser WhatsApp charger (15 secondes pour une nouvelle fenêtre)
+      // WhatsApp Web peut être lent à charger initialement
+      console.log("⏳ Attente de 15 secondes pour laisser WhatsApp charger complètement...");
+      toast.info("⏳ Chargement initial de WhatsApp Web... (15 secondes)", { duration: 15000 });
+      await new Promise((resolve) => setTimeout(resolve, 15000));
       
       // Focus sur la fenêtre (non-bloquant)
       try {
@@ -1239,13 +1243,14 @@ export function SituationPage({ activities = [], user }) {
       isFirstMessageRef.current = false;
       console.log(`✅ Délai initial terminé. WhatsApp devrait être chargé maintenant.`);
     } else {
-      // Pour les messages suivants, attendre encore 5 secondes supplémentaires pour s'assurer que WhatsApp a bien chargé la nouvelle conversation
-      console.log(`⏳ Message suivant détecté. Attente supplémentaire de 5 secondes pour s'assurer que WhatsApp a bien chargé la nouvelle conversation...`);
+      // Pour les messages suivants, attendre encore 8 secondes supplémentaires pour s'assurer que WhatsApp a bien chargé la nouvelle conversation
+      // WhatsApp peut être lent lors du changement de conversation, surtout si la connexion est lente
+      console.log(`⏳ Message suivant détecté. Attente supplémentaire de 8 secondes pour s'assurer que WhatsApp a bien chargé la nouvelle conversation...`);
       toast.info(
-        `📱 Chargement de la conversation... Attente de 5 secondes...`,
-        { duration: 5000 }
+        `📱 Vérification du chargement de la conversation... Attente de 8 secondes...`,
+        { duration: 8000 }
       );
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 8000));
       console.log(`✅ Délai de chargement terminé. WhatsApp devrait être prêt maintenant.`);
     }
 
