@@ -979,6 +979,149 @@ export function SituationPage({ activities = [], user }) {
     setShowPreview(true);
   };
 
+  // Fonction pour tenter d'envoyer automatiquement le message WhatsApp
+  const tryAutoSendMessage = async (whatsappWindow, maxAttempts = 5) => {
+    if (!whatsappWindow || whatsappWindow.closed) {
+      console.warn("⚠️ Fenêtre WhatsApp fermée, impossible d'automatiser l'envoi");
+      return false;
+    }
+
+    // Essayer plusieurs fois avec des délais croissants (WhatsApp peut prendre du temps à charger)
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        // Attendre que WhatsApp soit complètement chargé (délai croissant)
+        const waitTime = attempt === 1 ? 2000 : attempt === 2 ? 3000 : 4000;
+        console.log(`🔄 Tentative ${attempt}/${maxAttempts} d'envoi automatique (attente ${waitTime}ms)...`);
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+
+        // Essayer d'accéder au document de la fenêtre WhatsApp
+        // Note: Cela peut échouer à cause de CORS si la fenêtre est sur un domaine différent
+        let sendButton = null;
+        let textBox = null;
+
+        try {
+          // Méthode 1: Chercher le bouton d'envoi par différents sélecteurs possibles
+        const selectors = [
+          'button[data-tab="11"]', // Bouton d'envoi WhatsApp
+          'span[data-icon="send"]', // Icône d'envoi
+          'button[aria-label*="Send"]', // Bouton avec aria-label
+          'button[aria-label*="Envoyer"]', // Bouton avec aria-label français
+          '[data-testid="send"]', // Test ID
+          'button[type="submit"]', // Bouton submit
+        ];
+
+        for (const selector of selectors) {
+          try {
+            const elements = whatsappWindow.document.querySelectorAll(selector);
+            if (elements.length > 0) {
+              sendButton = elements[elements.length - 1]; // Prendre le dernier (le plus récent)
+              console.log(`✅ Bouton d'envoi trouvé avec le sélecteur: ${selector}`);
+              break;
+            }
+          } catch (e) {
+            // Continuer avec le prochain sélecteur
+          }
+        }
+
+        // Méthode 2: Chercher la zone de texte pour simuler Entrée
+        const textSelectors = [
+          'div[contenteditable="true"][data-tab="10"]',
+          'div[contenteditable="true"][role="textbox"]',
+          '[contenteditable="true"]',
+        ];
+
+        for (const selector of textSelectors) {
+          try {
+            const elements = whatsappWindow.document.querySelectorAll(selector);
+            if (elements.length > 0) {
+              textBox = elements[elements.length - 1];
+              console.log(`✅ Zone de texte trouvée avec le sélecteur: ${selector}`);
+              break;
+            }
+          } catch (e) {
+            // Continuer avec le prochain sélecteur
+          }
+        }
+
+        // Méthode 3: Essayer de cliquer sur le bouton d'envoi
+        if (sendButton) {
+          console.log("🤖 Tentative d'envoi automatique via clic sur le bouton...");
+          sendButton.click();
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          console.log("✅ Clic sur le bouton d'envoi effectué");
+          return true;
+        }
+
+        // Méthode 4: Simuler la touche Entrée dans la zone de texte
+        if (textBox) {
+          console.log("🤖 Tentative d'envoi automatique via touche Entrée...");
+          textBox.focus();
+          
+          // Créer et dispatcher un événement Entrée
+          const enterEvent = new KeyboardEvent('keydown', {
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            bubbles: true,
+            cancelable: true,
+          });
+          
+          textBox.dispatchEvent(enterEvent);
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          
+          const enterEventUp = new KeyboardEvent('keyup', {
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            bubbles: true,
+            cancelable: true,
+          });
+          
+          textBox.dispatchEvent(enterEventUp);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          console.log("✅ Touche Entrée simulée");
+          return true;
+        }
+
+          // Si aucune méthode n'a fonctionné, continuer à la prochaine tentative
+          if (attempt < maxAttempts) {
+            console.log(`⚠️ Tentative ${attempt} échouée, nouvelle tentative dans 1 seconde...`);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            continue;
+          } else {
+            console.warn("⚠️ Impossible de trouver le bouton d'envoi ou la zone de texte après toutes les tentatives");
+            return false;
+          }
+        } catch (innerError) {
+          // Erreur CORS ou autre dans le try interne - continuer à la prochaine tentative
+          if (attempt < maxAttempts) {
+            console.warn(`⚠️ Tentative ${attempt} échouée (CORS ou protection WhatsApp), nouvelle tentative...`);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            continue;
+          } else {
+            console.warn("⚠️ Automatisation impossible après toutes les tentatives (CORS ou protection WhatsApp):", innerError.message);
+            return false;
+          }
+        }
+      } catch (error) {
+        // Erreur dans le try externe - essayer encore si ce n'est pas la dernière tentative
+        if (attempt < maxAttempts) {
+          console.warn(`⚠️ Tentative ${attempt} échouée (erreur générale), nouvelle tentative...`);
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        } else {
+          console.warn("⚠️ Automatisation impossible après toutes les tentatives:", error.message);
+          return false;
+        }
+      }
+    }
+    
+    // Si on arrive ici, toutes les tentatives ont échoué
+    return false;
+  };
+
   // Ouvrir WhatsApp Web avec le numéro et le message pré-rempli (optimisé pour réduire les délais)
   const openWhatsApp = async (phone, message) => {
     // Nettoyer le numéro de téléphone (enlever les espaces, tirets, etc.)
@@ -1102,17 +1245,24 @@ export function SituationPage({ activities = [], user }) {
       console.log(`✅ Délai initial terminé. WhatsApp devrait être chargé maintenant.`);
     }
 
-    console.log(`✅ WhatsApp Web ouvert avec succès. Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes...`);
+    console.log(`✅ WhatsApp Web ouvert avec succès. Tentative d'envoi automatique...`);
     
-    // Afficher une notification pour guider l'utilisateur
-    toast.info(
-      `📱 WhatsApp Web ouvert pour ${data.name} (${data.phone}). ` +
-      `Cliquez sur "Envoyer" dans la fenêtre WhatsApp, puis attendez ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes...`,
-      { duration: MIN_DELAY_BETWEEN_MESSAGES }
-    );
+    // Tenter d'envoyer automatiquement le message
+    const autoSendSuccess = await tryAutoSendMessage(whatsappWindow);
+    
+    if (autoSendSuccess) {
+      console.log(`✅ Message envoyé automatiquement avec succès !`);
+      toast.success(`✅ Message envoyé automatiquement pour ${data.name}`, { duration: 3000 });
+    } else {
+      console.log(`⚠️ Envoi automatique échoué, l'utilisateur devra cliquer manuellement`);
+      toast.warning(
+        `📱 WhatsApp Web ouvert pour ${data.name} (${data.phone}). ` +
+        `Cliquez sur "Envoyer" dans la fenêtre WhatsApp si le message ne s'est pas envoyé automatiquement.`,
+        { duration: MIN_DELAY_BETWEEN_MESSAGES }
+      );
+    }
 
     // Attendre 10 secondes minimum avant de passer au suivant
-    // Pendant ce temps, l'utilisateur doit cliquer sur "Envoyer" dans WhatsApp Web
     // Ce délai est CRITIQUE pour éviter le bannissement WhatsApp
     console.log(`⏱️ Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes (minimum requis pour éviter le bannissement)...`);
     const startTime = Date.now();
@@ -1183,7 +1333,8 @@ export function SituationPage({ activities = [], user }) {
       `⚠️ IMPORTANT :\n` +
       `- Vous devez AUTORISER LES POPUPS dans votre navigateur pour que cela fonctionne\n` +
       `- Vous devrez être connecté à WhatsApp Web\n` +
-      `- Vous devrez cliquer sur "Envoyer" pour chaque message dans la fenêtre WhatsApp\n` +
+      `- Le système tentera d'envoyer automatiquement chaque message (nouveau !)\n` +
+      `- Si l'envoi automatique échoue, vous devrez cliquer sur "Envoyer" manuellement\n` +
       `- Le système attendra exactement 10 secondes entre chaque message (CRITIQUE pour éviter le bannissement)\n` +
       `- Le premier message attendra 10 secondes supplémentaires pour laisser WhatsApp charger\n` +
       `- Vous pouvez arrêter l'envoi automatique à tout moment avec le bouton "Arrêter"\n\n` +
