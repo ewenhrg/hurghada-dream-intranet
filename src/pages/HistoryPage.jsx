@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, memo, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -42,71 +42,33 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [stopSales, setStopSales] = useState([]);
   const [pushSales, setPushSales] = useState([]);
   
-  // Charger les stop sales et push sales depuis Supabase
+  // Charger les stop sales et push sales depuis Supabase (optimisé : filtrer côté serveur)
   useEffect(() => {
     async function loadStopSalesAndPushSales() {
       if (!supabase) return;
       try {
         const today = new Date().toISOString().split('T')[0]; // Date d'aujourd'hui au format YYYY-MM-DD
 
-        // Charger les stop sales
+        // Charger uniquement les stop sales valides (date >= aujourd'hui) - filtre côté serveur
         const { data: stopSalesData, error: stopSalesError } = await supabase
           .from("stop_sales")
           .select("*")
-          .eq("site_key", SITE_KEY);
+          .eq("site_key", SITE_KEY)
+          .gte("date", today); // Filtrer côté serveur : date >= aujourd'hui
 
         if (!stopSalesError && stopSalesData) {
-          // Filtrer et supprimer les stop sales dont la date est passée
-          const validStopSales = [];
-          const expiredStopSales = [];
-
-          stopSalesData.forEach((stopSale) => {
-            if (stopSale.date < today) {
-              expiredStopSales.push(stopSale.id);
-            } else {
-              validStopSales.push(stopSale);
-            }
-          });
-
-          // Supprimer les stop sales expirés de Supabase
-          if (expiredStopSales.length > 0) {
-            await supabase
-              .from("stop_sales")
-              .delete()
-              .in("id", expiredStopSales);
-          }
-
-          setStopSales(validStopSales);
+          setStopSales(stopSalesData);
         }
 
-        // Charger les push sales
+        // Charger uniquement les push sales valides (date >= aujourd'hui) - filtre côté serveur
         const { data: pushSalesData, error: pushSalesError } = await supabase
           .from("push_sales")
           .select("*")
-          .eq("site_key", SITE_KEY);
+          .eq("site_key", SITE_KEY)
+          .gte("date", today); // Filtrer côté serveur : date >= aujourd'hui
 
         if (!pushSalesError && pushSalesData) {
-          // Filtrer et supprimer les push sales dont la date est passée
-          const validPushSales = [];
-          const expiredPushSales = [];
-
-          pushSalesData.forEach((pushSale) => {
-            if (pushSale.date < today) {
-              expiredPushSales.push(pushSale.id);
-            } else {
-              validPushSales.push(pushSale);
-            }
-          });
-
-          // Supprimer les push sales expirés de Supabase
-          if (expiredPushSales.length > 0) {
-            await supabase
-              .from("push_sales")
-              .delete()
-              .in("id", expiredPushSales);
-          }
-
-          setPushSales(validPushSales);
+          setPushSales(pushSalesData);
         }
       } catch (err) {
         console.error("Erreur lors du chargement des stop sales/push sales:", err);
@@ -115,8 +77,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
     loadStopSalesAndPushSales();
     
-    // Recharger toutes les 10 secondes pour avoir les données à jour
-    const interval = setInterval(loadStopSalesAndPushSales, 10000);
+    // Recharger toutes les 30 secondes au lieu de 10 secondes pour réduire la charge
+    const interval = setInterval(loadStopSalesAndPushSales, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -139,13 +101,27 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     });
   };
 
-  // Mémoriser le calcul des tickets remplis pour éviter de le refaire à chaque render
+  // Mémoriser le calcul des tickets remplis et pré-formater les dates pour éviter les recalculs
   const quotesWithStatus = useMemo(() => {
-    return quotes.map((d) => ({
-      ...d,
-      allTicketsFilled: d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false,
-      hasTickets: d.items?.some((item) => item.ticketNumber && item.ticketNumber.trim()) || false,
-    }));
+    return quotes.map((d) => {
+      // Pré-formater la date de création une seule fois
+      const createdAtDate = new Date(d.createdAt);
+      const formattedCreatedAt = createdAtDate.toLocaleString("fr-FR");
+      
+      // Pré-formater les dates des items
+      const itemsWithFormattedDates = d.items?.map((item) => ({
+        ...item,
+        formattedDate: item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?",
+      })) || [];
+      
+      return {
+        ...d,
+        allTicketsFilled: d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false,
+        hasTickets: d.items?.some((item) => item.ticketNumber && item.ticketNumber.trim()) || false,
+        formattedCreatedAt,
+        itemsWithFormattedDates,
+      };
+    });
   }, [quotes]);
   
   const filtered = useMemo(() => {
@@ -174,54 +150,48 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     return result;
   }, [debouncedQ, quotesWithStatus, statusFilter]);
 
-  // Scroller en haut de la modale de paiement et de la page quand elle s'ouvre
-  useEffect(() => {
-    if (showPaymentModal) {
-      // Scroller la page vers le haut pour que la modale soit visible
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      
-      // Attendre un court instant pour que la modale soit rendue
-      setTimeout(() => {
-        // Scroller le contenu de la modale vers le haut
-        if (paymentModalRef.current) {
-          paymentModalRef.current.scrollTop = 0;
-        }
-        // Scroller vers le conteneur de la modale si nécessaire
-        if (paymentModalContainerRef.current) {
-          paymentModalContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-    }
+  // Scroller en haut de la modale de paiement et de la page quand elle s'ouvre (optimisé avec useCallback)
+  const handlePaymentModalScroll = useCallback(() => {
+    if (!showPaymentModal) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      if (paymentModalRef.current) {
+        paymentModalRef.current.scrollTop = 0;
+      }
+      if (paymentModalContainerRef.current) {
+        paymentModalContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
   }, [showPaymentModal]);
 
-  // Scroller en haut de la modale de modification et de la page quand elle s'ouvre
   useEffect(() => {
-    if (showEditModal) {
-      // Scroller la page vers le haut pour que la modale soit visible
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      
-      // Attendre un court instant pour que la modale soit rendue
-      setTimeout(() => {
-        // Scroller le contenu de la modale vers le haut
-        if (editModalRef.current) {
-          editModalRef.current.scrollTop = 0;
-        }
-        // Scroller vers le conteneur de la modale si nécessaire
-        if (editModalContainerRef.current) {
-          editModalContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-    }
+    handlePaymentModalScroll();
+  }, [handlePaymentModalScroll]);
+
+  // Scroller en haut de la modale de modification et de la page quand elle s'ouvre (optimisé avec useCallback)
+  const handleEditModalScroll = useCallback(() => {
+    if (!showEditModal) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      if (editModalRef.current) {
+        editModalRef.current.scrollTop = 0;
+      }
+      if (editModalContainerRef.current) {
+        editModalContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
   }, [showEditModal]);
 
-  // Fonction pour supprimer automatiquement les devis non payés de plus de 20 jours
   useEffect(() => {
+    handleEditModalScroll();
+  }, [handleEditModalScroll]);
+
+  // Fonction pour supprimer automatiquement les devis non payés de plus de 20 jours (optimisé : mémoïsé)
+  const cleanupOldUnpaidQuotes = useCallback(async () => {
     // Ne pas exécuter si quotes est vide
     if (!quotes || quotes.length === 0) {
       return;
     }
-
-    const cleanupOldUnpaidQuotes = async () => {
       const now = new Date();
       const twentyDaysAgo = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000); // 20 jours en millisecondes
       
@@ -285,11 +255,12 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         }
       }
     };
+  }, [quotes, setQuotes]);
 
-    // Exécuter le nettoyage au chargement de la page historique
+  // Exécuter le nettoyage au chargement de la page historique (une seule fois)
+  useEffect(() => {
     cleanupOldUnpaidQuotes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Exécuter uniquement une fois au montage du composant
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
@@ -409,7 +380,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
                   <div className="flex-1 space-y-2">
                     <p className="text-xs md:text-sm text-slate-600 font-medium">
-                      📅 {new Date(d.createdAt).toLocaleString("fr-FR")}
+                      📅 {d.formattedCreatedAt}
                       {d.createdByName && <span className="ml-2 text-blue-700 font-bold">• Créé par {d.createdByName}</span>}
                     </p>
                     <p className="text-base md:text-lg text-slate-900 font-bold">
@@ -440,7 +411,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                 <div className="flex flex-col gap-5 md:gap-6 pt-4 md:pt-5 border-t-2 border-white/60 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex-1 space-y-3">
                     <div className="space-y-2.5 md:space-y-3">
-                      {d.items.map((li, i) => (
+                      {d.itemsWithFormattedDates.map((li, i) => (
                         <div
                           key={i}
                           className="flex flex-wrap items-center justify-between gap-3 md:gap-4 rounded-xl border-2 border-white/80 bg-white/95 backdrop-blur-sm px-4 md:px-5 py-3 md:py-4 shadow-lg transition-all duration-200 hover:shadow-xl hover:border-blue-200/60"
@@ -450,7 +421,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                               {li.activityName || "Activité ?"}
                             </span>
                             <span className="text-xs md:text-sm text-slate-600 font-medium">
-                              📅 {li.date ? new Date(li.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?"} — 👥 {li.adults ?? 0} adt / {li.children ?? 0} enf / {li.babies ?? 0} bébé(s)
+                              📅 {li.formattedDate} — 👥 {li.adults ?? 0} adt / {li.children ?? 0} enf / {li.babies ?? 0} bébé(s)
                             </span>
                           </div>
                           <div className="flex flex-col items-end gap-2">
@@ -668,7 +639,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     <div className="flex-1">
                       <p className="font-bold text-base md:text-lg text-slate-900 mb-1">{item.activityName}</p>
                       <p className="text-xs md:text-sm text-slate-600 font-medium">
-                        📅 {new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")} — 👥 {item.adults} adulte(s), {item.children} enfant(s), {item.babies ?? 0} bébé(s)
+                        📅 {item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?"} — 👥 {item.adults} adulte(s), {item.children} enfant(s), {item.babies ?? 0} bébé(s)
                       </p>
                     </div>
                     <div className="text-right bg-white/80 rounded-lg px-3 py-2 border-2 border-blue-100/60">

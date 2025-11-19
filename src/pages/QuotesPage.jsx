@@ -189,60 +189,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       try {
         const today = new Date().toISOString().split('T')[0]; // Date d'aujourd'hui au format YYYY-MM-DD
 
-        // Charger les stop sales et push sales en parallèle pour améliorer les performances
+        // Charger les stop sales et push sales en parallèle avec filtrage côté serveur (optimisé)
         const [stopSalesResult, pushSalesResult] = await Promise.all([
-          supabase.from("stop_sales").select("*").eq("site_key", SITE_KEY),
-          supabase.from("push_sales").select("*").eq("site_key", SITE_KEY),
+          supabase.from("stop_sales").select("*").eq("site_key", SITE_KEY).gte("date", today),
+          supabase.from("push_sales").select("*").eq("site_key", SITE_KEY).gte("date", today),
         ]);
 
-        // Traiter les stop sales
+        // Traiter les stop sales (déjà filtrés côté serveur)
         if (!stopSalesResult.error && stopSalesResult.data) {
-          const validStopSales = [];
-          const expiredStopSales = [];
-
-          stopSalesResult.data.forEach((stopSale) => {
-            if (stopSale.date < today) {
-              expiredStopSales.push(stopSale.id);
-            } else {
-              validStopSales.push(stopSale);
-            }
-          });
-
-          // Supprimer les stop sales expirés de Supabase (en arrière-plan, ne pas bloquer)
-          if (expiredStopSales.length > 0) {
-            supabase
-              .from("stop_sales")
-              .delete()
-              .in("id", expiredStopSales)
-              .catch((err) => console.warn("Erreur suppression stop sales expirés:", err));
-          }
-
-          setStopSales(validStopSales);
+          setStopSales(stopSalesResult.data);
         }
 
-        // Traiter les push sales
+        // Traiter les push sales (déjà filtrés côté serveur)
         if (!pushSalesResult.error && pushSalesResult.data) {
-          const validPushSales = [];
-          const expiredPushSales = [];
-
-          pushSalesResult.data.forEach((pushSale) => {
-            if (pushSale.date < today) {
-              expiredPushSales.push(pushSale.id);
-            } else {
-              validPushSales.push(pushSale);
-            }
-          });
-
-          // Supprimer les push sales expirés de Supabase (en arrière-plan, ne pas bloquer)
-          if (expiredPushSales.length > 0) {
-            supabase
-              .from("push_sales")
-              .delete()
-              .in("id", expiredPushSales)
-              .catch((err) => console.warn("Erreur suppression push sales expirés:", err));
-          }
-
-          setPushSales(validPushSales);
+          setPushSales(pushSalesResult.data);
         }
       } catch (err) {
         console.error("Erreur lors du chargement des stop sales/push sales:", err);
