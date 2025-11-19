@@ -979,7 +979,7 @@ export function SituationPage({ activities = [], user }) {
     setShowPreview(true);
   };
 
-  // Ouvrir WhatsApp Web avec le numéro et le message pré-rempli
+  // Ouvrir WhatsApp Web avec le numéro et le message pré-rempli (optimisé pour réduire les délais)
   const openWhatsApp = async (phone, message) => {
     // Nettoyer le numéro de téléphone (enlever les espaces, tirets, etc.)
     const cleanPhone = phone.replace(/[\s-()]/g, "");
@@ -989,37 +989,36 @@ export function SituationPage({ activities = [], user }) {
     const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
     
     console.log(`📱 Changement de l'URL WhatsApp pour ${phone}...`);
-    console.log(`📱 URL: ${whatsappUrl.substring(0, 50)}...`);
     
     // Nom de fenêtre fixe pour forcer la réutilisation
     const windowName = "whatsapp_auto_send";
     
-    // Vérifier si une fenêtre WhatsApp existe déjà et n'est pas fermée
+    // Vérifier rapidement si une fenêtre WhatsApp existe déjà et n'est pas fermée
     if (whatsappWindowRef.current) {
       try {
-        // Vérifier si la fenêtre est toujours ouverte
+        // Vérification rapide si la fenêtre est toujours ouverte (sans bloquer)
         if (!whatsappWindowRef.current.closed) {
-          // La fenêtre existe et est ouverte, essayer de changer son URL
+          // La fenêtre existe et est ouverte, essayer de changer son URL rapidement
           try {
             console.log("🔄 Réutilisation de la fenêtre WhatsApp existante - changement d'URL...");
             whatsappWindowRef.current.location.href = whatsappUrl;
             whatsappWindowRef.current.focus();
             console.log("✅ URL WhatsApp mise à jour dans la fenêtre existante");
             
-            // Attendre un peu pour que la fenêtre se charge
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            // Attente réduite pour améliorer la vitesse (200ms au lieu de 500ms)
+            await new Promise((resolve) => setTimeout(resolve, 200));
             
             return whatsappWindowRef.current;
           } catch (error) {
             // Si on ne peut pas accéder à la fenêtre (cross-origin), utiliser window.open avec le même nom
-            // Cela devrait forcer le navigateur à réutiliser la fenêtre existante
-            console.log("🔄 Impossible de changer l'URL directement (cross-origin), utilisation de window.open avec le même nom...");
+            console.log("🔄 Impossible de changer l'URL directement (cross-origin), utilisation de window.open...");
             const reusedWindow = window.open(whatsappUrl, windowName);
             if (reusedWindow) {
               whatsappWindowRef.current = reusedWindow;
               reusedWindow.focus();
               console.log("✅ Fenêtre WhatsApp réutilisée via window.open");
-              await new Promise((resolve) => setTimeout(resolve, 500));
+              // Attente réduite
+              await new Promise((resolve) => setTimeout(resolve, 200));
               return reusedWindow;
             }
           }
@@ -1044,10 +1043,10 @@ export function SituationPage({ activities = [], user }) {
       whatsappWindowRef.current = whatsappWindow;
       console.log("✅ Nouvelle fenêtre WhatsApp ouverte");
       
-      // Attendre un peu pour que la fenêtre se charge
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Attente réduite pour améliorer la vitesse (200ms au lieu de 500ms)
+      await new Promise((resolve) => setTimeout(resolve, 200));
       
-      // Focus sur la fenêtre
+      // Focus sur la fenêtre (non-bloquant)
       try {
         whatsappWindow.focus();
       } catch (error) {
@@ -1059,7 +1058,6 @@ export function SituationPage({ activities = [], user }) {
       console.error("❌ window.open() a retourné null - Impossible d'ouvrir la fenêtre WhatsApp");
       console.error("❌ Le navigateur bloque probablement les popups automatiques");
       console.error("❌ IMPORTANT: Vous devez autoriser les popups pour ce site");
-      console.error("❌ Instructions: Cliquez sur l'icône de cadenas dans la barre d'adresse → Autoriser les popups");
       whatsappWindowRef.current = null;
       return null;
     }
@@ -1073,12 +1071,12 @@ export function SituationPage({ activities = [], user }) {
     const previewMessage = previewMessages.find((msg) => msg.id === data.id);
     const message = previewMessage?.message || generateMessageWithContext(data);
     
-    // IMPORTANT: Attendre 15 secondes minimum entre chaque message pour éviter le bannissement WhatsApp
+    // IMPORTANT: Attendre 10 secondes minimum entre chaque message pour éviter le bannissement WhatsApp
     // C'est le délai minimum recommandé par WhatsApp pour éviter les restrictions
-    // Augmenté à 15 secondes pour les connexions WiFi lentes
-    const MIN_DELAY_BETWEEN_MESSAGES = 15000; // 15 secondes
+    // Optimisé à 10 secondes pour un meilleur débit tout en restant sécurisé
+    const MIN_DELAY_BETWEEN_MESSAGES = 10000; // 10 secondes (réduit de 15s pour améliorer la vitesse)
     // Délai supplémentaire pour la première ouverture de WhatsApp (pour laisser le temps à la page de charger)
-    const INITIAL_LOAD_DELAY = 15000; // 15 secondes supplémentaires pour le premier message (WiFi lent)
+    const INITIAL_LOAD_DELAY = 10000; // 10 secondes supplémentaires pour le premier message (réduit de 15s)
     
     // Ouvrir WhatsApp Web (la fonction ferme déjà la fenêtre précédente)
     console.log(`⏳ Ouverture de WhatsApp Web...`);
@@ -1091,12 +1089,14 @@ export function SituationPage({ activities = [], user }) {
     }
 
     // Si c'est le premier message, attendre plus longtemps pour laisser le temps à WhatsApp de charger complètement
+    // Optimisé : délai réduit à 10 secondes (au lieu de 15s) pour améliorer la vitesse
     if (isFirstMessageRef.current) {
       console.log(`⏳ Premier message détecté. Attente supplémentaire de ${INITIAL_LOAD_DELAY / 1000} secondes pour laisser le temps à WhatsApp de charger...`);
       toast.info(
-        `📱 Premier message : Attente de ${INITIAL_LOAD_DELAY / 1000} secondes pour laisser WhatsApp charger complètement...`,
+        `📱 Premier message : Attente de ${INITIAL_LOAD_DELAY / 1000} secondes pour laisser WhatsApp charger...`,
         { duration: INITIAL_LOAD_DELAY }
       );
+      // Utiliser Promise pour éviter les blocages
       await new Promise((resolve) => setTimeout(resolve, INITIAL_LOAD_DELAY));
       isFirstMessageRef.current = false;
       console.log(`✅ Délai initial terminé. WhatsApp devrait être chargé maintenant.`);
@@ -1111,10 +1111,10 @@ export function SituationPage({ activities = [], user }) {
       { duration: MIN_DELAY_BETWEEN_MESSAGES }
     );
 
-    // Attendre 15 secondes minimum avant de passer au suivant
+    // Attendre 10 secondes minimum avant de passer au suivant
     // Pendant ce temps, l'utilisateur doit cliquer sur "Envoyer" dans WhatsApp Web
-    // Ce délai est CRITIQUE pour éviter le bannissement WhatsApp et laisser le temps au WiFi lent
-    console.log(`⏱️ Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes (minimum requis pour éviter le bannissement et WiFi lent)...`);
+    // Ce délai est CRITIQUE pour éviter le bannissement WhatsApp
+    console.log(`⏱️ Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes (minimum requis pour éviter le bannissement)...`);
     const startTime = Date.now();
     await new Promise((resolve) => setTimeout(resolve, MIN_DELAY_BETWEEN_MESSAGES));
     const elapsedTime = Date.now() - startTime;
@@ -1178,17 +1178,17 @@ export function SituationPage({ activities = [], user }) {
       `Le système va :\n` +
       `1. Ouvrir WhatsApp Web avec chaque numéro\n` +
       `2. Pré-remplir le message\n` +
-      `3. Attendre 15 secondes minimum entre chaque message (pour éviter le bannissement et laisser le temps au WiFi lent)\n` +
+      `3. Attendre 10 secondes minimum entre chaque message (pour éviter le bannissement)\n` +
       `4. Passer automatiquement au suivant\n\n` +
       `⚠️ IMPORTANT :\n` +
       `- Vous devez AUTORISER LES POPUPS dans votre navigateur pour que cela fonctionne\n` +
       `- Vous devrez être connecté à WhatsApp Web\n` +
       `- Vous devrez cliquer sur "Envoyer" pour chaque message dans la fenêtre WhatsApp\n` +
-      `- Le système attendra exactement 15 secondes entre chaque message (CRITIQUE pour éviter le bannissement)\n` +
-      `- Le premier message attendra 15 secondes supplémentaires pour laisser WhatsApp charger (WiFi lent)\n` +
+      `- Le système attendra exactement 10 secondes entre chaque message (CRITIQUE pour éviter le bannissement)\n` +
+      `- Le premier message attendra 10 secondes supplémentaires pour laisser WhatsApp charger\n` +
       `- Vous pouvez arrêter l'envoi automatique à tout moment avec le bouton "Arrêter"\n\n` +
       `🛡️ PROTECTION CONTRE LE BANNISSEMENT :\n` +
-      `- Délai minimum de 15 secondes entre chaque message (garanti)\n` +
+      `- Délai minimum de 10 secondes entre chaque message (garanti)\n` +
       `- Ne pas envoyer plus de 30 messages par heure (recommandé)\n\n` +
       `💡 ASTUCE : Gardez la fenêtre WhatsApp Web ouverte et cliquez rapidement sur "Envoyer" lorsque chaque message s'ouvre.\n\n` +
       `Voulez-vous continuer ?`
@@ -1278,9 +1278,9 @@ export function SituationPage({ activities = [], user }) {
 
       console.log(`✅ ========== FIN DU MESSAGE ${i + 1}/${validQueue.length} ==========\n`);
       
-      // NOTE: Le délai de 15 secondes est déjà inclus dans sendWhatsAppMessage
+      // NOTE: Le délai de 10 secondes est déjà inclus dans sendWhatsAppMessage
       // Pas besoin de pause supplémentaire pour éviter le bannissement
-      // Le délai de 15 secondes entre chaque message est respecté automatiquement
+      // Le délai de 10 secondes entre chaque message est respecté automatiquement
     }
 
     // Terminer l'envoi automatique

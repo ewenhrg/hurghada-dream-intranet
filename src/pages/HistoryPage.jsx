@@ -934,6 +934,16 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
 // Composant modale de modification de devis
 function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, user, canModifyActivities, stopSales = [], pushSales = [], onClose, onSave, editModalRef, editModalContainerRef }) {
+  // Map des activités pour des recherches O(1) au lieu de O(n)
+  const activitiesMap = useMemo(() => {
+    const map = new Map();
+    activities.forEach((activity) => {
+      if (activity.id) map.set(activity.id, activity);
+      if (activity.supabase_id) map.set(activity.supabase_id, activity);
+    });
+    return map;
+  }, [activities]);
+
   const blankItem = () => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
@@ -966,10 +976,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     setItems((prev) => prev.filter((_, idx) => idx !== i));
   }
 
-  // Calcul des totaux (similaire à QuotesPage)
+  // Calcul des totaux (similaire à QuotesPage) - optimisé avec Map
   const computed = useMemo(() => {
     return items.map((it) => {
-      const act = activities.find((a) => a.id === it.activityId);
+      const act = activitiesMap.get(it.activityId);
       const weekday = it.date ? new Date(it.date + "T12:00:00").getDay() : null;
       const available = act && weekday != null ? !!act.availableDays?.[weekday] : true;
       const transferInfo = act && client.neighborhood ? act.transfers?.[client.neighborhood] || null : null;
@@ -1077,7 +1087,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         currency: currencyCode,
       };
     });
-  }, [items, activities, client.neighborhood]);
+  }, [items, activitiesMap, client.neighborhood]);
 
   const grandCurrency = computed.find((c) => c.currency)?.currency || "EUR";
   const grandTotal = computed.reduce((s, c) => s + (c.lineTotal || 0), 0);

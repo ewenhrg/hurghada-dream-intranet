@@ -336,10 +336,10 @@ export default function App() {
     // Synchronisation immédiate
     syncWithSupabase();
 
-    // Synchronisation des activités toutes les 10 secondes (optimisé: réduit de 3s à 10s pour moins de charge)
+    // Synchronisation des activités toutes les 30 secondes (optimisé: réduit pour moins de charge)
     const interval = setInterval(() => {
       syncWithSupabase();
-    }, 10000);
+    }, 30000);
 
     // Nettoyer l'intervalle au démontage
     return () => {
@@ -354,10 +354,10 @@ export default function App() {
     // Charger immédiatement
     loadPendingRequestsCount();
 
-    // Recharger toutes les 10 secondes
+    // Recharger toutes les 30 secondes au lieu de 10 secondes pour réduire la charge
     const interval = setInterval(() => {
       loadPendingRequestsCount();
-    }, 10000);
+    }, 30000);
 
     return () => {
       clearInterval(interval);

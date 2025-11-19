@@ -13,6 +13,16 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   
   // Vérifier si l'utilisateur peut modifier/supprimer les activités (seulement Léa et Ewen)
   const canModifyActivities = user?.name === "Léa" || user?.name === "Ewen";
+
+  // Map des activités pour des recherches O(1) au lieu de O(n)
+  const activitiesMap = useMemo(() => {
+    const map = new Map();
+    activities.forEach((activity) => {
+      if (activity.id) map.set(activity.id, activity);
+      if (activity.supabase_id) map.set(activity.supabase_id, activity);
+    });
+    return map;
+  }, [activities]);
   
   // Charger le formulaire sauvegardé depuis localStorage
   const [isPageReload] = useState(() => {
@@ -131,8 +141,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       toast.warning("Vous n'avez pas la permission d'ajouter des activités.");
       return;
     }
-    // Trouver l'activité en cours de modification pour récupérer son supabase_id
-    const existingActivity = isEditing ? activities.find((a) => a.id === editingId) : null;
+    // Trouver l'activité en cours de modification pour récupérer son supabase_id (optimisé avec Map)
+    const existingActivity = isEditing ? activitiesMap.get(editingId) : null;
     const supabaseId = existingActivity?.supabase_id;
     
     const activityData = {
@@ -297,7 +307,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       toast.warning("Seuls Léa et Ewen peuvent supprimer les activités.");
       return;
     }
-    const activityToDelete = activities.find((a) => a.id === id);
+    const activityToDelete = activitiesMap.get(id);
     const activityName = activityToDelete?.name || "cette activité";
     if (!window.confirm(`Êtes-vous sûr de vouloir supprimer l'activité "${activityName}" ?\n\nCette action est irréversible et supprimera définitivement l'activité.`)) return;
     const next = activities.filter((a) => a.id !== id);

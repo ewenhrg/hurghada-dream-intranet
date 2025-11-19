@@ -13,6 +13,16 @@ export function StopSalePage({ activities, user }) {
   const [type, setType] = useState("stop"); // "stop" ou "push"
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Map des activités pour des recherches O(1) au lieu de O(n)
+  const activitiesMap = useMemo(() => {
+    const map = new Map();
+    activities.forEach((activity) => {
+      if (activity.id) map.set(activity.id, activity);
+      if (activity.supabase_id) map.set(activity.supabase_id, activity);
+    });
+    return map;
+  }, [activities]);
+
   // Vérifier si l'utilisateur peut modifier (Ewen, Léa ou situation)
   const canEdit = useMemo(() => {
     return user?.name === "Ewen" || user?.name === "Léa" || user?.canAccessSituation || user?.name === "situation";
@@ -125,7 +135,7 @@ export function StopSalePage({ activities, user }) {
     setLoading(true);
 
     try {
-      const activity = activities.find((a) => a.id === selectedActivityId);
+      const activity = activitiesMap.get(selectedActivityId);
       if (!activity) {
         toast.error("Activité non trouvée.");
         setLoading(false);

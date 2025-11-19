@@ -7,6 +7,15 @@ import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
 
 export function ModificationsPage({ quotes, setQuotes, activities, user }) {
+  // Map des activités pour des recherches O(1) au lieu de O(n)
+  const activitiesMap = useMemo(() => {
+    const map = new Map();
+    activities.forEach((activity) => {
+      if (activity.id) map.set(activity.id, activity);
+      if (activity.supabase_id) map.set(activity.supabase_id, activity);
+    });
+    return map;
+  }, [activities]);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
   const [showModifyModal, setShowModifyModal] = useState(false);
@@ -84,8 +93,8 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
       
       updatedItems[selectedItemIndex] = cancelledItem;
     } else if (modifyType === "modify" && newActivityId) {
-      // Modifier l'activité (la remplacer)
-      const newActivity = activities.find((a) => a.id === newActivityId);
+      // Modifier l'activité (la remplacer) - optimisé avec Map
+      const newActivity = activitiesMap.get(newActivityId);
       if (!newActivity) {
         toast.error("Activité non trouvée");
         return;
