@@ -682,8 +682,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                             setSelectedQuote(d);
                             setEditClient({
                               ...d.client,
-                              arrivalDate: d.client?.arrivalDate || "",
-                              departureDate: d.client?.departureDate || "",
+                              arrivalDate: d.client?.arrivalDate || d.clientArrivalDate || "",
+                              departureDate: d.client?.departureDate || d.clientDepartureDate || "",
                             });
                             setEditItems(
                               d.items.map((item) => ({
@@ -1050,8 +1050,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   client_hotel: finalUpdatedQuote.client.hotel || "",
                   client_room: finalUpdatedQuote.client.room || "",
                   client_neighborhood: finalUpdatedQuote.client.neighborhood || "",
-                  client_arrival_date: finalUpdatedQuote.client.arrivalDate || "",
-                  client_departure_date: finalUpdatedQuote.client.departureDate || "",
+                  client_arrival_date: finalUpdatedQuote.client.arrivalDate || null,
+                  client_departure_date: finalUpdatedQuote.client.departureDate || null,
                   notes: finalUpdatedQuote.notes || "",
                   total: finalUpdatedQuote.total,
                   currency: finalUpdatedQuote.currency,
@@ -1384,6 +1384,26 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">📅 Date d'arrivée</label>
+                <TextInput 
+                  type="date"
+                  value={client.arrivalDate || ""} 
+                  onChange={(e) => setClient((c) => ({ ...c, arrivalDate: e.target.value }))} 
+                  className="text-base"
+                />
+              </div>
+              <div>
+                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">📅 Date de départ</label>
+                <TextInput 
+                  type="date"
+                  value={client.departureDate || ""} 
+                  onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
+                  className="text-base"
+                />
               </div>
             </div>
           </div>
