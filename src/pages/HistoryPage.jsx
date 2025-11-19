@@ -13,19 +13,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending", "modified"
-  
-  // États pour la recherche avancée
-  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
-  const [searchName, setSearchName] = useState("");
-  const [searchHotel, setSearchHotel] = useState("");
-  const [searchTicket, setSearchTicket] = useState("");
-  const [searchDateFrom, setSearchDateFrom] = useState("");
-  const [searchDateTo, setSearchDateTo] = useState("");
-  
-  // Debounce pour les recherches avancées
-  const debouncedSearchName = useDebounce(searchName, 300);
-  const debouncedSearchHotel = useDebounce(searchHotel, 300);
-  const debouncedSearchTicket = useDebounce(searchTicket, 300);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
@@ -184,51 +171,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       result = result.filter((d) => (d.client?.phone || "").replace(/\D+/g, "").includes(needle));
     }
     
-    // Recherche avancée - Nom de client
-    if (debouncedSearchName.trim()) {
-      const nameLower = debouncedSearchName.toLowerCase().trim();
-      result = result.filter((d) => 
-        (d.client?.name || "").toLowerCase().includes(nameLower)
-      );
-    }
-    
-    // Recherche avancée - Hôtel
-    if (debouncedSearchHotel.trim()) {
-      const hotelLower = debouncedSearchHotel.toLowerCase().trim();
-      result = result.filter((d) => 
-        (d.client?.hotel || "").toLowerCase().includes(hotelLower)
-      );
-    }
-    
-    // Recherche avancée - Numéro de ticket
-    if (debouncedSearchTicket.trim()) {
-      const ticketLower = debouncedSearchTicket.toLowerCase().trim();
-      result = result.filter((d) => 
-        d.items?.some((item) => 
-          (item.ticketNumber || "").toLowerCase().includes(ticketLower)
-        )
-      );
-    }
-    
-    // Recherche avancée - Date de création (du... au...)
-    if (searchDateFrom) {
-      const fromDate = new Date(searchDateFrom + "T00:00:00");
-      result = result.filter((d) => {
-        const quoteDate = new Date(d.createdAt);
-        return quoteDate >= fromDate;
-      });
-    }
-    
-    if (searchDateTo) {
-      const toDate = new Date(searchDateTo + "T23:59:59");
-      result = result.filter((d) => {
-        const quoteDate = new Date(d.createdAt);
-        return quoteDate <= toDate;
-      });
-    }
-    
     return result;
-  }, [debouncedQ, debouncedSearchName, debouncedSearchHotel, debouncedSearchTicket, searchDateFrom, searchDateTo, quotesWithStatus, statusFilter]);
+  }, [debouncedQ, quotesWithStatus, statusFilter]);
 
   // Scroller en haut de la modale de paiement et de la page quand elle s'ouvre
   useEffect(() => {
@@ -395,100 +339,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
               🔄 Modifié
             </Pill>
           </div>
-        </div>
-        
-        {/* Recherche avancée */}
-        <div className="border-2 border-blue-200/60 rounded-2xl bg-gradient-to-br from-blue-50/90 to-indigo-50/70 backdrop-blur-sm shadow-lg">
-          <button
-            onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-            className="w-full flex items-center justify-between gap-3 p-4 md:p-5 hover:bg-blue-50/60 transition-all duration-200 rounded-xl"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-xl">🔍</span>
-              <span className="font-bold text-sm md:text-base text-slate-800">Recherche avancée</span>
-              {(debouncedSearchName || debouncedSearchHotel || debouncedSearchTicket || searchDateFrom || searchDateTo) && (
-                <span className="px-3 py-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold rounded-full shadow-md">
-                  Active
-                </span>
-              )}
-            </div>
-            <span className="text-slate-600 text-sm md:text-base font-semibold">
-              {showAdvancedSearch ? "▼ Réduire" : "▶ Développer"}
-            </span>
-          </button>
-          
-          {showAdvancedSearch && (
-            <div className="p-5 md:p-6 pt-0 space-y-4 md:space-y-5 border-t-2 border-blue-200/60 mt-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-                <div>
-                  <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Nom du client</label>
-                  <TextInput
-                    placeholder="Rechercher par nom..."
-                    value={searchName}
-                    onChange={(e) => setSearchName(e.target.value)}
-                    className="w-full text-base"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Hôtel</label>
-                  <TextInput
-                    placeholder="Rechercher par hôtel..."
-                    value={searchHotel}
-                    onChange={(e) => setSearchHotel(e.target.value)}
-                    className="w-full text-base"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Numéro de ticket</label>
-                  <TextInput
-                    placeholder="Rechercher par ticket..."
-                    value={searchTicket}
-                    onChange={(e) => setSearchTicket(e.target.value)}
-                    className="w-full text-base"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-                <div>
-                  <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Date de création (du)</label>
-                  <TextInput
-                    type="date"
-                    value={searchDateFrom}
-                    onChange={(e) => setSearchDateFrom(e.target.value)}
-                    className="w-full text-base"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Date de création (au)</label>
-                  <TextInput
-                    type="date"
-                    value={searchDateTo}
-                    onChange={(e) => setSearchDateTo(e.target.value)}
-                    className="w-full text-base"
-                  />
-                </div>
-              </div>
-              
-              {(debouncedSearchName || debouncedSearchHotel || debouncedSearchTicket || searchDateFrom || searchDateTo) && (
-                <div className="flex justify-end pt-2 border-t border-blue-200/60">
-                  <GhostBtn
-                    onClick={() => {
-                      setSearchName("");
-                      setSearchHotel("");
-                      setSearchTicket("");
-                      setSearchDateFrom("");
-                      setSearchDateTo("");
-                    }}
-                    variant="danger"
-                    size="sm"
-                  >
-                    🧹 Réinitialiser les filtres
-                  </GhostBtn>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
       
