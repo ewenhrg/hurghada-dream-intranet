@@ -1149,8 +1149,9 @@ export function SituationPage({ activities = [], user }) {
             whatsappWindowRef.current = reusedWindow;
             reusedWindow.focus();
             console.log("✅ Fenêtre WhatsApp réutilisée - URL mise à jour");
-            // Attente réduite pour améliorer la vitesse
-            await new Promise((resolve) => setTimeout(resolve, 200));
+            // Attente importante pour laisser WhatsApp charger la nouvelle conversation (8 secondes)
+            console.log("⏳ Attente de 8 secondes pour laisser WhatsApp charger la nouvelle conversation...");
+            await new Promise((resolve) => setTimeout(resolve, 8000));
             return reusedWindow;
           }
         } else {
@@ -1179,8 +1180,9 @@ export function SituationPage({ activities = [], user }) {
         console.log("✅ Fenêtre WhatsApp ouverte/réutilisée avec succès");
       }
       
-      // Attente réduite pour améliorer la vitesse
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // Attente pour laisser WhatsApp charger (8 secondes pour une nouvelle fenêtre)
+      console.log("⏳ Attente de 8 secondes pour laisser WhatsApp charger...");
+      await new Promise((resolve) => setTimeout(resolve, 8000));
       
       // Focus sur la fenêtre (non-bloquant)
       try {
@@ -1236,6 +1238,15 @@ export function SituationPage({ activities = [], user }) {
       await new Promise((resolve) => setTimeout(resolve, INITIAL_LOAD_DELAY));
       isFirstMessageRef.current = false;
       console.log(`✅ Délai initial terminé. WhatsApp devrait être chargé maintenant.`);
+    } else {
+      // Pour les messages suivants, attendre encore 5 secondes supplémentaires pour s'assurer que WhatsApp a bien chargé la nouvelle conversation
+      console.log(`⏳ Message suivant détecté. Attente supplémentaire de 5 secondes pour s'assurer que WhatsApp a bien chargé la nouvelle conversation...`);
+      toast.info(
+        `📱 Chargement de la conversation... Attente de 5 secondes...`,
+        { duration: 5000 }
+      );
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      console.log(`✅ Délai de chargement terminé. WhatsApp devrait être prêt maintenant.`);
     }
 
     console.log(`✅ WhatsApp Web ouvert avec succès. Tentative d'envoi automatique...`);
