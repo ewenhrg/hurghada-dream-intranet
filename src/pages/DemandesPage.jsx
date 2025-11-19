@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, NEIGHBORHOODS } from "../constants";
 import { TextInput, PrimaryBtn, GhostBtn, Pill } from "../components/ui";
@@ -12,16 +12,18 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
   const [statusFilter, setStatusFilter] = useState("pending"); // pending, converted, all
   const [generatedLink, setGeneratedLink] = useState("");
 
-  // Charger les demandes depuis Supabase
-  useEffect(() => {
-    loadRequests();
-    
-    // Recharger toutes les 10 secondes
-    const interval = setInterval(loadRequests, 10000);
-    return () => clearInterval(interval);
-  }, []);
+  // Map des activités pour des recherches O(1) au lieu de O(n)
+  const activitiesMap = useMemo(() => {
+    const map = new Map();
+    activities.forEach((activity) => {
+      if (activity.id) map.set(activity.id.toString(), activity);
+      if (activity.supabase_id) map.set(activity.supabase_id.toString(), activity);
+    });
+    return map;
+  }, [activities]);
 
-  async function loadRequests() {
+  // Charger les demandes depuis Supabase (optimisé avec useCallback)
+  const loadRequests = useCallback(async () => {
     if (!supabase) {
       setLoading(false);
       return;
@@ -55,9 +57,17 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
     } finally {
       setLoading(false);
     }
-  }
+  }, [statusFilter]);
 
-  // Filtrer les demandes par recherche
+  useEffect(() => {
+    loadRequests();
+    
+    // Recharger toutes les 30 secondes au lieu de 10 secondes pour réduire la charge
+    const interval = setInterval(loadRequests, 30000);
+    return () => clearInterval(interval);
+  }, [loadRequests]);
+
+  // Filtrer les demandes par recherche (optimisé avec useMemo)
   const filteredRequests = useMemo(() => {
     if (!searchQuery.trim()) return requests;
 
@@ -71,20 +81,15 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
     );
   }, [requests, searchQuery]);
 
-  // Obtenir le nom d'une activité par son ID
-  const getActivityName = (activityId) => {
+  // Obtenir le nom d'une activité par son ID (optimisé avec Map O(1))
+  const getActivityName = useCallback((activityId) => {
     if (!activityId) return "Activité inconnue";
     
-    // Chercher par ID local
-    let activity = activities.find((a) => a.id?.toString() === activityId?.toString());
-    
-    // Si pas trouvé, chercher par supabase_id
-    if (!activity) {
-      activity = activities.find((a) => a.supabase_id?.toString() === activityId?.toString());
-    }
+    const activityIdStr = activityId.toString();
+    const activity = activitiesMap.get(activityIdStr);
     
     return activity?.name || `Activité (ID: ${activityId})`;
-  };
+  }, [activitiesMap]);
 
 
   // Copier le lien générique (ou le lien spécifique si token fourni)

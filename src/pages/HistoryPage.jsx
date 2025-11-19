@@ -192,69 +192,69 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     if (!quotes || quotes.length === 0) {
       return;
     }
-      const now = new Date();
-      const twentyDaysAgo = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000); // 20 jours en millisecondes
+    
+    const now = new Date();
+    const twentyDaysAgo = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000); // 20 jours en millisecondes
+    
+    // Identifier les devis à supprimer
+    const quotesToDelete = quotes.filter((quote) => {
+      // Vérifier si le devis est non payé (tous les tickets ne sont pas remplis)
+      const allTicketsFilled = quote.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false;
+      if (allTicketsFilled) {
+        return false; // Le devis est payé, ne pas le supprimer
+      }
       
-      // Identifier les devis à supprimer
-      const quotesToDelete = quotes.filter((quote) => {
-        // Vérifier si le devis est non payé (tous les tickets ne sont pas remplis)
-        const allTicketsFilled = quote.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false;
-        if (allTicketsFilled) {
-          return false; // Le devis est payé, ne pas le supprimer
-        }
-        
-        // Vérifier si le devis a été créé il y a plus de 20 jours
-        const createdAt = new Date(quote.createdAt);
-        if (isNaN(createdAt.getTime())) {
-          return false; // Date invalide, ne pas supprimer
-        }
-        
-        return createdAt < twentyDaysAgo;
-      });
+      // Vérifier si le devis a été créé il y a plus de 20 jours
+      const createdAt = new Date(quote.createdAt);
+      if (isNaN(createdAt.getTime())) {
+        return false; // Date invalide, ne pas supprimer
+      }
+      
+      return createdAt < twentyDaysAgo;
+    });
 
-      if (quotesToDelete.length > 0) {
-        console.log(`🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de 20 jours`);
-        
-        // Supprimer de la liste locale
-        const remainingQuotes = quotes.filter((quote) => 
-          !quotesToDelete.some((toDelete) => toDelete.id === quote.id)
-        );
-        setQuotes(remainingQuotes);
-        saveLS(LS_KEYS.quotes, remainingQuotes);
+    if (quotesToDelete.length > 0) {
+      console.log(`🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de 20 jours`);
+      
+      // Supprimer de la liste locale
+      const remainingQuotes = quotes.filter((quote) => 
+        !quotesToDelete.some((toDelete) => toDelete.id === quote.id)
+      );
+      setQuotes(remainingQuotes);
+      saveLS(LS_KEYS.quotes, remainingQuotes);
 
-        // Supprimer de Supabase si configuré
-        if (supabase) {
-          for (const quoteToDelete of quotesToDelete) {
-            try {
-              let deleteQuery = supabase
-                .from("quotes")
-                .delete()
-                .eq("site_key", SITE_KEY);
+      // Supprimer de Supabase si configuré
+      if (supabase) {
+        for (const quoteToDelete of quotesToDelete) {
+          try {
+            let deleteQuery = supabase
+              .from("quotes")
+              .delete()
+              .eq("site_key", SITE_KEY);
 
-              // Utiliser supabase_id en priorité pour identifier le devis à supprimer
-              if (quoteToDelete.supabase_id) {
-                deleteQuery = deleteQuery.eq("id", quoteToDelete.supabase_id);
-              } else {
-                // Sinon, utiliser client_phone + created_at (pour compatibilité avec les anciens devis)
-                deleteQuery = deleteQuery
-                  .eq("client_phone", quoteToDelete.client?.phone || "")
-                  .eq("created_at", quoteToDelete.createdAt);
-              }
-              
-              const { error: deleteError } = await deleteQuery;
-              
-              if (deleteError) {
-                console.warn("⚠️ Erreur suppression Supabase:", deleteError);
-              } else {
-                console.log(`✅ Devis supprimé de Supabase (ID: ${quoteToDelete.supabase_id || quoteToDelete.id})`);
-              }
-            } catch (deleteErr) {
-              console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
+            // Utiliser supabase_id en priorité pour identifier le devis à supprimer
+            if (quoteToDelete.supabase_id) {
+              deleteQuery = deleteQuery.eq("id", quoteToDelete.supabase_id);
+            } else {
+              // Sinon, utiliser client_phone + created_at (pour compatibilité avec les anciens devis)
+              deleteQuery = deleteQuery
+                .eq("client_phone", quoteToDelete.client?.phone || "")
+                .eq("created_at", quoteToDelete.createdAt);
             }
+            
+            const { error: deleteError } = await deleteQuery;
+            
+            if (deleteError) {
+              console.warn("⚠️ Erreur suppression Supabase:", deleteError);
+            } else {
+              console.log(`✅ Devis supprimé de Supabase (ID: ${quoteToDelete.supabase_id || quoteToDelete.id})`);
+            }
+          } catch (deleteErr) {
+            console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
           }
         }
       }
-    };
+    }
   }, [quotes, setQuotes]);
 
   // Exécuter le nettoyage au chargement de la page historique (une seule fois)
