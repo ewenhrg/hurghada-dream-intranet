@@ -4,6 +4,21 @@ export default {
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
+  // Optimisation : purge CSS agressive en production
+  purge: {
+    enabled: process.env.NODE_ENV === 'production',
+    content: [
+      "./index.html",
+      "./src/**/*.{js,jsx,ts,tsx}",
+    ],
+    // Options de purge pour réduire la taille
+    options: {
+      safelist: [
+        // Garder les classes dynamiques importantes
+        /^(bg|text|border)-(primary|secondary|accent|success|warning|danger|info)/,
+      ],
+    },
+  },
   theme: {
     extend: {
       colors: {
@@ -27,4 +42,9 @@ export default {
     },
   },
   plugins: [],
+  // Optimisation : réduire la taille du CSS
+  corePlugins: {
+    // Désactiver les plugins non utilisés si nécessaire
+    preflight: true,
+  },
 };

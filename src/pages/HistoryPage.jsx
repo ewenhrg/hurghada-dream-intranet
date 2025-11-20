@@ -102,23 +102,41 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     });
   };
 
+  // Cache pour les dates formatées (persiste entre les renders)
+  const dateFormatterCacheRef = useRef(new Map());
+  
   // Mémoriser le calcul des tickets remplis et pré-formater les dates pour éviter les recalculs
+  // Optimisation : utiliser Map pour éviter les recalculs de dates
   const quotesWithStatus = useMemo(() => {
+    const dateFormatterCache = dateFormatterCacheRef.current;
     return quotes.map((d) => {
-      // Pré-formater la date de création une seule fois
-      const createdAtDate = new Date(d.createdAt);
-      const formattedCreatedAt = createdAtDate.toLocaleString("fr-FR");
+      // Pré-formater la date de création une seule fois avec cache
+      let formattedCreatedAt = dateFormatterCache.get(d.createdAt);
+      if (!formattedCreatedAt) {
+        const createdAtDate = new Date(d.createdAt);
+        formattedCreatedAt = createdAtDate.toLocaleString("fr-FR");
+        dateFormatterCache.set(d.createdAt, formattedCreatedAt);
+      }
       
-      // Pré-formater les dates des items
-      const itemsWithFormattedDates = d.items?.map((item) => ({
-        ...item,
-        formattedDate: item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?",
-      })) || [];
+      // Pré-formater les dates des items avec cache
+      const itemsWithFormattedDates = d.items?.map((item) => {
+        if (!item.date) return { ...item, formattedDate: "Date ?" };
+        let formattedDate = dateFormatterCache.get(item.date);
+        if (!formattedDate) {
+          formattedDate = new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR");
+          dateFormatterCache.set(item.date, formattedDate);
+        }
+        return { ...item, formattedDate };
+      }) || [];
+      
+      // Calculer les statuts une seule fois
+      const allTicketsFilled = d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false;
+      const hasTickets = d.items?.some((item) => item.ticketNumber && item.ticketNumber.trim()) || false;
       
       return {
         ...d,
-        allTicketsFilled: d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false,
-        hasTickets: d.items?.some((item) => item.ticketNumber && item.ticketNumber.trim()) || false,
+        allTicketsFilled,
+        hasTickets,
         formattedCreatedAt,
         itemsWithFormattedDates,
       };

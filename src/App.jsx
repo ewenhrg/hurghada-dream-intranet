@@ -329,7 +329,7 @@ export default function App() {
          setTab("devis");
     
     toast.success("Demande chargée dans le formulaire de devis !");
-  }, [activitiesMap, activities, loadPendingRequestsCount]);
+  }, [activitiesMap, activities, loadPendingRequestsCount, user?.name, setQuoteDraft, setTab]);
 
   // charger supabase au montage et synchronisation des activités toutes les 10 secondes (optimisé)
   useEffect(() => {

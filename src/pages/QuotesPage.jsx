@@ -790,10 +790,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     });
   }, [items, activitiesMap, client.neighborhood, stopSalesMap, pushSalesMap]);
 
-  const grandCurrency = computed.find((c) => c.currency)?.currency || "EUR";
-  const grandTotal = computed.reduce((s, c) => s + (c.lineTotal || 0), 0);
-  const grandTotalCash = Math.round(grandTotal); // Prix espèces (arrondi sans centimes)
-  const grandTotalCard = calculateCardPrice(grandTotal); // Prix carte (espèces + 3% arrondi à l'euro supérieur)
+  // Mémoïser les calculs de totaux pour éviter les recalculs inutiles
+  const grandCurrency = useMemo(() => computed.find((c) => c.currency)?.currency || "EUR", [computed]);
+  const grandTotal = useMemo(() => computed.reduce((s, c) => s + (c.lineTotal || 0), 0), [computed]);
+  const grandTotalCash = useMemo(() => Math.round(grandTotal), [grandTotal]); // Prix espèces (arrondi sans centimes)
+  const grandTotalCard = useMemo(() => calculateCardPrice(grandTotal), [grandTotal]); // Prix carte (espèces + 3% arrondi à l'euro supérieur)
 
   // Récupérer toutes les dates utilisées dans le formulaire en cours avec leurs activités
   const usedDates = useMemo(() => {

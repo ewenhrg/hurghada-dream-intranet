@@ -16,11 +16,25 @@ export function uuid() {
   return "hd-" + Math.random().toString(36).slice(2) + "-" + Date.now().toString(36);
 }
 
+// Formater le prix avec centimes (optimisé avec cache)
 export function currency(n, curr = "EUR") {
   if (n === undefined || n === null) n = 0;
   const num = Number(n) || 0;
+  
+  // Utiliser le cache pour éviter de recréer les formatters
+  const cacheKey = `${curr}_withCents`;
+  let formatter = numberFormatterCache.get(cacheKey);
+  if (!formatter) {
+    try {
+      formatter = new Intl.NumberFormat("fr-FR", { style: "currency", currency: curr });
+      numberFormatterCache.set(cacheKey, formatter);
+    } catch {
+      return `${num.toFixed(2)} ${curr}`;
+    }
+  }
+  
   try {
-    return new Intl.NumberFormat("fr-FR", { style: "currency", currency: curr }).format(num);
+    return formatter.format(num);
   } catch {
     return `${num.toFixed(2)} ${curr}`;
   }
@@ -33,12 +47,33 @@ export function calculateCardPrice(cashPrice) {
   return Math.ceil(priceWithFees);
 }
 
-// Formater le prix sans centimes
+// Cache pour les formatters de nombres (évite de recréer les formatters)
+const numberFormatterCache = new Map();
+
+// Formater le prix sans centimes (optimisé avec cache)
 export function currencyNoCents(n, curr = "EUR") {
   if (n === undefined || n === null) n = 0;
   const num = Math.round(Number(n) || 0);
+  
+  // Utiliser le cache pour éviter de recréer les formatters
+  const cacheKey = `${curr}_noCents`;
+  let formatter = numberFormatterCache.get(cacheKey);
+  if (!formatter) {
+    try {
+      formatter = new Intl.NumberFormat("fr-FR", { 
+        style: "currency", 
+        currency: curr, 
+        minimumFractionDigits: 0, 
+        maximumFractionDigits: 0 
+      });
+      numberFormatterCache.set(cacheKey, formatter);
+    } catch {
+      return `${num} ${curr}`;
+    }
+  }
+  
   try {
-    return new Intl.NumberFormat("fr-FR", { style: "currency", currency: curr, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num);
+    return formatter.format(num);
   } catch {
     return `${num} ${curr}`;
   }

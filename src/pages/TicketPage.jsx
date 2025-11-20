@@ -443,7 +443,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
               <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '6%' }}>
                 Date
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '10%' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '12%' }}>
                 Prénom + Téléphone
               </th>
               <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '8%' }}>
@@ -551,7 +551,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', wordBreak: 'break-word', whiteSpace: 'normal' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "clientName" ? (
                         <input
                           type="text"
@@ -570,6 +570,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "clientName" })}
                           onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
                           onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                          title={row.isEmpty ? "" : (row.clientName || "") + (row.clientName && row.clientPhone ? " " : "") + (row.clientPhone ? `+${row.clientPhone}` : "")}
                         >
                           {row.isEmpty ? "" : (row.clientName || "") + (row.clientName && row.clientPhone ? " " : "") + (row.clientPhone ? `+${row.clientPhone}` : "")}
                         </span>

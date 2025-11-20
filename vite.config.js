@@ -7,6 +7,9 @@ export default defineConfig({
   build: {
     // Optimisations de build - utiliser esbuild (plus rapide, déjà inclus)
     minify: 'esbuild',
+    // Optimiser la taille du bundle
+    target: 'esnext',
+    cssCodeSplit: true,
     rollupOptions: {
       output: {
         // Optimiser le code splitting pour réduire la taille du bundle initial
@@ -33,6 +36,14 @@ export default defineConfig({
             const pageName = id.split('/pages/')[1].split('.')[0];
             return `page-${pageName}`;
           }
+          // Séparer les composants
+          if (id.includes('/components/')) {
+            return 'components';
+          }
+          // Séparer les utilitaires
+          if (id.includes('/utils/') || id.includes('/utils.js')) {
+            return 'utils';
+          }
         },
         // Optimiser les noms de chunks pour un meilleur caching
         chunkFileNames: 'assets/[name]-[hash].js',
@@ -49,7 +60,10 @@ export default defineConfig({
     // Réduire la taille du bundle avec tree-shaking agressif
     treeshake: {
       moduleSideEffects: false,
+      preset: 'smallest',
     },
+    // Optimiser la compression
+    reportCompressedSize: false, // Désactiver pour accélérer le build
   },
   // Optimisations pour le développement
   server: {

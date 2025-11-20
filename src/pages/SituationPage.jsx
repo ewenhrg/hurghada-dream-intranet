@@ -957,10 +957,10 @@ export function SituationPage({ activities = [], user }) {
   });
   const virtualRows = rowVirtualizer.getVirtualItems();
   
-  // Wrapper pour generateMessage avec contexte local
-  const generateMessageWithContext = (data) => {
+  // Wrapper pour generateMessage avec contexte local (mémoïsé pour éviter les recalculs)
+  const generateMessageWithContext = useCallback((data) => {
     return generateMessage(data, messageTemplates, rowsWithMarina, exteriorHotels);
-  };
+  }, [messageTemplates, rowsWithMarina, exteriorHotels]);
 
   // Prévisualiser les messages
   const handlePreviewMessages = () => {
