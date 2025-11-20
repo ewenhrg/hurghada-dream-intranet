@@ -414,13 +414,15 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
                         </p>
                       </div>
                     )}
-                    <GhostBtn
-                      onClick={() => copyRequestLink(request.token)}
-                      variant="primary"
-                      className="w-full"
-                    >
-                      🔗 Copier le lien
-                    </GhostBtn>
+                    {request.status !== "converted" && (
+                      <GhostBtn
+                        onClick={() => copyRequestLink(request.token)}
+                        variant="primary"
+                        className="w-full"
+                      >
+                        🔗 Copier le lien
+                      </GhostBtn>
+                    )}
                     <GhostBtn
                       onClick={() => handleDeleteRequest(request.id)}
                       variant="danger"
