@@ -437,7 +437,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
               <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '2%' }}>
                 {/* Colonne pour les logos modifiés/annulés */}
               </th>
-              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '5%' }}>
+              <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '7%' }}>
                 Ticket
               </th>
               <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'left', fontWeight: 'bold', fontSize: '11px', width: '6%' }}>
@@ -521,8 +521,10 @@ export function TicketPage({ quotes, setQuotes, user }) {
                       {!row.isEmpty && row.isModified && '🔄'}
                       {!row.isEmpty && row.isCancelled && '❌'}
                     </td>
-                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {row.isEmpty ? row.ticketNum : row.ticket}
+                    <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', wordBreak: 'break-word', whiteSpace: 'normal' }}>
+                      <span title={row.isEmpty ? row.ticketNum : row.ticket}>
+                        {row.isEmpty ? row.ticketNum : row.ticket}
+                      </span>
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px' }}>
                       {canEdit && !row.isEmpty && editingCell?.rowKey === uniqueKey && editingCell?.field === "date" ? (
