@@ -1,7 +1,31 @@
-import { SITE_KEY as SB_SITE_KEY } from "./lib/supabase";
 import { uuid, emptyTransfers } from "./utils";
 
-export const SITE_KEY = SB_SITE_KEY || "hurghada_dream_0606";
+// Dupliquer la logique de SITE_KEY pour éviter les problèmes d'initialisation circulaire
+// Lire les variables env (vite ou CRA)
+function getEnv(key) {
+  // Vite
+  if (
+    typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    Object.prototype.hasOwnProperty.call(import.meta.env, key)
+  ) {
+    return import.meta.env[key];
+  }
+  // CRA
+  const globalProcess =
+    typeof globalThis !== "undefined" && globalThis.process ? globalThis.process : undefined;
+  if (globalProcess && globalProcess.env && Object.prototype.hasOwnProperty.call(globalProcess.env, key)) {
+    return globalProcess.env[key];
+  }
+  // fallback window
+  if (typeof window !== "undefined" && window.__ENV__ && window.__ENV__[key]) {
+    return window.__ENV__[key];
+  }
+  return undefined;
+}
+
+export const SITE_KEY =
+  getEnv("VITE_SITE_KEY") || getEnv("REACT_APP_SITE_KEY") || "hurghada_dream_0606";
 export const PIN_CODE = "0606";
 
 export const LS_KEYS = {

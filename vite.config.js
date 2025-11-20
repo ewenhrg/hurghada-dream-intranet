@@ -19,8 +19,9 @@ export default defineConfig({
             if (id.includes('react') || id.includes('react-dom')) {
               return 'react-vendor';
             }
+            // Garder Supabase avec React pour éviter les problèmes d'initialisation
             if (id.includes('@supabase')) {
-              return 'supabase-vendor';
+              return 'react-vendor'; // Mettre avec React pour éviter les problèmes d'ordre de chargement
             }
             if (id.includes('react-router')) {
               return 'router-vendor';
@@ -58,8 +59,15 @@ export default defineConfig({
     // Optimiser les assets
     assetsInlineLimit: 4096, // Inline les petits assets (<4KB)
     // Réduire la taille du bundle avec tree-shaking agressif
+    // Exclure Supabase du tree-shaking strict pour éviter les problèmes d'initialisation
     treeshake: {
-      moduleSideEffects: false,
+      moduleSideEffects: (id) => {
+        // Garder les effets de bord pour Supabase et les modules critiques
+        if (id.includes('@supabase') || id.includes('supabase')) {
+          return true;
+        }
+        return false;
+      },
       preset: 'smallest',
     },
     // Optimiser la compression
