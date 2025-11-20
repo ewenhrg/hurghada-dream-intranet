@@ -756,9 +756,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       }
 
       // extra (montant à ajouter ou soustraire) - s'applique à toutes les activités
-      if (it.extraAmount !== undefined && it.extraAmount !== null && it.extraAmount !== "") {
-        const extraAmountValue = Number(it.extraAmount);
-        if (!isNaN(extraAmountValue)) {
+      // Convertir en string d'abord pour gérer les cas où c'est déjà un nombre
+      const extraAmountStr = String(it.extraAmount || "").trim();
+      if (extraAmountStr !== "" && extraAmountStr !== "0" && extraAmountStr !== "0.00") {
+        const extraAmountValue = Number(extraAmountStr);
+        if (!isNaN(extraAmountValue) && extraAmountValue !== 0) {
           lineTotal += extraAmountValue;
         }
       }
@@ -879,7 +881,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         children: Number(c.raw.children || 0),
         babies: Number(c.raw.babies || 0),
         extraLabel: c.raw.extraLabel || "",
-        extraAmount: Number(c.raw.extraAmount || 0),
+        extraAmount: c.raw.extraAmount !== undefined && c.raw.extraAmount !== null && c.raw.extraAmount !== "" ? Number(c.raw.extraAmount) : 0,
         extraDolphin: c.raw.extraDolphin || false,
         speedBoatExtra: Array.isArray(c.raw.speedBoatExtra) ? c.raw.speedBoatExtra : (c.raw.speedBoatExtra ? [c.raw.speedBoatExtra] : []),
         buggySimple: Number(c.raw.buggySimple || 0),

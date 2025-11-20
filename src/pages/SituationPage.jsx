@@ -1149,11 +1149,12 @@ export function SituationPage({ activities = [], user }) {
             whatsappWindowRef.current = reusedWindow;
             reusedWindow.focus();
             console.log("✅ Fenêtre WhatsApp réutilisée - URL mise à jour");
-            // Attente importante pour laisser WhatsApp charger la nouvelle conversation (15 secondes)
-            // WhatsApp Web peut être lent à charger, surtout lors du changement de conversation
-            console.log("⏳ Attente de 15 secondes pour laisser WhatsApp charger complètement la nouvelle conversation...");
-            toast.info("⏳ Chargement de la conversation WhatsApp... (15 secondes)", { duration: 15000 });
-            await new Promise((resolve) => setTimeout(resolve, 15000));
+            // Attente importante pour laisser WhatsApp charger la nouvelle conversation (20 secondes)
+            // WhatsApp Web peut être très lent à charger, surtout lors du changement de conversation
+            // Augmenté à 20 secondes pour s'assurer que la page est complètement chargée
+            console.log("⏳ Attente de 20 secondes pour laisser WhatsApp charger complètement la nouvelle conversation...");
+            toast.info("⏳ Chargement de la conversation WhatsApp... (20 secondes - WhatsApp peut être lent)", { duration: 20000 });
+            await new Promise((resolve) => setTimeout(resolve, 20000));
             return reusedWindow;
           }
         } else {
@@ -1182,11 +1183,11 @@ export function SituationPage({ activities = [], user }) {
         console.log("✅ Fenêtre WhatsApp ouverte/réutilisée avec succès");
       }
       
-      // Attente pour laisser WhatsApp charger (15 secondes pour une nouvelle fenêtre)
-      // WhatsApp Web peut être lent à charger initialement
-      console.log("⏳ Attente de 15 secondes pour laisser WhatsApp charger complètement...");
-      toast.info("⏳ Chargement initial de WhatsApp Web... (15 secondes)", { duration: 15000 });
-      await new Promise((resolve) => setTimeout(resolve, 15000));
+      // Attente pour laisser WhatsApp charger (20 secondes pour une nouvelle fenêtre)
+      // WhatsApp Web peut être très lent à charger initialement, surtout avec une connexion lente
+      console.log("⏳ Attente de 20 secondes pour laisser WhatsApp charger complètement...");
+      toast.info("⏳ Chargement initial de WhatsApp Web... (20 secondes - WhatsApp peut être lent)", { duration: 20000 });
+      await new Promise((resolve) => setTimeout(resolve, 20000));
       
       // Focus sur la fenêtre (non-bloquant)
       try {
@@ -1218,7 +1219,8 @@ export function SituationPage({ activities = [], user }) {
     // Optimisé à 10 secondes pour un meilleur débit tout en restant sécurisé
     const MIN_DELAY_BETWEEN_MESSAGES = 10000; // 10 secondes (réduit de 15s pour améliorer la vitesse)
     // Délai supplémentaire pour la première ouverture de WhatsApp (pour laisser le temps à la page de charger)
-    const INITIAL_LOAD_DELAY = 10000; // 10 secondes supplémentaires pour le premier message (réduit de 15s)
+    // Augmenté à 15 secondes car WhatsApp peut être très lent à charger initialement
+    const INITIAL_LOAD_DELAY = 15000; // 15 secondes supplémentaires pour le premier message
     
     // Ouvrir WhatsApp Web (la fonction ferme déjà la fenêtre précédente)
     console.log(`⏳ Ouverture de WhatsApp Web...`);
@@ -1243,14 +1245,15 @@ export function SituationPage({ activities = [], user }) {
       isFirstMessageRef.current = false;
       console.log(`✅ Délai initial terminé. WhatsApp devrait être chargé maintenant.`);
     } else {
-      // Pour les messages suivants, attendre encore 8 secondes supplémentaires pour s'assurer que WhatsApp a bien chargé la nouvelle conversation
-      // WhatsApp peut être lent lors du changement de conversation, surtout si la connexion est lente
-      console.log(`⏳ Message suivant détecté. Attente supplémentaire de 8 secondes pour s'assurer que WhatsApp a bien chargé la nouvelle conversation...`);
+      // Pour les messages suivants, attendre encore 12 secondes supplémentaires pour s'assurer que WhatsApp a bien chargé la nouvelle conversation
+      // WhatsApp peut être très lent lors du changement de conversation, surtout si la connexion est lente
+      // Augmenté à 12 secondes pour garantir que la page est complètement chargée
+      console.log(`⏳ Message suivant détecté. Attente supplémentaire de 12 secondes pour s'assurer que WhatsApp a bien chargé la nouvelle conversation...`);
       toast.info(
-        `📱 Vérification du chargement de la conversation... Attente de 8 secondes...`,
-        { duration: 8000 }
+        `📱 Vérification du chargement de la conversation... Attente de 12 secondes (WhatsApp peut être lent)...`,
+        { duration: 12000 }
       );
-      await new Promise((resolve) => setTimeout(resolve, 8000));
+      await new Promise((resolve) => setTimeout(resolve, 12000));
       console.log(`✅ Délai de chargement terminé. WhatsApp devrait être prêt maintenant.`);
     }
 
