@@ -537,33 +537,54 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                           
                           try {
                             // Afficher un toast de chargement
-                            toast.info("Génération du PDF en cours...", { duration: 2000 });
+                            toast.info("Génération du PDF en cours...", { duration: 3000 });
                             
-                            // Générer le HTML du devis
+                            // Générer le HTML du devis (exactement comme le bouton Imprimer)
                             const htmlContent = generateQuoteHTML(d);
                             
-                            // Créer un élément temporaire pour le PDF
-                            const tempDiv = document.createElement("div");
-                            tempDiv.innerHTML = htmlContent;
-                            tempDiv.style.position = "absolute";
-                            tempDiv.style.left = "-9999px";
-                            tempDiv.style.width = "210mm"; // Format A4
-                            document.body.appendChild(tempDiv);
+                            // Créer une fenêtre temporaire pour générer le PDF (comme le bouton Imprimer)
+                            const printWindow = window.open("", "_blank");
+                            if (!printWindow) {
+                              toast.error("Impossible d'ouvrir une nouvelle fenêtre. Vérifiez que les popups ne sont pas bloquées.");
+                              return;
+                            }
                             
-                            // Options pour la génération du PDF
+                            printWindow.document.write(htmlContent);
+                            printWindow.document.close();
+                            
+                            // Attendre que le contenu soit complètement chargé et rendu
+                            await new Promise((resolve) => {
+                              const checkReady = () => {
+                                if (printWindow.document.readyState === 'complete') {
+                                  // Attendre encore un peu pour que les styles soient appliqués
+                                  setTimeout(resolve, 800);
+                                } else {
+                                  setTimeout(checkReady, 100);
+                                }
+                              };
+                              checkReady();
+                            });
+                            
+                            // Options pour la génération du PDF (identique au format d'impression)
                             const opt = {
                               margin: [10, 10, 10, 10],
                               filename: `Devis_${cleanPhone}_${new Date().toISOString().slice(0, 10)}.pdf`,
                               image: { type: "jpeg", quality: 0.98 },
-                              html2canvas: { scale: 2, useCORS: true },
+                              html2canvas: { 
+                                scale: 2, 
+                                useCORS: true,
+                                logging: false,
+                                windowWidth: printWindow.document.documentElement.scrollWidth || printWindow.innerWidth,
+                                windowHeight: printWindow.document.documentElement.scrollHeight || printWindow.innerHeight
+                              },
                               jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
                             };
                             
-                            // Générer et télécharger le PDF
-                            await html2pdf().set(opt).from(tempDiv).save();
+                            // Générer le PDF (exactement comme le bouton Imprimer)
+                            await html2pdf().set(opt).from(printWindow.document.body).save();
                             
-                            // Nettoyer l'élément temporaire
-                            document.body.removeChild(tempDiv);
+                            // Fermer la fenêtre temporaire
+                            printWindow.close();
                             
                             // Message pour WhatsApp
                             const clientName = d.client?.name || "Client";
@@ -577,36 +598,23 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                             // Nom de fenêtre fixe pour réutiliser la même fenêtre WhatsApp
                             const windowName = "whatsapp_quote_send";
                             
-                            // Vérifier si une fenêtre WhatsApp existe déjà
-                            if (whatsappWindowRef.current) {
-                              try {
-                                if (!whatsappWindowRef.current.closed) {
-                                  // Réutiliser la fenêtre existante
-                                  const reusedWindow = window.open(whatsappUrl, windowName);
-                                  if (reusedWindow) {
-                                    whatsappWindowRef.current = reusedWindow;
-                                    reusedWindow.focus();
-                                    toast.success("PDF généré ! WhatsApp ouvert. Attachez le PDF et envoyez.");
-                                  }
-                                } else {
-                                  whatsappWindowRef.current = null;
-                                }
-                              } catch (error) {
-                                console.warn("Erreur lors de la vérification de la fenêtre WhatsApp:", error);
-                                whatsappWindowRef.current = null;
-                              }
-                            }
-                            
-                            // Ouvrir ou réutiliser la fenêtre WhatsApp
-                            if (!whatsappWindowRef.current || whatsappWindowRef.current.closed) {
-                              const whatsappWindow = window.open(whatsappUrl, windowName);
+                            // Ouvrir WhatsApp
+                            let whatsappWindow = whatsappWindowRef.current;
+                            if (!whatsappWindow || whatsappWindow.closed) {
+                              whatsappWindow = window.open(whatsappUrl, windowName);
                               if (whatsappWindow) {
                                 whatsappWindowRef.current = whatsappWindow;
                                 whatsappWindow.focus();
-                                toast.success("PDF généré ! WhatsApp ouvert. Attachez le PDF et envoyez.");
-                              } else {
-                                toast.error("Impossible d'ouvrir WhatsApp. Vérifiez que les popups ne sont pas bloquées.");
                               }
+                            } else {
+                              whatsappWindow.location.href = whatsappUrl;
+                              whatsappWindow.focus();
+                            }
+                            
+                            if (whatsappWindow) {
+                              toast.success("PDF généré et téléchargé ! WhatsApp ouvert. Attachez le PDF téléchargé et envoyez.");
+                            } else {
+                              toast.error("Impossible d'ouvrir WhatsApp. Vérifiez que les popups ne sont pas bloquées.");
                             }
                           } catch (error) {
                             console.error("Erreur lors de la génération du PDF:", error);
