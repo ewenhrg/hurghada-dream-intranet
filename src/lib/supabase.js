@@ -85,20 +85,44 @@ function makeStubClient() {
   };
 }
 
-export const supabase = (() => {
-  if (!isConfigured) {
-    if (typeof window !== "undefined") showConfigHint();
-    return makeStubClient();
+// Initialisation avec gestion d'erreur améliorée
+let supabaseInstance = null;
+
+function initializeSupabase() {
+  if (supabaseInstance !== null) {
+    return supabaseInstance;
   }
+  
+  if (!isConfigured) {
+    if (typeof window !== "undefined") {
+      // Délayer l'affichage du hint pour éviter les problèmes d'initialisation
+      setTimeout(() => showConfigHint(), 100);
+    }
+    supabaseInstance = makeStubClient();
+    return supabaseInstance;
+  }
+  
   try {
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    // S'assurer que les variables sont bien définies avant de créer le client
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.warn("Variables Supabase manquantes, utilisation du stub");
+      supabaseInstance = makeStubClient();
+      return supabaseInstance;
+    }
+    
+    supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: { persistSession: false },
     });
+    return supabaseInstance;
   } catch (e) {
     console.warn("Erreur createClient → stub", e);
-    return makeStubClient();
+    supabaseInstance = makeStubClient();
+    return supabaseInstance;
   }
-})();
+}
+
+// Initialiser immédiatement mais de manière sûre
+export const supabase = initializeSupabase();
 
 export const __SUPABASE_DEBUG__ = {
   supabaseUrl: SUPABASE_URL,

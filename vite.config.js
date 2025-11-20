@@ -14,14 +14,15 @@ export default defineConfig({
       output: {
         // Optimiser le code splitting pour réduire la taille du bundle initial
         manualChunks: (id) => {
+          // IMPORTANT: Mettre Supabase et lib/supabase dans le chunk principal pour éviter les problèmes d'initialisation
+          if (id.includes('lib/supabase') || id.includes('@supabase')) {
+            return undefined; // undefined = chunk principal (index)
+          }
+          
           // Séparer les vendors
           if (id.includes('node_modules')) {
             if (id.includes('react') || id.includes('react-dom')) {
               return 'react-vendor';
-            }
-            // Garder Supabase avec React pour éviter les problèmes d'initialisation
-            if (id.includes('@supabase')) {
-              return 'react-vendor'; // Mettre avec React pour éviter les problèmes d'ordre de chargement
             }
             if (id.includes('react-router')) {
               return 'router-vendor';
