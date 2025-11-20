@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateQuoteWhatsAppMessage, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
+import html2pdf from "html2pdf.js";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -520,15 +521,12 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       </button>
                       <button
                         className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-green-500 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
-                        onClick={() => {
+                        onClick={async () => {
                           const clientPhone = d.client?.phone || "";
                           if (!clientPhone || clientPhone.trim() === "") {
                             toast.error("Aucun numéro de téléphone disponible pour ce client.");
                             return;
                           }
-                          
-                          // Générer le message WhatsApp avec les détails du devis
-                          const message = generateQuoteWhatsAppMessage(d);
                           
                           // Nettoyer le numéro de téléphone (enlever les espaces, tirets, etc.)
                           const cleanPhone = cleanPhoneNumber(clientPhone);
@@ -537,44 +535,82 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                             return;
                           }
                           
-                          // Encoder le message pour l'URL
-                          const encodedMessage = encodeURIComponent(message);
-                          // Créer l'URL WhatsApp
-                          const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
-                          
-                          // Nom de fenêtre fixe pour réutiliser la même fenêtre WhatsApp
-                          const windowName = "whatsapp_quote_send";
-                          
-                          // Vérifier si une fenêtre WhatsApp existe déjà
-                          if (whatsappWindowRef.current) {
-                            try {
-                              if (!whatsappWindowRef.current.closed) {
-                                // Réutiliser la fenêtre existante
-                                const reusedWindow = window.open(whatsappUrl, windowName);
-                                if (reusedWindow) {
-                                  whatsappWindowRef.current = reusedWindow;
-                                  reusedWindow.focus();
-                                  toast.success("WhatsApp ouvert avec le devis ! Cliquez sur 'Envoyer' dans WhatsApp.");
+                          try {
+                            // Afficher un toast de chargement
+                            toast.info("Génération du PDF en cours...", { duration: 2000 });
+                            
+                            // Générer le HTML du devis
+                            const htmlContent = generateQuoteHTML(d);
+                            
+                            // Créer un élément temporaire pour le PDF
+                            const tempDiv = document.createElement("div");
+                            tempDiv.innerHTML = htmlContent;
+                            tempDiv.style.position = "absolute";
+                            tempDiv.style.left = "-9999px";
+                            tempDiv.style.width = "210mm"; // Format A4
+                            document.body.appendChild(tempDiv);
+                            
+                            // Options pour la génération du PDF
+                            const opt = {
+                              margin: [10, 10, 10, 10],
+                              filename: `Devis_${cleanPhone}_${new Date().toISOString().slice(0, 10)}.pdf`,
+                              image: { type: "jpeg", quality: 0.98 },
+                              html2canvas: { scale: 2, useCORS: true },
+                              jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                            };
+                            
+                            // Générer et télécharger le PDF
+                            await html2pdf().set(opt).from(tempDiv).save();
+                            
+                            // Nettoyer l'élément temporaire
+                            document.body.removeChild(tempDiv);
+                            
+                            // Message pour WhatsApp
+                            const clientName = d.client?.name || "Client";
+                            const message = `Bonjour ${clientName},\n\nVeuillez trouver ci-joint le devis détaillé.\n\nPour toute question, n'hésitez pas à nous contacter.\n\nMerci et à bientôt avec Hurghada Dream !`;
+                            
+                            // Encoder le message pour l'URL
+                            const encodedMessage = encodeURIComponent(message);
+                            // Créer l'URL WhatsApp
+                            const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
+                            
+                            // Nom de fenêtre fixe pour réutiliser la même fenêtre WhatsApp
+                            const windowName = "whatsapp_quote_send";
+                            
+                            // Vérifier si une fenêtre WhatsApp existe déjà
+                            if (whatsappWindowRef.current) {
+                              try {
+                                if (!whatsappWindowRef.current.closed) {
+                                  // Réutiliser la fenêtre existante
+                                  const reusedWindow = window.open(whatsappUrl, windowName);
+                                  if (reusedWindow) {
+                                    whatsappWindowRef.current = reusedWindow;
+                                    reusedWindow.focus();
+                                    toast.success("PDF généré ! WhatsApp ouvert. Attachez le PDF et envoyez.");
+                                  }
+                                } else {
+                                  whatsappWindowRef.current = null;
                                 }
-                              } else {
+                              } catch (error) {
+                                console.warn("Erreur lors de la vérification de la fenêtre WhatsApp:", error);
                                 whatsappWindowRef.current = null;
                               }
-                            } catch (error) {
-                              console.warn("Erreur lors de la vérification de la fenêtre WhatsApp:", error);
-                              whatsappWindowRef.current = null;
                             }
-                          }
-                          
-                          // Ouvrir ou réutiliser la fenêtre WhatsApp
-                          if (!whatsappWindowRef.current || whatsappWindowRef.current.closed) {
-                            const whatsappWindow = window.open(whatsappUrl, windowName);
-                            if (whatsappWindow) {
-                              whatsappWindowRef.current = whatsappWindow;
-                              whatsappWindow.focus();
-                              toast.success("WhatsApp ouvert avec le devis ! Cliquez sur 'Envoyer' dans WhatsApp.");
-                            } else {
-                              toast.error("Impossible d'ouvrir WhatsApp. Vérifiez que les popups ne sont pas bloquées.");
+                            
+                            // Ouvrir ou réutiliser la fenêtre WhatsApp
+                            if (!whatsappWindowRef.current || whatsappWindowRef.current.closed) {
+                              const whatsappWindow = window.open(whatsappUrl, windowName);
+                              if (whatsappWindow) {
+                                whatsappWindowRef.current = whatsappWindow;
+                                whatsappWindow.focus();
+                                toast.success("PDF généré ! WhatsApp ouvert. Attachez le PDF et envoyez.");
+                              } else {
+                                toast.error("Impossible d'ouvrir WhatsApp. Vérifiez que les popups ne sont pas bloquées.");
+                              }
                             }
+                          } catch (error) {
+                            console.error("Erreur lors de la génération du PDF:", error);
+                            toast.error("Erreur lors de la génération du PDF. Veuillez réessayer.");
                           }
                         }}
                       >
