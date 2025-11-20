@@ -51,30 +51,30 @@ function showToast(message, type = "info", duration = 4000) {
     transition: all 0.3s ease;
   `;
 
-  // Styles par type
+  // Styles par type - Couleurs de texte plus foncées pour meilleure lisibilité
   const styles = {
     success: {
       background: "#f0fdf4",
       borderColor: "#86efac",
-      color: "#166534",
+      color: "#065f46", // Plus foncé pour meilleure lisibilité
       icon: "✅"
     },
     error: {
       background: "#fef2f2",
       borderColor: "#fca5a5",
-      color: "#991b1b",
+      color: "#7f1d1d", // Plus foncé pour meilleure lisibilité
       icon: "❌"
     },
     warning: {
       background: "#fffbeb",
       borderColor: "#fde047",
-      color: "#854d0e",
+      color: "#713f12", // Plus foncé pour meilleure lisibilité
       icon: "⚠️"
     },
     info: {
       background: "#eff6ff",
       borderColor: "#93c5fd",
-      color: "#1e40af",
+      color: "#1e3a8a", // Plus foncé pour meilleure lisibilité
       icon: "ℹ️"
     }
   };
@@ -86,8 +86,8 @@ function showToast(message, type = "info", duration = 4000) {
 
   toast.innerHTML = `
     <span style="font-size: 20px; flex-shrink: 0;">${style.icon}</span>
-    <span style="flex: 1; font-size: 14px; font-weight: 500;">${message}</span>
-    <button style="flex-shrink: 0; cursor: pointer; background: none; border: none; color: inherit; opacity: 0.6; font-size: 18px; padding: 0; width: 20px; height: 20px;" onclick="this.closest('#toast-container > div').remove()">✕</button>
+    <span style="flex: 1; font-size: 14px; font-weight: 600; color: ${style.color};">${message}</span>
+    <button style="flex-shrink: 0; cursor: pointer; background: none; border: none; color: ${style.color}; opacity: 0.7; font-size: 18px; padding: 0; width: 20px; height: 20px; font-weight: bold;" onclick="this.closest('#toast-container > div').remove()">✕</button>
   `;
 
   toastContainer.appendChild(toast);
