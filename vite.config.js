@@ -14,19 +14,20 @@ export default defineConfig({
       output: {
         // Optimiser le code splitting pour réduire la taille du bundle initial
         manualChunks: (id) => {
-          // IMPORTANT: Mettre Supabase et lib/supabase dans le chunk principal pour éviter les problèmes d'initialisation
-          if (id.includes('lib/supabase') || id.includes('@supabase')) {
+          // IMPORTANT: Mettre React, React-DOM, Supabase et lib/supabase dans le chunk principal
+          // pour garantir qu'ils soient chargés en premier et éviter les erreurs d'initialisation
+          if (
+            id.includes('react') || 
+            id.includes('react-dom') ||
+            id.includes('lib/supabase') || 
+            id.includes('@supabase') ||
+            id.includes('react-router')
+          ) {
             return undefined; // undefined = chunk principal (index)
           }
           
-          // Séparer les vendors
+          // Séparer les vendors restants
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
-            }
-            if (id.includes('react-router')) {
-              return 'router-vendor';
-            }
             if (id.includes('xlsx') || id.includes('@tanstack/react-virtual') || id.includes('react-window')) {
               return 'utils-vendor';
             }
@@ -60,11 +61,16 @@ export default defineConfig({
     // Optimiser les assets
     assetsInlineLimit: 4096, // Inline les petits assets (<4KB)
     // Réduire la taille du bundle avec tree-shaking agressif
-    // Exclure Supabase du tree-shaking strict pour éviter les problèmes d'initialisation
+    // Exclure React et Supabase du tree-shaking strict pour éviter les problèmes d'initialisation
     treeshake: {
       moduleSideEffects: (id) => {
-        // Garder les effets de bord pour Supabase et les modules critiques
-        if (id.includes('@supabase') || id.includes('supabase')) {
+        // Garder les effets de bord pour React, Supabase et les modules critiques
+        if (
+          id.includes('@supabase') || 
+          id.includes('supabase') ||
+          id.includes('react') ||
+          id.includes('react-dom')
+        ) {
           return true;
         }
         return false;
