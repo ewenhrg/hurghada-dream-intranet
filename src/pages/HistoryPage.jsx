@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, memo, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
+import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateQuoteWhatsAppMessage, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -30,6 +30,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   // Références pour le conteneur de la modale de modification
   const editModalRef = useRef(null);
   const editModalContainerRef = useRef(null);
+  
+  // Référence pour la fenêtre WhatsApp (réutiliser la même fenêtre)
+  const whatsappWindowRef = useRef(null);
   
   // États pour la modale de modification
   const [editClient, setEditClient] = useState(null);
@@ -514,6 +517,68 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         }}
                       >
                         🖨️ Imprimer
+                      </button>
+                      <button
+                        className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-green-500 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
+                        onClick={() => {
+                          const clientPhone = d.client?.phone || "";
+                          if (!clientPhone || clientPhone.trim() === "") {
+                            toast.error("Aucun numéro de téléphone disponible pour ce client.");
+                            return;
+                          }
+                          
+                          // Générer le message WhatsApp avec les détails du devis
+                          const message = generateQuoteWhatsAppMessage(d);
+                          
+                          // Nettoyer le numéro de téléphone (enlever les espaces, tirets, etc.)
+                          const cleanPhone = cleanPhoneNumber(clientPhone);
+                          if (!cleanPhone || cleanPhone.length < 8) {
+                            toast.error("Numéro de téléphone invalide.");
+                            return;
+                          }
+                          
+                          // Encoder le message pour l'URL
+                          const encodedMessage = encodeURIComponent(message);
+                          // Créer l'URL WhatsApp
+                          const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
+                          
+                          // Nom de fenêtre fixe pour réutiliser la même fenêtre WhatsApp
+                          const windowName = "whatsapp_quote_send";
+                          
+                          // Vérifier si une fenêtre WhatsApp existe déjà
+                          if (whatsappWindowRef.current) {
+                            try {
+                              if (!whatsappWindowRef.current.closed) {
+                                // Réutiliser la fenêtre existante
+                                const reusedWindow = window.open(whatsappUrl, windowName);
+                                if (reusedWindow) {
+                                  whatsappWindowRef.current = reusedWindow;
+                                  reusedWindow.focus();
+                                  toast.success("WhatsApp ouvert avec le devis ! Cliquez sur 'Envoyer' dans WhatsApp.");
+                                }
+                              } else {
+                                whatsappWindowRef.current = null;
+                              }
+                            } catch (error) {
+                              console.warn("Erreur lors de la vérification de la fenêtre WhatsApp:", error);
+                              whatsappWindowRef.current = null;
+                            }
+                          }
+                          
+                          // Ouvrir ou réutiliser la fenêtre WhatsApp
+                          if (!whatsappWindowRef.current || whatsappWindowRef.current.closed) {
+                            const whatsappWindow = window.open(whatsappUrl, windowName);
+                            if (whatsappWindow) {
+                              whatsappWindowRef.current = whatsappWindow;
+                              whatsappWindow.focus();
+                              toast.success("WhatsApp ouvert avec le devis ! Cliquez sur 'Envoyer' dans WhatsApp.");
+                            } else {
+                              toast.error("Impossible d'ouvrir WhatsApp. Vérifiez que les popups ne sont pas bloquées.");
+                            }
+                          }
+                        }}
+                      >
+                        📱 Envoyer
                       </button>
                       {!allTicketsFilled && (
                         <button

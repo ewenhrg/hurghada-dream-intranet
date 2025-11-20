@@ -1,8 +1,9 @@
 import { NEIGHBORHOODS } from "./constants";
 import { isBuggyActivity, isMotoCrossActivity } from "./utils/activityHelpers";
+import { SPEED_BOAT_EXTRAS } from "./constants/activityExtras";
 
-// Options d'extra pour Speed Boat uniquement
-const SPEED_BOAT_EXTRAS = [
+// Options d'extra pour Speed Boat uniquement (gardé pour compatibilité)
+const SPEED_BOAT_EXTRAS_LOCAL = [
   { id: "", label: "— Aucun extra —", priceAdult: 0, priceChild: 0 },
   { id: "hula_hula", label: "HULA HULA", priceAdult: 10, priceChild: 5 },
   { id: "orange_bay", label: "ORANGE BAY", priceAdult: 10, priceChild: 5 },
@@ -757,5 +758,127 @@ export function exportTicketsToCSV(ticketRows) {
   document.body.removeChild(link);
   
   URL.revokeObjectURL(url);
+}
+
+// Générer un message texte formaté pour WhatsApp avec les détails du devis
+export function generateQuoteWhatsAppMessage(quote) {
+  const date = new Date(quote.createdAt).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric"
+  });
+  
+  // Trier les activités par date (ordre croissant)
+  const sortedItems = [...quote.items].sort((a, b) => {
+    const dateA = a.date ? new Date(a.date + "T12:00:00").getTime() : 0;
+    const dateB = b.date ? new Date(b.date + "T12:00:00").getTime() : 0;
+    return dateA - dateB;
+  });
+  
+  let message = `*HURGHADA DREAM*\n`;
+  message += `*DEVIS*\n\n`;
+  message += `📅 Date du devis : ${date}\n`;
+  
+  if (quote.client?.name) {
+    message += `👤 Nom : ${quote.client.name}\n`;
+  }
+  if (quote.client?.phone) {
+    message += `📞 Téléphone : ${quote.client.phone}\n`;
+  }
+  if (quote.client?.hotel) {
+    message += `🏨 Hôtel : ${quote.client.hotel}\n`;
+  }
+  if (quote.client?.room) {
+    message += `🚪 Chambre : ${quote.client.room}\n`;
+  }
+  if (quote.client?.neighborhood) {
+    const neighborhoodFormatted = quote.client.neighborhood.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+    message += `📍 Quartier : ${neighborhoodFormatted}\n`;
+  }
+  if (quote.client?.arrivalDate) {
+    const arrivalDate = new Date(quote.client.arrivalDate + "T12:00:00").toLocaleDateString("fr-FR", { 
+      day: "2-digit", 
+      month: "long", 
+      year: "numeric" 
+    });
+    message += `✈️ Date d'arrivée : ${arrivalDate}\n`;
+  }
+  if (quote.client?.departureDate) {
+    const departureDate = new Date(quote.client.departureDate + "T12:00:00").toLocaleDateString("fr-FR", { 
+      day: "2-digit", 
+      month: "long", 
+      year: "numeric" 
+    });
+    message += `✈️ Date de départ : ${departureDate}\n`;
+  }
+  
+  message += `\n*ACTIVITÉS :*\n\n`;
+  
+  sortedItems.forEach((item, idx) => {
+    const itemDate = new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric"
+    });
+    
+    message += `${idx + 1}. *${item.activityName || "—"}*\n`;
+    message += `   📅 Date : ${itemDate}\n`;
+    if (item.pickupTime) {
+      message += `   ⏰ Heure : ${item.pickupTime}\n`;
+    }
+    message += `   👥 ${item.adults || 0} adulte(s), ${item.children || 0} enfant(s), ${item.babies || 0} bébé(s)\n`;
+    
+    // Ajouter les extras Speed Boat
+    const isSpeedBoat = item.activityName && item.activityName.toLowerCase().includes("speed boat");
+    if (isSpeedBoat) {
+      if (item.extraDolphin) {
+        message += `   🐬 Extra dauphin (+20€)\n`;
+      }
+      
+      if (item.speedBoatExtra) {
+        const extrasArray = Array.isArray(item.speedBoatExtra) 
+          ? item.speedBoatExtra 
+          : (typeof item.speedBoatExtra === "string" && item.speedBoatExtra !== "" 
+            ? [item.speedBoatExtra] 
+            : []);
+        
+        extrasArray.forEach((extraId) => {
+          if (extraId) {
+            const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === extraId);
+            if (selectedExtra && selectedExtra.id !== "") {
+              message += `   ${selectedExtra.label} (+${selectedExtra.priceAdult}€/adt + ${selectedExtra.priceChild}€/enfant)\n`;
+            }
+          }
+        });
+      }
+    }
+    
+    // Ajouter le supplément transfert
+    const transferSurchargeAmount = calculateTransferSurcharge(item);
+    if (transferSurchargeAmount > 0) {
+      message += `   🚗 Transfert : ${currencyNoCents(transferSurchargeAmount, quote.currency)}\n`;
+    }
+    
+    message += `   💵 Prix : ${currencyNoCents(Math.round(item.lineTotal), quote.currency)}\n`;
+    
+    if (item.ticketNumber) {
+      message += `   🎫 Ticket : ${item.ticketNumber}\n`;
+    }
+    
+    message += `\n`;
+  });
+  
+  message += `*TOTAL :*\n`;
+  message += `💵 Espèces : ${currencyNoCents(quote.totalCash || Math.round(quote.total || 0), quote.currency)}\n`;
+  message += `💳 Carte (avec frais 3%) : ${currencyNoCents(quote.totalCard || calculateCardPrice(quote.total || 0), quote.currency)}\n`;
+  
+  if (quote.notes && quote.notes.trim()) {
+    message += `\n📝 Notes :\n${quote.notes}\n`;
+  }
+  
+  message += `\n_Merci pour votre confiance !_\n`;
+  message += `_Pour toute question, n'hésitez pas à nous contacter._`;
+  
+  return message;
 }
 
