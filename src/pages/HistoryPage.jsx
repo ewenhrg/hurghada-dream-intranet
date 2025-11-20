@@ -2,8 +2,7 @@ import { useState, useMemo, useEffect, useRef, memo, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateQuoteWhatsAppMessage, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
-import html2pdf from "html2pdf.js";
+import { currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -31,9 +30,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   // Références pour le conteneur de la modale de modification
   const editModalRef = useRef(null);
   const editModalContainerRef = useRef(null);
-  
-  // Référence pour la fenêtre WhatsApp (réutiliser la même fenêtre)
-  const whatsappWindowRef = useRef(null);
   
   // États pour la modale de modification
   const [editClient, setEditClient] = useState(null);
@@ -217,7 +213,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     }
     
     const now = new Date();
-    const twentyDaysAgo = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000); // 20 jours en millisecondes
+    const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000); // 15 jours en millisecondes
     
     // Identifier les devis à supprimer
     const quotesToDelete = quotes.filter((quote) => {
@@ -227,17 +223,17 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         return false; // Le devis est payé, ne pas le supprimer
       }
       
-      // Vérifier si le devis a été créé il y a plus de 20 jours
+      // Vérifier si le devis a été créé il y a plus de 15 jours
       const createdAt = new Date(quote.createdAt);
       if (isNaN(createdAt.getTime())) {
         return false; // Date invalide, ne pas supprimer
       }
       
-      return createdAt < twentyDaysAgo;
+      return createdAt < fifteenDaysAgo;
     });
 
     if (quotesToDelete.length > 0) {
-      console.log(`🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de 20 jours`);
+      console.log(`🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de 15 jours`);
       
       // Supprimer de la liste locale
       const remainingQuotes = quotes.filter((quote) => 
@@ -518,111 +514,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         }}
                       >
                         🖨️ Imprimer
-                      </button>
-                      <button
-                        className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-green-500 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
-                        onClick={async () => {
-                          const clientPhone = d.client?.phone || "";
-                          if (!clientPhone || clientPhone.trim() === "") {
-                            toast.error("Aucun numéro de téléphone disponible pour ce client.");
-                            return;
-                          }
-                          
-                          // Nettoyer le numéro de téléphone (enlever les espaces, tirets, etc.)
-                          const cleanPhone = cleanPhoneNumber(clientPhone);
-                          if (!cleanPhone || cleanPhone.length < 8) {
-                            toast.error("Numéro de téléphone invalide.");
-                            return;
-                          }
-                          
-                          try {
-                            // Afficher un toast de chargement
-                            toast.info("Génération du PDF en cours...", { duration: 3000 });
-                            
-                            // Générer le HTML du devis (exactement comme le bouton Imprimer)
-                            const htmlContent = generateQuoteHTML(d);
-                            
-                            // Créer une fenêtre temporaire pour générer le PDF (comme le bouton Imprimer)
-                            const printWindow = window.open("", "_blank");
-                            if (!printWindow) {
-                              toast.error("Impossible d'ouvrir une nouvelle fenêtre. Vérifiez que les popups ne sont pas bloquées.");
-                              return;
-                            }
-                            
-                            printWindow.document.write(htmlContent);
-                            printWindow.document.close();
-                            
-                            // Attendre que le contenu soit complètement chargé et rendu
-                            await new Promise((resolve) => {
-                              const checkReady = () => {
-                                if (printWindow.document.readyState === 'complete') {
-                                  // Attendre encore un peu pour que les styles soient appliqués
-                                  setTimeout(resolve, 800);
-                                } else {
-                                  setTimeout(checkReady, 100);
-                                }
-                              };
-                              checkReady();
-                            });
-                            
-                            // Options pour la génération du PDF (identique au format d'impression)
-                            const opt = {
-                              margin: [10, 10, 10, 10],
-                              filename: `Devis_${cleanPhone}_${new Date().toISOString().slice(0, 10)}.pdf`,
-                              image: { type: "jpeg", quality: 0.98 },
-                              html2canvas: { 
-                                scale: 2, 
-                                useCORS: true,
-                                logging: false,
-                                windowWidth: printWindow.document.documentElement.scrollWidth || printWindow.innerWidth,
-                                windowHeight: printWindow.document.documentElement.scrollHeight || printWindow.innerHeight
-                              },
-                              jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-                            };
-                            
-                            // Générer le PDF (exactement comme le bouton Imprimer)
-                            await html2pdf().set(opt).from(printWindow.document.body).save();
-                            
-                            // Fermer la fenêtre temporaire
-                            printWindow.close();
-                            
-                            // Message pour WhatsApp
-                            const clientName = d.client?.name || "Client";
-                            const message = `Bonjour ${clientName},\n\nVeuillez trouver ci-joint le devis détaillé.\n\nPour toute question, n'hésitez pas à nous contacter.\n\nMerci et à bientôt avec Hurghada Dream !`;
-                            
-                            // Encoder le message pour l'URL
-                            const encodedMessage = encodeURIComponent(message);
-                            // Créer l'URL WhatsApp
-                            const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
-                            
-                            // Nom de fenêtre fixe pour réutiliser la même fenêtre WhatsApp
-                            const windowName = "whatsapp_quote_send";
-                            
-                            // Ouvrir WhatsApp
-                            let whatsappWindow = whatsappWindowRef.current;
-                            if (!whatsappWindow || whatsappWindow.closed) {
-                              whatsappWindow = window.open(whatsappUrl, windowName);
-                              if (whatsappWindow) {
-                                whatsappWindowRef.current = whatsappWindow;
-                                whatsappWindow.focus();
-                              }
-                            } else {
-                              whatsappWindow.location.href = whatsappUrl;
-                              whatsappWindow.focus();
-                            }
-                            
-                            if (whatsappWindow) {
-                              toast.success("PDF généré et téléchargé ! WhatsApp ouvert. Attachez le PDF téléchargé et envoyez.");
-                            } else {
-                              toast.error("Impossible d'ouvrir WhatsApp. Vérifiez que les popups ne sont pas bloquées.");
-                            }
-                          } catch (error) {
-                            console.error("Erreur lors de la génération du PDF:", error);
-                            toast.error("Erreur lors de la génération du PDF. Veuillez réessayer.");
-                          }
-                        }}
-                      >
-                        📱 Envoyer
                       </button>
                       {!allTicketsFilled && (
                         <button
