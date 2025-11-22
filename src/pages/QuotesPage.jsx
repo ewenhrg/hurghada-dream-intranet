@@ -1275,7 +1275,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             <span className="text-2xl">🎯</span>
             Activités ({computed.length})
           </h3>
-          {computed.map((c, idx) => (
+          {computed.map((c, idx) => {
+            // Calculer l'explication en dehors du JSX pour éviter les problèmes
+            const explanation = c.raw.activityId ? getActivityExplanation(c.raw.activityId) : null;
+            const activityName = c.act?.name || "";
+            const templatesCount = Object.keys(messageTemplates).length;
+            
+            return (
             <div key={idx} className="bg-white/95 backdrop-blur-sm border-2 border-slate-200/60 rounded-2xl p-5 md:p-7 lg:p-9 space-y-5 md:space-y-6 lg:space-y-8 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-blue-300/60">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-1 pb-4 border-b border-slate-200/60">
                 <div className="flex items-center gap-3">
@@ -1304,23 +1310,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     ))}
                   </select>
                   {/* Afficher l'explication de l'activité si elle existe */}
-                  {c.raw.activityId && (() => {
-                    const explanation = getActivityExplanation(c.raw.activityId);
-                    const activityName = c.act?.name || "";
-                    const templatesCount = Object.keys(messageTemplates).length;
-                    
-                    // Debug dans la console
-                    console.log('📋 Affichage explication:', {
-                      activityId: c.raw.activityId,
-                      activityName,
-                      hasExplanation: !!explanation,
-                      templatesCount,
-                      availableTemplates: Object.keys(messageTemplates),
-                    });
-                    
-                    // Toujours afficher quelque chose pour debug
-                    if (explanation) {
-                      return (
+                  {c.raw.activityId && (
+                    <>
+                      {/* Debug dans la console */}
+                      {console.log('📋 Affichage explication pour activité:', {
+                        activityId: c.raw.activityId,
+                        activityName,
+                        hasExplanation: !!explanation,
+                        templatesCount,
+                        availableTemplates: Object.keys(messageTemplates),
+                        cAct: c.act,
+                      }) || null}
+                      
+                      {/* Toujours afficher quelque chose */}
+                      {explanation ? (
                         <div className="mt-3 p-4 rounded-lg border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md">
                           <div className="flex items-start gap-2">
                             <span className="text-xl">ℹ️</span>
@@ -1332,32 +1335,29 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                             </div>
                           </div>
                         </div>
-                      );
-                    }
-                    
-                    // Afficher un message informatif si aucun template trouvé (toujours visible pour debug)
-                    return (
-                      <div className="mt-3 p-3 rounded-lg border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 shadow-sm">
-                        <div className="flex items-start gap-2">
-                          <span className="text-lg">💡</span>
-                          <div className="flex-1">
-                            <p className="text-xs font-semibold text-amber-900 mb-1">
-                              {activityName ? `Aucune explication configurée pour "${activityName}"` : 'Sélectionnez une activité'}
-                            </p>
-                            {templatesCount > 0 ? (
-                              <p className="text-[10px] text-amber-700 mt-1">
-                                Templates disponibles ({templatesCount}): {Object.keys(messageTemplates).slice(0, 3).join(', ')}{Object.keys(messageTemplates).length > 3 ? '...' : ''}
+                      ) : (
+                        <div className="mt-3 p-3 rounded-lg border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 shadow-sm">
+                          <div className="flex items-start gap-2">
+                            <span className="text-lg">💡</span>
+                            <div className="flex-1">
+                              <p className="text-xs font-semibold text-amber-900 mb-1">
+                                {activityName ? `Aucune explication configurée pour "${activityName}"` : 'Activité sélectionnée'}
                               </p>
-                            ) : (
-                              <p className="text-[10px] text-amber-700 mt-1">
-                                Configurez les explications dans la page "Situation" → ⚙️ Configurer les messages
-                              </p>
-                            )}
+                              {templatesCount > 0 ? (
+                                <p className="text-[10px] text-amber-700 mt-1">
+                                  Templates disponibles ({templatesCount}): {Object.keys(messageTemplates).slice(0, 3).join(', ')}{Object.keys(messageTemplates).length > 3 ? '...' : ''}
+                                </p>
+                              ) : (
+                                <p className="text-[10px] text-amber-700 mt-1">
+                                  Configurez les explications dans la page "Situation" → ⚙️ Configurer les messages
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })()}
+                      )}
+                    </>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2.5">Date *</label>
@@ -2186,7 +2186,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
 
         <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/80 to-pink-50/70 border-2 border-indigo-300/60 rounded-2xl p-5 md:p-7 shadow-xl backdrop-blur-sm">
