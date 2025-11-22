@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { SITE_KEY, CATEGORIES, LS_KEYS } from "../constants";
+import { SITE_KEY, CATEGORIES } from "../constants";
 import { TextInput, PrimaryBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
-import { loadLS } from "../utils";
 
 // Composant Tooltip pour l'aide contextuelle avec amélioration mobile et accessibilité
 function Tooltip({ text, children, id, position = "top" }) {
@@ -78,13 +77,8 @@ export function RequestPage() {
     });
     return initial;
   });
-  
-  // Charger les templates de messages pour les explications d'activités
-  const [messageTemplates, setMessageTemplates] = useState(() => {
-    return loadLS(LS_KEYS.messageTemplates, {});
-  });
 
-  // Charger les activités disponibles et les templates de messages
+  // Charger les activités disponibles
   useEffect(() => {
     async function loadActivities() {
       if (!supabase) {
@@ -116,56 +110,7 @@ export function RequestPage() {
       }
     }
 
-    async function loadMessageTemplates() {
-      if (!supabase) return;
-
-      try {
-        const { data, error } = await supabase
-          .from("message_settings")
-          .select("payload")
-          .eq("site_key", SITE_KEY)
-          .eq("settings_type", "message_templates")
-          .single();
-
-        if (!error && data && data.payload) {
-          setMessageTemplates(data.payload);
-        }
-      } catch (err) {
-        console.error("Erreur lors du chargement des templates:", err);
-      }
-    }
-
     loadActivities();
-    loadMessageTemplates();
-  }, []);
-
-  // Écouter les changements dans localStorage pour mettre à jour les templates en temps réel
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === LS_KEYS.messageTemplates && e.newValue) {
-        try {
-          const newTemplates = JSON.parse(e.newValue);
-          setMessageTemplates(newTemplates);
-        } catch (err) {
-          console.error("Erreur lors de la mise à jour des templates:", err);
-        }
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    
-    // Écouter aussi les changements dans la même fenêtre (via custom event)
-    const handleCustomStorageChange = () => {
-      const templates = loadLS(LS_KEYS.messageTemplates, {});
-      setMessageTemplates(templates);
-    };
-    
-    window.addEventListener("messageTemplatesUpdated", handleCustomStorageChange);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("messageTemplatesUpdated", handleCustomStorageChange);
-    };
   }, []);
 
   // Vérifier si le token existe déjà (pour pré-remplir le formulaire)
@@ -285,27 +230,6 @@ export function RequestPage() {
       ...prev,
       [categoryKey]: !prev[categoryKey],
     }));
-  };
-
-  // Fonction pour obtenir l'explication d'une activité
-  const getActivityExplanation = (activityName) => {
-    if (!activityName || !messageTemplates) return null;
-    
-    // Chercher le template exact
-    let explanation = messageTemplates[activityName];
-    
-    // Si pas trouvé, chercher avec correspondance insensible à la casse
-    if (!explanation) {
-      const lowerActivityName = activityName.toLowerCase().trim();
-      const matchingKey = Object.keys(messageTemplates).find(
-        key => key.toLowerCase().trim() === lowerActivityName
-      );
-      if (matchingKey) {
-        explanation = messageTemplates[matchingKey];
-      }
-    }
-    
-    return explanation && explanation.trim() !== "" ? explanation.trim() : null;
   };
 
   const handleSubmit = async (e) => {
@@ -863,20 +787,16 @@ export function RequestPage() {
                                 (a) => a.activityId?.toString() === activityId
                               );
 
-                              const explanation = isSelected ? getActivityExplanation(activity.name) : null;
-
                               return (
                                 <div
                                   key={activity.id}
-                                  className={`border-2 rounded-xl transition-all ${
+                                  className={`border-2 rounded-xl p-4 md:p-5 transition-all ${
                                     isSelected
                                       ? "border-blue-500 bg-blue-50 shadow-md"
                                       : "border-slate-200 bg-white hover:border-green-300 hover:shadow-sm"
                                   }`}
                                 >
-                                  <div className={`grid ${explanation ? 'md:grid-cols-2' : 'grid-cols-1'} gap-4 p-4 md:p-5`}>
-                                    {/* Colonne principale avec l'activité */}
-                                    <div className="flex items-start gap-4">
+                                  <div className="flex items-start gap-4">
                                       <input
                                         type="checkbox"
                                         id={`activity-${activityId}`}
@@ -1017,23 +937,7 @@ export function RequestPage() {
                                       )}
                                     </div>
                                   </div>
-                                  
-                                  {/* Colonne d'explication */}
-                                  {explanation && (
-                                    <div className="md:border-l-2 md:border-blue-200 md:pl-4 pt-4 md:pt-0">
-                                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200 shadow-sm">
-                                        <div className="flex items-center gap-2 mb-3">
-                                          <span className="text-xl">ℹ️</span>
-                                          <h5 className="text-sm font-bold text-blue-900">À propos de cette activité</h5>
-                                        </div>
-                                        <p className="text-sm text-blue-800 whitespace-pre-wrap leading-relaxed">
-                                          {explanation}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  )}
                                 </div>
-                              </div>
                               );
                             })}
                           </div>
