@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber } from "../utils";
+import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber } from "../utils";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -94,6 +94,35 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   // États pour les confirmations
   const [confirmDeleteItem, setConfirmDeleteItem] = useState({ isOpen: false, index: null, activityName: "" });
   const [confirmResetForm, setConfirmResetForm] = useState(false);
+
+  // Charger les templates de messages depuis localStorage
+  const [messageTemplates] = useState(() => {
+    return loadLS(LS_KEYS.messageTemplates, {});
+  });
+
+  // Fonction pour obtenir l'explication d'une activité
+  const getActivityExplanation = useCallback((activityId) => {
+    if (!activityId) return null;
+    const activity = activitiesMap.get(activityId);
+    if (!activity) return null;
+    
+    // Chercher le template pour cette activité par nom
+    const activityName = activity.name || "";
+    let template = messageTemplates[activityName];
+    
+    // Si pas trouvé exactement, chercher avec une correspondance insensible à la casse
+    if (!template) {
+      const lowerActivityName = activityName.toLowerCase().trim();
+      const matchingKey = Object.keys(messageTemplates).find(
+        key => key.toLowerCase().trim() === lowerActivityName
+      );
+      if (matchingKey) {
+        template = messageTemplates[matchingKey];
+      }
+    }
+    
+    return template || null;
+  }, [activitiesMap, messageTemplates]);
 
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
@@ -1194,6 +1223,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       </option>
                     ))}
                   </select>
+                  {/* Afficher l'explication de l'activité si elle existe */}
+                  {c.raw.activityId && getActivityExplanation(c.raw.activityId) && (
+                    <div className="mt-3 p-4 rounded-lg border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md">
+                      <div className="flex items-start gap-2">
+                        <span className="text-xl">ℹ️</span>
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-blue-900 mb-2">Explication de l'activité :</p>
+                          <p className="text-xs text-blue-800 whitespace-pre-wrap leading-relaxed">
+                            {getActivityExplanation(c.raw.activityId)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2.5">Date *</label>
