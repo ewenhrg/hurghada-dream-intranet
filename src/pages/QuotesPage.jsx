@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber } from "../utils";
@@ -94,6 +94,81 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   // États pour les confirmations
   const [confirmDeleteItem, setConfirmDeleteItem] = useState({ isOpen: false, index: null, activityName: "" });
   const [confirmResetForm, setConfirmResetForm] = useState(false);
+
+  // Charger les templates de messages depuis localStorage et Supabase
+  const [messageTemplates, setMessageTemplates] = useState(() => {
+    return loadLS(LS_KEYS.messageTemplates, {});
+  });
+
+  const isSupabaseConfigured = __SUPABASE_DEBUG__?.isConfigured;
+
+  // Charger les templates depuis Supabase (comme dans SituationPage)
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    let cancelled = false;
+
+    async function fetchTemplates() {
+      try {
+        const { data, error } = await supabase
+          .from("message_settings")
+          .select("settings_type, payload")
+          .eq("site_key", SITE_KEY)
+          .eq("settings_type", "message_templates");
+
+        if (!error && Array.isArray(data) && data.length > 0 && !cancelled) {
+          const templatesRow = data[0];
+          if (templatesRow && templatesRow.payload && typeof templatesRow.payload === "object") {
+            setMessageTemplates(templatesRow.payload);
+            saveLS(LS_KEYS.messageTemplates, templatesRow.payload);
+          }
+        }
+      } catch (fetchError) {
+        console.warn("⚠️ Erreur lors du chargement des templates depuis Supabase:", fetchError);
+      }
+    }
+
+    fetchTemplates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSupabaseConfigured]);
+
+  // Écouter les changements dans localStorage pour mettre à jour les templates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const updatedTemplates = loadLS(LS_KEYS.messageTemplates, {});
+      if (JSON.stringify(updatedTemplates) !== JSON.stringify(messageTemplates)) {
+        setMessageTemplates(updatedTemplates);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [messageTemplates]);
+
+  // Fonction pour obtenir l'explication d'une activité
+  const getActivityExplanation = useCallback((activityId) => {
+    if (!activityId) return null;
+    const activity = activitiesMap.get(activityId);
+    if (!activity) return null;
+    
+    const activityName = activity.name || "";
+    let template = messageTemplates[activityName];
+    
+    // Si pas trouvé exactement, chercher avec une correspondance insensible à la casse
+    if (!template) {
+      const lowerActivityName = activityName.toLowerCase().trim();
+      const matchingKey = Object.keys(messageTemplates).find(
+        key => key.toLowerCase().trim() === lowerActivityName
+      );
+      if (matchingKey) {
+        template = messageTemplates[matchingKey];
+      }
+    }
+    
+    return template || null;
+  }, [activitiesMap, messageTemplates]);
 
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
@@ -1166,8 +1241,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             <span className="text-2xl">🎯</span>
             Activités ({computed.length})
           </h3>
-          {computed.map((c, idx) => (
-            <div key={idx} className="bg-white/95 backdrop-blur-sm border-2 border-slate-200/60 rounded-2xl p-5 md:p-7 lg:p-9 space-y-5 md:space-y-6 lg:space-y-8 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-blue-300/60">
+          {computed.map((c, idx) => {
+            const explanation = c.raw.activityId ? getActivityExplanation(c.raw.activityId) : null;
+            const activityName = c.act?.name || "";
+            
+            return (
+            <div key={idx} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Colonne principale avec le formulaire */}
+              <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm border-2 border-slate-200/60 rounded-2xl p-5 md:p-7 lg:p-9 space-y-5 md:space-y-6 lg:space-y-8 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-blue-300/60">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-1 pb-4 border-b border-slate-200/60">
                 <div className="flex items-center gap-3">
                   <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-bold shadow-md">
@@ -2021,8 +2102,33 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </p>
                 </div>
               </div>
+              </div>
+              
+              {/* Colonne d'explication sur le côté */}
+              {c.raw.activityId && (
+                <div className="lg:col-span-1">
+                  <div className="sticky top-6 bg-gradient-to-br from-blue-50/90 to-indigo-50/80 border-2 border-blue-200/60 rounded-2xl p-5 md:p-6 shadow-lg backdrop-blur-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-2xl">ℹ️</span>
+                      <h4 className="text-base md:text-lg font-bold text-blue-900">
+                        {activityName || "Activité"}
+                      </h4>
+                    </div>
+                    {explanation ? (
+                      <div className="text-sm text-blue-800 whitespace-pre-wrap leading-relaxed">
+                        {explanation}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-blue-700 italic">
+                        Aucune explication configurée pour cette activité.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          ))}
+          );
+          })}
         </div>
 
         <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/80 to-pink-50/70 border-2 border-indigo-300/60 rounded-2xl p-5 md:p-7 shadow-xl backdrop-blur-sm">
