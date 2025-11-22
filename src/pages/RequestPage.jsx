@@ -530,25 +530,21 @@ export function RequestPage() {
             noValidate
           >
             {/* Informations personnelles */}
-            <div className="bg-gradient-to-br from-blue-50/80 via-indigo-50/80 to-purple-50/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-5 sm:p-6 md:p-8 border-2 border-blue-100/50 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
-              {/* Effet de brillance au survol */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%]"></div>
-              
-              <div className="flex items-center gap-3 sm:gap-4 mb-5 sm:mb-6 relative z-10">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg sm:text-xl flex-shrink-0 shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-                  <span className="text-xl sm:text-2xl">👤</span>
+            <div className="bg-white rounded-2xl p-6 md:p-8 border-2 border-blue-200/60 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
+                  <span className="text-2xl">👤</span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-800">
                   Vos informations
                 </h2>
               </div>
-              <div className="grid md:grid-cols-2 gap-4 sm:gap-5 relative z-10">
-                <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                  <label htmlFor="clientName" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" aria-hidden="true"></span>
-                    Nom complet <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                <div className="space-y-2">
+                  <label htmlFor="clientName" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    Nom complet <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
-                      text="Indiquez votre nom complet tel qu'il apparaît sur votre pièce d'identité. Cela nous permettra de vous identifier facilement."
+                      text="Indiquez votre nom complet tel qu'il apparaît sur votre pièce d'identité."
                       id="tooltip-name"
                     />
                   </label>
@@ -561,18 +557,17 @@ export function RequestPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, clientName: e.target.value })
                     }
-                    placeholder="Votre nom complet"
+                    placeholder="Jean Dupont"
                     aria-required="true"
                     aria-describedby="tooltip-name"
-                    className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                    className="w-full text-base py-3 border-2 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
-                <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                  <label htmlFor="clientPhone" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" aria-hidden="true"></span>
-                    Téléphone <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
+                <div className="space-y-2">
+                  <label htmlFor="clientPhone" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    Téléphone <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
-                      text="Indiquez votre numéro de téléphone avec l'indicatif pays (ex: +33 pour la France). Nous vous contacterons sur ce numéro pour confirmer votre réservation."
+                      text="Numéro avec indicatif pays (ex: +33 pour la France)"
                       id="tooltip-phone"
                     />
                   </label>
@@ -587,18 +582,17 @@ export function RequestPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, clientPhone: e.target.value })
                     }
-                    placeholder="+33606060606"
+                    placeholder="+33 6 12 34 56 78"
                     aria-required="true"
                     aria-describedby="tooltip-phone"
-                    className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                    className="w-full text-base py-3 border-2 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
-                <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                  <label htmlFor="clientEmail" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true"></span>
-                    Adresse email <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
+                <div className="space-y-2">
+                  <label htmlFor="clientEmail" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    Email <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
-                      text="Indiquez votre adresse email. Nous vous enverrons une confirmation de votre demande par email."
+                      text="Nous vous enverrons une confirmation par email"
                       id="tooltip-email"
                     />
                   </label>
@@ -613,18 +607,17 @@ export function RequestPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, clientEmail: e.target.value })
                     }
-                    placeholder="votre.email@exemple.com"
+                    placeholder="email@exemple.com"
                     aria-required="true"
                     aria-describedby="tooltip-email"
-                    className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                    className="w-full text-base py-3 border-2 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
-                <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                  <label htmlFor="clientHotel" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" aria-hidden="true"></span>
-                    Hôtel <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
+                <div className="space-y-2">
+                  <label htmlFor="clientHotel" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    Hôtel <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
-                      text="Indiquez le nom de votre hôtel. Cela nous aidera à organiser les transferts si nécessaire."
+                      text="Pour organiser les transferts si nécessaire"
                       id="tooltip-hotel"
                     />
                   </label>
@@ -640,15 +633,14 @@ export function RequestPage() {
                     placeholder="Nom de votre hôtel"
                     aria-required="true"
                     aria-describedby="tooltip-hotel"
-                    className="text-base sm:text-lg py-3 sm:py-3.5 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                    className="w-full text-base py-3 border-2 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
-                <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                  <label htmlFor="arrivalDate" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true"></span>
-                    Date d'arrivée <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
+                <div className="space-y-2">
+                  <label htmlFor="arrivalDate" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    Date d'arrivée <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
-                      text="Sélectionnez la date de votre arrivée à Hurghada. Cette date nous permettra de planifier vos activités."
+                      text="Date de votre arrivée à Hurghada"
                       id="tooltip-arrival"
                     />
                   </label>
@@ -665,15 +657,14 @@ export function RequestPage() {
                     min={new Date().toISOString().split('T')[0]}
                     aria-required="true"
                     aria-describedby="tooltip-arrival"
-                    className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 sm:py-3.5 text-base sm:text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                    className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
-                <div className="transform transition-all duration-300 hover:scale-[1.02]">
-                  <label htmlFor="departureDate" className="block text-sm sm:text-base font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true"></span>
-                    Date de départ <span className="text-red-500 font-bold" aria-label="obligatoire">*</span>
+                <div className="space-y-2">
+                  <label htmlFor="departureDate" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    Date de départ <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
-                      text="Sélectionnez la date de votre départ. Cette date doit être postérieure à votre date d'arrivée. Elle nous permettra de planifier vos activités jusqu'à votre départ."
+                      text="Date de votre départ (après l'arrivée)"
                       id="tooltip-departure"
                     />
                   </label>
@@ -691,27 +682,24 @@ export function RequestPage() {
                     aria-required="true"
                     aria-describedby="tooltip-departure"
                     aria-invalid={formData.departureDate && formData.arrivalDate && formData.departureDate < formData.arrivalDate}
-                    className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 sm:py-3.5 text-base sm:text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                    className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
             </div>
 
             {/* Sélection des activités */}
-            <div className="bg-gradient-to-br from-green-50/80 via-emerald-50/80 to-teal-50/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-5 sm:p-6 md:p-8 border-2 border-green-100/50 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
-              {/* Effet de brillance au survol */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%]"></div>
-              
-              <div className="flex items-start gap-3 sm:gap-4 mb-5 sm:mb-6 relative z-10">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-lg sm:text-xl flex-shrink-0 mt-0.5 shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-                  <span className="text-xl sm:text-2xl">🎯</span>
+            <div className="bg-white rounded-2xl p-6 md:p-8 border-2 border-green-200/60 shadow-lg">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-md">
+                  <span className="text-2xl">🎯</span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-slate-800">
                     Activités souhaitées <span className="text-red-500">*</span>
                   </h2>
-                  <p className="text-xs sm:text-sm text-gray-600 mt-2 font-medium">
-                    Sélectionnez les activités qui vous intéressent et indiquez le nombre de personnes
+                  <p className="text-sm text-slate-600 mt-1">
+                    Sélectionnez les activités et indiquez le nombre de personnes
                   </p>
                 </div>
               </div>
@@ -754,7 +742,7 @@ export function RequestPage() {
                     return (
                       <div
                         key={category.key}
-                        className="bg-white/90 backdrop-blur-sm rounded-lg sm:rounded-xl border-2 border-gray-200 overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-[1.01]"
+                        className="bg-white rounded-xl border-2 border-slate-200 overflow-hidden shadow-md hover:shadow-lg transition-all"
                       >
                         <button
                           type="button"
@@ -763,23 +751,23 @@ export function RequestPage() {
                           aria-expanded={isExpanded}
                           aria-controls={`category-${category.key}`}
                           aria-label={`${isExpanded ? 'Réduire' : 'Développer'} la catégorie ${category.label}`}
-                          className="w-full flex items-center justify-between p-4 sm:p-5 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50/50 transition-all duration-300 touch-manipulation group disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                          className="w-full flex items-center justify-between p-4 md:p-5 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500"
                         >
-                          <div className="flex items-center gap-3 sm:gap-4 flex-wrap flex-1 min-w-0">
-                            <span className="text-2xl sm:text-3xl flex-shrink-0 transform group-hover:scale-110 transition-transform duration-300">{categoryIcons[category.key] || "📋"}</span>
-                            <h3 className="text-base sm:text-lg font-extrabold text-gray-900 flex-shrink-0 group-hover:text-green-600 transition-colors duration-300">
+                          <div className="flex items-center gap-3 md:gap-4 flex-wrap flex-1 min-w-0">
+                            <span className="text-2xl md:text-3xl">{categoryIcons[category.key] || "📋"}</span>
+                            <h3 className="text-base md:text-lg font-bold text-slate-800">
                               {category.label}
                             </h3>
-                            <span className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full whitespace-nowrap font-semibold border border-gray-200">
+                            <span className="text-xs text-slate-600 bg-slate-100 px-3 py-1 rounded-full font-medium">
                               {categoryActivities.length} activité{categoryActivities.length > 1 ? "s" : ""}
                             </span>
                             {selectedCount > 0 && (
-                              <span className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap shadow-md transform group-hover:scale-110 transition-transform duration-300">
+                              <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                                 {selectedCount} sélectionnée{selectedCount > 1 ? "s" : ""}
                               </span>
                             )}
                           </div>
-                          <span className="text-gray-400 text-xl sm:text-2xl font-bold ml-2 flex-shrink-0 transform group-hover:scale-125 transition-transform duration-300">
+                          <span className="text-slate-400 text-xl font-bold ml-2">
                             {isExpanded ? "▼" : "▶"}
                           </span>
                         </button>
@@ -802,13 +790,13 @@ export function RequestPage() {
                               return (
                                 <div
                                   key={activity.id}
-                                  className={`border-2 rounded-lg sm:rounded-xl p-4 sm:p-5 transition-all duration-300 transform ${
+                                  className={`border-2 rounded-xl p-4 md:p-5 transition-all ${
                                     isSelected
-                                      ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg scale-[1.02]"
-                                      : "border-gray-200 bg-white hover:border-green-300 hover:shadow-md hover:scale-[1.01]"
+                                      ? "border-blue-500 bg-blue-50 shadow-md"
+                                      : "border-slate-200 bg-white hover:border-green-300 hover:shadow-sm"
                                   }`}
                                 >
-                                  <div className="flex items-start gap-3 sm:gap-4">
+                                  <div className="flex items-start gap-4">
                                     <input
                                       type="checkbox"
                                       id={`activity-${activityId}`}
@@ -817,53 +805,52 @@ export function RequestPage() {
                                       onChange={() => handleActivityToggle(activityId)}
                                       aria-label={`Sélectionner l'activité ${activity.name}`}
                                       aria-describedby={`activity-desc-${activityId}`}
-                                      className="mt-1 w-6 h-6 sm:w-7 sm:h-7 text-blue-600 rounded-lg border-2 border-gray-300 focus:ring-4 focus:ring-blue-200 cursor-pointer touch-manipulation flex-shrink-0 transform hover:scale-110 transition-all duration-300 accent-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      className="mt-1 w-5 h-5 md:w-6 md:h-6 text-blue-600 rounded border-2 border-slate-300 focus:ring-2 focus:ring-blue-200 cursor-pointer accent-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                     />
                                     <div className="flex-1 min-w-0">
-                                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
                                         <h4 
                                           id={`activity-desc-${activityId}`}
-                                          className="text-sm sm:text-base font-extrabold text-gray-900 break-words leading-tight"
+                                          className="text-base md:text-lg font-bold text-slate-800 break-words"
                                         >
                                           {activity.name}
                                         </h4>
                                         {activity.price_adult && (
-                                          <span className="text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-1.5 rounded-full whitespace-nowrap self-start sm:self-auto shadow-md">
+                                          <span className="text-sm font-bold text-white bg-blue-600 px-3 py-1.5 rounded-full whitespace-nowrap self-start md:self-auto">
                                             {activity.price_adult}€ / adulte
                                           </span>
                                         )}
                                       </div>
                                       {/* Informations d'âge */}
                                       {(activity.age_child || activity.age_baby) && (
-                                        <div className="flex flex-wrap gap-2 mb-3 text-xs sm:text-sm">
+                                        <div className="flex flex-wrap gap-2 mb-3 text-xs">
                                           {activity.age_child && (
-                                            <span className="text-gray-700 bg-gradient-to-r from-green-100 to-emerald-100 px-3 py-1.5 rounded-full font-semibold border border-green-200 shadow-sm">
+                                            <span className="text-slate-700 bg-green-100 px-3 py-1 rounded-full font-medium border border-green-200">
                                               👶 Enfant: {activity.age_child}
                                             </span>
                                           )}
                                           {activity.age_baby && (
-                                            <span className="text-gray-700 bg-gradient-to-r from-pink-100 to-rose-100 px-3 py-1.5 rounded-full font-semibold border border-pink-200 shadow-sm">
+                                            <span className="text-slate-700 bg-pink-100 px-3 py-1 rounded-full font-medium border border-pink-200">
                                               🍼 Bébé: {activity.age_baby}
                                             </span>
                                           )}
                                         </div>
                                       )}
                                       {activity.notes && (
-                                        <p className="text-xs text-gray-700 mb-3 bg-gradient-to-r from-gray-50 to-blue-50/50 p-3 rounded-lg border border-gray-200 font-medium leading-relaxed">
+                                        <p className="text-sm text-slate-700 mb-3 bg-slate-50 p-3 rounded-lg border border-slate-200 leading-relaxed">
                                           {activity.notes}
                                         </p>
                                       )}
                                       {isSelected && (
-                                        <div className="mt-4 pt-4 border-t-2 border-blue-300 animate-fade-in">
-                                          <p className="text-xs sm:text-sm font-extrabold text-gray-800 mb-3 flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                                        <div className="mt-4 pt-4 border-t-2 border-blue-300">
+                                          <p className="text-sm font-bold text-slate-800 mb-3">
                                             Nombre de personnes :
                                           </p>
-                                          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                                            <div className="transform transition-all duration-300 hover:scale-105">
-                                              <label className="block text-xs font-bold text-gray-800 mb-2">
+                                          <div className="grid grid-cols-3 gap-3">
+                                            <div>
+                                              <label className="block text-xs font-semibold text-slate-700 mb-2">
                                                 👥 Adultes <span className="text-red-500">*</span>
-                                                <span className="block text-xs font-normal text-gray-500 mt-0.5">(12+ ans)</span>
+                                                <span className="block text-xs font-normal text-slate-500 mt-0.5">(12+ ans)</span>
                                               </label>
                                               <input
                                                 type="number"
@@ -883,15 +870,15 @@ export function RequestPage() {
                                                 }
                                                 aria-label={`Nombre d'adultes pour ${activity.name}`}
                                                 aria-required="true"
-                                                className="w-full rounded-lg border-2 border-gray-200 bg-white px-3 py-2.5 text-base sm:text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all touch-manipulation shadow-sm hover:shadow-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                                 placeholder="0"
                                               />
                                             </div>
-                                            <div className="transform transition-all duration-300 hover:scale-105">
-                                              <label className="block text-xs font-bold text-gray-800 mb-2">
+                                            <div>
+                                              <label className="block text-xs font-semibold text-slate-700 mb-2">
                                                 👶 Enfants
                                                 {activity.age_child && (
-                                                  <span className="block text-xs font-normal text-gray-500 mt-0.5">
+                                                  <span className="block text-xs font-normal text-slate-500 mt-0.5">
                                                     ({activity.age_child})
                                                   </span>
                                                 )}
@@ -912,15 +899,15 @@ export function RequestPage() {
                                                   )
                                                 }
                                                 aria-label={`Nombre d'enfants pour ${activity.name}`}
-                                                className="w-full rounded-lg border-2 border-gray-200 bg-white px-3 py-2.5 text-base sm:text-sm focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all touch-manipulation shadow-sm hover:shadow-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                                 placeholder="0"
                                               />
                                             </div>
-                                            <div className="transform transition-all duration-300 hover:scale-105">
-                                              <label className="block text-xs font-bold text-gray-800 mb-2">
+                                            <div>
+                                              <label className="block text-xs font-semibold text-slate-700 mb-2">
                                                 🍼 Bébés
                                                 {activity.age_baby && (
-                                                  <span className="block text-xs font-normal text-gray-500 mt-0.5">
+                                                  <span className="block text-xs font-normal text-slate-500 mt-0.5">
                                                     ({activity.age_baby})
                                                   </span>
                                                 )}
@@ -941,7 +928,7 @@ export function RequestPage() {
                                                   )
                                                 }
                                                 aria-label={`Nombre de bébés pour ${activity.name}`}
-                                                className="w-full rounded-lg border-2 border-gray-200 bg-white px-3 py-2.5 text-base sm:text-sm focus:border-pink-500 focus:ring-4 focus:ring-pink-100 transition-all touch-manipulation shadow-sm hover:shadow-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                                 placeholder="0"
                                               />
                                             </div>
@@ -963,31 +950,27 @@ export function RequestPage() {
             </div>
 
             {/* Bouton de soumission */}
-            <div className="flex flex-col items-center gap-4 sm:gap-5 pt-6 sm:pt-8 border-t-2 border-gray-200">
+            <div className="flex flex-col items-center gap-4 pt-6 border-t-2 border-slate-200">
               <PrimaryBtn 
                 type="submit" 
                 disabled={submitting || requestSubmitted}
                 aria-label={submitting ? "Envoi de la demande en cours" : "Envoyer la demande de devis"}
                 aria-busy={submitting}
-                className="w-full sm:w-auto px-8 sm:px-12 py-4 sm:py-5 text-base sm:text-lg font-extrabold rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 touch-manipulation border-2 border-white/20 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-2"
+                className="w-full md:w-auto px-8 md:px-12 py-4 text-lg font-bold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {/* Effet de brillance au survol */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%]"></div>
-                
                 {submitting ? (
-                  <span className="flex items-center justify-center gap-3 relative z-10">
+                  <span className="flex items-center justify-center gap-3">
                     <span className="animate-spin text-xl">⏳</span>
                     <span>Envoi en cours...</span>
                   </span>
                 ) : (
-                  <span className="flex items-center justify-center gap-3 relative z-10">
-                    <span className="text-xl transform group-hover:scale-110 transition-transform duration-300">✉️</span>
+                  <span className="flex items-center justify-center gap-3">
+                    <span className="text-xl">✉️</span>
                     <span>Envoyer ma demande</span>
-                    <span className="text-lg transform group-hover:translate-x-1 transition-transform duration-300">→</span>
                   </span>
                 )}
               </PrimaryBtn>
-              <p className="text-xs sm:text-sm text-gray-600 text-center px-2 font-medium">
+              <p className="text-sm text-slate-600 text-center font-medium">
                 Les champs marqués d'un <span className="text-red-500 font-bold">*</span> sont obligatoires
               </p>
             </div>
