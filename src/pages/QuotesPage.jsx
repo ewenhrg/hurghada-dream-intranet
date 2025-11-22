@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber } from "../utils";
@@ -95,10 +95,77 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const [confirmDeleteItem, setConfirmDeleteItem] = useState({ isOpen: false, index: null, activityName: "" });
   const [confirmResetForm, setConfirmResetForm] = useState(false);
 
-  // Charger les templates de messages depuis localStorage
-  const [messageTemplates] = useState(() => {
+  // Charger les templates de messages depuis localStorage et Supabase
+  const [messageTemplates, setMessageTemplates] = useState(() => {
     return loadLS(LS_KEYS.messageTemplates, {});
   });
+  const [templatesLoaded, setTemplatesLoaded] = useState(false);
+
+  const isSupabaseConfigured = __SUPABASE_DEBUG__?.isConfigured;
+
+  // Charger les templates depuis Supabase (comme dans SituationPage)
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setTemplatesLoaded(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchTemplates() {
+      try {
+        const { data, error } = await supabase
+          .from("message_settings")
+          .select("settings_type, payload")
+          .eq("site_key", SITE_KEY)
+          .eq("settings_type", "message_templates");
+
+        if (!error && Array.isArray(data) && data.length > 0 && !cancelled) {
+          const templatesRow = data[0];
+          if (templatesRow && templatesRow.payload && typeof templatesRow.payload === "object") {
+            setMessageTemplates(templatesRow.payload);
+            saveLS(LS_KEYS.messageTemplates, templatesRow.payload);
+          }
+        } else if (error) {
+          console.warn("⚠️ Impossible de charger les templates depuis Supabase:", error);
+        }
+      } catch (fetchError) {
+        console.warn("⚠️ Erreur lors du chargement des templates depuis Supabase:", fetchError);
+      } finally {
+        if (!cancelled) {
+          setTemplatesLoaded(true);
+        }
+      }
+    }
+
+    fetchTemplates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSupabaseConfigured]);
+
+  // Écouter les changements dans localStorage pour mettre à jour les templates
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const updatedTemplates = loadLS(LS_KEYS.messageTemplates, {});
+      setMessageTemplates(updatedTemplates);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Écouter aussi les changements dans la même page (via un événement personnalisé)
+    const interval = setInterval(() => {
+      const updatedTemplates = loadLS(LS_KEYS.messageTemplates, {});
+      if (JSON.stringify(updatedTemplates) !== JSON.stringify(messageTemplates)) {
+        setMessageTemplates(updatedTemplates);
+      }
+    }, 1000); // Vérifier toutes les secondes
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [messageTemplates]);
 
   // Fonction pour obtenir l'explication d'une activité
   const getActivityExplanation = useCallback((activityId) => {
@@ -110,6 +177,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     const activityName = activity.name || "";
     let template = messageTemplates[activityName];
     
+    // Debug pour voir ce qui se passe
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Recherche explication pour:', {
+        activityId,
+        activityName,
+        hasTemplate: !!template,
+        availableTemplates: Object.keys(messageTemplates),
+      });
+    }
+    
     // Si pas trouvé exactement, chercher avec une correspondance insensible à la casse
     if (!template) {
       const lowerActivityName = activityName.toLowerCase().trim();
@@ -118,6 +195,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       );
       if (matchingKey) {
         template = messageTemplates[matchingKey];
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Template trouvé avec correspondance insensible à la casse:', matchingKey);
+        }
       }
     }
     
@@ -1224,19 +1304,33 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     ))}
                   </select>
                   {/* Afficher l'explication de l'activité si elle existe */}
-                  {c.raw.activityId && getActivityExplanation(c.raw.activityId) && (
-                    <div className="mt-3 p-4 rounded-lg border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md">
-                      <div className="flex items-start gap-2">
-                        <span className="text-xl">ℹ️</span>
-                        <div className="flex-1">
-                          <p className="text-xs font-semibold text-blue-900 mb-2">Explication de l'activité :</p>
-                          <p className="text-xs text-blue-800 whitespace-pre-wrap leading-relaxed">
-                            {getActivityExplanation(c.raw.activityId)}
-                          </p>
+                  {c.raw.activityId && (() => {
+                    const explanation = getActivityExplanation(c.raw.activityId);
+                    if (explanation) {
+                      return (
+                        <div className="mt-3 p-4 rounded-lg border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md">
+                          <div className="flex items-start gap-2">
+                            <span className="text-xl">ℹ️</span>
+                            <div className="flex-1">
+                              <p className="text-xs font-semibold text-blue-900 mb-2">Explication de l'activité :</p>
+                              <p className="text-xs text-blue-800 whitespace-pre-wrap leading-relaxed">
+                                {explanation}
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
+                      );
+                    }
+                    // Debug: afficher si aucun template trouvé (en développement seulement)
+                    if (process.env.NODE_ENV === 'development' && c.act) {
+                      return (
+                        <div className="mt-2 text-[10px] text-slate-400 italic">
+                          (Aucun template trouvé pour "{c.act.name}". Templates disponibles: {Object.keys(messageTemplates).length > 0 ? Object.keys(messageTemplates).join(', ') : 'aucun'})
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 <div>
                   <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2.5">Date *</label>
