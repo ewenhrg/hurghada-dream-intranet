@@ -1015,91 +1015,120 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               e.preventDefault();
             }
           }}
-          className="space-y-4 md:space-y-8"
+          className="space-y-6 md:space-y-8"
         >
-        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-3 mb-2">
-          <p className="text-xs md:text-sm text-slate-600 font-medium bg-blue-50/50 px-3 py-2 rounded-lg border border-blue-100/60">
-            💾 Les modifications sont sauvegardées automatiquement en brouillon
-          </p>
+        {/* Barre d'information et actions */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 rounded-xl border border-blue-200/60">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">💾</span>
+            <p className="text-sm text-slate-700 font-medium">
+              Les modifications sont sauvegardées automatiquement
+            </p>
+          </div>
           <GhostBtn
             type="button"
             variant="danger"
             size="sm"
             onClick={() => setConfirmResetForm(true)}
-            className="w-full sm:w-auto"
+            className="whitespace-nowrap"
           >
             🧹 Tout effacer
           </GhostBtn>
         </div>
+        
         {/* Infos client */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Client</p>
-            <TextInput value={client.name} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Téléphone</p>
-            <TextInput 
-              value={client.phone} 
-              onChange={(e) => {
-                // Nettoyer automatiquement le numéro de téléphone (supprimer espaces, parenthèses, etc.)
-                const cleaned = cleanPhoneNumber(e.target.value);
-                setClient((c) => ({ ...c, phone: cleaned }));
-              }} 
-            />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Email</p>
-            <TextInput 
-              type="email"
-              value={client.email || ""} 
-              onChange={(e) => setClient((c) => ({ ...c, email: e.target.value }))} 
-              placeholder="email@exemple.com"
-            />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Hôtel</p>
-            <TextInput value={client.hotel} onChange={(e) => setClient((c) => ({ ...c, hotel: e.target.value }))} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Chambre</p>
-            <TextInput value={client.room} onChange={(e) => setClient((c) => ({ ...c, room: e.target.value }))} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Quartier (client)</p>
-            <select
-              value={client.neighborhood}
-              onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
-              className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
-            >
-              <option value="">— Choisir —</option>
-              {NEIGHBORHOODS.map((n) => (
-                <option key={n.key} value={n.key}>
-                  {n.label}
-                </option>
-              ))}
-            </select>
+        <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/60 rounded-2xl border border-slate-200/60 p-6 md:p-8 shadow-md backdrop-blur-sm">
+          <h3 className="text-lg md:text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <span className="text-2xl">👤</span>
+            Informations client
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-slate-700">Nom complet *</label>
+              <TextInput 
+                value={client.name} 
+                onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))}
+                placeholder="Jean Dupont"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-slate-700">Téléphone *</label>
+              <TextInput 
+                value={client.phone} 
+                onChange={(e) => {
+                  const cleaned = cleanPhoneNumber(e.target.value);
+                  setClient((c) => ({ ...c, phone: cleaned }));
+                }}
+                placeholder="+33 6 12 34 56 78"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-slate-700">Email</label>
+              <TextInput 
+                type="email"
+                value={client.email || ""} 
+                onChange={(e) => setClient((c) => ({ ...c, email: e.target.value }))} 
+                placeholder="email@exemple.com"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-slate-700">Hôtel</label>
+              <TextInput 
+                value={client.hotel} 
+                onChange={(e) => setClient((c) => ({ ...c, hotel: e.target.value }))}
+                placeholder="Nom de l'hôtel"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-slate-700">Numéro de chambre</label>
+              <TextInput 
+                value={client.room} 
+                onChange={(e) => setClient((c) => ({ ...c, room: e.target.value }))}
+                placeholder="Ex: 205"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-slate-700">Quartier</label>
+              <select
+                value={client.neighborhood}
+                onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
+                className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+              >
+                <option value="">— Sélectionner un quartier —</option>
+                {NEIGHBORHOODS.map((n) => (
+                  <option key={n.key} value={n.key}>
+                    {n.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Dates séjour */}
-        <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/60 rounded-2xl border border-indigo-200/60 p-5 md:p-6 lg:p-8 shadow-md backdrop-blur-sm">
-          <h3 className="text-base md:text-lg font-semibold text-slate-800 mb-4 md:mb-5 flex items-center gap-2">
-            <span className="text-xl">📅</span>
+        <div className="bg-gradient-to-br from-indigo-50/90 to-purple-50/70 rounded-2xl border-2 border-indigo-200/60 p-6 md:p-8 shadow-lg backdrop-blur-sm">
+          <h3 className="text-lg md:text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <span className="text-2xl">📅</span>
             Dates du séjour
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-            <div>
-              <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Date d'arrivée</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-slate-700">Date d'arrivée *</label>
               <TextInput 
                 type="date" 
                 value={client.arrivalDate || ""} 
-                onChange={(e) => setClient((c) => ({ ...c, arrivalDate: e.target.value }))} 
+                onChange={(e) => setClient((c) => ({ ...c, arrivalDate: e.target.value }))}
+                className="w-full"
               />
             </div>
-            <div>
-              <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Date de départ</label>
-              <div className="flex gap-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-slate-700">Date de départ *</label>
+              <div className="flex flex-col sm:flex-row gap-3">
                 <TextInput 
                   type="date" 
                   value={client.departureDate || ""} 
@@ -1116,10 +1145,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     }}
                     variant="primary"
                     size="sm"
-                    title="Remplir automatiquement les dates des activités avec les dates du séjour"
+                    title="Remplir automatiquement les dates des activités"
                     className="whitespace-nowrap"
                   >
-                    📅 Auto-dates
+                    ✨ Auto-dates
                   </GhostBtn>
                 )}
               </div>
@@ -1128,16 +1157,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Champ global pour le nombre d'adultes */}
-        <div className="mb-4 md:mb-6 p-5 md:p-6 bg-gradient-to-br from-emerald-50/90 to-teal-50/80 rounded-2xl border-2 border-emerald-300/60 shadow-lg backdrop-blur-sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex-1">
-              <label className="block text-sm md:text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <span className="text-2xl">👥</span>
-                Nombre d'adultes global
-              </label>
-              <p className="text-xs md:text-sm text-slate-600 mb-3 font-medium">
-                Remplit automatiquement toutes les activités ci-dessous
-              </p>
+        <div className="bg-gradient-to-br from-emerald-50/90 to-teal-50/80 rounded-2xl border-2 border-emerald-300/60 p-6 md:p-8 shadow-lg backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">👥</span>
+              <div>
+                <label className="block text-base md:text-lg font-bold text-slate-800">
+                  Nombre d'adultes global
+                </label>
+                <p className="text-xs md:text-sm text-slate-600 mt-1">
+                  Remplit automatiquement toutes les activités
+                </p>
+              </div>
+            </div>
+            <div className="flex-1 md:max-w-xs">
               <NumberInput
                 value={globalAdults}
                 onChange={(e) => {
@@ -1151,10 +1184,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   );
                 }}
                 placeholder="Ex: 2"
-                className="max-w-xs text-base font-semibold"
+                className="w-full text-base font-semibold"
               />
               <p className="text-xs text-slate-500 mt-2 italic">
-                💡 Vous pouvez toujours modifier individuellement le nombre d'adultes pour chaque activité
+                💡 Modifiable individuellement pour chaque activité
               </p>
             </div>
           </div>
@@ -1167,36 +1200,45 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             Activités ({computed.length})
           </h3>
           {computed.map((c, idx) => (
-            <div key={idx} className="bg-white/95 backdrop-blur-sm border-2 border-slate-200/60 rounded-2xl p-5 md:p-7 lg:p-9 space-y-5 md:space-y-6 lg:space-y-8 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-blue-300/60">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-1 pb-4 border-b border-slate-200/60">
+            <div key={idx} className="bg-white rounded-2xl border-2 border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:border-blue-400/60 overflow-hidden">
+              {/* En-tête de l'activité */}
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-bold shadow-md">
+                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm text-white text-base font-bold shadow-md">
                     {idx + 1}
                   </span>
-                  <p className="text-base md:text-lg font-bold text-slate-800">Activité #{idx + 1}</p>
+                  <p className="text-lg font-bold text-white">Activité #{idx + 1}</p>
                 </div>
-                <GhostBtn type="button" onClick={() => removeItem(idx)} variant="danger" className="w-full sm:w-auto">
+                <GhostBtn 
+                  type="button" 
+                  onClick={() => removeItem(idx)} 
+                  variant="danger" 
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+                >
                   🗑️ Supprimer
                 </GhostBtn>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-5 md:gap-6 lg:gap-8 items-end">
-                <div className="sm:col-span-2 md:col-span-2">
-                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2.5">Activité *</label>
-                  <select
-                    value={c.raw.activityId}
-                    onChange={(e) => setItem(idx, { activityId: e.target.value })}
-                    className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-                  >
-                    <option value="">— Sélectionner une activité —</option>
-                    {sortedActivities.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2.5">Date *</label>
+              
+              {/* Contenu de l'activité */}
+              <div className="p-6 md:p-8 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+                  <div className="sm:col-span-2 lg:col-span-1">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2.5">Activité *</label>
+                    <select
+                      value={c.raw.activityId}
+                      onChange={(e) => setItem(idx, { activityId: e.target.value })}
+                      className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                    >
+                      <option value="">— Sélectionner une activité —</option>
+                      {sortedActivities.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2.5">Date *</label>
                   <ColoredDatePicker
                     value={c.raw.date}
                     onChange={(date) => setItem(idx, { date })}
@@ -1249,45 +1291,45 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       </div>
                     </div>
                   )}
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-2">Quartier</p>
-                  <div className="rounded-xl border border-dashed border-blue-200/50 bg-blue-50/50 px-3 py-2 text-sm text-gray-600">
-                    {client.neighborhood
-                      ? NEIGHBORHOODS.find((n) => n.key === client.neighborhood)?.label
-                      : "— Choisir avec le client"}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2.5">Quartier</label>
+                    <div className="rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+                      {client.neighborhood
+                        ? NEIGHBORHOODS.find((n) => n.key === client.neighborhood)?.label
+                        : "— Choisir avec le client"}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2.5">Créneau</label>
+                    <select
+                      value={c.raw.slot}
+                      onChange={(e) => setItem(idx, { slot: e.target.value })}
+                      className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all disabled:bg-slate-100 disabled:text-slate-400"
+                      disabled={!c.transferInfo || (!c.transferInfo.morningEnabled && !c.transferInfo.afternoonEnabled && !c.transferInfo.eveningEnabled)}
+                    >
+                      <option value="">— Choisir un créneau —</option>
+                      {c.transferInfo?.morningEnabled && (
+                        <option value="morning">🌅 Matin {c.transferInfo.morningTime ? `(${c.transferInfo.morningTime})` : ""}</option>
+                      )}
+                      {c.transferInfo?.afternoonEnabled && (
+                        <option value="afternoon">
+                          ☀️ Après-midi {c.transferInfo.afternoonTime ? `(${c.transferInfo.afternoonTime})` : ""}
+                        </option>
+                      )}
+                      {c.transferInfo?.eveningEnabled && (
+                        <option value="evening">
+                          🌙 Soir {c.transferInfo.eveningTime ? `(${c.transferInfo.eveningTime})` : ""}
+                        </option>
+                      )}
+                    </select>
+                    {c.transferInfo && (
+                      <p className="text-xs text-slate-500 mt-2 font-medium">
+                        💰 Supplément transfert: {currency(c.transferInfo.surcharge || 0, c.currency)} / adulte
+                      </p>
+                    )}
                   </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-2">Créneau</p>
-                  <select
-                    value={c.raw.slot}
-                    onChange={(e) => setItem(idx, { slot: e.target.value })}
-                    className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
-                    disabled={!c.transferInfo || (!c.transferInfo.morningEnabled && !c.transferInfo.afternoonEnabled && !c.transferInfo.eveningEnabled)}
-                  >
-                    <option value="">— Choisir —</option>
-                    {c.transferInfo?.morningEnabled && (
-                      <option value="morning">Matin {c.transferInfo.morningTime ? `(${c.transferInfo.morningTime})` : ""}</option>
-                    )}
-                    {c.transferInfo?.afternoonEnabled && (
-                      <option value="afternoon">
-                        Après-midi {c.transferInfo.afternoonTime ? `(${c.transferInfo.afternoonTime})` : ""}
-                      </option>
-                    )}
-                    {c.transferInfo?.eveningEnabled && (
-                      <option value="evening">
-                        Soir {c.transferInfo.eveningTime ? `(${c.transferInfo.eveningTime})` : ""}
-                      </option>
-                    )}
-                  </select>
-                  {c.transferInfo && (
-                    <p className="text-[10px] text-gray-500 mt-1">
-                      Supplément transfert: {currency(c.transferInfo.surcharge || 0, c.currency)} / adulte
-                    </p>
-                  )}
-                </div>
-              </div>
 
               {/* extra - Cases à cocher pour Speed Boat, champs classiques pour les autres */}
               {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") ? (
@@ -2013,57 +2055,85 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 </div>
               )}
 
-              <div className="flex items-center justify-between mt-6 pt-5 border-t-2 border-slate-200/60 bg-gradient-to-r from-slate-50/60 to-blue-50/40 rounded-xl p-4">
-                <p className="text-sm md:text-base font-bold text-slate-700">Sous-total activité</p>
-                <div className="text-right">
-                  <p className="text-lg md:text-xl font-bold text-slate-900">
-                    💵 {currencyNoCents(Math.round(c.lineTotal), c.currency)}
+              {/* Sous-total de l'activité */}
+              <div className="mt-6 pt-6 border-t-2 border-slate-200">
+                <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 md:p-5">
+                  <p className="text-sm md:text-base font-semibold text-slate-700">Sous-total de cette activité</p>
+                  <p className="text-xl md:text-2xl font-bold text-blue-700">
+                    {currencyNoCents(Math.round(c.lineTotal), c.currency)}
                   </p>
                 </div>
+              </div>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/80 to-pink-50/70 border-2 border-indigo-300/60 rounded-2xl p-5 md:p-7 shadow-xl backdrop-blur-sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
-            <GhostBtn type="button" onClick={addItem} variant="primary" className="w-full sm:w-auto text-base font-bold px-6 py-3">
+        {/* Section Total et Actions */}
+        <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/80 to-pink-50/70 border-2 border-indigo-300/60 rounded-2xl p-6 md:p-8 shadow-xl backdrop-blur-sm">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <GhostBtn 
+              type="button" 
+              onClick={addItem} 
+              variant="primary" 
+              className="w-full lg:w-auto text-base font-bold px-8 py-4 shadow-lg hover:shadow-xl transition-all"
+            >
               ➕ Ajouter une activité
             </GhostBtn>
-            <div className="text-left sm:text-right w-full sm:w-auto bg-white/80 rounded-xl p-4 md:p-5 border-2 border-indigo-200/60 shadow-md">
-              <p className="text-xs md:text-sm font-semibold text-slate-600 mb-2 uppercase tracking-wide">Total du devis</p>
-              <p className="text-xl md:text-2xl font-bold text-slate-900 mb-1">
-                💵 {currencyNoCents(grandTotalCash, grandCurrency)}
-              </p>
-              <p className="text-lg md:text-xl font-semibold text-slate-700">
-                💳 {currencyNoCents(grandTotalCard, grandCurrency)}
-              </p>
+            <div className="w-full lg:w-auto bg-white rounded-xl p-6 border-2 border-indigo-200/60 shadow-lg">
+              <p className="text-xs font-semibold text-slate-600 mb-3 uppercase tracking-wider">Total du devis</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between lg:justify-end gap-4">
+                  <span className="text-sm font-medium text-slate-600">Espèces:</span>
+                  <p className="text-2xl md:text-3xl font-bold text-indigo-700">
+                    {currencyNoCents(grandTotalCash, grandCurrency)}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between lg:justify-end gap-4 pt-2 border-t border-slate-200">
+                  <span className="text-sm font-medium text-slate-600">Carte:</span>
+                  <p className="text-xl md:text-2xl font-bold text-slate-700">
+                    {currencyNoCents(grandTotalCard, grandCurrency)}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-amber-50/80 to-yellow-50/60 border-2 border-amber-200/60 rounded-2xl p-5 md:p-6 shadow-md backdrop-blur-sm">
-          <label className="block text-sm md:text-base font-bold text-slate-700 mb-3 flex items-center gap-2">
-            <span className="text-xl">📝</span>
+        {/* Notes */}
+        <div className="bg-gradient-to-br from-amber-50/90 to-yellow-50/70 border-2 border-amber-200/60 rounded-2xl p-6 md:p-8 shadow-lg backdrop-blur-sm">
+          <label className="block text-base md:text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <span className="text-2xl">📝</span>
             Notes et informations supplémentaires
           </label>
-          <TextInput
+          <textarea
             placeholder="Langue du guide, point de pick-up, demandes spéciales, etc."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="text-base"
+            rows={3}
+            className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm md:text-base text-slate-800 shadow-sm focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition-all resize-none"
           />
-          <p className="text-xs text-slate-500 mt-2 italic">
-            Ces informations seront incluses dans le devis final
+          <p className="text-xs text-slate-500 mt-3 italic">
+            💡 Ces informations seront incluses dans le devis final
           </p>
         </div>
 
+        {/* Bouton de soumission */}
         <PrimaryBtn 
           type="submit" 
-          className="w-full"
+          className="w-full text-lg font-bold py-4 shadow-lg hover:shadow-xl transition-all"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Création en cours..." : "Créer le devis"}
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="animate-spin">⏳</span>
+              Création en cours...
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              ✨ Créer le devis
+            </span>
+          )}
         </PrimaryBtn>
       </form>
 
