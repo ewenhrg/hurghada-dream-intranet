@@ -1306,6 +1306,19 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   {/* Afficher l'explication de l'activité si elle existe */}
                   {c.raw.activityId && (() => {
                     const explanation = getActivityExplanation(c.raw.activityId);
+                    const activityName = c.act?.name || "";
+                    const templatesCount = Object.keys(messageTemplates).length;
+                    
+                    // Debug dans la console
+                    console.log('📋 Affichage explication:', {
+                      activityId: c.raw.activityId,
+                      activityName,
+                      hasExplanation: !!explanation,
+                      templatesCount,
+                      availableTemplates: Object.keys(messageTemplates),
+                    });
+                    
+                    // Toujours afficher quelque chose pour debug
                     if (explanation) {
                       return (
                         <div className="mt-3 p-4 rounded-lg border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md">
@@ -1321,15 +1334,29 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         </div>
                       );
                     }
-                    // Debug: afficher si aucun template trouvé (en développement seulement)
-                    if (process.env.NODE_ENV === 'development' && c.act) {
-                      return (
-                        <div className="mt-2 text-[10px] text-slate-400 italic">
-                          (Aucun template trouvé pour "{c.act.name}". Templates disponibles: {Object.keys(messageTemplates).length > 0 ? Object.keys(messageTemplates).join(', ') : 'aucun'})
+                    
+                    // Afficher un message informatif si aucun template trouvé (toujours visible pour debug)
+                    return (
+                      <div className="mt-3 p-3 rounded-lg border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 shadow-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="text-lg">💡</span>
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold text-amber-900 mb-1">
+                              {activityName ? `Aucune explication configurée pour "${activityName}"` : 'Sélectionnez une activité'}
+                            </p>
+                            {templatesCount > 0 ? (
+                              <p className="text-[10px] text-amber-700 mt-1">
+                                Templates disponibles ({templatesCount}): {Object.keys(messageTemplates).slice(0, 3).join(', ')}{Object.keys(messageTemplates).length > 3 ? '...' : ''}
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-amber-700 mt-1">
+                                Configurez les explications dans la page "Situation" → ⚙️ Configurer les messages
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      );
-                    }
-                    return null;
+                      </div>
+                    );
                   })()}
                 </div>
                 <div>
