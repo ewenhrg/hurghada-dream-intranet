@@ -1037,10 +1037,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
         
         {/* Infos client */}
-        <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/60 rounded-2xl border border-slate-200/60 p-6 md:p-8 shadow-md backdrop-blur-sm">
-          <h3 className="text-lg md:text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <span className="text-2xl">👤</span>
-            Informations client
+        <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/60 rounded-2xl border-2 border-blue-300/60 p-6 md:p-8 shadow-lg backdrop-blur-sm">
+          <h3 className="text-xl md:text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+            <span className="text-3xl">👤</span>
+            <span>Informations client</span>
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
             <div className="space-y-2">
