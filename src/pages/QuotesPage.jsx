@@ -1018,11 +1018,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           className="space-y-6 md:space-y-8"
         >
         {/* Barre d'information et actions */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 rounded-xl border border-blue-200/60">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 rounded-xl border-2 border-blue-400 shadow-lg">
           <div className="flex items-center gap-2">
-            <span className="text-xl">💾</span>
-            <p className="text-sm text-slate-700 font-medium">
-              Les modifications sont sauvegardées automatiquement
+            <span className="text-2xl">💾</span>
+            <p className="text-base font-bold text-blue-800">
+              ✅ Les modifications sont sauvegardées automatiquement
             </p>
           </div>
           <GhostBtn
@@ -1038,9 +1038,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         
         {/* Infos client */}
         <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/60 rounded-2xl border-2 border-blue-300/60 p-6 md:p-8 shadow-lg backdrop-blur-sm">
-          <h3 className="text-xl md:text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-            <span className="text-3xl">👤</span>
-            <span>Informations client</span>
+          <h3 className="text-2xl md:text-3xl font-bold text-blue-800 mb-6 flex items-center gap-3 bg-blue-100/50 px-4 py-3 rounded-xl">
+            <span className="text-4xl">👤</span>
+            <span>📋 INFORMATIONS CLIENT</span>
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
             <div className="space-y-2">
