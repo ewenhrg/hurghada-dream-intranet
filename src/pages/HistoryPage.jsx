@@ -547,6 +547,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                                 ktm530: item.ktm530 !== undefined && item.ktm530 !== null ? item.ktm530 : 0,
                                 slot: item.slot || "",
                                 ticketNumber: item.ticketNumber || "",
+                                description: item.description || "",
                               }))
                             );
                             setEditNotes(d.notes || "");
@@ -661,6 +662,12 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       <p className="text-xs md:text-sm text-slate-600 font-medium">
                         📅 {item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?"} — 👥 {item.adults} adulte(s), {item.children} enfant(s), {item.babies ?? 0} bébé(s)
                       </p>
+                      {item.description && (
+                        <div className="mt-2 bg-blue-100/60 border border-blue-200/60 rounded-lg p-2.5">
+                          <p className="text-xs font-semibold text-slate-600 mb-1">📝 Description :</p>
+                          <p className="text-xs text-slate-800 whitespace-pre-wrap">{item.description}</p>
+                        </div>
+                      )}
                     </div>
                     <div className="text-right bg-white/80 rounded-lg px-3 py-2 border-2 border-blue-100/60">
                       <p className="text-sm md:text-base font-bold text-slate-900">💵 {currencyNoCents(Math.round(item.lineTotal), selectedQuote.currency)}</p>
@@ -959,6 +966,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
 // Composant modale de modification de devis
 function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, user, canModifyActivities, stopSales = [], pushSales = [], onClose, onSave, editModalRef, editModalContainerRef }) {
+  // État pour la modal de description
+  const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, index: null, description: "" });
+  
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
     const map = new Map();
@@ -985,6 +995,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     yamaha250: "",
     ktm640: "",
     ktm530: "",
+    description: "", // Description de l'activité
   });
 
   const sortedActivities = useMemo(() => {
@@ -1172,6 +1183,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         pickupTime: c.pickupTime || "",
         lineTotal: c.lineTotal,
         transferSurchargePerAdult: c.transferInfo?.surcharge || 0,
+        description: c.raw.description || "",
         // Préserver le ticketNumber existant - ne peut pas être modifié si déjà rempli
         ticketNumber: (c.raw.ticketNumber && c.raw.ticketNumber.trim()) 
           ? c.raw.ticketNumber 
@@ -1279,9 +1291,18 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               <div key={idx} className="bg-gradient-to-br from-white/95 to-slate-50/80 backdrop-blur-sm border-2 border-blue-200/60 rounded-2xl p-4 md:p-5 space-y-4 shadow-lg transition-all duration-200 hover:shadow-xl">
                 <div className="flex items-center justify-between pb-3 border-b border-blue-200/60">
                   <p className="text-sm md:text-base font-bold text-slate-800">🎯 Activité #{idx + 1}</p>
-                  <GhostBtn type="button" onClick={() => removeItem(idx)} variant="danger" size="sm">
-                    🗑️ Supprimer
-                  </GhostBtn>
+                  <div className="flex gap-2">
+                    <GhostBtn 
+                      type="button" 
+                      onClick={() => setDescriptionModal({ isOpen: true, index: idx, description: c.raw.description || "" })} 
+                      size="sm"
+                    >
+                      📝 Description{c.raw.description ? " ✓" : ""}
+                    </GhostBtn>
+                    <GhostBtn type="button" onClick={() => removeItem(idx)} variant="danger" size="sm">
+                      🗑️ Supprimer
+                    </GhostBtn>
+                  </div>
                 </div>
                 {/* Première ligne : Activité et Date - Modifiables par tous */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1314,6 +1335,20 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     )}
                   </div>
                 </div>
+                
+                {/* Affichage de la description si elle existe */}
+                {c.raw.description && (
+                  <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/60 border-2 border-blue-200/60 rounded-xl p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-lg flex-shrink-0">📝</span>
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-slate-600 mb-1">Description de l'activité :</p>
+                        <p className="text-xs text-slate-800 whitespace-pre-wrap">{c.raw.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Deuxième ligne : Nombre de personnes - Modifiables par tous */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-cyan-50/50 p-3 md:p-4 rounded-xl border-2 border-cyan-200">
                   <div>
@@ -1567,6 +1602,47 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           </PrimaryBtn>
         </div>
       </div>
+      
+      {/* Modal de description */}
+      {descriptionModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
+              <h3 className="text-xl font-bold text-white">📝 Description de l'activité #{descriptionModal.index !== null ? descriptionModal.index + 1 : ""}</h3>
+            </div>
+            <div className="p-6 flex-1 overflow-y-auto">
+              <textarea
+                value={descriptionModal.description}
+                onChange={(e) => setDescriptionModal({ ...descriptionModal, description: e.target.value })}
+                placeholder="Ajoutez une description pour cette activité..."
+                className="w-full h-48 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm md:text-base text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all resize-none"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                💡 Cette description sera sauvegardée avec le devis et visible dans l'historique.
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
+              <GhostBtn
+                onClick={() => setDescriptionModal({ isOpen: false, index: null, description: "" })}
+                variant="primary"
+              >
+                Annuler
+              </GhostBtn>
+              <PrimaryBtn
+                onClick={() => {
+                  if (descriptionModal.index !== null) {
+                    setItem(descriptionModal.index, { description: descriptionModal.description });
+                    toast.success("Description sauvegardée.");
+                  }
+                  setDescriptionModal({ isOpen: false, index: null, description: "" });
+                }}
+              >
+                Enregistrer
+              </PrimaryBtn>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
