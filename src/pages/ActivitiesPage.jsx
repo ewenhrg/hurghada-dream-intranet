@@ -139,25 +139,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }
   
   function handleOpenDescriptionModal(activity) {
-    // Scroll immédiat vers le haut avant d'ouvrir la modale
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    
     setDescriptionModal({
       isOpen: true,
       activity: activity,
       description: activity.description || "",
     });
   }
-  
-  // Scroll automatique vers la modale quand elle s'ouvre
-  useEffect(() => {
-    if (descriptionModal.isOpen) {
-      // Petit délai pour laisser le DOM se mettre à jour, puis scroll vers le haut
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }, 100);
-    }
-  }, [descriptionModal.isOpen]);
   
   async function handleSaveDescription() {
     if (!descriptionModal.activity) return;
@@ -737,7 +724,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         <div 
           ref={descriptionModalRef} 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          style={{ scrollMarginTop: '20px' }}
         >
           <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
@@ -747,6 +733,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
             <div className="p-6 flex-1 overflow-y-auto">
               <textarea
+                ref={(el) => {
+                  if (el && descriptionModal.isOpen && user?.name === "Ewen") {
+                    // Focus automatique sur le textarea si Ewen peut modifier
+                    setTimeout(() => el.focus(), 100);
+                  }
+                }}
                 value={descriptionModal.description}
                 onChange={(e) => setDescriptionModal({ ...descriptionModal, description: e.target.value })}
                 placeholder="Ajoutez une description pour cette activité..."
