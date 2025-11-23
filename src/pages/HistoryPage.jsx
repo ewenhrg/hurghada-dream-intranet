@@ -1419,21 +1419,30 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={(e) => {
-                                    const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
-                                      ? c.raw.speedBoatExtra 
-                                      : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
-                                        ? [c.raw.speedBoatExtra] 
-                                        : []);
-                                    
-                                    if (e.target.checked) {
-                                      // Ajouter l'extra s'il n'est pas déjà dans la liste
-                                      if (!currentExtras.includes(extra.id)) {
-                                        setItem(idx, { speedBoatExtra: [...currentExtras, extra.id] });
+                                    // Utiliser une fonction de mise à jour pour lire la valeur la plus récente
+                                    setItems((prev) => {
+                                      const currentItem = prev[idx];
+                                      const currentExtras = Array.isArray(currentItem.speedBoatExtra) 
+                                        ? currentItem.speedBoatExtra 
+                                        : (currentItem.speedBoatExtra && typeof currentItem.speedBoatExtra === "string" && currentItem.speedBoatExtra !== "" 
+                                          ? [currentItem.speedBoatExtra] 
+                                          : []);
+                                      
+                                      let newExtras;
+                                      if (e.target.checked) {
+                                        // Ajouter l'extra s'il n'est pas déjà dans la liste
+                                        if (!currentExtras.includes(extra.id)) {
+                                          newExtras = [...currentExtras, extra.id];
+                                        } else {
+                                          newExtras = currentExtras;
+                                        }
+                                      } else {
+                                        // Retirer l'extra de la liste
+                                        newExtras = currentExtras.filter((id) => id !== extra.id);
                                       }
-                                    } else {
-                                      // Retirer l'extra de la liste
-                                      setItem(idx, { speedBoatExtra: currentExtras.filter((id) => id !== extra.id) });
-                                    }
+                                      
+                                      return prev.map((it, i) => (i === idx ? { ...it, speedBoatExtra: newExtras } : it));
+                                    });
                                   }}
                                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                 />
