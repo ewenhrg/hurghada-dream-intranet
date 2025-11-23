@@ -1053,11 +1053,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
             }
           });
         }
-
-        // extra (montant à ajouter ou soustraire - uniquement pour Speed Boat)
-        if (it.extraAmount) {
-          lineTotal += Number(it.extraAmount || 0);
-        }
       } else if (act && isBuggyActivity(act.name)) {
         // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy simple et family
         const buggySimple = Number(it.buggySimple || 0);
@@ -1089,6 +1084,16 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           lineTotal += Number(transferInfo.surcharge || 0) * totalMotos;
         } else {
           lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
+        }
+      }
+
+      // extra (montant à ajouter ou soustraire) - s'applique à toutes les activités
+      // Convertir en string d'abord pour gérer les cas où c'est déjà un nombre
+      const extraAmountStr = String(it.extraAmount || "").trim();
+      if (extraAmountStr !== "" && extraAmountStr !== "0" && extraAmountStr !== "0.00") {
+        const extraAmountValue = Number(extraAmountStr);
+        if (!isNaN(extraAmountValue) && extraAmountValue !== 0) {
+          lineTotal += extraAmountValue;
         }
       }
 
