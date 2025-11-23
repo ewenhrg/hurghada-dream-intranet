@@ -841,6 +841,21 @@ export function RequestPage() {
                                           {activity.notes}
                                         </p>
                                       )}
+                                      {isSelected && activity.description && (
+                                        <div className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200 shadow-sm">
+                                          <div className="flex items-start gap-2">
+                                            <span className="text-lg mt-0.5">📄</span>
+                                            <div className="flex-1">
+                                              <p className="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide">
+                                                Description
+                                              </p>
+                                              <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+                                                {activity.description}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
                                       {isSelected && (
                                         <div className="mt-4 pt-4 border-t-2 border-blue-300">
                                           <p className="text-sm font-bold text-slate-800 mb-3">
