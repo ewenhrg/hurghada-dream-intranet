@@ -157,6 +157,7 @@ export default function App() {
               currency: row.currency || "EUR",
               availableDays: row.available_days || [false, false, false, false, false, false, false],
               notes: row.notes || "",
+              description: row.description || "",
               transfers: row.transfers || emptyTransfers(),
             });
           });
