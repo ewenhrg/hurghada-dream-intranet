@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
 import { uuid, currency, emptyTransfers, saveLS, loadLS } from "../utils";
@@ -6,10 +6,68 @@ import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
 import { toast } from "../utils/toast.js";
+import { useDebounce } from "../hooks/useDebounce";
+
+// Composant ActivityRow mémorisé pour éviter les re-renders inutiles
+const ActivityRow = memo(({ activity, canModifyActivities, onDescriptionClick, onEditClick, onDeleteClick }) => {
+  const hasDescription = !!activity.description;
+  
+  return (
+    <tr 
+      className="border-t border-slate-200/60 transition-colors hover:bg-blue-50/50"
+    >
+      <td className="px-4 py-3 md:px-5 md:py-4 font-semibold text-slate-800">{activity.name}</td>
+      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(activity.priceAdult, activity.currency)}</td>
+      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(activity.priceChild, activity.currency)}</td>
+      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(activity.priceBaby, activity.currency)}</td>
+      <td className="px-4 py-3 md:px-5 md:py-4">
+        <div className="flex gap-1.5 flex-wrap">
+          {WEEKDAYS.map((d, dayIdx) =>
+            activity.availableDays?.[dayIdx] ? (
+              <span
+                key={d.key}
+                className="px-2.5 py-1 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 text-xs font-bold border border-green-300/60 shadow-sm"
+              >
+                {d.label}
+              </span>
+            ) : null,
+          )}
+        </div>
+      </td>
+      <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm">{activity.notes || <span className="text-slate-400 italic">—</span>}</td>
+      <td className="px-4 py-3 md:px-5 md:py-4 text-right">
+        <div className="flex gap-2 justify-end">
+          <GhostBtn 
+            onClick={onDescriptionClick} 
+            variant="primary" 
+            size="sm"
+            className={hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
+          >
+            📄 Description{hasDescription ? " ✓" : ""}
+          </GhostBtn>
+          {canModifyActivities && (
+            <>
+              <GhostBtn onClick={onEditClick} variant="primary" size="sm">
+                ✏️ Modifier
+              </GhostBtn>
+              <GhostBtn onClick={onDeleteClick} variant="danger" size="sm">
+                🗑️ Supprimer
+              </GhostBtn>
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
+
+ActivityRow.displayName = 'ActivityRow';
 
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDay, setSelectedDay] = useState("");
+  // Debounce de la recherche pour améliorer les performances
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
   // Vérifier si l'utilisateur peut modifier/supprimer les activités (seulement Léa et Ewen)
   const canModifyActivities = user?.name === "Léa" || user?.name === "Ewen";
@@ -80,7 +138,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   // État pour la modal de description
   const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, activity: null, description: "" });
 
-  // Sauvegarder le formulaire dans localStorage avec debounce (300ms)
+  // Sauvegarder le formulaire dans localStorage avec debounce (500ms pour réduire les écritures)
   useEffect(() => {
     sessionStorage.setItem('activitiesPageMounted', 'true');
     
@@ -94,7 +152,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         showForm,
         editingId,
       });
-    }, 300);
+    }, 500); // Augmenté à 500ms pour réduire les écritures
     
     saveTimeoutRef.current = timeoutId;
 
@@ -136,6 +194,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }, [canModifyActivities]);
   
   const handleOpenDescriptionModal = useCallback((activity) => {
+    // Scroll vers le haut avant d'ouvrir la modale pour une meilleure UX
+    window.scrollTo({ top: 0, behavior: "smooth" });
     setDescriptionModal({
       isOpen: true,
       activity: activity,
@@ -405,13 +465,13 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }
   }, [canModifyActivities, activitiesMap]);
 
-  // Filtrer les activités par recherche et par jour
+  // Filtrer les activités par recherche et par jour (utilise debouncedSearchQuery)
   const filteredActivities = useMemo(() => {
     let filtered = activities;
 
-    // Filtrer par recherche (nom, notes ou description)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
+    // Filtrer par recherche (nom, notes ou description) avec debounce
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase().trim();
       filtered = filtered.filter((a) => {
         const nameMatch = a.name?.toLowerCase().includes(query);
         const notesMatch = a.notes?.toLowerCase().includes(query);
@@ -429,7 +489,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }
 
     return filtered;
-  }, [activities, searchQuery, selectedDay]);
+  }, [activities, debouncedSearchQuery, selectedDay]);
 
   const grouped = useMemo(() => {
     const base = {};
@@ -674,61 +734,16 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(grouped[cat.key] || []).map((a) => {
-                    const hasDescription = !!a.description;
-                    const handleDescriptionClick = () => handleOpenDescriptionModal(a);
-                    const handleEditClick = () => handleEdit(a);
-                    const handleDeleteClick = () => handleDelete(a.id);
-                    
-                    return (
-                      <tr 
-                        key={a.id} 
-                        className="border-t border-slate-200/60 transition-colors hover:bg-blue-50/50"
-                      >
-                        <td className="px-4 py-3 md:px-5 md:py-4 font-semibold text-slate-800">{a.name}</td>
-                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceAdult, a.currency)}</td>
-                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceChild, a.currency)}</td>
-                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceBaby, a.currency)}</td>
-                        <td className="px-4 py-3 md:px-5 md:py-4">
-                          <div className="flex gap-1.5 flex-wrap">
-                            {WEEKDAYS.map((d, dayIdx) =>
-                              a.availableDays?.[dayIdx] ? (
-                                <span
-                                  key={d.key}
-                                  className="px-2.5 py-1 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 text-xs font-bold border border-green-300/60 shadow-sm"
-                                >
-                                  {d.label}
-                                </span>
-                              ) : null,
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm">{a.notes || <span className="text-slate-400 italic">—</span>}</td>
-                        <td className="px-4 py-3 md:px-5 md:py-4 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <GhostBtn 
-                              onClick={handleDescriptionClick} 
-                              variant="primary" 
-                              size="sm"
-                              className={hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
-                            >
-                              📄 Description{hasDescription ? " ✓" : ""}
-                            </GhostBtn>
-                            {canModifyActivities && (
-                              <>
-                                <GhostBtn onClick={handleEditClick} variant="primary" size="sm">
-                                  ✏️ Modifier
-                                </GhostBtn>
-                                <GhostBtn onClick={handleDeleteClick} variant="danger" size="sm">
-                                  🗑️ Supprimer
-                                </GhostBtn>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {(grouped[cat.key] || []).map((a) => (
+                    <ActivityRow
+                      key={a.id}
+                      activity={a}
+                      canModifyActivities={canModifyActivities}
+                      onDescriptionClick={() => handleOpenDescriptionModal(a)}
+                      onEditClick={() => handleEdit(a)}
+                      onDeleteClick={() => handleDelete(a.id)}
+                    />
+                  ))}
                   {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
                     <tr>
                       <td colSpan={7} className="px-4 py-8 md:py-10 text-center">
