@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
 import { uuid, currency, emptyTransfers, saveLS, loadLS } from "../utils";
@@ -88,27 +88,24 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       clearTimeout(saveTimeoutRef.current);
     }
     
-    saveTimeoutRef.current = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       saveLS(LS_KEYS.activityForm, {
         ...form,
         showForm,
         editingId,
       });
     }, 300);
+    
+    saveTimeoutRef.current = timeoutId;
 
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
-      saveLS(LS_KEYS.activityForm, {
-        ...form,
-        showForm,
-        editingId,
-      });
     };
   }, [form, showForm, editingId]);
 
-  function handleEdit(activity) {
+  const handleEdit = useCallback((activity) => {
     if (!canModifyActivities) {
       toast.warning("Seuls Léa et Ewen peuvent modifier les activités.");
       return;
@@ -136,35 +133,38 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     }, 100);
-  }
+  }, [canModifyActivities]);
   
-  function handleOpenDescriptionModal(activity) {
+  const handleOpenDescriptionModal = useCallback((activity) => {
     setDescriptionModal({
       isOpen: true,
       activity: activity,
       description: activity.description || "",
     });
-  }
+  }, []);
   
-  async function handleSaveDescription() {
+  const handleSaveDescription = useCallback(async () => {
     if (!descriptionModal.activity) return;
     
     const activityId = descriptionModal.activity.id;
     const supabaseId = descriptionModal.activity.supabase_id;
+    const description = descriptionModal.description;
     
     // Mettre à jour l'activité dans le state local
-    const updatedActivities = activities.map((a) =>
-      a.id === activityId ? { ...a, description: descriptionModal.description } : a
-    );
-    setActivities(updatedActivities);
-    saveLS(LS_KEYS.activities, updatedActivities);
+    setActivities((prevActivities) => {
+      const updated = prevActivities.map((a) =>
+        a.id === activityId ? { ...a, description } : a
+      );
+      saveLS(LS_KEYS.activities, updated);
+      return updated;
+    });
     
     // Mettre à jour dans Supabase si configuré et si supabaseId existe
     if (supabase && supabaseId) {
       try {
         const { error } = await supabase
           .from("activities")
-          .update({ description: descriptionModal.description || "" })
+          .update({ description: description || "" })
           .eq("id", supabaseId);
         
         if (error) {
@@ -191,9 +191,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }
     
     setDescriptionModal({ isOpen: false, activity: null, description: "" });
-  }
+  }, [descriptionModal.activity, descriptionModal.description]);
 
-  async function handleCreate(e) {
+  const handleCreate = useCallback(async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return;
 
@@ -367,9 +367,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     
     // Supprimer le formulaire sauvegardé après création réussie
     localStorage.removeItem(LS_KEYS.activityForm);
-  }
+  }, [form, editingId, canModifyActivities, user?.canAddActivity, activitiesMap, activities, setActivities]);
 
-  async function handleDelete(id) {
+  const handleDelete = useCallback(async (id) => {
     if (!canModifyActivities) {
       toast.warning("Seuls Léa et Ewen peuvent supprimer les activités.");
       return;
@@ -377,9 +377,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     const activityToDelete = activitiesMap.get(id);
     const activityName = activityToDelete?.name || "cette activité";
     if (!window.confirm(`Êtes-vous sûr de vouloir supprimer l'activité "${activityName}" ?\n\nCette action est irréversible et supprimera définitivement l'activité.`)) return;
-    const next = activities.filter((a) => a.id !== id);
-    setActivities(next);
-    saveLS(LS_KEYS.activities, next);
+    
+    setActivities((prevActivities) => {
+      const next = prevActivities.filter((a) => a.id !== id);
+      saveLS(LS_KEYS.activities, next);
+      return next;
+    });
     
     // Supprimer de Supabase si configuré
     if (supabase && activityToDelete?.supabase_id) {
@@ -400,19 +403,20 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         toast.error("Exception lors de la suppression dans Supabase. L'activité a été supprimée localement.");
       }
     }
-  }
+  }, [canModifyActivities, activitiesMap]);
 
   // Filtrer les activités par recherche et par jour
   const filteredActivities = useMemo(() => {
     let filtered = activities;
 
-    // Filtrer par recherche (nom ou notes)
+    // Filtrer par recherche (nom, notes ou description)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter((a) => {
         const nameMatch = a.name?.toLowerCase().includes(query);
         const notesMatch = a.notes?.toLowerCase().includes(query);
-        return nameMatch || notesMatch;
+        const descriptionMatch = a.description?.toLowerCase().includes(query);
+        return nameMatch || notesMatch || descriptionMatch;
       });
     }
 
@@ -431,11 +435,43 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     const base = {};
     CATEGORIES.forEach((c) => (base[c.key] = []));
     filteredActivities.forEach((a) => {
-      const key = CATEGORIES.find((c) => c.key === a.category) ? a.category : "desert";
-      base[key].push(a);
+      const key = a.category && CATEGORIES.some((c) => c.key === a.category) ? a.category : "desert";
+      if (base[key]) {
+        base[key].push(a);
+      }
     });
     return base;
   }, [filteredActivities]);
+  
+  // Mémoriser les handlers pour éviter les re-renders
+  const handleToggleForm = useCallback(() => {
+    if (showForm) {
+      setForm({
+        name: "",
+        category: "desert",
+        priceAdult: "",
+        priceChild: "",
+        priceBaby: "",
+        currency: "EUR",
+        availableDays: [false, false, false, false, false, false, false],
+        notes: "",
+        transfers: emptyTransfers(),
+      });
+      setEditingId(null);
+    }
+    setShowForm((s) => !s);
+  }, [showForm]);
+  
+  const handleCloseDescriptionModal = useCallback(() => {
+    setDescriptionModal({ isOpen: false, activity: null, description: "" });
+  }, []);
+  
+  // Ref callback optimisé pour le textarea
+  const textareaRefCallback = useCallback((el) => {
+    if (el && descriptionModal.isOpen && user?.name === "Ewen") {
+      setTimeout(() => el.focus(), 100);
+    }
+  }, [descriptionModal.isOpen, user?.name]);
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
@@ -451,23 +487,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         </div>
         {user?.canAddActivity && (
           <PrimaryBtn
-            onClick={() => {
-              if (showForm) {
-                setForm({
-                  name: "",
-                  category: "desert",
-                  priceAdult: "",
-                  priceChild: "",
-                  priceBaby: "",
-                  currency: "EUR",
-                  availableDays: [false, false, false, false, false, false, false],
-                  notes: "",
-                  transfers: emptyTransfers(),
-                });
-                setEditingId(null);
-              }
-              setShowForm((s) => !s);
-            }}
+            onClick={handleToggleForm}
             className="w-full sm:w-auto text-base font-bold px-6 py-3"
           >
             {showForm ? "❌ Annuler" : "➕ Ajouter une activité"}
@@ -485,7 +505,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           <div>
             <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Rechercher une activité</label>
             <TextInput
-              placeholder="Nom de l'activité ou notes..."
+              placeholder="Nom, notes ou description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="text-base"
@@ -654,54 +674,61 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(grouped[cat.key] || []).map((a, idx) => (
-                    <tr 
-                      key={a.id} 
-                      className={`border-t border-slate-200/60 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-blue-50/50`}
-                    >
-                      <td className="px-4 py-3 md:px-5 md:py-4 font-semibold text-slate-800">{a.name}</td>
-                      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceAdult, a.currency)}</td>
-                      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceChild, a.currency)}</td>
-                      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceBaby, a.currency)}</td>
-                      <td className="px-4 py-3 md:px-5 md:py-4">
-                        <div className="flex gap-1.5 flex-wrap">
-                          {WEEKDAYS.map((d, idx) =>
-                            a.availableDays?.[idx] ? (
-                              <span
-                                key={d.key}
-                                className="px-2.5 py-1 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 text-xs font-bold border border-green-300/60 shadow-sm"
-                              >
-                                {d.label}
-                              </span>
-                            ) : null,
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm">{a.notes || <span className="text-slate-400 italic">—</span>}</td>
-                      <td className="px-4 py-3 md:px-5 md:py-4 text-right">
-                        <div className="flex gap-2 justify-end">
-                          <GhostBtn 
-                            onClick={() => handleOpenDescriptionModal(a)} 
-                            variant="primary" 
-                            size="sm"
-                            className={a.description ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
-                          >
-                            📄 Description{a.description ? " ✓" : ""}
-                          </GhostBtn>
-                          {canModifyActivities && (
-                            <>
-                              <GhostBtn onClick={() => handleEdit(a)} variant="primary" size="sm">
-                                ✏️ Modifier
-                              </GhostBtn>
-                              <GhostBtn onClick={() => handleDelete(a.id)} variant="danger" size="sm">
-                                🗑️ Supprimer
-                              </GhostBtn>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {(grouped[cat.key] || []).map((a) => {
+                    const hasDescription = !!a.description;
+                    const handleDescriptionClick = () => handleOpenDescriptionModal(a);
+                    const handleEditClick = () => handleEdit(a);
+                    const handleDeleteClick = () => handleDelete(a.id);
+                    
+                    return (
+                      <tr 
+                        key={a.id} 
+                        className="border-t border-slate-200/60 transition-colors hover:bg-blue-50/50"
+                      >
+                        <td className="px-4 py-3 md:px-5 md:py-4 font-semibold text-slate-800">{a.name}</td>
+                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceAdult, a.currency)}</td>
+                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceChild, a.currency)}</td>
+                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceBaby, a.currency)}</td>
+                        <td className="px-4 py-3 md:px-5 md:py-4">
+                          <div className="flex gap-1.5 flex-wrap">
+                            {WEEKDAYS.map((d, dayIdx) =>
+                              a.availableDays?.[dayIdx] ? (
+                                <span
+                                  key={d.key}
+                                  className="px-2.5 py-1 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 text-xs font-bold border border-green-300/60 shadow-sm"
+                                >
+                                  {d.label}
+                                </span>
+                              ) : null,
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm">{a.notes || <span className="text-slate-400 italic">—</span>}</td>
+                        <td className="px-4 py-3 md:px-5 md:py-4 text-right">
+                          <div className="flex gap-2 justify-end">
+                            <GhostBtn 
+                              onClick={handleDescriptionClick} 
+                              variant="primary" 
+                              size="sm"
+                              className={hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
+                            >
+                              📄 Description{hasDescription ? " ✓" : ""}
+                            </GhostBtn>
+                            {canModifyActivities && (
+                              <>
+                                <GhostBtn onClick={handleEditClick} variant="primary" size="sm">
+                                  ✏️ Modifier
+                                </GhostBtn>
+                                <GhostBtn onClick={handleDeleteClick} variant="danger" size="sm">
+                                  🗑️ Supprimer
+                                </GhostBtn>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
                     <tr>
                       <td colSpan={7} className="px-4 py-8 md:py-10 text-center">
@@ -733,14 +760,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
             <div className="p-6 flex-1 overflow-y-auto">
               <textarea
-                ref={(el) => {
-                  if (el && descriptionModal.isOpen && user?.name === "Ewen") {
-                    // Focus automatique sur le textarea si Ewen peut modifier
-                    setTimeout(() => el.focus(), 100);
-                  }
-                }}
+                ref={textareaRefCallback}
                 value={descriptionModal.description}
-                onChange={(e) => setDescriptionModal({ ...descriptionModal, description: e.target.value })}
+                onChange={(e) => setDescriptionModal((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Ajoutez une description pour cette activité..."
                 disabled={user?.name !== "Ewen"}
                 readOnly={user?.name !== "Ewen"}
@@ -761,7 +783,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
             <div className="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
               <GhostBtn
-                onClick={() => setDescriptionModal({ isOpen: false, activity: null, description: "" })}
+                onClick={handleCloseDescriptionModal}
                 variant="primary"
               >
                 Fermer
