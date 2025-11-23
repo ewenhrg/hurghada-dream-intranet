@@ -74,6 +74,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   const [showForm, setShowForm] = useState(savedForm?.showForm || false);
   const [editingId, setEditingId] = useState(savedForm?.editingId || null);
   const saveTimeoutRef = useRef(null);
+  const formRef = useRef(null);
   
   // État pour la modal de description
   const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, activity: null, description: "" });
@@ -126,7 +127,14 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     });
     setEditingId(activity.id);
     setShowForm(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // Scroll vers le formulaire après un court délai pour laisser le DOM se mettre à jour
+    setTimeout(() => {
+      if (formRef.current) {
+        formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }, 100);
   }
   
   function handleOpenDescriptionModal(activity) {
@@ -150,7 +158,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     setActivities(updatedActivities);
     saveLS(LS_KEYS.activities, updatedActivities);
     
-    // Mettre à jour dans Supabase si configuré
+    // Mettre à jour dans Supabase si configuré et si supabaseId existe
     if (supabase && supabaseId) {
       try {
         const { error } = await supabase
@@ -159,8 +167,14 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           .eq("id", supabaseId);
         
         if (error) {
-          console.error("❌ Erreur lors de la mise à jour de la description dans Supabase:", error);
-          toast.error("Erreur lors de la sauvegarde dans Supabase. La description est sauvegardée localement.");
+          // Si l'erreur est 400 (Bad Request), c'est probablement que la colonne n'existe pas encore
+          if (error.code === "PGRST204" || error.message?.includes("column") || error.message?.includes("description")) {
+            console.warn("⚠️ La colonne 'description' n'existe peut-être pas encore dans Supabase. La description est sauvegardée localement.");
+            toast.warning("La colonne description n'existe pas encore dans Supabase. Exécutez le script SQL pour l'ajouter. La description est sauvegardée localement.");
+          } else {
+            console.error("❌ Erreur lors de la mise à jour de la description dans Supabase:", error);
+            toast.error("Erreur lors de la sauvegarde dans Supabase. La description est sauvegardée localement.");
+          }
         } else {
           toast.success("Description sauvegardée avec succès.");
         }
@@ -168,6 +182,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         console.error("❌ Exception lors de la mise à jour de la description dans Supabase:", err);
         toast.error("Exception lors de la sauvegarde dans Supabase. La description est sauvegardée localement.");
       }
+    } else if (!supabaseId) {
+      // Pas de supabase_id, donc l'activité n'est pas encore dans Supabase
+      toast.success("Description sauvegardée localement. L'activité sera synchronisée avec Supabase lors de sa prochaine modification.");
     } else {
       toast.success("Description sauvegardée avec succès.");
     }
@@ -492,7 +509,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="space-y-5 md:space-y-6 bg-gradient-to-br from-blue-50/90 via-indigo-50/80 to-purple-50/70 backdrop-blur-sm rounded-2xl p-5 md:p-7 border-2 border-blue-200/60 shadow-xl">
+        <form ref={formRef} onSubmit={handleCreate} className="space-y-5 md:space-y-6 bg-gradient-to-br from-blue-50/90 via-indigo-50/80 to-purple-50/70 backdrop-blur-sm rounded-2xl p-5 md:p-7 border-2 border-blue-200/60 shadow-xl">
           <div className="flex items-center gap-3 mb-4 pb-4 border-b-2 border-blue-200/60">
             <span className="text-2xl">{editingId ? "✏️" : "➕"}</span>
             <h3 className="text-lg md:text-xl font-bold text-slate-800">
