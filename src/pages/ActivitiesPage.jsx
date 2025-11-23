@@ -75,6 +75,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   const [editingId, setEditingId] = useState(savedForm?.editingId || null);
   const saveTimeoutRef = useRef(null);
   const formRef = useRef(null);
+  const descriptionModalRef = useRef(null);
   
   // État pour la modal de description
   const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, activity: null, description: "" });
@@ -144,6 +145,18 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       description: activity.description || "",
     });
   }
+  
+  // Scroll automatique vers la modale quand elle s'ouvre
+  useEffect(() => {
+    if (descriptionModal.isOpen) {
+      // Petit délai pour laisser le DOM se mettre à jour
+      setTimeout(() => {
+        // Comme la modale est en position fixed, on scroll vers le haut de la page
+        // pour que la modale soit visible au centre
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 100);
+    }
+  }, [descriptionModal.isOpen]);
   
   async function handleSaveDescription() {
     if (!descriptionModal.activity) return;
@@ -720,7 +733,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       
       {/* Modal de description */}
       {descriptionModal.isOpen && descriptionModal.activity && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div ref={descriptionModalRef} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
               <h3 className="text-xl font-bold text-white">
