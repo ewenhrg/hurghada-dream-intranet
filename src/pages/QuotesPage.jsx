@@ -63,7 +63,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     ktm530: "",
     allerSimple: false, // Pour HURGHADA - LE CAIRE et HURGHADA - LOUXOR
     allerRetour: false, // Pour HURGHADA - LE CAIRE et HURGHADA - LOUXOR
-    description: "", // Description de l'activité
   }), []);
 
   const defaultClient = draft?.client || {
@@ -95,9 +94,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   // États pour les confirmations
   const [confirmDeleteItem, setConfirmDeleteItem] = useState({ isOpen: false, index: null, activityName: "" });
   const [confirmResetForm, setConfirmResetForm] = useState(false);
-  
-  // État pour la modal de description
-  const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, index: null, description: "" });
 
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
@@ -896,7 +892,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         ktm530: Number(c.raw.ktm530 || 0),
         allerSimple: c.raw.allerSimple || false,
         allerRetour: c.raw.allerRetour || false,
-        description: c.raw.description || "",
         neighborhood: client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
@@ -1214,23 +1209,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </span>
                   <p className="text-lg font-bold text-white">Activité #{idx + 1}</p>
                 </div>
-                <div className="flex gap-2">
-                  <GhostBtn 
-                    type="button" 
-                    onClick={() => setDescriptionModal({ isOpen: true, index: idx, description: c.raw.description || "" })} 
-                    className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-                  >
-                    📝 Description{c.raw.description ? " ✓" : ""}
-                  </GhostBtn>
-                  <GhostBtn 
-                    type="button" 
-                    onClick={() => removeItem(idx)} 
-                    variant="danger" 
-                    className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-                  >
-                    🗑️ Supprimer
-                  </GhostBtn>
-                </div>
+                <GhostBtn 
+                  type="button" 
+                  onClick={() => removeItem(idx)} 
+                  variant="danger" 
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+                >
+                  🗑️ Supprimer
+                </GhostBtn>
               </div>
               
               {/* Contenu de l'activité */}
@@ -1344,19 +1330,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     )}
                   </div>
                 </div>
-
-              {/* Affichage de la description si elle existe */}
-              {c.raw.description && (
-                <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/60 border-2 border-blue-200/60 rounded-xl p-4 md:p-5 shadow-md">
-                  <div className="flex items-start gap-3">
-                    <span className="text-xl flex-shrink-0">📝</span>
-                    <div className="flex-1">
-                      <p className="text-xs font-semibold text-slate-600 mb-1.5">Description de l'activité :</p>
-                      <p className="text-sm text-slate-800 whitespace-pre-wrap">{c.raw.description}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* extra - Cases à cocher pour Speed Boat, champs classiques pour les autres */}
               {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") ? (
@@ -2172,47 +2145,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           )}
         </PrimaryBtn>
       </form>
-
-      {/* Modal de description */}
-      {descriptionModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
-              <h3 className="text-xl font-bold text-white">📝 Description de l'activité #{descriptionModal.index !== null ? descriptionModal.index + 1 : ""}</h3>
-            </div>
-            <div className="p-6 flex-1 overflow-y-auto">
-              <textarea
-                value={descriptionModal.description}
-                onChange={(e) => setDescriptionModal({ ...descriptionModal, description: e.target.value })}
-                placeholder="Ajoutez une description pour cette activité..."
-                className="w-full h-48 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm md:text-base text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all resize-none"
-              />
-              <p className="text-xs text-slate-500 mt-2">
-                💡 Cette description sera sauvegardée avec le devis et visible dans l'historique.
-              </p>
-            </div>
-            <div className="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
-              <GhostBtn
-                onClick={() => setDescriptionModal({ isOpen: false, index: null, description: "" })}
-                variant="primary"
-              >
-                Annuler
-              </GhostBtn>
-              <PrimaryBtn
-                onClick={() => {
-                  if (descriptionModal.index !== null) {
-                    setItem(descriptionModal.index, { description: descriptionModal.description });
-                    toast.success("Description sauvegardée.");
-                  }
-                  setDescriptionModal({ isOpen: false, index: null, description: "" });
-                }}
-              >
-                Enregistrer
-              </PrimaryBtn>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modale de paiement */}
       <PaymentModal

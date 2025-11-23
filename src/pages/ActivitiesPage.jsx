@@ -55,6 +55,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     currency: savedForm.currency || "EUR",
     availableDays: savedForm.availableDays || [false, false, false, false, false, false, false],
     notes: savedForm.notes || "",
+    description: savedForm.description || "",
     transfers: savedForm.transfers || emptyTransfers(),
   } : {
     name: "",
@@ -67,6 +68,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     currency: "EUR",
     availableDays: [false, false, false, false, false, false, false],
     notes: "",
+    description: "",
     transfers: emptyTransfers(),
   };
   
@@ -119,6 +121,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       currency: activity.currency || "EUR",
       availableDays: activity.availableDays || [false, false, false, false, false, false, false],
       notes: activity.notes || "",
+      description: activity.description || "",
       transfers: activity.transfers || emptyTransfers(),
     });
     setEditingId(activity.id);
@@ -157,6 +160,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       currency: form.currency || "EUR",
       availableDays: form.availableDays,
       notes: form.notes,
+      description: form.description || "",
       transfers: form.transfers,
       site_key: SITE_KEY,
       // Préserver le supabase_id si on modifie
@@ -194,6 +198,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         if (activityData.ageBaby) supabaseData.age_baby = activityData.ageBaby;
         if (activityData.currency) supabaseData.currency = activityData.currency;
         if (activityData.notes) supabaseData.notes = activityData.notes;
+        if (activityData.description) supabaseData.description = activityData.description;
         // Pour available_days, on envoie seulement si c'est un tableau valide
         if (activityData.availableDays && Array.isArray(activityData.availableDays) && activityData.availableDays.length === 7) {
           supabaseData.available_days = activityData.availableDays;
@@ -293,6 +298,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       currency: "EUR",
       availableDays: [false, false, false, false, false, false, false],
       notes: "",
+      description: "",
       transfers: emptyTransfers(),
     });
     setEditingId(null);
@@ -395,6 +401,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   currency: "EUR",
                   availableDays: [false, false, false, false, false, false, false],
                   notes: "",
+                  description: "",
                   transfers: emptyTransfers(),
                 });
                 setEditingId(null);
@@ -554,6 +561,20 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             />
           </div>
 
+          <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/70 rounded-xl p-4 md:p-5 border-2 border-indigo-200/60">
+            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2">📄 Description de l'activité (facultatif)</label>
+            <textarea
+              placeholder="Ajoutez une description détaillée de l'activité..."
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              className="w-full rounded-xl border-2 border-indigo-200/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base text-slate-800 shadow-md focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all resize-none min-h-[120px]"
+              rows="4"
+            />
+            <p className="text-xs text-slate-600 mt-2 font-medium">
+              💡 Cette description sera sauvegardée avec l'activité et visible dans la liste des activités.
+            </p>
+          </div>
+
           <div className="flex justify-end pt-4 border-t-2 border-blue-200/60">
             <PrimaryBtn type="submit" className="text-base font-bold px-8 py-3">
               {editingId ? "💾 Modifier l'activité" : "✅ Enregistrer"}
@@ -583,6 +604,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                     <th className="text-left px-4 py-3 md:px-5 md:py-4">🍼 Bébé</th>
                     <th className="text-left px-4 py-3 md:px-5 md:py-4">📅 Jours</th>
                     <th className="text-left px-4 py-3 md:px-5 md:py-4">📝 Notes</th>
+                    <th className="text-left px-4 py-3 md:px-5 md:py-4">📄 Description</th>
                     {canModifyActivities && (
                       <th className="text-right px-4 py-3 md:px-5 md:py-4">⚙️ Actions</th>
                     )}
@@ -613,6 +635,15 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                         </div>
                       </td>
                       <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm">{a.notes || <span className="text-slate-400 italic">—</span>}</td>
+                      <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm max-w-xs">
+                        {a.description ? (
+                          <div className="truncate" title={a.description}>
+                            {a.description}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic">—</span>
+                        )}
+                      </td>
                       {canModifyActivities && (
                         <td className="px-4 py-3 md:px-5 md:py-4 text-right">
                           <div className="flex gap-2 justify-end">
@@ -629,7 +660,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   ))}
                   {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
                     <tr>
-                      <td colSpan={canModifyActivities ? 7 : 6} className="px-4 py-8 md:py-10 text-center">
+                      <td colSpan={canModifyActivities ? 8 : 7} className="px-4 py-8 md:py-10 text-center">
                         <div className="flex flex-col items-center gap-2">
                           <span className="text-3xl">📭</span>
                           <p className="text-slate-500 font-medium">Aucune activité dans cette catégorie</p>
