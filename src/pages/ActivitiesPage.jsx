@@ -55,7 +55,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     currency: savedForm.currency || "EUR",
     availableDays: savedForm.availableDays || [false, false, false, false, false, false, false],
     notes: savedForm.notes || "",
-    description: savedForm.description || "",
     transfers: savedForm.transfers || emptyTransfers(),
   } : {
     name: "",
@@ -68,7 +67,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     currency: "EUR",
     availableDays: [false, false, false, false, false, false, false],
     notes: "",
-    description: "",
     transfers: emptyTransfers(),
   };
   
@@ -76,6 +74,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   const [showForm, setShowForm] = useState(savedForm?.showForm || false);
   const [editingId, setEditingId] = useState(savedForm?.editingId || null);
   const saveTimeoutRef = useRef(null);
+  
+  // État pour la modal de description
+  const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, activity: null, description: "" });
 
   // Sauvegarder le formulaire dans localStorage avec debounce (300ms)
   useEffect(() => {
@@ -121,12 +122,57 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       currency: activity.currency || "EUR",
       availableDays: activity.availableDays || [false, false, false, false, false, false, false],
       notes: activity.notes || "",
-      description: activity.description || "",
       transfers: activity.transfers || emptyTransfers(),
     });
     setEditingId(activity.id);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  
+  function handleOpenDescriptionModal(activity) {
+    setDescriptionModal({
+      isOpen: true,
+      activity: activity,
+      description: activity.description || "",
+    });
+  }
+  
+  async function handleSaveDescription() {
+    if (!descriptionModal.activity) return;
+    
+    const activityId = descriptionModal.activity.id;
+    const supabaseId = descriptionModal.activity.supabase_id;
+    
+    // Mettre à jour l'activité dans le state local
+    const updatedActivities = activities.map((a) =>
+      a.id === activityId ? { ...a, description: descriptionModal.description } : a
+    );
+    setActivities(updatedActivities);
+    saveLS(LS_KEYS.activities, updatedActivities);
+    
+    // Mettre à jour dans Supabase si configuré
+    if (supabase && supabaseId) {
+      try {
+        const { error } = await supabase
+          .from("activities")
+          .update({ description: descriptionModal.description || "" })
+          .eq("id", supabaseId);
+        
+        if (error) {
+          console.error("❌ Erreur lors de la mise à jour de la description dans Supabase:", error);
+          toast.error("Erreur lors de la sauvegarde dans Supabase. La description est sauvegardée localement.");
+        } else {
+          toast.success("Description sauvegardée avec succès.");
+        }
+      } catch (err) {
+        console.error("❌ Exception lors de la mise à jour de la description dans Supabase:", err);
+        toast.error("Exception lors de la sauvegarde dans Supabase. La description est sauvegardée localement.");
+      }
+    } else {
+      toast.success("Description sauvegardée avec succès.");
+    }
+    
+    setDescriptionModal({ isOpen: false, activity: null, description: "" });
   }
 
   async function handleCreate(e) {
@@ -160,7 +206,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       currency: form.currency || "EUR",
       availableDays: form.availableDays,
       notes: form.notes,
-      description: form.description || "",
       transfers: form.transfers,
       site_key: SITE_KEY,
       // Préserver le supabase_id si on modifie
@@ -198,7 +243,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         if (activityData.ageBaby) supabaseData.age_baby = activityData.ageBaby;
         if (activityData.currency) supabaseData.currency = activityData.currency;
         if (activityData.notes) supabaseData.notes = activityData.notes;
-        if (activityData.description) supabaseData.description = activityData.description;
         // Pour available_days, on envoie seulement si c'est un tableau valide
         if (activityData.availableDays && Array.isArray(activityData.availableDays) && activityData.availableDays.length === 7) {
           supabaseData.available_days = activityData.availableDays;
@@ -298,7 +342,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       currency: "EUR",
       availableDays: [false, false, false, false, false, false, false],
       notes: "",
-      description: "",
       transfers: emptyTransfers(),
     });
     setEditingId(null);
@@ -401,7 +444,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   currency: "EUR",
                   availableDays: [false, false, false, false, false, false, false],
                   notes: "",
-                  description: "",
                   transfers: emptyTransfers(),
                 });
                 setEditingId(null);
@@ -561,20 +603,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             />
           </div>
 
-          <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/70 rounded-xl p-4 md:p-5 border-2 border-indigo-200/60">
-            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2">📄 Description de l'activité (facultatif)</label>
-            <textarea
-              placeholder="Ajoutez une description détaillée de l'activité..."
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full rounded-xl border-2 border-indigo-200/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base text-slate-800 shadow-md focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all resize-none min-h-[120px]"
-              rows="4"
-            />
-            <p className="text-xs text-slate-600 mt-2 font-medium">
-              💡 Cette description sera sauvegardée avec l'activité et visible dans la liste des activités.
-            </p>
-          </div>
-
           <div className="flex justify-end pt-4 border-t-2 border-blue-200/60">
             <PrimaryBtn type="submit" className="text-base font-bold px-8 py-3">
               {editingId ? "💾 Modifier l'activité" : "✅ Enregistrer"}
@@ -604,10 +632,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                     <th className="text-left px-4 py-3 md:px-5 md:py-4">🍼 Bébé</th>
                     <th className="text-left px-4 py-3 md:px-5 md:py-4">📅 Jours</th>
                     <th className="text-left px-4 py-3 md:px-5 md:py-4">📝 Notes</th>
-                    <th className="text-left px-4 py-3 md:px-5 md:py-4">📄 Description</th>
-                    {canModifyActivities && (
-                      <th className="text-right px-4 py-3 md:px-5 md:py-4">⚙️ Actions</th>
-                    )}
+                    <th className="text-right px-4 py-3 md:px-5 md:py-4">⚙️ Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -635,32 +660,33 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                         </div>
                       </td>
                       <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm">{a.notes || <span className="text-slate-400 italic">—</span>}</td>
-                      <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm max-w-xs">
-                        {a.description ? (
-                          <div className="truncate" title={a.description}>
-                            {a.description}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 italic">—</span>
-                        )}
+                      <td className="px-4 py-3 md:px-5 md:py-4 text-right">
+                        <div className="flex gap-2 justify-end">
+                          <GhostBtn 
+                            onClick={() => handleOpenDescriptionModal(a)} 
+                            variant="primary" 
+                            size="sm"
+                            className={a.description ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
+                          >
+                            📄 Description{a.description ? " ✓" : ""}
+                          </GhostBtn>
+                          {canModifyActivities && (
+                            <>
+                              <GhostBtn onClick={() => handleEdit(a)} variant="primary" size="sm">
+                                ✏️ Modifier
+                              </GhostBtn>
+                              <GhostBtn onClick={() => handleDelete(a.id)} variant="danger" size="sm">
+                                🗑️ Supprimer
+                              </GhostBtn>
+                            </>
+                          )}
+                        </div>
                       </td>
-                      {canModifyActivities && (
-                        <td className="px-4 py-3 md:px-5 md:py-4 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <GhostBtn onClick={() => handleEdit(a)} variant="primary" size="sm">
-                              ✏️ Modifier
-                            </GhostBtn>
-                            <GhostBtn onClick={() => handleDelete(a.id)} variant="danger" size="sm">
-                              🗑️ Supprimer
-                            </GhostBtn>
-                          </div>
-                        </td>
-                      )}
                     </tr>
                   ))}
                   {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
                     <tr>
-                      <td colSpan={canModifyActivities ? 8 : 7} className="px-4 py-8 md:py-10 text-center">
+                      <td colSpan={7} className="px-4 py-8 md:py-10 text-center">
                         <div className="flex flex-col items-center gap-2">
                           <span className="text-3xl">📭</span>
                           <p className="text-slate-500 font-medium">Aucune activité dans cette catégorie</p>
@@ -674,6 +700,54 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           </div>
         </div>
       ))}
+      
+      {/* Modal de description */}
+      {descriptionModal.isOpen && descriptionModal.activity && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
+              <h3 className="text-xl font-bold text-white">
+                📄 Description - {descriptionModal.activity.name}
+              </h3>
+            </div>
+            <div className="p-6 flex-1 overflow-y-auto">
+              <textarea
+                value={descriptionModal.description}
+                onChange={(e) => setDescriptionModal({ ...descriptionModal, description: e.target.value })}
+                placeholder="Ajoutez une description pour cette activité..."
+                disabled={user?.name !== "Ewen"}
+                readOnly={user?.name !== "Ewen"}
+                className={`w-full h-48 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm md:text-base text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all resize-none ${
+                  user?.name !== "Ewen" ? "bg-slate-100 cursor-not-allowed" : ""
+                }`}
+              />
+              {user?.name !== "Ewen" && (
+                <p className="text-xs text-amber-600 mt-2 font-medium">
+                  ⚠️ Seul Ewen peut modifier la description.
+                </p>
+              )}
+              {user?.name === "Ewen" && (
+                <p className="text-xs text-slate-500 mt-2">
+                  💡 Cette description sera sauvegardée avec l'activité.
+                </p>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
+              <GhostBtn
+                onClick={() => setDescriptionModal({ isOpen: false, activity: null, description: "" })}
+                variant="primary"
+              >
+                Fermer
+              </GhostBtn>
+              {user?.name === "Ewen" && (
+                <PrimaryBtn onClick={handleSaveDescription}>
+                  Enregistrer
+                </PrimaryBtn>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
