@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
 import { uuid, currency, emptyTransfers, saveLS, loadLS } from "../utils";
@@ -7,61 +7,6 @@ import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
 import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
-
-// Composant ActivityRow mémorisé pour éviter les re-renders inutiles
-const ActivityRow = React.memo(({ activity, canModifyActivities, onDescriptionClick, onEditClick, onDeleteClick }) => {
-  const hasDescription = !!activity.description;
-  
-  return (
-    <tr 
-      className="border-t border-slate-200/60 transition-colors hover:bg-blue-50/50"
-    >
-      <td className="px-4 py-3 md:px-5 md:py-4 font-semibold text-slate-800">{activity.name}</td>
-      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(activity.priceAdult, activity.currency)}</td>
-      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(activity.priceChild, activity.currency)}</td>
-      <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(activity.priceBaby, activity.currency)}</td>
-      <td className="px-4 py-3 md:px-5 md:py-4">
-        <div className="flex gap-1.5 flex-wrap">
-          {WEEKDAYS.map((d, dayIdx) =>
-            activity.availableDays?.[dayIdx] ? (
-              <span
-                key={d.key}
-                className="px-2.5 py-1 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 text-xs font-bold border border-green-300/60 shadow-sm"
-              >
-                {d.label}
-              </span>
-            ) : null,
-          )}
-        </div>
-      </td>
-      <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm">{activity.notes || <span className="text-slate-400 italic">—</span>}</td>
-      <td className="px-4 py-3 md:px-5 md:py-4 text-right">
-        <div className="flex gap-2 justify-end">
-          <GhostBtn 
-            onClick={onDescriptionClick} 
-            variant="primary" 
-            size="sm"
-            className={hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
-          >
-            📄 Description{hasDescription ? " ✓" : ""}
-          </GhostBtn>
-          {canModifyActivities && (
-            <>
-              <GhostBtn onClick={onEditClick} variant="primary" size="sm">
-                ✏️ Modifier
-              </GhostBtn>
-              <GhostBtn onClick={onDeleteClick} variant="danger" size="sm">
-                🗑️ Supprimer
-              </GhostBtn>
-            </>
-          )}
-        </div>
-      </td>
-    </tr>
-  );
-});
-
-ActivityRow.displayName = 'ActivityRow';
 
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -734,16 +679,57 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(grouped[cat.key] || []).map((a) => (
-                    <ActivityRow
-                      key={a.id}
-                      activity={a}
-                      canModifyActivities={canModifyActivities}
-                      onDescriptionClick={() => handleOpenDescriptionModal(a)}
-                      onEditClick={() => handleEdit(a)}
-                      onDeleteClick={() => handleDelete(a.id)}
-                    />
-                  ))}
+                  {(grouped[cat.key] || []).map((a) => {
+                    const hasDescription = !!a.description;
+                    return (
+                      <tr 
+                        key={a.id}
+                        className="border-t border-slate-200/60 transition-colors hover:bg-blue-50/50"
+                      >
+                        <td className="px-4 py-3 md:px-5 md:py-4 font-semibold text-slate-800">{a.name}</td>
+                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceAdult, a.currency)}</td>
+                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceChild, a.currency)}</td>
+                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceBaby, a.currency)}</td>
+                        <td className="px-4 py-3 md:px-5 md:py-4">
+                          <div className="flex gap-1.5 flex-wrap">
+                            {WEEKDAYS.map((d, dayIdx) =>
+                              a.availableDays?.[dayIdx] ? (
+                                <span
+                                  key={d.key}
+                                  className="px-2.5 py-1 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 text-xs font-bold border border-green-300/60 shadow-sm"
+                                >
+                                  {d.label}
+                                </span>
+                              ) : null,
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm">{a.notes || <span className="text-slate-400 italic">—</span>}</td>
+                        <td className="px-4 py-3 md:px-5 md:py-4 text-right">
+                          <div className="flex gap-2 justify-end">
+                            <GhostBtn 
+                              onClick={() => handleOpenDescriptionModal(a)} 
+                              variant="primary" 
+                              size="sm"
+                              className={hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
+                            >
+                              📄 Description{hasDescription ? " ✓" : ""}
+                            </GhostBtn>
+                            {canModifyActivities && (
+                              <>
+                                <GhostBtn onClick={() => handleEdit(a)} variant="primary" size="sm">
+                                  ✏️ Modifier
+                                </GhostBtn>
+                                <GhostBtn onClick={() => handleDelete(a.id)} variant="danger" size="sm">
+                                  🗑️ Supprimer
+                                </GhostBtn>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
                     <tr>
                       <td colSpan={7} className="px-4 py-8 md:py-10 text-center">
