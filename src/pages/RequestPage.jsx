@@ -5,7 +5,7 @@ import { SITE_KEY, CATEGORIES } from "../constants";
 import { TextInput, PrimaryBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 
-// Composant Tooltip pour l'aide contextuelle avec amélioration mobile et accessibilité
+// Composant Tooltip pour l'aide contextuelle
 function Tooltip({ text, children, id, position = "top" }) {
   const [isVisible, setIsVisible] = useState(false);
   
@@ -13,19 +13,17 @@ function Tooltip({ text, children, id, position = "top" }) {
     <div className="relative inline-flex items-center">
       <button
         type="button"
-        className="inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors touch-manipulation"
+        className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
         onFocus={() => setIsVisible(true)}
         onBlur={() => setIsVisible(false)}
-        onTouchStart={() => setIsVisible(!isVisible)}
         onClick={() => setIsVisible(!isVisible)}
         aria-label={`Aide: ${text}`}
         aria-describedby={id}
         aria-expanded={isVisible}
-        aria-haspopup="true"
       >
-        <span className="text-xs sm:text-sm font-bold">?</span>
+        <span className="text-xs font-semibold">?</span>
       </button>
       {isVisible && (
         <div
@@ -35,16 +33,15 @@ function Tooltip({ text, children, id, position = "top" }) {
             position === "top" 
               ? "bottom-full mb-2 left-1/2 transform -translate-x-1/2" 
               : "top-full mt-2 left-1/2 transform -translate-x-1/2"
-          } w-64 sm:w-72 md:w-80 p-3 bg-gray-900 text-white text-xs sm:text-sm rounded-lg shadow-xl pointer-events-none`}
+          } w-64 p-3 bg-slate-900 text-white text-xs rounded-lg shadow-lg pointer-events-none`}
         >
           <div className="relative">
             <p className="leading-relaxed">{text}</p>
-            {/* Flèche pointant vers le bouton */}
             <div className={`absolute ${
               position === "top" ? "top-full -mt-1" : "bottom-full -mb-1"
             } left-1/2 transform -translate-x-1/2`}>
               <div className={`w-0 h-0 border-l-4 border-r-4 ${
-                position === "top" ? "border-t-4 border-t-gray-900" : "border-b-4 border-b-gray-900"
+                position === "top" ? "border-t-4 border-t-slate-900" : "border-b-4 border-b-slate-900"
               } border-transparent`}></div>
             </div>
           </div>
@@ -379,10 +376,10 @@ export function RequestPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement...</p>
+          <p className="text-slate-600">Chargement...</p>
         </div>
       </div>
     );
@@ -391,46 +388,35 @@ export function RequestPage() {
   // Afficher l'écran de confirmation si la demande a été envoyée
   if (requestSubmitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-4 sm:py-6 md:py-8 px-3 sm:px-4 relative overflow-hidden">
-        {/* Effets de fond animés */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
-        </div>
-
-        <div className="max-w-2xl mx-auto relative z-10">
-          <div className="bg-white/90 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-white/20 animate-fade-in">
-            <div className="relative bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-4 sm:px-6 md:px-10 py-8 sm:py-10 text-center text-white overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-shine"></div>
-              
-              <div className="relative z-10">
-                <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 mb-4 bg-white/20 rounded-full backdrop-blur-sm animate-bounce-subtle">
-                  <span className="text-4xl sm:text-5xl">✅</span>
-                </div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg">
-                  Demande envoyée avec succès !
-                </h1>
-                <p className="text-green-100 text-base sm:text-lg md:text-xl mb-4 sm:mb-6 px-2 font-medium">
-                  Merci pour votre demande. Nous avons bien reçu vos informations et nous vous contacterons bientôt.
-                </p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-6 md:py-8 px-4 sm:px-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 md:px-8 py-8 text-center text-white">
+              <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-white/20 rounded-full">
+                <span className="text-3xl">✅</span>
               </div>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">
+                Demande envoyée avec succès !
+              </h1>
+              <p className="text-emerald-100 text-sm md:text-base">
+                Merci pour votre demande. Nous avons bien reçu vos informations et nous vous contacterons bientôt.
+              </p>
             </div>
 
-            <div className="p-6 sm:p-8 md:p-10 text-center space-y-4">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200">
-                <p className="text-gray-700 text-sm sm:text-base font-medium mb-4">
+            <div className="p-6 md:p-8 text-center space-y-4">
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-6 border border-emerald-200">
+                <p className="text-slate-700 text-sm font-medium mb-4">
                   Votre demande de devis a été enregistrée et sera traitée dans les plus brefs délais.
                 </p>
-                <div className="flex justify-center items-center text-xs sm:text-sm">
+                <div className="flex justify-center items-center text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">💬</span>
+                    <span>💬</span>
                     <span className="text-blue-600 font-semibold">sur WhatsApp</span>
                   </div>
                 </div>
               </div>
               
-              <p className="text-xs sm:text-sm text-gray-500 font-medium">
+              <p className="text-xs text-slate-500">
                 Cette page ne peut plus être modifiée. Si vous avez besoin de modifier votre demande, veuillez nous contacter directement.
               </p>
             </div>
@@ -441,107 +427,55 @@ export function RequestPage() {
   }
 
   return (
-    <>
-      {/* Styles CSS pour les animations */}
-      <style>{`
-        @keyframes blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-        }
-        @keyframes shine {
-          0% { transform: translateX(-100%) skewX(-12deg); }
-          100% { transform: translateX(200%) skewX(-12deg); }
-        }
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes bounce-subtle {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-        .animate-shine {
-          animation: shine 3s infinite;
-        }
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out;
-        }
-        .animate-bounce-subtle {
-          animation: bounce-subtle 2s ease-in-out infinite;
-        }
-      `}</style>
-      
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-4 sm:py-6 md:py-8 px-3 sm:px-4 relative overflow-hidden">
-        {/* Effets de fond animés */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
-        </div>
-      
-      <div className="max-w-5xl mx-auto relative z-10">
-        <div className="bg-white/90 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-white/20 animate-fade-in">
-          {/* Header avec dégradé amélioré */}
-          <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-4 sm:px-6 md:px-10 py-8 sm:py-10 text-center text-white overflow-hidden">
-            {/* Effet de brillance animé */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-shine"></div>
-            
-            <div className="relative z-10">
-              <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 mb-4 bg-white/20 rounded-full backdrop-blur-sm animate-bounce-subtle">
-                <span className="text-3xl sm:text-4xl">📋</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg">
-                Demande de devis
-              </h1>
-              <p className="text-blue-100 text-sm sm:text-base md:text-lg mb-4 sm:mb-6 px-2 font-medium">
-                Remplissez ce formulaire pour recevoir un devis personnalisé
-              </p>
-              <a
-                href="https://tapkit.me/catalogues-activites"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.open("https://tapkit.me/catalogues-activites", "_blank", "noopener,noreferrer");
-                }}
-                className="inline-flex items-center gap-2 bg-white text-blue-600 font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl shadow-xl hover:shadow-2xl hover:bg-blue-50 transition-all duration-300 transform hover:scale-110 active:scale-95 text-sm sm:text-base border-2 border-white/50 cursor-pointer"
-              >
-                <span className="text-lg">📖</span>
-                <span>NOTRE CATALOGUE</span>
-              </a>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-6 md:py-8 px-4 sm:px-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
+          {/* Header simplifié */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 md:px-8 py-8 text-center text-white">
+            <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-white/20 rounded-full">
+              <span className="text-3xl">📋</span>
             </div>
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">
+              Demande de devis
+            </h1>
+            <p className="text-blue-100 text-sm md:text-base mb-4">
+              Remplissez ce formulaire pour recevoir un devis personnalisé
+            </p>
+            <a
+              href="https://tapkit.me/catalogues-activites"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.preventDefault();
+                window.open("https://tapkit.me/catalogues-activites", "_blank", "noopener,noreferrer");
+              }}
+              className="inline-flex items-center gap-2 bg-white text-blue-600 font-semibold px-6 py-2.5 rounded-lg shadow-md hover:shadow-lg hover:bg-blue-50 transition-all text-sm"
+            >
+              <span>📖</span>
+              <span>NOTRE CATALOGUE</span>
+            </a>
           </div>
 
           <form 
             onSubmit={handleSubmit} 
-            className="p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8" 
+            className="p-6 md:p-8 space-y-6" 
             style={{ pointerEvents: requestSubmitted ? 'none' : 'auto', opacity: requestSubmitted ? 0.5 : 1 }}
             aria-label="Formulaire de demande de devis"
             noValidate
           >
             {/* Informations personnelles */}
-            <div className="bg-white rounded-2xl p-6 md:p-8 border-2 border-blue-200/60 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
-                  <span className="text-2xl">👤</span>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 md:p-8 border border-blue-200">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white">
+                  <span className="text-xl">👤</span>
                 </div>
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-800">
+                <h2 className="text-xl md:text-2xl font-bold text-blue-900">
                   Vos informations
                 </h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <label htmlFor="clientName" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <label htmlFor="clientName" className="block text-sm font-medium text-slate-700 flex items-center gap-2">
                     Nom complet <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
                       text="Indiquez votre nom complet tel qu'il apparaît sur votre pièce d'identité."
@@ -560,11 +494,11 @@ export function RequestPage() {
                     placeholder="Jean Dupont"
                     aria-required="true"
                     aria-describedby="tooltip-name"
-                    className="w-full text-base py-3 border-2 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full text-sm py-2.5 border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="clientPhone" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <label htmlFor="clientPhone" className="block text-sm font-medium text-slate-700 flex items-center gap-2">
                     Téléphone <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
                       text="Numéro avec indicatif pays (ex: +33 pour la France)"
@@ -585,11 +519,11 @@ export function RequestPage() {
                     placeholder="+33 6 12 34 56 78"
                     aria-required="true"
                     aria-describedby="tooltip-phone"
-                    className="w-full text-base py-3 border-2 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full text-sm py-2.5 border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="clientEmail" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <label htmlFor="clientEmail" className="block text-sm font-medium text-slate-700 flex items-center gap-2">
                     Email <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
                       text="Nous vous enverrons une confirmation par email"
@@ -610,11 +544,11 @@ export function RequestPage() {
                     placeholder="email@exemple.com"
                     aria-required="true"
                     aria-describedby="tooltip-email"
-                    className="w-full text-base py-3 border-2 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full text-sm py-2.5 border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="clientHotel" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <label htmlFor="clientHotel" className="block text-sm font-medium text-slate-700 flex items-center gap-2">
                     Hôtel <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
                       text="Pour organiser les transferts si nécessaire"
@@ -633,11 +567,11 @@ export function RequestPage() {
                     placeholder="Nom de votre hôtel"
                     aria-required="true"
                     aria-describedby="tooltip-hotel"
-                    className="w-full text-base py-3 border-2 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full text-sm py-2.5 border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="arrivalDate" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <label htmlFor="arrivalDate" className="block text-sm font-medium text-slate-700 flex items-center gap-2">
                     Date d'arrivée <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
                       text="Date de votre arrivée à Hurghada"
@@ -657,11 +591,11 @@ export function RequestPage() {
                     min={new Date().toISOString().split('T')[0]}
                     aria-required="true"
                     aria-describedby="tooltip-arrival"
-                    className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="departureDate" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <label htmlFor="departureDate" className="block text-sm font-medium text-slate-700 flex items-center gap-2">
                     Date de départ <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
                       text="Date de votre départ (après l'arrivée)"
@@ -682,36 +616,36 @@ export function RequestPage() {
                     aria-required="true"
                     aria-describedby="tooltip-departure"
                     aria-invalid={formData.departureDate && formData.arrivalDate && formData.departureDate < formData.arrivalDate}
-                    className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
             </div>
 
             {/* Sélection des activités */}
-            <div className="bg-white rounded-2xl p-6 md:p-8 border-2 border-green-200/60 shadow-lg">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-md">
-                  <span className="text-2xl">🎯</span>
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 md:p-8 border border-emerald-200">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white">
+                  <span className="text-xl">🎯</span>
                 </div>
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-bold text-slate-800">
+                  <h2 className="text-xl md:text-2xl font-bold text-emerald-900">
                     Activités souhaitées <span className="text-red-500">*</span>
                   </h2>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <p className="text-sm text-emerald-700 mt-1">
                     Sélectionnez les activités et indiquez le nombre de personnes
                   </p>
                 </div>
               </div>
 
               {activities.length === 0 ? (
-                <div className="bg-white rounded-xl p-6 sm:p-8 text-center border-2 border-dashed border-gray-300">
-                  <p className="text-gray-500 text-base sm:text-lg">
+                <div className="bg-white rounded-lg p-6 text-center border border-dashed border-slate-300">
+                  <p className="text-slate-600 text-sm">
                     Aucune activité disponible pour le moment.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2 sm:space-y-3">
+                <div className="space-y-3">
                   {CATEGORIES.filter((category) => {
                     // Exclure la catégorie transfert
                     if (category.key === "transfert") {
@@ -742,7 +676,7 @@ export function RequestPage() {
                     return (
                       <div
                         key={category.key}
-                        className="bg-white rounded-xl border-2 border-slate-200 overflow-hidden shadow-md hover:shadow-lg transition-all"
+                        className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all"
                       >
                         <button
                           type="button"
@@ -751,23 +685,23 @@ export function RequestPage() {
                           aria-expanded={isExpanded}
                           aria-controls={`category-${category.key}`}
                           aria-label={`${isExpanded ? 'Réduire' : 'Développer'} la catégorie ${category.label}`}
-                          className="w-full flex items-center justify-between p-4 md:p-5 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         >
-                          <div className="flex items-center gap-3 md:gap-4 flex-wrap flex-1 min-w-0">
-                            <span className="text-2xl md:text-3xl">{categoryIcons[category.key] || "📋"}</span>
-                            <h3 className="text-base md:text-lg font-bold text-slate-800">
+                          <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
+                            <span className="text-xl">{categoryIcons[category.key] || "📋"}</span>
+                            <h3 className="text-base font-semibold text-slate-800">
                               {category.label}
                             </h3>
-                            <span className="text-xs text-slate-600 bg-slate-100 px-3 py-1 rounded-full font-medium">
+                            <span className="text-xs text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full font-medium">
                               {categoryActivities.length} activité{categoryActivities.length > 1 ? "s" : ""}
                             </span>
                             {selectedCount > 0 && (
-                              <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                              <span className="bg-emerald-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
                                 {selectedCount} sélectionnée{selectedCount > 1 ? "s" : ""}
                               </span>
                             )}
                           </div>
-                          <span className="text-slate-400 text-xl font-bold ml-2">
+                          <span className="text-slate-400 text-lg font-bold ml-2">
                             {isExpanded ? "▼" : "▶"}
                           </span>
                         </button>
@@ -776,7 +710,7 @@ export function RequestPage() {
                             id={`category-${category.key}`}
                             role="region"
                             aria-label={`Activités de la catégorie ${category.label}`}
-                            className="border-t border-gray-200 p-3 sm:p-4 space-y-2 sm:space-y-3 bg-gray-50"
+                            className="border-t border-slate-200 p-4 space-y-3 bg-slate-50"
                           >
                             {categoryActivities.map((activity) => {
                               const activityId = activity.id?.toString();
@@ -790,13 +724,13 @@ export function RequestPage() {
                               return (
                                 <div
                                   key={activity.id}
-                                  className={`border-2 rounded-xl p-4 md:p-5 transition-all ${
+                                  className={`border rounded-lg p-4 transition-all ${
                                     isSelected
-                                      ? "border-blue-500 bg-blue-50 shadow-md"
-                                      : "border-slate-200 bg-white hover:border-green-300 hover:shadow-sm"
+                                      ? "border-emerald-500 bg-emerald-50 shadow-sm"
+                                      : "border-slate-200 bg-white hover:border-emerald-300"
                                   }`}
                                 >
-                                  <div className="flex items-start gap-4">
+                                  <div className="flex items-start gap-3">
                                       <input
                                         type="checkbox"
                                         id={`activity-${activityId}`}
@@ -805,18 +739,18 @@ export function RequestPage() {
                                         onChange={() => handleActivityToggle(activityId)}
                                         aria-label={`Sélectionner l'activité ${activity.name}`}
                                         aria-describedby={`activity-desc-${activityId}`}
-                                        className="mt-1 w-5 h-5 md:w-6 md:h-6 text-blue-600 rounded border-2 border-slate-300 focus:ring-2 focus:ring-blue-200 cursor-pointer accent-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="mt-1 w-5 h-5 text-emerald-600 rounded border-2 border-slate-300 focus:ring-2 focus:ring-emerald-200 cursor-pointer accent-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                       />
                                       <div className="flex-1 min-w-0">
-                                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+                                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                                         <h4 
                                           id={`activity-desc-${activityId}`}
-                                          className="text-base md:text-lg font-bold text-slate-800 break-words"
+                                          className="text-base font-semibold text-slate-800 break-words"
                                         >
                                           {activity.name}
                                         </h4>
                                         {activity.price_adult && (
-                                          <span className="text-sm font-bold text-white bg-blue-600 px-3 py-1.5 rounded-full whitespace-nowrap self-start md:self-auto">
+                                          <span className="text-xs font-semibold text-white bg-emerald-600 px-3 py-1.5 rounded-full whitespace-nowrap self-start sm:self-auto">
                                             {activity.price_adult}€ / adulte
                                           </span>
                                         )}
@@ -825,28 +759,28 @@ export function RequestPage() {
                                       {(activity.age_child || activity.age_baby) && (
                                         <div className="flex flex-wrap gap-2 mb-3 text-xs">
                                           {activity.age_child && (
-                                            <span className="text-slate-700 bg-green-100 px-3 py-1 rounded-full font-medium border border-green-200">
+                                            <span className="text-slate-700 bg-green-100 px-2.5 py-1 rounded-full font-medium border border-green-200">
                                               👶 Enfant: {activity.age_child}
                                             </span>
                                           )}
                                           {activity.age_baby && (
-                                            <span className="text-slate-700 bg-pink-100 px-3 py-1 rounded-full font-medium border border-pink-200">
+                                            <span className="text-slate-700 bg-pink-100 px-2.5 py-1 rounded-full font-medium border border-pink-200">
                                               🍼 Bébé: {activity.age_baby}
                                             </span>
                                           )}
                                         </div>
                                       )}
                                       {activity.notes && (
-                                        <p className="text-sm text-slate-700 mb-3 bg-slate-50 p-3 rounded-lg border border-slate-200 leading-relaxed">
+                                        <p className="text-sm text-slate-700 mb-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
                                           {activity.notes}
                                         </p>
                                       )}
                                       {isSelected && activity.description && (
-                                        <div className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200 shadow-sm">
+                                        <div className="mb-4 bg-gradient-to-r from-emerald-50 to-teal-50 p-4 rounded-lg border border-emerald-200">
                                           <div className="flex items-start gap-2">
-                                            <span className="text-lg mt-0.5">📄</span>
+                                            <span className="text-base mt-0.5">📄</span>
                                             <div className="flex-1">
-                                              <p className="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide">
+                                              <p className="text-xs font-semibold text-emerald-800 mb-2 uppercase tracking-wide">
                                                 Description
                                               </p>
                                               <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
@@ -857,13 +791,13 @@ export function RequestPage() {
                                         </div>
                                       )}
                                       {isSelected && (
-                                        <div className="mt-4 pt-4 border-t-2 border-blue-300">
-                                          <p className="text-sm font-bold text-slate-800 mb-3">
+                                        <div className="mt-4 pt-4 border-t border-emerald-200">
+                                          <p className="text-sm font-semibold text-slate-800 mb-3">
                                             Nombre de personnes :
                                           </p>
                                           <div className="grid grid-cols-3 gap-3">
                                             <div>
-                                              <label className="block text-xs font-semibold text-slate-700 mb-2">
+                                              <label className="block text-xs font-medium text-slate-700 mb-2">
                                                 👥 Adultes <span className="text-red-500">*</span>
                                                 <span className="block text-xs font-normal text-slate-500 mt-0.5">(12+ ans)</span>
                                               </label>
@@ -885,12 +819,12 @@ export function RequestPage() {
                                                 }
                                                 aria-label={`Nombre d'adultes pour ${activity.name}`}
                                                 aria-required="true"
-                                                className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                                 placeholder="0"
                                               />
                                             </div>
                                             <div>
-                                              <label className="block text-xs font-semibold text-slate-700 mb-2">
+                                              <label className="block text-xs font-medium text-slate-700 mb-2">
                                                 👶 Enfants
                                                 {activity.age_child && (
                                                   <span className="block text-xs font-normal text-slate-500 mt-0.5">
@@ -914,12 +848,12 @@ export function RequestPage() {
                                                   )
                                                 }
                                                 aria-label={`Nombre d'enfants pour ${activity.name}`}
-                                                className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                                 placeholder="0"
                                               />
                                             </div>
                                             <div>
-                                              <label className="block text-xs font-semibold text-slate-700 mb-2">
+                                              <label className="block text-xs font-medium text-slate-700 mb-2">
                                                 🍼 Bébés
                                                 {activity.age_baby && (
                                                   <span className="block text-xs font-normal text-slate-500 mt-0.5">
@@ -943,7 +877,7 @@ export function RequestPage() {
                                                   )
                                                 }
                                                 aria-label={`Nombre de bébés pour ${activity.name}`}
-                                                className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                                 placeholder="0"
                                               />
                                             </div>
@@ -965,35 +899,34 @@ export function RequestPage() {
             </div>
 
             {/* Bouton de soumission */}
-            <div className="flex flex-col items-center gap-4 pt-6 border-t-2 border-slate-200">
+            <div className="flex flex-col items-center gap-4 pt-6 border-t border-slate-200">
               <PrimaryBtn 
                 type="submit" 
                 disabled={submitting || requestSubmitted}
                 aria-label={submitting ? "Envoi de la demande en cours" : "Envoyer la demande de devis"}
                 aria-busy={submitting}
-                className="w-full md:w-auto px-8 md:px-12 py-4 text-lg font-bold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full md:w-auto px-8 py-3 text-base font-semibold"
               >
                 {submitting ? (
-                  <span className="flex items-center justify-center gap-3">
-                    <span className="animate-spin text-xl">⏳</span>
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="animate-spin">⏳</span>
                     <span>Envoi en cours...</span>
                   </span>
                 ) : (
-                  <span className="flex items-center justify-center gap-3">
-                    <span className="text-xl">✉️</span>
+                  <span className="flex items-center justify-center gap-2">
+                    <span>✉️</span>
                     <span>Envoyer ma demande</span>
                   </span>
                 )}
               </PrimaryBtn>
-              <p className="text-sm text-slate-600 text-center font-medium">
-                Les champs marqués d'un <span className="text-red-500 font-bold">*</span> sont obligatoires
+              <p className="text-xs text-slate-600 text-center">
+                Les champs marqués d'un <span className="text-red-500 font-semibold">*</span> sont obligatoires
               </p>
             </div>
           </form>
         </div>
       </div>
     </div>
-    </>
   );
 }
 
