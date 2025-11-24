@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
 import { uuid, currency, emptyTransfers, saveLS, loadLS } from "../utils";
@@ -9,7 +9,7 @@ import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
 
 // Composant ActivityRow mémorisé pour éviter les re-renders inutiles
-const ActivityRow = memo(({ activity, canModifyActivities, onDescriptionClick, onEditClick, onDeleteClick }) => {
+const ActivityRow = React.memo(({ activity, canModifyActivities, onDescriptionClick, onEditClick, onDeleteClick }) => {
   const hasDescription = !!activity.description;
   
   return (
