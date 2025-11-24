@@ -1018,7 +1018,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           className="space-y-6 md:space-y-8"
         >
         {/* Barre d'information et actions */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center gap-3">
             <span className="text-xl">💾</span>
             <p className="text-sm font-medium text-slate-700">
@@ -1037,8 +1037,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
         
         {/* Infos client */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
-          <h3 className="text-xl md:text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm p-6 md:p-8">
+          <h3 className="text-xl md:text-2xl font-bold text-blue-900 mb-6 flex items-center gap-3">
             <span className="text-2xl">👤</span>
             <span>Informations client</span>
           </h3>
@@ -1111,8 +1111,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Dates séjour */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
-          <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 shadow-sm p-6 md:p-8">
+          <h3 className="text-lg md:text-xl font-bold text-indigo-900 mb-6 flex items-center gap-3">
             <span className="text-xl">📅</span>
             <span>Dates du séjour</span>
           </h3>
@@ -1157,15 +1157,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Champ global pour le nombre d'adultes */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 shadow-sm p-6 md:p-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
             <div className="flex items-center gap-3">
               <span className="text-2xl">👥</span>
               <div>
-                <label className="block text-base md:text-lg font-bold text-slate-900">
+                <label className="block text-base md:text-lg font-bold text-emerald-900">
                   Nombre d'adultes global
                 </label>
-                <p className="text-sm text-slate-600 mt-1">
+                <p className="text-sm text-emerald-700 mt-1">
                   Remplit automatiquement toutes les activités
                 </p>
               </div>
@@ -1202,12 +1202,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           {computed.map((c, idx) => (
             <div key={idx} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
               {/* En-tête de l'activité */}
-              <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-semibold">
                     {idx + 1}
                   </span>
-                  <p className="text-base font-semibold text-slate-900">Activité #{idx + 1}</p>
+                  <p className="text-base font-semibold text-blue-900">Activité #{idx + 1}</p>
                 </div>
                 <GhostBtn 
                   type="button" 
@@ -2079,7 +2079,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Section Total et Actions */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200 shadow-sm p-6 md:p-8">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <GhostBtn 
               type="button" 
@@ -2089,8 +2089,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             >
               ➕ Ajouter une activité
             </GhostBtn>
-            <div className="w-full lg:w-auto bg-slate-50 rounded-lg p-6 border border-slate-200">
-              <p className="text-xs font-medium text-slate-600 mb-4 uppercase tracking-wide">Total du devis</p>
+            <div className="w-full lg:w-auto bg-white rounded-lg p-6 border border-purple-200 shadow-sm">
+              <p className="text-xs font-medium text-purple-700 mb-4 uppercase tracking-wide">Total du devis</p>
               <div className="space-y-3">
                 <div className="flex items-center justify-between lg:justify-end gap-4">
                   <span className="text-sm font-medium text-slate-600">Espèces:</span>
@@ -2110,8 +2110,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Notes */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
-          <label className="block text-base md:text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl border border-amber-200 shadow-sm p-6 md:p-8">
+          <label className="block text-base md:text-lg font-bold text-amber-900 mb-4 flex items-center gap-2">
             <span className="text-xl">📝</span>
             <span>Notes et informations supplémentaires</span>
           </label>
