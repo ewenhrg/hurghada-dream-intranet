@@ -997,7 +997,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8 md:space-y-10 p-4 md:p-6 lg:p-8">
         {/* Section Stop Sales et Push Sales - Compacte et repliable */}
         {(formattedStopSales.length > 0 || formattedPushSales.length > 0) && (
           <StopPushSalesSummary 
@@ -1018,11 +1018,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           className="space-y-6 md:space-y-8"
         >
         {/* Barre d'information et actions */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 rounded-xl border-2 border-blue-400 shadow-lg">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">💾</span>
-            <p className="text-base font-bold text-blue-800">
-              ✅ Les modifications sont sauvegardées automatiquement
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">💾</span>
+            <p className="text-sm font-medium text-slate-700">
+              Les modifications sont sauvegardées automatiquement
             </p>
           </div>
           <GhostBtn
@@ -1037,14 +1037,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
         
         {/* Infos client */}
-        <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/60 rounded-2xl border-2 border-blue-300/60 p-6 md:p-8 shadow-lg backdrop-blur-sm">
-          <h3 className="text-2xl md:text-3xl font-bold text-blue-800 mb-6 flex items-center gap-3 bg-blue-100/50 px-4 py-3 rounded-xl">
-            <span className="text-4xl">👤</span>
-            <span>📋 INFORMATIONS CLIENT</span>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
+          <h3 className="text-xl md:text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+            <span className="text-2xl">👤</span>
+            <span>Informations client</span>
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700">Nom complet *</label>
+              <label className="block text-sm font-medium text-slate-700">Nom complet *</label>
               <TextInput 
                 value={client.name} 
                 onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))}
@@ -1053,7 +1053,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700">Téléphone *</label>
+              <label className="block text-sm font-medium text-slate-700">Téléphone *</label>
               <TextInput 
                 value={client.phone} 
                 onChange={(e) => {
@@ -1065,7 +1065,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700">Email</label>
+              <label className="block text-sm font-medium text-slate-700">Email</label>
               <TextInput 
                 type="email"
                 value={client.email || ""} 
@@ -1075,7 +1075,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700">Hôtel</label>
+              <label className="block text-sm font-medium text-slate-700">Hôtel</label>
               <TextInput 
                 value={client.hotel} 
                 onChange={(e) => setClient((c) => ({ ...c, hotel: e.target.value }))}
@@ -1084,7 +1084,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700">Numéro de chambre</label>
+              <label className="block text-sm font-medium text-slate-700">Numéro de chambre</label>
               <TextInput 
                 value={client.room} 
                 onChange={(e) => setClient((c) => ({ ...c, room: e.target.value }))}
@@ -1093,11 +1093,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700">Quartier</label>
+              <label className="block text-sm font-medium text-slate-700">Quartier</label>
               <select
                 value={client.neighborhood}
                 onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
-                className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-normal text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               >
                 <option value="">— Sélectionner un quartier —</option>
                 {NEIGHBORHOODS.map((n) => (
@@ -1111,14 +1111,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Dates séjour */}
-        <div className="bg-gradient-to-br from-indigo-50/90 to-purple-50/70 rounded-2xl border-2 border-indigo-200/60 p-6 md:p-8 shadow-lg backdrop-blur-sm">
-          <h3 className="text-lg md:text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <span className="text-2xl">📅</span>
-            Dates du séjour
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
+          <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+            <span className="text-xl">📅</span>
+            <span>Dates du séjour</span>
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700">Date d'arrivée *</label>
+              <label className="block text-sm font-medium text-slate-700">Date d'arrivée *</label>
               <TextInput 
                 type="date" 
                 value={client.arrivalDate || ""} 
@@ -1127,7 +1127,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700">Date de départ *</label>
+              <label className="block text-sm font-medium text-slate-700">Date de départ *</label>
               <div className="flex flex-col sm:flex-row gap-3">
                 <TextInput 
                   type="date" 
@@ -1157,15 +1157,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Champ global pour le nombre d'adultes */}
-        <div className="bg-gradient-to-br from-emerald-50/90 to-teal-50/80 rounded-2xl border-2 border-emerald-300/60 p-6 md:p-8 shadow-lg backdrop-blur-sm">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
             <div className="flex items-center gap-3">
-              <span className="text-3xl">👥</span>
+              <span className="text-2xl">👥</span>
               <div>
-                <label className="block text-base md:text-lg font-bold text-slate-800">
+                <label className="block text-base md:text-lg font-bold text-slate-900">
                   Nombre d'adultes global
                 </label>
-                <p className="text-xs md:text-sm text-slate-600 mt-1">
+                <p className="text-sm text-slate-600 mt-1">
                   Remplit automatiquement toutes les activités
                 </p>
               </div>
@@ -1184,9 +1184,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   );
                 }}
                 placeholder="Ex: 2"
-                className="w-full text-base font-semibold"
+                className="w-full text-base"
               />
-              <p className="text-xs text-slate-500 mt-2 italic">
+              <p className="text-xs text-slate-500 mt-2">
                 💡 Modifiable individuellement pour chaque activité
               </p>
             </div>
@@ -1195,25 +1195,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
         {/* Lignes */}
         <div className="space-y-6 md:space-y-8">
-          <h3 className="text-lg md:text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <span className="text-2xl">🎯</span>
-            Activités ({computed.length})
+          <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <span className="text-xl">🎯</span>
+            <span>Activités ({computed.length})</span>
           </h3>
           {computed.map((c, idx) => (
-            <div key={idx} className="bg-white rounded-2xl border-2 border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:border-blue-400/60 overflow-hidden">
+            <div key={idx} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
               {/* En-tête de l'activité */}
-              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm text-white text-base font-bold shadow-md">
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-semibold">
                     {idx + 1}
                   </span>
-                  <p className="text-lg font-bold text-white">Activité #{idx + 1}</p>
+                  <p className="text-base font-semibold text-slate-900">Activité #{idx + 1}</p>
                 </div>
                 <GhostBtn 
                   type="button" 
                   onClick={() => removeItem(idx)} 
                   variant="danger" 
-                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+                  size="sm"
                 >
                   🗑️ Supprimer
                 </GhostBtn>
@@ -1223,11 +1223,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               <div className="p-6 md:p-8 space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
                   <div className="sm:col-span-2 lg:col-span-1">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2.5">Activité *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Activité *</label>
                     <select
                       value={c.raw.activityId}
                       onChange={(e) => setItem(idx, { activityId: e.target.value })}
-                      className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-normal text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     >
                       <option value="">— Sélectionner une activité —</option>
                       {sortedActivities.map((a) => (
@@ -1238,7 +1238,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2.5">Date *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Date *</label>
                   <ColoredDatePicker
                     value={c.raw.date}
                     onChange={(date) => setItem(idx, { date })}
@@ -1247,14 +1247,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     pushSales={pushSales}
                   />
                   {c.act && c.isStopSale && (
-                    <div className="mt-3 p-3 rounded-lg border-2 border-red-500 bg-gradient-to-r from-red-50 to-red-100/80 shadow-md animate-pulse">
+                    <div className="mt-3 p-3 rounded-lg border border-red-300 bg-red-50">
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl">🛑</span>
+                        <span className="text-lg">🛑</span>
                         <div className="flex-1">
-                          <p className="text-sm font-bold text-red-900 leading-tight">
+                          <p className="text-sm font-semibold text-red-900">
                             STOP SALE
                           </p>
-                          <p className="text-xs text-red-800 mt-0.5">
+                          <p className="text-xs text-red-700 mt-0.5">
                             Cette activité est bloquée à la vente pour cette date
                           </p>
                         </div>
@@ -1262,14 +1262,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                   )}
                   {c.act && c.isPushSale && (
-                    <div className="mt-3 p-3 rounded-lg border-2 border-green-500 bg-gradient-to-r from-green-50 to-emerald-50 shadow-md">
+                    <div className="mt-3 p-3 rounded-lg border border-green-300 bg-green-50">
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl">✅</span>
+                        <span className="text-lg">✅</span>
                         <div className="flex-1">
-                          <p className="text-sm font-bold text-green-900 leading-tight">
+                          <p className="text-sm font-semibold text-green-900">
                             PUSH SALE
                           </p>
-                          <p className="text-xs text-green-800 mt-0.5">
+                          <p className="text-xs text-green-700 mt-0.5">
                             Cette activité est ouverte exceptionnellement pour cette date
                           </p>
                         </div>
@@ -1277,14 +1277,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                   )}
                   {c.act && !c.isStopSale && !c.isPushSale && !c.baseAvailable && (
-                    <div className="mt-3 p-3 rounded-lg border-2 border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 shadow-md">
+                    <div className="mt-3 p-3 rounded-lg border border-amber-300 bg-amber-50">
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl">⚠️</span>
+                        <span className="text-lg">⚠️</span>
                         <div className="flex-1">
-                          <p className="text-sm font-bold text-amber-900 leading-tight">
+                          <p className="text-sm font-semibold text-amber-900">
                             Activité non disponible
                           </p>
-                          <p className="text-xs text-amber-800 mt-0.5">
+                          <p className="text-xs text-amber-700 mt-0.5">
                             Pas disponible ce jour-là (on peut quand même créer)
                           </p>
                         </div>
@@ -1293,19 +1293,19 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   )}
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2.5">Quartier</label>
-                    <div className="rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Quartier</label>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-normal text-slate-700">
                       {client.neighborhood
                         ? NEIGHBORHOODS.find((n) => n.key === client.neighborhood)?.label
                         : "— Choisir avec le client"}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2.5">Créneau</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Créneau</label>
                     <select
                       value={c.raw.slot}
                       onChange={(e) => setItem(idx, { slot: e.target.value })}
-                      className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all disabled:bg-slate-100 disabled:text-slate-400"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-normal text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:bg-slate-100 disabled:text-slate-400"
                       disabled={!c.transferInfo || (!c.transferInfo.morningEnabled && !c.transferInfo.afternoonEnabled && !c.transferInfo.eveningEnabled)}
                     >
                       <option value="">— Choisir un créneau —</option>
@@ -1324,7 +1324,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       )}
                     </select>
                     {c.transferInfo && (
-                      <p className="text-xs text-slate-500 mt-2 font-medium">
+                      <p className="text-xs text-slate-600 mt-2">
                         💰 Supplément transfert: {currency(c.transferInfo.surcharge || 0, c.currency)} / adulte
                       </p>
                     )}
@@ -2065,10 +2065,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               )}
 
               {/* Sous-total de l'activité */}
-              <div className="mt-6 pt-6 border-t-2 border-slate-200">
-                <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 md:p-5">
-                  <p className="text-sm md:text-base font-semibold text-slate-700">Sous-total de cette activité</p>
-                  <p className="text-xl md:text-2xl font-bold text-blue-700">
+              <div className="mt-6 pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm font-medium text-slate-700">Sous-total de cette activité</p>
+                  <p className="text-xl font-bold text-slate-900">
                     {currencyNoCents(Math.round(c.lineTotal), c.currency)}
                   </p>
                 </div>
@@ -2079,26 +2079,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Section Total et Actions */}
-        <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/80 to-pink-50/70 border-2 border-indigo-300/60 rounded-2xl p-6 md:p-8 shadow-xl backdrop-blur-sm">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <GhostBtn 
               type="button" 
               onClick={addItem} 
               variant="primary" 
-              className="w-full lg:w-auto text-base font-bold px-8 py-4 shadow-lg hover:shadow-xl transition-all"
+              className="w-full lg:w-auto"
             >
               ➕ Ajouter une activité
             </GhostBtn>
-            <div className="w-full lg:w-auto bg-white rounded-xl p-6 border-2 border-indigo-200/60 shadow-lg">
-              <p className="text-xs font-semibold text-slate-600 mb-3 uppercase tracking-wider">Total du devis</p>
-              <div className="space-y-2">
+            <div className="w-full lg:w-auto bg-slate-50 rounded-lg p-6 border border-slate-200">
+              <p className="text-xs font-medium text-slate-600 mb-4 uppercase tracking-wide">Total du devis</p>
+              <div className="space-y-3">
                 <div className="flex items-center justify-between lg:justify-end gap-4">
                   <span className="text-sm font-medium text-slate-600">Espèces:</span>
-                  <p className="text-2xl md:text-3xl font-bold text-indigo-700">
+                  <p className="text-2xl md:text-3xl font-bold text-slate-900">
                     {currencyNoCents(grandTotalCash, grandCurrency)}
                   </p>
                 </div>
-                <div className="flex items-center justify-between lg:justify-end gap-4 pt-2 border-t border-slate-200">
+                <div className="flex items-center justify-between lg:justify-end gap-4 pt-3 border-t border-slate-200">
                   <span className="text-sm font-medium text-slate-600">Carte:</span>
                   <p className="text-xl md:text-2xl font-bold text-slate-700">
                     {currencyNoCents(grandTotalCard, grandCurrency)}
@@ -2110,19 +2110,19 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Notes */}
-        <div className="bg-gradient-to-br from-amber-50/90 to-yellow-50/70 border-2 border-amber-200/60 rounded-2xl p-6 md:p-8 shadow-lg backdrop-blur-sm">
-          <label className="block text-base md:text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <span className="text-2xl">📝</span>
-            Notes et informations supplémentaires
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
+          <label className="block text-base md:text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <span className="text-xl">📝</span>
+            <span>Notes et informations supplémentaires</span>
           </label>
           <textarea
             placeholder="Langue du guide, point de pick-up, demandes spéciales, etc."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm md:text-base text-slate-800 shadow-sm focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition-all resize-none"
+            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
           />
-          <p className="text-xs text-slate-500 mt-3 italic">
+          <p className="text-xs text-slate-500 mt-3">
             💡 Ces informations seront incluses dans le devis final
           </p>
         </div>
@@ -2130,7 +2130,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         {/* Bouton de soumission */}
         <PrimaryBtn 
           type="submit" 
-          className="w-full text-lg font-bold py-4 shadow-lg hover:shadow-xl transition-all"
+          className="w-full text-base font-semibold py-3"
           disabled={isSubmitting}
         >
           {isSubmitting ? (
