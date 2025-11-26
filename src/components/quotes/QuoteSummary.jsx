@@ -37,5 +37,5 @@ export const QuoteSummary = memo(function QuoteSummary({ computed, grandTotalCas
       </div>
     </div>
   );
-}););
+});
 
