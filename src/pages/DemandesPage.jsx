@@ -7,10 +7,12 @@ import { generateRequestLink, generateRequestToken } from "../utils/tokenGenerat
 
 export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteFromRequest }) {
   const [requests, setRequests] = useState([]);
+  const [historyRequests, setHistoryRequests] = useState([]); // Demandes converties (historique)
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending"); // pending, converted, all
   const [generatedLink, setGeneratedLink] = useState("");
+  const [showHistory, setShowHistory] = useState(false); // Afficher/masquer l'historique
 
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
@@ -22,6 +24,34 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
     return map;
   }, [activities]);
 
+  // Fonction pour supprimer les demandes de plus de 5 jours
+  const cleanupOldRequests = useCallback(async () => {
+    if (!supabase) return;
+
+    try {
+      // Calculer la date limite (5 jours avant aujourd'hui)
+      const fiveDaysAgo = new Date();
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+      const fiveDaysAgoISO = fiveDaysAgo.toISOString();
+
+      // Supprimer les demandes converties de plus de 5 jours
+      const { error } = await supabase
+        .from("client_requests")
+        .delete()
+        .eq("site_key", SITE_KEY)
+        .eq("status", "converted")
+        .lt("converted_at", fiveDaysAgoISO);
+
+      if (error) {
+        console.warn("Erreur lors du nettoyage des anciennes demandes:", error);
+      } else {
+        console.log("✅ Nettoyage des demandes de plus de 5 jours effectué");
+      }
+    } catch (err) {
+      console.warn("Exception lors du nettoyage des anciennes demandes:", err);
+    }
+  }, []);
+
   // Charger les demandes depuis Supabase (optimisé avec useCallback)
   const loadRequests = useCallback(async () => {
     if (!supabase) {
@@ -30,6 +60,9 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
     }
 
     try {
+      // Nettoyer les anciennes demandes avant de charger
+      await cleanupOldRequests();
+
       let query = supabase
         .from("client_requests")
         .select("*")
@@ -49,7 +82,39 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
         console.error("Erreur lors du chargement des demandes:", error);
         toast.error("Impossible de charger les demandes.");
       } else {
-        setRequests(data || []);
+        // Calculer la date limite (5 jours avant aujourd'hui)
+        const now = new Date();
+        const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+        
+        // Filtrer les demandes converties de plus de 5 jours pour l'affichage principal
+        const validRequests = (data || []).filter((request) => {
+          // Si c'est une demande convertie, vérifier qu'elle n'a pas plus de 5 jours
+          if (request.status === "converted" && request.converted_at) {
+            const convertedDate = new Date(request.converted_at);
+            return convertedDate >= fiveDaysAgo;
+          }
+          // Pour les autres demandes (pending), toujours les afficher
+          return true;
+        });
+
+        setRequests(validRequests);
+
+        // Charger séparément l'historique (toutes les demandes converties de moins de 5 jours)
+        // On les charge séparément pour pouvoir les afficher dans une section dédiée
+        const { data: historyData, error: historyError } = await supabase
+          .from("client_requests")
+          .select("*")
+          .eq("site_key", SITE_KEY)
+          .eq("status", "converted")
+          .gte("converted_at", fiveDaysAgo.toISOString())
+          .order("converted_at", { ascending: false })
+          .limit(50); // Limiter à 50 pour éviter de surcharger
+
+        if (!historyError && historyData) {
+          setHistoryRequests(historyData || []);
+        } else if (historyError) {
+          console.warn("Erreur lors du chargement de l'historique:", historyError);
+        }
       }
     } catch (err) {
       console.error("Exception lors du chargement des demandes:", err);
@@ -57,7 +122,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, cleanupOldRequests]);
 
   useEffect(() => {
     loadRequests();
@@ -435,6 +500,159 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Section Historique des demandes converties */}
+      {historyRequests.length > 0 && (
+        <div className="mt-8 pt-8 border-t border-gray-300/30">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-xl font-bold text-white mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
+                📜 Historique des demandes converties
+              </h3>
+              <p className="text-sm text-white/70">
+                Demandes converties en devis (conservées 5 jours)
+              </p>
+            </div>
+            <GhostBtn
+              onClick={() => setShowHistory(!showHistory)}
+              variant="primary"
+              className="whitespace-nowrap"
+            >
+              {showHistory ? "👁️ Masquer" : "👁️ Afficher"} ({historyRequests.length})
+            </GhostBtn>
+          </div>
+
+          {showHistory && (
+            <div className="space-y-4 mt-4">
+              {historyRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="bg-gradient-to-br from-emerald-50/60 to-teal-50/40 backdrop-blur-sm rounded-xl border-2 border-emerald-200/60 shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg opacity-75"
+                >
+                  <div className="p-4 md:p-6">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      {/* Informations client */}
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="text-base font-semibold text-gray-800">
+                              {request.client_name || "Sans nom"}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              📞 {request.client_phone || "Non renseigné"}
+                            </p>
+                            {request.client_email && (
+                              <p className="text-sm text-gray-600">
+                                📧 {request.client_email}
+                              </p>
+                            )}
+                          </div>
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold shadow-sm border-2 bg-gradient-to-r from-emerald-100 to-emerald-50 text-emerald-800 border-emerald-200/50">
+                            ✅ Convertie
+                          </span>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-2 text-sm text-gray-600">
+                          {request.client_hotel && (
+                            <p>
+                              <span className="font-medium">Hôtel :</span> {request.client_hotel}
+                              {request.client_room && ` - Chambre ${request.client_room}`}
+                            </p>
+                          )}
+                          {request.arrival_date && (
+                            <p>
+                              <span className="font-medium">Arrivée :</span>{" "}
+                              {new Date(request.arrival_date).toLocaleDateString("fr-FR")}
+                            </p>
+                          )}
+                          {request.departure_date && (
+                            <p>
+                              <span className="font-medium">Départ :</span>{" "}
+                              {new Date(request.departure_date).toLocaleDateString("fr-FR")}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Activités sélectionnées */}
+                        {request.selected_activities &&
+                          Array.isArray(request.selected_activities) &&
+                          request.selected_activities.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-emerald-200/50">
+                              <p className="text-xs font-medium text-gray-700 mb-2">
+                                Activités sélectionnées :
+                              </p>
+                              <div className="space-y-1">
+                                {request.selected_activities.slice(0, 3).map((selectedActivity, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="bg-white/60 rounded-lg border border-emerald-200/50 p-2 text-xs shadow-sm"
+                                  >
+                                    <span className="font-medium">
+                                      {getActivityName(selectedActivity.activityId)}
+                                    </span>
+                                    <span className="text-gray-600 ml-2">
+                                      - {selectedActivity.adults || 0} adulte
+                                      {selectedActivity.adults > 1 ? "s" : ""}
+                                    </span>
+                                  </div>
+                                ))}
+                                {request.selected_activities.length > 3 && (
+                                  <p className="text-xs text-gray-500 italic">
+                                    + {request.selected_activities.length - 3} autre(s) activité(s)
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                        {/* Date de conversion */}
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-500">
+                            📅 Demandé le{" "}
+                            {new Date(request.created_at).toLocaleDateString("fr-FR", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                          {request.converted_at && (
+                            <p className="text-xs text-emerald-600 font-medium">
+                              ✅ Convertie le{" "}
+                              {new Date(request.converted_at).toLocaleDateString("fr-FR", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                              {request.converted_by && ` par ${request.converted_by}`}
+                            </p>
+                          )}
+                          {request.converted_at && (() => {
+                            const convertedDate = new Date(request.converted_at);
+                            const now = new Date();
+                            const daysSinceConversion = Math.floor(
+                              (now.getTime() - convertedDate.getTime()) / (1000 * 60 * 60 * 24)
+                            );
+                            const daysRemaining = Math.max(0, 5 - daysSinceConversion);
+                            return (
+                              <p className="text-xs text-gray-400 italic">
+                                ⏱️ Suppression automatique dans {daysRemaining} jour{daysRemaining > 1 ? "s" : ""}
+                              </p>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
