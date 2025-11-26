@@ -567,15 +567,72 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           autoFocus
                         />
                       ) : (
-                        <span 
-                          style={{ cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', padding: canEdit && !row.isEmpty ? '4px' : '0', borderRadius: canEdit && !row.isEmpty ? '4px' : '0', display: 'inline-block', width: '100%' }}
-                          onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "clientName" })}
-                          onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
-                          onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
-                          title={row.isEmpty ? "" : (row.clientName || "") + (row.clientName && row.clientPhone ? " " : "") + (row.clientPhone ? `+${row.clientPhone}` : "")}
-                        >
-                          {row.isEmpty ? "" : (row.clientName || "") + (row.clientName && row.clientPhone ? " " : "") + (row.clientPhone ? `+${row.clientPhone}` : "")}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
+                          {row.clientName && (
+                            <span 
+                              style={{ 
+                                cursor: canEdit && !row.isEmpty ? 'pointer' : 'default', 
+                                padding: canEdit && !row.isEmpty ? '2px 4px' : '0', 
+                                borderRadius: canEdit && !row.isEmpty ? '4px' : '0', 
+                                display: 'inline-block',
+                                userSelect: 'text',
+                                WebkitUserSelect: 'text',
+                                MozUserSelect: 'text',
+                                msUserSelect: 'text'
+                              }}
+                              onClick={() => canEdit && !row.isEmpty && setEditingCell({ rowKey: uniqueKey, field: "clientName" })}
+                              onMouseEnter={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = '#f0f0f0')}
+                              onMouseLeave={(e) => canEdit && !row.isEmpty && (e.target.style.backgroundColor = 'transparent')}
+                            >
+                              {row.clientName}
+                            </span>
+                          )}
+                          {row.clientPhone && (
+                            <span 
+                              style={{ 
+                                cursor: 'text',
+                                padding: '2px 4px',
+                                borderRadius: '4px',
+                                display: 'inline-block',
+                                userSelect: 'text',
+                                WebkitUserSelect: 'text',
+                                MozUserSelect: 'text',
+                                msUserSelect: 'text',
+                                color: '#2563eb',
+                                fontWeight: '500'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Sélectionner le texte du téléphone pour faciliter la copie
+                                const range = document.createRange();
+                                range.selectNodeContents(e.target);
+                                const selection = window.getSelection();
+                                selection.removeAllRanges();
+                                selection.addRange(range);
+                              }}
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                // Copier le numéro de téléphone au double-clic
+                                const phoneText = `+${row.clientPhone}`;
+                                navigator.clipboard.writeText(phoneText).then(() => {
+                                  toast.success("Numéro de téléphone copié !");
+                                }).catch(() => {
+                                  // Fallback si clipboard API échoue
+                                  const textArea = document.createElement('textarea');
+                                  textArea.value = phoneText;
+                                  document.body.appendChild(textArea);
+                                  textArea.select();
+                                  document.execCommand('copy');
+                                  document.body.removeChild(textArea);
+                                  toast.success("Numéro de téléphone copié !");
+                                });
+                              }}
+                              title="Double-cliquez pour copier le numéro de téléphone"
+                            >
+                              +{row.clientPhone}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td style={{ border: '1px solid #ddd', padding: '6px', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
