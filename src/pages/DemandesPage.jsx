@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, NEIGHBORHOODS } from "../constants";
 import { TextInput, PrimaryBtn, GhostBtn, Pill } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { generateRequestLink, generateRequestToken } from "../utils/tokenGenerator";
+import { appCache, createCacheKey } from "../utils/cache";
 
 export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteFromRequest }) {
   const [requests, setRequests] = useState([]);

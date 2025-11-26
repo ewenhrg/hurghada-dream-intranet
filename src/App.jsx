@@ -11,6 +11,7 @@ import { useTranslation } from "./hooks/useTranslation";
 import PageLoader from "./components/PageLoader";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { toast } from "./utils/toast.js";
+import { activitiesCache, createCacheKey } from "./utils/cache";
 
 // Fonction helper pour le lazy loading avec gestion d'erreur et retry
 const lazyWithRetry = (importFn, retries = 3) => {
@@ -119,11 +120,20 @@ export default function App() {
     setOk(false);
   }, []);
 
-  // fonction de synchronisation Supabase - mémoïsée avec useCallback
+  // fonction de synchronisation Supabase - mémoïsée avec useCallback et cache
   // Note: setActivities et setRemoteEnabled sont des setters stables de React, pas besoin de dépendances
   const syncWithSupabase = useCallback(async () => {
     if (!supabase) return;
     try {
+      // Vérifier le cache
+      const cacheKey = createCacheKey("activities", SITE_KEY);
+      const cached = activitiesCache.get(cacheKey);
+      if (cached) {
+        setActivities(cached);
+        setRemoteEnabled(true);
+        return;
+      }
+
       // Vérifier si Supabase est configuré (pas un stub)
       const { error: testError } = await supabase.from("activities").select("id").limit(1);
       
@@ -180,9 +190,10 @@ export default function App() {
             // Si uniqueKeys.has(key) est true, on ignore cette activité (doublon dans Supabase)
           });
 
-          // Mettre à jour le state ET le localStorage avec UNIQUEMENT les données Supabase
+          // Mettre à jour le state, le localStorage et le cache avec UNIQUEMENT les données Supabase
           setActivities(supabaseActivities);
           saveLS(LS_KEYS.activities, supabaseActivities);
+          activitiesCache.set(cacheKey, supabaseActivities);
         } else {
           // Si Supabase est vide, vider aussi le state et le localStorage
           console.log("📦 Supabase: aucune activité trouvée, vidage des activités locales");

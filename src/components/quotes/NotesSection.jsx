@@ -1,7 +1,9 @@
+import { memo } from 'react';
+
 /**
  * Composant pour la section des notes du devis
  */
-export function NotesSection({ notes, onNotesChange }) {
+export const NotesSection = memo(function NotesSection({ notes, onNotesChange }) {
   return (
     <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl border border-amber-200 shadow-sm p-6 md:p-8">
       <label className="block text-base md:text-lg font-bold text-amber-900 mb-4 flex items-center gap-2">
@@ -20,5 +22,5 @@ export function NotesSection({ notes, onNotesChange }) {
       </p>
     </div>
   );
-}
+});
 

@@ -186,12 +186,21 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
   }, [blankItemMemo, setDraft]);
 
-  // Charger les stop sales et push sales depuis Supabase
+  // Charger les stop sales et push sales depuis Supabase avec cache
   useEffect(() => {
     async function loadStopSalesAndPushSales() {
       if (!supabase) return;
       try {
-        const today = new Date().toISOString().split('T')[0]; // Date d'aujourd'hui au format YYYY-MM-DD
+        const today = new Date().toISOString().split('T')[0];
+        const cacheKey = createCacheKey("sales", SITE_KEY, today);
+        
+        // Vérifier le cache
+        const cached = salesCache.get(cacheKey);
+        if (cached) {
+          setStopSales(cached.stopSales || []);
+          setPushSales(cached.pushSales || []);
+          return;
+        }
 
         // Charger les stop sales et push sales en parallèle avec filtrage côté serveur (optimisé)
         const [stopSalesResult, pushSalesResult] = await Promise.all([
@@ -200,14 +209,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         ]);
 
         // Traiter les stop sales (déjà filtrés côté serveur)
-        if (!stopSalesResult.error && stopSalesResult.data) {
-          setStopSales(stopSalesResult.data);
-        }
-
-        // Traiter les push sales (déjà filtrés côté serveur)
-        if (!pushSalesResult.error && pushSalesResult.data) {
-          setPushSales(pushSalesResult.data);
-        }
+        const stopSalesData = (!stopSalesResult.error && stopSalesResult.data) ? stopSalesResult.data : [];
+        const pushSalesData = (!pushSalesResult.error && pushSalesResult.data) ? pushSalesResult.data : [];
+        
+        setStopSales(stopSalesData);
+        setPushSales(pushSalesData);
+        
+        // Mettre en cache
+        salesCache.set(cacheKey, { stopSales: stopSalesData, pushSales: pushSalesData });
       } catch (err) {
         console.error("Erreur lors du chargement des stop sales/push sales:", err);
       }
@@ -215,8 +224,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
     loadStopSalesAndPushSales();
     
-    // Recharger toutes les 30 secondes pour avoir les données à jour (optimisé: réduit de 10s à 30s)
-    const interval = setInterval(loadStopSalesAndPushSales, 30000);
+    // Recharger toutes les 60 secondes pour avoir les données à jour (optimisé avec cache)
+    const interval = setInterval(loadStopSalesAndPushSales, 60000);
     return () => clearInterval(interval);
   }, []);
 

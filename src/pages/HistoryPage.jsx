@@ -8,6 +8,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
+import { salesCache, createCacheKey } from "../utils/cache";
 
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
@@ -43,34 +44,36 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [stopSales, setStopSales] = useState([]);
   const [pushSales, setPushSales] = useState([]);
   
-  // Charger les stop sales et push sales depuis Supabase (optimisé : filtrer côté serveur)
+  // Charger les stop sales et push sales depuis Supabase avec cache (optimisé)
   useEffect(() => {
     async function loadStopSalesAndPushSales() {
       if (!supabase) return;
       try {
-        const today = new Date().toISOString().split('T')[0]; // Date d'aujourd'hui au format YYYY-MM-DD
+        const today = new Date().toISOString().split('T')[0];
+        const cacheKey = createCacheKey("sales", SITE_KEY, today);
+        
+        // Vérifier le cache
+        const cached = salesCache.get(cacheKey);
+        if (cached) {
+          setStopSales(cached.stopSales || []);
+          setPushSales(cached.pushSales || []);
+          return;
+        }
 
         // Charger uniquement les stop sales valides (date >= aujourd'hui) - filtre côté serveur
-        const { data: stopSalesData, error: stopSalesError } = await supabase
-          .from("stop_sales")
-          .select("*")
-          .eq("site_key", SITE_KEY)
-          .gte("date", today); // Filtrer côté serveur : date >= aujourd'hui
+        const [stopSalesResult, pushSalesResult] = await Promise.all([
+          supabase.from("stop_sales").select("*").eq("site_key", SITE_KEY).gte("date", today),
+          supabase.from("push_sales").select("*").eq("site_key", SITE_KEY).gte("date", today),
+        ]);
 
-        if (!stopSalesError && stopSalesData) {
-          setStopSales(stopSalesData);
-        }
-
-        // Charger uniquement les push sales valides (date >= aujourd'hui) - filtre côté serveur
-        const { data: pushSalesData, error: pushSalesError } = await supabase
-          .from("push_sales")
-          .select("*")
-          .eq("site_key", SITE_KEY)
-          .gte("date", today); // Filtrer côté serveur : date >= aujourd'hui
-
-        if (!pushSalesError && pushSalesData) {
-          setPushSales(pushSalesData);
-        }
+        const stopSalesData = (!stopSalesResult.error && stopSalesResult.data) ? stopSalesResult.data : [];
+        const pushSalesData = (!pushSalesResult.error && pushSalesResult.data) ? pushSalesResult.data : [];
+        
+        setStopSales(stopSalesData);
+        setPushSales(pushSalesData);
+        
+        // Mettre en cache
+        salesCache.set(cacheKey, { stopSales: stopSalesData, pushSales: pushSalesData });
       } catch (err) {
         console.error("Erreur lors du chargement des stop sales/push sales:", err);
       }
@@ -78,19 +81,26 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
     loadStopSalesAndPushSales();
     
-    // Recharger toutes les 30 secondes au lieu de 10 secondes pour réduire la charge
-    const interval = setInterval(loadStopSalesAndPushSales, 30000);
+    // Recharger toutes les 60 secondes (optimisé avec cache)
+    const interval = setInterval(loadStopSalesAndPushSales, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // Écouter le scroll pour afficher/masquer le bouton "remonter en haut"
+  // Écouter le scroll pour afficher/masquer le bouton "remonter en haut" (optimisé avec requestAnimationFrame)
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      const scrollY = window.scrollY || document.documentElement.scrollTop;
-      setShowScrollToTop(scrollY > 300); // Afficher le bouton après 300px de scroll
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollY = window.scrollY || document.documentElement.scrollTop;
+          setShowScrollToTop(scrollY > 300);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 

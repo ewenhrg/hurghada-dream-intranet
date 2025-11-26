@@ -1,10 +1,11 @@
+import { memo } from 'react';
 import { GhostBtn } from "../ui";
 import { currencyNoCents } from "../../utils";
 
 /**
  * Composant pour afficher le résumé des totaux du devis
  */
-export function QuoteSummary({ computed, grandTotalCash, grandTotalCard, grandCurrency, onAddItem }) {
+export const QuoteSummary = memo(function QuoteSummary({ computed, grandTotalCash, grandTotalCard, grandCurrency, onAddItem }) {
   return (
     <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200 shadow-sm p-6 md:p-8">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
@@ -36,5 +37,5 @@ export function QuoteSummary({ computed, grandTotalCash, grandTotalCard, grandCu
       </div>
     </div>
   );
-}
+}););
 
