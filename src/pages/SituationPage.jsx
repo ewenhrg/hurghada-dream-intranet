@@ -1134,28 +1134,36 @@ export function SituationPage({ activities = [], user }) {
     console.log(`📱 Changement de l'URL WhatsApp pour ${phone}...`);
     
     // Nom de fenêtre fixe pour FORCER la réutilisation de la même fenêtre
-    // Le navigateur réutilisera automatiquement la fenêtre si elle existe déjà avec ce nom
     const windowName = "whatsapp_auto_send";
     
     // Vérifier si une fenêtre existe déjà et n'est pas fermée
     if (whatsappWindowRef.current) {
       try {
         if (!whatsappWindowRef.current.closed) {
-          console.log("🔄 Fenêtre WhatsApp existante détectée, réutilisation...");
-          // La fenêtre existe et est ouverte
-          // Utiliser window.open avec le même nom pour forcer la réutilisation et changer l'URL
-          const reusedWindow = window.open(whatsappUrl, windowName);
-          if (reusedWindow) {
-            whatsappWindowRef.current = reusedWindow;
-            reusedWindow.focus();
-            console.log("✅ Fenêtre WhatsApp réutilisée - URL mise à jour");
-            // Attente importante pour laisser WhatsApp charger la nouvelle conversation (20 secondes)
-            // WhatsApp Web peut être très lent à charger, surtout lors du changement de conversation
-            // Augmenté à 20 secondes pour s'assurer que la page est complètement chargée
-            console.log("⏳ Attente de 20 secondes pour laisser WhatsApp charger complètement la nouvelle conversation...");
-            toast.info("⏳ Chargement de la conversation WhatsApp... (20 secondes - WhatsApp peut être lent)", { duration: 20000 });
-            await new Promise((resolve) => setTimeout(resolve, 20000));
-            return reusedWindow;
+          console.log("🔄 Fenêtre WhatsApp existante détectée, changement d'URL...");
+          // Changer l'URL directement dans la fenêtre existante (plus rapide, pas de rechargement complet)
+          try {
+            whatsappWindowRef.current.location.href = whatsappUrl;
+            whatsappWindowRef.current.focus();
+            console.log("✅ URL WhatsApp mise à jour dans la fenêtre existante");
+            // Délai réduit à 3 secondes car on change juste l'URL (pas de rechargement complet)
+            console.log("⏳ Attente de 3 secondes pour laisser WhatsApp charger la nouvelle conversation...");
+            toast.info("⏳ Chargement de la conversation WhatsApp... (3 secondes)", { duration: 3000 });
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            return whatsappWindowRef.current;
+          } catch (error) {
+            // Si on ne peut pas changer l'URL directement (CORS), utiliser window.open
+            console.warn("⚠️ Impossible de changer l'URL directement, utilisation de window.open...");
+            const reusedWindow = window.open(whatsappUrl, windowName);
+            if (reusedWindow) {
+              whatsappWindowRef.current = reusedWindow;
+              reusedWindow.focus();
+              console.log("✅ Fenêtre WhatsApp réutilisée via window.open");
+              console.log("⏳ Attente de 5 secondes pour laisser WhatsApp charger...");
+              toast.info("⏳ Chargement de la conversation WhatsApp... (5 secondes)", { duration: 5000 });
+              await new Promise((resolve) => setTimeout(resolve, 5000));
+              return reusedWindow;
+            }
           }
         } else {
           // La fenêtre a été fermée, réinitialiser la référence
@@ -1169,25 +1177,19 @@ export function SituationPage({ activities = [], user }) {
       }
     }
     
-    // Ouvrir ou réutiliser la fenêtre WhatsApp avec window.open
-    // Si une fenêtre avec ce nom existe déjà, le navigateur la réutilisera automatiquement
-    console.log("🔄 Ouverture/réutilisation de la fenêtre WhatsApp...");
+    // Ouvrir une nouvelle fenêtre WhatsApp
+    console.log("🔄 Ouverture d'une nouvelle fenêtre WhatsApp...");
     const whatsappWindow = window.open(whatsappUrl, windowName);
     
     if (whatsappWindow) {
-      // Mettre à jour la référence (même si c'est la même fenêtre)
+      // Mettre à jour la référence
       whatsappWindowRef.current = whatsappWindow;
+      console.log("✅ Fenêtre WhatsApp ouverte avec succès");
       
-      // Vérifier si c'est une nouvelle fenêtre ou une réutilisation
-      if (whatsappWindow === whatsappWindowRef.current || !whatsappWindow.closed) {
-        console.log("✅ Fenêtre WhatsApp ouverte/réutilisée avec succès");
-      }
-      
-      // Attente pour laisser WhatsApp charger (20 secondes pour une nouvelle fenêtre)
-      // WhatsApp Web peut être très lent à charger initialement, surtout avec une connexion lente
-      console.log("⏳ Attente de 20 secondes pour laisser WhatsApp charger complètement...");
-      toast.info("⏳ Chargement initial de WhatsApp Web... (20 secondes - WhatsApp peut être lent)", { duration: 20000 });
-      await new Promise((resolve) => setTimeout(resolve, 20000));
+      // Attente réduite à 5 secondes pour le chargement initial (optimisé)
+      console.log("⏳ Attente de 5 secondes pour laisser WhatsApp charger...");
+      toast.info("⏳ Chargement initial de WhatsApp Web... (5 secondes)", { duration: 5000 });
+      await new Promise((resolve) => setTimeout(resolve, 5000));
       
       // Focus sur la fenêtre (non-bloquant)
       try {
@@ -1216,13 +1218,9 @@ export function SituationPage({ activities = [], user }) {
     
     // IMPORTANT: Attendre 10 secondes minimum entre chaque message pour éviter le bannissement WhatsApp
     // C'est le délai minimum recommandé par WhatsApp pour éviter les restrictions
-    // Optimisé à 10 secondes pour un meilleur débit tout en restant sécurisé
-    const MIN_DELAY_BETWEEN_MESSAGES = 10000; // 10 secondes (réduit de 15s pour améliorer la vitesse)
-    // Délai supplémentaire pour la première ouverture de WhatsApp (pour laisser le temps à la page de charger)
-    // Augmenté à 15 secondes car WhatsApp peut être très lent à charger initialement
-    const INITIAL_LOAD_DELAY = 15000; // 15 secondes supplémentaires pour le premier message
+    const MIN_DELAY_BETWEEN_MESSAGES = 10000; // 10 secondes entre chaque changement de conversation
     
-    // Ouvrir WhatsApp Web (la fonction ferme déjà la fenêtre précédente)
+    // Ouvrir WhatsApp Web (réutilise la même fenêtre en changeant l'URL)
     console.log(`⏳ Ouverture de WhatsApp Web...`);
     const whatsappWindow = await openWhatsApp(data.phone, message);
     
@@ -1232,51 +1230,22 @@ export function SituationPage({ activities = [], user }) {
       return false;
     }
 
-    // Si c'est le premier message, attendre plus longtemps pour laisser le temps à WhatsApp de charger complètement
-    // Optimisé : délai réduit à 10 secondes (au lieu de 15s) pour améliorer la vitesse
+    // Marquer que ce n'est plus le premier message après la première ouverture
     if (isFirstMessageRef.current) {
-      console.log(`⏳ Premier message détecté. Attente supplémentaire de ${INITIAL_LOAD_DELAY / 1000} secondes pour laisser le temps à WhatsApp de charger...`);
-      toast.info(
-        `📱 Premier message : Attente de ${INITIAL_LOAD_DELAY / 1000} secondes pour laisser WhatsApp charger...`,
-        { duration: INITIAL_LOAD_DELAY }
-      );
-      // Utiliser Promise pour éviter les blocages
-      await new Promise((resolve) => setTimeout(resolve, INITIAL_LOAD_DELAY));
       isFirstMessageRef.current = false;
-      console.log(`✅ Délai initial terminé. WhatsApp devrait être chargé maintenant.`);
-    } else {
-      // Pour les messages suivants, attendre encore 12 secondes supplémentaires pour s'assurer que WhatsApp a bien chargé la nouvelle conversation
-      // WhatsApp peut être très lent lors du changement de conversation, surtout si la connexion est lente
-      // Augmenté à 12 secondes pour garantir que la page est complètement chargée
-      console.log(`⏳ Message suivant détecté. Attente supplémentaire de 12 secondes pour s'assurer que WhatsApp a bien chargé la nouvelle conversation...`);
-      toast.info(
-        `📱 Vérification du chargement de la conversation... Attente de 12 secondes (WhatsApp peut être lent)...`,
-        { duration: 12000 }
-      );
-      await new Promise((resolve) => setTimeout(resolve, 12000));
-      console.log(`✅ Délai de chargement terminé. WhatsApp devrait être prêt maintenant.`);
     }
 
-    console.log(`✅ WhatsApp Web ouvert avec succès. Tentative d'envoi automatique...`);
-    
-    // Tenter d'envoyer automatiquement le message
-    const autoSendSuccess = await tryAutoSendMessage(whatsappWindow);
-    
-    if (autoSendSuccess) {
-      console.log(`✅ Message envoyé automatiquement avec succès !`);
-      toast.success(`✅ Message envoyé automatiquement pour ${data.name}`, { duration: 3000 });
-    } else {
-      console.log(`⚠️ Envoi automatique échoué, l'utilisateur devra cliquer manuellement`);
-      toast.warning(
-        `📱 WhatsApp Web ouvert pour ${data.name} (${data.phone}). ` +
-        `Cliquez sur "Envoyer" dans la fenêtre WhatsApp si le message ne s'est pas envoyé automatiquement.`,
-        { duration: MIN_DELAY_BETWEEN_MESSAGES }
-      );
-    }
+    console.log(`✅ WhatsApp Web ouvert avec succès. Le message est prêt à être envoyé.`);
+    toast.info(
+      `📱 WhatsApp Web ouvert pour ${data.name} (${data.phone}). ` +
+      `Cliquez sur "Envoyer" (ou appuyez sur Entrée) dans la fenêtre WhatsApp pour envoyer le message.`,
+      { duration: 5000 }
+    );
 
     // Attendre 10 secondes minimum avant de passer au suivant
     // Ce délai est CRITIQUE pour éviter le bannissement WhatsApp
-    console.log(`⏱️ Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes (minimum requis pour éviter le bannissement)...`);
+    // L'utilisateur a ce temps pour cliquer sur Envoyer
+    console.log(`⏱️ Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes avant le prochain message (pour éviter le bannissement)...`);
     const startTime = Date.now();
     await new Promise((resolve) => setTimeout(resolve, MIN_DELAY_BETWEEN_MESSAGES));
     const elapsedTime = Date.now() - startTime;
