@@ -647,6 +647,26 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
                           })()}
                         </div>
                       </div>
+                      {/* Bouton pour créer un nouveau devis */}
+                      {onCreateQuoteFromRequest && (
+                        <div className="flex-shrink-0">
+                          <PrimaryBtn
+                            onClick={() => {
+                              if (onCreateQuoteFromRequest) {
+                                onCreateQuoteFromRequest(request);
+                                toast.success("Devis créé à partir de la demande !");
+                              }
+                            }}
+                            variant="primary"
+                            className="w-full md:w-auto whitespace-nowrap"
+                          >
+                            📝 Créer un nouveau devis
+                          </PrimaryBtn>
+                          <p className="text-xs text-gray-500 mt-2 text-center md:text-left">
+                            Recréer le devis si perdu
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
