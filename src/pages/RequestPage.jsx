@@ -217,31 +217,6 @@ export function RequestPage() {
     }));
   };
 
-  // Fonction pour transformer automatiquement le 0 en +20 (indicatif Égypte)
-  const formatPhoneNumber = (phoneValue) => {
-    // Nettoyer le numéro (enlever les espaces, tirets, etc.)
-    const cleaned = phoneValue.replace(/[\s\-\(\)]/g, '');
-    
-    // Si le numéro commence par 0 et n'a pas déjà l'indicatif +20
-    if (cleaned.startsWith('0') && !cleaned.startsWith('+20')) {
-      // Remplacer le 0 par +20
-      return '+20' + cleaned.substring(1);
-    }
-    
-    // Si le numéro commence déjà par +20, le garder tel quel
-    if (cleaned.startsWith('+20')) {
-      return cleaned;
-    }
-    
-    // Si le numéro commence par 20 (sans le +), ajouter le +
-    if (cleaned.startsWith('20') && cleaned.length > 2) {
-      return '+' + cleaned;
-    }
-    
-    // Sinon, retourner la valeur originale
-    return phoneValue;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -515,7 +490,7 @@ export function RequestPage() {
                   <label htmlFor="clientPhone" className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
                     Téléphone <span className="text-red-500" aria-label="obligatoire">*</span>
                     <Tooltip 
-                      text="Le 0 initial sera automatiquement remplacé par +20 (Égypte). Exemple: 0106060606 devient +20106060606"
+                      text="Numéro avec indicatif pays (ex: +33 pour la France)"
                       id="tooltip-phone"
                     />
                   </label>
@@ -527,20 +502,10 @@ export function RequestPage() {
                     inputMode="tel"
                     disabled={requestSubmitted}
                     value={formData.clientPhone}
-                    onChange={(e) => {
-                      const rawValue = e.target.value;
-                      // Appliquer la transformation automatique
-                      const formatted = formatPhoneNumber(rawValue);
-                      setFormData({ ...formData, clientPhone: formatted });
-                    }}
-                    onBlur={(e) => {
-                      // S'assurer que la transformation est appliquée lors de la perte de focus
-                      const formatted = formatPhoneNumber(e.target.value);
-                      if (formatted !== e.target.value) {
-                        setFormData({ ...formData, clientPhone: formatted });
-                      }
-                    }}
-                    placeholder="+20 106 060 6060"
+                    onChange={(e) =>
+                      setFormData({ ...formData, clientPhone: e.target.value })
+                    }
+                    placeholder="+33 6 12 34 56 78"
                     aria-required="true"
                     aria-describedby="tooltip-phone"
                   />
