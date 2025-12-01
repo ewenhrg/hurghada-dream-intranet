@@ -14,8 +14,8 @@ export function HotelsPage({ user }) {
     neighborhood_key: "",
   });
 
-  // Vérifier si l'utilisateur est Ewen
-  const isEwen = user?.name === "Ewen";
+  // Vérifier si l'utilisateur est Ewen, Léa ou Laly
+  const canAccess = user?.name === "Ewen" || user?.name === "Léa" || user?.name === "Laly";
 
   // Charger les hôtels depuis Supabase
   async function loadHotels() {
@@ -72,9 +72,9 @@ export function HotelsPage({ user }) {
   async function handleSubmit(e) {
     e.preventDefault();
     
-    // Vérifier que seul Ewen peut modifier
-    if (!isEwen) {
-      toast.error("Seul Ewen peut ajouter ou modifier des hôtels.");
+    // Vérifier que seuls Ewen, Léa et Laly peuvent modifier
+    if (!canAccess) {
+      toast.error("Seuls Ewen, Léa et Laly peuvent ajouter ou modifier des hôtels.");
       return;
     }
 
@@ -155,8 +155,8 @@ export function HotelsPage({ user }) {
 
   // Supprimer un hôtel
   async function handleDelete(hotelId, hotelName) {
-    if (!isEwen) {
-      toast.error("Seul Ewen peut supprimer des hôtels.");
+    if (!canAccess) {
+      toast.error("Seuls Ewen, Léa et Laly peuvent supprimer des hôtels.");
       return;
     }
 
@@ -184,13 +184,13 @@ export function HotelsPage({ user }) {
     }
   }
 
-  // Si l'utilisateur n'est pas Ewen, afficher un message
-  if (!isEwen) {
+  // Si l'utilisateur n'a pas accès, afficher un message
+  if (!canAccess) {
     return (
       <div className="p-4 md:p-6">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
           <p className="text-red-800 font-semibold">Accès refusé</p>
-          <p className="text-red-600 text-sm mt-2">Seul Ewen peut accéder à cette page pour gérer les hôtels.</p>
+          <p className="text-red-600 text-sm mt-2">Seuls Ewen, Léa et Laly peuvent accéder à cette page pour gérer les hôtels.</p>
         </div>
       </div>
     );
