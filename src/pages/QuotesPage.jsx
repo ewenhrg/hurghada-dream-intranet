@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -14,11 +14,15 @@ import { QuoteSummary } from "../components/quotes/QuoteSummary";
 import { NotesSection } from "../components/quotes/NotesSection";
 import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
+import { useDebounce } from "../hooks/useDebounce";
 
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
   const [stopSales, setStopSales] = useState([]);
   const [pushSales, setPushSales] = useState([]);
   const [hotels, setHotels] = useState([]);
+  
+  // Debounce pour le nom de l'hôtel (attendre 800ms après la fin de la saisie)
+  const debouncedHotelName = useDebounce(client.hotel, 800);
 
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
@@ -210,6 +214,35 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
     loadHotels();
   }, []);
+
+  // Fonction pour rechercher et auto-sélectionner le quartier
+  const detectHotelNeighborhood = useCallback((hotelName) => {
+    if (!hotelName || !hotelName.trim() || hotels.length === 0) return;
+    
+    const hotelNameLower = hotelName.toLowerCase().trim();
+    
+    // Chercher uniquement une correspondance exacte (pas de recherche partielle)
+    const foundHotel = hotels.find((h) => 
+      h.name.toLowerCase().trim() === hotelNameLower
+    );
+    
+    if (foundHotel && foundHotel.neighborhood_key !== client.neighborhood) {
+      // Auto-sélectionner le quartier si l'hôtel est trouvé et que le quartier est différent
+      setClient((c) => ({ 
+        ...c, 
+        neighborhood: foundHotel.neighborhood_key 
+      }));
+      const neighborhoodLabel = NEIGHBORHOODS.find((n) => n.key === foundHotel.neighborhood_key)?.label || foundHotel.neighborhood_key;
+      toast.success(`Quartier détecté automatiquement : ${neighborhoodLabel}`, { duration: 3000 });
+    }
+  }, [hotels, client.neighborhood]);
+
+  // Détecter le quartier après le debounce (quand l'utilisateur a fini d'écrire)
+  useEffect(() => {
+    if (debouncedHotelName && debouncedHotelName.trim().length >= 3) {
+      detectHotelNeighborhood(debouncedHotelName);
+    }
+  }, [debouncedHotelName, detectHotelNeighborhood]);
 
   // Charger les stop sales et push sales depuis Supabase avec cache
   useEffect(() => {
@@ -652,33 +685,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   onChange={(e) => {
                     const hotelName = e.target.value;
                     setClient((c) => ({ ...c, hotel: hotelName }));
-                    
-                    // Rechercher l'hôtel dans la base de données (recherche insensible à la casse et partielle)
-                    if (hotelName.trim().length >= 3) {
-                      const hotelNameLower = hotelName.toLowerCase().trim();
-                      // D'abord chercher une correspondance exacte
-                      let foundHotel = hotels.find((h) => 
-                        h.name.toLowerCase().trim() === hotelNameLower
-                      );
-                      
-                      // Si pas de correspondance exacte, chercher une correspondance partielle
-                      if (!foundHotel) {
-                        foundHotel = hotels.find((h) => 
-                          h.name.toLowerCase().trim().includes(hotelNameLower) ||
-                          hotelNameLower.includes(h.name.toLowerCase().trim())
-                        );
-                      }
-                      
-                      if (foundHotel && foundHotel.neighborhood_key !== client.neighborhood) {
-                        // Auto-sélectionner le quartier si l'hôtel est trouvé et que le quartier est différent
-                        setClient((c) => ({ 
-                          ...c, 
-                          hotel: hotelName,
-                          neighborhood: foundHotel.neighborhood_key 
-                        }));
-                        const neighborhoodLabel = NEIGHBORHOODS.find((n) => n.key === foundHotel.neighborhood_key)?.label || foundHotel.neighborhood_key;
-                        toast.success(`Quartier détecté automatiquement : ${neighborhoodLabel}`, { duration: 3000 });
-                      }
+                    // La détection se fera automatiquement après le debounce (800ms après la fin de la saisie)
+                  }}
+                  onBlur={(e) => {
+                    // Détecter aussi quand l'utilisateur quitte le champ (au cas où le debounce n'aurait pas encore fonctionné)
+                    const hotelName = e.target.value;
+                    if (hotelName && hotelName.trim().length >= 3) {
+                      detectHotelNeighborhood(hotelName);
                     }
                   }}
                   placeholder="Nom de l'hôtel"
