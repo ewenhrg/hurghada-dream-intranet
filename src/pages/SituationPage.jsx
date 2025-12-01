@@ -1670,7 +1670,7 @@ export function SituationPage({ activities = [], user }) {
 
         {/* Tableau des données */}
         {excelData.length > 0 && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
             <div className="min-w-[990px] border border-slate-200 rounded-lg shadow-sm bg-white">
               <div
                 className="grid text-left text-[10px] font-semibold uppercase text-white"

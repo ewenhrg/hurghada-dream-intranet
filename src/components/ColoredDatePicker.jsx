@@ -237,7 +237,7 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
               e.stopPropagation();
               setShowCalendar(!showCalendar);
             }}
-            className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-semibold"
+            className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-semibold min-h-[44px] min-w-[44px] touch-manipulation"
             title="Ouvrir le calendrier avec disponibilités"
           >
             📅
@@ -251,7 +251,7 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
             className="fixed inset-0 z-40" 
             onClick={() => setShowCalendar(false)}
           />
-          <div className="absolute z-50 mt-2 bg-white rounded-xl shadow-2xl border-2 border-gray-200 p-4 w-[320px]">
+          <div className="absolute z-50 mt-2 bg-white rounded-xl shadow-2xl border-2 border-gray-200 p-3 md:p-4 w-[calc(100vw-2rem)] max-w-[320px] md:w-[320px]">
             <div className="flex items-center justify-between mb-4">
               <button
                 type="button"
@@ -260,7 +260,7 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
                   e.stopPropagation();
                   prevMonth();
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] touch-manipulation"
               >
                 ‹
               </button>
@@ -274,7 +274,7 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
                   e.stopPropagation();
                   nextMonth();
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] touch-manipulation"
               >
                 ›
               </button>
@@ -302,8 +302,9 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
                         handleDateClick(day.date, e);
                       }
                     }}
-                    className={getDayClassName(day, status)}
+                    className={getDayClassName(day, status) + " touch-manipulation"}
                     disabled={!day.isCurrentMonth || isDateInPastOrToday(day.date)}
+                    style={{ minHeight: '44px', minWidth: '44px' }}
                     title={
                       !day.isCurrentMonth ? "" :
                       status === 'available' ? "Disponible" :

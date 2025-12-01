@@ -665,8 +665,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </span>
           </div>
           <div className="rounded-2xl border-2 border-slate-200/60 bg-white/95 backdrop-blur-sm shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm md:text-base">
+            <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <table className="w-full text-sm md:text-base min-w-full">
                 <thead className="bg-gradient-to-r from-blue-50/90 to-indigo-50/80 text-slate-800 text-xs md:text-sm font-bold">
                   <tr>
                     <th className="text-left px-4 py-3 md:px-5 md:py-4">Activité</th>

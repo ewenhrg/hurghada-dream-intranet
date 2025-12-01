@@ -1013,8 +1013,8 @@ export default function App() {
                 EN
               </button>
             </div>
-            <nav className="flex gap-2 md:gap-2.5 overflow-x-auto flex-1 md:flex-initial pb-1 md:pb-0 scrollbar-hide">
-              <div className="flex gap-2 md:gap-2.5 min-w-max">
+            <nav className="flex gap-2 md:gap-2.5 overflow-x-auto flex-1 md:flex-initial pb-1 md:pb-0 scrollbar-hide -mx-2 md:mx-0 px-2 md:px-0" style={{ WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}>
+              <div className="flex gap-2 md:gap-2.5 min-w-max" style={{ scrollSnapAlign: 'start' }}>
                 <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
                   {t("nav.devis")}
                 </Pill>

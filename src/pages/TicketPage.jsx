@@ -430,8 +430,8 @@ export function TicketPage({ quotes, setQuotes, user }) {
       </div>
 
       {/* Tableau */}
-      <div className="overflow-x-auto" style={{ width: '100%' }}>
-        <table className="border-collapse bg-white/95 backdrop-blur-sm" style={{ border: '1px solid rgba(148,163,184,0.3)', width: '100%', tableLayout: 'fixed' }}>
+      <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0" style={{ width: '100%', WebkitOverflowScrolling: 'touch' }}>
+        <table className="border-collapse bg-white/95 backdrop-blur-sm min-w-full" style={{ border: '1px solid rgba(148,163,184,0.3)', tableLayout: 'auto' }}>
           <thead>
             <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #333' }}>
               <th style={{ border: '1px solid #ddd', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '2%' }}>

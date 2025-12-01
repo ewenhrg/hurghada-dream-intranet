@@ -601,7 +601,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
 
   return (
-    <div className="space-y-8 md:space-y-10 p-4 md:p-6 lg:p-8">
+    <div className="space-y-6 md:space-y-8 lg:space-y-10 p-3 md:p-4 lg:p-6">
         {/* Section Stop Sales et Push Sales - Compacte et repliable */}
         {(formattedStopSales.length > 0 || formattedPushSales.length > 0) && (
           <StopPushSalesSummary 
@@ -619,7 +619,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               e.preventDefault();
             }
           }}
-          className="space-y-6 md:space-y-8"
+          className="space-y-5 md:space-y-6 lg:space-y-8"
         >
         {/* Barre d'information et actions */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl border border-slate-200 shadow-sm">
@@ -641,8 +641,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
         
         {/* Infos client */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm p-6 md:p-8">
-          <h3 className="text-xl md:text-2xl font-bold text-blue-900 mb-6 flex items-center gap-3">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm p-4 md:p-6 lg:p-8">
+          <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-blue-900 mb-4 md:mb-6 flex items-center gap-2 md:gap-3">
             <span className="text-2xl">👤</span>
             <span>Informations client</span>
           </h3>
@@ -747,12 +747,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Dates séjour */}
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 shadow-sm p-6 md:p-8">
-          <h3 className="text-lg md:text-xl font-bold text-indigo-900 mb-6 flex items-center gap-3">
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 shadow-sm p-4 md:p-6 lg:p-8">
+          <h3 className="text-base md:text-lg lg:text-xl font-bold text-indigo-900 mb-4 md:mb-6 flex items-center gap-2 md:gap-3">
             <span className="text-xl">📅</span>
             <span>Dates du séjour</span>
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 lg:gap-6">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-700">Date d'arrivée *</label>
               <TextInput 
@@ -793,7 +793,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Champ global pour le nombre d'adultes */}
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 shadow-sm p-6 md:p-8">
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 shadow-sm p-4 md:p-6 lg:p-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
             <div className="flex items-center gap-3">
               <span className="text-2xl">👥</span>
@@ -830,8 +830,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Lignes */}
-        <div className="space-y-6 md:space-y-8">
-          <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <div className="space-y-5 md:space-y-6 lg:space-y-8">
+          <h3 className="text-base md:text-lg lg:text-xl font-bold text-slate-900 mb-3 md:mb-4 flex items-center gap-2">
             <span className="text-xl">🎯</span>
             <span>Activités ({computed.length})</span>
           </h3>
@@ -856,8 +856,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               </div>
               
               {/* Contenu de l'activité */}
-              <div className="p-6 md:p-8 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+              <div className="p-4 md:p-6 lg:p-8 space-y-5 md:space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
                   <div className="sm:col-span-2 lg:col-span-1">
                     <label className="block text-sm font-medium text-slate-700 mb-2">Activité *</label>
                     <select
