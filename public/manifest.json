@@ -1,0 +1,44 @@
+{
+  "name": "Hurghada Dream - Gestion des devis",
+  "short_name": "Hurghada Dream",
+  "description": "Système de gestion des devis et activités pour Hurghada Dream",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070d1f",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Nouveau devis",
+      "short_name": "Devis",
+      "description": "Créer un nouveau devis",
+      "url": "/?tab=quotes",
+      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Demandes",
+      "short_name": "Demandes",
+      "description": "Voir les demandes clients",
+      "url": "/?tab=demandes",
+      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+    }
+  ]
+}
+

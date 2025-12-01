@@ -9,6 +9,24 @@ import "./index.css"; // 👈 c'est ici qu'on charge le CSS (où il y aura @tail
 // Initialiser le système de toasts au démarrage
 initToast();
 
+// Enregistrer le Service Worker pour PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('Service Worker enregistré avec succès:', registration.scope);
+        
+        // Vérifier les mises à jour périodiquement
+        setInterval(() => {
+          registration.update();
+        }, 60000); // Vérifier toutes les minutes
+      })
+      .catch((error) => {
+        console.log('Échec de l\'enregistrement du Service Worker:', error);
+      });
+  });
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>

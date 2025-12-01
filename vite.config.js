@@ -88,4 +88,6 @@ export default defineConfig({
   },
   // Optimiser les assets
   assetsInclude: ['**/*.xlsx'],
+  // Configuration PWA
+  publicDir: 'public',
 })
