@@ -14,8 +14,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   // Debounce de la recherche pour améliorer les performances
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
-  // Vérifier si l'utilisateur peut modifier/supprimer les activités (seulement Léa et Ewen)
-  const canModifyActivities = user?.name === "Léa" || user?.name === "Ewen";
+  // Vérifier si l'utilisateur peut modifier/supprimer les activités (Léa, Laly et Ewen)
+  const canModifyActivities = user?.name === "Léa" || user?.name === "Laly" || user?.name === "Ewen";
 
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
@@ -110,7 +110,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   const handleEdit = useCallback((activity) => {
     if (!canModifyActivities) {
-      toast.warning("Seuls Léa et Ewen peuvent modifier les activités.");
+      toast.warning("Seuls Léa, Laly et Ewen peuvent modifier les activités.");
       return;
     }
     setForm({
@@ -206,7 +206,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     
     // Vérifier les permissions
     if (isEditing && !canModifyActivities) {
-      toast.warning("Seuls Léa et Ewen peuvent modifier les activités.");
+      toast.warning("Seuls Léa, Laly et Ewen peuvent modifier les activités.");
       return;
     }
     if (!isEditing && !user?.canAddActivity) {
@@ -376,7 +376,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   const handleDelete = useCallback(async (id) => {
     if (!canModifyActivities) {
-      toast.warning("Seuls Léa et Ewen peuvent supprimer les activités.");
+      toast.warning("Seuls Léa, Laly et Ewen peuvent supprimer les activités.");
       return;
     }
     const activityToDelete = activitiesMap.get(id);

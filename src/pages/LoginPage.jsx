@@ -53,8 +53,8 @@ export function LoginPage({ onSuccess }) {
           canAccessUsers: data.can_access_users || false,
         };
         
-        // Donner tous les accès à Léa sauf canResetData
-        if (data.name === "Léa") {
+        // Donner tous les accès à Léa et Laly sauf canResetData
+        if (data.name === "Léa" || data.name === "Laly") {
           userPermissions.canDeleteQuote = true;
           userPermissions.canAddActivity = true;
           userPermissions.canEditActivity = true;
