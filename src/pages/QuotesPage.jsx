@@ -396,7 +396,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
     if (hasInvalidDates) {
       setItems(correctedItems);
-      toast.warning("Les dates passées ou du jour même ont été automatiquement corrigées pour demain.");
+      // Correction silencieuse des dates passées
     }
   }, []); // Exécuter une seule fois au chargement
 
