@@ -18,6 +18,7 @@ import { useAutoFillDates } from "../hooks/useAutoFillDates";
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
   const [stopSales, setStopSales] = useState([]);
   const [pushSales, setPushSales] = useState([]);
+  const [hotels, setHotels] = useState([]);
 
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
@@ -185,6 +186,30 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       setDraft(null);
     }
   }, [blankItemMemo, setDraft]);
+
+  // Charger les hôtels depuis Supabase
+  useEffect(() => {
+    async function loadHotels() {
+      if (!supabase) return;
+      try {
+        const { data, error } = await supabase
+          .from("hotels")
+          .select("*")
+          .eq("site_key", SITE_KEY)
+          .order("name", { ascending: true });
+
+        if (error) {
+          console.error("Erreur lors du chargement des hôtels:", error);
+        } else {
+          setHotels(data || []);
+        }
+      } catch (err) {
+        console.error("Erreur lors du chargement des hôtels:", err);
+      }
+    }
+
+    loadHotels();
+  }, []);
 
   // Charger les stop sales et push sales depuis Supabase avec cache
   useEffect(() => {
@@ -621,12 +646,64 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-700">Hôtel</label>
-              <TextInput 
-                value={client.hotel} 
-                onChange={(e) => setClient((c) => ({ ...c, hotel: e.target.value }))}
-                placeholder="Nom de l'hôtel"
-                className="w-full"
-              />
+              <div className="flex gap-2">
+                <TextInput 
+                  value={client.hotel} 
+                  onChange={(e) => {
+                    const hotelName = e.target.value;
+                    setClient((c) => ({ ...c, hotel: hotelName }));
+                    
+                    // Rechercher l'hôtel dans la base de données (recherche insensible à la casse et partielle)
+                    if (hotelName.trim().length >= 3) {
+                      const hotelNameLower = hotelName.toLowerCase().trim();
+                      // D'abord chercher une correspondance exacte
+                      let foundHotel = hotels.find((h) => 
+                        h.name.toLowerCase().trim() === hotelNameLower
+                      );
+                      
+                      // Si pas de correspondance exacte, chercher une correspondance partielle
+                      if (!foundHotel) {
+                        foundHotel = hotels.find((h) => 
+                          h.name.toLowerCase().trim().includes(hotelNameLower) ||
+                          hotelNameLower.includes(h.name.toLowerCase().trim())
+                        );
+                      }
+                      
+                      if (foundHotel && foundHotel.neighborhood_key !== client.neighborhood) {
+                        // Auto-sélectionner le quartier si l'hôtel est trouvé et que le quartier est différent
+                        setClient((c) => ({ 
+                          ...c, 
+                          hotel: hotelName,
+                          neighborhood: foundHotel.neighborhood_key 
+                        }));
+                        const neighborhoodLabel = NEIGHBORHOODS.find((n) => n.key === foundHotel.neighborhood_key)?.label || foundHotel.neighborhood_key;
+                        toast.success(`Quartier détecté automatiquement : ${neighborhoodLabel}`, { duration: 3000 });
+                      }
+                    }
+                  }}
+                  placeholder="Nom de l'hôtel"
+                  className="flex-1"
+                />
+                {client.hotel && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const hotelName = encodeURIComponent(client.hotel);
+                      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${hotelName}+Hurghada+Egypt`;
+                      window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
+                    }}
+                    className="px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold whitespace-nowrap flex items-center gap-2"
+                    title="Ouvrir sur Google Maps"
+                  >
+                    📍 Maps
+                  </button>
+                )}
+              </div>
+              {client.hotel && hotels.some((h) => h.name.toLowerCase().trim() === client.hotel.toLowerCase().trim()) && (
+                <p className="text-xs text-green-600 mt-1">
+                  ✓ Hôtel reconnu dans la base de données
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-700">Numéro de chambre</label>

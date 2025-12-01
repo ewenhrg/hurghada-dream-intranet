@@ -44,6 +44,7 @@ const ActivitiesPage = lazyWithRetry(() => import("./pages/ActivitiesPage").then
 const QuotesPage = lazyWithRetry(() => import("./pages/QuotesPage").then(module => ({ default: module.QuotesPage })));
 const HistoryPage = lazyWithRetry(() => import("./pages/HistoryPage").then(module => ({ default: module.HistoryPage })));
 const UsersPage = lazyWithRetry(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
+const HotelsPage = lazyWithRetry(() => import("./pages/HotelsPage").then(module => ({ default: module.HotelsPage })));
 const TicketPage = lazyWithRetry(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
 const ModificationsPage = lazyWithRetry(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
 const SituationPage = lazyWithRetry(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
@@ -1052,6 +1053,11 @@ export default function App() {
                     {t("nav.users")}
                   </Pill>
                 )}
+                {user?.name === "Ewen" && (
+                  <Pill active={tab === "hotels"} onClick={() => setTab("hotels")}>
+                    🏨 Hôtels
+                  </Pill>
+                )}
                 <Pill active={tab === "demandes"} onClick={() => setTab("demandes")}>
                   <span className="flex items-center gap-2">
                     <span>📋 Demandes</span>
@@ -1330,6 +1336,16 @@ export default function App() {
           {tab === "users" && (user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
             <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")}>
               <UsersPage user={user} />
+            </Section>
+          )}
+
+          {tab === "hotels" && user?.name === "Ewen" && (
+            <Section title="Gestion des hôtels" subtitle="Associez les hôtels à leurs quartiers">
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>
+                  <HotelsPage user={user} />
+                </Suspense>
+              </ErrorBoundary>
             </Section>
           )}
               </Suspense>
