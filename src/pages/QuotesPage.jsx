@@ -20,9 +20,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const [stopSales, setStopSales] = useState([]);
   const [pushSales, setPushSales] = useState([]);
   const [hotels, setHotels] = useState([]);
-  
-  // Debounce pour le nom de l'hôtel (attendre 800ms après la fin de la saisie)
-  const debouncedHotelName = useDebounce(client.hotel, 800);
 
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
@@ -86,6 +83,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   };
   
   const [client, setClient] = useState(() => defaultClient);
+  
+  // Debounce pour le nom de l'hôtel (attendre 800ms après la fin de la saisie)
+  const debouncedHotelName = useDebounce(client.hotel, 800);
+  
   const [items, setItems] = useState(() => (draft?.items && draft.items.length > 0 ? draft.items : [blankItemMemo()]));
   const [notes, setNotes] = useState(() => draft?.notes || "");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
