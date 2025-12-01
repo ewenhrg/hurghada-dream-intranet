@@ -314,6 +314,33 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     pushSalesMap
   );
 
+  // Corriger automatiquement les dates passées ou du jour même
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+    let hasInvalidDates = false;
+    const correctedItems = items.map((item) => {
+      if (item.date) {
+        const itemDate = new Date(item.date + "T12:00:00");
+        itemDate.setHours(0, 0, 0, 0);
+        if (itemDate <= today) {
+          hasInvalidDates = true;
+          return { ...item, date: tomorrowStr };
+        }
+      }
+      return item;
+    });
+
+    if (hasInvalidDates) {
+      setItems(correctedItems);
+      toast.warning("Les dates passées ou du jour même ont été automatiquement corrigées pour demain.");
+    }
+  }, []); // Exécuter une seule fois au chargement
+
   // Récupérer toutes les dates utilisées dans le formulaire en cours avec leurs activités
   const usedDates = useMemo(() => {
     const datesMap = new Map();
@@ -759,7 +786,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     <label className="block text-sm font-medium text-slate-700 mb-2">Date *</label>
                   <ColoredDatePicker
                     value={c.raw.date}
-                    onChange={(date) => setItem(idx, { date })}
+                    onChange={(date) => {
+                      // Validation supplémentaire : empêcher les dates passées ou aujourd'hui
+                      if (date) {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const selectedDate = new Date(date + "T12:00:00");
+                        selectedDate.setHours(0, 0, 0, 0);
+                        if (selectedDate <= today) {
+                          toast.warning("Les activités ne peuvent pas être programmées avant demain.");
+                          return;
+                        }
+                      }
+                      setItem(idx, { date });
+                    }}
                     activity={c.act}
                     stopSales={stopSales}
                     pushSales={pushSales}

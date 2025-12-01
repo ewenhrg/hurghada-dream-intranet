@@ -109,6 +109,15 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
   const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
   const dayNames = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
+  // Fonction pour vérifier si une date est dans le passé ou aujourd'hui
+  const isDateInPastOrToday = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    return checkDate <= today;
+  };
+
   const handleDateClick = (date, e) => {
     if (e) {
       e.preventDefault();
@@ -118,6 +127,13 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
       toast.warning("Veuillez d'abord sélectionner une activité");
       return;
     }
+    
+    // Vérifier si la date est dans le passé ou aujourd'hui
+    if (isDateInPastOrToday(date)) {
+      toast.warning("Les activités ne peuvent pas être programmées avant demain.");
+      return;
+    }
+    
     // Utiliser une méthode qui ne dépend pas du fuseau horaire
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -136,7 +152,7 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
   };
 
   const getDayClassName = (day, status) => {
-    const baseClasses = "w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg cursor-pointer transition-all hover:scale-110 ";
+    const baseClasses = "w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg transition-all ";
     const today = new Date();
     const isToday = day.date.toDateString() === today.toDateString();
     // Comparer les dates sans dépendre du fuseau horaire
@@ -145,10 +161,19 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
     const dayNum = String(day.date.getDate()).padStart(2, '0');
     const dayDateStr = `${year}-${month}-${dayNum}`;
     const isSelected = value && dayDateStr === value;
+    const isPastOrToday = isDateInPastOrToday(day.date);
     
     if (!day.isCurrentMonth) {
       return baseClasses + "text-gray-300 cursor-not-allowed";
     }
+    
+    // Si la date est dans le passé ou aujourd'hui, la désactiver
+    if (isPastOrToday) {
+      return baseClasses + "bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed opacity-50";
+    }
+    
+    // Ajouter les classes de hover et cursor seulement si la date n'est pas passée
+    const interactiveClasses = "cursor-pointer hover:scale-110 ";
     
     let colorClasses = "";
     switch (status) {
@@ -176,7 +201,7 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
       colorClasses += " font-bold";
     }
     
-    return baseClasses + colorClasses;
+    return baseClasses + interactiveClasses + colorClasses;
   };
 
   return (
@@ -188,6 +213,14 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
             value={formatDateForDisplay(value)}
             onChange={(e) => {
               const parsed = parseDateFromDisplay(e.target.value);
+              // Valider la date avant de l'accepter
+              if (parsed) {
+                const dateObj = new Date(parsed + "T12:00:00");
+                if (isDateInPastOrToday(dateObj)) {
+                  toast.warning("Les activités ne peuvent pas être programmées avant demain.");
+                  return;
+                }
+              }
               onChange(parsed);
             }}
             onFocus={() => activity && setShowCalendar(true)}
@@ -265,12 +298,12 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (day.isCurrentMonth) {
+                      if (day.isCurrentMonth && !isDateInPastOrToday(day.date)) {
                         handleDateClick(day.date, e);
                       }
                     }}
                     className={getDayClassName(day, status)}
-                    disabled={!day.isCurrentMonth}
+                    disabled={!day.isCurrentMonth || isDateInPastOrToday(day.date)}
                     title={
                       !day.isCurrentMonth ? "" :
                       status === 'available' ? "Disponible" :
