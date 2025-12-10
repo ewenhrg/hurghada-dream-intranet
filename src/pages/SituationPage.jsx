@@ -1321,7 +1321,10 @@ export function SituationPage({ activities = [], user }) {
       `- Vous pouvez arrêter l'envoi automatique à tout moment avec le bouton "Arrêter"\n\n` +
       `🛡️ PROTECTION CONTRE LE BANNISSEMENT :\n` +
       `- Délai minimum de 10 secondes entre chaque message (garanti)\n` +
-      `- Ne pas envoyer plus de 30 messages par heure (recommandé)\n\n` +
+      `- Ne pas envoyer plus de 30 messages par heure (recommandé)\n` +
+      `- Chaque message contient un lien unique (évite la détection de spam)\n` +
+      `- Varier les messages si possible (utilisez les templates personnalisés)\n` +
+      `- Éviter d'envoyer plus de 50 messages par jour depuis le même compte\n\n` +
       `💡 ASTUCE : Gardez la fenêtre WhatsApp Web ouverte et cliquez rapidement sur "Envoyer" lorsque chaque message s'ouvre.\n\n` +
       `Voulez-vous continuer ?`
     );

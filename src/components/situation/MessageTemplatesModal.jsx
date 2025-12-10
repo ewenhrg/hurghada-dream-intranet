@@ -125,7 +125,11 @@ export default function MessageTemplatesModal({
                       <code className="bg-slate-100 px-1 rounded">{"{roomNo}"}</code>,{" "}
                       <code className="bg-slate-100 px-1 rounded">{"{adults}"}</code>,{" "}
                       <code className="bg-slate-100 px-1 rounded">{"{children}"}</code>,{" "}
-                      <code className="bg-slate-100 px-1 rounded">{"{infants}"}</code>
+                      <code className="bg-slate-100 px-1 rounded">{"{infants}"}</code>,{" "}
+                      <code className="bg-blue-100 px-1 rounded text-blue-700 font-semibold">{"{formLink}"}</code>
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1 font-medium">
+                      💡 <code>{"{formLink}"}</code> génère un lien unique pour chaque client (évite le bannissement WhatsApp)
                     </p>
                   </div>
                 )}
@@ -235,7 +239,11 @@ export default function MessageTemplatesModal({
                 <code className="bg-slate-100 px-1 rounded">{"{roomNo}"}</code>,{" "}
                 <code className="bg-slate-100 px-1 rounded">{"{adults}"}</code>,{" "}
                 <code className="bg-slate-100 px-1 rounded">{"{children}"}</code>,{" "}
-                <code className="bg-slate-100 px-1 rounded">{"{infants}"}</code>
+                <code className="bg-slate-100 px-1 rounded">{"{infants}"}</code>,{" "}
+                <code className="bg-blue-100 px-1 rounded text-blue-700 font-semibold">{"{formLink}"}</code>
+              </p>
+              <p className="text-xs text-blue-600 mt-1 font-medium">
+                💡 <code>{"{formLink}"}</code> génère un lien unique pour chaque client (évite le bannissement WhatsApp)
               </p>
             </div>
           )}

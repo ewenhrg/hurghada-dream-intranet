@@ -1,6 +1,7 @@
 // Fonctions utilitaires pour la génération de messages
 
 import { findHotelInList } from "./hotelMatcher";
+import { generateRequestToken, generateRequestLink } from "./tokenGenerator";
 
 /**
  * Obtenir le template par défaut pour une activité
@@ -19,6 +20,18 @@ Merci de vous présenter à l'heure indiquée.
 
 Cordialement,
 Hurghada Dream`;
+}
+
+/**
+ * Générer un lien de formulaire unique pour un client (évite la détection de spam WhatsApp)
+ * @param {Object} data - Les données du client
+ * @returns {string} - Le lien unique avec token
+ */
+function generateUniqueFormLink(data) {
+  // Générer un token unique basé sur les données du client pour avoir un lien différent pour chacun
+  // Cela évite que WhatsApp détecte des liens identiques comme du spam
+  const token = generateRequestToken();
+  return generateRequestLink(token);
 }
 
 /**
@@ -70,6 +83,9 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
       }
     }
     
+    // Générer un lien unique pour ce client (évite la détection de spam WhatsApp)
+    const uniqueFormLink = generateUniqueFormLink(data);
+    
     // Remplacer les variables dans le template
     let message = template
       .replace(/\{name\}/g, data.name || "Client")
@@ -80,7 +96,8 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
       .replace(/\{roomNo\}/g, data.roomNo || "")
       .replace(/\{adults\}/g, String(data.adults || 0))
       .replace(/\{children\}/g, String(data.children || 0))
-      .replace(/\{infants\}/g, String(data.infants || 0));
+      .replace(/\{infants\}/g, String(data.infants || 0))
+      .replace(/\{formLink\}/g, uniqueFormLink);
     
     // Ajouter le message RDV en haut du message
     return rdvMessageTop + message;
