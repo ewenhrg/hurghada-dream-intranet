@@ -408,17 +408,17 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   )}
                 </div>
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
-                  <div className="flex-1 space-y-2">
-                    <p className="text-xs md:text-sm text-slate-600 font-medium">
+                  <div className="flex-1 space-y-2 min-w-0">
+                    <p className="text-xs md:text-sm text-slate-600 font-medium break-words">
                       📅 {d.formattedCreatedAt}
                       {d.createdByName && <span className="ml-2 text-blue-700 font-bold">• Créé par {d.createdByName}</span>}
                     </p>
-                    <p className="text-base md:text-lg text-slate-900 font-bold">
+                    <p className="text-sm md:text-base lg:text-lg text-slate-900 font-bold break-words">
                       📞 {d.client?.phone || "Tél ?"} — 🏨 {d.client?.hotel || "Hôtel ?"}
                       {d.client?.room ? ` (Chambre ${d.client.room})` : ""}
                     </p>
                     {d.client?.name && (
-                      <p className="text-sm md:text-base text-slate-700 font-semibold">
+                      <p className="text-xs md:text-sm lg:text-base text-slate-700 font-semibold break-words">
                         👤 {d.client.name}
                       </p>
                     )}
@@ -439,23 +439,24 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   ) : null}
                 </div>
                 <div className="flex flex-col gap-5 md:gap-6 pt-4 md:pt-5 border-t-2 border-white/60 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="flex-1 space-y-3">
+                  <div className="flex-1 space-y-3 min-w-0">
                     <div className="space-y-2.5 md:space-y-3">
                       {d.itemsWithFormattedDates.map((li, i) => (
                         <div
                           key={i}
-                          className="flex flex-wrap items-center justify-between gap-3 md:gap-4 rounded-xl border-2 border-white/80 bg-white/95 backdrop-blur-sm px-4 md:px-5 py-3 md:py-4 shadow-lg transition-all duration-200 hover:shadow-xl hover:border-blue-200/60"
+                          className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 md:gap-4 rounded-xl border-2 border-white/80 bg-white/95 backdrop-blur-sm px-3 md:px-4 lg:px-5 py-3 md:py-4 shadow-lg transition-all duration-200 hover:shadow-xl hover:border-blue-200/60 animate-fade-in"
+                          style={{ animationDelay: `${i * 50}ms` }}
                         >
-                          <div className="flex flex-col gap-1">
-                            <span className="text-sm md:text-base font-bold text-slate-900">
+                          <div className="flex flex-col gap-1 min-w-0 flex-1">
+                            <span className="text-sm md:text-base font-bold text-slate-900 break-words">
                               {li.activityName || "Activité ?"}
                             </span>
-                            <span className="text-xs md:text-sm text-slate-600 font-medium">
+                            <span className="text-xs md:text-sm text-slate-600 font-medium break-words">
                               📅 {li.formattedDate} — 👥 {li.adults ?? 0} adt / {li.children ?? 0} enf / {li.babies ?? 0} bébé(s)
                             </span>
                           </div>
-                          <div className="flex flex-col items-end gap-2">
-                            <span className="text-base md:text-lg font-bold text-slate-900">
+                          <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
+                            <span className="text-sm md:text-base lg:text-lg font-bold text-slate-900">
                               💵 {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
                             </span>
                             {li.ticketNumber && li.ticketNumber.trim() !== "" && (
