@@ -97,7 +97,12 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
     
     const isPushSale = pushSales.some(p => {
       const pushActivityIdStr = String(p.activity_id || '');
-      const matches = (pushActivityIdStr === activityIdStr || (activitySupabaseIdStr && pushActivityIdStr === activitySupabaseIdStr)) && 
+      // Vérifier avec l'ID du push sale contre tous les IDs possibles de l'activité
+      const matches = (pushActivityIdStr === activityIdStr || 
+                      (activitySupabaseIdStr && pushActivityIdStr === activitySupabaseIdStr) ||
+                      // Vérifier aussi si l'ID du push sale correspond à un ID de l'activité dans l'autre sens
+                      (pushActivityIdStr === String(activity.supabase_id || '')) ||
+                      (pushActivityIdStr === String(activity.id || ''))) && 
                       p.date === dateStr;
       // Log de débogage pour le 11 décembre
       if (dateStr.includes('12-11')) {
@@ -107,6 +112,8 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
           pushActivityIdStr,
           activityIdStr,
           activitySupabaseIdStr,
+          activityId: activity.id,
+          activitySupabaseId: activity.supabase_id,
           matches,
           activityName: activity.name,
           allPushSales: pushSales.map(ps => ({ activity_id: ps.activity_id, date: ps.date }))

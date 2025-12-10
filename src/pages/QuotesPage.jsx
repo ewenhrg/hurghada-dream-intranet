@@ -34,24 +34,60 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   }, [activities]);
 
   // Map des stop sales pour des recherches O(1) : clé = "activityId_date"
+  // Créer des entrées pour tous les IDs possibles (id local et supabase_id) pour chaque activité
   const stopSalesMap = useMemo(() => {
     const map = new Map();
     stopSales.forEach((stop) => {
-      const key = `${stop.activity_id}_${stop.date}`;
+      const date = stop.date;
+      const activityId = String(stop.activity_id || '');
+      
+      // Créer une clé avec l'ID du stop sale
+      const key = `${activityId}_${date}`;
       map.set(key, stop);
+      
+      // Si une activité correspond à cet ID, créer aussi des clés avec ses autres IDs possibles
+      const activity = activitiesMap.get(activityId);
+      if (activity) {
+        // Ajouter avec l'ID local si différent
+        if (activity.id && String(activity.id) !== activityId) {
+          map.set(`${activity.id}_${date}`, stop);
+        }
+        // Ajouter avec le supabase_id si différent
+        if (activity.supabase_id && String(activity.supabase_id) !== activityId) {
+          map.set(`${activity.supabase_id}_${date}`, stop);
+        }
+      }
     });
     return map;
-  }, [stopSales]);
+  }, [stopSales, activitiesMap]);
 
   // Map des push sales pour des recherches O(1) : clé = "activityId_date"
+  // Créer des entrées pour tous les IDs possibles (id local et supabase_id) pour chaque activité
   const pushSalesMap = useMemo(() => {
     const map = new Map();
     pushSales.forEach((push) => {
-      const key = `${push.activity_id}_${push.date}`;
+      const date = push.date;
+      const activityId = String(push.activity_id || '');
+      
+      // Créer une clé avec l'ID du push sale
+      const key = `${activityId}_${date}`;
       map.set(key, push);
+      
+      // Si une activité correspond à cet ID, créer aussi des clés avec ses autres IDs possibles
+      const activity = activitiesMap.get(activityId);
+      if (activity) {
+        // Ajouter avec l'ID local si différent
+        if (activity.id && String(activity.id) !== activityId) {
+          map.set(`${activity.id}_${date}`, push);
+        }
+        // Ajouter avec le supabase_id si différent
+        if (activity.supabase_id && String(activity.supabase_id) !== activityId) {
+          map.set(`${activity.supabase_id}_${date}`, push);
+        }
+      }
     });
     return map;
-  }, [pushSales]);
+  }, [pushSales, activitiesMap]);
 
   const blankItemMemo = useCallback(() => ({
     activityId: "",
