@@ -140,6 +140,46 @@ body::before {
   }
 }
 
+/* Animations pour la page de login */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-40px) translateX(-10px);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translateY(-20px) translateX(5px);
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-150%) scale(1);
+  }
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--hd-font-display);
   letter-spacing: -0.02em;

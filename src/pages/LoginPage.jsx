@@ -101,9 +101,34 @@ export function LoginPage({ onSuccess }) {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#070d1f] text-white animate-fade-in">
+      {/* Arrière-plan avec gradients animés */}
       <div className="absolute inset-0 opacity-90 bg-[radial-gradient(circle_at_top,_rgba(76,29,149,0.35),transparent_55%)]" />
+      
+      {/* Orbes animés avec mouvement fluide */}
       <div className="pointer-events-none absolute -top-48 -right-40 h-[420px] w-[420px] rounded-full bg-gradient-to-br from-[#4f46e5]/45 via-[#0ea5e9]/35 to-transparent blur-3xl opacity-70 animate-pulse" style={{ animationDuration: '4s' }} />
       <div className="pointer-events-none absolute bottom-[-20%] left-[-15%] h-[480px] w-[480px] rounded-full bg-gradient-to-tr from-[#0ea5e9]/35 via-[#22d3ee]/25 to-transparent blur-[140px] animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
+      <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-gradient-to-r from-[#7c3aed]/20 via-[#f472b6]/15 to-transparent blur-[160px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+      
+      {/* Grille de fond subtile */}
+      <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:50px_50px]" />
+      
+      {/* Particules flottantes */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-white/10 blur-sm"
+            style={{
+              width: `${Math.random() * 4 + 2}px`,
+              height: `${Math.random() * 4 + 2}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animation: `float ${Math.random() * 10 + 10}s infinite ease-in-out`,
+              animationDelay: `${Math.random() * 5}s`,
+            }}
+          />
+        ))}
+      </div>
 
       <div className="relative z-10 flex flex-col-reverse lg:flex-row items-center lg:items-stretch justify-between w-full max-w-6xl mx-auto px-6 md:px-10 py-12 md:py-16 gap-12">
         <section className="flex-1 space-y-8 text-center lg:text-left animate-slide-up">
@@ -152,29 +177,46 @@ export function LoginPage({ onSuccess }) {
         </section>
 
         <aside className="w-full max-w-md animate-scale-in" style={{ animationDelay: '200ms' }}>
-          <div className="relative overflow-hidden rounded-3xl border-2 border-white/30 bg-white/98 text-slate-900 shadow-[0_40px_100px_-30px_rgba(15,23,42,0.7)] backdrop-blur-xl p-8 md:p-10 hover:shadow-[0_50px_120px_-35px_rgba(15,23,42,0.8)] transition-all duration-300">
-            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#38bdf8] via-[#7c3aed] to-[#f472b6] shadow-lg" />
-            <div className="text-center mb-8">
-              <div className="relative inline-block mb-5">
-                <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8] via-[#7c3aed] to-[#f472b6] rounded-2xl blur-lg opacity-50 animate-pulse" style={{ animationDuration: '3s' }} />
-                <img
-                  src="/logo.png"
-                  alt="Hurghada Dream Logo"
-                  className="relative mx-auto w-28 h-28 object-contain rounded-2xl border-2 border-slate-200/80 shadow-xl"
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                    const parent = e.target.parentElement;
-                    if (parent && !parent.querySelector('.fallback-logo')) {
-                      const fallback = document.createElement('div');
-                      fallback.className = 'fallback-logo relative mx-auto w-28 h-28 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white grid place-items-center font-bold text-2xl shadow-xl';
-                      fallback.textContent = 'HD';
-                      parent.appendChild(fallback);
-                    }
-                  }}
-                />
+          <div className="relative overflow-hidden rounded-3xl border-2 border-white/30 bg-white/98 text-slate-900 shadow-[0_40px_100px_-30px_rgba(15,23,42,0.7)] backdrop-blur-xl p-8 md:p-10 hover:shadow-[0_50px_120px_-35px_rgba(15,23,42,0.8)] transition-all duration-500 hover:scale-[1.02]">
+            {/* Barre de gradient animée en haut */}
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#38bdf8] via-[#7c3aed] to-[#f472b6] shadow-lg">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer" style={{ width: '200%', transform: 'translateX(-100%)' }} />
+            </div>
+            
+            {/* Effet de lumière qui suit la souris */}
+            <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+              <div className="absolute inset-0 bg-gradient-radial from-white/10 via-transparent to-transparent" style={{ background: 'radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.1) 0%, transparent 50%)' }} />
+            </div>
+            <div className="text-center mb-8 relative z-10">
+              <div className="relative inline-block mb-5 group">
+                {/* Halo animé autour du logo */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8] via-[#7c3aed] to-[#f472b6] rounded-2xl blur-lg opacity-50 animate-pulse group-hover:opacity-70 transition-opacity duration-300" style={{ animationDuration: '3s' }} />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8] via-[#7c3aed] to-[#f472b6] rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-300" style={{ animationDuration: '3s', animationDelay: '1.5s' }} />
+                
+                {/* Logo avec effet de rotation au hover */}
+                <div className="relative transform transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
+                  <img
+                    src="/logo.png"
+                    alt="Hurghada Dream Logo"
+                    className="relative mx-auto w-28 h-28 object-contain rounded-2xl border-2 border-slate-200/80 shadow-xl transition-all duration-300 group-hover:border-indigo-300 group-hover:shadow-2xl"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      const parent = e.target.parentElement;
+                      if (parent && !parent.querySelector('.fallback-logo')) {
+                        const fallback = document.createElement('div');
+                        fallback.className = 'fallback-logo relative mx-auto w-28 h-28 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white grid place-items-center font-bold text-2xl shadow-xl';
+                        fallback.textContent = 'HD';
+                        parent.appendChild(fallback);
+                      }
+                    }}
+                  />
+                </div>
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 bg-clip-text text-transparent mb-2">
-                Portail interne
+              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 bg-clip-text text-transparent mb-2 relative">
+                <span className="relative inline-block">
+                  Portail interne
+                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 opacity-50" />
+                </span>
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed font-medium">
                 Saisissez votre code de six chiffres pour rejoindre la plateforme.
@@ -190,8 +232,11 @@ export function LoginPage({ onSuccess }) {
                   </span>
                   <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-1 rounded-full">confidentiel</span>
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 rounded-2xl blur-md opacity-0 transition-opacity duration-300 focus-within:opacity-100" />
+                <div className="relative group">
+                  {/* Halo de focus amélioré */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 rounded-2xl blur-md opacity-0 transition-opacity duration-500 group-focus-within:opacity-100 group-focus-within:animate-pulse" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 transition-opacity duration-500 group-focus-within:opacity-100" />
+                  
                   <input
                     id="code"
                     type="password"
@@ -201,47 +246,85 @@ export function LoginPage({ onSuccess }) {
                       setError("");
                     }}
                     placeholder="000000"
-                    className="relative w-full rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 text-center text-lg font-bold tracking-[0.6em] text-slate-900 shadow-lg outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 focus:shadow-xl hover:border-indigo-300"
+                    className="relative w-full rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 pl-14 pr-14 text-center text-lg font-bold tracking-[0.6em] text-slate-900 shadow-lg outline-none transition-all duration-500 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 focus:shadow-2xl hover:border-indigo-300 hover:shadow-xl backdrop-blur-sm"
                     maxLength={6}
                     autoFocus
                   />
-                  <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xs font-bold uppercase tracking-[0.35em] text-indigo-400">
-                    HD
+                  
+                  {/* Préfixe HD avec animation */}
+                  <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xs font-bold uppercase tracking-[0.35em] text-indigo-400 transition-colors duration-300 group-focus-within:text-indigo-600">
+                    <span className="relative">
+                      HD
+                      <span className="absolute inset-0 text-indigo-600 blur-sm opacity-0 group-focus-within:opacity-50 transition-opacity duration-300">HD</span>
+                    </span>
                   </span>
+                  
+                  {/* Indicateurs de saisie améliorés */}
                   {code.length > 0 && (
                     <div className="absolute inset-y-0 right-4 flex items-center">
-                      <div className="flex gap-1">
+                      <div className="flex gap-1.5">
                         {Array.from({ length: code.length }).map((_, i) => (
-                          <span key={i} className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
+                          <span 
+                            key={i} 
+                            className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 animate-pulse shadow-lg shadow-indigo-500/50" 
+                            style={{ animationDelay: `${i * 100}ms`, animationDuration: '1.5s' }} 
+                          />
                         ))}
+                        {code.length < 6 && (
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 opacity-30" />
+                        )}
                       </div>
                     </div>
                   )}
+                  
+                  {/* Barre de progression */}
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500/0 via-indigo-500/50 to-purple-500/0 rounded-full transition-all duration-500" style={{ width: `${(code.length / 6) * 100}%` }} />
                 </div>
               </div>
 
               {error && (
-                <div className="rounded-2xl border-2 border-red-300/70 bg-gradient-to-r from-red-50 to-rose-50 px-5 py-4 text-sm font-bold text-red-700 shadow-xl animate-slide-up flex items-center gap-3">
-                  <span className="text-xl">⚠️</span>
-                  <span>{error}</span>
+                <div className="rounded-2xl border-2 border-red-300/70 bg-gradient-to-r from-red-50 to-rose-50 px-5 py-4 text-sm font-bold text-red-700 shadow-xl animate-slide-up flex items-center gap-3 relative overflow-hidden">
+                  {/* Effet de brillance animé */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer" style={{ animationDuration: '2s' }} />
+                  <span className="text-xl relative z-10 animate-bounce" style={{ animationDuration: '1s' }}>⚠️</span>
+                  <span className="relative z-10">{error}</span>
                 </div>
               )}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#2563eb] via-[#7c3aed] to-[#f472b6] px-6 py-4 text-base font-bold text-white shadow-[0_22px_48px_-20px_rgba(79,70,229,0.8)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_-25px_rgba(79,70,229,0.9)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6366f1]/50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 relative overflow-hidden group"
+                className="w-full inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#2563eb] via-[#7c3aed] to-[#f472b6] px-6 py-4 text-base font-bold text-white shadow-[0_22px_48px_-20px_rgba(79,70,229,0.8)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_30px_70px_-25px_rgba(79,70,229,0.9)] hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-[#6366f1]/50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:scale-100 relative overflow-hidden group"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                {/* Effet de brillance animé */}
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
+                
+                {/* Particules animées au hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  {[...Array(6)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="absolute w-1 h-1 bg-white/60 rounded-full"
+                      style={{
+                        left: `${20 + i * 15}%`,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        animation: `sparkle ${1.5}s infinite`,
+                        animationDelay: `${i * 0.1}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+                
                 {loading ? (
                   <>
                     <span className="h-5 w-5 border-2 border-white/80 border-t-transparent rounded-full animate-spin relative z-10" />
-                    <span className="relative z-10">Connexion...</span>
+                    <span className="relative z-10 animate-pulse">Connexion...</span>
                   </>
                 ) : (
                   <>
-                    <span className="relative z-10">Accéder</span>
-                    <span className="text-white/80 text-lg leading-none relative z-10">↵</span>
+                    <span className="relative z-10 transition-transform duration-300 group-hover:scale-110">Accéder</span>
+                    <span className="text-white/80 text-lg leading-none relative z-10 transition-transform duration-300 group-hover:translate-x-1 group-hover:scale-110">↵</span>
                   </>
                 )}
               </button>
