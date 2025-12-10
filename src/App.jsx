@@ -48,7 +48,8 @@ const HistoryPage = lazyWithRetry(() => import("./pages/HistoryPage").then(modul
 const UsersPage = lazyWithRetry(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
 const HotelsPage = lazyWithRetry(() => import("./pages/HotelsPage").then(module => ({ default: module.HotelsPage })));
 const TicketPage = lazyWithRetry(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
-const ModificationsPage = lazyWithRetry(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
+// Page Modifications désactivée temporairement
+// const ModificationsPage = lazyWithRetry(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
 const SituationPage = lazyWithRetry(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
 const StopSalePage = lazyWithRetry(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
 const DemandesPage = lazyWithRetry(() => import("./pages/DemandesPage").then(module => ({ default: module.DemandesPage })));
@@ -1035,11 +1036,12 @@ export default function App() {
                     {t("nav.tickets")}
                   </Pill>
                 )}
-                {(user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
+                {/* Page Modifications désactivée temporairement */}
+                {/* {(user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
                   <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
                     {t("nav.modifications")}
                   </Pill>
-                )}
+                )} */}
                 {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
                   <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
                     {t("nav.situation")}
@@ -1303,14 +1305,15 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "modifications" && (user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
+        {/* Page Modifications désactivée temporairement */}
+        {/* {tab === "modifications" && (user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
           <Section
             title={t("page.modifications.title")}
             subtitle={t("page.modifications.subtitle")}
           >
             <ModificationsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
           </Section>
-        )}
+        )} */}
 
         {tab === "situation" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
           <SituationPage activities={activities} user={user} />
