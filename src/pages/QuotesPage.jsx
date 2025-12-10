@@ -259,6 +259,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         if (cached) {
           setStopSales(cached.stopSales || []);
           setPushSales(cached.pushSales || []);
+          // Log de débogage pour voir ce qui est chargé depuis le cache
+          logger.log('Push sales chargés depuis le cache:', {
+            count: (cached.pushSales || []).length,
+            pushSales: (cached.pushSales || []).map(p => ({ activity_id: p.activity_id, date: p.date }))
+          });
           return;
         }
 
@@ -274,6 +279,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         
         setStopSales(stopSalesData);
         setPushSales(pushSalesData);
+        
+        // Log de débogage pour voir ce qui est chargé
+        logger.log('Push sales chargés:', {
+          count: pushSalesData.length,
+          pushSales: pushSalesData.map(p => ({ activity_id: p.activity_id, date: p.date }))
+        });
         
         // Mettre en cache
         salesCache.set(cacheKey, { stopSales: stopSalesData, pushSales: pushSalesData });
@@ -976,8 +987,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       setItem(idx, { date });
                     }}
                     activity={c.act}
-                    stopSales={stopSales}
-                    pushSales={pushSales}
+                    stopSales={stopSales || []}
+                    pushSales={pushSales || []}
                   />
                   {c.act && c.isStopSale && (
                     <div className="mt-3 p-3 rounded-lg border-2 border-red-500 bg-red-500/20 shadow-lg shadow-red-500/30 animate-pulse">

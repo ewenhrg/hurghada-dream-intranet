@@ -5,6 +5,19 @@ import { logger } from "../utils/logger";
 
 // Composant calendrier personnalisé avec jours colorés
 export function ColoredDatePicker({ value, onChange, activity, stopSales = [], pushSales = [] }) {
+  // Log de débogage pour voir ce qui est reçu
+  useEffect(() => {
+    if (activity && pushSales.length > 0) {
+      logger.log('ColoredDatePicker - Push sales reçus:', {
+        activityId: activity.id,
+        activitySupabaseId: activity.supabase_id,
+        activityName: activity.name,
+        pushSalesCount: pushSales.length,
+        pushSales: pushSales.map(p => ({ activity_id: p.activity_id, date: p.date }))
+      });
+    }
+  }, [activity, pushSales]);
+  
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(() => {
     const date = value ? new Date(value + "T12:00:00") : new Date();
@@ -63,37 +76,40 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
     const activityIdStr = String(activity.id || '');
     const activitySupabaseIdStr = activity.supabase_id ? String(activity.supabase_id) : null;
     
-    // Log de débogage temporaire pour voir ce qui est reçu
-    if (dateStr === '2025-12-11') {
-      logger.log('Vérification push sale pour le 11/12:', {
-        dateStr,
-        activityIdStr,
-        activitySupabaseIdStr,
-        activityName: activity.name,
-        pushSalesCount: pushSales.length,
-        pushSales: pushSales.map(p => ({ activity_id: p.activity_id, date: p.date }))
-      });
-    }
-    
     const isStopSale = stopSales.some(s => {
       const stopActivityIdStr = String(s.activity_id || '');
-      return (stopActivityIdStr === activityIdStr || (activitySupabaseIdStr && stopActivityIdStr === activitySupabaseIdStr)) && 
-             s.date === dateStr;
+      const matches = (stopActivityIdStr === activityIdStr || (activitySupabaseIdStr && stopActivityIdStr === activitySupabaseIdStr)) && 
+                      s.date === dateStr;
+      // Log de débogage pour le 11 décembre
+      if (dateStr.includes('12-11')) {
+        logger.log('Vérification stop sale pour le 11/12:', {
+          dateStr,
+          stopDate: s.date,
+          stopActivityIdStr,
+          activityIdStr,
+          activitySupabaseIdStr,
+          matches,
+          activityName: activity.name
+        });
+      }
+      return matches;
     });
     
     const isPushSale = pushSales.some(p => {
       const pushActivityIdStr = String(p.activity_id || '');
       const matches = (pushActivityIdStr === activityIdStr || (activitySupabaseIdStr && pushActivityIdStr === activitySupabaseIdStr)) && 
                       p.date === dateStr;
-      // Log de débogage temporaire pour le 11 décembre
-      if (dateStr === '2025-12-11' && matches) {
-        logger.log('Push sale détecté pour le 11/12:', {
+      // Log de débogage pour le 11 décembre
+      if (dateStr.includes('12-11')) {
+        logger.log('Vérification push sale pour le 11/12:', {
           dateStr,
+          pushDate: p.date,
           pushActivityIdStr,
           activityIdStr,
           activitySupabaseIdStr,
-          pushDate: p.date,
-          activityName: activity.name
+          matches,
+          activityName: activity.name,
+          allPushSales: pushSales.map(ps => ({ activity_id: ps.activity_id, date: ps.date }))
         });
       }
       return matches;
