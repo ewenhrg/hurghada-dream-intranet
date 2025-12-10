@@ -623,33 +623,52 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           className="space-y-5 md:space-y-6 lg:space-y-8"
         >
         {/* Barre d'information et actions */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 md:p-6 bg-gradient-to-r from-indigo-50 via-blue-50 to-cyan-50 rounded-2xl border-2 border-indigo-200/60 shadow-lg backdrop-blur-sm animate-fade-in">
           <div className="flex items-center gap-3">
-            <span className="text-xl">💾</span>
-            <p className="text-sm font-medium text-slate-700">
-              Les modifications sont sauvegardées automatiquement
-            </p>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center shadow-md">
+              <span className="text-lg">💾</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-800">
+                Sauvegarde automatique
+              </p>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Vos modifications sont enregistrées en temps réel
+              </p>
+            </div>
           </div>
           <GhostBtn
             type="button"
             variant="danger"
             size="sm"
             onClick={() => setConfirmResetForm(true)}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap shadow-md hover:shadow-lg transition-all"
           >
             🧹 Tout effacer
           </GhostBtn>
         </div>
         
         {/* Infos client */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm p-4 md:p-6 lg:p-8">
-          <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-blue-900 mb-4 md:mb-6 flex items-center gap-2 md:gap-3">
-            <span className="text-2xl">👤</span>
-            <span>Informations client</span>
-          </h3>
+        <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border-2 border-blue-200/60 shadow-xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
+          <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-blue-200/40">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <span className="text-2xl">👤</span>
+            </div>
+            <div>
+              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 bg-clip-text text-transparent">
+                Informations client
+              </h3>
+              <p className="text-xs md:text-sm text-slate-600 mt-1">
+                Renseignez les détails de votre client
+              </p>
+            </div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Nom complet *</label>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '50ms' }}>
+              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                Nom complet *
+              </label>
               <TextInput 
                 value={client.name} 
                 onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))}
@@ -657,8 +676,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 className="w-full"
               />
             </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Téléphone *</label>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
+              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                Téléphone *
+              </label>
               <TextInput 
                 value={client.phone} 
                 onChange={(e) => {
@@ -669,8 +691,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 className="w-full"
               />
             </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Email</label>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '150ms' }}>
+              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                Email
+              </label>
               <TextInput 
                 type="email"
                 value={client.email || ""} 
@@ -679,8 +704,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 className="w-full"
               />
             </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Hôtel</label>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '200ms' }}>
+              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                Hôtel
+              </label>
               <div className="flex gap-2">
                 <TextInput 
                   value={client.hotel} 
@@ -707,21 +735,28 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${hotelName}+Hurghada+Egypt`;
                       window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
                     }}
-                    className="px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold whitespace-nowrap flex items-center gap-2"
+                    className="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all font-semibold whitespace-nowrap flex items-center gap-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                     title="Ouvrir sur Google Maps"
                   >
-                    📍 Maps
+                    <span>📍</span>
+                    <span className="hidden sm:inline">Maps</span>
                   </button>
                 )}
               </div>
               {client.hotel && hotels.some((h) => h.name.toLowerCase().trim() === client.hotel.toLowerCase().trim()) && (
-                <p className="text-xs text-green-600 mt-1">
-                  ✓ Hôtel reconnu dans la base de données
-                </p>
+                <div className="flex items-center gap-2 mt-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                  <span className="text-green-600">✓</span>
+                  <p className="text-xs font-medium text-green-700">
+                    Hôtel reconnu dans la base de données
+                  </p>
+                </div>
               )}
             </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Numéro de chambre</label>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '250ms' }}>
+              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                Numéro de chambre
+              </label>
               <TextInput 
                 value={client.room} 
                 onChange={(e) => setClient((c) => ({ ...c, room: e.target.value }))}
@@ -729,12 +764,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 className="w-full"
               />
             </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Quartier</label>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '300ms' }}>
+              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                Quartier
+              </label>
               <select
                 value={client.neighborhood}
                 onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
-                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-normal text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md"
               >
                 <option value="">— Sélectionner un quartier —</option>
                 {NEIGHBORHOODS.map((n) => (
@@ -748,14 +786,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Dates séjour */}
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 shadow-sm p-4 md:p-6 lg:p-8">
-          <h3 className="text-base md:text-lg lg:text-xl font-bold text-indigo-900 mb-4 md:mb-6 flex items-center gap-2 md:gap-3">
-            <span className="text-xl">📅</span>
-            <span>Dates du séjour</span>
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 lg:gap-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Date d'arrivée *</label>
+        <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border-2 border-indigo-200/60 shadow-xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
+          <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-indigo-200/40">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+              <span className="text-2xl">📅</span>
+            </div>
+            <div>
+              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 bg-clip-text text-transparent">
+                Dates du séjour
+              </h3>
+              <p className="text-xs md:text-sm text-slate-600 mt-1">
+                Définissez les dates d'arrivée et de départ
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+            <div className="space-y-2 animate-fade-in">
+              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                Date d'arrivée *
+              </label>
               <TextInput 
                 type="date" 
                 value={client.arrivalDate || ""} 
@@ -763,8 +813,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 className="w-full"
               />
             </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Date de départ *</label>
+            <div className="space-y-2 animate-fade-in">
+              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                Date de départ *
+              </label>
               <div className="flex flex-col sm:flex-row gap-3">
                 <TextInput 
                   type="date" 
@@ -783,7 +836,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     variant="primary"
                     size="sm"
                     title="Remplir automatiquement les dates des activités"
-                    className="whitespace-nowrap"
+                    className="whitespace-nowrap shadow-md hover:shadow-lg transition-all"
                   >
                     ✨ Auto-dates
                   </GhostBtn>
@@ -794,15 +847,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Champ global pour le nombre d'adultes */}
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 shadow-sm p-4 md:p-6 lg:p-8">
+        <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-2xl border-2 border-emerald-200/60 shadow-xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">👥</span>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                <span className="text-2xl">👥</span>
+              </div>
               <div>
-                <label className="block text-base md:text-lg font-bold text-emerald-900">
+                <label className="block text-lg md:text-xl font-bold bg-gradient-to-r from-emerald-700 to-teal-700 bg-clip-text text-transparent">
                   Nombre d'adultes global
                 </label>
-                <p className="text-sm text-emerald-700 mt-1">
+                <p className="text-sm text-emerald-700 mt-1 font-medium">
                   Remplit automatiquement toutes les activités
                 </p>
               </div>
@@ -821,36 +876,54 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   );
                 }}
                 placeholder="Ex: 2"
-                className="w-full text-base"
+                className="w-full text-base shadow-md hover:shadow-lg transition-all"
               />
-              <p className="text-xs text-slate-500 mt-2">
-                💡 Modifiable individuellement pour chaque activité
-              </p>
+              <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-white/60 rounded-lg border border-emerald-200/60">
+                <span className="text-emerald-600">💡</span>
+                <p className="text-xs text-slate-600 font-medium">
+                  Modifiable individuellement pour chaque activité
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Lignes */}
         <div className="space-y-5 md:space-y-6 lg:space-y-8">
-          <h3 className="text-base md:text-lg lg:text-xl font-bold text-slate-900 mb-3 md:mb-4 flex items-center gap-2">
-            <span className="text-xl">🎯</span>
-            <span>Activités ({computed.length})</span>
-          </h3>
+          <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-slate-200/60">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <span className="text-xl">🎯</span>
+            </div>
+            <div>
+              <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                Activités
+              </h3>
+              <p className="text-sm text-slate-600 mt-0.5">
+                {computed.length} activité{computed.length > 1 ? 's' : ''} configurée{computed.length > 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
           {computed.map((c, idx) => (
-            <div key={idx} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+            <div key={idx} className="bg-white rounded-2xl border-2 border-slate-200/60 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
               {/* En-tête de l'activité */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b-2 border-blue-200/60 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-semibold">
+                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-base font-bold shadow-md">
                     {idx + 1}
                   </span>
-                  <p className="text-base font-semibold text-blue-900">Activité #{idx + 1}</p>
+                  <div>
+                    <p className="text-base font-bold text-blue-900">Activité #{idx + 1}</p>
+                    {c.act && (
+                      <p className="text-xs text-blue-700 mt-0.5 font-medium">{c.act.name}</p>
+                    )}
+                  </div>
                 </div>
                 <GhostBtn 
                   type="button" 
                   onClick={() => removeItem(idx)} 
                   variant="danger" 
                   size="sm"
+                  className="shadow-md hover:shadow-lg transition-all"
                 >
                   🗑️ Supprimer
                 </GhostBtn>
