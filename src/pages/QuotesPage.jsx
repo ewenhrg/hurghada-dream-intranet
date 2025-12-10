@@ -283,7 +283,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
   }, [debouncedHotelName, detectHotelNeighborhood]);
 
-  // Charger les stop sales et push sales depuis Supabase avec cache
+  // Charger les stop sales et push sales depuis Supabase avec cache et Realtime
   useEffect(() => {
     async function loadStopSalesAndPushSales() {
       if (!supabase) return;
@@ -291,14 +291,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         const today = new Date().toISOString().split('T')[0];
         const cacheKey = createCacheKey("sales", SITE_KEY, today);
         
-        // Vérifier le cache
-        const cached = salesCache.get(cacheKey);
-        if (cached) {
-          setStopSales(cached.stopSales || []);
-          setPushSales(cached.pushSales || []);
-          return;
-        }
-
+        // Ne pas utiliser le cache pour avoir les données à jour en temps réel
         // Charger les stop sales et push sales en parallèle avec filtrage côté serveur (optimisé)
         const [stopSalesResult, pushSalesResult] = await Promise.all([
           supabase.from("stop_sales").select("*").eq("site_key", SITE_KEY).gte("date", today),
@@ -312,18 +305,68 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         setStopSales(stopSalesData);
         setPushSales(pushSalesData);
         
-        // Mettre en cache
+        // Mettre en cache avec une durée de vie plus courte
         salesCache.set(cacheKey, { stopSales: stopSalesData, pushSales: pushSalesData });
       } catch (err) {
         logger.error("Erreur lors du chargement des stop sales/push sales:", err);
       }
     }
 
+    // Charger immédiatement
     loadStopSalesAndPushSales();
     
-    // Recharger toutes les 60 secondes pour avoir les données à jour (optimisé avec cache)
-    const interval = setInterval(loadStopSalesAndPushSales, 60000);
-    return () => clearInterval(interval);
+    // Recharger toutes les 10 secondes pour avoir les données à jour en temps réel
+    const interval = setInterval(loadStopSalesAndPushSales, 10000);
+    
+    // Écouter les changements en temps réel avec Supabase Realtime
+    let stopSalesChannel = null;
+    let pushSalesChannel = null;
+    
+    if (supabase) {
+      // Canal pour les stop sales
+      stopSalesChannel = supabase
+        .channel('stop_sales_changes')
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'stop_sales',
+            filter: `site_key=eq.${SITE_KEY}`
+          }, 
+          (payload) => {
+            // Recharger les données quand il y a un changement
+            loadStopSalesAndPushSales();
+          }
+        )
+        .subscribe();
+      
+      // Canal pour les push sales
+      pushSalesChannel = supabase
+        .channel('push_sales_changes')
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'push_sales',
+            filter: `site_key=eq.${SITE_KEY}`
+          }, 
+          (payload) => {
+            // Recharger les données quand il y a un changement
+            loadStopSalesAndPushSales();
+          }
+        )
+        .subscribe();
+    }
+    
+    return () => {
+      clearInterval(interval);
+      if (stopSalesChannel) {
+        supabase.removeChannel(stopSalesChannel);
+      }
+      if (pushSalesChannel) {
+        supabase.removeChannel(pushSalesChannel);
+      }
+    };
   }, []);
 
   // Trier les activités par ordre alphabétique pour le menu déroulant
