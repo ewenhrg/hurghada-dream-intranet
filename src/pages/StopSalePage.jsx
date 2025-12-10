@@ -143,10 +143,14 @@ export function StopSalePage({ activities, user }) {
         return;
       }
 
+      // Utiliser le supabase_id si disponible, sinon l'ID local
+      // C'est important pour que les stop/push sales soient détectés dans la page devis
+      const activityIdToUse = activity.supabase_id ? String(activity.supabase_id) : String(activity.id);
+
       if (type === "stop") {
-        // Vérifier si le stop sale existe déjà
+        // Vérifier si le stop sale existe déjà (vérifier avec les deux IDs possibles)
         const existing = stopSales.find(
-          (s) => s.activity_id === selectedActivityId && s.date === selectedDate
+          (s) => (s.activity_id === activityIdToUse || s.activity_id === String(activity.id) || s.activity_id === String(activity.supabase_id)) && s.date === selectedDate
         );
         if (existing) {
           toast.warning("Ce stop sale existe déjà pour cette activité et cette date.");
@@ -156,7 +160,7 @@ export function StopSalePage({ activities, user }) {
 
         // Vérifier si un push sale existe pour la même activité/date (conflit)
         const conflictingPush = pushSales.find(
-          (p) => p.activity_id === selectedActivityId && p.date === selectedDate
+          (p) => (p.activity_id === activityIdToUse || p.activity_id === String(activity.id) || p.activity_id === String(activity.supabase_id)) && p.date === selectedDate
         );
         if (conflictingPush) {
           if (!window.confirm("Un push sale existe déjà pour cette activité et cette date. Voulez-vous le supprimer et créer un stop sale ?")) {
@@ -175,7 +179,7 @@ export function StopSalePage({ activities, user }) {
           .from("stop_sales")
           .insert({
             site_key: SITE_KEY,
-            activity_id: selectedActivityId,
+            activity_id: activityIdToUse,
             activity_name: activity.name || "",
             date: selectedDate,
             created_by: user?.name || "",
@@ -194,9 +198,13 @@ export function StopSalePage({ activities, user }) {
         }
       } else {
         // Push sale
-        // Vérifier si le push sale existe déjà
+        // Utiliser le supabase_id si disponible, sinon l'ID local
+        // C'est important pour que les stop/push sales soient détectés dans la page devis
+        const activityIdToUse = activity.supabase_id ? String(activity.supabase_id) : String(activity.id);
+        
+        // Vérifier si le push sale existe déjà (vérifier avec les deux IDs possibles)
         const existing = pushSales.find(
-          (p) => p.activity_id === selectedActivityId && p.date === selectedDate
+          (p) => (p.activity_id === activityIdToUse || p.activity_id === String(activity.id) || p.activity_id === String(activity.supabase_id)) && p.date === selectedDate
         );
         if (existing) {
           toast.warning("Ce push sale existe déjà pour cette activité et cette date.");
@@ -206,7 +214,7 @@ export function StopSalePage({ activities, user }) {
 
         // Vérifier si un stop sale existe pour la même activité/date (conflit)
         const conflictingStop = stopSales.find(
-          (s) => s.activity_id === selectedActivityId && s.date === selectedDate
+          (s) => (s.activity_id === activityIdToUse || s.activity_id === String(activity.id) || s.activity_id === String(activity.supabase_id)) && s.date === selectedDate
         );
         if (conflictingStop) {
           if (!window.confirm("Un stop sale existe déjà pour cette activité et cette date. Voulez-vous le supprimer et créer un push sale ?")) {
@@ -225,7 +233,7 @@ export function StopSalePage({ activities, user }) {
           .from("push_sales")
           .insert({
             site_key: SITE_KEY,
-            activity_id: selectedActivityId,
+            activity_id: activityIdToUse,
             activity_name: activity.name || "",
             date: selectedDate,
             created_by: user?.name || "",
