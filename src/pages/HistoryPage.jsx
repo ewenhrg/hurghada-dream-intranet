@@ -294,95 +294,69 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
-      {/* En-tête avec recherche et filtres améliorés */}
-      <div className="space-y-6">
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+      <div className="flex flex-col gap-5 md:gap-6">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-start md:items-center justify-between">
+          <div className="flex-1 max-w-md">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-800 mb-3 flex items-center gap-2">
               <span className="text-2xl">📋</span>
-            </div>
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent">
-                Historique des devis
-              </h2>
-              <p className="text-sm text-slate-600 mt-1">
-                Consultez et gérez tous vos devis
+              Historique des devis
+            </h2>
+            <div className="space-y-2">
+              <TextInput
+                placeholder="Rechercher par numéro de téléphone..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="w-full text-base"
+              />
+              <p className="text-xs md:text-sm text-amber-700 bg-amber-50/80 px-3 py-2 rounded-lg border border-amber-200/60 flex items-center gap-2 font-medium">
+                <span className="text-base">⚠️</span>
+                <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
               </p>
             </div>
           </div>
-          
-          {/* Barre de recherche agrandie */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
-            <label className="block text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-              <span className="text-lg">🔍</span>
-              Rechercher par numéro de téléphone
-            </label>
-            <TextInput
-              placeholder="Ex: +33 6 12 34 56 78 ou 0612345678..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="w-full text-base md:text-lg py-3 shadow-sm hover:shadow-md transition-all"
-            />
-            <p className="text-xs md:text-sm text-amber-700 bg-amber-50/80 px-3 py-2 rounded-lg border border-amber-200/60 flex items-center gap-2 font-medium mt-3">
-              <span className="text-base">⚠️</span>
-              <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
-            </p>
-          </div>
-
-          {/* Filtres améliorés avec plus d'espace */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5">
-            <label className="block text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-              <span className="text-lg">🎯</span>
-              Filtrer par statut
-            </label>
-            <div className="flex flex-wrap gap-3 md:gap-4">
-              <Pill
-                active={statusFilter === "all"}
-                onClick={() => setStatusFilter("all")}
-                className="px-5 py-2.5 text-sm md:text-base font-semibold shadow-sm hover:shadow-md transition-all"
-              >
-                📊 Tous
-              </Pill>
-              <Pill
-                active={statusFilter === "paid"}
-                onClick={() => setStatusFilter("paid")}
-                className="px-5 py-2.5 text-sm md:text-base font-semibold shadow-sm hover:shadow-md transition-all"
-              >
-                ✅ Payés
-              </Pill>
-              <Pill
-                active={statusFilter === "pending"}
-                onClick={() => setStatusFilter("pending")}
-                className="px-5 py-2.5 text-sm md:text-base font-semibold shadow-sm hover:shadow-md transition-all"
-              >
-                ⏳ En attente
-              </Pill>
-              <Pill
-                active={statusFilter === "modified"}
-                onClick={() => setStatusFilter("modified")}
-                className="px-5 py-2.5 text-sm md:text-base font-semibold shadow-sm hover:shadow-md transition-all"
-              >
-                🔄 Modifié
-              </Pill>
-            </div>
+          <div className="flex flex-wrap gap-2 md:gap-3">
+            <Pill
+              active={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
+            >
+              📊 Tous
+            </Pill>
+            <Pill
+              active={statusFilter === "paid"}
+              onClick={() => setStatusFilter("paid")}
+            >
+              ✅ Payés
+            </Pill>
+            <Pill
+              active={statusFilter === "pending"}
+              onClick={() => setStatusFilter("pending")}
+            >
+              ⏳ En attente
+            </Pill>
+            <Pill
+              active={statusFilter === "modified"}
+              onClick={() => setStatusFilter("modified")}
+            >
+              🔄 Modifié
+            </Pill>
           </div>
         </div>
       </div>
       
-      {/* Indicateur du nombre de résultats compact */}
-      <div className="flex items-center justify-between bg-white rounded-lg border border-slate-200 shadow-sm p-3">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">📊</span>
+      {/* Indicateur du nombre de résultats */}
+      <div className="flex items-center justify-between bg-gradient-to-r from-slate-50/90 to-blue-50/70 rounded-xl border-2 border-slate-200/60 p-4 md:p-5 shadow-md backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">📊</span>
           <div>
             {filtered.length === 0 ? (
-              <p className="text-amber-700 font-semibold text-sm">Aucun devis trouvé</p>
+              <p className="text-amber-700 font-bold text-base md:text-lg">Aucun devis trouvé</p>
             ) : filtered.length === 1 ? (
-              <p className="text-blue-700 font-semibold text-sm">1 devis trouvé</p>
+              <p className="text-blue-700 font-bold text-base md:text-lg">1 devis trouvé</p>
             ) : (
-              <p className="text-blue-700 font-semibold text-sm">{filtered.length} devis trouvés</p>
+              <p className="text-blue-700 font-bold text-base md:text-lg">{filtered.length} devis trouvés</p>
             )}
             {quotes.length !== filtered.length && (
-              <p className="text-slate-500 text-xs mt-0.5">
+              <p className="text-slate-600 text-sm font-medium mt-1">
                 sur {quotes.length} total
               </p>
             )}
@@ -390,7 +364,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         </div>
       </div>
       
-      <div className="space-y-3">
+      <div className="space-y-4 md:space-y-5">
         {filtered.map((d) => {
           const allTicketsFilled = d.allTicketsFilled;
           const hasTickets = d.hasTickets;
@@ -398,261 +372,255 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           return (
             <div
               key={d.id}
-              className={`relative overflow-hidden rounded-lg border border-slate-200 transition-all duration-200 bg-[#f7f9fc] shadow-sm hover:shadow-md hover:scale-[1.005] ${
+              className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-300 p-5 md:p-7 pl-7 md:pl-9 shadow-lg hover:shadow-2xl hover:scale-[1.01] cursor-pointer ${
                 allTicketsFilled
-                  ? "hover:border-emerald-300"
-                  : "hover:border-amber-300"
+                  ? "border-emerald-300/60 bg-gradient-to-br from-emerald-50/95 to-teal-50/90 hover:border-emerald-400/80"
+                  : "border-amber-300/60 bg-gradient-to-br from-amber-50/95 to-orange-50/90 hover:border-amber-400/80"
               }`}
             >
-              {/* Barre latérale colorée */}
               <span
-                className={`absolute inset-y-0 left-0 w-1 ${
+                className={`absolute inset-y-0 left-0 w-2 ${
                   allTicketsFilled
-                    ? "bg-gradient-to-b from-emerald-500 to-teal-500"
-                    : "bg-gradient-to-b from-amber-500 to-orange-500"
+                    ? "bg-gradient-to-b from-emerald-400 via-emerald-500 to-teal-400 shadow-lg"
+                    : "bg-gradient-to-b from-amber-400 via-amber-500 to-orange-400 shadow-lg"
                 }`}
               />
-              
-              <div className="relative p-4">
-                {/* En-tête compact : Statut + Créé par + Date sur une ligne */}
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-slate-200">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`px-2.5 py-1 rounded-md text-xs font-semibold shadow-sm border ${
-                      allTicketsFilled
-                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-emerald-600"
-                        : "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-600"
-                    }`}
-                    >
-                      {allTicketsFilled ? "✅ Payé" : "⏳ En attente"}
+              <span className="absolute inset-0 pointer-events-none bg-gradient-to-br from-white/0 via-white/10 to-white/0" />
+              <div className="relative space-y-4 md:space-y-5">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                  <span className={`px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-md border-2 ${
+                    allTicketsFilled
+                      ? "bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-900 border-emerald-300/60"
+                      : "bg-gradient-to-r from-amber-100 to-orange-100 text-amber-900 border-amber-300/60"
+                  }`}
+                  >
+                    {allTicketsFilled ? "✅ Payé" : "⏳ En attente"}
+                  </span>
+                  {d.isModified && (
+                    <span className="px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-900 border-purple-300/60">
+                      🔄 Modifié
                     </span>
-                    {d.isModified && (
-                      <span className="px-2.5 py-1 rounded-md text-xs font-semibold shadow-sm border bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-purple-600">
-                        🔄 Modifié
-                      </span>
-                    )}
-                    {hasTickets && (
-                      <span className="px-2.5 py-1 rounded-md text-xs font-semibold shadow-sm border bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-600">
-                        🎫 {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
-                      </span>
-                    )}
-                    <span className="text-xs text-slate-500">
+                  )}
+                  {hasTickets && (
+                    <span className="px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-900 border-blue-300/60">
+                      🎫 Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
+                  <div className="flex-1 space-y-2 min-w-0">
+                    <p className="text-xs md:text-sm text-slate-600 font-medium break-words">
                       📅 {d.formattedCreatedAt}
-                      {d.createdByName && <span className="ml-1.5">• {d.createdByName}</span>}
-                    </span>
-                  </div>
-                  {/* Total du devis en haut à droite */}
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-slate-900">
-                      {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
+                      {d.createdByName && <span className="ml-2 text-blue-700 font-bold">• Créé par {d.createdByName}</span>}
                     </p>
-                    <p className="text-xs text-slate-600">
-                      {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
+                    <p className="text-sm md:text-base lg:text-lg text-slate-900 font-bold break-words">
+                      📞 {d.client?.phone || "Tél ?"} — 🏨 {d.client?.hotel || "Hôtel ?"}
+                      {d.client?.room ? ` (Chambre ${d.client.room})` : ""}
                     </p>
-                  </div>
-                </div>
-
-                {/* Informations client compactes */}
-                <div className="mb-3 pb-2 border-b border-slate-200">
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                     {d.client?.name && (
-                      <span className="font-bold text-slate-900">👤 {d.client.name}</span>
-                    )}
-                    <span className="font-semibold text-slate-800">📞 {d.client?.phone || "Tél ?"}</span>
-                    <span className="text-slate-700">
-                      🏨 {d.client?.hotel || "Hôtel ?"}
-                      {d.client?.room && <span className="text-slate-600"> ({d.client.room})</span>}
-                    </span>
-                    {(d.trip && d.trip.trim() && d.trip !== "Activité ?") && (
-                      <span className="px-2 py-0.5 rounded text-xs bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
-                        ✈️ {d.trip}
-                      </span>
-                    )}
-                    {d.invoiceN && d.invoiceN !== "N/A" && (
-                      <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700 font-semibold border border-slate-200">
-                        📄 {d.invoiceN}
-                      </span>
+                      <p className="text-xs md:text-sm lg:text-base text-slate-700 font-semibold break-words">
+                        👤 {d.client.name}
+                      </p>
                     )}
                   </div>
+                  {(d.trip && d.trip.trim() && d.trip !== "Activité ?") || (d.invoiceN && d.invoiceN !== "N/A") ? (
+                    <div className="flex flex-col items-end gap-2 text-right min-w-[140px]">
+                      {d.trip && d.trip.trim() && d.trip !== "Activité ?" && (
+                        <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-900 border-2 border-indigo-300/60 shadow-sm">
+                          ✈️ {d.trip}
+                        </span>
+                      )}
+                      {d.invoiceN && d.invoiceN !== "N/A" && (
+                        <span className="text-xs md:text-sm uppercase tracking-wide text-slate-700 font-bold bg-slate-100 px-3 py-1.5 rounded-lg border-2 border-slate-300/60">
+                          📄 Invoice {d.invoiceN}
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
-                {/* Activités compactes */}
-                <div className="mb-3 pb-2 border-b border-slate-200">
-                  <div className="space-y-1.5">
-                    {d.itemsWithFormattedDates.map((li, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between gap-2 rounded border border-slate-200 bg-slate-50/50 px-2 py-1.5 shadow-sm transition-all duration-150 hover:shadow hover:bg-slate-50 hover:border-slate-300"
-                      >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <span className="w-5 h-5 rounded bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-                            <span className="text-white text-[10px] font-bold">{i + 1}</span>
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                              <span className="text-xs font-semibold text-slate-900">{li.activityName || "Activité ?"}</span>
-                              <span className="text-[10px] text-slate-600">📅 {li.formattedDate}</span>
-                              <span className="text-[10px] text-slate-600">👥 {li.adults ?? 0}/{li.children ?? 0}/{li.babies ?? 0}</span>
-                              {li.ticketNumber && li.ticketNumber.trim() !== "" && (
-                                <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200 text-[10px]">
-                                  🎫 {li.ticketNumber}
-                                </span>
-                              )}
-                            </div>
+                <div className="flex flex-col gap-5 md:gap-6 pt-4 md:pt-5 border-t-2 border-white/60 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex-1 space-y-3 min-w-0">
+                    <div className="space-y-2.5 md:space-y-3">
+                      {d.itemsWithFormattedDates.map((li, i) => (
+                        <div
+                          key={i}
+                          className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 md:gap-4 rounded-xl border-2 border-white/80 bg-white/95 backdrop-blur-sm px-3 md:px-4 lg:px-5 py-3 md:py-4 shadow-lg transition-all duration-200 hover:shadow-xl hover:border-blue-200/60 animate-fade-in"
+                          style={{ animationDelay: `${i * 50}ms` }}
+                        >
+                          <div className="flex flex-col gap-1 min-w-0 flex-1">
+                            <span className="text-sm md:text-base font-bold text-slate-900 break-words">
+                              {li.activityName || "Activité ?"}
+                            </span>
+                            <span className="text-xs md:text-sm text-slate-600 font-medium break-words">
+                              📅 {li.formattedDate} — 👥 {li.adults ?? 0} adt / {li.children ?? 0} enf / {li.babies ?? 0} bébé(s)
+                            </span>
+                          </div>
+                          <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
+                            <span className="text-sm md:text-base lg:text-lg font-bold text-slate-900">
+                              💵 {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
+                            </span>
+                            {li.ticketNumber && li.ticketNumber.trim() !== "" && (
+                              <span className="px-3 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-900 border-2 border-emerald-300/60 shadow-sm">
+                                🎫 {li.ticketNumber}
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <span className="text-xs font-bold text-slate-900 whitespace-nowrap">
-                          {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
-                        </span>
+                      ))}
+                    </div>
+                    {d.notes && d.notes.trim() !== "" && (
+                      <div className="bg-white/90 backdrop-blur-sm border-2 border-white/80 rounded-xl px-4 md:px-5 py-3 md:py-4 shadow-md">
+                        <p className="text-xs md:text-sm text-slate-700 font-medium">
+                          📝 <span className="font-semibold">Notes :</span> {d.notes}
+                        </p>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
-
-                {/* Notes compactes si présentes */}
-                {d.notes && d.notes.trim() !== "" && (
-                  <div className="mb-3 pb-2 border-b border-slate-200">
-                    <p className="text-xs text-slate-700">
-                      <span className="font-semibold">📝 Notes :</span> {d.notes}
-                    </p>
-                  </div>
-                )}
-
-                {/* Actions compactes sur une ligne */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    className={`flex items-center justify-center gap-1.5 rounded px-3 py-1.5 h-8 text-xs font-semibold text-white border shadow-sm transition-all duration-150 hover:shadow hover:scale-[1.02] active:scale-[0.98] ${
-                      allTicketsFilled 
-                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-700 hover:from-emerald-700 hover:to-teal-700" 
-                        : "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-600 hover:from-emerald-600 hover:to-teal-600"
-                    }`}
-                    onClick={() => {
-                      setSelectedQuote(d);
-                      const existingTickets = {};
-                      d.items?.forEach((item, idx) => {
-                        existingTickets[idx] = item.ticketNumber || "";
-                      });
-                      setTicketNumbers(existingTickets);
-                      setStripeAmount(d.paidStripe ? d.paidStripe.toString() : "");
-                      setCashAmount(d.paidCash ? d.paidCash.toString() : "");
-                      setShowPaymentModal(true);
-                    }}
-                  >
-                    <span className="text-sm">{allTicketsFilled ? "✅" : "💰"}</span>
-                    <span>{allTicketsFilled ? "Tickets" : "Payer"}</span>
-                  </button>
-                  <button
-                    className="flex items-center justify-center gap-1.5 rounded px-3 py-1.5 h-8 text-xs font-semibold text-white border border-indigo-600 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-sm transition-all duration-150 hover:shadow hover:scale-[1.02] active:scale-[0.98]"
-                    onClick={() => {
-                      const htmlContent = generateQuoteHTML(d);
-                      const clientPhone = d.client?.phone || "";
-                      const fileName = `Devis - ${clientPhone}`;
-                      const newWindow = window.open();
-                      if (newWindow) {
-                        newWindow.document.write(htmlContent);
-                        newWindow.document.title = fileName;
-                        newWindow.document.close();
-                        setTimeout(() => {
-                          newWindow.print();
-                        }, 500);
-                      }
-                    }}
-                  >
-                    <span className="text-sm">🖨️</span>
-                    <span>Imprimer</span>
-                  </button>
-                  {!allTicketsFilled && (
-                    <button
-                      className="flex items-center justify-center gap-1.5 rounded px-3 py-1.5 h-8 text-xs font-semibold text-white border border-amber-600 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-sm transition-all duration-150 hover:shadow hover:scale-[1.02] active:scale-[0.98]"
-                      onClick={() => {
-                        setSelectedQuote(d);
-                        setEditClient({
-                          ...d.client,
-                          arrivalDate: d.client?.arrivalDate || d.clientArrivalDate || "",
-                          departureDate: d.client?.departureDate || d.clientDepartureDate || "",
-                        });
-                        setEditItems(
-                          d.items.map((item) => ({
-                            activityId: item.activityId || "",
-                            date: item.date || new Date().toISOString().slice(0, 10),
-                            adults: item.adults !== undefined && item.adults !== null ? item.adults : 2,
-                            children: item.children !== undefined && item.children !== null ? item.children : 0,
-                            babies: item.babies !== undefined && item.babies !== null ? item.babies : 0,
-                            extraLabel: item.extraLabel || "",
-                            extraAmount: item.extraAmount || "",
-                            extraDolphin: item.extraDolphin || false,
-                            speedBoatExtra: Array.isArray(item.speedBoatExtra)
-                              ? item.speedBoatExtra
-                              : item.speedBoatExtra
-                                ? [item.speedBoatExtra]
-                                : [],
-                            buggySimple: item.buggySimple !== undefined && item.buggySimple !== null ? item.buggySimple : 0,
-                            buggyFamily: item.buggyFamily !== undefined && item.buggyFamily !== null ? item.buggyFamily : 0,
-                            yamaha250: item.yamaha250 !== undefined && item.yamaha250 !== null ? item.yamaha250 : 0,
-                            ktm640: item.ktm640 !== undefined && item.ktm640 !== null ? item.ktm640 : 0,
-                            ktm530: item.ktm530 !== undefined && item.ktm530 !== null ? item.ktm530 : 0,
-                            slot: item.slot || "",
-                            ticketNumber: item.ticketNumber || "",
-                          }))
-                        );
-                        setEditNotes(d.notes || "");
-                        setShowEditModal(true);
-                      }}
-                    >
-                      <span className="text-sm">✏️</span>
-                      <span>Modifier</span>
-                    </button>
-                  )}
-                  {user?.canDeleteQuote && (
-                    <button
-                      className="flex items-center justify-center gap-1.5 rounded px-3 py-1.5 h-8 text-xs font-semibold text-white border border-red-600 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-sm transition-all duration-150 hover:shadow hover:scale-[1.02] active:scale-[0.98]"
-                      onClick={async () => {
-                        const clientInfo = d.client?.name ? `${d.client.name}${d.client?.phone ? ` (${d.client.phone})` : ''}` : 'ce devis';
-                        const totalInfo = d.total ? ` (Total: ${Math.round(d.total)}€)` : '';
-                        
-                        if (window.confirm(`Êtes-vous sûr de vouloir supprimer le devis de ${clientInfo}${totalInfo} ?\n\nCette action est irréversible et supprimera définitivement le devis.`)) {
-                          const updatedQuotes = quotes.filter((quote) => quote.id !== d.id);
-                          setQuotes(updatedQuotes);
-                          saveLS(LS_KEYS.quotes, updatedQuotes);
-
-                          if (supabase) {
-                            try {
-                              let deleteQuery = supabase
-                                .from("quotes")
-                                .delete()
-                                .eq("site_key", SITE_KEY);
-
-                              if (d.supabase_id) {
-                                deleteQuery = deleteQuery.eq("id", d.supabase_id);
-                              } else {
-                                deleteQuery = deleteQuery
-                                  .eq("client_phone", d.client?.phone || "")
-                                  .eq("created_at", d.createdAt);
-                              }
-
-                              const { error: deleteError } = await deleteQuery;
-
-                              if (deleteError) {
-                                logger.warn("⚠️ Erreur suppression Supabase:", deleteError);
-                              } else {
-                                logger.log("✅ Devis supprimé de Supabase!");
-                              }
-                            } catch (deleteErr) {
-                              logger.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
-                            }
+                  <div className="flex flex-col items-end gap-4 min-w-[240px] bg-white/80 backdrop-blur-sm rounded-xl p-4 md:p-5 border-2 border-white/80 shadow-lg">
+                    <div className="text-right w-full">
+                      <p className="text-xs md:text-sm font-semibold text-slate-600 mb-1 uppercase tracking-wide">Total du devis</p>
+                      <p className="text-xl md:text-2xl font-bold text-slate-900 mb-1">
+                        💵 {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
+                      </p>
+                      <p className="text-lg md:text-xl font-semibold text-slate-700">
+                        💳 {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-2 md:gap-3 w-full">
+                      <button
+                        className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95 ${
+                          allTicketsFilled 
+                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-500 hover:from-emerald-700 hover:to-teal-700" 
+                            : "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-400 hover:from-emerald-600 hover:to-teal-600"
+                        }`}
+                        onClick={() => {
+                          setSelectedQuote(d);
+                          const existingTickets = {};
+                          d.items?.forEach((item, idx) => {
+                            existingTickets[idx] = item.ticketNumber || "";
+                          });
+                          setTicketNumbers(existingTickets);
+                          // Initialiser les montants Stripe et Cash depuis le devis
+                          setStripeAmount(d.paidStripe ? d.paidStripe.toString() : "");
+                          setCashAmount(d.paidCash ? d.paidCash.toString() : "");
+                          setShowPaymentModal(true);
+                        }}
+                      >
+                        {allTicketsFilled ? "✅ Tickets" : "💰 Payer"}
+                      </button>
+                      <button
+                        className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
+                        onClick={() => {
+                          const htmlContent = generateQuoteHTML(d);
+                          const clientPhone = d.client?.phone || "";
+                          const fileName = `Devis - ${clientPhone}`;
+                          const newWindow = window.open();
+                          if (newWindow) {
+                            newWindow.document.write(htmlContent);
+                            newWindow.document.title = fileName;
+                            newWindow.document.close();
+                            setTimeout(() => {
+                              newWindow.print();
+                            }, 500);
                           }
-                        }
-                      }}
-                    >
-                      <span className="text-sm">🗑️</span>
-                      <span>Supprimer</span>
-                    </button>
-                  )}
+                        }}
+                      >
+                        🖨️ Imprimer
+                      </button>
+                      {!allTicketsFilled && (
+                        <button
+                          className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-amber-500 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
+                          onClick={() => {
+                            setSelectedQuote(d);
+                            setEditClient({
+                              ...d.client,
+                              arrivalDate: d.client?.arrivalDate || d.clientArrivalDate || "",
+                              departureDate: d.client?.departureDate || d.clientDepartureDate || "",
+                            });
+                            setEditItems(
+                              d.items.map((item) => ({
+                                activityId: item.activityId || "",
+                                date: item.date || new Date().toISOString().slice(0, 10),
+                                adults: item.adults !== undefined && item.adults !== null ? item.adults : 2,
+                                children: item.children !== undefined && item.children !== null ? item.children : 0,
+                                babies: item.babies !== undefined && item.babies !== null ? item.babies : 0,
+                                extraLabel: item.extraLabel || "",
+                                extraAmount: item.extraAmount || "",
+                                extraDolphin: item.extraDolphin || false,
+                                speedBoatExtra: Array.isArray(item.speedBoatExtra)
+                                  ? item.speedBoatExtra
+                                  : item.speedBoatExtra
+                                    ? [item.speedBoatExtra]
+                                    : [],
+                                buggySimple: item.buggySimple !== undefined && item.buggySimple !== null ? item.buggySimple : 0,
+                                buggyFamily: item.buggyFamily !== undefined && item.buggyFamily !== null ? item.buggyFamily : 0,
+                                yamaha250: item.yamaha250 !== undefined && item.yamaha250 !== null ? item.yamaha250 : 0,
+                                ktm640: item.ktm640 !== undefined && item.ktm640 !== null ? item.ktm640 : 0,
+                                ktm530: item.ktm530 !== undefined && item.ktm530 !== null ? item.ktm530 : 0,
+                                slot: item.slot || "",
+                                ticketNumber: item.ticketNumber || "",
+                              }))
+                            );
+                            setEditNotes(d.notes || "");
+                            setShowEditModal(true);
+                          }}
+                        >
+                          ✏️ Modifier
+                        </button>
+                      )}
+                      {user?.canDeleteQuote && (
+                        <button
+                          className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-red-500 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
+                          onClick={async () => {
+                            const clientInfo = d.client?.name ? `${d.client.name}${d.client?.phone ? ` (${d.client.phone})` : ''}` : 'ce devis';
+                            const totalInfo = d.total ? ` (Total: ${Math.round(d.total)}€)` : '';
+                            
+                            if (window.confirm(`Êtes-vous sûr de vouloir supprimer le devis de ${clientInfo}${totalInfo} ?\n\nCette action est irréversible et supprimera définitivement le devis.`)) {
+                              const updatedQuotes = quotes.filter((quote) => quote.id !== d.id);
+                              setQuotes(updatedQuotes);
+                              saveLS(LS_KEYS.quotes, updatedQuotes);
+
+                              if (supabase) {
+                                try {
+                                  let deleteQuery = supabase
+                                    .from("quotes")
+                                    .delete()
+                                    .eq("site_key", SITE_KEY);
+
+                                  if (d.supabase_id) {
+                                    deleteQuery = deleteQuery.eq("id", d.supabase_id);
+                                  } else {
+                                    deleteQuery = deleteQuery
+                                      .eq("client_phone", d.client?.phone || "")
+                                      .eq("created_at", d.createdAt);
+                                  }
+
+                                  const { error: deleteError } = await deleteQuery;
+
+                                  if (deleteError) {
+                                    logger.warn("⚠️ Erreur suppression Supabase:", deleteError);
+                                  } else {
+                                    logger.log("✅ Devis supprimé de Supabase!");
+                                  }
+                                } catch (deleteErr) {
+                                  logger.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
+                                }
+                              }
+                            }
+                          }}
+                        >
+                          🗑️ Supprimer
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           );
         })}
         {filtered.length === 0 && (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 md:p-16 text-center shadow-sm">
+          <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/70 rounded-2xl border-2 border-slate-200/60 p-12 md:p-16 text-center shadow-lg">
             <div className="flex flex-col items-center gap-4">
               <span className="text-5xl md:text-6xl">📭</span>
               <p className="text-lg md:text-xl font-bold text-slate-700">Aucun devis trouvé</p>
