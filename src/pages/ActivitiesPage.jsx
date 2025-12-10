@@ -6,6 +6,7 @@ import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 import { useDebounce } from "../hooks/useDebounce";
 
 export function ActivitiesPage({ activities, setActivities, user }) {
@@ -175,17 +176,17 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         if (error) {
           // Si l'erreur est 400 (Bad Request), c'est probablement que la colonne n'existe pas encore
           if (error.code === "PGRST204" || error.message?.includes("column") || error.message?.includes("description")) {
-            console.warn("⚠️ La colonne 'description' n'existe peut-être pas encore dans Supabase. La description est sauvegardée localement.");
+            logger.warn("⚠️ La colonne 'description' n'existe peut-être pas encore dans Supabase. La description est sauvegardée localement.");
             toast.warning("La colonne description n'existe pas encore dans Supabase. Exécutez le script SQL pour l'ajouter. La description est sauvegardée localement.");
           } else {
-            console.error("❌ Erreur lors de la mise à jour de la description dans Supabase:", error);
+            logger.error("❌ Erreur lors de la mise à jour de la description dans Supabase:", error);
             toast.error("Erreur lors de la sauvegarde dans Supabase. La description est sauvegardée localement.");
           }
         } else {
           toast.success("Description sauvegardée avec succès.");
         }
       } catch (err) {
-        console.error("❌ Exception lors de la mise à jour de la description dans Supabase:", err);
+        logger.error("❌ Exception lors de la mise à jour de la description dans Supabase:", err);
         toast.error("Exception lors de la sauvegarde dans Supabase. La description est sauvegardée localement.");
       }
     } else if (!supabaseId) {
@@ -279,7 +280,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         
         if (isEditing && supabaseId) {
           // MODIFICATION : utiliser UPDATE avec l'ID Supabase
-          console.log("🔄 Mise à jour dans Supabase (ID:", supabaseId, "):", supabaseData);
+          logger.log("🔄 Mise à jour dans Supabase (ID:", supabaseId, "):", supabaseData);
           const result = await supabase
             .from("activities")
             .update(supabaseData)
@@ -303,12 +304,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             next = next.map((a) => (a.id === activityData.id ? { ...a, supabase_id: existingSupabaseId } : a));
             setActivities(next);
             saveLS(LS_KEYS.activities, next);
-            console.log("✅ Activité trouvée dans Supabase, réutilisation de l'ID:", existingSupabaseId);
+            logger.log("✅ Activité trouvée dans Supabase, réutilisation de l'ID:", existingSupabaseId);
             data = existingActivities;
             error = null;
           } else {
             // Pas d'activité similaire, créer une nouvelle
-            console.log("🔄 Création dans Supabase:", supabaseData);
+            logger.log("🔄 Création dans Supabase:", supabaseData);
             const result = await supabase.from("activities").insert(supabaseData);
             data = result.data;
             error = result.error;
@@ -327,32 +328,32 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         
         if (error) {
           const action = isEditing ? "mise à jour" : "création";
-          console.error(`❌ ERREUR Supabase (${action}):`, error);
-          console.error("Détails:", JSON.stringify(error, null, 2));
+          logger.error(`❌ ERREUR Supabase (${action}):`, error);
+          logger.error("Détails:", JSON.stringify(error, null, 2));
           
           // Si l'erreur concerne des colonnes manquantes ou le code PGRST204
           if ((error.message && error.message.includes("column")) || error.code === "PGRST204") {
-            console.warn("⚠️ Erreur PGRST204 - Colonnes manquantes ou format incorrect dans Supabase.");
-            console.warn("Données envoyées:", JSON.stringify(supabaseData, null, 2));
+            logger.warn("⚠️ Erreur PGRST204 - Colonnes manquantes ou format incorrect dans Supabase.");
+            logger.warn("Données envoyées:", JSON.stringify(supabaseData, null, 2));
             toast.error("Erreur PGRST204 - Structure Supabase. L'activité est sauvegardée localement. Vérifiez la console pour plus de détails.");
           } else if (error.message && error.message.includes("row-level security") || error.code === "42501") {
             // Erreur de politique RLS (Row Level Security)
-            console.error("❌ Erreur RLS (Row Level Security) - Les politiques Supabase bloquent l'insertion");
+            logger.error("❌ Erreur RLS (Row Level Security) - Les politiques Supabase bloquent l'insertion");
             toast.error("Erreur de sécurité Supabase (RLS). L'activité est sauvegardée localement. Vérifiez la console pour plus de détails.");
           } else {
             toast.error("Erreur Supabase (création). L'activité est quand même enregistrée en local. Vérifiez la console pour plus de détails.");
           }
         } else {
           const action = isEditing ? "modifiée" : "créée";
-          console.log(`✅ Activité ${action} avec succès dans Supabase!`);
-          console.log("Données retournées:", data);
+          logger.log(`✅ Activité ${action} avec succès dans Supabase!`);
+          logger.log("Données retournées:", data);
         }
       } catch (err) {
-        console.error("❌ EXCEPTION lors de l'envoi à Supabase:", err);
+        logger.error("❌ EXCEPTION lors de l'envoi à Supabase:", err);
         toast.error("Exception lors de l'envoi à Supabase. L'activité est quand même enregistrée en local. Vérifiez la console pour plus de détails.");
       }
     } else {
-      console.warn("⚠️ Supabase n'est pas disponible (stub)");
+      logger.warn("⚠️ Supabase n'est pas disponible (stub)");
       toast.warning("Supabase n'est pas configuré. L'activité est sauvegardée uniquement en local.");
     }
 
@@ -398,13 +399,13 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           .eq("id", activityToDelete.supabase_id);
         
         if (error) {
-          console.error("❌ Erreur lors de la suppression dans Supabase:", error);
+          logger.error("❌ Erreur lors de la suppression dans Supabase:", error);
           toast.error("Erreur lors de la suppression dans Supabase. L'activité a été supprimée localement.");
         } else {
-          console.log("✅ Activité supprimée de Supabase avec succès!");
+          logger.log("✅ Activité supprimée de Supabase avec succès!");
         }
       } catch (err) {
-        console.error("❌ Exception lors de la suppression dans Supabase:", err);
+        logger.error("❌ Exception lors de la suppression dans Supabase:", err);
         toast.error("Exception lors de la suppression dans Supabase. L'activité a été supprimée localement.");
       }
     }

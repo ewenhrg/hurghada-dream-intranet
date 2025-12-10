@@ -6,6 +6,7 @@ import { currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, cleanPh
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
@@ -75,7 +76,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         // Mettre en cache
         salesCache.set(cacheKey, { stopSales: stopSalesData, pushSales: pushSalesData });
       } catch (err) {
-        console.error("Erreur lors du chargement des stop sales/push sales:", err);
+        logger.error("Erreur lors du chargement des stop sales/push sales:", err);
       }
     }
 
@@ -243,7 +244,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     });
 
     if (quotesToDelete.length > 0) {
-      console.log(`🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de 15 jours`);
+      logger.log(`🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de 15 jours`);
       
       // Supprimer de la liste locale
       const remainingQuotes = quotes.filter((quote) => 
@@ -274,12 +275,12 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             const { error: deleteError } = await deleteQuery;
             
             if (deleteError) {
-              console.warn("⚠️ Erreur suppression Supabase:", deleteError);
+              logger.warn("⚠️ Erreur suppression Supabase:", deleteError);
             } else {
-              console.log(`✅ Devis supprimé de Supabase (ID: ${quoteToDelete.supabase_id || quoteToDelete.id})`);
+              logger.log(`✅ Devis supprimé de Supabase (ID: ${quoteToDelete.supabase_id || quoteToDelete.id})`);
             }
           } catch (deleteErr) {
-            console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
+            logger.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
           }
         }
       }
@@ -596,12 +597,12 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                                   const { error: deleteError } = await deleteQuery;
 
                                   if (deleteError) {
-                                    console.warn("⚠️ Erreur suppression Supabase:", deleteError);
+                                    logger.warn("⚠️ Erreur suppression Supabase:", deleteError);
                                   } else {
-                                    console.log("✅ Devis supprimé de Supabase!");
+                                    logger.log("✅ Devis supprimé de Supabase!");
                                   }
                                 } catch (deleteErr) {
-                                  console.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
+                                  logger.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
                                 }
                               }
                             }
@@ -830,10 +831,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       const { data, error: updateError } = await updateQuery.select();
                       
                       if (updateError) {
-                        console.error("❌ Erreur mise à jour Supabase:", updateError);
+                        logger.error("❌ Erreur mise à jour Supabase:", updateError);
                         toast.error(`Erreur lors de la sauvegarde sur Supabase: ${updateError.message || 'Erreur inconnue'}. Les modifications sont sauvegardées localement.`);
                       } else {
-                        console.log("✅ Devis mis à jour dans Supabase avec succès:", data);
+                        logger.log("✅ Devis mis à jour dans Supabase avec succès:", data);
                         // Mettre à jour le supabase_id si ce n'était pas déjà fait
                         const updatedData = Array.isArray(data) ? data[0] : data;
                         if (updatedData && updatedData.id && !updatedQuote.supabase_id) {
@@ -844,7 +845,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         }
                       }
                     } catch (updateErr) {
-                      console.error("❌ Exception lors de la mise à jour Supabase:", updateErr);
+                      logger.error("❌ Exception lors de la mise à jour Supabase:", updateErr);
                       toast.error(`Exception lors de la sauvegarde sur Supabase: ${updateErr.message || 'Erreur inconnue'}. Les modifications sont sauvegardées localement.`);
                     }
                   }
@@ -935,10 +936,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                 const { data, error: updateError } = await updateQuery.select();
 
                 if (updateError) {
-                  console.error("❌ Erreur mise à jour Supabase:", updateError);
+                  logger.error("❌ Erreur mise à jour Supabase:", updateError);
                   toast.error(`Erreur lors de la sauvegarde sur Supabase: ${updateError.message || 'Erreur inconnue'}. Les modifications sont sauvegardées localement.`);
                 } else {
-                  console.log("✅ Devis mis à jour dans Supabase avec succès:", data);
+                  logger.log("✅ Devis mis à jour dans Supabase avec succès:", data);
                   // Mettre à jour le supabase_id dans le devis local si ce n'était pas déjà fait
                   const updatedData = Array.isArray(data) ? data[0] : data;
                   if (updatedData && updatedData.id && !finalUpdatedQuote.supabase_id) {
@@ -949,7 +950,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   }
                 }
               } catch (updateErr) {
-                console.error("❌ Exception lors de la mise à jour Supabase:", updateErr);
+                logger.error("❌ Exception lors de la mise à jour Supabase:", updateErr);
                 toast.error(`Exception lors de la sauvegarde sur Supabase: ${updateErr.message || 'Erreur inconnue'}. Les modifications sont sauvegardées localement.`);
               }
             }

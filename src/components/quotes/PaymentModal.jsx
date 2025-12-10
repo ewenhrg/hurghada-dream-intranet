@@ -4,6 +4,7 @@ import { LS_KEYS } from "../../constants";
 import { currency, saveLS } from "../../utils";
 import { TextInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
+import { logger } from "../../utils/logger";
 
 export function PaymentModal({ 
   show, 
@@ -86,13 +87,13 @@ export function PaymentModal({
           .eq("id", selectedQuote.supabase_id);
 
         if (error) {
-          console.error("Erreur lors de la mise à jour Supabase:", error);
+          logger.error("Erreur lors de la mise à jour Supabase:", error);
           toast.error("Erreur lors de la synchronisation avec Supabase.");
         } else {
           toast.success("Numéros de ticket et méthodes de paiement enregistrés avec succès.");
         }
       } catch (error) {
-        console.error("Erreur lors de la mise à jour Supabase:", error);
+        logger.error("Erreur lors de la mise à jour Supabase:", error);
         toast.error("Erreur lors de la synchronisation avec Supabase.");
       }
     }

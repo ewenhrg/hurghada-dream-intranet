@@ -4,6 +4,7 @@ import { SITE_KEY, LS_KEYS } from "../constants";
 import { currencyNoCents, saveLS, cleanPhoneNumber, calculateCardPrice } from "../utils";
 import { GhostBtn, PrimaryBtn, TextInput, NumberInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 import { useDebounce } from "../hooks/useDebounce";
 
 export function ModificationsPage({ quotes, setQuotes, activities, user }) {
@@ -200,13 +201,13 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
           .eq("id", selectedQuote.supabase_id || selectedQuote.id);
 
         if (updateError) {
-          console.warn("⚠️ Erreur mise à jour Supabase:", updateError);
+          logger.warn("⚠️ Erreur mise à jour Supabase:", updateError);
           toast.warning("Erreur lors de la mise à jour dans Supabase");
         } else {
           toast.success("Modification enregistrée avec succès !");
         }
       } catch (err) {
-        console.warn("⚠️ Erreur lors de la mise à jour Supabase:", err);
+        logger.warn("⚠️ Erreur lors de la mise à jour Supabase:", err);
         toast.warning("Erreur lors de la mise à jour dans Supabase");
       }
     }

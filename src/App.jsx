@@ -11,6 +11,7 @@ import { useTranslation } from "./hooks/useTranslation";
 import PageLoader from "./components/PageLoader";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { toast } from "./utils/toast.js";
+import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
 
 // Fonction helper pour le lazy loading avec gestion d'erreur et retry
@@ -18,7 +19,7 @@ const lazyWithRetry = (importFn, retries = 3) => {
   return lazy(() => {
     const loadModule = (attempt = 0) => {
       return importFn().catch((error) => {
-        console.warn(`Erreur de chargement du module (tentative ${attempt + 1}/${retries + 1})...`, error);
+        logger.warn(`Erreur de chargement du module (tentative ${attempt + 1}/${retries + 1})...`, error);
         if (attempt < retries) {
           // Retry après un court délai exponentiel
           const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
@@ -29,7 +30,7 @@ const lazyWithRetry = (importFn, retries = 3) => {
           });
         }
         // Si toutes les tentatives échouent, recharger la page
-        console.error("Impossible de charger le module après plusieurs tentatives, rechargement de la page...");
+        logger.error("Impossible de charger le module après plusieurs tentatives, rechargement de la page...");
         setTimeout(() => {
           window.location.reload();
         }, 2000);
@@ -113,7 +114,7 @@ export default function App() {
       sessionStorage.removeItem("hd_user");
       sessionStorage.removeItem("quotesPageMounted");
     } catch (error) {
-      console.warn("Erreur lors de la suppression des informations de session:", error);
+      logger.warn("Erreur lors de la suppression des informations de session:", error);
     }
     setUser(null);
     setQuoteDraft(null);
@@ -197,17 +198,17 @@ export default function App() {
           activitiesCache.set(cacheKey, supabaseActivities);
         } else {
           // Si Supabase est vide, vider aussi le state et le localStorage
-          console.log("📦 Supabase: aucune activité trouvée, vidage des activités locales");
+          logger.log("📦 Supabase: aucune activité trouvée, vidage des activités locales");
           setActivities([]);
           saveLS(LS_KEYS.activities, []);
         }
       } else if (error) {
-        console.warn("⚠️ Erreur lors de la récupération des activités depuis Supabase:", error);
+        logger.warn("⚠️ Erreur lors de la récupération des activités depuis Supabase:", error);
       }
 
       // Synchronisation des devis se fait dans un useEffect séparé pour éviter les doublons
     } catch (err) {
-      console.warn("Erreur synchronisation Supabase:", err);
+      logger.warn("Erreur synchronisation Supabase:", err);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -226,7 +227,7 @@ export default function App() {
         setPendingRequestsCount(count || 0);
       }
     } catch (err) {
-      console.warn("Erreur lors du chargement du nombre de demandes:", err);
+      logger.warn("Erreur lors du chargement du nombre de demandes:", err);
     }
   }, [ok]);
 
@@ -322,17 +323,17 @@ export default function App() {
           .eq("site_key", SITE_KEY);
 
         if (error) {
-          console.warn("Erreur lors de la mise à jour du statut de la demande:", error);
+          logger.warn("Erreur lors de la mise à jour du statut de la demande:", error);
           // Continuer quand même même si la mise à jour échoue
         } else {
-          console.log("✅ Demande marquée comme convertie en devis");
+          logger.log("✅ Demande marquée comme convertie en devis");
           // Mettre à jour le compteur de demandes en attente
           if (loadPendingRequestsCount) {
             loadPendingRequestsCount();
           }
         }
       } catch (err) {
-        console.warn("Exception lors de la mise à jour du statut de la demande:", err);
+        logger.warn("Exception lors de la mise à jour du statut de la demande:", err);
         // Continuer quand même même si la mise à jour échoue
       }
     }
@@ -385,7 +386,7 @@ export default function App() {
       try {
         localStorage.removeItem(LS_KEYS.quoteForm);
       } catch (error) {
-        console.warn("Impossible de supprimer le brouillon de devis du localStorage", error);
+        logger.warn("Impossible de supprimer le brouillon de devis du localStorage", error);
       }
     }
   }, [quoteDraft]);
@@ -530,7 +531,7 @@ export default function App() {
           });
         }
       } catch (err) {
-        console.warn("Erreur synchronisation devis Supabase:", err);
+        logger.warn("Erreur synchronisation devis Supabase:", err);
       }
     }
     
@@ -580,7 +581,7 @@ export default function App() {
       };
     };
 
-    console.log("🔄 Abonnement Realtime aux devis...");
+    logger.log("🔄 Abonnement Realtime aux devis...");
 
     // S'abonner aux changements sur la table quotes
     const channel = supabase
@@ -594,7 +595,7 @@ export default function App() {
           filter: `site_key=eq.${SITE_KEY}`,
         },
         async (payload) => {
-          console.log('📨 Changement Realtime reçu:', payload.eventType, payload);
+          logger.log('📨 Changement Realtime reçu:', payload.eventType, payload);
 
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const newQuote = convertSupabaseQuoteToLocal(payload.new);
@@ -639,7 +640,7 @@ export default function App() {
                   return updated;
                 } else {
                   // Les données locales sont plus récentes, garder les données locales
-                  console.log("⚠️ Ignoré mise à jour Realtime (données locales plus récentes)");
+                  logger.log("⚠️ Ignoré mise à jour Realtime (données locales plus récentes)");
                   return prevQuotes;
                 }
               } else {
@@ -681,24 +682,24 @@ export default function App() {
       )
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Abonnement Realtime actif pour les devis');
+          logger.log('✅ Abonnement Realtime actif pour les devis');
         } else if (status === 'CHANNEL_ERROR') {
-          console.warn('⚠️ Erreur abonnement Realtime:', status, err);
+          logger.warn('⚠️ Erreur abonnement Realtime:', status, err);
           // Réessayer de s'abonner après un délai en cas d'erreur
           setTimeout(() => {
-            console.log('🔄 Tentative de reconnexion Realtime...');
+            logger.log('🔄 Tentative de reconnexion Realtime...');
             // Le channel sera recréé au prochain render si remoteEnabled change
           }, 5000);
         } else if (status === 'TIMED_OUT') {
-          console.warn('⏱️ Timeout abonnement Realtime, reconnexion...');
+          logger.warn('⏱️ Timeout abonnement Realtime, reconnexion...');
         } else if (status === 'CLOSED') {
-          console.log('🔌 Abonnement Realtime fermé');
+          logger.log('🔌 Abonnement Realtime fermé');
         }
       });
 
     // Nettoyer l'abonnement au démontage
     return () => {
-      console.log('🔌 Déconnexion de l\'abonnement Realtime pour les devis');
+      logger.log('🔌 Déconnexion de l\'abonnement Realtime pour les devis');
       supabase.removeChannel(channel);
     };
   }, [remoteEnabled]);
@@ -707,7 +708,7 @@ export default function App() {
   useEffect(() => {
     if (!supabase || !remoteEnabled) return;
 
-    console.log("🔄 Abonnement Realtime aux activités...");
+    logger.log("🔄 Abonnement Realtime aux activités...");
 
     // Fonction pour convertir une activité Supabase en format local
     const convertSupabaseActivityToLocal = (row) => {
@@ -742,7 +743,7 @@ export default function App() {
           filter: `site_key=eq.${SITE_KEY}`,
         },
         async (payload) => {
-          console.log('📨 Changement Realtime activités reçu:', payload.eventType, payload);
+          logger.log('📨 Changement Realtime activités reçu:', payload.eventType, payload);
 
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const newActivity = convertSupabaseActivityToLocal(payload.new);
@@ -796,19 +797,19 @@ export default function App() {
       )
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Abonnement Realtime actif pour les activités');
+          logger.log('✅ Abonnement Realtime actif pour les activités');
         } else if (status === 'CHANNEL_ERROR') {
-          console.warn('⚠️ Erreur abonnement Realtime activités:', status, err);
+          logger.warn('⚠️ Erreur abonnement Realtime activités:', status, err);
         } else if (status === 'TIMED_OUT') {
-          console.warn('⏱️ Timeout abonnement Realtime activités, reconnexion...');
+          logger.warn('⏱️ Timeout abonnement Realtime activités, reconnexion...');
         } else if (status === 'CLOSED') {
-          console.log('🔌 Abonnement Realtime activités fermé');
+          logger.log('🔌 Abonnement Realtime activités fermé');
         }
       });
 
     // Nettoyer l'abonnement au démontage
     return () => {
-      console.log('🔌 Déconnexion de l\'abonnement Realtime pour les activités');
+      logger.log('🔌 Déconnexion de l\'abonnement Realtime pour les activités');
       supabase.removeChannel(activitiesChannel);
     };
   }, [remoteEnabled]);
@@ -863,7 +864,7 @@ export default function App() {
           import("./pages/UsersPage"),
         ]);
       } catch (error) {
-        console.warn("Préchargement des pages échoué", error);
+        logger.warn("Préchargement des pages échoué", error);
       }
     };
 

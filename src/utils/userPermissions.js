@@ -3,6 +3,8 @@
  * Évite la duplication de code dans App.jsx
  */
 
+import { logger } from "./logger";
+
 /**
  * Configure les permissions par défaut pour un utilisateur
  * @param {Object} userData - Données utilisateur
@@ -53,7 +55,7 @@ export function loadUserFromSession() {
     const userData = JSON.parse(userStr);
     return configureUserPermissions(userData);
   } catch (e) {
-    console.error("Erreur lors de la lecture des données utilisateur:", e);
+    logger.error("Erreur lors de la lecture des données utilisateur:", e);
     return null;
   }
 }

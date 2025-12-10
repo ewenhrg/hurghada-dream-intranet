@@ -1,6 +1,7 @@
 import { NEIGHBORHOODS } from "./constants";
 import { isBuggyActivity, isMotoCrossActivity } from "./utils/activityHelpers";
 import { SPEED_BOAT_EXTRAS } from "./constants/activityExtras";
+import { logger } from "./utils/logger";
 
 // Options d'extra pour Speed Boat uniquement (gardé pour compatibilité)
 const SPEED_BOAT_EXTRAS_LOCAL = [
@@ -131,7 +132,7 @@ export async function copyToClipboard(text) {
       return true;
     }
   } catch (error) {
-    console.error("Erreur lors de la copie dans le presse-papiers:", error);
+    logger.error("Erreur lors de la copie dans le presse-papiers:", error);
     return false;
   }
 }
@@ -157,7 +158,7 @@ export function saveLS(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
     // localStorage peut échouer (mode privé, quota, etc.)
-    console.warn("saveLS: impossible d'écrire dans localStorage", error);
+    logger.warn("saveLS: impossible d'écrire dans localStorage", error);
   }
 }
 

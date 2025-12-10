@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { cleanPhoneNumber, exportTicketsToCSV, saveLS } from "../utils";
 import { PrimaryBtn, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 import { useDebounce } from "../hooks/useDebounce";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS } from "../constants";
@@ -349,14 +350,14 @@ export function TicketPage({ quotes, setQuotes, user }) {
       const { error: updateError } = await updateQuery;
       
       if (updateError) {
-        console.warn("⚠️ Erreur mise à jour Supabase:", updateError);
+        logger.warn("⚠️ Erreur mise à jour Supabase:", updateError);
         toast.error("Erreur lors de la sauvegarde en base de données.");
       } else {
-        console.log("✅ Devis mis à jour dans Supabase!");
+        logger.log("✅ Devis mis à jour dans Supabase!");
         toast.success("Modifications sauvegardées en base de données !");
       }
     } catch (error) {
-      console.error("❌ Erreur lors de la sauvegarde:", error);
+      logger.error("❌ Erreur lors de la sauvegarde:", error);
       toast.error("Erreur lors de la sauvegarde en base de données.");
     }
   };

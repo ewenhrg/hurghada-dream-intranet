@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, CATEGORIES } from "../constants";
 import { TextInput, PrimaryBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 
 // Composant Tooltip amélioré
 function Tooltip({ text, children, id, position = "top" }) {
@@ -91,13 +92,13 @@ export function RequestPage() {
           .order("name", { ascending: true });
 
         if (error) {
-          console.error("Erreur lors du chargement des activités:", error);
+          logger.error("Erreur lors du chargement des activités:", error);
           toast.error("Impossible de charger les activités.");
         } else {
           setActivities(data || []);
         }
       } catch (err) {
-        console.error("Exception lors du chargement des activités:", err);
+        logger.error("Exception lors du chargement des activités:", err);
         toast.error("Erreur lors du chargement des activités.");
       } finally {
         setLoading(false);
@@ -132,7 +133,7 @@ export function RequestPage() {
           });
         }
       } catch (err) {
-        console.error("Erreur lors de la vérification de la demande:", err);
+        logger.error("Erreur lors de la vérification de la demande:", err);
       }
     }
 
@@ -297,7 +298,7 @@ export function RequestPage() {
             .eq("id", existing.id);
           
           if (error) {
-            console.error("Erreur détaillée Supabase:", error);
+            logger.error("Erreur détaillée Supabase:", error);
             throw error;
           }
           toast.success("Votre demande a été mise à jour avec succès !");
@@ -308,7 +309,7 @@ export function RequestPage() {
             .insert(requestData);
           
           if (error) {
-            console.error("Erreur détaillée Supabase:", error);
+            logger.error("Erreur détaillée Supabase:", error);
             throw error;
           }
           toast.success("Votre demande a été envoyée avec succès !");
@@ -320,14 +321,14 @@ export function RequestPage() {
           .insert(requestData);
         
         if (error) {
-          console.error("Erreur détaillée Supabase:", error);
+          logger.error("Erreur détaillée Supabase:", error);
           throw error;
         }
         toast.success("Votre demande a été envoyée avec succès !");
         setRequestSubmitted(true);
       }
     } catch (error) {
-      console.error("Erreur lors de l'envoi de la demande:", error);
+      logger.error("Erreur lors de l'envoi de la demande:", error);
       let errorMessage = "Une erreur s'est produite lors de l'envoi de votre demande.";
       if (error?.message) {
         errorMessage = error.message;

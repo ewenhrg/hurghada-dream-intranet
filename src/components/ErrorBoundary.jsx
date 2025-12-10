@@ -1,4 +1,5 @@
 import { Component } from "react";
+import { logger } from "../utils/logger";
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -11,12 +12,12 @@ class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("Erreur capturée par ErrorBoundary:", error, errorInfo);
+    logger.error("Erreur capturée par ErrorBoundary:", error, errorInfo);
     
     // Si c'est une erreur de chargement de module, essayer de recharger la page
     if (error?.message?.includes("Failed to fetch dynamically imported module") || 
         error?.message?.includes("Expected a JavaScript-or-Wasm module script")) {
-      console.warn("Erreur de chargement de module détectée, rechargement de la page dans 2 secondes...");
+      logger.warn("Erreur de chargement de module détectée, rechargement de la page dans 2 secondes...");
       setTimeout(() => {
         window.location.reload();
       }, 2000);

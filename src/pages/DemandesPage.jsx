@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, NEIGHBORHOODS } from "../constants";
 import { TextInput, PrimaryBtn, GhostBtn, Pill } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 import { generateRequestLink, generateRequestToken } from "../utils/tokenGenerator";
 import { appCache, createCacheKey } from "../utils/cache";
 
@@ -44,12 +45,12 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
         .lt("converted_at", fiveDaysAgoISO);
 
       if (error) {
-        console.warn("Erreur lors du nettoyage des anciennes demandes:", error);
+        logger.warn("Erreur lors du nettoyage des anciennes demandes:", error);
       } else {
-        console.log("✅ Nettoyage des demandes de plus de 5 jours effectué");
+        logger.log("✅ Nettoyage des demandes de plus de 5 jours effectué");
       }
     } catch (err) {
-      console.warn("Exception lors du nettoyage des anciennes demandes:", err);
+      logger.warn("Exception lors du nettoyage des anciennes demandes:", err);
     }
   }, []);
 
@@ -80,7 +81,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
       const { data, error } = await query;
 
       if (error) {
-        console.error("Erreur lors du chargement des demandes:", error);
+        logger.error("Erreur lors du chargement des demandes:", error);
         toast.error("Impossible de charger les demandes.");
       } else {
         // Calculer la date limite (5 jours avant aujourd'hui)
@@ -114,11 +115,11 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
         if (!historyError && historyData) {
           setHistoryRequests(historyData || []);
         } else if (historyError) {
-          console.warn("Erreur lors du chargement de l'historique:", historyError);
+          logger.warn("Erreur lors du chargement de l'historique:", historyError);
         }
       }
     } catch (err) {
-      console.error("Exception lors du chargement des demandes:", err);
+      logger.error("Exception lors du chargement des demandes:", err);
       toast.error("Erreur lors du chargement des demandes.");
     } finally {
       setLoading(false);
@@ -211,7 +212,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
         .eq("site_key", SITE_KEY);
 
       if (error) {
-        console.error("Erreur lors de la suppression de la demande:", error);
+        logger.error("Erreur lors de la suppression de la demande:", error);
         toast.error("Impossible de supprimer la demande.");
       } else {
         toast.success("Demande supprimée avec succès.");
@@ -223,7 +224,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
         }
       }
     } catch (err) {
-      console.error("Exception lors de la suppression de la demande:", err);
+      logger.error("Exception lors de la suppression de la demande:", err);
       toast.error("Erreur lors de la suppression de la demande.");
     }
   };

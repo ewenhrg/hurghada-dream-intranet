@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback, Suspense, lazy, memo
 import * as XLSX from "xlsx";
 import { PrimaryBtn, GhostBtn, Section, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 import { LS_KEYS, SITE_KEY } from "../constants";
 import { loadLS, saveLS } from "../utils";
 import { extractPhoneFromName, validatePhoneNumber, extractNameFromField } from "../utils/phoneUtils";
@@ -9,6 +10,12 @@ import { convertExcelValue, findColumn } from "../utils/excelParser";
 import { generateMessage, getDefaultTemplate } from "../utils/messageGenerator";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { ExcelUploadSection } from "../components/situation/ExcelUploadSection";
+import { SituationStats } from "../components/situation/SituationStats";
+import { DetectedColumnsInfo } from "../components/situation/DetectedColumnsInfo";
+import { AutoSendingIndicator } from "../components/situation/AutoSendingIndicator";
+import { MessagePreviewSection } from "../components/situation/MessagePreviewSection";
+import { SendLogSection } from "../components/situation/SendLogSection";
 
 const MessageTemplatesModal = lazy(() => import("../components/situation/MessageTemplatesModal"));
 const HotelsModal = lazy(() => import("../components/situation/HotelsModal"));
@@ -401,10 +408,10 @@ export function SituationPage({ activities = [], user }) {
             saveLS(LS_KEYS.exteriorHotels, normalizedHotels);
           }
         } else if (error) {
-          console.warn("⚠️ Impossible de charger les paramètres Supabase:", error);
+          logger.warn("⚠️ Impossible de charger les paramètres Supabase:", error);
         }
       } catch (fetchError) {
-        console.warn("⚠️ Erreur lors du chargement des paramètres Supabase:", fetchError);
+        logger.warn("⚠️ Erreur lors du chargement des paramètres Supabase:", fetchError);
       } finally {
         if (!cancelled) {
           setSettingsLoaded(true);
@@ -443,10 +450,10 @@ export function SituationPage({ activities = [], user }) {
           );
 
         if (error) {
-          console.warn("⚠️ Impossible de sauvegarder les templates sur Supabase:", error);
+          logger.warn("⚠️ Impossible de sauvegarder les templates sur Supabase:", error);
         }
       } catch (saveError) {
-        console.warn("⚠️ Erreur lors de la sauvegarde des templates sur Supabase:", saveError);
+        logger.warn("⚠️ Erreur lors de la sauvegarde des templates sur Supabase:", saveError);
       }
     }, 400);
 
@@ -481,10 +488,10 @@ export function SituationPage({ activities = [], user }) {
           );
 
         if (error) {
-          console.warn("⚠️ Impossible de sauvegarder les hôtels sur Supabase:", error);
+          logger.warn("⚠️ Impossible de sauvegarder les hôtels sur Supabase:", error);
         }
       } catch (saveError) {
-        console.warn("⚠️ Erreur lors de la sauvegarde des hôtels sur Supabase:", saveError);
+        logger.warn("⚠️ Erreur lors de la sauvegarde des hôtels sur Supabase:", saveError);
       }
     }, 400);
 
@@ -610,7 +617,7 @@ export function SituationPage({ activities = [], user }) {
         // Lire d'abord comme tableau de tableaux pour avoir toutes les lignes avec les valeurs brutes
         const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: true });
         
-        console.log("📋 Données brutes du fichier Excel (premières 5 lignes):", rawData.slice(0, 5));
+        logger.log("📋 Données brutes du fichier Excel (premières 5 lignes):", rawData.slice(0, 5));
         
         // Chercher automatiquement la ligne qui contient les en-têtes
         // On cherche des mots-clés comme "Invoice", "Date", "Name", "Hotel", etc.
@@ -625,7 +632,7 @@ export function SituationPage({ activities = [], user }) {
           // Si on trouve au moins 3 mots-clés dans cette ligne, c'est probablement la ligne d'en-têtes
           if (matches.length >= 3) {
             headerRowIndex = i;
-            console.log(`✅ Ligne d'en-têtes trouvée à l'index ${i}:`, row);
+            logger.log(`✅ Ligne d'en-têtes trouvée à l'index ${i}:`, row);
             break;
           }
         }
@@ -640,7 +647,7 @@ export function SituationPage({ activities = [], user }) {
             return header || `Column_${idx + 1}`;
           });
           
-          console.log("📊 En-têtes détectés:", headers);
+          logger.log("📊 En-têtes détectés:", headers);
           
           if (headers.length > 0) {
             // Filtrer les colonnes à ignorer : M (index 12) et N (index 13)
@@ -728,7 +735,7 @@ export function SituationPage({ activities = [], user }) {
             });
             if (tripKey) {
               trip = row[tripKey];
-              console.log(`🔍 Trip trouvé via recherche partielle: colonne "${tripKey}" avec valeur "${trip}"`);
+              logger.log(`🔍 Trip trouvé via recherche partielle: colonne "${tripKey}" avec valeur "${trip}"`);
             }
           }
           
@@ -786,7 +793,7 @@ export function SituationPage({ activities = [], user }) {
         // Afficher le nombre de lignes vides supprimées
         const emptyRowsCount = mappedData.length - filteredData.length;
         if (emptyRowsCount > 0) {
-          console.log(`📋 ${emptyRowsCount} ligne(s) vide(s) supprimée(s) automatiquement`);
+          logger.log(`📋 ${emptyRowsCount} ligne(s) vide(s) supprimée(s) automatiquement`);
         }
 
         // Afficher un debug des colonnes trouvées
@@ -798,8 +805,8 @@ export function SituationPage({ activities = [], user }) {
             !col.startsWith("Column_") // Filtrer aussi les colonnes par défaut
           );
           setDetectedColumns(detectedColumns);
-          console.log("📊 Colonnes détectées dans le fichier Excel:", detectedColumns);
-          console.log("📋 Première ligne de données:", jsonDataNormalized[0]);
+          logger.log("📊 Colonnes détectées dans le fichier Excel:", detectedColumns);
+          logger.log("📋 Première ligne de données:", jsonDataNormalized[0]);
           
           // Debug pour Trip et time
           const firstRow = jsonDataNormalized[0];
@@ -813,22 +820,22 @@ export function SituationPage({ activities = [], user }) {
           });
           
           if (tripColumn) {
-            console.log(`✅ Colonne Trip trouvée: "${tripColumn}" avec valeur: "${firstRow[tripColumn]}"`);
+            logger.log(`✅ Colonne Trip trouvée: "${tripColumn}" avec valeur: "${firstRow[tripColumn]}"`);
           } else {
-            console.warn("⚠️ Colonne Trip non trouvée. Colonnes disponibles:", detectedColumns);
+            logger.warn("⚠️ Colonne Trip non trouvée. Colonnes disponibles:", detectedColumns);
           }
           
           if (timeColumn) {
-            console.log(`✅ Colonne time trouvée: "${timeColumn}" avec valeur: "${firstRow[timeColumn]}"`);
+            logger.log(`✅ Colonne time trouvée: "${timeColumn}" avec valeur: "${firstRow[timeColumn]}"`);
           } else {
-            console.warn("⚠️ Colonne time non trouvée. Colonnes disponibles:", detectedColumns);
+            logger.warn("⚠️ Colonne time non trouvée. Colonnes disponibles:", detectedColumns);
           }
           
           // Debug pour les valeurs Trip détectées dans les premières lignes
           if (filteredData.length > 0) {
-            console.log("📋 Exemple de valeurs Trip détectées dans les premières lignes:");
+            logger.log("📋 Exemple de valeurs Trip détectées dans les premières lignes:");
             filteredData.slice(0, 3).forEach((row, idx) => {
-              console.log(`  Ligne ${idx + 1}: trip="${row.trip}" | time="${row.time}"`);
+              logger.log(`  Ligne ${idx + 1}: trip="${row.trip}" | time="${row.time}"`);
             });
           }
           
@@ -860,9 +867,9 @@ export function SituationPage({ activities = [], user }) {
           toast.error(alertMessage, { duration: 8000 });
           
           // Afficher les détails dans la console
-          console.warn("⚠️ Numéros de téléphone invalides détectés :");
+          logger.warn("⚠️ Numéros de téléphone invalides détectés :");
           invalidPhones.forEach((data, idx) => {
-            console.warn(`${idx + 1}. ${data.name} - ${data.phone || "MANQUANT"} - Erreur: ${data.phoneError || "Numéro manquant"}`);
+            logger.warn(`${idx + 1}. ${data.name} - ${data.phone || "MANQUANT"} - Erreur: ${data.phoneError || "Numéro manquant"}`);
           });
         }
         
@@ -876,7 +883,7 @@ export function SituationPage({ activities = [], user }) {
           toast.success(message);
         }
       } catch (error) {
-        console.error("Erreur lors de la lecture du fichier Excel:", error);
+        logger.error("Erreur lors de la lecture du fichier Excel:", error);
         toast.error("Erreur lors de la lecture du fichier Excel. Vérifiez que le fichier est valide.");
       }
     };
@@ -982,7 +989,7 @@ export function SituationPage({ activities = [], user }) {
   // Fonction pour tenter d'envoyer automatiquement le message WhatsApp
   const tryAutoSendMessage = async (whatsappWindow, maxAttempts = 5) => {
     if (!whatsappWindow || whatsappWindow.closed) {
-      console.warn("⚠️ Fenêtre WhatsApp fermée, impossible d'automatiser l'envoi");
+      logger.warn("⚠️ Fenêtre WhatsApp fermée, impossible d'automatiser l'envoi");
       return false;
     }
 
@@ -991,7 +998,7 @@ export function SituationPage({ activities = [], user }) {
       try {
         // Attendre que WhatsApp soit complètement chargé (délai croissant)
         const waitTime = attempt === 1 ? 2000 : attempt === 2 ? 3000 : 4000;
-        console.log(`🔄 Tentative ${attempt}/${maxAttempts} d'envoi automatique (attente ${waitTime}ms)...`);
+        logger.log(`🔄 Tentative ${attempt}/${maxAttempts} d'envoi automatique (attente ${waitTime}ms)...`);
         await new Promise((resolve) => setTimeout(resolve, waitTime));
 
         // Essayer d'accéder au document de la fenêtre WhatsApp
@@ -1015,7 +1022,7 @@ export function SituationPage({ activities = [], user }) {
             const elements = whatsappWindow.document.querySelectorAll(selector);
             if (elements.length > 0) {
               sendButton = elements[elements.length - 1]; // Prendre le dernier (le plus récent)
-              console.log(`✅ Bouton d'envoi trouvé avec le sélecteur: ${selector}`);
+              logger.log(`✅ Bouton d'envoi trouvé avec le sélecteur: ${selector}`);
               break;
             }
           } catch (e) {
@@ -1035,7 +1042,7 @@ export function SituationPage({ activities = [], user }) {
             const elements = whatsappWindow.document.querySelectorAll(selector);
             if (elements.length > 0) {
               textBox = elements[elements.length - 1];
-              console.log(`✅ Zone de texte trouvée avec le sélecteur: ${selector}`);
+              logger.log(`✅ Zone de texte trouvée avec le sélecteur: ${selector}`);
               break;
             }
           } catch (e) {
@@ -1045,16 +1052,16 @@ export function SituationPage({ activities = [], user }) {
 
         // Méthode 3: Essayer de cliquer sur le bouton d'envoi
         if (sendButton) {
-          console.log("🤖 Tentative d'envoi automatique via clic sur le bouton...");
+          logger.log("🤖 Tentative d'envoi automatique via clic sur le bouton...");
           sendButton.click();
           await new Promise((resolve) => setTimeout(resolve, 500));
-          console.log("✅ Clic sur le bouton d'envoi effectué");
+          logger.log("✅ Clic sur le bouton d'envoi effectué");
           return true;
         }
 
         // Méthode 4: Simuler la touche Entrée dans la zone de texte
         if (textBox) {
-          console.log("🤖 Tentative d'envoi automatique via touche Entrée...");
+          logger.log("🤖 Tentative d'envoi automatique via touche Entrée...");
           textBox.focus();
           
           // Créer et dispatcher un événement Entrée
@@ -1081,38 +1088,38 @@ export function SituationPage({ activities = [], user }) {
           
           textBox.dispatchEvent(enterEventUp);
           await new Promise((resolve) => setTimeout(resolve, 500));
-          console.log("✅ Touche Entrée simulée");
+          logger.log("✅ Touche Entrée simulée");
           return true;
         }
 
           // Si aucune méthode n'a fonctionné, continuer à la prochaine tentative
           if (attempt < maxAttempts) {
-            console.log(`⚠️ Tentative ${attempt} échouée, nouvelle tentative dans 1 seconde...`);
+            logger.log(`⚠️ Tentative ${attempt} échouée, nouvelle tentative dans 1 seconde...`);
             await new Promise((resolve) => setTimeout(resolve, 1000));
             continue;
           } else {
-            console.warn("⚠️ Impossible de trouver le bouton d'envoi ou la zone de texte après toutes les tentatives");
+            logger.warn("⚠️ Impossible de trouver le bouton d'envoi ou la zone de texte après toutes les tentatives");
             return false;
           }
         } catch (innerError) {
           // Erreur CORS ou autre dans le try interne - continuer à la prochaine tentative
           if (attempt < maxAttempts) {
-            console.warn(`⚠️ Tentative ${attempt} échouée (CORS ou protection WhatsApp), nouvelle tentative...`);
+            logger.warn(`⚠️ Tentative ${attempt} échouée (CORS ou protection WhatsApp), nouvelle tentative...`);
             await new Promise((resolve) => setTimeout(resolve, 1000));
             continue;
           } else {
-            console.warn("⚠️ Automatisation impossible après toutes les tentatives (CORS ou protection WhatsApp):", innerError.message);
+            logger.warn("⚠️ Automatisation impossible après toutes les tentatives (CORS ou protection WhatsApp):", innerError.message);
             return false;
           }
         }
       } catch (error) {
         // Erreur dans le try externe - essayer encore si ce n'est pas la dernière tentative
         if (attempt < maxAttempts) {
-          console.warn(`⚠️ Tentative ${attempt} échouée (erreur générale), nouvelle tentative...`);
+          logger.warn(`⚠️ Tentative ${attempt} échouée (erreur générale), nouvelle tentative...`);
           await new Promise((resolve) => setTimeout(resolve, 1000));
           continue;
         } else {
-          console.warn("⚠️ Automatisation impossible après toutes les tentatives:", error.message);
+          logger.warn("⚠️ Automatisation impossible après toutes les tentatives:", error.message);
           return false;
         }
       }
@@ -1131,7 +1138,7 @@ export function SituationPage({ activities = [], user }) {
     // Créer l'URL WhatsApp
     const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
     
-    console.log(`📱 Changement de l'URL WhatsApp pour ${phone}...`);
+    logger.log(`📱 Changement de l'URL WhatsApp pour ${phone}...`);
     
     // Nom de fenêtre fixe pour FORCER la réutilisation de la même fenêtre
     const windowName = "whatsapp_auto_send";
@@ -1140,26 +1147,26 @@ export function SituationPage({ activities = [], user }) {
     if (whatsappWindowRef.current) {
       try {
         if (!whatsappWindowRef.current.closed) {
-          console.log("🔄 Fenêtre WhatsApp existante détectée, changement d'URL...");
+          logger.log("🔄 Fenêtre WhatsApp existante détectée, changement d'URL...");
           // Changer l'URL directement dans la fenêtre existante (plus rapide, pas de rechargement complet)
           try {
             whatsappWindowRef.current.location.href = whatsappUrl;
             whatsappWindowRef.current.focus();
-            console.log("✅ URL WhatsApp mise à jour dans la fenêtre existante");
+            logger.log("✅ URL WhatsApp mise à jour dans la fenêtre existante");
             // Délai réduit à 3 secondes car on change juste l'URL (pas de rechargement complet)
-            console.log("⏳ Attente de 3 secondes pour laisser WhatsApp charger la nouvelle conversation...");
+            logger.log("⏳ Attente de 3 secondes pour laisser WhatsApp charger la nouvelle conversation...");
             toast.info("⏳ Chargement de la conversation WhatsApp... (3 secondes)", { duration: 3000 });
             await new Promise((resolve) => setTimeout(resolve, 3000));
             return whatsappWindowRef.current;
           } catch (error) {
             // Si on ne peut pas changer l'URL directement (CORS), utiliser window.open
-            console.warn("⚠️ Impossible de changer l'URL directement, utilisation de window.open...");
+            logger.warn("⚠️ Impossible de changer l'URL directement, utilisation de window.open...");
             const reusedWindow = window.open(whatsappUrl, windowName);
             if (reusedWindow) {
               whatsappWindowRef.current = reusedWindow;
               reusedWindow.focus();
-              console.log("✅ Fenêtre WhatsApp réutilisée via window.open");
-              console.log("⏳ Attente de 5 secondes pour laisser WhatsApp charger...");
+              logger.log("✅ Fenêtre WhatsApp réutilisée via window.open");
+              logger.log("⏳ Attente de 5 secondes pour laisser WhatsApp charger...");
               toast.info("⏳ Chargement de la conversation WhatsApp... (5 secondes)", { duration: 5000 });
               await new Promise((resolve) => setTimeout(resolve, 5000));
               return reusedWindow;
@@ -1167,27 +1174,27 @@ export function SituationPage({ activities = [], user }) {
           }
         } else {
           // La fenêtre a été fermée, réinitialiser la référence
-          console.log("🔄 La fenêtre WhatsApp précédente a été fermée");
+          logger.log("🔄 La fenêtre WhatsApp précédente a été fermée");
           whatsappWindowRef.current = null;
         }
       } catch (error) {
         // Erreur lors de la vérification, réinitialiser et ouvrir une nouvelle fenêtre
-        console.warn("⚠️ Erreur lors de la vérification de la fenêtre existante:", error);
+        logger.warn("⚠️ Erreur lors de la vérification de la fenêtre existante:", error);
         whatsappWindowRef.current = null;
       }
     }
     
     // Ouvrir une nouvelle fenêtre WhatsApp
-    console.log("🔄 Ouverture d'une nouvelle fenêtre WhatsApp...");
+    logger.log("🔄 Ouverture d'une nouvelle fenêtre WhatsApp...");
     const whatsappWindow = window.open(whatsappUrl, windowName);
     
     if (whatsappWindow) {
       // Mettre à jour la référence
       whatsappWindowRef.current = whatsappWindow;
-      console.log("✅ Fenêtre WhatsApp ouverte avec succès");
+      logger.log("✅ Fenêtre WhatsApp ouverte avec succès");
       
       // Attente réduite à 5 secondes pour le chargement initial (optimisé)
-      console.log("⏳ Attente de 5 secondes pour laisser WhatsApp charger...");
+      logger.log("⏳ Attente de 5 secondes pour laisser WhatsApp charger...");
       toast.info("⏳ Chargement initial de WhatsApp Web... (5 secondes)", { duration: 5000 });
       await new Promise((resolve) => setTimeout(resolve, 5000));
       
@@ -1195,14 +1202,14 @@ export function SituationPage({ activities = [], user }) {
       try {
         whatsappWindow.focus();
       } catch (error) {
-        console.debug("Focus WhatsApp impossible:", error);
+        logger.debug("Focus WhatsApp impossible:", error);
       }
       
       return whatsappWindow;
     } else {
-      console.error("❌ window.open() a retourné null - Impossible d'ouvrir la fenêtre WhatsApp");
-      console.error("❌ Le navigateur bloque probablement les popups automatiques");
-      console.error("❌ IMPORTANT: Vous devez autoriser les popups pour ce site");
+      logger.error("❌ window.open() a retourné null - Impossible d'ouvrir la fenêtre WhatsApp");
+      logger.error("❌ Le navigateur bloque probablement les popups automatiques");
+      logger.error("❌ IMPORTANT: Vous devez autoriser les popups pour ce site");
       whatsappWindowRef.current = null;
       return null;
     }
@@ -1210,7 +1217,7 @@ export function SituationPage({ activities = [], user }) {
 
   // Envoyer un message via WhatsApp Web automatiquement
   const sendWhatsAppMessage = async (data, index, total) => {
-    console.log(`📨 Envoi du message ${index + 1}/${total} pour ${data.name} (${data.phone})`);
+    logger.log(`📨 Envoi du message ${index + 1}/${total} pour ${data.name} (${data.phone})`);
     
     // Utiliser le message modifié depuis previewMessages s'il existe, sinon générer le message
     const previewMessage = previewMessages.find((msg) => msg.id === data.id);
@@ -1221,11 +1228,11 @@ export function SituationPage({ activities = [], user }) {
     const MIN_DELAY_BETWEEN_MESSAGES = 10000; // 10 secondes entre chaque changement de conversation
     
     // Ouvrir WhatsApp Web (réutilise la même fenêtre en changeant l'URL)
-    console.log(`⏳ Ouverture de WhatsApp Web...`);
+    logger.log(`⏳ Ouverture de WhatsApp Web...`);
     const whatsappWindow = await openWhatsApp(data.phone, message);
     
     if (!whatsappWindow) {
-      console.error(`❌ Impossible d'ouvrir WhatsApp Web pour ${data.phone}`);
+      logger.error(`❌ Impossible d'ouvrir WhatsApp Web pour ${data.phone}`);
       toast.error("Impossible d'ouvrir WhatsApp Web. Vérifiez que les popups ne sont pas bloquées.");
       return false;
     }
@@ -1235,7 +1242,7 @@ export function SituationPage({ activities = [], user }) {
       isFirstMessageRef.current = false;
     }
 
-    console.log(`✅ WhatsApp Web ouvert avec succès. Le message est prêt à être envoyé.`);
+    logger.log(`✅ WhatsApp Web ouvert avec succès. Le message est prêt à être envoyé.`);
     toast.info(
       `📱 WhatsApp Web ouvert pour ${data.name} (${data.phone}). ` +
       `Cliquez sur "Envoyer" (ou appuyez sur Entrée) dans la fenêtre WhatsApp pour envoyer le message.`,
@@ -1245,11 +1252,11 @@ export function SituationPage({ activities = [], user }) {
     // Attendre 10 secondes minimum avant de passer au suivant
     // Ce délai est CRITIQUE pour éviter le bannissement WhatsApp
     // L'utilisateur a ce temps pour cliquer sur Envoyer
-    console.log(`⏱️ Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes avant le prochain message (pour éviter le bannissement)...`);
+    logger.log(`⏱️ Attente de ${MIN_DELAY_BETWEEN_MESSAGES / 1000} secondes avant le prochain message (pour éviter le bannissement)...`);
     const startTime = Date.now();
     await new Promise((resolve) => setTimeout(resolve, MIN_DELAY_BETWEEN_MESSAGES));
     const elapsedTime = Date.now() - startTime;
-    console.log(`✅ Attente terminée (${elapsedTime}ms écoulés). Passage au suivant...`);
+    logger.log(`✅ Attente terminée (${elapsedTime}ms écoulés). Passage au suivant...`);
 
     // Marquer comme envoyé
     const logEntry = {
@@ -1276,7 +1283,7 @@ export function SituationPage({ activities = [], user }) {
 
     // Ne pas fermer la fenêtre ici - elle sera fermée avant l'ouverture de la suivante
     // Cela évite les problèmes de timing et permet à l'utilisateur de voir le message envoyé
-    console.log("✅ Message traité, la fenêtre sera fermée avant l'ouverture du suivant");
+    logger.log("✅ Message traité, la fenêtre sera fermée avant l'ouverture du suivant");
 
     return true;
   };
@@ -1354,9 +1361,9 @@ export function SituationPage({ activities = [], user }) {
     
     if (invalidQueue.length > 0) {
       toast.warning(`⚠️ ${invalidQueue.length} ligne(s) avec numéro invalide seront ignorées.`, { duration: 5000 });
-      console.warn(`⚠️ ${invalidQueue.length} ligne(s) avec numéro invalide ignorées :`);
+      logger.warn(`⚠️ ${invalidQueue.length} ligne(s) avec numéro invalide ignorées :`);
       invalidQueue.forEach((data) => {
-        console.warn(`  - ${data.name}: ${data.phone || "MANQUANT"} - ${data.phoneError || "Numéro manquant"}`);
+        logger.warn(`  - ${data.name}: ${data.phone || "MANQUANT"} - ${data.phoneError || "Numéro manquant"}`);
       });
     }
     
@@ -1368,36 +1375,36 @@ export function SituationPage({ activities = [], user }) {
       return;
     }
     
-    console.log(`🚀 Démarrage de l'envoi automatique de ${validQueue.length} messages (${invalidQueue.length} ignorés)`);
+    logger.log(`🚀 Démarrage de l'envoi automatique de ${validQueue.length} messages (${invalidQueue.length} ignorés)`);
     
     for (let i = 0; i < validQueue.length; i++) {
       if (!isAutoSendingRef.current) {
         // Si l'utilisateur a arrêté l'envoi
-        console.log(`⏹️ Envoi arrêté par l'utilisateur à l'index ${i}`);
+        logger.log(`⏹️ Envoi arrêté par l'utilisateur à l'index ${i}`);
         break;
       }
 
-      console.log(`\n🔄 ========== DÉBUT DU MESSAGE ${i + 1}/${validQueue.length} ==========`);
+      logger.log(`\n🔄 ========== DÉBUT DU MESSAGE ${i + 1}/${validQueue.length} ==========`);
       
       setCurrentIndex(i + 1);
       setRemainingCount(validQueue.length - i - 1);
 
       const data = validQueue[i];
 
-      console.log(`📤 Envoi ${i + 1}/${validQueue.length} : ${data.name} (${data.phone})`);
+      logger.log(`📤 Envoi ${i + 1}/${validQueue.length} : ${data.name} (${data.phone})`);
       toast.info(`Envoi ${i + 1}/${validQueue.length} : ${data.name} (${data.phone})`);
 
       try {
-        console.log(`⏳ Appel de sendWhatsAppMessage pour le message ${i + 1}...`);
+        logger.log(`⏳ Appel de sendWhatsAppMessage pour le message ${i + 1}...`);
         const result = await sendWhatsAppMessage(data, i, validQueue.length);
-        console.log(`✅ Message ${i + 1} traité avec résultat:`, result);
+        logger.log(`✅ Message ${i + 1} traité avec résultat:`, result);
         
         if (!result) {
-          console.warn(`⚠️ sendWhatsAppMessage a retourné false pour le message ${i + 1}, mais on continue...`);
+          logger.warn(`⚠️ sendWhatsAppMessage a retourné false pour le message ${i + 1}, mais on continue...`);
         }
       } catch (error) {
-        console.error(`❌ ERREUR lors de l'envoi du message ${i + 1}:`, error);
-        console.error(`Stack trace:`, error.stack);
+        logger.error(`❌ ERREUR lors de l'envoi du message ${i + 1}:`, error);
+        logger.error(`Stack trace:`, error.stack);
         const logEntry = {
           id: data.id,
           name: data.name,
@@ -1411,7 +1418,7 @@ export function SituationPage({ activities = [], user }) {
         setSendLog((prev) => [...prev, logEntry]);
       }
 
-      console.log(`✅ ========== FIN DU MESSAGE ${i + 1}/${validQueue.length} ==========\n`);
+      logger.log(`✅ ========== FIN DU MESSAGE ${i + 1}/${validQueue.length} ==========\n`);
       
       // NOTE: Le délai de 10 secondes est déjà inclus dans sendWhatsAppMessage
       // Pas besoin de pause supplémentaire pour éviter le bannissement
@@ -1419,7 +1426,7 @@ export function SituationPage({ activities = [], user }) {
     }
 
     // Terminer l'envoi automatique
-    console.log(`🏁 Fin de l'envoi automatique`);
+    logger.log(`🏁 Fin de l'envoi automatique`);
     isAutoSendingRef.current = false;
     setAutoSending(false);
     setSending(false);
@@ -1444,7 +1451,7 @@ export function SituationPage({ activities = [], user }) {
       try {
         whatsappWindowRef.current.close();
       } catch (error) {
-        console.debug("Impossible de fermer la fenêtre WhatsApp:", error);
+        logger.debug("Impossible de fermer la fenêtre WhatsApp:", error);
       }
     }
 
@@ -1467,7 +1474,7 @@ export function SituationPage({ activities = [], user }) {
         try {
           whatsappWindowRef.current.close();
         } catch (error) {
-          console.debug("Impossible de fermer la fenêtre WhatsApp au démontage:", error);
+          logger.debug("Impossible de fermer la fenêtre WhatsApp au démontage:", error);
         }
       }
     };
@@ -1586,90 +1593,13 @@ export function SituationPage({ activities = [], user }) {
     >
       <div className="space-y-6">
         {/* Upload */}
-        <div 
-          className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50/50"
-          onDrop={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-              const file = files[0];
-              if (file.name.match(/\.(xlsx|xls)$/i)) {
-                const fakeEvent = { target: { files: [file] } };
-                handleFileUpload(fakeEvent);
-              } else {
-                toast.error("Veuillez glisser un fichier Excel (.xlsx ou .xls)");
-              }
-            }
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-        >
-          <input
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleFileUpload}
-            className="hidden"
-            id="excel-upload"
-          />
-          <label
-            htmlFor="excel-upload"
-            className="cursor-pointer inline-flex flex-col items-center gap-3"
-          >
-            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-2xl shadow-lg">
-              📤
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Cliquez ou glissez un fichier Excel ici</p>
-              <p className="text-xs text-slate-500 mt-1">Formats acceptés: .xlsx, .xls</p>
-            </div>
-          </label>
-        </div>
+        <ExcelUploadSection onFileUpload={handleFileUpload} />
 
         {/* Colonnes détectées */}
-        {detectedColumns.length > 0 && (
-          <div className="bg-blue-50/50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm font-semibold text-blue-900 mb-2">📊 Colonnes détectées dans le fichier Excel:</p>
-            <div className="flex flex-wrap gap-2">
-              {detectedColumns.map((col, idx) => (
-                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                  {col}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        <DetectedColumnsInfo detectedColumns={detectedColumns} />
 
         {/* Statistiques */}
-        {stats.total > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/90 border border-slate-200 rounded-lg p-4">
-              <p className="text-xs text-slate-600 mb-1">Total lignes</p>
-              <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
-            </div>
-            <div className="bg-blue-50/50 border border-blue-200 rounded-lg p-4">
-              <p className="text-xs text-slate-600 mb-1">Avec téléphone</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.withPhone}</p>
-            </div>
-            <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-4">
-              <p className="text-xs text-slate-600 mb-1">Sans téléphone</p>
-              <p className="text-2xl font-bold text-amber-600">{stats.withoutPhone}</p>
-              {stats.invalidPhones > 0 && (
-                <p className="text-[11px] text-[#dc2626] mt-1 font-semibold">⚠️ {stats.invalidPhones} invalide(s)</p>
-              )}
-            </div>
-            <div className="bg-emerald-50/50 border border-emerald-200 rounded-lg p-4">
-              <p className="text-xs text-slate-600 mb-1">Messages envoyés</p>
-              <p className="text-2xl font-bold text-emerald-600">{stats.sent}</p>
-            </div>
-          </div>
-        )}
+        <SituationStats stats={stats} />
 
         {/* Tableau des données */}
         {excelData.length > 0 && (
@@ -1719,22 +1649,11 @@ export function SituationPage({ activities = [], user }) {
 
         {/* Indicateur d'envoi automatique */}
         {autoSending && (
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-4 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-lg mb-1">🔄 Envoi automatique en cours...</p>
-                <p className="text-sm opacity-90">
-                  Message {currentIndex} sur {currentIndex + remainingCount} • {remainingCount} restant(s)
-                </p>
-              </div>
-              <GhostBtn 
-                onClick={handleStopAutoSending}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-              >
-                ⏹️ Arrêter
-              </GhostBtn>
-            </div>
-          </div>
+          <AutoSendingIndicator
+            currentIndex={currentIndex}
+            remainingCount={remainingCount}
+            onStop={handleStopAutoSending}
+          />
         )}
 
         {/* Actions */}
@@ -1761,82 +1680,20 @@ export function SituationPage({ activities = [], user }) {
         )}
 
         {/* Prévisualisation des messages */}
-        {showPreview && previewMessages.length > 0 && (
-          <div className="border border-blue-200 rounded-xl p-6 bg-blue-50/30">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Prévisualisation des messages</h3>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {previewMessages.map((msg, index) => (
-                <div
-                  key={msg.id}
-                  className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <p className="font-medium text-sm text-slate-900">{msg.name}</p>
-                      <p className="text-xs text-slate-500">
-                        {msg.trip} • {msg.date} à {msg.time}
-                      </p>
-                    </div>
-                    {msg.phone ? (
-                      <span className="text-xs text-blue-600 font-medium">{msg.phone}</span>
-                    ) : (
-                      <span className="text-xs text-amber-600">⚠️ Pas de téléphone</span>
-                    )}
-                  </div>
-                  <textarea
-                    value={msg.message}
-                    onChange={(e) => {
-                      const updatedMessages = [...previewMessages];
-                      updatedMessages[index] = { ...updatedMessages[index], message: e.target.value };
-                      setPreviewMessages(updatedMessages);
-                    }}
-                    className="w-full text-xs text-slate-700 bg-slate-50 p-3 rounded border border-slate-200 whitespace-pre-wrap font-sans resize-y min-h-[100px]"
-                    rows={6}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex justify-end">
-              <GhostBtn onClick={() => setShowPreview(false)}>Fermer</GhostBtn>
-            </div>
-          </div>
+        {showPreview && (
+          <MessagePreviewSection
+            previewMessages={previewMessages}
+            onMessageChange={(index, value) => {
+              const updatedMessages = [...previewMessages];
+              updatedMessages[index] = { ...updatedMessages[index], message: value };
+              setPreviewMessages(updatedMessages);
+            }}
+            onClose={() => setShowPreview(false)}
+          />
         )}
 
         {/* Log d'envoi */}
-        {sendLog.length > 0 && (
-          <div className="border border-slate-200 rounded-xl p-6 bg-slate-50/50">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">📊 Log d'envoi</h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {sendLog.map((log, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    log.status === "success"
-                      ? "bg-emerald-50 border border-emerald-200"
-                      : "bg-red-50 border border-red-200"
-                  }`}
-                >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-900">{log.name}</p>
-                    <p className="text-xs text-slate-600">
-                      {log.phone} • {log.trip} • {log.time}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    {log.status === "success" ? (
-                      <span className="text-emerald-700 text-xs font-medium">✓ Succès</span>
-                    ) : (
-                      <span className="text-red-700 text-xs font-medium">✗ Erreur</span>
-                    )}
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      {new Date(log.sentAt).toLocaleTimeString("fr-FR")}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <SendLogSection sendLog={sendLog} />
 
         {/* Modal de configuration des messages */}
         {showConfigModal && (

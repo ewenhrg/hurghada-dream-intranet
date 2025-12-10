@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 
 export function StopSalePage({ activities, user }) {
   const [stopSales, setStopSales] = useState([]);
@@ -46,7 +47,7 @@ export function StopSalePage({ activities, user }) {
         .order("date", { ascending: false });
 
       if (error) {
-        console.error("Erreur lors du chargement des stop sales:", error);
+        logger.error("Erreur lors du chargement des stop sales:", error);
       } else {
         // Filtrer et supprimer les stop sales dont la date est passée
         const validStopSales = [];
@@ -71,7 +72,7 @@ export function StopSalePage({ activities, user }) {
         setStopSales(validStopSales);
       }
     } catch (err) {
-      console.error("Exception lors du chargement des stop sales:", err);
+      logger.error("Exception lors du chargement des stop sales:", err);
     }
   }
 
@@ -87,7 +88,7 @@ export function StopSalePage({ activities, user }) {
         .order("date", { ascending: false });
 
       if (error) {
-        console.error("Erreur lors du chargement des push sales:", error);
+        logger.error("Erreur lors du chargement des push sales:", error);
       } else {
         // Filtrer et supprimer les push sales dont la date est passée
         const validPushSales = [];
@@ -112,7 +113,7 @@ export function StopSalePage({ activities, user }) {
         setPushSales(validPushSales);
       }
     } catch (err) {
-      console.error("Exception lors du chargement des push sales:", err);
+      logger.error("Exception lors du chargement des push sales:", err);
     }
   }
 
@@ -183,7 +184,7 @@ export function StopSalePage({ activities, user }) {
           .single();
 
         if (error) {
-          console.error("Erreur lors de l'ajout du stop sale:", error);
+          logger.error("Erreur lors de l'ajout du stop sale:", error);
           toast.error("Erreur lors de l'ajout du stop sale.");
         } else {
           toast.success("Stop sale ajouté avec succès !");
@@ -233,7 +234,7 @@ export function StopSalePage({ activities, user }) {
           .single();
 
         if (error) {
-          console.error("Erreur lors de l'ajout du push sale:", error);
+          logger.error("Erreur lors de l'ajout du push sale:", error);
           toast.error("Erreur lors de l'ajout du push sale.");
         } else {
           toast.success("Push sale ajouté avec succès !");
@@ -243,7 +244,7 @@ export function StopSalePage({ activities, user }) {
         }
       }
     } catch (err) {
-      console.error("Exception lors de l'ajout:", err);
+      logger.error("Exception lors de l'ajout:", err);
       toast.error("Erreur lors de l'ajout.");
     } finally {
       setLoading(false);
@@ -271,7 +272,7 @@ export function StopSalePage({ activities, user }) {
         .eq("id", id);
 
       if (error) {
-        console.error("Erreur lors de la suppression:", error);
+        logger.error("Erreur lors de la suppression:", error);
         toast.error("Erreur lors de la suppression.");
       } else {
         toast.success("Élément supprimé avec succès !");
@@ -282,7 +283,7 @@ export function StopSalePage({ activities, user }) {
         }
       }
     } catch (err) {
-      console.error("Exception lors de la suppression:", err);
+      logger.error("Exception lors de la suppression:", err);
       toast.error("Erreur lors de la suppression.");
     } finally {
       setLoading(false);

@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, NEIGHBORHOODS } from "../constants";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 
 export function HotelsPage({ user }) {
   const [hotels, setHotels] = useState([]);
@@ -29,13 +30,13 @@ export function HotelsPage({ user }) {
         .order("name", { ascending: true });
       
       if (error) {
-        console.error("Erreur lors du chargement des hôtels:", error);
+        logger.error("Erreur lors du chargement des hôtels:", error);
         toast.error("Erreur lors du chargement des hôtels: " + (error.message || "Erreur inconnue"));
       } else {
         setHotels(data || []);
       }
     } catch (err) {
-      console.error("Exception lors du chargement des hôtels:", err);
+      logger.error("Exception lors du chargement des hôtels:", err);
       toast.error("Exception lors du chargement des hôtels: " + err.message);
     } finally {
       setLoading(false);
@@ -115,10 +116,10 @@ export function HotelsPage({ user }) {
           .single();
 
         if (error) {
-          console.error("Erreur lors de la modification de l'hôtel:", error);
+          logger.error("Erreur lors de la modification de l'hôtel:", error);
           toast.error("Erreur lors de la modification de l'hôtel: " + (error.message || "Erreur inconnue"));
         } else {
-          console.log("✅ Hôtel modifié avec succès!");
+          logger.log("✅ Hôtel modifié avec succès!");
           await loadHotels();
           resetForm();
           toast.success("Hôtel modifié avec succès !");
@@ -132,21 +133,21 @@ export function HotelsPage({ user }) {
           .single();
 
         if (error) {
-          console.error("Erreur lors de la création de l'hôtel:", error);
+          logger.error("Erreur lors de la création de l'hôtel:", error);
           if (error.code === "23505") {
             toast.error("Cet hôtel existe déjà dans la base de données.");
           } else {
             toast.error("Erreur lors de la création de l'hôtel: " + (error.message || "Erreur inconnue"));
           }
         } else {
-          console.log("✅ Hôtel créé avec succès!");
+          logger.log("✅ Hôtel créé avec succès!");
           await loadHotels();
           resetForm();
           toast.success("Hôtel créé avec succès !");
         }
       }
     } catch (err) {
-      console.error("Exception lors de la sauvegarde de l'hôtel:", err);
+      logger.error("Exception lors de la sauvegarde de l'hôtel:", err);
       toast.error("Exception lors de la sauvegarde: " + err.message);
     } finally {
       setLoading(false);
@@ -169,15 +170,15 @@ export function HotelsPage({ user }) {
       const { error } = await supabase.from("hotels").delete().eq("id", hotelId);
 
       if (error) {
-        console.error("Erreur lors de la suppression de l'hôtel:", error);
+        logger.error("Erreur lors de la suppression de l'hôtel:", error);
         toast.error("Erreur lors de la suppression: " + (error.message || "Erreur inconnue"));
       } else {
-        console.log("✅ Hôtel supprimé avec succès!");
+        logger.log("✅ Hôtel supprimé avec succès!");
         await loadHotels();
         toast.success("Hôtel supprimé avec succès !");
       }
     } catch (err) {
-      console.error("Exception lors de la suppression:", err);
+      logger.error("Exception lors de la suppression:", err);
       toast.error("Exception lors de la suppression: " + err.message);
     } finally {
       setLoading(false);

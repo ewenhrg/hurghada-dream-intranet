@@ -1,5 +1,6 @@
 // src/lib/supabase.js
 import { createClient } from "@supabase/supabase-js";
+import { logger } from "../utils/logger";
 
 // lire les variables env (vite ou CRA)
 function getEnv(key) {
@@ -105,7 +106,7 @@ function initializeSupabase() {
   try {
     // S'assurer que les variables sont bien définies avant de créer le client
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      console.warn("Variables Supabase manquantes, utilisation du stub");
+      logger.warn("Variables Supabase manquantes, utilisation du stub");
       supabaseInstance = makeStubClient();
       return supabaseInstance;
     }
@@ -115,7 +116,7 @@ function initializeSupabase() {
     });
     return supabaseInstance;
   } catch (e) {
-    console.warn("Erreur createClient → stub", e);
+    logger.warn("Erreur createClient → stub", e);
     supabaseInstance = makeStubClient();
     return supabaseInstance;
   }

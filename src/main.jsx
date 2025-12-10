@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import { initToast } from "./utils/toast.js";
+import { logger } from "./utils/logger";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import "./index.css"; // 👈 c'est ici qu'on charge le CSS (où il y aura @tailwind)
 
@@ -14,7 +15,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
-        console.log('Service Worker enregistré avec succès:', registration.scope);
+        logger.log('Service Worker enregistré avec succès:', registration.scope);
         
         // Vérifier les mises à jour périodiquement
         setInterval(() => {
@@ -22,7 +23,7 @@ if ('serviceWorker' in navigator) {
         }, 60000); // Vérifier toutes les minutes
       })
       .catch((error) => {
-        console.log('Échec de l\'enregistrement du Service Worker:', error);
+        logger.log('Échec de l\'enregistrement du Service Worker:', error);
       });
   });
 }

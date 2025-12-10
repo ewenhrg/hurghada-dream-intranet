@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 
 export function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -31,13 +32,13 @@ export function UsersPage() {
     try {
       const { data, error } = await supabase.from("users").select("*").order("created_at", { ascending: false });
       if (error) {
-        console.error("Erreur lors du chargement des utilisateurs:", error);
+        logger.error("Erreur lors du chargement des utilisateurs:", error);
         toast.error("Erreur lors du chargement des utilisateurs: " + (error.message || "Erreur inconnue"));
       } else {
         setUsers(data || []);
       }
     } catch (err) {
-      console.error("Exception lors du chargement des utilisateurs:", err);
+      logger.error("Exception lors du chargement des utilisateurs:", err);
       toast.error("Exception lors du chargement des utilisateurs: " + err.message);
     } finally {
       setLoading(false);
@@ -131,10 +132,10 @@ export function UsersPage() {
         const { error } = await supabase.from("users").update(userData).eq("id", editingUser.id).select().single();
 
         if (error) {
-          console.error("Erreur lors de la modification de l'utilisateur:", error);
+          logger.error("Erreur lors de la modification de l'utilisateur:", error);
           toast.error("Erreur lors de la modification de l'utilisateur: " + (error.message || "Erreur inconnue"));
         } else {
-          console.log("✅ Utilisateur modifié avec succès!");
+          logger.log("✅ Utilisateur modifié avec succès!");
           await loadUsers();
           resetForm();
           toast.success("Utilisateur modifié avec succès !");
@@ -144,21 +145,21 @@ export function UsersPage() {
         const { error } = await supabase.from("users").insert(userData).select().single();
 
         if (error) {
-          console.error("Erreur lors de la création de l'utilisateur:", error);
+          logger.error("Erreur lors de la création de l'utilisateur:", error);
           if (error.code === "23505") {
             toast.error("Ce code est déjà utilisé par un autre utilisateur.");
           } else {
             toast.error("Erreur lors de la création de l'utilisateur: " + (error.message || "Erreur inconnue"));
           }
         } else {
-          console.log("✅ Utilisateur créé avec succès!");
+          logger.log("✅ Utilisateur créé avec succès!");
           await loadUsers();
           resetForm();
           toast.success("Utilisateur créé avec succès !");
         }
       }
     } catch (err) {
-      console.error("Exception lors de la sauvegarde de l'utilisateur:", err);
+      logger.error("Exception lors de la sauvegarde de l'utilisateur:", err);
       toast.error("Exception lors de la sauvegarde: " + err.message);
     } finally {
       setLoading(false);
@@ -176,15 +177,15 @@ export function UsersPage() {
       const { error } = await supabase.from("users").delete().eq("id", userId);
 
       if (error) {
-        console.error("Erreur lors de la suppression de l'utilisateur:", error);
+        logger.error("Erreur lors de la suppression de l'utilisateur:", error);
         toast.error("Erreur lors de la suppression: " + (error.message || "Erreur inconnue"));
       } else {
-        console.log("✅ Utilisateur supprimé avec succès!");
+        logger.log("✅ Utilisateur supprimé avec succès!");
         await loadUsers();
         toast.success("Utilisateur supprimé avec succès !");
       }
     } catch (err) {
-      console.error("Exception lors de la suppression:", err);
+      logger.error("Exception lors de la suppression:", err);
       toast.error("Exception lors de la suppression: " + err.message);
     } finally {
       setLoading(false);

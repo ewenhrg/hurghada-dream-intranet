@@ -8,6 +8,7 @@ import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 import { StopPushSalesSummary } from "../components/quotes/StopPushSalesSummary";
 import { PaymentModal } from "../components/quotes/PaymentModal";
 import { QuoteSummary } from "../components/quotes/QuoteSummary";
@@ -204,12 +205,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           .order("name", { ascending: true });
 
         if (error) {
-          console.error("Erreur lors du chargement des hôtels:", error);
+          logger.error("Erreur lors du chargement des hôtels:", error);
         } else {
           setHotels(data || []);
         }
       } catch (err) {
-        console.error("Erreur lors du chargement des hôtels:", err);
+        logger.error("Erreur lors du chargement des hôtels:", err);
       }
     }
 
@@ -277,7 +278,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         // Mettre en cache
         salesCache.set(cacheKey, { stopSales: stopSalesData, pushSales: pushSalesData });
       } catch (err) {
-        console.error("Erreur lors du chargement des stop sales/push sales:", err);
+        logger.error("Erreur lors du chargement des stop sales/push sales:", err);
       }
     }
 
@@ -540,20 +541,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           updated_at: q.createdAt, // Initialiser updated_at avec la date de création
         };
 
-        console.log("🔄 Envoi du devis à Supabase:", supabaseData);
+        logger.log("🔄 Envoi du devis à Supabase:", supabaseData);
         const { data, error } = await supabase.from("quotes").insert(supabaseData).select().single();
 
         if (error) {
-          console.error("❌ ERREUR Supabase (création devis):", error);
-          console.error("Détails:", JSON.stringify(error, null, 2));
+          logger.error("❌ ERREUR Supabase (création devis):", error);
+          logger.error("Détails:", JSON.stringify(error, null, 2));
           
           // Toujours afficher l'erreur pour le debug
           toast.error(
             "Erreur Supabase (création devis). Vérifiez la console pour plus de détails. Le devis est quand même enregistré en local."
           );
         } else {
-          console.log("✅ Devis créé avec succès dans Supabase!");
-          console.log("Réponse:", data);
+          logger.log("✅ Devis créé avec succès dans Supabase!");
+          logger.log("Réponse:", data);
           
           // Mettre à jour le devis local avec le supabase_id retourné
           if (data && data.id) {
@@ -575,18 +576,18 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             });
             toast.success("Devis créé et synchronisé avec succès !");
           } else {
-            console.warn("⚠️ Supabase a retourné une réponse mais sans ID");
+            logger.warn("⚠️ Supabase a retourné une réponse mais sans ID");
             toast.warning("Devis créé localement mais problème de synchronisation avec Supabase.");
           }
         }
       } catch (err) {
-        console.error("❌ EXCEPTION lors de l'envoi du devis à Supabase:", err);
+        logger.error("❌ EXCEPTION lors de l'envoi du devis à Supabase:", err);
         toast.error(
           "Exception lors de l'envoi à Supabase. Vérifiez la console pour plus de détails. Le devis est quand même enregistré en local."
         );
       }
     } else {
-      console.warn("⚠️ Supabase non configuré - le devis n'est enregistré qu'en local");
+      logger.warn("⚠️ Supabase non configuré - le devis n'est enregistré qu'en local");
     }
 
     // Réinitialiser le formulaire après création réussie

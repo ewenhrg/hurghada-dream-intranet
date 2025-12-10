@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { logger } from "../utils/logger";
 
 export function LoginPage({ onSuccess }) {
   const [code, setCode] = useState("");
@@ -90,7 +91,7 @@ export function LoginPage({ onSuccess }) {
         }
       }
     } catch (err) {
-      console.error("Erreur lors de la connexion:", err);
+      logger.error("Erreur lors de la connexion:", err);
       setError("Une erreur s'est produite. Veuillez réessayer.");
       setCode("");
     } finally {
