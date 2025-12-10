@@ -299,8 +299,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         ]);
 
         // Traiter les stop sales (déjà filtrés côté serveur)
-        const stopSalesData = (!stopSalesResult.error && stopSalesResult.data) ? stopSalesResult.data : [];
-        const pushSalesData = (!pushSalesResult.error && pushSalesResult.data) ? pushSalesResult.data : [];
+        let stopSalesData = (!stopSalesResult.error && stopSalesResult.data) ? stopSalesResult.data : [];
+        let pushSalesData = (!pushSalesResult.error && pushSalesResult.data) ? pushSalesResult.data : [];
+        
+        // Supprimer automatiquement les stop/push sales dont la date est passée ou égale à aujourd'hui (date <= aujourd'hui)
+        // Si on arrive le 13/12, le stop sale du 13/12 doit être supprimé car c'est déjà trop tard
+        const expiredStopSales = stopSalesData.filter(s => s.date <= today);
+        const expiredPushSales = pushSalesData.filter(p => p.date <= today);
+        
+        if (expiredStopSales.length > 0) {
+          const expiredIds = expiredStopSales.map(s => s.id);
+          await supabase.from("stop_sales").delete().in("id", expiredIds);
+          stopSalesData = stopSalesData.filter(s => s.date > today);
+        }
+        
+        if (expiredPushSales.length > 0) {
+          const expiredIds = expiredPushSales.map(p => p.id);
+          await supabase.from("push_sales").delete().in("id", expiredIds);
+          pushSalesData = pushSalesData.filter(p => p.date > today);
+        }
         
         setStopSales(stopSalesData);
         setPushSales(pushSalesData);

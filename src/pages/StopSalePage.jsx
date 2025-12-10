@@ -54,7 +54,9 @@ export function StopSalePage({ activities, user }) {
         const expiredStopSales = [];
 
         (data || []).forEach((stopSale) => {
-          if (stopSale.date < today) {
+          // Supprimer les stop sales dont la date est passée ou égale à aujourd'hui (date <= aujourd'hui)
+          // Si on arrive le 13/12, le stop sale du 13/12 doit être supprimé car c'est déjà trop tard
+          if (stopSale.date <= today) {
             expiredStopSales.push(stopSale.id);
           } else {
             validStopSales.push(stopSale);
@@ -95,7 +97,9 @@ export function StopSalePage({ activities, user }) {
         const expiredPushSales = [];
 
         (data || []).forEach((pushSale) => {
-          if (pushSale.date < today) {
+          // Supprimer les push sales dont la date est passée ou égale à aujourd'hui (date <= aujourd'hui)
+          // Si on arrive le 13/12, le push sale du 13/12 doit être supprimé car c'est déjà trop tard
+          if (pushSale.date <= today) {
             expiredPushSales.push(pushSale.id);
           } else {
             validPushSales.push(pushSale);
