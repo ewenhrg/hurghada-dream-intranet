@@ -57,8 +57,15 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
     const baseAvailable = activity.availableDays?.[weekday] === true;
     
     // Vérifier stop sales et push sales
-    const isStopSale = stopSales.some(s => s.activity_id === activity.id && s.date === dateStr);
-    const isPushSale = pushSales.some(p => p.activity_id === activity.id && p.date === dateStr);
+    // Vérifier avec l'ID local (id) et l'ID Supabase (supabase_id) car les stop/push sales peuvent utiliser l'un ou l'autre
+    const isStopSale = stopSales.some(s => 
+      (s.activity_id === activity.id || s.activity_id === activity.supabase_id) && 
+      s.date === dateStr
+    );
+    const isPushSale = pushSales.some(p => 
+      (p.activity_id === activity.id || p.activity_id === activity.supabase_id) && 
+      p.date === dateStr
+    );
     
     if (isStopSale) return 'stop-sale';
     if (isPushSale) return 'push-sale';

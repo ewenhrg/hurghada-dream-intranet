@@ -21,12 +21,14 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       const baseAvailable = act && weekday != null ? !!act.availableDays?.[weekday] : true;
       
       // Vérifier les stop sales et push sales (optimisé avec Maps O(1))
+      // Vérifier avec l'ID local (id) et l'ID Supabase (supabase_id) car les stop/push sales peuvent utiliser l'un ou l'autre
       let isStopSale = false;
       let isPushSale = false;
       if (act && it.date) {
-        const key = `${act.id}_${it.date}`;
-        isStopSale = stopSalesMap.has(key);
-        isPushSale = pushSalesMap.has(key);
+        const keyId = `${act.id}_${it.date}`;
+        const keySupabaseId = act.supabase_id ? `${act.supabase_id}_${it.date}` : null;
+        isStopSale = stopSalesMap.has(keyId) || (keySupabaseId && stopSalesMap.has(keySupabaseId));
+        isPushSale = pushSalesMap.has(keyId) || (keySupabaseId && pushSalesMap.has(keySupabaseId));
       }
       
       // Disponibilité finale : disponible si push sale OU (baseAvailable ET pas de stop sale)
