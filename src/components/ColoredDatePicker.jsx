@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { TextInput } from "./ui";
 import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
 
 // Composant calendrier personnalisé avec jours colorés
 export function ColoredDatePicker({ value, onChange, activity, stopSales = [], pushSales = [] }) {
@@ -58,14 +59,45 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
     
     // Vérifier stop sales et push sales
     // Vérifier avec l'ID local (id) et l'ID Supabase (supabase_id) car les stop/push sales peuvent utiliser l'un ou l'autre
-    const isStopSale = stopSales.some(s => 
-      (s.activity_id === activity.id || s.activity_id === activity.supabase_id) && 
-      s.date === dateStr
-    );
-    const isPushSale = pushSales.some(p => 
-      (p.activity_id === activity.id || p.activity_id === activity.supabase_id) && 
-      p.date === dateStr
-    );
+    // Convertir les IDs en string pour la comparaison car ils peuvent être de types différents
+    const activityIdStr = String(activity.id || '');
+    const activitySupabaseIdStr = activity.supabase_id ? String(activity.supabase_id) : null;
+    
+    // Log de débogage temporaire pour voir ce qui est reçu
+    if (dateStr === '2025-12-11') {
+      logger.log('Vérification push sale pour le 11/12:', {
+        dateStr,
+        activityIdStr,
+        activitySupabaseIdStr,
+        activityName: activity.name,
+        pushSalesCount: pushSales.length,
+        pushSales: pushSales.map(p => ({ activity_id: p.activity_id, date: p.date }))
+      });
+    }
+    
+    const isStopSale = stopSales.some(s => {
+      const stopActivityIdStr = String(s.activity_id || '');
+      return (stopActivityIdStr === activityIdStr || (activitySupabaseIdStr && stopActivityIdStr === activitySupabaseIdStr)) && 
+             s.date === dateStr;
+    });
+    
+    const isPushSale = pushSales.some(p => {
+      const pushActivityIdStr = String(p.activity_id || '');
+      const matches = (pushActivityIdStr === activityIdStr || (activitySupabaseIdStr && pushActivityIdStr === activitySupabaseIdStr)) && 
+                      p.date === dateStr;
+      // Log de débogage temporaire pour le 11 décembre
+      if (dateStr === '2025-12-11' && matches) {
+        logger.log('Push sale détecté pour le 11/12:', {
+          dateStr,
+          pushActivityIdStr,
+          activityIdStr,
+          activitySupabaseIdStr,
+          pushDate: p.date,
+          activityName: activity.name
+        });
+      }
+      return matches;
+    });
     
     if (isStopSale) return 'stop-sale';
     if (isPushSale) return 'push-sale';
