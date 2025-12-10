@@ -293,60 +293,67 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
-      <div className="flex flex-col gap-5 md:gap-6">
-        <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-start md:items-center justify-between">
-          <div className="flex-1 max-w-md">
-            <h2 className="text-xl md:text-2xl font-bold text-slate-800 mb-3 flex items-center gap-2">
-              <span className="text-2xl">📋</span>
-              Historique des devis
-            </h2>
-            <div className="space-y-2">
-              <TextInput
-                placeholder="Rechercher par numéro de téléphone..."
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                className="w-full text-base"
-              />
-              <p className="text-xs md:text-sm text-amber-700 bg-amber-50/80 px-3 py-2 rounded-lg border border-amber-200/60 flex items-center gap-2 font-medium">
-                <span className="text-base">⚠️</span>
-                <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
-              </p>
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 bg-gradient-to-br from-slate-50/50 via-white to-blue-50/30 min-h-screen">
+      {/* Header amélioré */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-lg p-5 md:p-6 lg:p-7">
+        <div className="flex flex-col gap-5 md:gap-6">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-start md:items-center justify-between">
+            <div className="flex-1 max-w-md">
+              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 bg-clip-text text-transparent mb-4 flex items-center gap-3">
+                <span className="text-3xl md:text-4xl animate-pulse">📋</span>
+                <span>Historique des devis</span>
+              </h2>
+              <div className="space-y-3">
+                <TextInput
+                  placeholder="Rechercher par numéro de téléphone..."
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  className="w-full text-base border-2 border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 rounded-xl shadow-sm"
+                />
+                <p className="text-xs md:text-sm text-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-2.5 rounded-xl border-2 border-amber-200/70 flex items-center gap-2 font-medium shadow-sm">
+                  <span className="text-base">⚠️</span>
+                  <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2 md:gap-3">
-            <Pill
-              active={statusFilter === "all"}
-              onClick={() => setStatusFilter("all")}
-            >
-              📊 Tous
-            </Pill>
-            <Pill
-              active={statusFilter === "paid"}
-              onClick={() => setStatusFilter("paid")}
-            >
-              ✅ Payés
-            </Pill>
-            <Pill
-              active={statusFilter === "pending"}
-              onClick={() => setStatusFilter("pending")}
-            >
-              ⏳ En attente
-            </Pill>
-            <Pill
-              active={statusFilter === "modified"}
-              onClick={() => setStatusFilter("modified")}
-            >
-              🔄 Modifié
-            </Pill>
+            <div className="flex flex-wrap gap-2 md:gap-3">
+              <Pill
+                active={statusFilter === "all"}
+                onClick={() => setStatusFilter("all")}
+                className="transition-all duration-200 hover:scale-105"
+              >
+                📊 Tous
+              </Pill>
+              <Pill
+                active={statusFilter === "paid"}
+                onClick={() => setStatusFilter("paid")}
+                className="transition-all duration-200 hover:scale-105"
+              >
+                ✅ Payés
+              </Pill>
+              <Pill
+                active={statusFilter === "pending"}
+                onClick={() => setStatusFilter("pending")}
+                className="transition-all duration-200 hover:scale-105"
+              >
+                ⏳ En attente
+              </Pill>
+              <Pill
+                active={statusFilter === "modified"}
+                onClick={() => setStatusFilter("modified")}
+                className="transition-all duration-200 hover:scale-105"
+              >
+                🔄 Modifié
+              </Pill>
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Indicateur du nombre de résultats */}
-      <div className="flex items-center justify-between bg-gradient-to-r from-slate-50/90 to-blue-50/70 rounded-xl border-2 border-slate-200/60 p-4 md:p-5 shadow-md backdrop-blur-sm">
+      {/* Indicateur du nombre de résultats amélioré */}
+      <div className="flex items-center justify-between bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-purple-50/70 rounded-xl border-2 border-blue-200/60 p-4 md:p-5 shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">📊</span>
+          <span className="text-2xl md:text-3xl animate-bounce">📊</span>
           <div>
             {filtered.length === 0 ? (
               <p className="text-amber-700 font-bold text-base md:text-lg">Aucun devis trouvé</p>
@@ -372,95 +379,122 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           return (
             <div
               key={d.id}
-              className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-300 p-5 md:p-7 pl-7 md:pl-9 shadow-lg hover:shadow-2xl hover:scale-[1.01] cursor-pointer ${
+              className={`relative overflow-hidden rounded-2xl border transition-all duration-300 p-5 md:p-6 lg:p-7 shadow-lg hover:shadow-2xl hover:scale-[1.005] cursor-pointer bg-[#f7f9fc] ${
                 allTicketsFilled
-                  ? "border-emerald-300/60 bg-gradient-to-br from-emerald-50/95 to-teal-50/90 hover:border-emerald-400/80"
-                  : "border-amber-300/60 bg-gradient-to-br from-amber-50/95 to-orange-50/90 hover:border-amber-400/80"
+                  ? "border-emerald-200/70 hover:border-emerald-300/90"
+                  : "border-amber-200/70 hover:border-amber-300/90"
               }`}
             >
+              {/* Barre latérale colorée */}
               <span
-                className={`absolute inset-y-0 left-0 w-2 ${
+                className={`absolute inset-y-0 left-0 w-1.5 ${
                   allTicketsFilled
-                    ? "bg-gradient-to-b from-emerald-400 via-emerald-500 to-teal-400 shadow-lg"
-                    : "bg-gradient-to-b from-amber-400 via-amber-500 to-orange-400 shadow-lg"
+                    ? "bg-gradient-to-b from-emerald-500 via-emerald-600 to-teal-500 shadow-lg"
+                    : "bg-gradient-to-b from-amber-500 via-amber-600 to-orange-500 shadow-lg"
                 }`}
               />
-              <span className="absolute inset-0 pointer-events-none bg-gradient-to-br from-white/0 via-white/10 to-white/0" />
+              {/* Overlay subtil */}
+              <span className="absolute inset-0 pointer-events-none bg-gradient-to-br from-white/40 via-white/10 to-transparent" />
+              
               <div className="relative space-y-4 md:space-y-5">
-                <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                  <span className={`px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-md border-2 ${
-                    allTicketsFilled
-                      ? "bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-900 border-emerald-300/60"
-                      : "bg-gradient-to-r from-amber-100 to-orange-100 text-amber-900 border-amber-300/60"
-                  }`}
-                  >
-                    {allTicketsFilled ? "✅ Payé" : "⏳ En attente"}
-                  </span>
-                  {d.isModified && (
-                    <span className="px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-900 border-purple-300/60">
-                      🔄 Modifié
+                {/* En-tête avec statut et métadonnées */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                    <span className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 transition-all duration-200 ${
+                      allTicketsFilled
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-emerald-600 shadow-emerald-200/50"
+                        : "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-600 shadow-amber-200/50"
+                    }`}
+                    >
+                      {allTicketsFilled ? "✅ Payé" : "⏳ En attente"}
                     </span>
-                  )}
-                  {hasTickets && (
-                    <span className="px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-900 border-blue-300/60">
-                      🎫 Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
-                  <div className="flex-1 space-y-2 min-w-0">
-                    <p className="text-xs md:text-sm text-slate-600 font-medium break-words">
-                      📅 {d.formattedCreatedAt}
-                      {d.createdByName && <span className="ml-2 text-blue-700 font-bold">• Créé par {d.createdByName}</span>}
-                    </p>
-                    <p className="text-sm md:text-base lg:text-lg text-slate-900 font-bold break-words">
-                      📞 {d.client?.phone || "Tél ?"} — 🏨 {d.client?.hotel || "Hôtel ?"}
-                      {d.client?.room ? ` (Chambre ${d.client.room})` : ""}
-                    </p>
-                    {d.client?.name && (
-                      <p className="text-xs md:text-sm lg:text-base text-slate-700 font-semibold break-words">
-                        👤 {d.client.name}
-                      </p>
+                    {d.isModified && (
+                      <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-purple-600 shadow-purple-200/50">
+                        🔄 Modifié
+                      </span>
+                    )}
+                    {hasTickets && (
+                      <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-600 shadow-blue-200/50">
+                        🎫 Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
+                      </span>
                     )}
                   </div>
-                  {(d.trip && d.trip.trim() && d.trip !== "Activité ?") || (d.invoiceN && d.invoiceN !== "N/A") ? (
-                    <div className="flex flex-col items-end gap-2 text-right min-w-[140px]">
-                      {d.trip && d.trip.trim() && d.trip !== "Activité ?" && (
-                        <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-900 border-2 border-indigo-300/60 shadow-sm">
-                          ✈️ {d.trip}
-                        </span>
-                      )}
-                      {d.invoiceN && d.invoiceN !== "N/A" && (
-                        <span className="text-xs md:text-sm uppercase tracking-wide text-slate-700 font-bold bg-slate-100 px-3 py-1.5 rounded-lg border-2 border-slate-300/60">
-                          📄 Invoice {d.invoiceN}
-                        </span>
-                      )}
-                    </div>
-                  ) : null}
+                  <p className="text-xs md:text-sm text-slate-500 font-medium">
+                    📅 {d.formattedCreatedAt}
+                    {d.createdByName && <span className="ml-2 text-blue-600 font-semibold">• {d.createdByName}</span>}
+                  </p>
                 </div>
-                <div className="flex flex-col gap-5 md:gap-6 pt-4 md:pt-5 border-t-2 border-white/60 lg:flex-row lg:items-start lg:justify-between">
+                
+                {/* Informations client améliorées */}
+                <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-slate-200/60 p-4 md:p-5 shadow-sm">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
+                    <div className="flex-1 space-y-2 min-w-0">
+                      {d.client?.name && (
+                        <p className="text-base md:text-lg lg:text-xl text-slate-900 font-bold break-words flex items-center gap-2">
+                          <span className="text-xl">👤</span>
+                          {d.client.name}
+                        </p>
+                      )}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm md:text-base">
+                        <p className="text-slate-700 font-semibold break-words flex items-center gap-2">
+                          <span className="text-lg">📞</span>
+                          {d.client?.phone || "Tél ?"}
+                        </p>
+                        <p className="text-slate-700 font-semibold break-words flex items-center gap-2">
+                          <span className="text-lg">🏨</span>
+                          {d.client?.hotel || "Hôtel ?"}
+                          {d.client?.room && <span className="text-slate-600 font-normal">(Chambre {d.client.room})</span>}
+                        </p>
+                      </div>
+                    </div>
+                    {(d.trip && d.trip.trim() && d.trip !== "Activité ?") || (d.invoiceN && d.invoiceN !== "N/A") ? (
+                      <div className="flex flex-col items-end gap-2 text-right min-w-[140px]">
+                        {d.trip && d.trip.trim() && d.trip !== "Activité ?" && (
+                          <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-2 border-indigo-600 shadow-md">
+                            ✈️ {d.trip}
+                          </span>
+                        )}
+                        {d.invoiceN && d.invoiceN !== "N/A" && (
+                          <span className="text-xs md:text-sm uppercase tracking-wide text-slate-700 font-bold bg-slate-100 px-3 py-1.5 rounded-lg border-2 border-slate-300/60 shadow-sm">
+                            📄 Invoice {d.invoiceN}
+                          </span>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+                {/* Section activités et total */}
+                <div className="flex flex-col gap-5 md:gap-6 pt-4 md:pt-5 border-t border-slate-200/60 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex-1 space-y-3 min-w-0">
                     <div className="space-y-2.5 md:space-y-3">
                       {d.itemsWithFormattedDates.map((li, i) => (
                         <div
                           key={i}
-                          className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 md:gap-4 rounded-xl border-2 border-white/80 bg-white/95 backdrop-blur-sm px-3 md:px-4 lg:px-5 py-3 md:py-4 shadow-lg transition-all duration-200 hover:shadow-xl hover:border-blue-200/60 animate-fade-in"
+                          className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 md:gap-4 rounded-xl border border-slate-200/70 bg-white/90 backdrop-blur-sm px-4 md:px-5 py-3 md:py-4 shadow-md transition-all duration-200 hover:shadow-lg hover:border-blue-300/70 hover:bg-white animate-fade-in"
                           style={{ animationDelay: `${i * 50}ms` }}
                         >
-                          <div className="flex flex-col gap-1 min-w-0 flex-1">
-                            <span className="text-sm md:text-base font-bold text-slate-900 break-words">
+                          <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                            <span className="text-sm md:text-base font-bold text-slate-900 break-words flex items-center gap-2">
+                              <span className="text-lg">🎯</span>
                               {li.activityName || "Activité ?"}
                             </span>
-                            <span className="text-xs md:text-sm text-slate-600 font-medium break-words">
-                              📅 {li.formattedDate} — 👥 {li.adults ?? 0} adt / {li.children ?? 0} enf / {li.babies ?? 0} bébé(s)
+                            <span className="text-xs md:text-sm text-slate-600 font-medium break-words flex items-center gap-3 flex-wrap">
+                              <span className="flex items-center gap-1">
+                                <span>📅</span>
+                                {li.formattedDate}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span>👥</span>
+                                {li.adults ?? 0} adt / {li.children ?? 0} enf / {li.babies ?? 0} bébé(s)
+                              </span>
                             </span>
                           </div>
                           <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
-                            <span className="text-sm md:text-base lg:text-lg font-bold text-slate-900">
+                            <span className="text-base md:text-lg lg:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                               💵 {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
                             </span>
                             {li.ticketNumber && li.ticketNumber.trim() !== "" && (
-                              <span className="px-3 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-900 border-2 border-emerald-300/60 shadow-sm">
+                              <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-2 border-emerald-600 shadow-md">
                                 🎫 {li.ticketNumber}
                               </span>
                             )}
@@ -469,26 +503,31 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       ))}
                     </div>
                     {d.notes && d.notes.trim() !== "" && (
-                      <div className="bg-white/90 backdrop-blur-sm border-2 border-white/80 rounded-xl px-4 md:px-5 py-3 md:py-4 shadow-md">
-                        <p className="text-xs md:text-sm text-slate-700 font-medium">
-                          📝 <span className="font-semibold">Notes :</span> {d.notes}
+                      <div className="bg-gradient-to-r from-amber-50/80 to-orange-50/60 backdrop-blur-sm border-2 border-amber-200/70 rounded-xl px-4 md:px-5 py-3 md:py-4 shadow-md">
+                        <p className="text-xs md:text-sm text-slate-700 font-medium flex items-start gap-2">
+                          <span className="text-base mt-0.5">📝</span>
+                          <span><span className="font-semibold text-slate-900">Notes :</span> {d.notes}</span>
                         </p>
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-col items-end gap-4 min-w-[240px] bg-white/80 backdrop-blur-sm rounded-xl p-4 md:p-5 border-2 border-white/80 shadow-lg">
+                  
+                  {/* Zone total améliorée */}
+                  <div className="flex flex-col items-end gap-4 min-w-[240px] bg-gradient-to-br from-white/90 to-blue-50/50 backdrop-blur-sm rounded-xl p-5 md:p-6 border-2 border-blue-200/60 shadow-lg">
                     <div className="text-right w-full">
-                      <p className="text-xs md:text-sm font-semibold text-slate-600 mb-1 uppercase tracking-wide">Total du devis</p>
-                      <p className="text-xl md:text-2xl font-bold text-slate-900 mb-1">
-                        💵 {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
-                      </p>
-                      <p className="text-lg md:text-xl font-semibold text-slate-700">
-                        💳 {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
-                      </p>
+                      <p className="text-xs md:text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wider">Total du devis</p>
+                      <div className="space-y-1.5">
+                        <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                          💵 {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
+                        </p>
+                        <p className="text-lg md:text-xl font-semibold text-slate-700">
+                          💳 {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap justify-end gap-2 md:gap-3 w-full">
+                    <div className="flex flex-wrap justify-end gap-2 md:gap-3 w-full pt-2 border-t border-slate-200/60">
                       <button
-                        className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95 ${
+                        className={`flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95 hover:shadow-xl ${
                           allTicketsFilled 
                             ? "bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-500 hover:from-emerald-700 hover:to-teal-700" 
                             : "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-400 hover:from-emerald-600 hover:to-teal-600"
@@ -509,7 +548,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         {allTicketsFilled ? "✅ Tickets" : "💰 Payer"}
                       </button>
                       <button
-                        className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
+                        className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95 hover:shadow-xl"
                         onClick={() => {
                           const htmlContent = generateQuoteHTML(d);
                           const clientPhone = d.client?.phone || "";
@@ -529,7 +568,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       </button>
                       {!allTicketsFilled && (
                         <button
-                          className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-amber-500 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
+                          className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-amber-500 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95 hover:shadow-xl"
                           onClick={() => {
                             setSelectedQuote(d);
                             setEditClient({
@@ -570,7 +609,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       )}
                       {user?.canDeleteQuote && (
                         <button
-                          className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm md:text-base font-bold text-white border-2 border-red-500 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95"
+                          className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-red-500 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95 hover:shadow-xl"
                           onClick={async () => {
                             const clientInfo = d.client?.name ? `${d.client.name}${d.client?.phone ? ` (${d.client.phone})` : ''}` : 'ce devis';
                             const totalInfo = d.total ? ` (Total: ${Math.round(d.total)}€)` : '';
