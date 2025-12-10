@@ -1355,6 +1355,7 @@ export default function App() {
             </ErrorBoundary>
         </div>
         )}
+        </PageTransition>
       </main>
 
       <footer 
