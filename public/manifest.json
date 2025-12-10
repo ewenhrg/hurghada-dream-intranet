@@ -23,15 +23,13 @@
       "name": "Nouveau devis",
       "short_name": "Devis",
       "description": "Créer un nouveau devis",
-      "url": "/?tab=quotes",
-      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+      "url": "/?tab=quotes"
     },
     {
       "name": "Demandes",
       "short_name": "Demandes",
       "description": "Voir les demandes clients",
-      "url": "/?tab=demandes",
-      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+      "url": "/?tab=demandes"
     }
   ]
 }

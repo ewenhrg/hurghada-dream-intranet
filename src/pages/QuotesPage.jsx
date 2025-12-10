@@ -142,6 +142,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   // États pour les confirmations
   const [confirmDeleteItem, setConfirmDeleteItem] = useState({ isOpen: false, index: null, activityName: "" });
   const [confirmResetForm, setConfirmResetForm] = useState(false);
+  const confirmResetFormRef = useRef(null);
 
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
@@ -753,7 +754,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             type="button"
             variant="danger"
             size="sm"
-            onClick={() => setConfirmResetForm(true)}
+            onClick={() => {
+              setConfirmResetForm(true);
+              // Scroll vers la modale de confirmation après un court délai pour laisser le DOM se mettre à jour
+              setTimeout(() => {
+                if (confirmResetFormRef.current) {
+                  confirmResetFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              }, 100);
+            }}
             className="whitespace-nowrap shadow-md hover:shadow-lg transition-all"
           >
             🧹 Tout effacer
@@ -1971,20 +1980,22 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         type="danger"
       />
 
-      <ConfirmDialog
-        isOpen={confirmResetForm}
-        onClose={() => setConfirmResetForm(false)}
-        onConfirm={() => {
-          resetQuoteForm();
-          toast.success("Formulaire réinitialisé.");
-          setConfirmResetForm(false);
-        }}
-        title="Tout effacer"
-        message="Êtes-vous sûr de vouloir tout effacer ?\n\nCette action supprimera toutes les activités et les informations client du formulaire.\n\nCette action est irréversible."
-        confirmText="Effacer"
-        cancelText="Annuler"
-        type="danger"
-      />
+      <div ref={confirmResetFormRef}>
+        <ConfirmDialog
+          isOpen={confirmResetForm}
+          onClose={() => setConfirmResetForm(false)}
+          onConfirm={() => {
+            resetQuoteForm();
+            toast.success("Formulaire réinitialisé.");
+            setConfirmResetForm(false);
+          }}
+          title="Tout effacer"
+          message="Êtes-vous sûr de vouloir tout effacer ?\n\nCette action supprimera toutes les activités et les informations client du formulaire.\n\nCette action est irréversible."
+          confirmText="Effacer"
+          cancelText="Annuler"
+          type="danger"
+        />
+      </div>
     </div>
   );
 }
