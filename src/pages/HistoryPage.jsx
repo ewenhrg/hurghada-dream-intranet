@@ -54,10 +54,15 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         const cacheKey = createCacheKey("sales", SITE_KEY, today);
         
         // Ne pas utiliser le cache pour avoir les données à jour en temps réel
-        // Charger uniquement les stop sales valides (date >= aujourd'hui) - filtre côté serveur
+        // Charger les stop sales et push sales (récupérer aussi ceux du jour même pour les supprimer)
+        // On récupère depuis hier pour être sûr de ne rien manquer
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        
         const [stopSalesResult, pushSalesResult] = await Promise.all([
-          supabase.from("stop_sales").select("*").eq("site_key", SITE_KEY).gte("date", today),
-          supabase.from("push_sales").select("*").eq("site_key", SITE_KEY).gte("date", today),
+          supabase.from("stop_sales").select("*").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
+          supabase.from("push_sales").select("*").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
         ]);
 
         let stopSalesData = (!stopSalesResult.error && stopSalesResult.data) ? stopSalesResult.data : [];
