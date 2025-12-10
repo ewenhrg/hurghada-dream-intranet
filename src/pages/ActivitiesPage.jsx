@@ -480,21 +480,25 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }, [descriptionModal.isOpen, user?.name]);
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex-1">
-          <h2 className="text-xl md:text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 animate-page-enter">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b-2 border-slate-200/60">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
             <span className="text-2xl">🎯</span>
-            Gestion des activités
-          </h2>
-          <p className="text-sm md:text-base text-slate-600 font-medium">
-            Ajoutez une activité, ses prix, ses jours disponibles et ses transferts par quartier
-          </p>
+          </div>
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 bg-clip-text text-transparent">
+              Gestion des activités
+            </h2>
+            <p className="text-sm md:text-base text-slate-600 font-medium mt-1">
+              Ajoutez une activité, ses prix, ses jours disponibles et ses transferts par quartier
+            </p>
+          </div>
         </div>
         {user?.canAddActivity && (
           <PrimaryBtn
             onClick={handleToggleForm}
-            className="w-full sm:w-auto text-base font-bold px-6 py-3"
+            className="w-full sm:w-auto text-base font-bold px-6 py-3 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
           >
             {showForm ? "❌ Annuler" : "➕ Ajouter une activité"}
           </PrimaryBtn>
@@ -502,27 +506,42 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       </div>
 
       {/* Filtres et recherche */}
-      <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/70 rounded-2xl border-2 border-slate-200/60 p-5 md:p-6 shadow-lg backdrop-blur-sm">
-        <h3 className="text-base md:text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <span className="text-xl">🔍</span>
-          Recherche et filtres
-        </h3>
-        <div className="grid md:grid-cols-2 gap-4 md:gap-5">
+      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-2xl border-2 border-slate-200/60 p-5 md:p-7 shadow-xl backdrop-blur-sm animate-slide-up">
+        <div className="flex items-center gap-4 mb-5 pb-4 border-b-2 border-blue-200/40">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+            <span className="text-xl">🔍</span>
+          </div>
           <div>
-            <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Rechercher une activité</label>
+            <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+              Recherche et filtres
+            </h3>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Trouvez rapidement une activité
+            </p>
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-5 md:gap-6">
+          <div className="animate-fade-in">
+            <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              Rechercher une activité
+            </label>
             <TextInput
               placeholder="Nom, notes ou description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="text-base"
+              className="text-base shadow-md hover:shadow-lg transition-all"
             />
           </div>
-          <div>
-            <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Filtrer par jour</label>
+          <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+            <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+              Filtrer par jour
+            </label>
             <select
               value={selectedDay}
               onChange={(e) => setSelectedDay(e.target.value)}
-              className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+              className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md hover:shadow-lg focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
             >
               <option value="">📅 Tous les jours</option>
               {WEEKDAYS.map((day) => (
@@ -536,32 +555,50 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       </div>
 
       {showForm && (
-        <form ref={formRef} onSubmit={handleCreate} className="space-y-5 md:space-y-6 bg-gradient-to-br from-blue-50/90 via-indigo-50/80 to-purple-50/70 backdrop-blur-sm rounded-2xl p-5 md:p-7 border-2 border-blue-200/60 shadow-xl">
-          <div className="flex items-center gap-3 mb-4 pb-4 border-b-2 border-blue-200/60">
-            <span className="text-2xl">{editingId ? "✏️" : "➕"}</span>
-            <h3 className="text-lg md:text-xl font-bold text-slate-800">
-              {editingId ? "Modifier l'activité" : "Nouvelle activité"}
-            </h3>
+        <form ref={formRef} onSubmit={handleCreate} className="space-y-5 md:space-y-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 backdrop-blur-sm rounded-2xl p-5 md:p-7 lg:p-9 border-2 border-blue-200/60 shadow-xl animate-scale-in">
+          <div className="flex items-center gap-4 mb-5 pb-4 border-b-2 border-blue-200/60">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <span className="text-2xl">{editingId ? "✏️" : "➕"}</span>
+            </div>
+            <div>
+              <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 bg-clip-text text-transparent">
+                {editingId ? "Modifier l'activité" : "Nouvelle activité"}
+              </h3>
+              <p className="text-xs text-slate-600 mt-0.5">
+                {editingId ? "Modifiez les informations de l'activité" : "Remplissez les informations de la nouvelle activité"}
+              </p>
+            </div>
           </div>
 
-          <div className="bg-white/80 rounded-xl p-4 md:p-5 border-2 border-blue-100/60">
-            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">Informations de base</label>
-            <div className="grid md:grid-cols-2 gap-4 md:gap-5">
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 md:p-6 border-2 border-blue-100/60 shadow-lg animate-fade-in">
+            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-blue-100/60">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                <span className="text-white text-sm">📋</span>
+              </div>
+              <label className="text-sm md:text-base font-bold text-slate-800">Informations de base</label>
+            </div>
+            <div className="grid md:grid-cols-2 gap-5 md:gap-6">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-2">Nom de l'activité *</label>
+                <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                  Nom de l'activité *
+                </label>
                 <TextInput
                   placeholder="Ex: Snorkeling"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="text-base"
+                  className="text-base shadow-md hover:shadow-lg transition-all"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-2">Catégorie *</label>
+                <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                  Catégorie *
+                </label>
                 <select
                   value={form.category}
                   onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                  className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md hover:shadow-lg focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c.key} value={c.key}>
@@ -573,8 +610,13 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-emerald-50/80 to-teal-50/70 rounded-xl p-4 md:p-5 border-2 border-emerald-200/60">
-            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">💰 Tarification</label>
+          <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl p-5 md:p-6 border-2 border-emerald-200/60 shadow-lg animate-fade-in" style={{ animationDelay: '100ms' }}>
+            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-emerald-200/60">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                <span className="text-white text-sm">💰</span>
+              </div>
+              <label className="text-sm md:text-base font-bold text-slate-800">Tarification</label>
+            </div>
             <div className="grid md:grid-cols-4 gap-4 md:gap-5">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-2">Prix adulte</label>
@@ -624,59 +666,81 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-amber-50/80 to-yellow-50/70 rounded-xl p-4 md:p-5 border-2 border-amber-200/60">
-            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">📅 Jours disponibles</label>
+          <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-xl p-5 md:p-6 border-2 border-amber-200/60 shadow-lg animate-fade-in" style={{ animationDelay: '200ms' }}>
+            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-amber-200/60">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
+                <span className="text-white text-sm">📅</span>
+              </div>
+              <label className="text-sm md:text-base font-bold text-slate-800">Jours disponibles</label>
+            </div>
             <DaysSelector value={form.availableDays} onChange={(v) => setForm((f) => ({ ...f, availableDays: v }))} />
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50/80 to-pink-50/70 rounded-xl p-4 md:p-5 border-2 border-purple-200/60">
-            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">🚗 Transferts par quartier</label>
-            <p className="text-xs text-slate-600 mb-3 font-medium">
-              Activez Matin / Après-midi / Soir et indiquez les heures et suppléments pour chaque quartier
-            </p>
+          <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 rounded-xl p-5 md:p-6 border-2 border-purple-200/60 shadow-lg animate-fade-in" style={{ animationDelay: '300ms' }}>
+            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-purple-200/60">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                <span className="text-white text-sm">🚗</span>
+              </div>
+              <div className="flex-1">
+                <label className="text-sm md:text-base font-bold text-slate-800 block">Transferts par quartier</label>
+                <p className="text-xs text-slate-600 mt-1 font-medium">
+                  Activez Matin / Après-midi / Soir et indiquez les heures et suppléments pour chaque quartier
+                </p>
+              </div>
+            </div>
             <TransfersEditor value={form.transfers} onChange={(v) => setForm((f) => ({ ...f, transfers: v }))} />
           </div>
 
-          <div className="bg-slate-50/80 rounded-xl p-4 md:p-5 border-2 border-slate-200/60">
-            <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2">📝 Notes (facultatif)</label>
+          <div className="bg-slate-50/90 backdrop-blur-sm rounded-xl p-5 md:p-6 border-2 border-slate-200/60 shadow-lg animate-fade-in" style={{ animationDelay: '400ms' }}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center">
+                <span className="text-white text-sm">📝</span>
+              </div>
+              <label className="text-sm md:text-base font-bold text-slate-800">Notes (facultatif)</label>
+            </div>
             <TextInput
               placeholder="Informations supplémentaires, remarques..."
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              className="text-base"
+              className="text-base shadow-md hover:shadow-lg transition-all"
             />
           </div>
 
-          <div className="flex justify-end pt-4 border-t-2 border-blue-200/60">
-            <PrimaryBtn type="submit" className="text-base font-bold px-8 py-3">
+          <div className="flex justify-end pt-5 border-t-2 border-blue-200/60">
+            <PrimaryBtn type="submit" className="text-base font-bold px-8 py-3 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5">
               {editingId ? "💾 Modifier l'activité" : "✅ Enregistrer"}
             </PrimaryBtn>
           </div>
         </form>
       )}
 
-      {CATEGORIES.map((cat) => (
-        <div key={cat.key} className="space-y-3 md:space-y-4">
-          <div className="flex items-center gap-3">
-            <h3 className="text-base md:text-lg font-bold text-slate-800 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-xl shadow-md">
-              {cat.label}
-            </h3>
-            <span className="text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+      {CATEGORIES.map((cat, catIdx) => (
+        <div key={cat.key} className="space-y-4 md:space-y-5 animate-fade-in" style={{ animationDelay: `${catIdx * 50}ms` }}>
+          <div className="flex items-center gap-4 pb-3 border-b-2 border-slate-200/60">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <span className="text-white text-lg font-bold">{cat.label.charAt(0)}</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                {cat.label}
+              </h3>
+            </div>
+            <span className="px-4 py-2 text-sm font-bold text-slate-700 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full border-2 border-slate-300/60 shadow-sm">
               {(grouped[cat.key] || []).length} activité{(grouped[cat.key] || []).length > 1 ? "s" : ""}
             </span>
           </div>
-          <div className="rounded-2xl border-2 border-slate-200/60 bg-white/95 backdrop-blur-sm shadow-lg overflow-hidden">
+          <div className="rounded-2xl border-2 border-slate-200/60 bg-white/95 backdrop-blur-sm shadow-xl overflow-hidden">
             <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               <table className="w-full text-sm md:text-base min-w-full">
-                <thead className="bg-gradient-to-r from-blue-50/90 to-indigo-50/80 text-slate-800 text-xs md:text-sm font-bold">
+                <thead className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 text-slate-800 text-xs md:text-sm font-bold border-b-2 border-blue-200/60">
                   <tr>
-                    <th className="text-left px-4 py-3 md:px-5 md:py-4">Activité</th>
-                    <th className="text-left px-4 py-3 md:px-5 md:py-4">💰 Adulte</th>
-                    <th className="text-left px-4 py-3 md:px-5 md:py-4">👶 Enfant</th>
-                    <th className="text-left px-4 py-3 md:px-5 md:py-4">🍼 Bébé</th>
-                    <th className="text-left px-4 py-3 md:px-5 md:py-4">📅 Jours</th>
-                    <th className="text-left px-4 py-3 md:px-5 md:py-4">📝 Notes</th>
-                    <th className="text-right px-4 py-3 md:px-5 md:py-4">⚙️ Actions</th>
+                    <th className="text-left px-4 py-4 md:px-5 md:py-5">Activité</th>
+                    <th className="text-left px-4 py-4 md:px-5 md:py-5">💰 Adulte</th>
+                    <th className="text-left px-4 py-4 md:px-5 md:py-5">👶 Enfant</th>
+                    <th className="text-left px-4 py-4 md:px-5 md:py-5">🍼 Bébé</th>
+                    <th className="text-left px-4 py-4 md:px-5 md:py-5">📅 Jours</th>
+                    <th className="text-left px-4 py-4 md:px-5 md:py-5">📝 Notes</th>
+                    <th className="text-right px-4 py-4 md:px-5 md:py-5">⚙️ Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -685,19 +749,19 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                     return (
                       <tr 
                         key={a.id}
-                        className="border-t border-slate-200/60 transition-colors hover:bg-blue-50/50"
+                        className="border-t border-slate-200/60 transition-all duration-200 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30"
                       >
-                        <td className="px-4 py-3 md:px-5 md:py-4 font-semibold text-slate-800">{a.name}</td>
-                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceAdult, a.currency)}</td>
-                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceChild, a.currency)}</td>
-                        <td className="px-4 py-3 md:px-5 md:py-4 font-medium text-slate-700">{currency(a.priceBaby, a.currency)}</td>
-                        <td className="px-4 py-3 md:px-5 md:py-4">
+                        <td className="px-4 py-4 md:px-5 md:py-5 font-bold text-slate-800 text-base">{a.name}</td>
+                        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(a.priceAdult, a.currency)}</td>
+                        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(a.priceChild, a.currency)}</td>
+                        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(a.priceBaby, a.currency)}</td>
+                        <td className="px-4 py-4 md:px-5 md:py-5">
                           <div className="flex gap-1.5 flex-wrap">
                             {WEEKDAYS.map((d, dayIdx) =>
                               a.availableDays?.[dayIdx] ? (
                                 <span
                                   key={d.key}
-                                  className="px-2.5 py-1 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 text-xs font-bold border border-green-300/60 shadow-sm"
+                                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 text-xs font-bold border border-emerald-300/60 shadow-sm"
                                 >
                                   {d.label}
                                 </span>
@@ -705,24 +769,24 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 md:px-5 md:py-4 text-slate-600 text-sm">{a.notes || <span className="text-slate-400 italic">—</span>}</td>
-                        <td className="px-4 py-3 md:px-5 md:py-4 text-right">
-                          <div className="flex gap-2 justify-end">
+                        <td className="px-4 py-4 md:px-5 md:py-5 text-slate-600 text-sm">{a.notes || <span className="text-slate-400 italic">—</span>}</td>
+                        <td className="px-4 py-4 md:px-5 md:py-5 text-right">
+                          <div className="flex gap-2 justify-end flex-wrap">
                             <GhostBtn 
                               onClick={() => handleOpenDescriptionModal(a)} 
                               variant="primary" 
                               size="sm"
-                              className={hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
+                              className={`shadow-md hover:shadow-lg transition-all ${hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}`}
                             >
-                              📄 Description{hasDescription ? " ✓" : ""}
+                              📄{hasDescription ? " ✓" : ""}
                             </GhostBtn>
                             {canModifyActivities && (
                               <>
-                                <GhostBtn onClick={() => handleEdit(a)} variant="primary" size="sm">
-                                  ✏️ Modifier
+                                <GhostBtn onClick={() => handleEdit(a)} variant="primary" size="sm" className="shadow-md hover:shadow-lg transition-all">
+                                  ✏️
                                 </GhostBtn>
-                                <GhostBtn onClick={() => handleDelete(a.id)} variant="danger" size="sm">
-                                  🗑️ Supprimer
+                                <GhostBtn onClick={() => handleDelete(a.id)} variant="danger" size="sm" className="shadow-md hover:shadow-lg transition-all">
+                                  🗑️
                                 </GhostBtn>
                               </>
                             )}
@@ -733,10 +797,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   })}
                   {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 md:py-10 text-center">
-                        <div className="flex flex-col items-center gap-2">
-                          <span className="text-3xl">📭</span>
-                          <p className="text-slate-500 font-medium">Aucune activité dans cette catégorie</p>
+                      <td colSpan={7} className="px-4 py-12 md:py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                            <span className="text-3xl">📭</span>
+                          </div>
+                          <p className="text-slate-500 font-semibold text-base">Aucune activité dans cette catégorie</p>
                         </div>
                       </td>
                     </tr>
@@ -752,13 +818,18 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       {descriptionModal.isOpen && descriptionModal.activity && (
         <div 
           ref={descriptionModalRef} 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
         >
-          <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
-              <h3 className="text-xl font-bold text-white">
-                📄 Description - {descriptionModal.activity.name}
-              </h3>
+          <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scale-in">
+            <div className="bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 px-6 py-5 border-b-2 border-blue-400/60">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <span className="text-xl">📄</span>
+                </div>
+                <h3 className="text-xl font-bold text-white">
+                  Description - {descriptionModal.activity.name}
+                </h3>
+              </div>
             </div>
             <div className="p-6 flex-1 overflow-y-auto">
               <textarea
