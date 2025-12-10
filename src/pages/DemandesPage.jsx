@@ -169,14 +169,16 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
 
   // Générer un lien générique réutilisable pour tous
   const handleGenerateNewLink = () => {
-    // Lien générique sans token - peut être utilisé par tout le monde
+    // Générer un lien unique avec token pour éviter la détection de spam WhatsApp
+    // Chaque fois qu'on génère un lien, il sera différent
+    const token = generateRequestToken();
     const baseUrl = window.location.origin;
-    const link = `${baseUrl}/request`;
+    const link = generateRequestLink(token);
     setGeneratedLink(link);
     
     // Copier automatiquement dans le presse-papiers
     navigator.clipboard.writeText(link);
-    toast.success("Lien générique généré et copié ! Ce lien peut être utilisé par tous les clients.");
+    toast.success("Lien unique généré et copié ! Ce lien peut être utilisé par tous les clients.");
   };
 
   // Copier le lien généré
@@ -284,7 +286,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
                 <code className="text-sm md:text-base text-blue-900 break-all font-medium">{generatedLink}</code>
               </div>
               <p className="text-xs md:text-sm text-gray-600 mt-2 font-medium">
-                💡 Ce lien peut être envoyé à tous vos clients. Chaque client pourra créer sa propre demande.
+                💡 Ce lien unique peut être envoyé à tous vos clients. Chaque lien généré est différent pour éviter le bannissement WhatsApp.
               </p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
