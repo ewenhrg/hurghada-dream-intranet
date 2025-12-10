@@ -13,12 +13,9 @@ import { StopPushSalesSummary } from "../components/quotes/StopPushSalesSummary"
 import { PaymentModal } from "../components/quotes/PaymentModal";
 import { QuoteSummary } from "../components/quotes/QuoteSummary";
 import { NotesSection } from "../components/quotes/NotesSection";
-import { QuoteSummarySidebar } from "../components/quotes/QuoteSummarySidebar";
-import { Accordion } from "../components/Accordion";
 import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import { useDebounce } from "../hooks/useDebounce";
-import { salesCache, createCacheKey } from "../utils/cache";
 
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
   const [stopSales, setStopSales] = useState([]);
@@ -108,15 +105,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   // États pour les confirmations
   const [confirmDeleteItem, setConfirmDeleteItem] = useState({ isOpen: false, index: null, activityName: "" });
   const [confirmResetForm, setConfirmResetForm] = useState(false);
-
-  // États pour les accordéons (client ouvert par défaut, autres fermés)
-  const [accordionStates, setAccordionStates] = useState({
-    client: true,
-    dates: false,
-    globalAdults: false,
-    activities: false,
-    notes: false,
-  });
 
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
@@ -613,86 +601,69 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   }
 
 
-  // Fonction pour ouvrir automatiquement la section suivante
-  const openNextSection = useCallback((currentSection) => {
-    const sections = ['client', 'dates', 'globalAdults', 'activities'];
-    const currentIndex = sections.indexOf(currentSection);
-    if (currentIndex < sections.length - 1) {
-      const nextSection = sections[currentIndex + 1];
-      setAccordionStates((prev) => ({
-        ...prev,
-        [nextSection]: true,
-      }));
-    }
-  }, []);
-
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6 lg:p-8">
-      {/* Section Stop Sales et Push Sales - Compacte et repliable */}
-      {(formattedStopSales.length > 0 || formattedPushSales.length > 0) && (
-        <div className="mb-6">
+    <div className="space-y-6 md:space-y-8 lg:space-y-10 p-3 md:p-4 lg:p-6">
+        {/* Section Stop Sales et Push Sales - Compacte et repliable */}
+        {(formattedStopSales.length > 0 || formattedPushSales.length > 0) && (
           <StopPushSalesSummary 
             stopSales={formattedStopSales} 
             pushSales={formattedPushSales}
             activities={activities}
           />
-        </div>
-      )}
+        )}
 
-      {/* Layout 2 colonnes : Formulaire principal + Sidebar sticky */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
-        {/* Colonne principale - Formulaire */}
-        <div className="lg:col-span-2 space-y-6">
-          <form 
-            onSubmit={handleCreateQuote} 
-            onKeyDown={(e) => {
-              // Désactiver la touche Entrée pour soumettre le formulaire
-              if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
-                e.preventDefault();
-              }
-            }}
-            className="space-y-6"
-          >
-            {/* Barre d'information et actions */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center shadow-sm">
-                  <span className="text-lg">💾</span>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-800">
-                    Sauvegarde automatique
-                  </p>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    Vos modifications sont enregistrées en temps réel
-                  </p>
-                </div>
-              </div>
-              <GhostBtn
-                type="button"
-                variant="danger"
-                size="sm"
-                onClick={() => setConfirmResetForm(true)}
-                className="whitespace-nowrap shadow-sm hover:shadow-md transition-all"
-              >
-                🧹 Tout effacer
-              </GhostBtn>
+        <form 
+          onSubmit={handleCreateQuote} 
+          onKeyDown={(e) => {
+            // Désactiver la touche Entrée pour soumettre le formulaire
+            if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+              e.preventDefault();
+            }
+          }}
+          className="space-y-5 md:space-y-6 lg:space-y-8"
+        >
+        {/* Barre d'information et actions */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 md:p-6 bg-gradient-to-r from-indigo-50 via-blue-50 to-cyan-50 rounded-2xl border-2 border-indigo-200/60 shadow-lg backdrop-blur-sm animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center shadow-md">
+              <span className="text-lg">💾</span>
             </div>
-            
-            {/* Section Informations client - Accordéon */}
-            <Accordion
-              title="Informations client"
-              icon="👤"
-              defaultOpen={accordionStates.client}
-              onToggle={(isOpen) => {
-                setAccordionStates((prev) => ({ ...prev, client: isOpen }));
-                if (isOpen && client.name && client.phone) {
-                  openNextSection('client');
-                }
-              }}
-              className="bg-[#f7f9fc]"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">
+                Sauvegarde automatique
+              </p>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Vos modifications sont enregistrées en temps réel
+              </p>
+            </div>
+          </div>
+          <GhostBtn
+            type="button"
+            variant="danger"
+            size="sm"
+            onClick={() => setConfirmResetForm(true)}
+            className="whitespace-nowrap shadow-md hover:shadow-lg transition-all"
+          >
+            🧹 Tout effacer
+          </GhostBtn>
+        </div>
+        
+        {/* Infos client */}
+        <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border-2 border-blue-200/60 shadow-xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
+          <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-blue-200/40">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <span className="text-2xl">👤</span>
+            </div>
+            <div>
+              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 bg-clip-text text-transparent">
+                Informations client
+              </h3>
+              <p className="text-xs md:text-sm text-slate-600 mt-1">
+                Renseignez les détails de votre client
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '50ms' }}>
               <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
@@ -810,23 +781,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </option>
                 ))}
               </select>
-              </div>
-            </Accordion>
+            </div>
+          </div>
+        </div>
 
-            {/* Section Dates du séjour - Accordéon */}
-            <Accordion
-              title="Dates du séjour"
-              icon="📅"
-              defaultOpen={accordionStates.dates}
-              onToggle={(isOpen) => {
-                setAccordionStates((prev) => ({ ...prev, dates: isOpen }));
-                if (isOpen && client.arrivalDate && client.departureDate) {
-                  openNextSection('dates');
-                }
-              }}
-              className="bg-[#f7f9fc]"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+        {/* Dates séjour */}
+        <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border-2 border-indigo-200/60 shadow-xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
+          <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-indigo-200/40">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+              <span className="text-2xl">📅</span>
+            </div>
+            <div>
+              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 bg-clip-text text-transparent">
+                Dates du séjour
+              </h3>
+              <p className="text-xs md:text-sm text-slate-600 mt-1">
+                Définissez les dates d'arrivée et de départ
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
             <div className="space-y-2 animate-fade-in">
               <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
@@ -868,102 +842,103 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </GhostBtn>
                 )}
               </div>
-            </Accordion>
+            </div>
+          </div>
+        </div>
 
-            {/* Section Nombre d'adultes global - Accordéon */}
-            <Accordion
-              title="Nombre d'adultes global"
-              icon="👥"
-              defaultOpen={accordionStates.globalAdults}
-              onToggle={(isOpen) => {
-                setAccordionStates((prev) => ({ ...prev, globalAdults: isOpen }));
-                if (isOpen && globalAdults) {
-                  openNextSection('globalAdults');
-                }
-              }}
-              className="bg-[#f7f9fc]"
-            >
-              <div className="space-y-4">
-                <p className="text-sm text-slate-600">
+        {/* Champ global pour le nombre d'adultes */}
+        <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-2xl border-2 border-emerald-200/60 shadow-xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                <span className="text-2xl">👥</span>
+              </div>
+              <div>
+                <label className="block text-lg md:text-xl font-bold bg-gradient-to-r from-emerald-700 to-teal-700 bg-clip-text text-transparent">
+                  Nombre d'adultes global
+                </label>
+                <p className="text-sm text-emerald-700 mt-1 font-medium">
                   Remplit automatiquement toutes les activités
                 </p>
-                <div className="max-w-xs">
-                  <NumberInput
-                    value={globalAdults}
-                    onChange={(e) => {
-                      const value = e.target.value === "" ? "" : e.target.value;
-                      setGlobalAdults(value);
-                      setItems((prev) =>
-                        prev.map((item) => ({
-                          ...item,
-                          adults: value,
-                        }))
-                      );
-                    }}
-                    placeholder="Ex: 2"
-                    className="w-full text-base shadow-sm hover:shadow-md transition-all"
-                  />
-                  <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-white/60 rounded-lg border border-slate-200">
-                    <span className="text-slate-500">💡</span>
-                    <p className="text-xs text-slate-600 font-medium">
-                      Modifiable individuellement pour chaque activité
-                    </p>
+              </div>
+            </div>
+            <div className="flex-1 md:max-w-xs">
+              <NumberInput
+                value={globalAdults}
+                onChange={(e) => {
+                  const value = e.target.value === "" ? "" : e.target.value;
+                  setGlobalAdults(value);
+                  setItems((prev) =>
+                    prev.map((item) => ({
+                      ...item,
+                      adults: value,
+                    }))
+                  );
+                }}
+                placeholder="Ex: 2"
+                className="w-full text-base shadow-md hover:shadow-lg transition-all"
+              />
+              <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-white/60 rounded-lg border border-emerald-200/60">
+                <span className="text-emerald-600">💡</span>
+                <p className="text-xs text-slate-600 font-medium">
+                  Modifiable individuellement pour chaque activité
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Lignes */}
+        <div className="space-y-5 md:space-y-6 lg:space-y-8">
+          <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-slate-200/60">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <span className="text-xl">🎯</span>
+            </div>
+            <div>
+              <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                Activités
+              </h3>
+              <p className="text-sm text-slate-600 mt-0.5">
+                {computed.length} activité{computed.length > 1 ? 's' : ''} configurée{computed.length > 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+          {computed.map((c, idx) => (
+            <div key={idx} className="bg-white rounded-2xl border-2 border-slate-200/60 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
+              {/* En-tête de l'activité */}
+              <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b-2 border-blue-200/60 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-base font-bold shadow-md">
+                    {idx + 1}
+                  </span>
+                  <div>
+                    <p className="text-base font-bold text-blue-900">Activité #{idx + 1}</p>
+                    {c.act && (
+                      <p className="text-xs text-blue-700 mt-0.5 font-medium">{c.act.name}</p>
+                    )}
                   </div>
                 </div>
+                <GhostBtn 
+                  type="button" 
+                  onClick={() => removeItem(idx)} 
+                  variant="danger" 
+                  size="sm"
+                  className="shadow-md hover:shadow-lg transition-all"
+                >
+                  🗑️ Supprimer
+                </GhostBtn>
               </div>
-            </Accordion>
-
-            {/* Section Activités - Accordéon */}
-            <Accordion
-              title={`Activités (${computed.length} ${computed.length > 1 ? 'activités' : 'activité'})`}
-              icon="🎯"
-              defaultOpen={accordionStates.activities}
-              onToggle={(isOpen) => {
-                setAccordionStates((prev) => ({ ...prev, activities: isOpen }));
-              }}
-              className="bg-[#f7f9fc]"
-            >
-              <div className="space-y-5">
-                {computed.map((c, idx) => (
-                  <div 
-                    key={idx} 
-                    className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden animate-fade-in hover:scale-[1.01]" 
-                    style={{ animationDelay: `${idx * 50}ms` }}
-                  >
-                    {/* En-tête de l'activité */}
-                    <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/80 to-purple-50/80 border-b border-slate-200 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-sm font-bold shadow-sm">
-                          {idx + 1}
-                        </span>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">Activité #{idx + 1}</p>
-                          {c.act && (
-                            <p className="text-xs text-slate-600 mt-0.5 font-medium">{c.act.name}</p>
-                          )}
-                        </div>
-                      </div>
-                      <GhostBtn 
-                        type="button" 
-                        onClick={() => removeItem(idx)} 
-                        variant="danger" 
-                        size="sm"
-                        className="shadow-sm hover:shadow-md transition-all"
-                      >
-                        🗑️ Supprimer
-                      </GhostBtn>
-                    </div>
-                    
-                    {/* Contenu de l'activité */}
-                    <div className="p-5 md:p-6 space-y-5">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-800 mb-2">Activité *</label>
-                          <select
-                            value={c.raw.activityId}
-                            onChange={(e) => setItem(idx, { activityId: e.target.value })}
-                            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md"
-                          >
+              
+              {/* Contenu de l'activité */}
+              <div className="p-4 md:p-6 lg:p-8 space-y-5 md:space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
+                  <div className="sm:col-span-2 lg:col-span-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Activité *</label>
+                    <select
+                      value={c.raw.activityId}
+                      onChange={(e) => setItem(idx, { activityId: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-normal text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    >
                       <option value="">— Sélectionner une activité —</option>
                       {sortedActivities.map((a) => (
                         <option key={a.id} value={a.id}>
@@ -1821,67 +1796,41 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </p>
                 </div>
               </div>
-                    </div>
-                  </div>
-                ))}
-                <GhostBtn 
-                  type="button" 
-                  onClick={() => {
-                    addItem();
-                    setAccordionStates((prev) => ({ ...prev, activities: true }));
-                  }} 
-                  variant="primary" 
-                  className="w-full shadow-sm hover:shadow-md transition-all"
-                >
-                  ➕ Ajouter une activité
-                </GhostBtn>
               </div>
-            </Accordion>
-
-            {/* Section Notes - Accordéon */}
-            <Accordion
-              title="Notes"
-              icon="📝"
-              defaultOpen={accordionStates.notes}
-              onToggle={(isOpen) => {
-                setAccordionStates((prev) => ({ ...prev, notes: isOpen }));
-              }}
-              className="bg-[#f7f9fc]"
-            >
-              <NotesSection notes={notes} onNotesChange={setNotes} />
-            </Accordion>
-
-            {/* Bouton de soumission */}
-            <PrimaryBtn 
-              type="submit" 
-              className="w-full text-base font-semibold py-4 shadow-lg hover:shadow-xl transition-all"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin">⏳</span>
-                  Création en cours...
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  ✨ Créer le devis
-                </span>
-              )}
-            </PrimaryBtn>
-          </form>
+            </div>
+          ))}
         </div>
 
-        {/* Sidebar - Résumé sticky */}
-        <div className="lg:col-span-1">
-          <QuoteSummarySidebar
-            client={client}
-            computed={computed}
-            grandTotalCash={grandTotalCash}
-            grandTotalCard={grandTotalCard}
-            grandCurrency={grandCurrency}
-          />
-        </div>
-      </div>
+        {/* Section Total et Actions */}
+        <QuoteSummary
+          computed={computed}
+          grandTotalCash={grandTotalCash}
+          grandTotalCard={grandTotalCard}
+          grandCurrency={grandCurrency}
+          onAddItem={addItem}
+        />
+
+        {/* Notes */}
+        <NotesSection notes={notes} onNotesChange={setNotes} />
+
+        {/* Bouton de soumission */}
+        <PrimaryBtn 
+          type="submit" 
+          className="w-full text-base font-semibold py-3"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="animate-spin">⏳</span>
+              Création en cours...
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              ✨ Créer le devis
+            </span>
+          )}
+        </PrimaryBtn>
+      </form>
 
       {/* Modale de paiement */}
       <PaymentModal
