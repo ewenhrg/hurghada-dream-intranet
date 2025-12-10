@@ -372,10 +372,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           return (
             <div
               key={d.id}
-              className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-300 p-5 md:p-7 pl-7 md:pl-9 shadow-lg hover:shadow-xl ${
+              className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-300 p-5 md:p-7 pl-7 md:pl-9 shadow-lg hover:shadow-2xl hover:scale-[1.01] cursor-pointer ${
                 allTicketsFilled
-                  ? "border-emerald-300/60 bg-gradient-to-br from-emerald-50/95 to-teal-50/90"
-                  : "border-amber-300/60 bg-gradient-to-br from-amber-50/95 to-orange-50/90"
+                  ? "border-emerald-300/60 bg-gradient-to-br from-emerald-50/95 to-teal-50/90 hover:border-emerald-400/80"
+                  : "border-amber-300/60 bg-gradient-to-br from-amber-50/95 to-orange-50/90 hover:border-amber-400/80"
               }`}
             >
               <span
