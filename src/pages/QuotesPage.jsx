@@ -306,7 +306,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const formattedStopSales = useMemo(() => {
     return stopSales
       .map((stop) => {
-        const activity = activitiesMap.get(stop.activity_id);
+        // Vérifier avec l'ID local (id) et l'ID Supabase (supabase_id) car les stop sales peuvent utiliser l'un ou l'autre
+        let activity = activitiesMap.get(stop.activity_id);
+        if (!activity) {
+          // Si pas trouvé avec l'ID direct, chercher dans toutes les activités par supabase_id
+          activity = Array.from(activitiesMap.values()).find(a => a.supabase_id === stop.activity_id);
+        }
         return {
           ...stop,
           activityName: activity?.name || stop.activity_id,
@@ -325,7 +330,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const formattedPushSales = useMemo(() => {
     return pushSales
       .map((push) => {
-        const activity = activitiesMap.get(push.activity_id);
+        // Vérifier avec l'ID local (id) et l'ID Supabase (supabase_id) car les push sales peuvent utiliser l'un ou l'autre
+        let activity = activitiesMap.get(push.activity_id);
+        if (!activity) {
+          // Si pas trouvé avec l'ID direct, chercher dans toutes les activités par supabase_id
+          activity = Array.from(activitiesMap.values()).find(a => a.supabase_id === push.activity_id);
+        }
         return {
           ...push,
           activityName: activity?.name || push.activity_id,
@@ -604,7 +614,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   return (
     <div className="space-y-6 md:space-y-8 lg:space-y-10 p-3 md:p-4 lg:p-6">
         {/* Section Stop Sales et Push Sales - Compacte et repliable */}
-        {(formattedStopSales.length > 0 || formattedPushSales.length > 0) && (
+        {(stopSales.length > 0 || pushSales.length > 0) && (
           <StopPushSalesSummary 
             stopSales={formattedStopSales} 
             pushSales={formattedPushSales}
