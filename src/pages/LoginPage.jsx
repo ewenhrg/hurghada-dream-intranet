@@ -250,6 +250,10 @@ export function LoginPage({ onSuccess }) {
                     className="relative w-full rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 pl-14 pr-20 text-center text-lg font-bold tracking-[0.6em] text-slate-900 shadow-lg outline-none transition-all duration-700 ease-out focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 focus:shadow-2xl hover:border-indigo-300 hover:shadow-xl backdrop-blur-sm"
                     maxLength={6}
                     autoFocus
+                    style={{ 
+                      fontFamily: showCode ? 'inherit' : 'text-security-disc',
+                      WebkitTextSecurity: showCode ? 'none' : 'disc'
+                    }}
                   />
                   
                   {/* Préfixe HD avec animation */}
@@ -264,7 +268,7 @@ export function LoginPage({ onSuccess }) {
                   <button
                     type="button"
                     onClick={() => setShowCode(!showCode)}
-                    className="absolute inset-y-0 right-4 flex items-center justify-center w-10 h-10 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-500 ease-out focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:ring-offset-2 active:scale-95"
+                    className="absolute inset-y-0 right-4 flex items-center justify-center w-10 h-10 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-500 ease-out focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:ring-offset-2 active:scale-95 z-10"
                     aria-label={showCode ? "Masquer le code" : "Afficher le code"}
                     tabIndex={0}
                   >
@@ -280,19 +284,18 @@ export function LoginPage({ onSuccess }) {
                     )}
                   </button>
                   
-                  {/* Indicateurs de saisie améliorés - seulement si le code est masqué */}
-                  {code.length > 0 && !showCode && (
-                    <div className="absolute inset-y-0 right-16 flex items-center opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 ease-out">
+                  {/* Indicateurs de saisie personnalisés - seulement quand le code est visible (pour éviter la duplication avec les points du navigateur) */}
+                  {code.length > 0 && showCode && (
+                    <div className="absolute inset-y-0 right-16 flex items-center pointer-events-none">
                       <div className="flex gap-1.5">
                         {Array.from({ length: code.length }).map((_, i) => (
                           <span 
                             key={i} 
-                            className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 animate-pulse shadow-lg shadow-indigo-500/50" 
-                            style={{ animationDelay: `${i * 100}ms`, animationDuration: '1.5s' }} 
+                            className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/50" 
                           />
                         ))}
                         {code.length < 6 && (
-                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 opacity-30 transition-opacity duration-300" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 opacity-30" />
                         )}
                       </div>
                     </div>
