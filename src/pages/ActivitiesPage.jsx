@@ -776,17 +776,17 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                               onClick={() => handleOpenDescriptionModal(a)} 
                               variant="primary" 
                               size="sm"
-                              className={`shadow-md hover:shadow-lg transition-all ${hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}`}
+                              className={hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
                             >
-                              📄{hasDescription ? " ✓" : ""}
+                              📄 Description{hasDescription ? " ✓" : ""}
                             </GhostBtn>
                             {canModifyActivities && (
                               <>
-                                <GhostBtn onClick={() => handleEdit(a)} variant="primary" size="sm" className="shadow-md hover:shadow-lg transition-all">
-                                  ✏️
+                                <GhostBtn onClick={() => handleEdit(a)} variant="primary" size="sm">
+                                  ✏️ Modifier
                                 </GhostBtn>
-                                <GhostBtn onClick={() => handleDelete(a.id)} variant="danger" size="sm" className="shadow-md hover:shadow-lg transition-all">
-                                  🗑️
+                                <GhostBtn onClick={() => handleDelete(a.id)} variant="danger" size="sm">
+                                  🗑️ Supprimer
                                 </GhostBtn>
                               </>
                             )}
