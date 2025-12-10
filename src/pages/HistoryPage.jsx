@@ -53,7 +53,26 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         const today = new Date().toISOString().split('T')[0];
         const cacheKey = createCacheKey("sales", SITE_KEY, today);
         
-        // Ne pas utiliser le cache pour avoir les données à jour en temps réel
+        // Vérifier le cache d'abord pour améliorer les performances
+        const cached = salesCache.get(cacheKey);
+        if (cached && cached.stopSales && cached.pushSales) {
+          // Utiliser le cache mais vérifier quand même les expirés en arrière-plan
+          setStopSales(cached.stopSales);
+          setPushSales(cached.pushSales);
+          
+          // Vérifier les expirés en arrière-plan sans bloquer l'UI
+          setTimeout(async () => {
+            const expiredStopSales = cached.stopSales.filter(s => s.date <= today);
+            const expiredPushSales = cached.pushSales.filter(p => p.date <= today);
+            
+            if (expiredStopSales.length > 0 || expiredPushSales.length > 0) {
+              // Recharger pour avoir les données à jour
+              loadStopSalesAndPushSales();
+            }
+          }, 100);
+          return;
+        }
+        
         // Charger les stop sales et push sales (récupérer aussi ceux du jour même pour les supprimer)
         // On récupère depuis hier pour être sûr de ne rien manquer
         const yesterday = new Date();
@@ -88,7 +107,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         setStopSales(stopSalesData);
         setPushSales(pushSalesData);
         
-        // Mettre en cache avec une durée de vie plus courte
+        // Mettre en cache
         salesCache.set(cacheKey, { stopSales: stopSalesData, pushSales: pushSalesData });
       } catch (err) {
         logger.error("Erreur lors du chargement des stop sales/push sales:", err);
@@ -98,8 +117,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     // Charger immédiatement
     loadStopSalesAndPushSales();
     
-    // Recharger toutes les 10 secondes pour avoir les données à jour en temps réel
-    const interval = setInterval(loadStopSalesAndPushSales, 10000);
+    // Recharger toutes les 30 secondes pour avoir les données à jour (optimisé pour les performances)
+    // Le Realtime Supabase gère les mises à jour immédiates
+    const interval = setInterval(loadStopSalesAndPushSales, 30000);
     
     // Écouter les changements en temps réel avec Supabase Realtime
     let stopSalesChannel = null;
@@ -385,28 +405,28 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
               <Pill
                 active={statusFilter === "all"}
                 onClick={() => setStatusFilter("all")}
-                className="transition-all duration-200 hover:scale-105"
+                className="transition-opacity duration-150 hover:opacity-80"
               >
                 📊 Tous
               </Pill>
               <Pill
                 active={statusFilter === "paid"}
                 onClick={() => setStatusFilter("paid")}
-                className="transition-all duration-200 hover:scale-105"
+                className="transition-opacity duration-150 hover:opacity-80"
               >
                 ✅ Payés
               </Pill>
               <Pill
                 active={statusFilter === "pending"}
                 onClick={() => setStatusFilter("pending")}
-                className="transition-all duration-200 hover:scale-105"
+                className="transition-opacity duration-150 hover:opacity-80"
               >
                 ⏳ En attente
               </Pill>
               <Pill
                 active={statusFilter === "modified"}
                 onClick={() => setStatusFilter("modified")}
-                className="transition-all duration-200 hover:scale-105"
+                className="transition-opacity duration-150 hover:opacity-80"
               >
                 🔄 Modifié
               </Pill>
@@ -444,7 +464,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           return (
             <div
               key={d.id}
-              className={`relative overflow-hidden rounded-2xl border transition-all duration-300 p-5 md:p-6 lg:p-7 shadow-lg hover:shadow-2xl hover:scale-[1.005] cursor-pointer bg-[#f7f9fc] ${
+              className={`relative overflow-hidden rounded-2xl border transition-shadow duration-200 p-5 md:p-6 lg:p-7 shadow-lg hover:shadow-xl cursor-pointer bg-[#f7f9fc] ${
                 allTicketsFilled
                   ? "border-emerald-200/70 hover:border-emerald-300/90"
                   : "border-amber-200/70 hover:border-amber-300/90"
@@ -592,7 +612,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     </div>
                     <div className="flex flex-wrap justify-end gap-2 md:gap-3 w-full pt-2 border-t border-slate-200/60">
                       <button
-                        className={`flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95 hover:shadow-xl ${
+                        className={`flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 shadow-lg transition-opacity duration-150 min-h-[44px] hover:opacity-90 active:opacity-75 hover:shadow-xl ${
                           allTicketsFilled 
                             ? "bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-500 hover:from-emerald-700 hover:to-teal-700" 
                             : "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-400 hover:from-emerald-600 hover:to-teal-600"
@@ -613,7 +633,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                         {allTicketsFilled ? "✅ Tickets" : "💰 Payer"}
                       </button>
                       <button
-                        className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95 hover:shadow-xl"
+                        className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg transition-opacity duration-150 min-h-[44px] hover:opacity-90 active:opacity-75 hover:shadow-xl"
                         onClick={() => {
                           const htmlContent = generateQuoteHTML(d);
                           const clientPhone = d.client?.phone || "";
@@ -633,7 +653,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       </button>
                       {!allTicketsFilled && (
                         <button
-                          className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-amber-500 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95 hover:shadow-xl"
+                          className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-amber-500 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg transition-opacity duration-150 min-h-[44px] hover:opacity-90 active:opacity-75 hover:shadow-xl"
                           onClick={() => {
                             setSelectedQuote(d);
                             setEditClient({
@@ -674,7 +694,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       )}
                       {user?.canDeleteQuote && (
                         <button
-                          className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-red-500 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg transition-all duration-200 min-h-[44px] hover:scale-105 active:scale-95 hover:shadow-xl"
+                          className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-red-500 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg transition-opacity duration-150 min-h-[44px] hover:opacity-90 active:opacity-75 hover:shadow-xl"
                           onClick={async () => {
                             const clientInfo = d.client?.name ? `${d.client.name}${d.client?.phone ? ` (${d.client.phone})` : ''}` : 'ce devis';
                             const totalInfo = d.total ? ` (Total: ${Math.round(d.total)}€)` : '';
@@ -738,7 +758,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       {showScrollToTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 z-40 w-14 h-14 md:w-16 md:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-2 border-white/20 backdrop-blur-sm"
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 md:w-16 md:h-16 rounded-full shadow-2xl flex items-center justify-center transition-opacity duration-150 hover:opacity-90 active:opacity-75 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-2 border-white/20 backdrop-blur-sm"
           style={{
             boxShadow: '0 8px 24px rgba(79, 70, 229, 0.6)',
           }}
@@ -1310,7 +1330,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
             <span className="text-2xl">✏️</span>
             Modifier le devis
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-3xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center transition-all hover:scale-110">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-3xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center transition-opacity duration-150 hover:opacity-80">
             ×
           </button>
         </div>

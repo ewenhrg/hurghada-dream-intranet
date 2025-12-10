@@ -43,15 +43,16 @@ self.addEventListener('activate', (event) => {
 
 // Stratégie de cache: Network First, puis Cache
 self.addEventListener('fetch', (event) => {
-  // Ne pas mettre en cache les requêtes Supabase et autres APIs externes
+  // Ne pas intercepter les requêtes Supabase et autres APIs externes
+  // Laisser le navigateur les gérer directement pour éviter les problèmes CORS
   if (
     event.request.url.includes('supabase.co') ||
     event.request.url.includes('googleapis.com') ||
     event.request.url.includes('gstatic.com') ||
-    event.request.url.includes('whatsapp.com')
+    event.request.url.includes('whatsapp.com') ||
+    event.request.url.includes('vercel.app')
   ) {
-    // Pour les APIs, utiliser network only
-    event.respondWith(fetch(event.request));
+    // Ne pas intercepter ces requêtes, laisser le navigateur les gérer
     return;
   }
 

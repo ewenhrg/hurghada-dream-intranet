@@ -16,7 +16,7 @@ import { NotesSection } from "../components/quotes/NotesSection";
 import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import { useDebounce } from "../hooks/useDebounce";
-import { salesCache, createCacheKey } from "../utils/cache";
+import { salesCache, appCache, createCacheKey } from "../utils/cache";
 
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
   const [stopSales, setStopSales] = useState([]);
@@ -230,11 +230,19 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
   }, [blankItemMemo, setDraft]);
 
-  // Charger les hôtels depuis Supabase
+  // Charger les hôtels depuis Supabase avec cache
   useEffect(() => {
     async function loadHotels() {
       if (!supabase) return;
       try {
+        // Vérifier le cache d'abord
+        const cacheKey = createCacheKey("hotels", SITE_KEY);
+        const cached = appCache.get(cacheKey);
+        if (cached) {
+          setHotels(cached);
+          return;
+        }
+
         const { data, error } = await supabase
           .from("hotels")
           .select("*")
@@ -244,7 +252,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         if (error) {
           logger.error("Erreur lors du chargement des hôtels:", error);
         } else {
-          setHotels(data || []);
+          const hotelsData = data || [];
+          setHotels(hotelsData);
+          // Mettre en cache (TTL de 10 minutes car les hôtels changent rarement)
+          appCache.set(cacheKey, hotelsData, 10 * 60 * 1000);
         }
       } catch (err) {
         logger.error("Erreur lors du chargement des hôtels:", err);
@@ -291,7 +302,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         const today = new Date().toISOString().split('T')[0];
         const cacheKey = createCacheKey("sales", SITE_KEY, today);
         
-        // Ne pas utiliser le cache pour avoir les données à jour en temps réel
+        // Vérifier le cache d'abord pour améliorer les performances
+        const cached = salesCache.get(cacheKey);
+        if (cached && cached.stopSales && cached.pushSales) {
+          // Utiliser le cache mais vérifier quand même les expirés en arrière-plan
+          setStopSales(cached.stopSales);
+          setPushSales(cached.pushSales);
+          
+          // Vérifier les expirés en arrière-plan sans bloquer l'UI
+          setTimeout(async () => {
+            const expiredStopSales = cached.stopSales.filter(s => s.date <= today);
+            const expiredPushSales = cached.pushSales.filter(p => p.date <= today);
+            
+            if (expiredStopSales.length > 0 || expiredPushSales.length > 0) {
+              // Recharger pour avoir les données à jour
+              loadStopSalesAndPushSales();
+            }
+          }, 100);
+          return;
+        }
+        
         // Charger les stop sales et push sales (récupérer aussi ceux du jour même pour les supprimer)
         // On récupère depuis hier pour être sûr de ne rien manquer
         const yesterday = new Date();
@@ -327,7 +357,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         setStopSales(stopSalesData);
         setPushSales(pushSalesData);
         
-        // Mettre en cache avec une durée de vie plus courte
+        // Mettre en cache
         salesCache.set(cacheKey, { stopSales: stopSalesData, pushSales: pushSalesData });
       } catch (err) {
         logger.error("Erreur lors du chargement des stop sales/push sales:", err);
@@ -337,8 +367,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     // Charger immédiatement
     loadStopSalesAndPushSales();
     
-    // Recharger toutes les 10 secondes pour avoir les données à jour en temps réel
-    const interval = setInterval(loadStopSalesAndPushSales, 10000);
+    // Recharger toutes les 30 secondes pour avoir les données à jour (optimisé pour les performances)
+    // Le Realtime Supabase gère les mises à jour immédiates
+    const interval = setInterval(loadStopSalesAndPushSales, 30000);
     
     // Écouter les changements en temps réel avec Supabase Realtime
     let stopSalesChannel = null;

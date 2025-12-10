@@ -4,6 +4,7 @@ import { SITE_KEY, NEIGHBORHOODS } from "../constants";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
+import { appCache, createCacheKey } from "../utils/cache";
 
 export function HotelsPage({ user }) {
   const [hotels, setHotels] = useState([]);
@@ -23,6 +24,15 @@ export function HotelsPage({ user }) {
     if (!supabase) return;
     setLoading(true);
     try {
+      // Vérifier le cache d'abord
+      const cacheKey = createCacheKey("hotels", SITE_KEY);
+      const cached = appCache.get(cacheKey);
+      if (cached) {
+        setHotels(cached);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("hotels")
         .select("*")
@@ -33,7 +43,11 @@ export function HotelsPage({ user }) {
         logger.error("Erreur lors du chargement des hôtels:", error);
         toast.error("Erreur lors du chargement des hôtels: " + (error.message || "Erreur inconnue"));
       } else {
-        setHotels(data || []);
+        const hotelsData = data || [];
+        setHotels(hotelsData);
+        // Mettre en cache (TTL de 10 minutes car les hôtels changent rarement)
+        const cacheKey = createCacheKey("hotels", SITE_KEY);
+        appCache.set(cacheKey, hotelsData, 10 * 60 * 1000);
       }
     } catch (err) {
       logger.error("Exception lors du chargement des hôtels:", err);
@@ -120,6 +134,9 @@ export function HotelsPage({ user }) {
           toast.error("Erreur lors de la modification de l'hôtel: " + (error.message || "Erreur inconnue"));
         } else {
           logger.log("✅ Hôtel modifié avec succès!");
+          // Invalider le cache pour forcer le rechargement
+          const cacheKey = createCacheKey("hotels", SITE_KEY);
+          appCache.delete(cacheKey);
           await loadHotels();
           resetForm();
           toast.success("Hôtel modifié avec succès !");
@@ -141,6 +158,9 @@ export function HotelsPage({ user }) {
           }
         } else {
           logger.log("✅ Hôtel créé avec succès!");
+          // Invalider le cache pour forcer le rechargement
+          const cacheKey = createCacheKey("hotels", SITE_KEY);
+          appCache.delete(cacheKey);
           await loadHotels();
           resetForm();
           toast.success("Hôtel créé avec succès !");
@@ -174,6 +194,9 @@ export function HotelsPage({ user }) {
         toast.error("Erreur lors de la suppression: " + (error.message || "Erreur inconnue"));
       } else {
         logger.log("✅ Hôtel supprimé avec succès!");
+        // Invalider le cache pour forcer le rechargement
+        const cacheKey = createCacheKey("hotels", SITE_KEY);
+        appCache.delete(cacheKey);
         await loadHotels();
         toast.success("Hôtel supprimé avec succès !");
       }
