@@ -6,6 +6,7 @@ export function LoginPage({ onSuccess }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showCode, setShowCode] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -151,14 +152,14 @@ export function LoginPage({ onSuccess }) {
             ].map((feature, idx) => (
               <div 
                 key={feature.title} 
-                className={`rounded-2xl border-2 ${feature.borderColor} bg-gradient-to-br ${feature.color} backdrop-blur-md p-5 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 animate-fade-in`}
+                className={`rounded-2xl border-2 ${feature.borderColor} bg-gradient-to-br ${feature.color} backdrop-blur-md p-5 shadow-xl hover:shadow-2xl transition-all duration-700 ease-out hover:-translate-y-1 hover:scale-[1.02] animate-fade-in`}
                 style={{ animationDelay: `${300 + idx * 100}ms` }}
               >
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl">{feature.icon}</span>
-                  <p className="text-sm font-bold text-white">{feature.title}</p>
+                <div className="flex items-center gap-3 mb-2 transition-transform duration-500 ease-out group-hover:translate-x-1">
+                  <span className="text-2xl transition-transform duration-500 ease-out group-hover:scale-110">{feature.icon}</span>
+                  <p className="text-sm font-bold text-white transition-colors duration-500 ease-out">{feature.title}</p>
                 </div>
-                <p className="text-xs text-white/75 leading-relaxed ml-9">{feature.desc}</p>
+                <p className="text-xs text-white/75 leading-relaxed ml-9 transition-opacity duration-500 ease-out group-hover:text-white/90">{feature.desc}</p>
               </div>
             ))}
           </div>
@@ -190,15 +191,15 @@ export function LoginPage({ onSuccess }) {
             <div className="text-center mb-8 relative z-10">
               <div className="relative inline-block mb-5 group">
                 {/* Halo animé autour du logo */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8] via-[#7c3aed] to-[#f472b6] rounded-2xl blur-lg opacity-50 animate-pulse group-hover:opacity-70 transition-opacity duration-300" style={{ animationDuration: '3s' }} />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8] via-[#7c3aed] to-[#f472b6] rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-300" style={{ animationDuration: '3s', animationDelay: '1.5s' }} />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8] via-[#7c3aed] to-[#f472b6] rounded-2xl blur-lg opacity-50 animate-pulse group-hover:opacity-70 transition-opacity duration-700 ease-out" style={{ animationDuration: '3s' }} />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8] via-[#7c3aed] to-[#f472b6] rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-700 ease-out" style={{ animationDuration: '3s', animationDelay: '1.5s' }} />
                 
                 {/* Logo avec effet de rotation au hover */}
-                <div className="relative transform transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
+                <div className="relative transform transition-all duration-700 ease-out group-hover:scale-110 group-hover:rotate-3">
                   <img
                     src="/logo.png"
                     alt="Hurghada Dream Logo"
-                    className="relative mx-auto w-28 h-28 object-contain rounded-2xl border-2 border-slate-200/80 shadow-xl transition-all duration-300 group-hover:border-indigo-300 group-hover:shadow-2xl"
+                    className="relative mx-auto w-28 h-28 object-contain rounded-2xl border-2 border-slate-200/80 shadow-xl transition-all duration-700 ease-out group-hover:border-indigo-300 group-hover:shadow-2xl"
                     onError={(e) => {
                       e.target.style.display = "none";
                       const parent = e.target.parentElement;
@@ -234,34 +235,54 @@ export function LoginPage({ onSuccess }) {
                 </label>
                 <div className="relative group">
                   {/* Halo de focus amélioré */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 rounded-2xl blur-md opacity-0 transition-opacity duration-500 group-focus-within:opacity-100 group-focus-within:animate-pulse" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 transition-opacity duration-500 group-focus-within:opacity-100" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 rounded-2xl blur-md opacity-0 transition-opacity duration-700 ease-out group-focus-within:opacity-100 group-focus-within:animate-pulse" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 transition-opacity duration-700 ease-out group-focus-within:opacity-100" />
                   
                   <input
                     id="code"
-                    type="password"
+                    type={showCode ? "text" : "password"}
                     value={code}
                     onChange={(e) => {
                       setCode(e.target.value);
                       setError("");
                     }}
                     placeholder="000000"
-                    className="relative w-full rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 pl-14 pr-14 text-center text-lg font-bold tracking-[0.6em] text-slate-900 shadow-lg outline-none transition-all duration-500 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 focus:shadow-2xl hover:border-indigo-300 hover:shadow-xl backdrop-blur-sm"
+                    className="relative w-full rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 pl-14 pr-20 text-center text-lg font-bold tracking-[0.6em] text-slate-900 shadow-lg outline-none transition-all duration-700 ease-out focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 focus:shadow-2xl hover:border-indigo-300 hover:shadow-xl backdrop-blur-sm"
                     maxLength={6}
                     autoFocus
                   />
                   
                   {/* Préfixe HD avec animation */}
-                  <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xs font-bold uppercase tracking-[0.35em] text-indigo-400 transition-colors duration-300 group-focus-within:text-indigo-600">
+                  <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xs font-bold uppercase tracking-[0.35em] text-indigo-400 transition-all duration-500 ease-out group-focus-within:text-indigo-600 group-focus-within:scale-110">
                     <span className="relative">
                       HD
-                      <span className="absolute inset-0 text-indigo-600 blur-sm opacity-0 group-focus-within:opacity-50 transition-opacity duration-300">HD</span>
+                      <span className="absolute inset-0 text-indigo-600 blur-sm opacity-0 group-focus-within:opacity-50 transition-opacity duration-500 ease-out">HD</span>
                     </span>
                   </span>
                   
-                  {/* Indicateurs de saisie améliorés */}
-                  {code.length > 0 && (
-                    <div className="absolute inset-y-0 right-4 flex items-center">
+                  {/* Bouton afficher/masquer le code */}
+                  <button
+                    type="button"
+                    onClick={() => setShowCode(!showCode)}
+                    className="absolute inset-y-0 right-4 flex items-center justify-center w-10 h-10 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-500 ease-out focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:ring-offset-2 active:scale-95"
+                    aria-label={showCode ? "Masquer le code" : "Afficher le code"}
+                    tabIndex={0}
+                  >
+                    {showCode ? (
+                      <svg className="w-5 h-5 transition-transform duration-500 ease-out" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0L9.88 9.88m-3.59-3.59l3.29 3.29M12 12l.879.879m-6.5 6.5L12 12m0 0l6.5 6.5M12 12l6.5-6.5M12 12l-6.5-6.5" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5 transition-transform duration-500 ease-out" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                  
+                  {/* Indicateurs de saisie améliorés - seulement si le code est masqué */}
+                  {code.length > 0 && !showCode && (
+                    <div className="absolute inset-y-0 right-16 flex items-center opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 ease-out">
                       <div className="flex gap-1.5">
                         {Array.from({ length: code.length }).map((_, i) => (
                           <span 
@@ -271,36 +292,36 @@ export function LoginPage({ onSuccess }) {
                           />
                         ))}
                         {code.length < 6 && (
-                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 opacity-30" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 opacity-30 transition-opacity duration-300" />
                         )}
                       </div>
                     </div>
                   )}
                   
                   {/* Barre de progression */}
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500/0 via-indigo-500/50 to-purple-500/0 rounded-full transition-all duration-500" style={{ width: `${(code.length / 6) * 100}%` }} />
+                  <div className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-indigo-500/0 via-indigo-500/50 to-purple-500/0 rounded-full transition-all duration-700 ease-out" style={{ width: `${(code.length / 6) * 100}%` }} />
                 </div>
               </div>
 
               {error && (
-                <div className="rounded-2xl border-2 border-red-300/70 bg-gradient-to-r from-red-50 to-rose-50 px-5 py-4 text-sm font-bold text-red-700 shadow-xl animate-slide-up flex items-center gap-3 relative overflow-hidden">
+                <div className="rounded-2xl border-2 border-red-300/70 bg-gradient-to-r from-red-50 to-rose-50 px-5 py-4 text-sm font-bold text-red-700 shadow-xl animate-slide-up flex items-center gap-3 relative overflow-hidden transition-all duration-700 ease-out">
                   {/* Effet de brillance animé */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer" style={{ animationDuration: '2s' }} />
-                  <span className="text-xl relative z-10 animate-bounce" style={{ animationDuration: '1s' }}>⚠️</span>
-                  <span className="relative z-10">{error}</span>
+                  <span className="text-xl relative z-10 animate-bounce transition-transform duration-500 ease-out" style={{ animationDuration: '1s' }}>⚠️</span>
+                  <span className="relative z-10 transition-opacity duration-500 ease-out">{error}</span>
                 </div>
               )}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#2563eb] via-[#7c3aed] to-[#f472b6] px-6 py-4 text-base font-bold text-white shadow-[0_22px_48px_-20px_rgba(79,70,229,0.8)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_30px_70px_-25px_rgba(79,70,229,0.9)] hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-[#6366f1]/50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:scale-100 relative overflow-hidden group"
+                className="w-full inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#2563eb] via-[#7c3aed] to-[#f472b6] px-6 py-4 text-base font-bold text-white shadow-[0_22px_48px_-20px_rgba(79,70,229,0.8)] transition-all duration-700 ease-out hover:-translate-y-1 hover:shadow-[0_30px_70px_-25px_rgba(79,70,229,0.9)] hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-[#6366f1]/50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:scale-100 relative overflow-hidden group"
               >
                 {/* Effet de brillance animé */}
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
                 
                 {/* Particules animées au hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-out">
                   {[...Array(6)].map((_, i) => (
                     <div
                       key={i}
@@ -318,13 +339,13 @@ export function LoginPage({ onSuccess }) {
                 
                 {loading ? (
                   <>
-                    <span className="h-5 w-5 border-2 border-white/80 border-t-transparent rounded-full animate-spin relative z-10" />
-                    <span className="relative z-10 animate-pulse">Connexion...</span>
+                    <span className="h-5 w-5 border-2 border-white/80 border-t-transparent rounded-full animate-spin relative z-10 transition-opacity duration-500 ease-out" />
+                    <span className="relative z-10 animate-pulse transition-opacity duration-500 ease-out">Connexion...</span>
                   </>
                 ) : (
                   <>
-                    <span className="relative z-10 transition-transform duration-300 group-hover:scale-110">Accéder</span>
-                    <span className="text-white/80 text-lg leading-none relative z-10 transition-transform duration-300 group-hover:translate-x-1 group-hover:scale-110">↵</span>
+                    <span className="relative z-10 transition-all duration-500 ease-out group-hover:scale-110 group-hover:tracking-wide">Accéder</span>
+                    <span className="text-white/80 text-lg leading-none relative z-10 transition-all duration-500 ease-out group-hover:translate-x-1 group-hover:scale-110 group-hover:text-white">↵</span>
                   </>
                 )}
               </button>
