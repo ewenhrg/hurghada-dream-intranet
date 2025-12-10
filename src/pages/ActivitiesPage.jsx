@@ -770,8 +770,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                           </div>
                         </td>
                         <td className="px-4 py-4 md:px-5 md:py-5 text-slate-600 text-sm">{a.notes || <span className="text-slate-400 italic">—</span>}</td>
-                        <td className="px-4 py-4 md:px-5 md:py-5 text-right">
-                          <div className="flex gap-2 justify-end flex-wrap">
+                        <td className="px-4 py-3 md:px-5 md:py-4 text-right">
+                          <div className="flex gap-2 justify-end">
                             <GhostBtn 
                               onClick={() => handleOpenDescriptionModal(a)} 
                               variant="primary" 
