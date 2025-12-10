@@ -970,14 +970,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     pushSales={pushSales}
                   />
                   {c.act && c.isStopSale && (
-                    <div className="mt-3 p-3 rounded-lg border border-red-300 bg-red-50">
+                    <div className="mt-3 p-3 rounded-lg border-2 border-red-500 bg-red-500/20 shadow-lg shadow-red-500/30 animate-pulse">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">🛑</span>
+                        <span className="text-xl">🛑</span>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-red-900">
+                          <p className="text-sm font-bold text-red-600 uppercase tracking-wide">
                             STOP SALE
                           </p>
-                          <p className="text-xs text-red-700 mt-0.5">
+                          <p className="text-xs text-red-700 mt-0.5 font-medium">
                             Cette activité est bloquée à la vente pour cette date
                           </p>
                         </div>
@@ -985,14 +985,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                   )}
                   {c.act && c.isPushSale && (
-                    <div className="mt-3 p-3 rounded-lg border border-green-300 bg-green-50">
+                    <div className="mt-3 p-3 rounded-lg border-2 border-green-500 bg-green-500/20 shadow-lg shadow-green-500/30">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">✅</span>
+                        <span className="text-xl">✅</span>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-green-900">
+                          <p className="text-sm font-bold text-green-600 uppercase tracking-wide">
                             PUSH SALE
                           </p>
-                          <p className="text-xs text-green-700 mt-0.5">
+                          <p className="text-xs text-green-700 mt-0.5 font-medium">
                             Cette activité est ouverte exceptionnellement pour cette date
                           </p>
                         </div>

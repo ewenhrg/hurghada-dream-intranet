@@ -184,10 +184,10 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
         colorClasses = "bg-red-100 text-red-800 border-2 border-red-400 hover:bg-red-200";
         break;
       case 'stop-sale':
-        colorClasses = "bg-red-500 text-white border-2 border-red-700 hover:bg-red-600 animate-pulse";
+        colorClasses = "bg-red-500 text-white border-2 border-red-600 hover:bg-red-600 animate-pulse shadow-lg shadow-red-500/80 ring-2 ring-red-400 ring-offset-1 font-bold";
         break;
       case 'push-sale':
-        colorClasses = "bg-green-500 text-white border-2 border-green-700 hover:bg-green-600";
+        colorClasses = "bg-green-500 text-white border-2 border-green-600 hover:bg-green-600 shadow-lg shadow-green-500/80 ring-2 ring-green-400 ring-offset-1 font-bold";
         break;
       default:
         colorClasses = "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200";
@@ -329,12 +329,12 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
                 <span>Non disponible</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-red-500 border-2 border-red-700 rounded animate-pulse"></div>
-                <span>STOP SALE</span>
+                <div className="w-4 h-4 bg-red-500 border-2 border-red-600 rounded animate-pulse shadow-md shadow-red-500/70 ring-1 ring-red-400"></div>
+                <span className="font-bold text-red-600 uppercase tracking-wide">STOP SALE</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-green-500 border-2 border-green-700 rounded"></div>
-                <span>PUSH SALE</span>
+                <div className="w-4 h-4 bg-green-500 border-2 border-green-600 rounded shadow-md shadow-green-500/70 ring-1 ring-green-400"></div>
+                <span className="font-bold text-green-600 uppercase tracking-wide">PUSH SALE</span>
               </div>
             </div>
           </div>
