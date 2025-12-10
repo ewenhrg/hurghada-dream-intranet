@@ -811,6 +811,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 ))}
               </select>
               </div>
+              </div>
             </Accordion>
 
             {/* Section Dates du séjour - Accordéon */}
@@ -867,6 +868,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     ✨ Auto-dates
                   </GhostBtn>
                 )}
+              </div>
+            </div>
               </div>
             </Accordion>
 
@@ -1812,15 +1815,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 </div>
               )}
 
-              {/* Sous-total de l'activité */}
-              <div className="mt-6 pt-6 border-t border-slate-200">
-                <div className="flex items-center justify-between bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <p className="text-sm font-medium text-slate-700">Sous-total de cette activité</p>
-                  <p className="text-xl font-bold text-slate-900">
-                    {currencyNoCents(Math.round(c.lineTotal), c.currency)}
-                  </p>
-                </div>
-              </div>
+                      {/* Sous-total de l'activité */}
+                      <div className="mt-6 pt-6 border-t border-slate-200">
+                        <div className="flex items-center justify-between bg-slate-50 rounded-lg p-4 border border-slate-200">
+                          <p className="text-sm font-medium text-slate-700">Sous-total de cette activité</p>
+                          <p className="text-xl font-bold text-slate-900">
+                            {currencyNoCents(Math.round(c.lineTotal), c.currency)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
