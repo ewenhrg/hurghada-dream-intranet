@@ -743,6 +743,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
+    // Vérifier que chaque activité a au moins 1 participant (adultes, enfants ou bébés)
+    const activitiesWithoutParticipants = validComputed.filter((c) => {
+      const adults = Number(c.raw.adults || 0);
+      const children = Number(c.raw.children || 0);
+      const babies = Number(c.raw.babies || 0);
+      return adults < 1 && children < 1 && babies < 1;
+    });
+
+    if (activitiesWithoutParticipants.length > 0) {
+      const activityNames = activitiesWithoutParticipants
+        .map((c) => c.act.name || "Activité sans nom")
+        .join(", ");
+      toast.error(
+        `Les activités suivantes doivent avoir au moins 1 participant (adulte, enfant ou bébé) : ${activityNames}`
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
     // Vérifier les stop sales
     const stopSaleItems = validComputed.filter((c) => c.isStopSale);
     if (stopSaleItems.length > 0) {
