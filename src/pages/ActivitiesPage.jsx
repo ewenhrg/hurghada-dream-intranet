@@ -15,8 +15,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   // Debounce de la recherche pour améliorer les performances
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
-  // Vérifier si l'utilisateur peut modifier/supprimer les activités (Léa, Laly et Ewen)
-  const canModifyActivities = user?.name === "Léa" || user?.name === "Laly" || user?.name === "Ewen";
+  // Vérifier si l'utilisateur peut modifier/supprimer les activités (Léa, Laly, Ewen et utilisateurs avec accès Situation)
+  const canModifyActivities = user?.name === "Léa" || user?.name === "Laly" || user?.name === "Ewen" || user?.canAccessSituation || user?.name === "situation";
 
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {

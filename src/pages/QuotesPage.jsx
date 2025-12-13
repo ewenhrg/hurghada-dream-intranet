@@ -142,6 +142,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   // États pour les confirmations
   const [confirmDeleteItem, setConfirmDeleteItem] = useState({ isOpen: false, index: null, activityName: "" });
   const [confirmResetForm, setConfirmResetForm] = useState(false);
+  
+  // État pour la modal de suggestions
+  const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
+  const [suggestedActivities, setSuggestedActivities] = useState([]);
 
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
@@ -434,6 +438,127 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
   // Hook pour le remplissage automatique des dates
   const handleAutoFillDates = useAutoFillDates(client, items, setItems, activitiesMap, stopSalesMap, pushSalesMap);
+
+  // Fonction pour générer les suggestions d'activités basées sur les dates
+  const generateSuggestions = useCallback(() => {
+    if (!client.arrivalDate || !client.departureDate) {
+      toast.warning("Veuillez renseigner les dates d'arrivée et de départ du client.");
+      return;
+    }
+
+    const arrival = new Date(client.arrivalDate);
+    const departure = new Date(client.departureDate);
+    
+    if (arrival > departure) {
+      toast.warning("La date d'arrivée doit être antérieure à la date de départ.");
+      return;
+    }
+
+    // Obtenir la date d'aujourd'hui (sans l'heure)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculer la date de début : maximum entre (arrivée + 1) et (aujourd'hui + 1)
+    const arrivalPlusOne = new Date(arrival);
+    arrivalPlusOne.setDate(arrivalPlusOne.getDate() + 1);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const startDate = arrivalPlusOne > tomorrow ? arrivalPlusOne : tomorrow;
+
+    // Générer toutes les dates entre la date de début et le départ
+    const allDates = [];
+    const currentDate = new Date(startDate);
+    const departureMinusOne = new Date(departure);
+    departureMinusOne.setDate(departureMinusOne.getDate() - 1);
+    
+    while (currentDate <= departureMinusOne) {
+      const dateStr = new Date(currentDate).toISOString().slice(0, 10);
+      const dayOfWeek = currentDate.getDay();
+      allDates.push({ date: dateStr, dayOfWeek });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    if (allDates.length === 0) {
+      toast.warning("Aucune date disponible entre demain et le départ.");
+      return;
+    }
+
+    // Fonction helper pour vérifier si une activité est une plongée
+    const isDivingActivity = (activityName) => {
+      if (!activityName) return false;
+      const nameLower = activityName.toLowerCase();
+      return nameLower.includes('plongée') || nameLower.includes('plongee') || nameLower.includes('diving');
+    };
+
+    // Fonction helper pour vérifier si une date respecte la règle des 2 jours minimum avant le départ (pour la plongée)
+    const isDateSafeForDiving = (dateStr) => {
+      const activityDate = new Date(dateStr + "T12:00:00");
+      const diffTime = departure.getTime() - activityDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 2;
+    };
+
+    // Fonction helper pour vérifier si une date/activité est disponible
+    const isDateAvailableForActivity = (activityId, dateStr, dayOfWeek, availableDays) => {
+      // Vérifier si c'est un push sale (toujours disponible)
+      const pushKey = `${activityId}_${dateStr}`;
+      if (pushSalesMap.has(pushKey)) {
+        return true;
+      }
+      
+      // Vérifier si c'est un stop sale (jamais disponible sauf si push sale)
+      const stopKey = `${activityId}_${dateStr}`;
+      if (stopSalesMap.has(stopKey)) {
+        return false;
+      }
+      
+      // Vérifier si l'activité est disponible ce jour de la semaine
+      return availableDays?.[dayOfWeek] === true;
+    };
+
+    // Générer les suggestions : pour chaque activité, trouver toutes les dates où elle est disponible
+    const suggestions = [];
+    
+    activities.forEach((activity) => {
+      const activityId = String(activity.id || activity.supabase_id || '');
+      const availableDates = [];
+      
+      allDates.forEach(({ date, dayOfWeek }) => {
+        // Vérifier si l'activité est disponible cette date
+        if (isDateAvailableForActivity(activityId, date, dayOfWeek, activity.availableDays)) {
+          // Pour les plongées, vérifier la règle des 2 jours minimum avant le départ
+          if (isDivingActivity(activity.name)) {
+            if (isDateSafeForDiving(date)) {
+              availableDates.push(date);
+            }
+          } else {
+            availableDates.push(date);
+          }
+        }
+      });
+      
+      if (availableDates.length > 0) {
+        suggestions.push({
+          activity,
+          availableDates,
+          count: availableDates.length,
+        });
+      }
+    });
+
+    // Trier par nombre de dates disponibles (décroissant)
+    suggestions.sort((a, b) => b.count - a.count);
+
+    if (suggestions.length === 0) {
+      toast.info("Aucune activité disponible pour ces dates.");
+      return;
+    }
+
+    setSuggestedActivities(suggestions);
+    setShowSuggestionsModal(true);
+  }, [client.arrivalDate, client.departureDate, activities, activitiesMap, stopSalesMap, pushSalesMap]);
 
   // Formater les stop sales avec les noms d'activités (optimisé avec Map)
   const formattedStopSales = useMemo(() => {
@@ -976,20 +1101,36 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   className="flex-1"
                 />
                 {client.arrivalDate && client.departureDate && (
-                  <GhostBtn
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleAutoFillDates();
-                    }}
-                    variant="primary"
-                    size="sm"
-                    title="Remplir automatiquement les dates des activités"
-                    className="whitespace-nowrap shadow-md hover:shadow-lg transition-all"
-                  >
-                    ✨ Auto-dates
-                  </GhostBtn>
+                  <div className="flex gap-2">
+                    <GhostBtn
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleAutoFillDates();
+                      }}
+                      variant="primary"
+                      size="sm"
+                      title="Remplir automatiquement les dates des activités"
+                      className="whitespace-nowrap shadow-md hover:shadow-lg transition-all"
+                    >
+                      ✨ Auto-dates
+                    </GhostBtn>
+                    <GhostBtn
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        generateSuggestions();
+                      }}
+                      variant="primary"
+                      size="sm"
+                      title="Voir les activités possibles pour ces dates"
+                      className="whitespace-nowrap shadow-md hover:shadow-lg transition-all"
+                    >
+                      💡 Suggestions
+                    </GhostBtn>
+                  </div>
                 )}
               </div>
             </div>
@@ -2023,6 +2164,96 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         cancelText="Annuler"
         type="danger"
       />
+
+      {/* Modal de suggestions d'activités */}
+      {showSuggestionsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 md:p-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="rounded-xl md:rounded-2xl border-2 border-indigo-200 bg-white shadow-2xl p-4 md:p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl md:text-4xl">💡</span>
+                <div>
+                  <h3 className="text-lg md:text-xl font-bold text-slate-900">Suggestions d'activités</h3>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Activités disponibles pour les dates sélectionnées
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSuggestionsModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors text-2xl font-bold"
+                aria-label="Fermer"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+              {suggestedActivities.map((suggestion, idx) => {
+                const activity = suggestion.activity;
+                return (
+                  <div
+                    key={idx}
+                    className="border-2 border-slate-200 rounded-xl p-4 hover:border-indigo-300 transition-all bg-gradient-to-br from-white to-slate-50/50"
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="flex-1">
+                        <h4 className="text-base md:text-lg font-bold text-slate-900 mb-1">
+                          {activity.name || "Activité sans nom"}
+                        </h4>
+                        <p className="text-sm text-slate-600">
+                          Disponible sur <span className="font-bold text-indigo-600">{suggestion.count}</span> date{suggestion.count > 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          // Ajouter la première date disponible comme nouvel item
+                          const newItem = blankItemMemo();
+                          newItem.activityId = activity.id || activity.supabase_id || "";
+                          newItem.date = suggestion.availableDates[0];
+                          setItems((prev) => [...prev, newItem]);
+                          toast.success(`Activité "${activity.name}" ajoutée pour le ${new Date(suggestion.availableDates[0] + "T12:00:00").toLocaleDateString("fr-FR")}`);
+                        }}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-semibold whitespace-nowrap"
+                      >
+                        Ajouter
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {suggestion.availableDates.slice(0, 10).map((date) => (
+                        <span
+                          key={date}
+                          className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-200"
+                        >
+                          {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </span>
+                      ))}
+                      {suggestion.availableDates.length > 10 && (
+                        <span className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
+                          +{suggestion.availableDates.length - 10} autres
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
+              <button
+                onClick={() => setShowSuggestionsModal(false)}
+                className="px-5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
