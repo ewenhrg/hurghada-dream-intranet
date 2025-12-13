@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase";
-import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
+import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber } from "../utils";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
@@ -146,6 +146,36 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   // État pour la modal de suggestions
   const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
   const [suggestedActivities, setSuggestedActivities] = useState([]);
+
+  // Grouper les suggestions par catégorie
+  const suggestionsByCategory = useMemo(() => {
+    const grouped = {};
+    
+    // Initialiser toutes les catégories
+    CATEGORIES.forEach((cat) => {
+      grouped[cat.key] = {
+        label: cat.label,
+        activities: [],
+      };
+    });
+    
+    // Grouper les suggestions par catégorie
+    suggestedActivities.forEach((suggestion) => {
+      const category = suggestion.activity.category || "desert";
+      if (!grouped[category]) {
+        grouped[category] = {
+          label: category,
+          activities: [],
+        };
+      }
+      grouped[category].activities.push(suggestion);
+    });
+    
+    // Retourner seulement les catégories qui ont des activités
+    return Object.entries(grouped)
+      .filter(([_, data]) => data.activities.length > 0)
+      .map(([key, data]) => ({ key, ...data }));
+  }, [suggestedActivities]);
 
   // Propager le brouillon vers l'état global pour persister lors d'un changement d'onglet
   useEffect(() => {
@@ -2188,59 +2218,85 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               </button>
             </div>
 
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-              {suggestedActivities.map((suggestion, idx) => {
-                const activity = suggestion.activity;
-                return (
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              {suggestionsByCategory.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <p className="text-lg font-medium">Aucune activité disponible</p>
+                  <p className="text-sm mt-2">Aucune activité n'est disponible pour les dates sélectionnées.</p>
+                </div>
+              ) : (
+                suggestionsByCategory.map((categoryData) => (
                   <div
-                    key={idx}
-                    className="border-2 border-slate-200 rounded-xl p-4 hover:border-indigo-300 transition-all bg-gradient-to-br from-white to-slate-50/50"
+                    key={categoryData.key}
+                    className="border-2 border-indigo-200 rounded-xl p-4 md:p-5 bg-gradient-to-br from-indigo-50/30 to-white shadow-lg"
                   >
-                    <div className="flex items-start justify-between gap-4 mb-3">
-                      <div className="flex-1">
-                        <h4 className="text-base md:text-lg font-bold text-slate-900 mb-1">
-                          {activity.name || "Activité sans nom"}
-                        </h4>
-                        <p className="text-sm text-slate-600">
-                          Disponible sur <span className="font-bold text-indigo-600">{suggestion.count}</span> date{suggestion.count > 1 ? "s" : ""}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          // Ajouter la première date disponible comme nouvel item
-                          const newItem = blankItemMemo();
-                          newItem.activityId = activity.id || activity.supabase_id || "";
-                          newItem.date = suggestion.availableDates[0];
-                          setItems((prev) => [...prev, newItem]);
-                          toast.success(`Activité "${activity.name}" ajoutée pour le ${new Date(suggestion.availableDates[0] + "T12:00:00").toLocaleDateString("fr-FR")}`);
-                        }}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-semibold whitespace-nowrap"
-                      >
-                        Ajouter
-                      </button>
+                    <div className="flex items-center gap-2 mb-4 pb-3 border-b-2 border-indigo-200">
+                      <span className="text-xl md:text-2xl">📋</span>
+                      <h4 className="text-lg md:text-xl font-bold text-indigo-900">
+                        {categoryData.label}
+                      </h4>
+                      <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
+                        {categoryData.activities.length} activité{categoryData.activities.length > 1 ? "s" : ""}
+                      </span>
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {suggestion.availableDates.slice(0, 10).map((date) => (
-                        <span
-                          key={date}
-                          className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-200"
-                        >
-                          {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
-                            weekday: "short",
-                            day: "numeric",
-                            month: "short",
-                          })}
-                        </span>
-                      ))}
-                      {suggestion.availableDates.length > 10 && (
-                        <span className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
-                          +{suggestion.availableDates.length - 10} autres
-                        </span>
-                      )}
+                    
+                    <div className="space-y-3">
+                      {categoryData.activities.map((suggestion, idx) => {
+                        const activity = suggestion.activity;
+                        return (
+                          <div
+                            key={idx}
+                            className="border-2 border-slate-200 rounded-xl p-4 hover:border-indigo-400 transition-all bg-white shadow-sm"
+                          >
+                            <div className="flex items-start justify-between gap-4 mb-3">
+                              <div className="flex-1">
+                                <h5 className="text-base md:text-lg font-bold text-slate-900 mb-1">
+                                  {activity.name || "Activité sans nom"}
+                                </h5>
+                                <p className="text-sm text-slate-600">
+                                  Disponible sur <span className="font-bold text-indigo-600">{suggestion.count}</span> date{suggestion.count > 1 ? "s" : ""}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  // Ajouter la première date disponible comme nouvel item
+                                  const newItem = blankItemMemo();
+                                  newItem.activityId = activity.id || activity.supabase_id || "";
+                                  newItem.date = suggestion.availableDates[0];
+                                  setItems((prev) => [...prev, newItem]);
+                                  toast.success(`Activité "${activity.name}" ajoutée pour le ${new Date(suggestion.availableDates[0] + "T12:00:00").toLocaleDateString("fr-FR")}`);
+                                }}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-semibold whitespace-nowrap shadow-md hover:shadow-lg"
+                              >
+                                Ajouter
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {suggestion.availableDates.slice(0, 10).map((date) => (
+                                <span
+                                  key={date}
+                                  className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-200"
+                                >
+                                  {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
+                                    weekday: "short",
+                                    day: "numeric",
+                                    month: "short",
+                                  })}
+                                </span>
+                              ))}
+                              {suggestion.availableDates.length > 10 && (
+                                <span className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
+                                  +{suggestion.availableDates.length - 10} autres
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                );
-              })}
+                ))
+              )}
             </div>
 
             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
