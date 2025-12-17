@@ -539,9 +539,9 @@ Si tu n'as pas l'information dans le contexte, dis-le clairement.`;
   });
 
   try {
-    // Utiliser gemini-1.5-flash (gratuit et rapide) au lieu de gemini-pro (déprécié)
+    // Utiliser l'API v1 avec gemini-pro (modèle standard et stable)
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
