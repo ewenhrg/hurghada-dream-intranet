@@ -17,7 +17,6 @@ import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator"
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import { useDebounce } from "../hooks/useDebounce";
 import { salesCache, appCache, createCacheKey } from "../utils/cache";
-import { Chatbot } from "../components/Chatbot";
 
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
   const [stopSales, setStopSales] = useState([]);
@@ -723,175 +722,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       onUsedDatesChange(usedDates);
     }
   }, [usedDates, onUsedDatesChange]);
-
-  // Fonction pour remplir le formulaire depuis les informations extraites par le chatbot
-  const handleExtractInfo = useCallback(async (extractedInfo, activitiesList, stopSalesMapRef, pushSalesMapRef) => {
-    try {
-      // 1. Remplir les informations client
-      setClient((prev) => ({
-        ...prev,
-        name: extractedInfo.name || prev.name,
-        phone: extractedInfo.phone || prev.phone,
-        email: extractedInfo.email || prev.email,
-        hotel: extractedInfo.hotel || prev.hotel,
-        room: extractedInfo.room || prev.room,
-        arrivalDate: extractedInfo.arrivalDate || prev.arrivalDate,
-        departureDate: extractedInfo.departureDate || prev.departureDate,
-      }));
-
-      // 2. Attendre un peu pour que le state se mette à jour
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // 3. Trouver les activités correspondantes
-      const foundActivities = [];
-      extractedInfo.activities.forEach((extractedActivity) => {
-        // Chercher l'activité dans la liste
-        const matchedActivity = activitiesList.find((act) => {
-          const actNameLower = act.name.toLowerCase();
-          const extractedNameLower = extractedActivity.name.toLowerCase();
-          return (
-            actNameLower === extractedNameLower ||
-            actNameLower.includes(extractedNameLower) ||
-            extractedNameLower.includes(actNameLower)
-          );
-        });
-        if (matchedActivity) {
-          foundActivities.push(matchedActivity);
-        }
-      });
-
-      if (foundActivities.length === 0) {
-        return {
-          success: false,
-          message: "Aucune activité correspondante trouvée dans la liste.",
-          activitiesFound: [],
-        };
-      }
-
-      // 4. Calculer les dates disponibles pour chaque activité
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const arrival = extractedInfo.arrivalDate ? new Date(extractedInfo.arrivalDate) : null;
-      const departure = extractedInfo.departureDate ? new Date(extractedInfo.departureDate) : null;
-
-      if (!arrival || !departure) {
-        return {
-          success: false,
-          message: "Les dates de séjour sont requises.",
-          activitiesFound: [],
-        };
-      }
-
-      // Calculer la date de début : maximum entre (arrivée + 1) et (aujourd'hui + 1)
-      const arrivalPlusOne = new Date(arrival);
-      arrivalPlusOne.setDate(arrivalPlusOne.getDate() + 1);
-      const startDate = arrivalPlusOne > tomorrow ? arrivalPlusOne : tomorrow;
-
-      // Générer toutes les dates entre la date de début et le départ
-      const allDates = [];
-      const currentDate = new Date(startDate);
-      const departureMinusOne = new Date(departure);
-      departureMinusOne.setDate(departureMinusOne.getDate() - 1);
-
-      while (currentDate <= departureMinusOne) {
-        const dateStr = currentDate.toISOString().slice(0, 10);
-        const dayOfWeek = currentDate.getDay();
-        allDates.push({ date: dateStr, dayOfWeek });
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-
-      // 5. Créer les items pour chaque activité avec les dates disponibles
-      const newItems = [];
-      foundActivities.forEach((activity) => {
-        const activityId = String(activity.id || activity.supabase_id || "");
-        
-        // Trouver la première date disponible pour cette activité
-        let selectedDate = null;
-        for (const { date, dayOfWeek } of allDates) {
-          // Vérifier si c'est un push sale (toujours disponible)
-          const pushKey = `${activityId}_${date}`;
-          if (pushSalesMapRef.has(pushKey)) {
-            selectedDate = date;
-            break;
-          }
-
-          // Vérifier si c'est un stop sale (jamais disponible sauf si push sale)
-          const stopKey = `${activityId}_${date}`;
-          if (stopSalesMapRef.has(stopKey)) {
-            continue;
-          }
-
-          // Vérifier si l'activité est disponible ce jour de la semaine
-          if (activity.availableDays?.[dayOfWeek] === true) {
-            // Pour les plongées, vérifier la règle des 2 jours minimum avant le départ
-            const isDivingActivity = activity.name && (
-              activity.name.toLowerCase().includes('plongée') ||
-              activity.name.toLowerCase().includes('plongee') ||
-              activity.name.toLowerCase().includes('diving')
-            );
-
-            if (isDivingActivity) {
-              const activityDate = new Date(date + "T12:00:00");
-              const diffTime = departure.getTime() - activityDate.getTime();
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-              if (diffDays >= 2) {
-                selectedDate = date;
-                break;
-              }
-            } else {
-              selectedDate = date;
-              break;
-            }
-          }
-        }
-
-        if (selectedDate) {
-          const newItem = {
-            ...blankItemMemo(),
-            activityId: activity.id || activity.supabase_id,
-            date: selectedDate,
-            adults: extractedInfo.adults || "",
-            children: extractedInfo.children || 0,
-            babies: extractedInfo.babies || 0,
-          };
-          newItems.push(newItem);
-        }
-      });
-
-      if (newItems.length === 0) {
-        return {
-          success: false,
-          message: "Aucune date disponible trouvée pour les activités sélectionnées.",
-          activitiesFound: foundActivities,
-        };
-      }
-
-      // 6. Mettre à jour les items
-      setItems(newItems);
-      setGlobalAdults(extractedInfo.adults || "");
-
-      // 7. Faire défiler vers le haut pour voir le formulaire rempli
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }, 200);
-
-      return {
-        success: true,
-        message: "Formulaire rempli avec succès !",
-        activitiesFound: foundActivities,
-      };
-    } catch (error) {
-      logger.error("Erreur lors du remplissage du formulaire:", error);
-      return {
-        success: false,
-        message: `Erreur : ${error.message || "Erreur inconnue"}`,
-        activitiesFound: [],
-      };
-    }
-  }, [blankItemMemo]);
 
   async function handleCreateQuote(e) {
     e.preventDefault();
@@ -2546,13 +2376,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
       )}
 
-      {/* Chatbot assistant */}
-      <Chatbot
-        onExtractInfo={handleExtractInfo}
-        activities={activities}
-        stopSalesMap={stopSalesMap}
-        pushSalesMap={pushSalesMap}
-      />
     </div>
   );
 }
