@@ -42,11 +42,17 @@ export function AIAssistant({ activities, quotes, user, activitiesMap }) {
           // Sauvegarder dans localStorage comme cache pour éviter les requêtes répétées
           localStorage.setItem('gemini_api_key', data.gemini_api_key);
           localStorage.setItem('gemini_api_key_source', 'supabase');
+          console.log("✅ Clé API Gemini chargée depuis Supabase");
         } else {
           // Si pas trouvé dans Supabase, essayer localStorage (fallback)
+          console.warn("⚠️ Clé API non trouvée dans Supabase. Erreur:", error);
+          console.log("SITE_KEY utilisé:", SITE_KEY);
           const cachedKey = localStorage.getItem('gemini_api_key');
           if (cachedKey) {
             setGeminiApiKey(cachedKey);
+            console.log("✅ Utilisation de la clé en cache (localStorage)");
+          } else {
+            console.warn("⚠️ Aucune clé API trouvée (ni Supabase ni localStorage)");
           }
         }
       } catch (err) {
@@ -107,11 +113,43 @@ export function AIAssistant({ activities, quotes, user, activitiesMap }) {
     setIsProcessing(true);
 
     try {
+      // Vérifier si la clé API est disponible
+      if (!geminiApiKey) {
+        // Attendre un peu au cas où la clé est en cours de chargement
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Réessayer de charger depuis localStorage (au cas où Supabase n'est pas encore configuré)
+        const fallbackKey = localStorage.getItem('gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY;
+        if (!fallbackKey) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: `⚠️ **Configuration requise**
+
+La clé API Gemini n'a pas été trouvée. 
+
+**Solution rapide :**
+1. Ouvrez la console du navigateur (F12)
+2. Tapez : \`localStorage.setItem('gemini_api_key', 'AIzaSyA3u5F90QmxDe-YKvLQy31cfkrC5emuhwM')\`
+3. Rechargez la page
+
+**Solution permanente (pour tous les PC) :**
+Exécutez le script SQL \`supabase_ai_config_table.sql\` dans Supabase (SQL Editor).
+
+✅ **C'est 100% GRATUIT** !`,
+            },
+          ]);
+          setIsProcessing(false);
+          return;
+        }
+      }
+
       // Préparer le contexte avec les données du site
       const context = buildContext(activities, quotes, user, activitiesMap);
       
       // Appeler l'API IA gratuite (Google Gemini)
-      const response = await callGeminiAI(userMessage, context, messages, geminiApiKey);
+      const response = await callGeminiAI(userMessage, context, messages, geminiApiKey || localStorage.getItem('gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY);
       
       setMessages((prev) => [
         ...prev,
@@ -286,15 +324,50 @@ async function callGeminiAI(userMessage, context, previousMessages, geminiApiKey
   if (!apiKey) {
     return `⚠️ **Configuration requise (GRATUIT)**
 
-La clé API Gemini est en cours de chargement depuis Supabase...
+La clé API Gemini n'a pas été trouvée dans Supabase.
 
-Si le problème persiste, vérifiez que la clé API est bien configurée dans Supabase (table ai_config).
+**Pour activer l'assistant IA sur tous les PC :**
 
-**Pour configurer la clé dans Supabase :**
-1. Exécutez le script SQL : \`supabase_ai_config_table.sql\`
-2. Ou insérez directement dans la table \`ai_config\` :
-   - site_key: 'hurghada-dream' (ou votre SITE_KEY)
-   - gemini_api_key: 'VOTRE_CLE_GEMINI'
+1. Ouvrez votre projet Supabase
+2. Allez dans "SQL Editor"
+3. Copiez-collez et exécutez le script SQL suivant :
+
+\`\`\`sql
+-- Créer la table pour stocker la configuration de l'IA
+CREATE TABLE IF NOT EXISTS public.ai_config (
+  id BIGSERIAL PRIMARY KEY,
+  site_key TEXT NOT NULL,
+  gemini_api_key TEXT NOT NULL,
+  provider TEXT DEFAULT 'gemini',
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_by TEXT DEFAULT '',
+  UNIQUE(site_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_config_site_key ON public.ai_config(site_key);
+
+ALTER TABLE public.ai_config ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow select ai_config"
+ON public.ai_config FOR SELECT TO public USING (true);
+
+CREATE POLICY "Allow update ai_config"
+ON public.ai_config FOR UPDATE TO public USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow insert ai_config"
+ON public.ai_config FOR INSERT TO public WITH CHECK (true);
+
+-- Insérer la clé API (remplacez 'hurghada_dream_0606' par votre SITE_KEY si différent)
+INSERT INTO public.ai_config (site_key, gemini_api_key, provider, updated_by)
+VALUES ('hurghada_dream_0606', 'AIzaSyA3u5F90QmxDe-YKvLQy31cfkrC5emuhwM', 'gemini', 'System')
+ON CONFLICT (site_key) DO UPDATE SET
+  gemini_api_key = EXCLUDED.gemini_api_key,
+  provider = EXCLUDED.provider,
+  updated_at = NOW(),
+  updated_by = EXCLUDED.updated_by;
+\`\`\`
+
+4. Rechargez cette page
 
 ✅ **C'est 100% GRATUIT** avec un quota généreux (15 requêtes/min, 1500/jour) !`;
   }
