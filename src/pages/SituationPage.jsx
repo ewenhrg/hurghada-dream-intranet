@@ -1684,10 +1684,10 @@ export function SituationPage({ activities = [], user }) {
           <MessagePreviewSection
             previewMessages={previewMessages}
             onMessageChange={(index, value) => {
-              const updatedMessages = [...previewMessages];
+                      const updatedMessages = [...previewMessages];
               updatedMessages[index] = { ...updatedMessages[index], message: value };
-              setPreviewMessages(updatedMessages);
-            }}
+                      setPreviewMessages(updatedMessages);
+                    }}
             onClose={() => setShowPreview(false)}
           />
         )}

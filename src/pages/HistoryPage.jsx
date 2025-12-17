@@ -72,7 +72,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           }, 100);
           return;
         }
-        
+
         // Charger les stop sales et push sales (récupérer aussi ceux du jour même pour les supprimer)
         // On récupère depuis hier pour être sûr de ne rien manquer
         const yesterday = new Date();
@@ -381,55 +381,55 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 bg-gradient-to-br from-slate-50/50 via-white to-blue-50/30 min-h-screen">
       {/* Header amélioré */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-lg p-5 md:p-6 lg:p-7">
-        <div className="flex flex-col gap-5 md:gap-6">
-          <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-start md:items-center justify-between">
-            <div className="flex-1 max-w-md">
+      <div className="flex flex-col gap-5 md:gap-6">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-start md:items-center justify-between">
+          <div className="flex-1 max-w-md">
               <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 bg-clip-text text-transparent mb-4 flex items-center gap-3">
                 <span className="text-3xl md:text-4xl animate-pulse">📋</span>
                 <span>Historique des devis</span>
-              </h2>
+            </h2>
               <div className="space-y-3">
-                <TextInput
-                  placeholder="Rechercher par numéro de téléphone..."
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
+              <TextInput
+                placeholder="Rechercher par numéro de téléphone..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
                   className="w-full text-base border-2 border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 rounded-xl shadow-sm"
-                />
+              />
                 <p className="text-xs md:text-sm text-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-2.5 rounded-xl border-2 border-amber-200/70 flex items-center gap-2 font-medium shadow-sm">
-                  <span className="text-base">⚠️</span>
-                  <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
-                </p>
-              </div>
+                <span className="text-base">⚠️</span>
+                <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
+              </p>
             </div>
-            <div className="flex flex-wrap gap-2 md:gap-3">
-              <Pill
-                active={statusFilter === "all"}
-                onClick={() => setStatusFilter("all")}
+          </div>
+          <div className="flex flex-wrap gap-2 md:gap-3">
+            <Pill
+              active={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
                 className="transition-opacity duration-150 hover:opacity-80"
-              >
-                📊 Tous
-              </Pill>
-              <Pill
-                active={statusFilter === "paid"}
-                onClick={() => setStatusFilter("paid")}
+            >
+              📊 Tous
+            </Pill>
+            <Pill
+              active={statusFilter === "paid"}
+              onClick={() => setStatusFilter("paid")}
                 className="transition-opacity duration-150 hover:opacity-80"
-              >
-                ✅ Payés
-              </Pill>
-              <Pill
-                active={statusFilter === "pending"}
-                onClick={() => setStatusFilter("pending")}
+            >
+              ✅ Payés
+            </Pill>
+            <Pill
+              active={statusFilter === "pending"}
+              onClick={() => setStatusFilter("pending")}
                 className="transition-opacity duration-150 hover:opacity-80"
-              >
-                ⏳ En attente
-              </Pill>
-              <Pill
-                active={statusFilter === "modified"}
-                onClick={() => setStatusFilter("modified")}
+            >
+              ⏳ En attente
+            </Pill>
+            <Pill
+              active={statusFilter === "modified"}
+              onClick={() => setStatusFilter("modified")}
                 className="transition-opacity duration-150 hover:opacity-80"
-              >
-                🔄 Modifié
-              </Pill>
+            >
+              🔄 Modifié
+            </Pill>
             </div>
           </div>
         </div>
@@ -484,42 +484,42 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
               <div className="relative space-y-4 md:space-y-5">
                 {/* En-tête avec statut et métadonnées */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3">
                     <span className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 transition-all duration-200 ${
-                      allTicketsFilled
+                    allTicketsFilled
                         ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-emerald-600 shadow-emerald-200/50"
                         : "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-600 shadow-amber-200/50"
-                    }`}
-                    >
-                      {allTicketsFilled ? "✅ Payé" : "⏳ En attente"}
-                    </span>
-                    {d.isModified && (
+                  }`}
+                  >
+                    {allTicketsFilled ? "✅ Payé" : "⏳ En attente"}
+                  </span>
+                  {d.isModified && (
                       <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-purple-600 shadow-purple-200/50">
-                        🔄 Modifié
-                      </span>
-                    )}
-                    {hasTickets && (
+                      🔄 Modifié
+                    </span>
+                  )}
+                  {hasTickets && (
                       <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-600 shadow-blue-200/50">
-                        🎫 Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
-                      </span>
-                    )}
-                  </div>
+                      🎫 Tickets : {d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length}/{d.items.length}
+                    </span>
+                  )}
+                </div>
                   <p className="text-xs md:text-sm text-slate-500 font-medium">
-                    📅 {d.formattedCreatedAt}
+                      📅 {d.formattedCreatedAt}
                     {d.createdByName && <span className="ml-2 text-blue-600 font-semibold">• {d.createdByName}</span>}
-                  </p>
+                    </p>
                 </div>
                 
                 {/* Informations client améliorées */}
                 <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-slate-200/60 p-4 md:p-5 shadow-sm">
                   <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
                     <div className="flex-1 space-y-2 min-w-0">
-                      {d.client?.name && (
+                    {d.client?.name && (
                         <p className="text-base md:text-lg lg:text-xl text-slate-900 font-bold break-words flex items-center gap-2">
                           <span className="text-xl">👤</span>
                           {d.client.name}
-                        </p>
-                      )}
+                      </p>
+                    )}
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm md:text-base">
                         <p className="text-slate-700 font-semibold break-words flex items-center gap-2">
                           <span className="text-lg">📞</span>
@@ -531,22 +531,22 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                           {d.client?.room && <span className="text-slate-600 font-normal">(Chambre {d.client.room})</span>}
                         </p>
                       </div>
-                    </div>
-                    {(d.trip && d.trip.trim() && d.trip !== "Activité ?") || (d.invoiceN && d.invoiceN !== "N/A") ? (
-                      <div className="flex flex-col items-end gap-2 text-right min-w-[140px]">
-                        {d.trip && d.trip.trim() && d.trip !== "Activité ?" && (
-                          <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-2 border-indigo-600 shadow-md">
-                            ✈️ {d.trip}
-                          </span>
-                        )}
-                        {d.invoiceN && d.invoiceN !== "N/A" && (
-                          <span className="text-xs md:text-sm uppercase tracking-wide text-slate-700 font-bold bg-slate-100 px-3 py-1.5 rounded-lg border-2 border-slate-300/60 shadow-sm">
-                            📄 Invoice {d.invoiceN}
-                          </span>
-                        )}
-                      </div>
-                    ) : null}
                   </div>
+                  {(d.trip && d.trip.trim() && d.trip !== "Activité ?") || (d.invoiceN && d.invoiceN !== "N/A") ? (
+                    <div className="flex flex-col items-end gap-2 text-right min-w-[140px]">
+                      {d.trip && d.trip.trim() && d.trip !== "Activité ?" && (
+                          <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-2 border-indigo-600 shadow-md">
+                          ✈️ {d.trip}
+                        </span>
+                      )}
+                      {d.invoiceN && d.invoiceN !== "N/A" && (
+                          <span className="text-xs md:text-sm uppercase tracking-wide text-slate-700 font-bold bg-slate-100 px-3 py-1.5 rounded-lg border-2 border-slate-300/60 shadow-sm">
+                          📄 Invoice {d.invoiceN}
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
                 </div>
                 {/* Section activités et total */}
                 <div className="flex flex-col gap-5 md:gap-6 pt-4 md:pt-5 border-t border-slate-200/60 lg:flex-row lg:items-start lg:justify-between">
@@ -603,12 +603,12 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                       <p className="text-xs md:text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wider">Total du devis</p>
                       <div className="space-y-1.5">
                         <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                          💵 {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
-                        </p>
-                        <p className="text-lg md:text-xl font-semibold text-slate-700">
-                          💳 {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
-                        </p>
-                      </div>
+                        💵 {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
+                      </p>
+                      <p className="text-lg md:text-xl font-semibold text-slate-700">
+                        💳 {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
+                      </p>
+                    </div>
                     </div>
                     <div className="flex flex-wrap justify-end gap-2 md:gap-3 w-full pt-2 border-t border-slate-200/60">
                       <button

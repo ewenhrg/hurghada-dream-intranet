@@ -14,6 +14,7 @@ import { PageTransition } from "./components/PageTransition";
 import { toast } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
+import { LocalChatbot } from "./components/LocalChatbot";
 
 // Fonction helper pour le lazy loading avec gestion d'erreur et retry
 const lazyWithRetry = (importFn, retries = 3) => {
@@ -1349,6 +1350,16 @@ export default function App() {
         {footerText}
       </footer>
 
+      {/* Assistant Local - Disponible sur toutes les pages */}
+      {ok && user && (
+        <LocalChatbot
+          activities={activities}
+          quotes={quotes}
+          clients={quotes.map(q => q.client).filter(Boolean)}
+          hotels={[]}
+          user={user}
+        />
+      )}
     </div>
   );
 }
