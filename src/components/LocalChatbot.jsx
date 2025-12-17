@@ -220,6 +220,73 @@ Que souhaitez-vous savoir d'autre ?`;
       return response;
     }
 
+    // Questions sur les jours disponibles
+    if (
+      lowerMessage.includes("dispo") ||
+      lowerMessage.includes("disponible") ||
+      lowerMessage.includes("jour") ||
+      lowerMessage.includes("quand") ||
+      lowerMessage.includes("quel jour") ||
+      lowerMessage.includes("quels jours")
+    ) {
+      // Extraire le nom de l'activité de la question
+      const activityNameMatch = lowerMessage.match(/(?:dispo|disponible|jour|quand|quel jour|quels jours).*?(?:pour|de|du|le|la|l'|les)?\s*(.+?)(?:\s+est|\s+est-ce|\s+dispo|disponible|$)/i);
+      let activityName = "";
+      
+      if (activityNameMatch) {
+        activityName = activityNameMatch[1].trim();
+      } else {
+        // Essayer de trouver l'activité en cherchant des mots-clés communs
+        const words = lowerMessage.split(/\s+/);
+        const activityKeywords = words.filter(w => 
+          w.length > 3 && 
+          !["dispo", "disponible", "jour", "jours", "quand", "quel", "quels", "pour", "de", "du", "le", "la", "les", "est", "sont"].includes(w.toLowerCase())
+        );
+        if (activityKeywords.length > 0) {
+          activityName = activityKeywords.join(" ");
+        }
+      }
+
+      if (activityName) {
+        const foundActivities = searchActivities(activityName);
+        
+        if (foundActivities.length > 0) {
+          const act = foundActivities[0];
+          const availableDays = act.availableDays || [];
+          const weekdays = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+          
+          const daysAvailable = [];
+          const daysNotAvailable = [];
+          
+          availableDays.forEach((isAvailable, index) => {
+            if (isAvailable) {
+              daysAvailable.push(weekdays[index]);
+            } else {
+              daysNotAvailable.push(weekdays[index]);
+            }
+          });
+
+          let response = `📅 **Jours disponibles pour "${act.name}"** :\n\n`;
+          
+          if (daysAvailable.length > 0) {
+            response += `✅ **Disponible** : ${daysAvailable.join(", ")}\n\n`;
+          } else {
+            response += `❌ Aucun jour disponible\n\n`;
+          }
+          
+          if (daysNotAvailable.length > 0 && daysAvailable.length > 0) {
+            response += `❌ **Non disponible** : ${daysNotAvailable.join(", ")}\n`;
+          }
+
+          return response;
+        } else {
+          return `❌ Je n'ai pas trouvé l'activité "${activityName}".\n\nEssayez avec le nom exact de l'activité ou demandez-moi "liste des activités" pour voir toutes les activités disponibles.`;
+        }
+      } else {
+        return `❌ Je n'ai pas pu identifier l'activité dans votre question.\n\nEssayez de formuler ainsi : "Quels jours sont disponibles pour [nom de l'activité] ?"`;
+      }
+    }
+
     // Questions sur les prix
     if (
       lowerMessage.includes("prix") ||
@@ -290,6 +357,7 @@ Que souhaitez-vous savoir d'autre ?`;
 
 • 📊 **Statistiques** : "Combien de devis ?", "Statistiques"
 • 🎯 **Activités** : "Liste des activités", "Activité plongée"
+• 📅 **Jours disponibles** : "Quels jours pour dolphin house ?", "Quand est disponible [activité] ?"
 • 📋 **Devis** : "Devis de [nom client]", "Liste des devis"
 • 👥 **Clients** : "Clients", "Qui est [nom]"
 • 💰 **Prix** : "Prix de [activité]"
@@ -304,6 +372,7 @@ Posez-moi une question ! 😊`;
 Essayez de me demander :
 • Des statistiques ("Combien de devis ?")
 • Des activités ("Liste des activités")
+• Les jours disponibles ("Quels jours pour dolphin house ?")
 • Des devis ("Devis de [nom]")
 • Des prix ("Prix de [activité]")
 
