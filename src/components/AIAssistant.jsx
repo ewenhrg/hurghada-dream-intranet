@@ -1,5 +1,21 @@
 import { useState, useRef, useEffect } from "react";
-import { supabase, SITE_KEY } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
+
+// Définir SITE_KEY directement ici pour éviter les problèmes d'import
+// Utiliser la même logique que dans lib/supabase.js mais avec garantie de la valeur par défaut
+function getSiteKey() {
+  // Essayer d'abord les variables d'environnement
+  if (typeof import.meta !== "undefined" && import.meta.env) {
+    const envKey = import.meta.env.VITE_SITE_KEY || import.meta.env.REACT_APP_SITE_KEY;
+    if (envKey && envKey !== "https://uvqzqlfzhgbknkpvybbj.supabase.co") {
+      return envKey;
+    }
+  }
+  // Toujours retourner la valeur par défaut correcte
+  return "hurghada_dream_0606";
+}
+
+const SITE_KEY = getSiteKey();
 
 export function AIAssistant({ activities, quotes, user, activitiesMap }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,7 +35,7 @@ export function AIAssistant({ activities, quotes, user, activitiesMap }) {
   useEffect(() => {
     async function loadApiKey() {
       console.log("🔍 [AIAssistant] Début du chargement de la clé API...");
-      console.log("🔍 [AIAssistant] SITE_KEY:", SITE_KEY);
+      console.log("🔍 [AIAssistant] SITE_KEY (forcé):", SITE_KEY);
       console.log("🔍 [AIAssistant] Supabase disponible?", !!supabase);
       
       if (!supabase) {
@@ -412,8 +428,17 @@ async function callGeminiAI(userMessage, context, previousMessages, geminiApiKey
   const apiKey = geminiApiKey || import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key');
 
   if (!apiKey) {
-    // Récupérer SITE_KEY depuis les constantes (même logique que dans le composant)
-    const siteKey = import.meta.env.VITE_SITE_KEY || import.meta.env.REACT_APP_SITE_KEY || "hurghada_dream_0606";
+    // Utiliser la même logique que dans le composant pour obtenir SITE_KEY
+    function getSiteKeyForError() {
+      if (typeof import.meta !== "undefined" && import.meta.env) {
+        const envKey = import.meta.env.VITE_SITE_KEY || import.meta.env.REACT_APP_SITE_KEY;
+        if (envKey && envKey !== "https://uvqzqlfzhgbknkpvybbj.supabase.co") {
+          return envKey;
+        }
+      }
+      return "hurghada_dream_0606";
+    }
+    const siteKey = getSiteKeyForError();
     
     return `⚠️ **Configuration requise (GRATUIT)**
 
