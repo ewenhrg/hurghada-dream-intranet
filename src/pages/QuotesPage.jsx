@@ -16,7 +16,9 @@ import { NotesSection } from "../components/quotes/NotesSection";
 import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import { useDebounce } from "../hooks/useDebounce";
+import { useQuoteValidation } from "../hooks/useQuoteValidation";
 import { salesCache, appCache, createCacheKey } from "../utils/cache";
+import { ValidationPanel } from "../components/quotes/ValidationPanel";
 
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
   const [stopSales, setStopSales] = useState([]);
@@ -673,6 +675,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     pushSalesMap
   );
 
+  // Hook de validation intelligente
+  const validation = useQuoteValidation(
+    client,
+    items,
+    computed,
+    activitiesMap,
+    stopSalesMap,
+    pushSalesMap
+  );
+
   // Corriger automatiquement les dates passées ou du jour même
   useEffect(() => {
     const today = new Date();
@@ -733,6 +745,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
     setIsSubmitting(true);
 
+    // Utiliser la validation intelligente
+    if (!validation.isValid) {
+      // Afficher le premier message d'erreur
+      const firstError = validation.errors[0];
+      if (firstError) {
+        toast.error(firstError.message, { duration: 5000 });
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
     // Filtrer les items vides (sans activité sélectionnée)
     const validComputed = computed.filter((c) => c.act && c.act.id);
     
@@ -743,39 +766,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
-    // Vérifier que chaque activité a au moins 1 participant (adultes, enfants ou bébés)
-    const activitiesWithoutParticipants = validComputed.filter((c) => {
-      const adults = Number(c.raw.adults || 0);
-      const children = Number(c.raw.children || 0);
-      const babies = Number(c.raw.babies || 0);
-      return adults < 1 && children < 1 && babies < 1;
-    });
-
-    if (activitiesWithoutParticipants.length > 0) {
-      const activityNames = activitiesWithoutParticipants
-        .map((c) => c.act.name || "Activité sans nom")
-        .join(", ");
-      toast.error(
-        `Les activités suivantes doivent avoir au moins 1 participant (adulte, enfant ou bébé) : ${activityNames}`
-      );
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Vérifier les stop sales
-    const stopSaleItems = validComputed.filter((c) => c.isStopSale);
-    if (stopSaleItems.length > 0) {
-      toast.error(
-        `${stopSaleItems.length} activité(s) sont en STOP SALE pour cette date. Le devis ne peut pas être créé.`,
-      );
-      setIsSubmitting(false);
-      return;
-    }
-
-    const notAvailable = validComputed.filter((c) => c.weekday != null && !c.baseAvailable && !c.isPushSale);
-    if (notAvailable.length) {
+    // Afficher les avertissements s'il y en a
+    if (validation.hasWarnings) {
+      const warningCount = validation.warningCount;
       toast.warning(
-        `${notAvailable.length} activité(s) sont hors-dispo ce jour-là. Le devis est quand même créé (date exceptionnelle ou push sale).`,
+        `${warningCount} avertissement${warningCount > 1 ? "s" : ""} détecté${warningCount > 1 ? "s" : ""}. Vérifiez le panneau de validation.`,
+        { duration: 4000 }
       );
     }
 
@@ -929,6 +925,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             activities={activities}
           />
         )}
+
+        {/* Panneau de validation intelligente */}
+        <ValidationPanel validation={validation} />
 
         <form 
           onSubmit={handleCreateQuote} 
