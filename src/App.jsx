@@ -14,7 +14,6 @@ import { PageTransition } from "./components/PageTransition";
 import { toast } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
-import { AIAssistant } from "./components/AIAssistant";
 
 // Fonction helper pour le lazy loading avec gestion d'erreur et retry
 const lazyWithRetry = (importFn, retries = 3) => {
@@ -1350,15 +1349,6 @@ export default function App() {
         {footerText}
       </footer>
 
-      {/* Assistant IA Gratuit - Disponible sur toutes les pages */}
-      {ok && user && (
-        <AIAssistant
-          activities={activities}
-          quotes={quotes}
-          user={user}
-          activitiesMap={activitiesMap}
-        />
-      )}
     </div>
   );
 }
