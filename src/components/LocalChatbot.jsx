@@ -361,7 +361,7 @@ Ou tapez "aide" pour voir toutes mes capacités ! 😊`;
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full shadow-2xl hover:shadow-3xl flex items-center justify-center text-white text-3xl z-[9999] transition-all duration-200 hover:scale-110 cursor-pointer"
+          className="fixed bottom-6 right-24 w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full shadow-2xl hover:shadow-3xl flex items-center justify-center text-white text-3xl z-[9999] transition-all duration-200 hover:scale-110 cursor-pointer"
           style={{ zIndex: 9999 }}
           aria-label="Ouvrir l'assistant"
         >
@@ -372,7 +372,7 @@ Ou tapez "aide" pour voir toutes mes capacités ! 😊`;
       {/* Fenêtre du chatbot */}
       {isOpen && (
         <div 
-          className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col border-2 border-gray-200" 
+          className="fixed bottom-6 right-24 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col border-2 border-gray-200" 
           style={{ zIndex: 9999 }}
         >
           {/* En-tête */}
