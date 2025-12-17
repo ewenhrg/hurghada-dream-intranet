@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { SITE_KEY } from "../constants";
 
 export function AIAssistant({ activities, quotes, user, activitiesMap }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [geminiApiKey, setGeminiApiKey] = useState(null);
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -12,6 +15,78 @@ export function AIAssistant({ activities, quotes, user, activitiesMap }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Charger la clé API depuis Supabase (partagée entre tous les PC automatiquement)
+  useEffect(() => {
+    async function loadApiKey() {
+      if (!supabase) {
+        // Si Supabase n'est pas configuré, essayer localStorage ou .env comme fallback
+        const fallbackKey = import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key');
+        if (fallbackKey) {
+          setGeminiApiKey(fallbackKey);
+        }
+        return;
+      }
+      
+      try {
+        // Charger depuis Supabase (source principale - partagée entre tous les PC)
+        const { data, error } = await supabase
+          .from("ai_config")
+          .select("gemini_api_key")
+          .eq("site_key", SITE_KEY)
+          .single();
+
+        if (!error && data && data.gemini_api_key) {
+          // Clé trouvée dans Supabase - l'utiliser (tous les PC l'auront automatiquement)
+          setGeminiApiKey(data.gemini_api_key);
+          // Sauvegarder dans localStorage comme cache pour éviter les requêtes répétées
+          localStorage.setItem('gemini_api_key', data.gemini_api_key);
+          localStorage.setItem('gemini_api_key_source', 'supabase');
+        } else {
+          // Si pas trouvé dans Supabase, essayer localStorage (fallback)
+          const cachedKey = localStorage.getItem('gemini_api_key');
+          if (cachedKey) {
+            setGeminiApiKey(cachedKey);
+          }
+        }
+      } catch (err) {
+        console.error("Erreur lors du chargement de la clé API depuis Supabase:", err);
+        // En cas d'erreur, essayer localStorage comme fallback
+        const fallbackKey = localStorage.getItem('gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY;
+        if (fallbackKey) {
+          setGeminiApiKey(fallbackKey);
+        }
+      }
+    }
+
+    loadApiKey();
+    
+    // Écouter les changements en temps réel dans Supabase (si la clé est mise à jour)
+    if (supabase) {
+      const channel = supabase
+        .channel('ai_config_changes')
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'ai_config',
+            filter: `site_key=eq.${SITE_KEY}`
+          }, 
+          (payload) => {
+            if (payload.new && payload.new.gemini_api_key) {
+              setGeminiApiKey(payload.new.gemini_api_key);
+              localStorage.setItem('gemini_api_key', payload.new.gemini_api_key);
+              localStorage.setItem('gemini_api_key_source', 'supabase');
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -36,7 +111,7 @@ export function AIAssistant({ activities, quotes, user, activitiesMap }) {
       const context = buildContext(activities, quotes, user, activitiesMap);
       
       // Appeler l'API IA gratuite (Google Gemini)
-      const response = await callGeminiAI(userMessage, context, messages);
+      const response = await callGeminiAI(userMessage, context, messages, geminiApiKey);
       
       setMessages((prev) => [
         ...prev,
@@ -204,28 +279,22 @@ function buildContext(activities, quotes, user, activitiesMap) {
 }
 
 // Fonction pour appeler Google Gemini API (GRATUIT)
-async function callGeminiAI(userMessage, context, previousMessages) {
-  // Récupérer la clé API depuis les variables d'environnement ou localStorage
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key');
+async function callGeminiAI(userMessage, context, previousMessages, geminiApiKey) {
+  // Utiliser la clé API passée en paramètre (depuis Supabase ou localStorage)
+  const apiKey = geminiApiKey || import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key');
 
   if (!apiKey) {
     return `⚠️ **Configuration requise (GRATUIT)**
 
-Pour utiliser l'assistant IA gratuit, vous devez obtenir une clé API Google Gemini :
+La clé API Gemini est en cours de chargement depuis Supabase...
 
-**Comment obtenir votre clé API GRATUITE :**
-1. Allez sur https://makersuite.google.com/app/apikey
-2. Connectez-vous avec votre compte Google
-3. Cliquez sur "Create API Key"
-4. Copiez la clé
+Si le problème persiste, vérifiez que la clé API est bien configurée dans Supabase (table ai_config).
 
-**Comment configurer la clé :**
-1. Ouvrez la console du navigateur (F12)
-2. Tapez : \`localStorage.setItem('gemini_api_key', 'VOTRE_CLE_ICI')\`
-3. Rechargez la page
-
-Ou ajoutez-la dans un fichier .env.local à la racine :
-\`VITE_GEMINI_API_KEY=votre_cle_ici\`
+**Pour configurer la clé dans Supabase :**
+1. Exécutez le script SQL : \`supabase_ai_config_table.sql\`
+2. Ou insérez directement dans la table \`ai_config\` :
+   - site_key: 'hurghada-dream' (ou votre SITE_KEY)
+   - gemini_api_key: 'VOTRE_CLE_GEMINI'
 
 ✅ **C'est 100% GRATUIT** avec un quota généreux (15 requêtes/min, 1500/jour) !`;
   }
