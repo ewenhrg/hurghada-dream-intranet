@@ -14,6 +14,7 @@ import { PageTransition } from "./components/PageTransition";
 import { toast } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
+import { AIAssistant } from "./components/AIAssistant";
 
 // Fonction helper pour le lazy loading avec gestion d'erreur et retry
 const lazyWithRetry = (importFn, retries = 3) => {
@@ -1094,21 +1095,21 @@ export default function App() {
       {/* CONTENU CENTRÉ */}
       <main className={mainClassName}>
         <PageTransition>
-          {tab === "devis" ? (
-            <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
-                
-                <div 
+        {tab === "devis" ? (
+          <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
+              
+              <div 
                   className="space-y-6 md:space-y-10 rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-2xl animate-page-enter"
-                  style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 30px 60px -35px rgba(15, 23, 42, 0.65)',
-                    borderRadius: '2rem'
-                  }}
-                >
-                  <ErrorBoundary>
-                    <Suspense fallback={<PageLoader />}>
-                      <section className="space-y-6">
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 30px 60px -35px rgba(15, 23, 42, 0.65)',
+                  borderRadius: '2rem'
+                }}
+              >
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}>
+                    <section className="space-y-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <h2 className="font-semibold mb-1.5 bg-gradient-to-r from-[#4f46e5] via-[#6366f1] to-[#06b6d4] bg-clip-text text-transparent" style={{ fontSize: '1.75rem', letterSpacing: '-0.03em' }}>
@@ -1348,6 +1349,16 @@ export default function App() {
       >
         {footerText}
       </footer>
+
+      {/* Assistant IA Gratuit - Disponible sur toutes les pages */}
+      {ok && user && (
+        <AIAssistant
+          activities={activities}
+          quotes={quotes}
+          user={user}
+          activitiesMap={activitiesMap}
+        />
+      )}
     </div>
   );
 }
