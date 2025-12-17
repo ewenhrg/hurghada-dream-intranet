@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { supabase } from "../lib/supabase";
-import { SITE_KEY } from "../constants";
+import { supabase, SITE_KEY } from "../lib/supabase";
 
 export function AIAssistant({ activities, quotes, user, activitiesMap }) {
   const [isOpen, setIsOpen] = useState(false);
