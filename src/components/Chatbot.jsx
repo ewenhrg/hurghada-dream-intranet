@@ -1,6 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 
 export function Chatbot({ onExtractInfo, activities, stopSalesMap, pushSalesMap }) {
+  // Debug: vérifier que le composant est bien monté
+  useEffect(() => {
+    console.log("🤖 Chatbot component mounted");
+  }, []);
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -96,7 +101,8 @@ export function Chatbot({ onExtractInfo, activities, stopSalesMap, pushSalesMap 
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-white text-2xl z-50 transition-all duration-200 hover:scale-110"
+          className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-2xl hover:shadow-3xl flex items-center justify-center text-white text-3xl z-[9999] transition-all duration-200 hover:scale-110 cursor-pointer"
+          style={{ zIndex: 9999 }}
           aria-label="Ouvrir le chatbot"
         >
           💬
@@ -105,7 +111,7 @@ export function Chatbot({ onExtractInfo, activities, stopSalesMap, pushSalesMap 
 
       {/* Fenêtre du chatbot */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border-2 border-gray-200">
+        <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col border-2 border-gray-200" style={{ zIndex: 9999 }}>
           {/* En-tête */}
           <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-t-2xl flex items-center justify-between">
             <div className="flex items-center gap-2">
