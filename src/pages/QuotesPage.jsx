@@ -1187,20 +1187,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     >
                       ✨ Auto-dates
                     </GhostBtn>
-                    <GhostBtn
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        generateSuggestions();
-                      }}
-                      variant="primary"
-                      size="sm"
-                      title="Voir les activités possibles pour ces dates"
-                      className="whitespace-nowrap shadow-md hover:shadow-lg transition-all"
-                    >
-                      💡 Suggestions
-                    </GhostBtn>
                   </div>
                 )}
               </div>
