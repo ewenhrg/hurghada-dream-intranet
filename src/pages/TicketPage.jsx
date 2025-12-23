@@ -39,7 +39,10 @@ export function TicketPage({ quotes, setQuotes, user }) {
                 const totalBuggys = (Number(item.buggySimple || 0) + Number(item.buggyFamily || 0));
                 transferTotal = item.transferSurchargePerAdult * totalBuggys;
               } else {
-                transferTotal = item.transferSurchargePerAdult * (Number(item.adults || 0));
+                // Supplément transfert pour adultes + enfants (bébés gratuits)
+                const adults = Number(item.adults || 0);
+                const children = Number(item.children || 0);
+                transferTotal = item.transferSurchargePerAdult * (adults + children);
               }
             }
             

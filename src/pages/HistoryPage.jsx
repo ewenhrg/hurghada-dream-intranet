@@ -1208,7 +1208,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         lineTotal += Number(it.babies || 0) * Number(act.priceBaby || 0);
       }
 
-      // supplément transfert PAR ADULTE (sauf pour les activités buggy et moto cross où on utilise les quantités spécifiques)
+      // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits) (sauf pour les activités buggy et moto cross où on utilise les quantités spécifiques)
       if (transferInfo && transferInfo.surcharge) {
         if (act && isBuggyActivity(act.name)) {
           // Pour les activités buggy, le supplément est calculé sur le nombre total de buggys
@@ -1219,7 +1219,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           const totalMotos = Number(it.yamaha250 || 0) + Number(it.ktm640 || 0) + Number(it.ktm530 || 0);
           lineTotal += Number(transferInfo.surcharge || 0) * totalMotos;
         } else {
-          lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
+          // Pour toutes les autres activités, le supplément est calculé sur le nombre d'adultes + enfants (bébés gratuits)
+          const adults = Number(it.adults || 0);
+          const children = Number(it.children || 0);
+          lineTotal += Number(transferInfo.surcharge || 0) * (adults + children);
         }
       }
 

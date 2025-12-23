@@ -28,7 +28,7 @@ export const translations = {
     
     // Pages
     "page.devis.title": "Créer & gérer les devis (multi-activités)",
-    "page.devis.subtitle": "Supplément transfert = (par adulte) × (nombre d'adultes). Alerte si jour hors-dispo, mais le devis peut être créé.",
+    "page.devis.subtitle": "Supplément transfert = (par adulte/enfant) × (nombre d'adultes + enfants). Bébés gratuits. Alerte si jour hors-dispo, mais le devis peut être créé.",
     "page.activities.title": "Gestion des activités",
     "page.activities.subtitle": "Ajoutez, modifiez les prix, jours, transferts par quartier.",
     "page.history.title": "Historique des devis",
@@ -100,7 +100,7 @@ export const translations = {
     
     // Pages
     "page.devis.title": "Create & manage quotes (multi-activities)",
-    "page.devis.subtitle": "Transfer surcharge = (per adult) × (number of adults). Alert if day unavailable, but quote can be created.",
+    "page.devis.subtitle": "Transfer surcharge = (per adult/child) × (number of adults + children). Babies free. Alert if day unavailable, but quote can be created.",
     "page.activities.title": "Activities management",
     "page.activities.subtitle": "Add, edit prices, days, transfers by neighborhood.",
     "page.history.title": "Quotes history",

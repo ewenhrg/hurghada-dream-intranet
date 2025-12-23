@@ -115,11 +115,11 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
         newLineTotal += babies * Number(newActivity.priceBaby || 0);
       }
       
-      // Ajouter le supplément transfert si nécessaire (par adulte)
+      // Ajouter le supplément transfert si nécessaire (par adulte et enfant, bébés gratuits)
       const neighborhood = selectedQuote.client?.neighborhood || "";
       const transferInfo = newActivity.transfers?.[neighborhood];
       if (transferInfo && transferInfo.surcharge) {
-        newLineTotal += Number(transferInfo.surcharge || 0) * adults;
+        newLineTotal += Number(transferInfo.surcharge || 0) * (adults + children);
       }
       
       // Créer le nouvel item avec les nouvelles données

@@ -1396,7 +1396,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </select>
                     {c.transferInfo && (
                       <p className="text-xs text-slate-600 mt-2">
-                        💰 Supplément transfert: {currency(c.transferInfo.surcharge || 0, c.currency)} / adulte
+                        💰 Supplément transfert: {currency(c.transferInfo.surcharge || 0, c.currency)} / adulte et enfant (bébé gratuit)
                       </p>
                     )}
                   </div>

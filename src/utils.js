@@ -196,9 +196,10 @@ export function calculateTransferSurcharge(item) {
     return surchargePerAdult * totalMotos;
   }
   
-  // Pour les autres activités : multiplier par le nombre d'adultes
+  // Pour les autres activités : multiplier par le nombre d'adultes + enfants (bébés gratuits)
   const adults = Number(item.adults || 0);
-  return surchargePerAdult * adults;
+  const children = Number(item.children || 0);
+  return surchargePerAdult * (adults + children);
 }
 
 // Générer un template HTML professionnel pour le devis

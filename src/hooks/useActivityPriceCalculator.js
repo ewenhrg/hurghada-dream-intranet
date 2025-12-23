@@ -182,15 +182,17 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         
       }
 
-      // supplément transfert PAR ADULTE
+      // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits)
       if (transferInfo && transferInfo.surcharge) {
         if (act && isMotoCrossActivity(act.name)) {
           // Pour MOTO CROSS, le supplément est calculé sur le nombre total de motos
           const totalMotos = Number(it.yamaha250 || 0) + Number(it.ktm640 || 0) + Number(it.ktm530 || 0);
           lineTotal += Number(transferInfo.surcharge || 0) * totalMotos;
         } else {
-          // Pour toutes les autres activités (y compris buggy), le supplément est calculé sur le nombre d'adultes
-          lineTotal += Number(transferInfo.surcharge || 0) * Number(it.adults || 0);
+          // Pour toutes les autres activités (y compris buggy), le supplément est calculé sur le nombre d'adultes + enfants (bébés gratuits)
+          const adults = Number(it.adults || 0);
+          const children = Number(it.children || 0);
+          lineTotal += Number(transferInfo.surcharge || 0) * (adults + children);
         }
       }
 
