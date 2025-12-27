@@ -76,36 +76,57 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
     };
 
     // Fonction helper pour vérifier si une date/activité est en stop sale (optimisé avec Map O(1))
-    const isStopSale = (activityId, dateStr) => {
-      const key = `${activityId}_${dateStr}`;
-      return stopSalesMap.has(key);
+    // Vérifie avec l'ID local (id) et l'ID Supabase (supabase_id)
+    const isStopSale = (activity, dateStr) => {
+      if (!activity || !dateStr) return false;
+      const keyId = `${activity.id}_${dateStr}`;
+      const keySupabaseId = activity.supabase_id ? `${activity.supabase_id}_${dateStr}` : null;
+      return stopSalesMap.has(keyId) || (keySupabaseId && stopSalesMap.has(keySupabaseId));
     };
 
     // Fonction helper pour vérifier si une date/activité est en push sale (optimisé avec Map O(1))
-    const isPushSale = (activityId, dateStr) => {
-      const key = `${activityId}_${dateStr}`;
-      return pushSalesMap.has(key);
+    // Vérifie avec l'ID local (id) et l'ID Supabase (supabase_id)
+    const isPushSale = (activity, dateStr) => {
+      if (!activity || !dateStr) return false;
+      const keyId = `${activity.id}_${dateStr}`;
+      const keySupabaseId = activity.supabase_id ? `${activity.supabase_id}_${dateStr}` : null;
+      return pushSalesMap.has(keyId) || (keySupabaseId && pushSalesMap.has(keySupabaseId));
     };
 
     // Fonction helper pour vérifier si une date est disponible pour une activité
     // (disponible si push sale OU (disponible normalement ET pas de stop sale))
-    const isDateAvailableForActivity = (activityId, dateStr, dayOfWeek, availableDays) => {
+    const isDateAvailableForActivity = (activity, dateStr, dayOfWeek, availableDays) => {
+      if (!activity || !dateStr) return false;
+      
       // Vérifier si c'est un push sale (toujours disponible)
-      if (isPushSale(activityId, dateStr)) {
+      if (isPushSale(activity, dateStr)) {
         return true;
       }
       
       // Vérifier si c'est un stop sale (jamais disponible sauf si push sale)
-      if (isStopSale(activityId, dateStr)) {
+      if (isStopSale(activity, dateStr)) {
         return false;
       }
       
-      // Sinon, vérifier la disponibilité normale selon les jours disponibles
-      if (availableDays && dayOfWeek != null) {
-        return availableDays[dayOfWeek] === true;
+      // Vérifier si l'activité a des jours disponibles définis
+      const hasDaysDefined = availableDays && Array.isArray(availableDays) && availableDays.length > 0;
+      const hasAtLeastOneDayAvailable = hasDaysDefined && availableDays.some(day => day === true);
+      
+      // Si l'activité a des jours définis, vérifier que ce jour est disponible
+      if (hasDaysDefined) {
+        // Si aucun jour n'est disponible, l'activité n'est jamais disponible (sauf push sale)
+        if (!hasAtLeastOneDayAvailable) {
+          return false;
+        }
+        // Vérifier que ce jour de la semaine est disponible
+        if (dayOfWeek != null && dayOfWeek >= 0 && dayOfWeek < 7) {
+          return availableDays[dayOfWeek] === true;
+        }
+        // Si dayOfWeek est invalide mais que l'activité a des jours définis, ne pas considérer comme disponible
+        return false;
       }
       
-      // Si pas de jours définis, considérer comme disponible
+      // Si pas de jours définis, considérer comme disponible (compatibilité avec anciennes activités)
       return true;
     };
 
@@ -113,6 +134,7 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
     let datesAssigned = 0;
     const usedDates = new Set(); // Pour éviter d'assigner la même date plusieurs fois si possible
     const divingActivitiesWithoutDate = []; // Pour les activités de plongée qui n'ont pas pu être assignées
+    const activitiesWithoutDate = []; // Pour les activités qui n'ont pas pu être assignées (jours non disponibles)
     
     const updatedItems = items.map((item, idx) => {
       // Si pas d'activité sélectionnée, ne pas assigner de date
@@ -124,24 +146,7 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
       const activity = activitiesMap.get(item.activityId);
       
       if (!activity) {
-        // Si l'activité n'existe pas, utiliser la première date disponible non utilisée qui n'est pas en stop sale
-        for (const dateInfo of allDates) {
-          // Ne pas utiliser les dates en stop sale (sauf si push sale)
-          if (!isStopSale(item.activityId, dateInfo.date) || isPushSale(item.activityId, dateInfo.date)) {
-            if (!usedDates.has(dateInfo.date)) {
-              usedDates.add(dateInfo.date);
-              datesAssigned++;
-              return { ...item, date: dateInfo.date };
-            }
-          }
-        }
-        // Si toutes les dates sont utilisées ou en stop sale, chercher n'importe quelle date disponible
-        for (const dateInfo of allDates) {
-          if (!isStopSale(item.activityId, dateInfo.date) || isPushSale(item.activityId, dateInfo.date)) {
-            datesAssigned++;
-            return { ...item, date: dateInfo.date };
-          }
-        }
+        // Si l'activité n'existe pas, ne pas assigner de date (on ne peut pas vérifier la disponibilité)
         return item;
       }
 
@@ -150,7 +155,9 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
 
       // Vérifier les jours disponibles de l'activité
       const availableDays = activity.availableDays || [false, false, false, false, false, false, false];
-      const hasNoDaysDefined = availableDays.every(day => day === false);
+      const hasDaysDefined = availableDays && Array.isArray(availableDays) && availableDays.length > 0;
+      const hasAtLeastOneDayAvailable = hasDaysDefined && availableDays.some(day => day === true);
+      const hasNoDaysDefined = !hasDaysDefined || !hasAtLeastOneDayAvailable;
       
       // Trouver une date disponible pour cette activité (priorité aux dates non encore utilisées)
       let assignedDate = null;
@@ -163,7 +170,7 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
         }
         
         // Vérifier si la date est disponible (push sale OU (disponible normalement ET pas de stop sale))
-        if (isDateAvailableForActivity(activity.id, dateInfo.date, dateInfo.dayOfWeek, availableDays)) {
+        if (isDateAvailableForActivity(activity, dateInfo.date, dateInfo.dayOfWeek, availableDays)) {
           if (!usedDates.has(dateInfo.date)) {
             assignedDate = dateInfo.date;
             usedDates.add(dateInfo.date);
@@ -182,7 +189,7 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
           }
           
           // Vérifier si la date est disponible (push sale OU (disponible normalement ET pas de stop sale))
-          if (isDateAvailableForActivity(activity.id, dateInfo.date, dateInfo.dayOfWeek, availableDays)) {
+          if (isDateAvailableForActivity(activity, dateInfo.date, dateInfo.dayOfWeek, availableDays)) {
             assignedDate = dateInfo.date;
             datesAssigned++;
             break;
@@ -190,8 +197,9 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
         }
       }
 
-      // Si aucune date disponible trouvée (activité sans jours définis), utiliser la première date non utilisée qui n'est pas en stop sale
-      if (!assignedDate) {
+      // Si aucune date disponible trouvée ET que l'activité n'a pas de jours définis (compatibilité avec anciennes activités),
+      // utiliser la première date non utilisée qui n'est pas en stop sale (mais seulement si vraiment pas de jours définis)
+      if (!assignedDate && hasNoDaysDefined) {
         for (const dateInfo of allDates) {
           // Pour la plongée, vérifier aussi la règle des 2 jours minimum
           if (isDiving && !isDateSafeForDiving(dateInfo.date)) {
@@ -199,7 +207,7 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
           }
           
           // Ne pas utiliser les dates en stop sale (sauf si push sale)
-          if (!isStopSale(activity.id, dateInfo.date) || isPushSale(activity.id, dateInfo.date)) {
+          if (!isStopSale(activity, dateInfo.date) || isPushSale(activity, dateInfo.date)) {
             if (!usedDates.has(dateInfo.date)) {
               assignedDate = dateInfo.date;
               usedDates.add(dateInfo.date);
@@ -216,8 +224,8 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
               continue; // Skip cette date pour la plongée
             }
             
-            // Vérifier si la date est disponible (push sale OU (disponible normalement ET pas de stop sale))
-            if (isDateAvailableForActivity(activity.id, dateInfo.date, dateInfo.dayOfWeek, availableDays)) {
+            // Ne pas utiliser les dates en stop sale (sauf si push sale)
+            if (!isStopSale(activity, dateInfo.date) || isPushSale(activity, dateInfo.date)) {
               assignedDate = dateInfo.date;
               datesAssigned++;
               break;
@@ -226,9 +234,14 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
         }
       }
 
-      // Si c'est une activité de plongée et qu'aucune date n'a pu être assignée, noter cela
-      if (isDiving && !assignedDate) {
-        divingActivitiesWithoutDate.push(activity.name);
+      // Si aucune date n'a pu être assignée, noter cela
+      if (!assignedDate) {
+        if (isDiving) {
+          divingActivitiesWithoutDate.push(activity.name);
+        } else if (hasDaysDefined && hasAtLeastOneDayAvailable) {
+          // L'activité a des jours définis mais aucune date disponible n'a été trouvée
+          activitiesWithoutDate.push(activity.name);
+        }
       }
 
       return { ...item, date: assignedDate || item.date };
@@ -283,6 +296,13 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
         message += ` ⚠️ ATTENTION SÉCURITÉ : Les activités de plongée (${divingNames}) n'ont pas pu être assignées car il faut un minimum de 2 jours entre la plongée et le départ (risque de décompression).`;
       }
       
+      // Ajouter un avertissement pour les activités avec jours définis mais sans date assignée
+      if (activitiesWithoutDate.length > 0) {
+        hasWarnings = true;
+        const activityNames = activitiesWithoutDate.join(', ');
+        message += ` ⚠️ Les activités (${activityNames}) n'ont pas pu être assignées car aucune date disponible ne correspond à leurs jours disponibles dans la période du séjour.`;
+      }
+      
       if (hasWarnings) {
         toast.warning(message, { duration: 10000 });
       } else {
@@ -293,6 +313,10 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
       if (divingActivitiesWithoutDate.length > 0) {
         const divingNames = divingActivitiesWithoutDate.join(', ');
         message += ` ⚠️ ATTENTION SÉCURITÉ : Les activités de plongée (${divingNames}) nécessitent un minimum de 2 jours entre la plongée et le départ.`;
+      }
+      if (activitiesWithoutDate.length > 0) {
+        const activityNames = activitiesWithoutDate.join(', ');
+        message += ` ⚠️ Les activités (${activityNames}) n'ont pas de dates disponibles correspondant à leurs jours disponibles dans la période du séjour.`;
       }
       toast.warning(message, { duration: 10000 });
     }
