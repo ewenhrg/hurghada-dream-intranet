@@ -256,10 +256,22 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       });
     }
     
-    // Filtre par recherche téléphone (utilise la valeur debouncée)
+    // Filtre par recherche téléphone ou email (utilise la valeur debouncée)
     if (debouncedQ.trim()) {
-      const needle = debouncedQ.replace(/\D+/g, "");
-      result = result.filter((d) => (d.client?.phone || "").replace(/\D+/g, "").includes(needle));
+      const searchTerm = debouncedQ.trim().toLowerCase();
+      const phoneNeedle = debouncedQ.replace(/\D+/g, ""); // Pour la recherche téléphone (chiffres uniquement)
+      
+      result = result.filter((d) => {
+        // Recherche par téléphone (chiffres uniquement)
+        const clientPhone = (d.client?.phone || "").replace(/\D+/g, "");
+        const phoneMatch = phoneNeedle && clientPhone.includes(phoneNeedle);
+        
+        // Recherche par email (texte complet, insensible à la casse)
+        const clientEmail = (d.client?.email || "").toLowerCase();
+        const emailMatch = clientEmail.includes(searchTerm);
+        
+        return phoneMatch || emailMatch;
+      });
     }
     
     return result;
@@ -390,7 +402,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             </h2>
               <div className="space-y-3">
               <TextInput
-                placeholder="Rechercher par numéro de téléphone..."
+                placeholder="Rechercher par téléphone ou email..."
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                   className="w-full text-base border-2 border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 rounded-xl shadow-sm"
