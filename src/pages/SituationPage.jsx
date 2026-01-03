@@ -20,7 +20,7 @@ import { SendLogSection } from "../components/situation/SendLogSection";
 const MessageTemplatesModal = lazy(() => import("../components/situation/MessageTemplatesModal"));
 const HotelsModal = lazy(() => import("../components/situation/HotelsModal"));
 
-const GRID_TEMPLATE = "100px 90px 130px 140px 120px 90px 130px 80px 60px 90px";
+const GRID_TEMPLATE = "100px 90px 130px 140px 120px 90px 130px 80px 60px 90px 100px";
 const ROW_HEIGHT = 36;
 const TABLE_HEADERS = [
   "Invoice N",
@@ -33,6 +33,7 @@ const TABLE_HEADERS = [
   "Heure",
   "Marina",
   "Statut",
+  "Action",
 ];
 
 const VirtualizedRow = memo(({ index, style, data }) => {
@@ -43,6 +44,7 @@ const VirtualizedRow = memo(({ index, style, data }) => {
     handleCellEdit,
     handleToggleMarina,
     rowsWithMarina,
+    handleSendSingleMessage,
   } = data;
 
   const row = excelData[index];
@@ -296,6 +298,21 @@ const VirtualizedRow = memo(({ index, style, data }) => {
          ) : (
           <span className="text-xs text-[rgba(148,163,184,0.9)]">—</span>
          )}
+      </div>
+      <div className="px-2 py-2 flex justify-center items-center">
+        {row.phone && row.phoneValid && !row.messageSent ? (
+          <button
+            onClick={() => handleSendSingleMessage(row)}
+            className="px-3 py-1.5 text-[10px] font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Envoyer le message manuellement"
+          >
+            📤 Envoyer
+          </button>
+        ) : row.messageSent ? (
+          <span className="text-[10px] text-green-600 font-medium">✓ Envoyé</span>
+        ) : (
+          <span className="text-[10px] text-gray-400">—</span>
+        )}
       </div>
     </div>
   );
@@ -951,8 +968,9 @@ export function SituationPage({ activities = [], user }) {
       handleCellEdit,
       handleToggleMarina,
       rowsWithMarina,
+      handleSendSingleMessage,
     }),
-    [excelData, editingCell, handleCellEdit, handleToggleMarina, rowsWithMarina]
+    [excelData, editingCell, handleCellEdit, handleToggleMarina, rowsWithMarina, handleSendSingleMessage]
   );
 
   const tableBodyRef = useRef(null);
@@ -1286,6 +1304,32 @@ export function SituationPage({ activities = [], user }) {
     logger.log("✅ Message traité, la fenêtre sera fermée avant l'ouverture du suivant");
 
     return true;
+  };
+
+  // Envoyer un message manuellement pour une ligne spécifique
+  const handleSendSingleMessage = async (rowData) => {
+    if (!rowData.phone || !rowData.phoneValid) {
+      toast.error("Cette ligne n'a pas de numéro de téléphone valide.");
+      return;
+    }
+
+    if (rowData.messageSent) {
+      toast.info("Ce message a déjà été envoyé.");
+      return;
+    }
+
+    try {
+      // Trouver l'index de la ligne dans excelData
+      const index = excelData.findIndex((item) => item.id === rowData.id);
+      const total = excelData.length;
+
+      // Envoyer le message
+      await sendWhatsAppMessage(rowData, index, total);
+      toast.success(`Message envoyé pour ${rowData.name} (${rowData.phone})`);
+    } catch (error) {
+      logger.error("Erreur lors de l'envoi manuel du message:", error);
+      toast.error("Erreur lors de l'envoi du message. Veuillez réessayer.");
+    }
   };
 
   // Démarrer l'envoi automatique des messages
