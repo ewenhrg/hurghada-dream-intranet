@@ -959,19 +959,6 @@ export function SituationPage({ activities = [], user }) {
       })
     );
   }, [setExcelData]);
-  
-  const listItemData = useMemo(
-    () => ({
-      excelData,
-      editingCell,
-      setEditingCell,
-      handleCellEdit,
-      handleToggleMarina,
-      rowsWithMarina,
-      handleSendSingleMessage,
-    }),
-    [excelData, editingCell, handleCellEdit, handleToggleMarina, rowsWithMarina, handleSendSingleMessage]
-  );
 
   const tableBodyRef = useRef(null);
   const rowVirtualizer = useVirtualizer({
@@ -1307,7 +1294,7 @@ export function SituationPage({ activities = [], user }) {
   };
 
   // Envoyer un message manuellement pour une ligne spécifique
-  const handleSendSingleMessage = async (rowData) => {
+  const handleSendSingleMessage = useCallback(async (rowData) => {
     if (!rowData.phone || !rowData.phoneValid) {
       toast.error("Cette ligne n'a pas de numéro de téléphone valide.");
       return;
@@ -1323,14 +1310,28 @@ export function SituationPage({ activities = [], user }) {
       const index = excelData.findIndex((item) => item.id === rowData.id);
       const total = excelData.length;
 
-      // Envoyer le message
+      // Utiliser sendWhatsAppMessage qui gère déjà toute la logique
       await sendWhatsAppMessage(rowData, index, total);
       toast.success(`Message envoyé pour ${rowData.name} (${rowData.phone})`);
     } catch (error) {
       logger.error("Erreur lors de l'envoi manuel du message:", error);
       toast.error("Erreur lors de l'envoi du message. Veuillez réessayer.");
     }
-  };
+  }, [excelData]);
+
+  // Données pour les lignes virtualisées (doit être après handleSendSingleMessage)
+  const listItemData = useMemo(
+    () => ({
+      excelData,
+      editingCell,
+      setEditingCell,
+      handleCellEdit,
+      handleToggleMarina,
+      rowsWithMarina,
+      handleSendSingleMessage,
+    }),
+    [excelData, editingCell, handleCellEdit, handleToggleMarina, rowsWithMarina, handleSendSingleMessage]
+  );
 
   // Démarrer l'envoi automatique des messages
   const handleAutoSendMessages = async () => {
