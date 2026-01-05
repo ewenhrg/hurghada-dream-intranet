@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -12,7 +12,7 @@ import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 
 // Composant de carte de devis mémorisé pour améliorer les performances
-const QuoteCard = React.memo(function QuoteCard({ 
+function QuoteCardComponent({ 
   quote: d, 
   quotes, 
   setQuotes, 
@@ -321,7 +321,9 @@ const QuoteCard = React.memo(function QuoteCard({
       </div>
     </div>
   );
-});
+}
+
+const QuoteCard = memo(QuoteCardComponent);
 
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
