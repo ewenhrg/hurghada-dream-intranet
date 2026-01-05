@@ -43,6 +43,12 @@ self.addEventListener('activate', (event) => {
 
 // Stratégie de cache: Network First, puis Cache
 self.addEventListener('fetch', (event) => {
+  // Ne pas intercepter les requêtes avec des schémas non supportés (chrome-extension, etc.)
+  const url = new URL(event.request.url);
+  if (url.protocol === 'chrome-extension:' || url.protocol === 'moz-extension:' || url.protocol === 'safari-extension:') {
+    return;
+  }
+
   // Ne pas intercepter les requêtes Supabase et autres APIs externes
   // Laisser le navigateur les gérer directement pour éviter les problèmes CORS
   if (
@@ -68,10 +74,16 @@ self.addEventListener('fetch', (event) => {
         // Cloner la réponse pour la mettre en cache
         const responseToCache = response.clone();
 
-        caches.open(CACHE_NAME)
-          .then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+        // Vérifier que la requête peut être mise en cache (éviter les erreurs avec chrome-extension)
+        if (event.request.method === 'GET' && event.request.url.startsWith('http')) {
+          caches.open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(event.request, responseToCache).catch((err) => {
+                // Ignorer les erreurs de cache silencieusement
+                console.warn('Service Worker: Erreur lors de la mise en cache', err);
+              });
+            });
+        }
 
         return response;
       })

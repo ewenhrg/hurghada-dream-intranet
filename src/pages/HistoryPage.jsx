@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, memo, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -1152,7 +1152,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 }
 
 // Composant de carte de devis mémorisé pour améliorer les performances
-const QuoteCard = memo(function QuoteCard({ 
+const QuoteCard = React.memo(function QuoteCard({ 
   quote: d, 
   quotes, 
   setQuotes, 
