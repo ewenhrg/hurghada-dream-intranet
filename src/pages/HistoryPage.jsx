@@ -28,10 +28,18 @@ function QuoteCardComponent({
   setEditNotes, 
   setShowEditModal 
 }) {
-  const allTicketsFilled = d.allTicketsFilled;
-  const hasTickets = d.hasTickets;
+  // Calculer allTicketsFilled si ce n'est pas déjà défini
+  const allTicketsFilled = d.allTicketsFilled !== undefined 
+    ? d.allTicketsFilled 
+    : (d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false);
+  
+  // Calculer hasTickets si ce n'est pas déjà défini
+  const hasTickets = d.hasTickets !== undefined
+    ? d.hasTickets
+    : (d.items?.some((item) => item.ticketNumber && item.ticketNumber.trim()) || false);
+  
   const ticketsCount = useMemo(() => 
-    d.items.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length,
+    d.items?.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length || 0,
     [d.items]
   );
 
