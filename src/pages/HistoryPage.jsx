@@ -12,6 +12,7 @@ import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 
 // Composant de carte de devis mémorisé pour améliorer les performances
+// Déclarer comme fonction normale pour le hoisting, puis mémoriser
 function QuoteCardComponent({ 
   quote: d, 
   quotes, 
@@ -323,8 +324,10 @@ function QuoteCardComponent({
   );
 }
 
-const QuoteCard = React.memo(QuoteCardComponent);
+// Exporter QuoteCard directement (sans memo pour éviter les problèmes d'initialisation)
+const QuoteCard = QuoteCardComponent;
 
+// Exporter HistoryPage après la déclaration de QuoteCard
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
