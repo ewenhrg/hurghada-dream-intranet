@@ -278,9 +278,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           return;
         }
 
+        // Sélection spécifique pour réduire la taille des données
         const { data, error } = await supabase
           .from("hotels")
-          .select("*")
+          .select("id, name, neighborhood_key")
           .eq("site_key", SITE_KEY)
           .order("name", { ascending: true });
 
@@ -363,9 +364,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
         
+        // Sélection spécifique pour réduire la taille des données
         const [stopSalesResult, pushSalesResult] = await Promise.all([
-          supabase.from("stop_sales").select("*").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
-          supabase.from("push_sales").select("*").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
+          supabase.from("stop_sales").select("id, activity_id, date").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
+          supabase.from("push_sales").select("id, activity_id, date").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
         ]);
 
         // Traiter les stop sales

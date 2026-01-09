@@ -3,6 +3,10 @@ class SimpleCache {
   constructor(defaultTTL = 5 * 60 * 1000) { // 5 minutes par défaut
     this.cache = new Map();
     this.defaultTTL = defaultTTL;
+    // Nettoyer le cache expiré toutes les 5 minutes
+    this.cleanupInterval = setInterval(() => {
+      this.cleanup();
+    }, 5 * 60 * 1000);
   }
 
   get(key) {
@@ -18,6 +22,13 @@ class SimpleCache {
   }
 
   set(key, value, ttl = this.defaultTTL) {
+    // Limiter la taille du cache à 100 entrées pour éviter les fuites mémoire
+    if (this.cache.size >= 100 && !this.cache.has(key)) {
+      // Supprimer l'entrée la plus ancienne
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+    
     this.cache.set(key, {
       value,
       expiry: Date.now() + ttl
@@ -30,6 +41,16 @@ class SimpleCache {
 
   clear() {
     this.cache.clear();
+  }
+
+  // Nettoyer les entrées expirées
+  cleanup() {
+    const now = Date.now();
+    for (const [key, item] of this.cache.entries()) {
+      if (now > item.expiry) {
+        this.cache.delete(key);
+      }
+    }
   }
 
   // Invalider toutes les clés qui commencent par un préfixe

@@ -146,8 +146,12 @@ export default function App() {
         setRemoteEnabled(true);
       }
 
-      // Récupérer toutes les activités
-      const { data, error } = await supabase.from("activities").select("*").eq("site_key", SITE_KEY).order("id", { ascending: false });
+      // Récupérer toutes les activités - sélection spécifique pour réduire la taille des données
+      const { data, error } = await supabase
+        .from("activities")
+        .select("id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes, description, transfers")
+        .eq("site_key", SITE_KEY)
+        .order("id", { ascending: false });
       if (!error && Array.isArray(data)) {
         // LIRE UNIQUEMENT depuis Supabase (source de vérité absolue)
         // IGNORER COMPLÈTEMENT le localStorage local pour éviter les doublons
@@ -219,6 +223,7 @@ export default function App() {
   const loadPendingRequestsCount = useCallback(async () => {
     if (!supabase || !ok) return;
     try {
+      // Utiliser head: true pour ne récupérer que le count, pas les données
       const { count, error } = await supabase
         .from("client_requests")
         .select("*", { count: "exact", head: true })
@@ -352,10 +357,10 @@ export default function App() {
     // Synchronisation immédiate
     syncWithSupabase();
 
-    // Synchronisation des activités toutes les 30 secondes (optimisé: réduit pour moins de charge)
+    // Synchronisation des activités toutes les 60 secondes (optimisé: réduit pour moins de charge)
     const interval = setInterval(() => {
       syncWithSupabase();
-    }, 30000);
+    }, 60000);
 
     // Nettoyer l'intervalle au démontage
     return () => {
@@ -370,27 +375,39 @@ export default function App() {
     // Charger immédiatement
     loadPendingRequestsCount();
 
-    // Recharger toutes les 30 secondes au lieu de 10 secondes pour réduire la charge
+    // Recharger toutes les 60 secondes pour réduire la charge
     const interval = setInterval(() => {
       loadPendingRequestsCount();
-    }, 30000);
+    }, 60000);
 
     return () => {
       clearInterval(interval);
     };
   }, [ok, loadPendingRequestsCount]);
 
-  // Persister le brouillon de devis (ou le nettoyer) dès qu'il change
+  // Persister le brouillon de devis avec debounce pour éviter trop d'écritures
+  const quoteDraftSaveTimeoutRef = useRef(null);
   useEffect(() => {
-    if (quoteDraft) {
-      saveLS(LS_KEYS.quoteForm, quoteDraft);
-    } else {
-      try {
-        localStorage.removeItem(LS_KEYS.quoteForm);
-      } catch (error) {
-        logger.warn("Impossible de supprimer le brouillon de devis du localStorage", error);
-      }
+    if (quoteDraftSaveTimeoutRef.current) {
+      clearTimeout(quoteDraftSaveTimeoutRef.current);
     }
+    quoteDraftSaveTimeoutRef.current = setTimeout(() => {
+      if (quoteDraft) {
+        saveLS(LS_KEYS.quoteForm, quoteDraft);
+      } else {
+        try {
+          localStorage.removeItem(LS_KEYS.quoteForm);
+        } catch (error) {
+          logger.warn("Impossible de supprimer le brouillon de devis du localStorage", error);
+        }
+      }
+    }, 500); // Debounce de 500ms
+
+    return () => {
+      if (quoteDraftSaveTimeoutRef.current) {
+        clearTimeout(quoteDraftSaveTimeoutRef.current);
+      }
+    };
   }, [quoteDraft]);
 
   // Synchronisation initiale unique des devis depuis Supabase au chargement de la page
@@ -401,11 +418,13 @@ export default function App() {
       if (!supabase) return;
       
       try {
+        // Sélection spécifique pour réduire la taille des données transférées
         const { data: quotesData, error: quotesError } = await supabase
           .from("quotes")
-          .select("*")
+          .select("id, client_name, client_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, items, total, currency")
           .eq("site_key", SITE_KEY)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(1000); // Limiter à 1000 devis pour éviter de surcharger
         
         if (!quotesError && Array.isArray(quotesData)) {
           setQuotes((prevQuotes) => {

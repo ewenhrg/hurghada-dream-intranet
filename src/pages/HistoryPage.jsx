@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -332,8 +332,18 @@ function QuoteCardComponent({
   );
 }
 
-// Exporter QuoteCard directement (sans memo pour éviter les problèmes d'initialisation)
-const QuoteCard = QuoteCardComponent;
+// Exporter QuoteCard avec memo pour éviter les re-renders inutiles
+const QuoteCard = memo(QuoteCardComponent, (prevProps, nextProps) => {
+  // Comparaison personnalisée pour éviter les re-renders inutiles
+  return (
+    prevProps.quote.id === nextProps.quote.id &&
+    prevProps.quote.updated_at === nextProps.quote.updated_at &&
+    prevProps.quote.allTicketsFilled === nextProps.quote.allTicketsFilled &&
+    prevProps.quote.isModified === nextProps.quote.isModified &&
+    prevProps.user?.name === nextProps.user?.name &&
+    prevProps.quotes.length === nextProps.quotes.length
+  );
+});
 
 // Exporter HistoryPage après la déclaration de QuoteCard
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
@@ -408,9 +418,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
         
+        // Sélection spécifique pour réduire la taille des données
         const [stopSalesResult, pushSalesResult] = await Promise.all([
-          supabase.from("stop_sales").select("*").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
-          supabase.from("push_sales").select("*").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
+          supabase.from("stop_sales").select("id, activity_id, date").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
+          supabase.from("push_sales").select("id, activity_id, date").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
         ]);
 
         let stopSalesData = (!stopSalesResult.error && stopSalesResult.data) ? stopSalesResult.data : [];

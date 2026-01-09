@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     // Optimisations de build - utiliser esbuild (plus rapide, déjà inclus)
-    minify: 'esbuild',
+    minify: 'esbuild', // esbuild est plus rapide que terser pour le build
     // Optimiser la taille du bundle
     target: 'esnext',
     cssCodeSplit: true,
@@ -79,6 +79,12 @@ export default defineConfig({
     },
     // Optimiser la compression
     reportCompressedSize: false, // Désactiver pour accélérer le build
+    // Optimiser les assets
+    assetsInlineLimit: 8192, // Inline les petits assets (<8KB) pour réduire les requêtes HTTP
+    // Optimiser le chargement
+    modulePreload: {
+      polyfill: false, // Désactiver le polyfill pour réduire la taille
+    },
   },
   // Optimisations pour le développement
   server: {
