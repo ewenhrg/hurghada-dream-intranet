@@ -58,8 +58,6 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     // Désactiver les source maps en production pour réduire la taille
     sourcemap: false,
-    // Optimiser les assets
-    assetsInlineLimit: 4096, // Inline les petits assets (<4KB)
     // Réduire la taille du bundle avec tree-shaking agressif
     // Exclure React et Supabase du tree-shaking strict pour éviter les problèmes d'initialisation
     treeshake: {

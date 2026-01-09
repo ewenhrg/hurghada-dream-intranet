@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -332,18 +332,8 @@ function QuoteCardComponent({
   );
 }
 
-// Exporter QuoteCard avec memo pour éviter les re-renders inutiles
-const QuoteCard = memo(QuoteCardComponent, (prevProps, nextProps) => {
-  // Comparaison personnalisée pour éviter les re-renders inutiles
-  return (
-    prevProps.quote.id === nextProps.quote.id &&
-    prevProps.quote.updated_at === nextProps.quote.updated_at &&
-    prevProps.quote.allTicketsFilled === nextProps.quote.allTicketsFilled &&
-    prevProps.quote.isModified === nextProps.quote.isModified &&
-    prevProps.user?.name === nextProps.user?.name &&
-    prevProps.quotes.length === nextProps.quotes.length
-  );
-});
+// Exporter QuoteCard directement (la pagination suffit pour les performances)
+const QuoteCard = QuoteCardComponent;
 
 // Exporter HistoryPage après la déclaration de QuoteCard
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
