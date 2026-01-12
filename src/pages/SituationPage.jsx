@@ -20,8 +20,8 @@ import { SendLogSection } from "../components/situation/SendLogSection";
 const MessageTemplatesModal = lazy(() => import("../components/situation/MessageTemplatesModal"));
 const HotelsModal = lazy(() => import("../components/situation/HotelsModal"));
 
-const GRID_TEMPLATE = "100px 90px 130px 140px 120px 90px 130px 80px 60px 90px 100px";
-const ROW_HEIGHT = 36;
+const GRID_TEMPLATE = "110px 100px 150px 160px 130px 100px 140px 90px 70px 100px 120px";
+const ROW_HEIGHT = 48;
 const TABLE_HEADERS = [
   "Invoice N",
   "Date",
@@ -73,7 +73,7 @@ const VirtualizedRow = memo(({ index, style, data }) => {
     statusAccent = "from-rose-400/85 to-red-400/80";
   }
 
-  const cellBase = "px-2 py-1 text-[10px] text-[rgba(71,85,105,0.88)]";
+  const cellBase = "px-3 py-2 text-xs md:text-sm text-[rgba(71,85,105,0.95)]";
 
   const handleCellClick = (field) => {
     setEditingCell({ rowId: row.id, field });
@@ -101,12 +101,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-1 py-0.5 text-[10px]"
+            className="w-full px-2 py-1.5 text-xs md:text-sm"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
             onClick={() => handleCellClick("invoiceN")}
           >
             {row.invoiceN}
@@ -122,12 +122,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-1 py-0.5 text-[10px]"
+            className="w-full px-2 py-1.5 text-xs md:text-sm"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
             onClick={() => handleCellClick("date")}
           >
             {row.date}
@@ -143,12 +143,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-1 py-0.5 text-[10px]"
+            className="w-full px-2 py-1.5 text-xs md:text-sm"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
             onClick={() => handleCellClick("name")}
           >
             {row.name}
@@ -172,19 +172,19 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-1 py-0.5 text-[10px]"
+            className="w-full px-2 py-1.5 text-xs md:text-sm"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
             onClick={() => handleCellClick("phone")}
           >
             {row.phone ? (
               <>
                 <span>{row.phone}</span>
                 {!row.phoneValid && row.phoneError && (
-                  <span className="block text-[10px] text-red-500 mt-1" title={row.phoneError}>
+                  <span className="block text-xs text-red-500 mt-1 font-medium" title={row.phoneError}>
                     ⚠️ {row.phoneError}
                   </span>
                 )}
@@ -204,12 +204,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-1 py-0.5 text-[10px]"
+            className="w-full px-2 py-1.5 text-xs md:text-sm"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
             onClick={() => handleCellClick("hotel")}
           >
             {row.hotel}
@@ -225,12 +225,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-1 py-0.5 text-[10px]"
+            className="w-full px-2 py-1.5 text-xs md:text-sm"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
             onClick={() => handleCellClick("roomNo")}
           >
             {row.roomNo}
@@ -246,12 +246,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-1 py-0.5 text-[10px]"
+            className="w-full px-2 py-1.5 text-xs md:text-sm"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
             onClick={() => handleCellClick("trip")}
           >
             {row.trip}
@@ -267,12 +267,12 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-1 py-0.5 text-[10px]"
+            className="w-full px-2 py-1.5 text-xs md:text-sm"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-1 py-0.5 rounded inline-flex min-h-[20px] items-center"
+            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
             onClick={() => handleCellClick("time")}
           >
             {row.time}
@@ -303,15 +303,15 @@ const VirtualizedRow = memo(({ index, style, data }) => {
         {row.phone && row.phoneValid && !row.messageSent ? (
           <button
             onClick={() => handleSendSingleMessage(row)}
-            className="px-3 py-1.5 text-[10px] font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-xs md:text-sm font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             title="Envoyer le message manuellement"
           >
             📤 Envoyer
           </button>
         ) : row.messageSent ? (
-          <span className="text-[10px] text-green-600 font-medium">✓ Envoyé</span>
+          <span className="text-xs md:text-sm text-green-600 font-semibold">✓ Envoyé</span>
         ) : (
-          <span className="text-[10px] text-gray-400">—</span>
+          <span className="text-xs md:text-sm text-gray-400">—</span>
         )}
       </div>
     </div>
@@ -1626,11 +1626,19 @@ export function SituationPage({ activities = [], user }) {
       title="📋 Situation - Envoi de messages"
       subtitle="Chargez un fichier Excel et envoyez automatiquement les messages de rappel aux clients"
       right={
-        <div className="flex gap-2">
-          <GhostBtn onClick={() => setShowHotelsModal(true)} variant="info">
+        <div className="flex gap-2 md:gap-3 flex-wrap">
+          <GhostBtn 
+            onClick={() => setShowHotelsModal(true)} 
+            variant="info"
+            className="text-sm md:text-base px-4 md:px-5 py-2 md:py-2.5 font-semibold"
+          >
             🏨 Hôtels extérieur
           </GhostBtn>
-          <GhostBtn onClick={() => setShowConfigModal(true)} variant="primary">
+          <GhostBtn 
+            onClick={() => setShowConfigModal(true)} 
+            variant="primary"
+            className="text-sm md:text-base px-4 md:px-5 py-2 md:py-2.5 font-semibold"
+          >
             ⚙️ Configurer les messages
           </GhostBtn>
         </div>
@@ -1651,7 +1659,7 @@ export function SituationPage({ activities = [], user }) {
           <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
             <div className="min-w-[990px] border border-slate-200 rounded-lg shadow-sm bg-white">
               <div
-                className="grid text-left text-[10px] font-semibold uppercase text-white"
+                className="grid text-left text-xs md:text-sm font-bold uppercase text-white"
                 style={{
                   gridTemplateColumns: GRID_TEMPLATE,
                   backgroundImage:
@@ -1659,7 +1667,7 @@ export function SituationPage({ activities = [], user }) {
                 }}
               >
                 {TABLE_HEADERS.map((header) => (
-                  <div key={header} className="px-2 py-2">
+                  <div key={header} className="px-3 py-3 md:py-4">
                     {header}
                   </div>
                 ))}
@@ -1703,14 +1711,20 @@ export function SituationPage({ activities = [], user }) {
 
         {/* Actions */}
         {excelData.length > 0 && (
-          <div className="flex gap-3 justify-end flex-wrap">
-            <GhostBtn onClick={handlePreviewMessages} disabled={sending || autoSending} variant="info">
+          <div className="flex gap-3 md:gap-4 justify-end flex-wrap">
+            <GhostBtn 
+              onClick={handlePreviewMessages} 
+              disabled={sending || autoSending} 
+              variant="info"
+              className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
+            >
               📝 Prévisualiser les messages
             </GhostBtn>
             <PrimaryBtn 
                onClick={handleAutoSendMessages} 
                disabled={sending || autoSending || stats.withPhone === 0}
                variant="success"
+               className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
              >
                {autoSending ? "🔄 Envoi automatique..." : "🚀 Envoyer automatiquement via WhatsApp"}
              </PrimaryBtn>
@@ -1718,6 +1732,7 @@ export function SituationPage({ activities = [], user }) {
                onClick={handleSendMessages} 
                disabled={sending || autoSending || stats.withPhone === 0}
                variant="info"
+               className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
              >
                {sending ? "📤 Envoi en cours..." : "📤 Envoyer (simulation)"}
              </PrimaryBtn>
