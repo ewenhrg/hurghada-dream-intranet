@@ -1440,32 +1440,40 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
   }
 
   return (
-    <div ref={editModalContainerRef} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 md:p-4">
-      <div ref={editModalRef} className="bg-white/98 backdrop-blur-md rounded-2xl border-2 border-blue-200/60 shadow-2xl p-5 md:p-7 max-w-4xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-5 md:mb-6 pb-4 border-b-2 border-slate-200/60">
-          <h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
-            <span className="text-2xl">✏️</span>
-            Modifier le devis
+    <div ref={editModalContainerRef} className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 md:p-4">
+      <div ref={editModalRef} className="bg-white/99 backdrop-blur-md rounded-2xl border-2 border-blue-300/80 shadow-2xl p-6 md:p-8 lg:p-10 max-w-6xl w-full max-h-[98vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6 md:mb-8 pb-5 border-b-2 border-slate-300/80">
+          <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <span className="text-3xl md:text-4xl">✏️</span>
+            <span>Modifier le devis</span>
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-3xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center transition-opacity duration-150 hover:opacity-80">
+          <button 
+            onClick={onClose} 
+            className="text-slate-500 hover:text-slate-700 text-4xl leading-none min-w-[48px] min-h-[48px] flex items-center justify-center transition-all duration-200 hover:bg-slate-100 rounded-full hover:scale-110"
+            aria-label="Fermer la modale"
+          >
             ×
           </button>
         </div>
 
-        <div className="space-y-6 md:space-y-7">
+        <div className="space-y-8 md:space-y-10">
           {/* Infos client - Modifiables par tous */}
-          <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/70 rounded-xl p-4 md:p-5 border-2 border-blue-200/60">
-            <h4 className="text-sm md:text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <span className="text-lg">👤</span>
-              Informations client
+          <div className="bg-gradient-to-br from-blue-50/90 to-indigo-50/80 rounded-2xl p-6 md:p-7 lg:p-8 border-2 border-blue-300/70 shadow-lg">
+            <h4 className="text-base md:text-lg lg:text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+              <span className="text-2xl md:text-3xl">👤</span>
+              <span>Informations client</span>
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
               <div>
-                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Client</label>
-                <TextInput value={client.name || ""} onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} className="text-base" />
+                <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">👤 Nom du client</label>
+                <TextInput 
+                  value={client.name || ""} 
+                  onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))} 
+                  className="text-base md:text-lg py-3"
+                />
               </div>
               <div>
-                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Téléphone</label>
+                <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">📞 Téléphone</label>
                 <TextInput 
                   value={client.phone || ""} 
                   onChange={(e) => {
@@ -1473,25 +1481,33 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     const cleaned = cleanPhoneNumber(e.target.value);
                     setClient((c) => ({ ...c, phone: cleaned }));
                   }} 
-                  className="text-base"
+                  className="text-base md:text-lg py-3"
                 />
               </div>
               <div>
-                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Hôtel</label>
-                <TextInput value={client.hotel || ""} onChange={(e) => setClient((c) => ({ ...c, hotel: e.target.value }))} className="text-base" />
+                <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">🏨 Hôtel</label>
+                <TextInput 
+                  value={client.hotel || ""} 
+                  onChange={(e) => setClient((c) => ({ ...c, hotel: e.target.value }))} 
+                  className="text-base md:text-lg py-3"
+                />
               </div>
               <div>
-                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Chambre</label>
-                <TextInput value={client.room || ""} onChange={(e) => setClient((c) => ({ ...c, room: e.target.value }))} className="text-base" />
+                <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">🚪 Chambre</label>
+                <TextInput 
+                  value={client.room || ""} 
+                  onChange={(e) => setClient((c) => ({ ...c, room: e.target.value }))} 
+                  className="text-base md:text-lg py-3"
+                />
               </div>
               <div>
-                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Quartier</label>
+                <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">📍 Quartier</label>
                 <select
                   value={client.neighborhood || ""}
                   onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
-                  className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                  className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                 >
-                  <option value="">— Choisir —</option>
+                  <option value="">— Choisir un quartier —</option>
                   {NEIGHBORHOODS.map((n) => (
                     <option key={n.key} value={n.key}>
                       {n.label}
@@ -1500,52 +1516,55 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6 mt-5 md:mt-6">
               <div>
-                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">📅 Date d'arrivée</label>
+                <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">📅 Date d'arrivée</label>
                 <TextInput 
                   type="date"
                   value={client.arrivalDate || ""} 
                   onChange={(e) => setClient((c) => ({ ...c, arrivalDate: e.target.value }))} 
-                  className="text-base"
+                  className="text-base md:text-lg py-3"
                 />
               </div>
               <div>
-                <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">📅 Date de départ</label>
+                <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">📅 Date de départ</label>
                 <TextInput 
                   type="date"
                   value={client.departureDate || ""} 
                   onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
-                  className="text-base"
+                  className="text-base md:text-lg py-3"
                 />
               </div>
             </div>
           </div>
 
           {/* Activités */}
-          <div className="space-y-4 md:space-y-5">
-            <h4 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-2">
-              <span className="text-lg">🎯</span>
-              Activités
+          <div className="space-y-6 md:space-y-8">
+            <h4 className="text-base md:text-lg lg:text-xl font-bold text-slate-900 flex items-center gap-3">
+              <span className="text-2xl md:text-3xl">🎯</span>
+              <span>Activités</span>
             </h4>
             {computed.map((c, idx) => (
-              <div key={idx} className="bg-gradient-to-br from-white/95 to-slate-50/80 backdrop-blur-sm border-2 border-blue-200/60 rounded-2xl p-4 md:p-5 space-y-4 shadow-lg transition-all duration-200 hover:shadow-xl">
-                <div className="flex items-center justify-between pb-3 border-b border-blue-200/60">
-                  <p className="text-sm md:text-base font-bold text-slate-800">🎯 Activité #{idx + 1}</p>
-                  <GhostBtn type="button" onClick={() => removeItem(idx)} variant="danger" size="sm">
+              <div key={idx} className="bg-gradient-to-br from-white/98 to-slate-50/90 backdrop-blur-sm border-2 border-blue-300/70 rounded-2xl p-6 md:p-7 lg:p-8 space-y-5 md:space-y-6 shadow-lg transition-all duration-200 hover:shadow-xl hover:border-blue-400/80">
+                <div className="flex items-center justify-between pb-4 border-b-2 border-blue-200/70">
+                  <p className="text-base md:text-lg lg:text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <span className="text-xl md:text-2xl">🎯</span>
+                    <span>Activité #{idx + 1}</span>
+                  </p>
+                  <GhostBtn type="button" onClick={() => removeItem(idx)} variant="danger" size="md" className="text-sm md:text-base px-4 py-2">
                     🗑️ Supprimer
                   </GhostBtn>
                 </div>
                 {/* Première ligne : Activité et Date - Modifiables par tous */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="md:col-span-2">
-                    <p className="text-xs text-gray-500 mb-1">Activité</p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
+                  <div className="lg:col-span-2">
+                    <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🎯 Sélectionner une activité</p>
                     <select
                       value={c.raw.activityId || ""}
                       onChange={(e) => setItem(idx, { activityId: e.target.value })}
-                      className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
+                      className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                     >
-                      <option value="">— Choisir —</option>
+                      <option value="">— Choisir une activité —</option>
                       {sortedActivities.map((a) => (
                         <option key={a.id} value={a.id}>
                           {a.name}
@@ -1554,7 +1573,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     </select>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Date</p>
+                    <p className="text-sm md:text-base font-bold text-slate-800 mb-3">📅 Date de l'activité</p>
                     <ColoredDatePicker
                       value={c.raw.date}
                       onChange={(date) => setItem(idx, { date })}
@@ -1563,105 +1582,113 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       pushSales={pushSales}
                     />
                     {c.act && !c.available && (
-                      <p className="text-[10px] text-amber-700 mt-1">⚠️ activité pas dispo ce jour-là</p>
+                      <p className="text-xs md:text-sm text-amber-700 font-semibold mt-2 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">⚠️ Activité non disponible ce jour-là</p>
                     )}
                   </div>
                 </div>
                 {/* Deuxième ligne : Nombre de personnes - Modifiables par tous */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-cyan-50/50 p-3 md:p-4 rounded-xl border-2 border-cyan-200">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5 bg-cyan-50/60 p-5 md:p-6 rounded-xl border-2 border-cyan-300/70">
                   <div>
-                    <p className="text-xs text-gray-700 font-semibold mb-2">👥 Adultes</p>
+                    <p className="text-sm md:text-base font-bold text-slate-800 mb-3">👥 Adultes</p>
                     <NumberInput 
                       value={c.raw.adults || 0} 
                       onChange={(e) => setItem(idx, { adults: e.target.value })}
+                      className="text-base md:text-lg py-3"
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-700 font-semibold mb-2">
-                      👶 Enfants{c.act?.ageChild ? <span className="text-gray-500 ml-1">({c.act.ageChild})</span> : ""}
+                    <p className="text-sm md:text-base font-bold text-slate-800 mb-3">
+                      👶 Enfants{c.act?.ageChild ? <span className="text-slate-600 font-normal ml-2 text-sm">({c.act.ageChild})</span> : ""}
                     </p>
                     <NumberInput 
                       value={c.raw.children || 0} 
                       onChange={(e) => setItem(idx, { children: e.target.value })}
+                      className="text-base md:text-lg py-3"
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-700 font-semibold mb-2">
-                      🍼 Bébés{c.act?.ageBaby ? <span className="text-gray-500 ml-1">({c.act.ageBaby})</span> : ""}
+                    <p className="text-sm md:text-base font-bold text-slate-800 mb-3">
+                      🍼 Bébés{c.act?.ageBaby ? <span className="text-slate-600 font-normal ml-2 text-sm">({c.act.ageBaby})</span> : ""}
                     </p>
                     <NumberInput 
                       value={c.raw.babies || 0} 
                       onChange={(e) => setItem(idx, { babies: e.target.value })}
+                      className="text-base md:text-lg py-3"
                     />
                   </div>
                 </div>
                 {/* Champs spécifiques pour Buggy - Modifiables par tous */}
                 {c.act && isBuggyActivity(c.act.name) && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 mt-4 bg-purple-50/60 p-5 md:p-6 rounded-xl border-2 border-purple-300/70">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🛵 Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
                       <NumberInput 
                         value={c.raw.buggySimple ?? ""} 
                         onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
                       />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Buggy Family ({getBuggyPrices(c.act.name).family}€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🛵 Buggy Family ({getBuggyPrices(c.act.name).family}€)</p>
                       <NumberInput 
                         value={c.raw.buggyFamily ?? ""} 
                         onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
                       />
                     </div>
                   </div>
                 )}
                 {/* Champs spécifiques pour MotoCross - Modifiables par tous */}
                 {c.act && isMotoCrossActivity(c.act.name) && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 mt-4 bg-purple-50/60 p-5 md:p-6 rounded-xl border-2 border-purple-300/70">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🏍️ YAMAHA 250CC ({getMotoCrossPrices().yamaha250}€)</p>
                       <NumberInput 
                         value={c.raw.yamaha250 ?? ""} 
                         onChange={(e) => setItem(idx, { yamaha250: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
                       />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">KTM640CC ({getMotoCrossPrices().ktm640}€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🏍️ KTM640CC ({getMotoCrossPrices().ktm640}€)</p>
                       <NumberInput 
                         value={c.raw.ktm640 ?? ""} 
                         onChange={(e) => setItem(idx, { ktm640: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
                       />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">KTM 530CC ({getMotoCrossPrices().ktm530}€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🏍️ KTM 530CC ({getMotoCrossPrices().ktm530}€)</p>
                       <NumberInput 
                         value={c.raw.ktm530 ?? ""} 
                         onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
                       />
                     </div>
                   </div>
                 )}
                 {/* Créneaux et Extras - Modifiables par tous */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
                   {c.transferInfo && (
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Créneau</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">⏰ Créneau de transfert</p>
                       <select
                         value={c.raw.slot || ""}
                         onChange={(e) => setItem(idx, { slot: e.target.value })}
-                        className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2 text-sm shadow-sm"
+                        className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                       >
-                        <option value="">—</option>
-                        {c.transferInfo.morningEnabled && <option value="morning">Matin ({c.transferInfo.morningTime})</option>}
-                        {c.transferInfo.afternoonEnabled && <option value="afternoon">Après-midi ({c.transferInfo.afternoonTime})</option>}
-                        {c.transferInfo.eveningEnabled && <option value="evening">Soir ({c.transferInfo.eveningTime})</option>}
+                        <option value="">— Choisir un créneau —</option>
+                        {c.transferInfo.morningEnabled && <option value="morning">🌅 Matin ({c.transferInfo.morningTime})</option>}
+                        {c.transferInfo.afternoonEnabled && <option value="afternoon">☀️ Après-midi ({c.transferInfo.afternoonTime})</option>}
+                        {c.transferInfo.eveningEnabled && <option value="evening">🌆 Soir ({c.transferInfo.eveningTime})</option>}
                       </select>
                     </div>
                   )}
                   {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") ? (
-                    <div className="md:col-span-2 space-y-3">
+                    <div className="lg:col-span-2 space-y-4 md:space-y-5">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Extras (plusieurs sélections possibles)</p>
-                        <div className="space-y-2 border border-blue-200/50 rounded-xl p-3 bg-white">
+                        <p className="text-sm md:text-base font-bold text-slate-800 mb-3">⚡ Extras Speed Boat (plusieurs sélections possibles)</p>
+                        <div className="space-y-3 border-2 border-blue-300/70 rounded-xl p-4 md:p-5 bg-white/99 shadow-md">
                           {SPEED_BOAT_EXTRAS.filter((extra) => extra.id !== "").map((extra) => {
                             // Gérer la compatibilité avec l'ancien format (string) et le nouveau format (array)
                             const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
@@ -1719,37 +1746,39 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       </div>
                       {/* Champ Extra pour ajuster le prix manuellement */}
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Extra (montant à ajouter ou soustraire)</p>
-                        <div className="flex items-center gap-2">
+                        <p className="text-sm md:text-base font-bold text-slate-800 mb-3">💰 Ajustement de prix (montant à ajouter ou soustraire)</p>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                           <NumberInput
                             value={c.raw.extraAmount || ""}
                             onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
                             placeholder="0.00"
-                            className="flex-1"
+                            className="flex-1 text-base md:text-lg py-3"
                           />
-                          <span className="text-xs text-gray-500 whitespace-nowrap">
+                          <span className="text-sm md:text-base text-slate-600 font-medium whitespace-nowrap">
                             € (positif = +, négatif = -)
                           </span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Utilisez un nombre positif pour augmenter le prix, négatif pour le diminuer
+                        <p className="text-xs md:text-sm text-slate-500 font-medium mt-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+                          💡 Utilisez un nombre positif pour augmenter le prix, négatif pour le diminuer
                         </p>
                       </div>
                     </div>
                   ) : (
                     <>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Extra (label)</p>
+                        <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🏷️ Extra (label)</p>
                         <TextInput 
                           value={c.raw.extraLabel || ""} 
                           onChange={(e) => setItem(idx, { extraLabel: e.target.value })}
+                          className="text-base md:text-lg py-3"
                         />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Extra (montant)</p>
+                        <p className="text-sm md:text-base font-bold text-slate-800 mb-3">💰 Extra (montant)</p>
                         <NumberInput 
                           value={c.raw.extraAmount || ""} 
                           onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
+                          className="text-base md:text-lg py-3"
                         />
                       </div>
                     </>
@@ -1757,32 +1786,36 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 </div>
                 {/* Extra dauphin (uniquement pour Speed Boat) - Modifiable par tous */}
                 {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") && (
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-3 mt-4 p-4 bg-cyan-50/60 rounded-xl border-2 border-cyan-300/70">
                     <input
                       type="checkbox"
                       id={`edit-extraDolphin-${idx}`}
                       checked={c.raw.extraDolphin || false}
                       onChange={(e) => setItem(idx, { extraDolphin: e.target.checked })}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="w-5 h-5 text-blue-600 border-gray-400 rounded focus:ring-blue-500 cursor-pointer"
                     />
-                    <label htmlFor={`edit-extraDolphin-${idx}`} className="text-sm text-gray-700 cursor-pointer">
-                      Extra dauphin 20€
+                    <label htmlFor={`edit-extraDolphin-${idx}`} className="text-sm md:text-base font-bold text-slate-800 cursor-pointer flex items-center gap-2">
+                      <span>🐬</span>
+                      <span>Extra dauphin (+20€)</span>
                     </label>
                   </div>
                 )}
                 {/* Afficher le numéro de ticket si présent (non modifiable) */}
                 {((c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber)) && (
-                  <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg">
-                    <p className="text-xs text-emerald-700 font-medium">🎫 Ticket: {(c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber)}</p>
-                    <p className="text-[10px] text-emerald-600 font-semibold mt-1">Non modifiable</p>
+                  <div className="mt-4 p-4 md:p-5 bg-emerald-50/80 border-2 border-emerald-300/70 rounded-xl">
+                    <p className="text-sm md:text-base text-emerald-800 font-bold mb-2 flex items-center gap-2">
+                      <span>🎫</span>
+                      <span>Numéro de ticket: {(c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber)}</span>
+                    </p>
+                    <p className="text-xs md:text-sm text-emerald-700 font-semibold">🔒 Ticket verrouillé (non modifiable)</p>
                   </div>
                 )}
                 {c.lineTotal > 0 && (
-                  <div className="text-right text-sm font-semibold text-slate-700">
-                    <p>Espèces: {currencyNoCents(Math.round(c.lineTotal), c.currency)}</p>
-                    <p className="text-xs text-slate-600">Carte: {currencyNoCents(calculateCardPrice(c.lineTotal), c.currency)}</p>
+                  <div className="text-right bg-gradient-to-r from-blue-50/80 to-indigo-50/70 p-4 md:p-5 rounded-xl border-2 border-blue-300/70 mt-4">
+                    <p className="text-base md:text-lg font-bold text-emerald-700 mb-1">💵 Espèces: {currencyNoCents(Math.round(c.lineTotal), c.currency)}</p>
+                    <p className="text-sm md:text-base font-semibold text-slate-700">💳 Carte: {currencyNoCents(calculateCardPrice(c.lineTotal), c.currency)}</p>
                     {calculateTransferSurcharge(c.raw) > 0 && (
-                      <p className="text-xs text-cyan-600 font-medium mt-1">
+                      <p className="text-sm md:text-base text-cyan-700 font-bold mt-2">
                         🚗 Transfert: {currencyNoCents(calculateTransferSurcharge(c.raw), c.currency)}
                       </p>
                     )}
@@ -1792,31 +1825,34 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
             ))}
           </div>
 
-          <div className="flex items-center justify-between">
-            <GhostBtn type="button" onClick={addItem}>
-              + Ajouter une autre activité
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 bg-gradient-to-r from-emerald-50/80 to-teal-50/70 p-6 md:p-7 rounded-2xl border-2 border-emerald-300/70 shadow-lg">
+            <GhostBtn type="button" onClick={addItem} className="text-base md:text-lg px-6 py-3">
+              ➕ Ajouter une autre activité
             </GhostBtn>
-            <div className="text-right">
-              <p className="text-xs text-gray-500">Total</p>
-              <p className="text-xl font-bold">Espèces: {currencyNoCents(grandTotalCash, grandCurrency)}</p>
-              <p className="text-lg font-semibold text-gray-700">Carte: {currencyNoCents(grandTotalCard, grandCurrency)}</p>
+            <div className="text-right lg:text-right w-full lg:w-auto">
+              <p className="text-sm md:text-base font-semibold text-slate-700 mb-2">💰 Total du devis</p>
+              <p className="text-2xl md:text-3xl font-bold text-emerald-700 mb-1">💵 Espèces: {currencyNoCents(grandTotalCash, grandCurrency)}</p>
+              <p className="text-xl md:text-2xl font-bold text-slate-700">💳 Carte: {currencyNoCents(grandTotalCard, grandCurrency)}</p>
             </div>
           </div>
 
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Notes</p>
+          <div className="bg-gradient-to-br from-amber-50/80 to-orange-50/70 rounded-xl p-5 md:p-6 border-2 border-amber-300/70">
+            <p className="text-sm md:text-base font-bold text-slate-800 mb-3">📝 Notes supplémentaires</p>
             <TextInput
-              placeholder="Infos supplémentaires : langue du guide, pick-up, etc."
+              placeholder="Infos supplémentaires : langue du guide, pick-up, préférences, etc."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              className="text-base md:text-lg py-3"
             />
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 md:mt-6 pt-4 border-t">
-          <GhostBtn onClick={onClose} className="w-full sm:w-auto">Annuler</GhostBtn>
-          <PrimaryBtn onClick={handleSave} className="w-full sm:w-auto">
-            Enregistrer les modifications
+        <div className="flex flex-col sm:flex-row gap-4 justify-end mt-6 md:mt-8 pt-6 border-t-2 border-slate-300/80">
+          <GhostBtn onClick={onClose} className="w-full sm:w-auto text-base md:text-lg px-6 py-3">
+            ❌ Annuler
+          </GhostBtn>
+          <PrimaryBtn onClick={handleSave} className="w-full sm:w-auto text-base md:text-lg px-8 py-3">
+            ✅ Enregistrer les modifications
           </PrimaryBtn>
         </div>
       </div>
