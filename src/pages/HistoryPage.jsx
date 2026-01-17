@@ -7,7 +7,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 
@@ -1341,6 +1341,21 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           transfert3Personnes * prices.transfert3Personnes +
           transfertPlus3Personnes * prices.transfertPlus3Personnes +
           visaSim * prices.visaSim;
+      } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
+        // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
+        const prices = getZeroTracasHorsZonePrices();
+        const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
+        const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
+        const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
+        const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
+        const visaSim = Number(it.zeroTracasVisaSim || 0);
+        
+        lineTotal = 
+          transfertVisaSim * prices.transfertVisaSim +
+          transfertVisa * prices.transfertVisa +
+          transfert3Personnes * prices.transfert3Personnes +
+          transfertPlus3Personnes * prices.transfertPlus3Personnes +
+          visaSim * prices.visaSim;
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
@@ -1348,8 +1363,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       }
 
       // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits) (sauf pour les activités buggy et moto cross où on utilise les quantités spécifiques)
-      // Ne pas appliquer pour ZERO TRACAS car le transfert est déjà inclus dans les prix
-      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name)) {
+      // Ne pas appliquer pour ZERO TRACAS et ZERO TRACAS HORS ZONE car le transfert est déjà inclus dans les prix
+      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name) && !isZeroTracasHorsZoneActivity(act?.name)) {
         if (act && isBuggyActivity(act.name)) {
           // Pour les activités buggy, le supplément est calculé sur le nombre total de buggys
           const totalBuggys = Number(it.buggySimple || 0) + Number(it.buggyFamily || 0);
@@ -1698,11 +1713,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     </div>
                   </div>
                 )}
-                {/* Champs spécifiques pour ZERO TRACAS - Modifiables par tous */}
-                {c.act && isZeroTracasActivity(c.act.name) && (
+                {/* Champs spécifiques pour ZERO TRACAS et ZERO TRACAS HORS ZONE - Modifiables par tous */}
+                {(c.act && isZeroTracasActivity(c.act.name)) || (c.act && isZeroTracasHorsZoneActivity(c.act.name)) ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 mt-4 bg-indigo-50/60 p-5 md:p-6 rounded-xl border-2 border-indigo-300/70">
                     <div>
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa + SIM (45€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "50€" : "45€"})</p>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertVisaSim ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasTransfertVisaSim: e.target.value === "" ? "" : e.target.value })}
@@ -1711,7 +1726,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       />
                     </div>
                     <div>
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa (40€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa ({isZeroTracasHorsZoneActivity(c.act.name) ? "45€" : "40€"})</p>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertVisa ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasTransfertVisa: e.target.value === "" ? "" : e.target.value })}
@@ -1720,7 +1735,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       />
                     </div>
                     <div>
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert 3 personnes (20€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert 3 personnes ({isZeroTracasHorsZoneActivity(c.act.name) ? "25€" : "20€"})</p>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfert3Personnes ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasTransfert3Personnes: e.target.value === "" ? "" : e.target.value })}
@@ -1729,7 +1744,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       />
                     </div>
                     <div>
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + de 3 personnes (25€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + de 3 personnes ({isZeroTracasHorsZoneActivity(c.act.name) ? "30€" : "25€"})</p>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertPlus3Personnes ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasTransfertPlus3Personnes: e.target.value === "" ? "" : e.target.value })}
@@ -1747,7 +1762,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       />
                     </div>
                   </div>
-                )}
+                ) : null}
                 {/* Créneaux et Extras - Modifiables par tous */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
                   {c.transferInfo && (

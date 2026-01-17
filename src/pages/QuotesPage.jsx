@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -2131,17 +2131,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 </div>
               )}
 
-              {/* Champs spécifiques pour ZERO TRACAS */}
-              {c.act && isZeroTracasActivity(c.act.name) && (
-                <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/70 rounded-xl p-5 md:p-6 border-2 border-indigo-300/70 shadow-lg mt-4">
+              {/* Champs spécifiques pour ZERO TRACAS et ZERO TRACAS HORS ZONE */}
+              {(c.act && isZeroTracasActivity(c.act.name)) || (c.act && isZeroTracasHorsZoneActivity(c.act.name)) ? (
+                  <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/70 rounded-xl p-5 md:p-6 border-2 border-indigo-300/70 shadow-lg mt-4">
                   <p className="text-sm md:text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
                     <span className="text-xl">🎯</span>
-                    <span>Types de services ZERO TRACAS</span>
+                    <span>Types de services {isZeroTracasHorsZoneActivity(c.act.name) ? "ZERO TRACAS HORS ZONE" : "ZERO TRACAS"}</span>
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
                     <div>
                       <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
-                        🚗 Transfert + Visa + SIM (45€)
+                        🚗 Transfert + Visa + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "50€" : "45€"})
                       </label>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertVisaSim ?? ""} 
@@ -2152,7 +2152,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                     <div>
                       <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
-                        🚗 Transfert + Visa (40€)
+                        🚗 Transfert + Visa ({isZeroTracasHorsZoneActivity(c.act.name) ? "45€" : "40€"})
                       </label>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertVisa ?? ""} 
@@ -2163,7 +2163,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                     <div>
                       <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
-                        🚗 Transfert 3 personnes (20€)
+                        🚗 Transfert 3 personnes ({isZeroTracasHorsZoneActivity(c.act.name) ? "25€" : "20€"})
                       </label>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfert3Personnes ?? ""} 
@@ -2174,7 +2174,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                     <div>
                       <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
-                        🚗 Transfert + de 3 personnes (25€)
+                        🚗 Transfert + de 3 personnes ({isZeroTracasHorsZoneActivity(c.act.name) ? "30€" : "25€"})
                       </label>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertPlus3Personnes ?? ""} 
@@ -2196,7 +2196,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* Extra dauphin (uniquement pour Speed Boat) */}
               {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") && (

@@ -47,3 +47,21 @@ export function getZeroTracasPrices() {
   };
 }
 
+// Helper pour vérifier si une activité est ZERO TRACAS HORS ZONE
+export function isZeroTracasHorsZoneActivity(activityName) {
+  if (!activityName) return false;
+  const name = activityName.toLowerCase();
+  return name.includes("zero tracas hors zone");
+}
+
+// Helper pour obtenir les prix ZERO TRACAS HORS ZONE
+export function getZeroTracasHorsZonePrices() {
+  return {
+    transfertVisaSim: 50,        // transfert + visa + sim
+    transfertVisa: 45,            // transfert + visa
+    transfert3Personnes: 25,      // transfert 3 personnes
+    transfertPlus3Personnes: 30,  // transfert plus de 3 personnes
+    visaSim: 40,                  // visa + sim
+  };
+}
+
