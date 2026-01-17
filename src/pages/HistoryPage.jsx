@@ -7,7 +7,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 
@@ -97,6 +97,11 @@ function QuoteCardComponent({
         yamaha250: item.yamaha250 !== undefined && item.yamaha250 !== null ? item.yamaha250 : 0,
         ktm640: item.ktm640 !== undefined && item.ktm640 !== null ? item.ktm640 : 0,
         ktm530: item.ktm530 !== undefined && item.ktm530 !== null ? item.ktm530 : 0,
+        zeroTracasTransfertVisaSim: item.zeroTracasTransfertVisaSim !== undefined && item.zeroTracasTransfertVisaSim !== null ? item.zeroTracasTransfertVisaSim : "",
+        zeroTracasTransfertVisa: item.zeroTracasTransfertVisa !== undefined && item.zeroTracasTransfertVisa !== null ? item.zeroTracasTransfertVisa : "",
+        zeroTracasTransfert3Personnes: item.zeroTracasTransfert3Personnes !== undefined && item.zeroTracasTransfert3Personnes !== null ? item.zeroTracasTransfert3Personnes : "",
+        zeroTracasTransfertPlus3Personnes: item.zeroTracasTransfertPlus3Personnes !== undefined && item.zeroTracasTransfertPlus3Personnes !== null ? item.zeroTracasTransfertPlus3Personnes : "",
+        zeroTracasVisaSim: item.zeroTracasVisaSim !== undefined && item.zeroTracasVisaSim !== null ? item.zeroTracasVisaSim : "",
         slot: item.slot || "",
         ticketNumber: item.ticketNumber || "",
       }))
@@ -1235,6 +1240,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     yamaha250: "",
     ktm640: "",
     ktm530: "",
+    zeroTracasTransfertVisaSim: "",
+    zeroTracasTransfertVisa: "",
+    zeroTracasTransfert3Personnes: "",
+    zeroTracasTransfertPlus3Personnes: "",
+    zeroTracasVisaSim: "",
   });
 
   const sortedActivities = useMemo(() => {
@@ -1316,6 +1326,21 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         const ktm530 = Number(it.ktm530 || 0);
         const prices = getMotoCrossPrices();
         lineTotal = yamaha250 * prices.yamaha250 + ktm640 * prices.ktm640 + ktm530 * prices.ktm530;
+      } else if (act && isZeroTracasActivity(act.name)) {
+        // cas spécial ZERO TRACAS : calcul basé sur les différents types de services
+        const prices = getZeroTracasPrices();
+        const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
+        const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
+        const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
+        const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
+        const visaSim = Number(it.zeroTracasVisaSim || 0);
+        
+        lineTotal = 
+          transfertVisaSim * prices.transfertVisaSim +
+          transfertVisa * prices.transfertVisa +
+          transfert3Personnes * prices.transfert3Personnes +
+          transfertPlus3Personnes * prices.transfertPlus3Personnes +
+          visaSim * prices.visaSim;
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
@@ -1323,7 +1348,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       }
 
       // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits) (sauf pour les activités buggy et moto cross où on utilise les quantités spécifiques)
-      if (transferInfo && transferInfo.surcharge) {
+      // Ne pas appliquer pour ZERO TRACAS car le transfert est déjà inclus dans les prix
+      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name)) {
         if (act && isBuggyActivity(act.name)) {
           // Pour les activités buggy, le supplément est calculé sur le nombre total de buggys
           const totalBuggys = Number(it.buggySimple || 0) + Number(it.buggyFamily || 0);
@@ -1420,6 +1446,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         yamaha250: Number(c.raw.yamaha250 || 0),
         ktm640: Number(c.raw.ktm640 || 0),
         ktm530: Number(c.raw.ktm530 || 0),
+        zeroTracasTransfertVisaSim: Number(c.raw.zeroTracasTransfertVisaSim || 0),
+        zeroTracasTransfertVisa: Number(c.raw.zeroTracasTransfertVisa || 0),
+        zeroTracasTransfert3Personnes: Number(c.raw.zeroTracasTransfert3Personnes || 0),
+        zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
+        zeroTracasVisaSim: Number(c.raw.zeroTracasVisaSim || 0),
         neighborhood: client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
@@ -1663,6 +1694,56 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         value={c.raw.ktm530 ?? ""} 
                         onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })}
                         className="text-base md:text-lg py-3"
+                      />
+                    </div>
+                  </div>
+                )}
+                {/* Champs spécifiques pour ZERO TRACAS - Modifiables par tous */}
+                {c.act && isZeroTracasActivity(c.act.name) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 mt-4 bg-indigo-50/60 p-5 md:p-6 rounded-xl border-2 border-indigo-300/70">
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa + SIM (45€)</p>
+                      <NumberInput 
+                        value={c.raw.zeroTracasTransfertVisaSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertVisaSim: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa (40€)</p>
+                      <NumberInput 
+                        value={c.raw.zeroTracasTransfertVisa ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertVisa: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert 3 personnes (20€)</p>
+                      <NumberInput 
+                        value={c.raw.zeroTracasTransfert3Personnes ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfert3Personnes: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + de 3 personnes (25€)</p>
+                      <NumberInput 
+                        value={c.raw.zeroTracasTransfertPlus3Personnes ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertPlus3Personnes: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">📱 Visa + SIM (40€)</p>
+                      <NumberInput 
+                        value={c.raw.zeroTracasVisaSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasVisaSim: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
+                        placeholder="0"
                       />
                     </div>
                   </div>

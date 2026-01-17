@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { calculateCardPrice } from "../utils";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices } from "../utils/activityHelpers";
 
 /**
  * Hook personnalisé pour calculer les prix des activités
@@ -95,6 +95,21 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         const ktm530 = Number(it.ktm530 || 0);
         const prices = getMotoCrossPrices();
         lineTotal = yamaha250 * prices.yamaha250 + ktm640 * prices.ktm640 + ktm530 * prices.ktm530;
+      } else if (act && isZeroTracasActivity(act.name)) {
+        // cas spécial ZERO TRACAS : calcul basé sur les différents types de services
+        const prices = getZeroTracasPrices();
+        const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
+        const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
+        const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
+        const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
+        const visaSim = Number(it.zeroTracasVisaSim || 0);
+        
+        lineTotal = 
+          transfertVisaSim * prices.transfertVisaSim +
+          transfertVisa * prices.transfertVisa +
+          transfert3Personnes * prices.transfert3Personnes +
+          transfertPlus3Personnes * prices.transfertPlus3Personnes +
+          visaSim * prices.visaSim;
       } else if (act && (act.name.toLowerCase().includes("hurghada") && (act.name.toLowerCase().includes("le caire") || act.name.toLowerCase().includes("louxor")))) {
         // cas spécial HURGHADA - LE CAIRE et HURGHADA - LOUXOR
         // Prix fixe : Aller simple = 150€, Aller retour = 300€
@@ -183,7 +198,8 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       }
 
       // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits)
-      if (transferInfo && transferInfo.surcharge) {
+      // Ne pas appliquer pour ZERO TRACAS car le transfert est déjà inclus dans les prix
+      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name)) {
         if (act && isMotoCrossActivity(act.name)) {
           // Pour MOTO CROSS, le supplément est calculé sur le nombre total de motos
           const totalMotos = Number(it.yamaha250 || 0) + Number(it.ktm640 || 0) + Number(it.ktm530 || 0);

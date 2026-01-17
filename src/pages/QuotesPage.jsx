@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -107,6 +107,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     ktm530: "",
     allerSimple: false, // Pour HURGHADA - LE CAIRE et HURGHADA - LOUXOR
     allerRetour: false, // Pour HURGHADA - LE CAIRE et HURGHADA - LOUXOR
+    zeroTracasTransfertVisaSim: "", // Pour ZERO TRACAS
+    zeroTracasTransfertVisa: "", // Pour ZERO TRACAS
+    zeroTracasTransfert3Personnes: "", // Pour ZERO TRACAS
+    zeroTracasTransfertPlus3Personnes: "", // Pour ZERO TRACAS
+    zeroTracasVisaSim: "", // Pour ZERO TRACAS
   }), []);
 
   const defaultClient = draft?.client || {
@@ -838,6 +843,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         ktm530: Number(c.raw.ktm530 || 0),
         allerSimple: c.raw.allerSimple || false,
         allerRetour: c.raw.allerRetour || false,
+        zeroTracasTransfertVisaSim: Number(c.raw.zeroTracasTransfertVisaSim || 0),
+        zeroTracasTransfertVisa: Number(c.raw.zeroTracasTransfertVisa || 0),
+        zeroTracasTransfert3Personnes: Number(c.raw.zeroTracasTransfert3Personnes || 0),
+        zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
+        zeroTracasVisaSim: Number(c.raw.zeroTracasVisaSim || 0),
         neighborhood: client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
@@ -2116,6 +2126,73 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         Bébés{c.act?.ageBaby ? <span className="text-slate-500 ml-1 font-normal">({c.act.ageBaby})</span> : ""}
                       </label>
                       <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} placeholder="0" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Champs spécifiques pour ZERO TRACAS */}
+              {c.act && isZeroTracasActivity(c.act.name) && (
+                <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/70 rounded-xl p-5 md:p-6 border-2 border-indigo-300/70 shadow-lg mt-4">
+                  <p className="text-sm md:text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span className="text-xl">🎯</span>
+                    <span>Types de services ZERO TRACAS</span>
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+                    <div>
+                      <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
+                        🚗 Transfert + Visa + SIM (45€)
+                      </label>
+                      <NumberInput 
+                        value={c.raw.zeroTracasTransfertVisaSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertVisaSim: e.target.value === "" ? "" : e.target.value })}
+                        placeholder="0"
+                        className="text-base md:text-lg py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
+                        🚗 Transfert + Visa (40€)
+                      </label>
+                      <NumberInput 
+                        value={c.raw.zeroTracasTransfertVisa ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertVisa: e.target.value === "" ? "" : e.target.value })}
+                        placeholder="0"
+                        className="text-base md:text-lg py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
+                        🚗 Transfert 3 personnes (20€)
+                      </label>
+                      <NumberInput 
+                        value={c.raw.zeroTracasTransfert3Personnes ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfert3Personnes: e.target.value === "" ? "" : e.target.value })}
+                        placeholder="0"
+                        className="text-base md:text-lg py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
+                        🚗 Transfert + de 3 personnes (25€)
+                      </label>
+                      <NumberInput 
+                        value={c.raw.zeroTracasTransfertPlus3Personnes ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertPlus3Personnes: e.target.value === "" ? "" : e.target.value })}
+                        placeholder="0"
+                        className="text-base md:text-lg py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
+                        📱 Visa + SIM (40€)
+                      </label>
+                      <NumberInput 
+                        value={c.raw.zeroTracasVisaSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasVisaSim: e.target.value === "" ? "" : e.target.value })}
+                        placeholder="0"
+                        className="text-base md:text-lg py-2"
+                      />
                     </div>
                   </div>
                 </div>

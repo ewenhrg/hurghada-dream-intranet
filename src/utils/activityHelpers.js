@@ -29,3 +29,21 @@ export function getMotoCrossPrices() {
   return { yamaha250: 100, ktm640: 120, ktm530: 160 };
 }
 
+// Helper pour vérifier si une activité est ZERO TRACAS
+export function isZeroTracasActivity(activityName) {
+  if (!activityName) return false;
+  const name = activityName.toLowerCase();
+  return name.includes("zero tracas");
+}
+
+// Helper pour obtenir les prix ZERO TRACAS
+export function getZeroTracasPrices() {
+  return {
+    transfertVisaSim: 45,        // transfert + visa + sim
+    transfertVisa: 40,            // transfert + visa
+    transfert3Personnes: 20,      // transfert 3 personnes
+    transfertPlus3Personnes: 25,  // transfert plus de 3 personnes
+    visaSim: 40,                  // visa + sim
+  };
+}
+
