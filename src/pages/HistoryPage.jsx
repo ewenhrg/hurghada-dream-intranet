@@ -1328,6 +1328,24 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         const ktm530 = Number(it.ktm530 || 0);
         const prices = getMotoCrossPrices();
         lineTotal = yamaha250 * prices.yamaha250 + ktm640 * prices.ktm640 + ktm530 * prices.ktm530;
+      } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
+        // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
+        // Vérifier HORS ZONE en premier car plus spécifique
+        const prices = getZeroTracasHorsZonePrices();
+        const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
+        const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
+        const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
+        const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
+        const visaSim = Number(it.zeroTracasVisaSim || 0);
+        const visaSeul = Number(it.zeroTracasVisaSeul || 0);
+        
+        lineTotal = 
+          transfertVisaSim * prices.transfertVisaSim +
+          transfertVisa * prices.transfertVisa +
+          transfert3Personnes * prices.transfert3Personnes +
+          transfertPlus3Personnes * prices.transfertPlus3Personnes +
+          visaSim * prices.visaSim +
+          visaSeul * prices.visaSeul;
       } else if (act && isZeroTracasActivity(act.name)) {
         // cas spécial ZERO TRACAS : calcul basé sur les différents types de services
         const prices = getZeroTracasPrices();
@@ -1345,7 +1363,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           transfertPlus3Personnes * prices.transfertPlus3Personnes +
           visaSim * prices.visaSim +
           visaSeul * prices.visaSeul;
-      } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
         // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
         const prices = getZeroTracasHorsZonePrices();
         const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);

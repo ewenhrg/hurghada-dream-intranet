@@ -30,9 +30,12 @@ export function getMotoCrossPrices() {
 }
 
 // Helper pour vérifier si une activité est ZERO TRACAS
+// Important : doit retourner false pour "ZERO TRACAS HORS ZONE"
 export function isZeroTracasActivity(activityName) {
   if (!activityName) return false;
   const name = activityName.toLowerCase();
+  // Vérifier d'abord si c'est HORS ZONE (plus spécifique)
+  if (name.includes("zero tracas hors zone")) return false;
   return name.includes("zero tracas");
 }
 
