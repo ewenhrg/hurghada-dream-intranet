@@ -44,6 +44,7 @@ export function getZeroTracasPrices() {
     transfert3Personnes: 20,      // transfert 3 personnes
     transfertPlus3Personnes: 25,  // transfert plus de 3 personnes
     visaSim: 40,                  // visa + sim
+    visaSeul: 30,                 // visa seul
   };
 }
 
@@ -62,6 +63,7 @@ export function getZeroTracasHorsZonePrices() {
     transfert3Personnes: 25,      // transfert 3 personnes
     transfertPlus3Personnes: 30,  // transfert plus de 3 personnes
     visaSim: 40,                  // visa + sim
+    visaSeul: 30,                 // visa seul
   };
 }
 

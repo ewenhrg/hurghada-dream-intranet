@@ -112,6 +112,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     zeroTracasTransfert3Personnes: "", // Pour ZERO TRACAS
     zeroTracasTransfertPlus3Personnes: "", // Pour ZERO TRACAS
     zeroTracasVisaSim: "", // Pour ZERO TRACAS
+    zeroTracasVisaSeul: "", // Pour ZERO TRACAS
   }), []);
 
   const defaultClient = draft?.client || {
@@ -848,6 +849,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         zeroTracasTransfert3Personnes: Number(c.raw.zeroTracasTransfert3Personnes || 0),
         zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
         zeroTracasVisaSim: Number(c.raw.zeroTracasVisaSim || 0),
+        zeroTracasVisaSeul: Number(c.raw.zeroTracasVisaSeul || 0),
         neighborhood: client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
@@ -2190,6 +2192,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <NumberInput 
                         value={c.raw.zeroTracasVisaSim ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasVisaSim: e.target.value === "" ? "" : e.target.value })}
+                        placeholder="0"
+                        className="text-base md:text-lg py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
+                        📄 Visa seul (30€)
+                      </label>
+                      <NumberInput 
+                        value={c.raw.zeroTracasVisaSeul ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasVisaSeul: e.target.value === "" ? "" : e.target.value })}
                         placeholder="0"
                         className="text-base md:text-lg py-2"
                       />

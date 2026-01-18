@@ -102,6 +102,7 @@ function QuoteCardComponent({
         zeroTracasTransfert3Personnes: item.zeroTracasTransfert3Personnes !== undefined && item.zeroTracasTransfert3Personnes !== null ? item.zeroTracasTransfert3Personnes : "",
         zeroTracasTransfertPlus3Personnes: item.zeroTracasTransfertPlus3Personnes !== undefined && item.zeroTracasTransfertPlus3Personnes !== null ? item.zeroTracasTransfertPlus3Personnes : "",
         zeroTracasVisaSim: item.zeroTracasVisaSim !== undefined && item.zeroTracasVisaSim !== null ? item.zeroTracasVisaSim : "",
+        zeroTracasVisaSeul: item.zeroTracasVisaSeul !== undefined && item.zeroTracasVisaSeul !== null ? item.zeroTracasVisaSeul : "",
         slot: item.slot || "",
         ticketNumber: item.ticketNumber || "",
       }))
@@ -1245,6 +1246,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     zeroTracasTransfert3Personnes: "",
     zeroTracasTransfertPlus3Personnes: "",
     zeroTracasVisaSim: "",
+    zeroTracasVisaSeul: "",
   });
 
   const sortedActivities = useMemo(() => {
@@ -1334,13 +1336,15 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
         const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
         const visaSim = Number(it.zeroTracasVisaSim || 0);
+        const visaSeul = Number(it.zeroTracasVisaSeul || 0);
         
         lineTotal = 
           transfertVisaSim * prices.transfertVisaSim +
           transfertVisa * prices.transfertVisa +
           transfert3Personnes * prices.transfert3Personnes +
           transfertPlus3Personnes * prices.transfertPlus3Personnes +
-          visaSim * prices.visaSim;
+          visaSim * prices.visaSim +
+          visaSeul * prices.visaSeul;
       } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
         // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
         const prices = getZeroTracasHorsZonePrices();
@@ -1349,13 +1353,15 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
         const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
         const visaSim = Number(it.zeroTracasVisaSim || 0);
+        const visaSeul = Number(it.zeroTracasVisaSeul || 0);
         
         lineTotal = 
           transfertVisaSim * prices.transfertVisaSim +
           transfertVisa * prices.transfertVisa +
           transfert3Personnes * prices.transfert3Personnes +
           transfertPlus3Personnes * prices.transfertPlus3Personnes +
-          visaSim * prices.visaSim;
+          visaSim * prices.visaSim +
+          visaSeul * prices.visaSeul;
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
@@ -1466,6 +1472,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         zeroTracasTransfert3Personnes: Number(c.raw.zeroTracasTransfert3Personnes || 0),
         zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
         zeroTracasVisaSim: Number(c.raw.zeroTracasVisaSim || 0),
+        zeroTracasVisaSeul: Number(c.raw.zeroTracasVisaSeul || 0),
         neighborhood: client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
@@ -1757,6 +1764,15 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <NumberInput 
                         value={c.raw.zeroTracasVisaSim ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasVisaSim: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">📄 Visa seul (30€)</p>
+                      <NumberInput 
+                        value={c.raw.zeroTracasVisaSeul ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasVisaSeul: e.target.value === "" ? "" : e.target.value })}
                         className="text-base md:text-lg py-3"
                         placeholder="0"
                       />
