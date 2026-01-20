@@ -1522,8 +1522,41 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
   }
 
   return (
-    <div ref={editModalContainerRef} className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 md:p-4">
-      <div ref={editModalRef} className="bg-white/99 backdrop-blur-md rounded-2xl border-2 border-blue-300/80 shadow-2xl p-6 md:p-8 lg:p-10 max-w-6xl w-full max-h-[98vh] overflow-y-auto">
+    <div 
+      ref={editModalContainerRef} 
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 md:p-4"
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflowY: 'auto',
+        // S'assurer que la modale reste visible dans le viewport
+        paddingTop: '2rem',
+        paddingBottom: '2rem'
+      }}
+      onClick={(e) => {
+        // Fermer la modale si on clique sur le fond
+        if (e.target === editModalContainerRef.current) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        ref={editModalRef} 
+        className="bg-white/99 backdrop-blur-md rounded-2xl border-2 border-blue-300/80 shadow-2xl p-6 md:p-8 lg:p-10 max-w-6xl w-full overflow-y-auto"
+        style={{
+          maxHeight: 'calc(100vh - 4rem)',
+          margin: 'auto',
+          // S'assurer que la modale reste centrée même si le contenu est long
+          alignSelf: 'center'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-6 md:mb-8 pb-5 border-b-2 border-slate-300/80">
           <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-900 flex items-center gap-3">
             <span className="text-3xl md:text-4xl">✏️</span>
