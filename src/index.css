@@ -81,6 +81,12 @@ html, body {
   /* Scroll fluide sans rollback */
   scroll-behavior: auto;
   overscroll-behavior: contain;
+  /* Forcer l'accélération GPU pour un scroll fluide */
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  /* Optimiser le rendu */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 main {
@@ -249,9 +255,9 @@ button {
   box-shadow: 
     0 10px 30px -15px rgba(15, 23, 42, 0.25),
     0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-  /* Réduire backdrop-blur pour améliorer les performances */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  /* Réduire drastiquement backdrop-blur pour améliorer les performances */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   transition: 
     transform var(--hd-transition-fast),
     box-shadow var(--hd-transition-fast),
@@ -260,6 +266,9 @@ button {
   position: relative;
   /* Optimisations de performance sans causer de rollback */
   contain: layout style paint;
+  /* Forcer l'accélération GPU */
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
 }
 
 .hd-card p,
@@ -313,17 +322,20 @@ button {
 }
 
 .glass-nav {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.78), rgba(30, 41, 59, 0.72));
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.8));
   border: 1px solid rgba(148, 163, 184, 0.25);
   box-shadow: 0 20px 45px -25px rgba(7, 13, 31, 0.55);
-  /* Réduire backdrop-blur pour améliorer les performances de scroll */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  /* Réduire drastiquement backdrop-blur pour améliorer les performances de scroll */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   /* Optimisations de performance sans causer de rollback */
   contain: layout style paint;
   /* Éviter les problèmes de scroll avec sticky */
   position: sticky;
   top: 0;
+  /* Forcer l'accélération GPU pour le header sticky */
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
 }
 
 .badge-soft {
@@ -755,8 +767,14 @@ select:not([class*="rounded"]):hover {
   overscroll-behavior: contain;
   /* Éviter les problèmes de scroll */
   -webkit-overflow-scrolling: touch;
-  /* Pas de will-change qui peut causer des problèmes */
-  /* Pas de transform qui peut causer des rollbacks */
+  /* Forcer l'accélération GPU pour un scroll fluide */
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  /* Optimiser le rendu */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000px;
+  -webkit-perspective: 1000px;
 }
 
 /* Optimisation pour les éléments sticky qui peuvent causer des problèmes de scroll */
@@ -777,17 +795,6 @@ header[class*="sticky"] {
   scroll-behavior: auto;
 }
 
-/* Réduire backdrop-blur globalement pour meilleures performances de scroll */
-.backdrop-blur-xl {
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-}
-
-.backdrop-blur-2xl {
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-}
-
 /* Classes utilitaires pour animations - optimisées */
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
@@ -799,17 +806,6 @@ header[class*="sticky"] {
   animation-fill-mode: both;
 }
 
-
-/* Réduire backdrop-blur globalement pour meilleures performances */
-.backdrop-blur-xl {
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-}
-
-.backdrop-blur-2xl {
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-}
 
 /* Animations désactivées par défaut pour performance */
 .animate-pulse-slow {
@@ -1167,13 +1163,13 @@ button:not(:disabled):active {
   /* Pas de transform qui peut causer des rollbacks */
 }
 
-/* Réduire backdrop-blur globalement pour meilleures performances de scroll */
+/* Réduire drastiquement backdrop-blur globalement pour meilleures performances de scroll */
 .backdrop-blur-xl {
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(2px) !important;
+  -webkit-backdrop-filter: blur(2px) !important;
 }
 
 .backdrop-blur-2xl {
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  backdrop-filter: blur(3px) !important;
+  -webkit-backdrop-filter: blur(3px) !important;
 }

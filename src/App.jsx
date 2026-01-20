@@ -929,7 +929,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-transparent overflow-hidden">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6 backdrop-blur-xl" style={{ backgroundColor: 'rgba(7,13,31,0.9)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
+      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6" style={{ backgroundColor: 'rgba(7,13,31,0.95)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
         <div className={headerNavClassName}>
           <div className="flex items-center gap-2 md:gap-3.5 w-full md:w-auto">
             <img 

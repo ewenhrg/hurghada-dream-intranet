@@ -532,22 +532,40 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     };
   }, []);
 
-  // Écouter le scroll pour afficher/masquer le bouton "remonter en haut" (optimisé avec requestAnimationFrame)
+  // Écouter le scroll pour afficher/masquer le bouton "remonter en haut" (optimisé avec debounce agressif)
   useEffect(() => {
     let ticking = false;
+    let lastScrollY = 0;
+    let timeoutId = null;
+    
     const handleScroll = () => {
       if (!ticking) {
+        ticking = true;
+        
+        // Utiliser requestAnimationFrame pour synchroniser avec le rendu
         window.requestAnimationFrame(() => {
           const scrollY = window.scrollY || document.documentElement.scrollTop;
-          setShowScrollToTop(scrollY > 300);
+          
+          // Debounce agressif : ne mettre à jour que si le scroll a changé significativement
+          if (Math.abs(scrollY - lastScrollY) > 50) {
+            // Utiliser un timeout pour éviter les mises à jour trop fréquentes
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+              setShowScrollToTop(scrollY > 300);
+              lastScrollY = scrollY;
+            }, 100); // Debounce de 100ms
+          }
+          
           ticking = false;
         });
-        ticking = true;
       }
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, []);
 
   // Fonction pour remonter en haut de la page
