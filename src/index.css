@@ -75,6 +75,12 @@ html, body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Optimisations de performance pour le scroll */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* Forcer l'accélération GPU pour le scroll */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 main {
@@ -236,17 +242,24 @@ button {
   background: var(--hd-surface);
   border: 1.5px solid var(--hd-border);
   border-radius: 1.25rem;
+  /* Shadows simplifiés pour meilleures performances */
   box-shadow: 
-    0 20px 50px -25px rgba(15, 23, 42, 0.3),
+    0 10px 30px -15px rgba(15, 23, 42, 0.25),
     0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-  backdrop-filter: blur(20px);
+  /* Réduire backdrop-blur pour améliorer les performances */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   transition: 
     transform var(--hd-transition-fast),
     box-shadow var(--hd-transition-fast),
     border-color var(--hd-transition-fast);
   color: var(--hd-text);
   position: relative;
+  /* Optimisations de performance */
   will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  contain: layout style paint;
 }
 
 .hd-card p,
@@ -303,7 +316,14 @@ button {
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.78), rgba(30, 41, 59, 0.72));
   border: 1px solid rgba(148, 163, 184, 0.25);
   box-shadow: 0 20px 45px -25px rgba(7, 13, 31, 0.55);
-  backdrop-filter: blur(20px);
+  /* Réduire backdrop-blur pour améliorer les performances de scroll */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  /* Optimisations de performance */
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  contain: layout style paint;
 }
 
 .badge-soft {
@@ -730,15 +750,49 @@ select:not([class*="rounded"]):hover {
   }
 }
 
+/* Optimisations globales pour le scroll - à la fin du fichier pour override */
+.scroll-container {
+  /* Forcer l'accélération GPU */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  /* Isolation pour éviter les reflows */
+  contain: layout style paint;
+  /* Optimiser le rendu */
+  will-change: scroll-position;
+}
+
+/* Réduire backdrop-blur globalement pour meilleures performances de scroll */
+.backdrop-blur-xl {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.backdrop-blur-2xl {
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
 /* Classes utilitaires pour animations - optimisées */
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
-  will-change: opacity;
+  animation-fill-mode: both;
 }
 
 .animate-slide-in {
   animation: slideIn 0.3s ease-out;
-  will-change: transform, opacity;
+  animation-fill-mode: both;
+}
+
+
+/* Réduire backdrop-blur globalement pour meilleures performances */
+.backdrop-blur-xl {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.backdrop-blur-2xl {
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
 }
 
 /* Animations désactivées par défaut pour performance */
@@ -1087,4 +1141,26 @@ button:not(:disabled):active {
     font-size: 16px !important;
     padding: 0.625rem;
   }
+}
+
+/* Optimisations globales pour le scroll - à la fin pour override */
+.scroll-container {
+  /* Forcer l'accélération GPU */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  /* Isolation pour éviter les reflows */
+  contain: layout style paint;
+  /* Optimiser le rendu */
+  will-change: scroll-position;
+}
+
+/* Réduire backdrop-blur globalement pour meilleures performances de scroll */
+.backdrop-blur-xl {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.backdrop-blur-2xl {
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
 }
