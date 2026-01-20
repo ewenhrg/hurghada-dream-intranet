@@ -629,7 +629,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   });
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 animate-page-enter">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b-2 border-slate-200/60">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
@@ -655,7 +655,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       </div>
 
       {/* Filtres et recherche */}
-      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-2xl border-2 border-slate-200/60 p-5 md:p-7 shadow-xl backdrop-blur-sm animate-slide-up">
+      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-2xl border-2 border-slate-200/60 p-5 md:p-7 shadow-xl">
         <div className="flex items-center gap-4 mb-5 pb-4 border-b-2 border-blue-200/40">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
             <span className="text-xl">🔍</span>
@@ -670,7 +670,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           </div>
         </div>
         <div className="grid md:grid-cols-2 gap-5 md:gap-6">
-          <div className="animate-fade-in">
+          <div>
             <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
               Rechercher une activité
@@ -682,7 +682,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               className="text-base shadow-md hover:shadow-lg transition-all"
             />
           </div>
-          <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <div>
             <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
               Filtrer par jour
@@ -704,7 +704,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       </div>
 
       {showForm && (
-        <form ref={formRef} onSubmit={handleCreate} className="space-y-5 md:space-y-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 backdrop-blur-sm rounded-2xl p-5 md:p-7 lg:p-9 border-2 border-blue-200/60 shadow-xl animate-scale-in">
+        <form ref={formRef} onSubmit={handleCreate} className="space-y-5 md:space-y-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 backdrop-blur-sm rounded-2xl p-5 md:p-7 lg:p-9 border-2 border-blue-200/60 shadow-xl">
           <div className="flex items-center gap-4 mb-5 pb-4 border-b-2 border-blue-200/60">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
               <span className="text-2xl">{editingId ? "✏️" : "➕"}</span>
@@ -719,7 +719,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
           </div>
 
-          <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 md:p-6 border-2 border-blue-100/60 shadow-lg animate-fade-in">
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 md:p-6 border-2 border-blue-100/60 shadow-lg">
             <div className="flex items-center gap-3 mb-4 pb-3 border-b border-blue-100/60">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                 <span className="text-white text-sm">📋</span>
@@ -759,7 +759,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl p-5 md:p-6 border-2 border-emerald-200/60 shadow-lg animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl p-5 md:p-6 border-2 border-emerald-200/60 shadow-lg">
             <div className="flex items-center gap-3 mb-4 pb-3 border-b border-emerald-200/60">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                 <span className="text-white text-sm">💰</span>
@@ -815,7 +815,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-xl p-5 md:p-6 border-2 border-amber-200/60 shadow-lg animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-xl p-5 md:p-6 border-2 border-amber-200/60 shadow-lg">
             <div className="flex items-center gap-3 mb-4 pb-3 border-b border-amber-200/60">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
                 <span className="text-white text-sm">📅</span>
@@ -825,7 +825,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             <DaysSelector value={form.availableDays} onChange={(v) => setForm((f) => ({ ...f, availableDays: v }))} />
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 rounded-xl p-5 md:p-6 border-2 border-purple-200/60 shadow-lg animate-fade-in" style={{ animationDelay: '300ms' }}>
+          <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 rounded-xl p-5 md:p-6 border-2 border-purple-200/60 shadow-lg">
             <div className="flex items-center gap-3 mb-4 pb-3 border-b border-purple-200/60">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
                 <span className="text-white text-sm">🚗</span>
@@ -840,7 +840,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             <TransfersEditor value={form.transfers} onChange={(v) => setForm((f) => ({ ...f, transfers: v }))} />
           </div>
 
-          <div className="bg-slate-50/90 backdrop-blur-sm rounded-xl p-5 md:p-6 border-2 border-slate-200/60 shadow-lg animate-fade-in" style={{ animationDelay: '400ms' }}>
+          <div className="bg-slate-50/90 backdrop-blur-sm rounded-xl p-5 md:p-6 border-2 border-slate-200/60 shadow-lg">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center">
                 <span className="text-white text-sm">📝</span>

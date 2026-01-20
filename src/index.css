@@ -814,26 +814,59 @@ table {
   -webkit-transform: translate3d(0, 0, 0);
   /* Isolation pour éviter les reflows */
   contain: layout style paint;
-  /* Éviter les problèmes de rendu */
-  will-change: contents;
+  /* Précharger le contenu pour éviter les carrés blancs */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
 }
 
 /* Classes utilitaires pour animations - optimisées */
 .animate-fade-in {
-  animation: fadeIn 0.2s ease-out;
-  animation-fill-mode: both;
+  /* Commencer directement à opacity: 1 pour éviter les carrés blancs */
+  opacity: 1;
+  /* Animation désactivée par défaut pour performance */
+  /* animation: fadeIn 0.2s ease-out;
+  animation-fill-mode: both; */
 }
 
 .animate-slide-in {
-  animation: slideIn 0.2s ease-out;
-  animation-fill-mode: both;
+  /* Commencer directement à opacity: 1 pour éviter les carrés blancs */
+  opacity: 1;
+  transform: translateX(0);
+  /* Animation désactivée par défaut pour performance */
+  /* animation: slideIn 0.2s ease-out;
+  animation-fill-mode: both; */
+}
+
+.animate-page-enter {
+  /* Commencer directement à opacity: 1 pour éviter les carrés blancs */
+  opacity: 1;
+  transform: translateY(0);
+  /* Animation désactivée par défaut pour performance */
+  /* animation: pageFadeIn 0.3s ease-out; */
+}
+
+.animate-slide-up {
+  /* Commencer directement à opacity: 1 pour éviter les carrés blancs */
+  opacity: 1;
+  transform: translateY(0);
+  /* Animation désactivée par défaut pour performance */
+  /* animation: slideUp 0.3s ease-out; */
+}
+
+.animate-scale-in {
+  /* Commencer directement à opacity: 1 pour éviter les carrés blancs */
+  opacity: 1;
+  transform: scale(1);
+  /* Animation désactivée par défaut pour performance */
+  /* animation: scaleIn 0.2s ease-out; */
 }
 
 /* Désactiver les animations pendant le scroll pour améliorer les performances */
 .scrolling .animate-fade-in,
 .scrolling .animate-slide-in,
 .scrolling .animate-page-enter,
-.scrolling .animate-scale-in {
+.scrolling .animate-scale-in,
+.scrolling .animate-slide-up {
   animation: none !important;
   opacity: 1 !important;
   transform: none !important;
@@ -912,17 +945,8 @@ table {
   }
 }
 
-.animate-page-enter {
-  animation: pageFadeIn 0.3s ease-out;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.3s ease-out;
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.2s ease-out;
-}
+/* Les animations sont désactivées par défaut pour éviter les carrés blancs */
+/* Utiliser les classes ci-dessus qui commencent directement à opacity: 1 */
 
 /* Focus visible amélioré */
 *:focus-visible {
