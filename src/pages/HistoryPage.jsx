@@ -356,21 +356,8 @@ function QuoteCardComponent({
   );
 }
 
-// Mémoriser QuoteCard pour éviter les re-renders inutiles
-const QuoteCard = React.memo(QuoteCardComponent, (prevProps, nextProps) => {
-  // Comparaison personnalisée pour éviter les re-renders inutiles
-  return (
-    prevProps.quote.id === nextProps.quote.id &&
-    prevProps.quote.allTicketsFilled === nextProps.quote.allTicketsFilled &&
-    prevProps.quote.hasTickets === nextProps.quote.hasTickets &&
-    prevProps.quote.isModified === nextProps.quote.isModified &&
-    prevProps.quote.formattedCreatedAt === nextProps.quote.formattedCreatedAt &&
-    prevProps.quote.itemsWithFormattedDates?.length === nextProps.quote.itemsWithFormattedDates?.length &&
-    prevProps.user?.name === nextProps.user?.name &&
-    prevProps.user?.canDeleteQuote === nextProps.user?.canDeleteQuote &&
-    JSON.stringify(prevProps.quote.items) === JSON.stringify(nextProps.quote.items)
-  );
-});
+// QuoteCard exporté directement (la pagination et les autres optimisations suffisent pour les performances)
+const QuoteCard = QuoteCardComponent;
 
 // Exporter HistoryPage après la déclaration de QuoteCard
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
