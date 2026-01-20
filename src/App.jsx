@@ -1195,7 +1195,7 @@ export default function App() {
               </div>
               
               {/* Boutons flottants : dates utilisées */}
-              <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+              <div className="fixed bottom-6 left-6 z-[9999] flex items-center gap-3">
                 {/* Bouton flottant pour voir les dates utilisées */}
                 {usedDates.length > 0 && (
                   <button
@@ -1204,7 +1204,11 @@ export default function App() {
                     style={{
                       backgroundColor: 'rgba(251, 191, 36, 0.95)',
                       boxShadow: '0 8px 24px -8px rgba(180, 83, 9, 0.6)',
-                      backdropFilter: 'blur(12px)'
+                      backdropFilter: 'blur(12px)',
+                      position: 'fixed',
+                      bottom: '1.5rem',
+                      left: '1.5rem',
+                      zIndex: 9999
                     }}
                     title="Voir les dates utilisées"
                   >
