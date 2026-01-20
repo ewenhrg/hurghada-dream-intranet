@@ -236,9 +236,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   }, [blankItemMemo, globalAdults]);
   
   const removeItem = useCallback((i) => {
+    // Suppression directe sans confirmation
     const itemToRemove = items[i];
     const activityName = activitiesMap.get(itemToRemove?.activityId)?.name || "cette activité";
-    setConfirmDeleteItem({ isOpen: true, index: i, activityName });
+    setItems((prev) => prev.filter((_, idx) => idx !== i));
+    toast.success(`Activité "${activityName}" supprimée du devis.`);
   }, [items, activitiesMap]);
 
   const handleConfirmDeleteItem = useCallback(() => {
@@ -2288,16 +2290,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       />
 
       {/* Dialogs de confirmation */}
-      <ConfirmDialog
-        isOpen={confirmDeleteItem.isOpen}
-        onClose={() => setConfirmDeleteItem({ isOpen: false, index: null, activityName: "" })}
-        onConfirm={handleConfirmDeleteItem}
-        title="Supprimer l'activité"
-        message={`Êtes-vous sûr de vouloir supprimer "${confirmDeleteItem.activityName}" de ce devis ?\n\nCette action est irréversible.`}
-        confirmText="Supprimer"
-        cancelText="Annuler"
-        type="danger"
-      />
+      {/* Modale de confirmation de suppression désactivée - suppression directe */}
 
       <ConfirmDialog
         isOpen={confirmResetForm}
