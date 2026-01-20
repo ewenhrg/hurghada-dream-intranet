@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -1125,8 +1126,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         </div>
       )}
 
-      {/* Modale de modification de devis */}
-      {showEditModal && selectedQuote && editClient && (
+      {/* Modale de modification de devis - Rendu via Portal directement dans le body */}
+      {showEditModal && selectedQuote && editClient && createPortal(
         <EditQuoteModal
           quote={selectedQuote}
           client={editClient}
@@ -1222,7 +1223,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             setEditNotes("");
             toast.success("Devis modifié avec succès !");
           }}
-        />
+        />,
+        document.body
       )}
     </div>
   );
