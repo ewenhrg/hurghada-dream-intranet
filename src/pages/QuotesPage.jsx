@@ -997,12 +997,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             variant="danger"
             size="sm"
             onClick={() => {
-              setConfirmResetForm(true);
-              // Scroll vers le haut de la page pour que la modale soit bien visible
-              // La modale est en position fixed donc elle apparaît toujours au centre de l'écran
-              setTimeout(() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }, 100);
+              // Effacement direct sans confirmation
+              resetQuoteForm();
+              toast.success("Formulaire réinitialisé.");
             }}
             className="whitespace-nowrap shadow-md hover:shadow-lg transition-all"
           >
@@ -2292,20 +2289,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       {/* Dialogs de confirmation */}
       {/* Modale de confirmation de suppression désactivée - suppression directe */}
 
-      <ConfirmDialog
-        isOpen={confirmResetForm}
-        onClose={() => setConfirmResetForm(false)}
-        onConfirm={() => {
-          resetQuoteForm();
-          toast.success("Formulaire réinitialisé.");
-          setConfirmResetForm(false);
-        }}
-        title="Tout effacer"
-        message="Êtes-vous sûr de vouloir tout effacer ?\n\nCette action supprimera toutes les activités et les informations client du formulaire.\n\nCette action est irréversible."
-        confirmText="Effacer"
-        cancelText="Annuler"
-        type="danger"
-      />
+      {/* Modale de confirmation "Tout effacer" désactivée - effacement direct */}
 
       {/* Modal de suggestions d'activités */}
       {showSuggestionsModal && (
