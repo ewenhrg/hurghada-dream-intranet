@@ -1,4 +1,43 @@
 import { useEffect, useState, useRef, lazy, Suspense, useMemo, useCallback } from "react";
+
+// Composant pour optimiser le scroll en désactivant les animations pendant le scroll
+function ScrollOptimizer({ children }) {
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolling(true);
+      
+      // Réactiver les animations après 150ms sans scroll
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsScrolling(false);
+      }, 150);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isScrolling) {
+      document.body.classList.add('scrolling');
+    } else {
+      document.body.classList.remove('scrolling');
+    }
+  }, [isScrolling]);
+
+  return <>{children}</>;
+}
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
@@ -1112,6 +1151,7 @@ export default function App() {
 
       {/* CONTENU CENTRÉ */}
       <main className={mainClassName}>
+        <ScrollOptimizer>
         <PageTransition>
         {tab === "devis" ? (
           <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
@@ -1355,6 +1395,7 @@ export default function App() {
         </div>
         )}
         </PageTransition>
+        </ScrollOptimizer>
       </main>
 
       <footer 

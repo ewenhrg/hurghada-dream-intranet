@@ -8,6 +8,7 @@ import { TransfersEditor } from "../components/TransfersEditor";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { useDebounce } from "../hooks/useDebounce";
+import { TableRowSkeleton } from "../components/Skeleton";
 
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -491,6 +492,75 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }
   }, [descriptionModal.isOpen, user?.name]);
 
+  // État pour suivre les catégories visibles (lazy loading) - initialiser avec TOUTES les catégories pour éviter les carrés blancs
+  const [visibleCategories, setVisibleCategories] = useState(() => {
+    const initialSet = new Set();
+    // Charger toutes les catégories immédiatement pour éviter les problèmes de rendu
+    CATEGORIES.forEach(cat => initialSet.add(cat.key));
+    return initialSet;
+  });
+  const categoryRefs = useRef(new Map());
+  const observerRef = useRef(null);
+  const pendingUpdatesRef = useRef(new Set());
+
+  // Intersection Observer optimisé avec debounce pour éviter les re-renders pendant le scroll
+  useEffect(() => {
+    // Créer l'observer une seule fois
+    if (!observerRef.current) {
+      let rafId = null;
+      
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          // Utiliser requestAnimationFrame pour regrouper les mises à jour
+          if (rafId) cancelAnimationFrame(rafId);
+          
+          rafId = requestAnimationFrame(() => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                const categoryKey = entry.target.getAttribute('data-category');
+                if (categoryKey) {
+                  pendingUpdatesRef.current.add(categoryKey);
+                }
+              }
+            });
+            
+            // Mettre à jour en une seule fois après le scroll
+            if (pendingUpdatesRef.current.size > 0) {
+              setVisibleCategories((prev) => {
+                const newSet = new Set(prev);
+                pendingUpdatesRef.current.forEach(key => newSet.add(key));
+                pendingUpdatesRef.current.clear();
+                return newSet;
+              });
+            }
+          });
+        },
+        {
+          rootMargin: '500px', // Charger plus tôt pour éviter les carrés blancs
+          threshold: 0.01,
+        }
+      );
+    }
+
+    // Observer toutes les catégories après un court délai
+    const timeoutId = setTimeout(() => {
+      CATEGORIES.forEach((cat) => {
+        const element = document.querySelector(`[data-category="${cat.key}"]`);
+        if (element && observerRef.current) {
+          observerRef.current.observe(element);
+        }
+      });
+    }, 200);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (rafId) cancelAnimationFrame(rafId);
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [grouped]);
+
   // Composant de ligne de table mémorisé pour améliorer les performances
   const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canModify }) => {
     const hasDescription = !!activity.description;
@@ -793,64 +863,78 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         </form>
       )}
 
-      {CATEGORIES.map((cat, catIdx) => (
-        <div key={cat.key} className="space-y-4 md:space-y-5 animate-fade-in" style={{ animationDelay: `${catIdx * 50}ms` }}>
-          <div className="flex items-center gap-4 pb-3 border-b-2 border-slate-200/60">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-              <span className="text-white text-lg font-bold">{cat.label.charAt(0)}</span>
+      {CATEGORIES.map((cat, catIdx) => {
+        const isVisible = visibleCategories.has(cat.key); // Toutes les catégories sont maintenant visibles par défaut
+        const activitiesInCategory = grouped[cat.key] || [];
+        
+        return (
+          <div 
+            key={cat.key} 
+            data-category={cat.key}
+            ref={(el) => {
+              if (el) categoryRefs.current.set(cat.key, el);
+            }}
+            className="space-y-4 md:space-y-5"
+          >
+            <div className="flex items-center gap-4 pb-3 border-b-2 border-slate-200/60">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                <span className="text-white text-lg font-bold">{cat.label.charAt(0)}</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                  {cat.label}
+                </h3>
+              </div>
+              <span className="px-4 py-2 text-sm font-bold text-slate-700 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full border-2 border-slate-300/60 shadow-sm">
+                {activitiesInCategory.length} activité{activitiesInCategory.length > 1 ? "s" : ""}
+              </span>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
-                {cat.label}
-              </h3>
-            </div>
-            <span className="px-4 py-2 text-sm font-bold text-slate-700 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full border-2 border-slate-300/60 shadow-sm">
-              {(grouped[cat.key] || []).length} activité{(grouped[cat.key] || []).length > 1 ? "s" : ""}
-            </span>
+            {isVisible ? (
+              <div className="rounded-2xl border-2 border-slate-200/60 bg-white/95 shadow-xl overflow-hidden" style={{ transform: 'translate3d(0, 0, 0)', backfaceVisibility: 'hidden' }}>
+                <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  <table className="w-full text-sm md:text-base min-w-full" style={{ transform: 'translate3d(0, 0, 0)', backfaceVisibility: 'hidden' }}>
+                    <thead className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 text-slate-800 text-xs md:text-sm font-bold border-b-2 border-blue-200/60">
+                      <tr>
+                        <th className="text-left px-4 py-4 md:px-5 md:py-5">Activité</th>
+                        <th className="text-left px-4 py-4 md:px-5 md:py-5">💰 Adulte</th>
+                        <th className="text-left px-4 py-4 md:px-5 md:py-5">👶 Enfant</th>
+                        <th className="text-left px-4 py-4 md:px-5 md:py-5">🍼 Bébé</th>
+                        <th className="text-left px-4 py-4 md:px-5 md:py-5">📅 Jours</th>
+                        <th className="text-left px-4 py-4 md:px-5 md:py-5">📝 Notes</th>
+                        <th className="text-right px-4 py-4 md:px-5 md:py-5">⚙️ Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activitiesInCategory.map((a) => (
+                        <ActivityRow
+                          key={a.id}
+                          activity={a}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onOpenDescription={handleOpenDescriptionModal}
+                          canModify={canModifyActivities}
+                        />
+                      ))}
+                      {activitiesInCategory.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-12 md:py-16 text-center">
+                            <div className="flex flex-col items-center gap-3">
+                              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                                <span className="text-3xl">📭</span>
+                              </div>
+                              <p className="text-slate-500 font-semibold text-base">Aucune activité dans cette catégorie</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="rounded-2xl border-2 border-slate-200/60 bg-white/95 backdrop-blur-sm shadow-xl overflow-hidden">
-            <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
-              <table className="w-full text-sm md:text-base min-w-full">
-                <thead className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 text-slate-800 text-xs md:text-sm font-bold border-b-2 border-blue-200/60">
-                  <tr>
-                    <th className="text-left px-4 py-4 md:px-5 md:py-5">Activité</th>
-                    <th className="text-left px-4 py-4 md:px-5 md:py-5">💰 Adulte</th>
-                    <th className="text-left px-4 py-4 md:px-5 md:py-5">👶 Enfant</th>
-                    <th className="text-left px-4 py-4 md:px-5 md:py-5">🍼 Bébé</th>
-                    <th className="text-left px-4 py-4 md:px-5 md:py-5">📅 Jours</th>
-                    <th className="text-left px-4 py-4 md:px-5 md:py-5">📝 Notes</th>
-                    <th className="text-right px-4 py-4 md:px-5 md:py-5">⚙️ Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(grouped[cat.key] || []).map((a) => (
-                    <ActivityRow
-                      key={a.id}
-                      activity={a}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      onOpenDescription={handleOpenDescriptionModal}
-                      canModify={canModifyActivities}
-                    />
-                  ))}
-                  {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-12 md:py-16 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                            <span className="text-3xl">📭</span>
-                          </div>
-                          <p className="text-slate-500 font-semibold text-base">Aucune activité dans cette catégorie</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      ))}
+        );
+      })}
       
       {/* Modal de description */}
       {descriptionModal.isOpen && descriptionModal.activity && (

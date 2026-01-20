@@ -795,15 +795,48 @@ header[class*="sticky"] {
   scroll-behavior: auto;
 }
 
+/* Optimisation pour éviter les carrés blancs pendant le scroll */
+table {
+  /* Forcer l'accélération GPU pour les tableaux */
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  /* Isolation pour éviter les reflows */
+  contain: layout style paint;
+  /* Optimiser le rendu */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Optimisation pour les sections qui se chargent */
+[data-category] {
+  /* Forcer l'accélération GPU */
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  /* Isolation pour éviter les reflows */
+  contain: layout style paint;
+  /* Éviter les problèmes de rendu */
+  will-change: contents;
+}
+
 /* Classes utilitaires pour animations - optimisées */
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.2s ease-out;
   animation-fill-mode: both;
 }
 
 .animate-slide-in {
-  animation: slideIn 0.3s ease-out;
+  animation: slideIn 0.2s ease-out;
   animation-fill-mode: both;
+}
+
+/* Désactiver les animations pendant le scroll pour améliorer les performances */
+.scrolling .animate-fade-in,
+.scrolling .animate-slide-in,
+.scrolling .animate-page-enter,
+.scrolling .animate-scale-in {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
 }
 
 
