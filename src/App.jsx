@@ -2,21 +2,34 @@ import { useEffect, useState, useRef, lazy, Suspense, useMemo, useCallback } fro
 
 // Composant pour optimiser le scroll en désactivant les animations pendant le scroll
 function ScrollOptimizer({ children }) {
-  const [isScrolling, setIsScrolling] = useState(false);
   const scrollTimeoutRef = useRef(null);
+  const rafIdRef = useRef(null);
 
   useEffect(() => {
+    let isScrolling = false;
+    
     const handleScroll = () => {
-      setIsScrolling(true);
-      
-      // Réactiver les animations après 150ms sans scroll
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
+      // Utiliser requestAnimationFrame pour éviter les re-renders
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
       }
       
-      scrollTimeoutRef.current = setTimeout(() => {
-        setIsScrolling(false);
-      }, 150);
+      rafIdRef.current = requestAnimationFrame(() => {
+        if (!isScrolling) {
+          isScrolling = true;
+          document.body.classList.add('scrolling');
+        }
+        
+        // Réactiver les animations après 200ms sans scroll
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+        
+        scrollTimeoutRef.current = setTimeout(() => {
+          isScrolling = false;
+          document.body.classList.remove('scrolling');
+        }, 200);
+      });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -25,16 +38,11 @@ function ScrollOptimizer({ children }) {
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
     };
   }, []);
-
-  useEffect(() => {
-    if (isScrolling) {
-      document.body.classList.add('scrolling');
-    } else {
-      document.body.classList.remove('scrolling');
-    }
-  }, [isScrolling]);
 
   return <>{children}</>;
 }
@@ -956,7 +964,7 @@ export default function App() {
   const headerNavClassName = `glass-nav mx-auto flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between gap-3 md:gap-4 ${maxWidthClass} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`;
   const mainClassName = `flex-1 overflow-y-auto py-4 md:py-10 ${mainPaddingClass} scroll-container`;
   const footerClassName = `mx-auto px-4 py-8 border-t mt-10 font-medium tracking-wide ${maxWidthClass}`;
-  const contentContainerClassName = `mx-auto space-y-6 md:space-y-10 ${maxWidthClass} rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-2xl`;
+  const contentContainerClassName = `mx-auto space-y-6 md:space-y-10 ${maxWidthClass} rounded-2xl p-4 md:p-6 lg:p-8`;
   // Construire les className pour les boutons de langue
   const langButtonBaseClass = "px-2 md:px-2.5 py-1.5 font-semibold rounded-lg transition-colors";
   const langButtonActiveClass = "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white";
@@ -968,7 +976,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-transparent overflow-hidden">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6" style={{ backgroundColor: 'rgba(7,13,31,0.95)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
+      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6" style={{ backgroundColor: 'rgba(7,13,31,0.98)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
         <div className={headerNavClassName}>
           <div className="flex items-center gap-2 md:gap-3.5 w-full md:w-auto">
             <img 
@@ -1157,7 +1165,7 @@ export default function App() {
           <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
               
               <div 
-                  className="space-y-6 md:space-y-10 rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-2xl animate-page-enter"
+                  className="space-y-6 md:space-y-10 rounded-2xl p-4 md:p-6 lg:p-8"
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -1204,7 +1212,6 @@ export default function App() {
                     style={{
                       backgroundColor: 'rgba(251, 191, 36, 0.95)',
                       boxShadow: '0 8px 24px -8px rgba(180, 83, 9, 0.6)',
-                      backdropFilter: 'blur(12px)',
                       position: 'fixed',
                       bottom: '1.5rem',
                       left: '1.5rem',
