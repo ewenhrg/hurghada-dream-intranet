@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -357,7 +357,7 @@ function QuoteCardComponent({
 }
 
 // Mémoriser QuoteCard pour éviter les re-renders inutiles
-const QuoteCard = memo(QuoteCardComponent, (prevProps, nextProps) => {
+const QuoteCard = React.memo(QuoteCardComponent, (prevProps, nextProps) => {
   // Comparaison personnalisée pour éviter les re-renders inutiles
   return (
     prevProps.quote.id === nextProps.quote.id &&
