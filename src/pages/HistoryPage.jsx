@@ -72,9 +72,14 @@ function QuoteCardComponent({
 
   // Optimisation : Utiliser useCallback avec une fonction optimisée qui évite les transformations lourdes
   const handleEditClick = useCallback(() => {
-    // Préparer les données de manière optimisée
+    // Préparer les données de manière optimisée avec valeurs par défaut
     const clientData = {
-      ...d.client,
+      name: d.client?.name || "",
+      phone: d.client?.phone || "",
+      email: d.client?.email || "",
+      hotel: d.client?.hotel || "",
+      room: d.client?.room || "",
+      neighborhood: d.client?.neighborhood || "",
       arrivalDate: d.client?.arrivalDate || d.clientArrivalDate || "",
       departureDate: d.client?.departureDate || d.clientDepartureDate || "",
     };
@@ -670,21 +675,26 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
   // Scroller en haut de la modale de modification et de la page quand elle s'ouvre (optimisé avec useCallback)
   const handleEditModalScroll = useCallback(() => {
-    if (!showEditModal) return;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => {
-      if (editModalRef.current) {
-        editModalRef.current.scrollTop = 0;
-      }
-      if (editModalContainerRef.current) {
-        editModalContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
-  }, [showEditModal]);
+    if (!showEditModal || !editClient) return;
+    // Attendre que la modale soit montée avant de scroller
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => {
+        if (editModalRef.current) {
+          editModalRef.current.scrollTop = 0;
+        }
+        if (editModalContainerRef.current) {
+          editModalContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+    });
+  }, [showEditModal, editClient]);
 
   useEffect(() => {
-    handleEditModalScroll();
-  }, [handleEditModalScroll]);
+    if (showEditModal && editClient) {
+      handleEditModalScroll();
+    }
+  }, [showEditModal, editClient, handleEditModalScroll]);
 
   // Fonction pour supprimer automatiquement les devis non payés de plus de 20 jours (optimisé : mémoïsé)
   const cleanupOldUnpaidQuotes = useCallback(async () => {
@@ -1296,12 +1306,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
 
   // Calcul des totaux (similaire à QuotesPage) - optimisé avec Map et cache
   const computed = useMemo(() => {
+    if (!items || items.length === 0 || !client) return [];
     const speedBoatExtrasMap = speedBoatExtrasMapRef.current;
     return items.map((it) => {
       const act = activitiesMap.get(it.activityId);
       const weekday = it.date ? new Date(it.date + "T12:00:00").getDay() : null;
       const available = act && weekday != null ? !!act.availableDays?.[weekday] : true;
-      const transferInfo = act && client.neighborhood ? act.transfers?.[client.neighborhood] || null : null;
+      const transferInfo = act && client?.neighborhood ? act.transfers?.[client.neighborhood] || null : null;
 
       let lineTotal = 0;
       const currencyCode = act?.currency || "EUR";
@@ -1450,7 +1461,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         currency: currencyCode,
       };
     });
-  }, [items, activitiesMap, client.neighborhood]);
+  }, [items, activitiesMap, client?.neighborhood]);
 
   const grandCurrency = computed.find((c) => c.currency)?.currency || "EUR";
   const grandTotal = computed.reduce((s, c) => s + (c.lineTotal || 0), 0);
