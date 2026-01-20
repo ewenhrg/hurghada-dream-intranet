@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -70,43 +70,61 @@ function QuoteCardComponent({
     }
   }, [d]);
 
+  // Optimisation : Utiliser useCallback avec une fonction optimisée qui évite les transformations lourdes
   const handleEditClick = useCallback(() => {
-    setSelectedQuote(d);
-    setEditClient({
+    // Préparer les données de manière optimisée
+    const clientData = {
       ...d.client,
       arrivalDate: d.client?.arrivalDate || d.clientArrivalDate || "",
       departureDate: d.client?.departureDate || d.clientDepartureDate || "",
-    });
-    setEditItems(
-      d.items.map((item) => ({
+    };
+    
+    // Transformer les items de manière optimisée (éviter les vérifications répétées)
+    const itemsData = d.items.map((item) => {
+      const baseItem = {
         activityId: item.activityId || "",
         date: item.date || new Date().toISOString().slice(0, 10),
-        adults: item.adults !== undefined && item.adults !== null ? item.adults : 2,
-        children: item.children !== undefined && item.children !== null ? item.children : 0,
-        babies: item.babies !== undefined && item.babies !== null ? item.babies : 0,
         extraLabel: item.extraLabel || "",
         extraAmount: item.extraAmount || "",
-        extraDolphin: item.extraDolphin || false,
-        speedBoatExtra: Array.isArray(item.speedBoatExtra)
-          ? item.speedBoatExtra
-          : item.speedBoatExtra
-            ? [item.speedBoatExtra]
-            : [],
-        buggySimple: item.buggySimple !== undefined && item.buggySimple !== null ? item.buggySimple : 0,
-        buggyFamily: item.buggyFamily !== undefined && item.buggyFamily !== null ? item.buggyFamily : 0,
-        yamaha250: item.yamaha250 !== undefined && item.yamaha250 !== null ? item.yamaha250 : 0,
-        ktm640: item.ktm640 !== undefined && item.ktm640 !== null ? item.ktm640 : 0,
-        ktm530: item.ktm530 !== undefined && item.ktm530 !== null ? item.ktm530 : 0,
-        zeroTracasTransfertVisaSim: item.zeroTracasTransfertVisaSim !== undefined && item.zeroTracasTransfertVisaSim !== null ? item.zeroTracasTransfertVisaSim : "",
-        zeroTracasTransfertVisa: item.zeroTracasTransfertVisa !== undefined && item.zeroTracasTransfertVisa !== null ? item.zeroTracasTransfertVisa : "",
-        zeroTracasTransfert3Personnes: item.zeroTracasTransfert3Personnes !== undefined && item.zeroTracasTransfert3Personnes !== null ? item.zeroTracasTransfert3Personnes : "",
-        zeroTracasTransfertPlus3Personnes: item.zeroTracasTransfertPlus3Personnes !== undefined && item.zeroTracasTransfertPlus3Personnes !== null ? item.zeroTracasTransfertPlus3Personnes : "",
-        zeroTracasVisaSim: item.zeroTracasVisaSim !== undefined && item.zeroTracasVisaSim !== null ? item.zeroTracasVisaSim : "",
-        zeroTracasVisaSeul: item.zeroTracasVisaSeul !== undefined && item.zeroTracasVisaSeul !== null ? item.zeroTracasVisaSeul : "",
+        extraDolphin: Boolean(item.extraDolphin),
         slot: item.slot || "",
         ticketNumber: item.ticketNumber || "",
-      }))
-    );
+      };
+      
+      // Gérer speedBoatExtra (array ou string)
+      if (Array.isArray(item.speedBoatExtra)) {
+        baseItem.speedBoatExtra = item.speedBoatExtra;
+      } else if (item.speedBoatExtra) {
+        baseItem.speedBoatExtra = [item.speedBoatExtra];
+      } else {
+        baseItem.speedBoatExtra = [];
+      }
+      
+      // Valeurs numériques avec valeurs par défaut
+      baseItem.adults = item.adults ?? 2;
+      baseItem.children = item.children ?? 0;
+      baseItem.babies = item.babies ?? 0;
+      baseItem.buggySimple = item.buggySimple ?? 0;
+      baseItem.buggyFamily = item.buggyFamily ?? 0;
+      baseItem.yamaha250 = item.yamaha250 ?? 0;
+      baseItem.ktm640 = item.ktm640 ?? 0;
+      baseItem.ktm530 = item.ktm530 ?? 0;
+      
+      // Valeurs string avec valeurs par défaut
+      baseItem.zeroTracasTransfertVisaSim = item.zeroTracasTransfertVisaSim ?? "";
+      baseItem.zeroTracasTransfertVisa = item.zeroTracasTransfertVisa ?? "";
+      baseItem.zeroTracasTransfert3Personnes = item.zeroTracasTransfert3Personnes ?? "";
+      baseItem.zeroTracasTransfertPlus3Personnes = item.zeroTracasTransfertPlus3Personnes ?? "";
+      baseItem.zeroTracasVisaSim = item.zeroTracasVisaSim ?? "";
+      baseItem.zeroTracasVisaSeul = item.zeroTracasVisaSeul ?? "";
+      
+      return baseItem;
+    });
+    
+    // Mettre à jour les états de manière synchrone pour éviter les re-renders multiples
+    setSelectedQuote(d);
+    setEditClient(clientData);
+    setEditItems(itemsData);
     setEditNotes(d.notes || "");
     setShowEditModal(true);
   }, [d, setSelectedQuote, setEditClient, setEditItems, setEditNotes, setShowEditModal]);
@@ -338,8 +356,21 @@ function QuoteCardComponent({
   );
 }
 
-// Exporter QuoteCard directement (la pagination suffit pour les performances)
-const QuoteCard = QuoteCardComponent;
+// Mémoriser QuoteCard pour éviter les re-renders inutiles
+const QuoteCard = memo(QuoteCardComponent, (prevProps, nextProps) => {
+  // Comparaison personnalisée pour éviter les re-renders inutiles
+  return (
+    prevProps.quote.id === nextProps.quote.id &&
+    prevProps.quote.allTicketsFilled === nextProps.quote.allTicketsFilled &&
+    prevProps.quote.hasTickets === nextProps.quote.hasTickets &&
+    prevProps.quote.isModified === nextProps.quote.isModified &&
+    prevProps.quote.formattedCreatedAt === nextProps.quote.formattedCreatedAt &&
+    prevProps.quote.itemsWithFormattedDates?.length === nextProps.quote.itemsWithFormattedDates?.length &&
+    prevProps.user?.name === nextProps.user?.name &&
+    prevProps.user?.canDeleteQuote === nextProps.user?.canDeleteQuote &&
+    JSON.stringify(prevProps.quote.items) === JSON.stringify(nextProps.quote.items)
+  );
+});
 
 // Exporter HistoryPage après la déclaration de QuoteCard
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
@@ -537,11 +568,51 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   // Cache pour les dates formatées (persiste entre les renders)
   const dateFormatterCacheRef = useRef(new Map());
   
-  // Mémoriser le calcul des tickets remplis et pré-formater les dates pour éviter les recalculs
-  // Optimisation : utiliser Map pour éviter les recalculs de dates
+  // Optimisation majeure : Filtrer D'ABORD, puis calculer les statuts uniquement pour les devis filtrés
+  // Cela évite de calculer les dates formatées pour TOUS les devis quand on n'affiche que 20
+  const filtered = useMemo(() => {
+    let result = quotes;
+    
+    // Filtre par statut (payé/en attente/modifié) - calcul rapide sans formatage
+    if (statusFilter !== "all") {
+      result = result.filter((d) => {
+        const allTicketsFilled = d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false;
+        if (statusFilter === "paid") {
+          return allTicketsFilled;
+        } else if (statusFilter === "pending") {
+          return !allTicketsFilled;
+        } else if (statusFilter === "modified") {
+          return d.isModified === true;
+        }
+        return true;
+      });
+    }
+    
+    // Filtre par recherche téléphone ou email (utilise la valeur debouncée)
+    if (debouncedQ.trim()) {
+      const searchTerm = debouncedQ.trim().toLowerCase();
+      const phoneNeedle = debouncedQ.replace(/\D+/g, ""); // Pour la recherche téléphone (chiffres uniquement)
+      
+      result = result.filter((d) => {
+        // Recherche par téléphone (chiffres uniquement)
+        const clientPhone = (d.client?.phone || "").replace(/\D+/g, "");
+        const phoneMatch = phoneNeedle && clientPhone.includes(phoneNeedle);
+        
+        // Recherche par email (texte complet, insensible à la casse)
+        const clientEmail = (d.client?.email || "").toLowerCase();
+        const emailMatch = clientEmail.includes(searchTerm);
+        
+        return phoneMatch || emailMatch;
+      });
+    }
+    
+    return result;
+  }, [debouncedQ, quotes, statusFilter]);
+  
+  // Calculer les statuts et formater les dates UNIQUEMENT pour les devis filtrés (pas tous les devis)
   const quotesWithStatus = useMemo(() => {
     const dateFormatterCache = dateFormatterCacheRef.current;
-    return quotes.map((d) => {
+    return filtered.map((d) => {
       // Pré-formater la date de création une seule fois avec cache
       let formattedCreatedAt = dateFormatterCache.get(d.createdAt);
       if (!formattedCreatedAt) {
@@ -573,52 +644,14 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         itemsWithFormattedDates,
       };
     });
-  }, [quotes]);
-  
-  const filtered = useMemo(() => {
-    let result = quotesWithStatus;
-    
-    // Filtre par statut (payé/en attente/modifié)
-    if (statusFilter !== "all") {
-      result = result.filter((d) => {
-        if (statusFilter === "paid") {
-          return d.allTicketsFilled;
-        } else if (statusFilter === "pending") {
-          return !d.allTicketsFilled;
-        } else if (statusFilter === "modified") {
-          return d.isModified === true;
-        }
-        return true;
-      });
-    }
-    
-    // Filtre par recherche téléphone ou email (utilise la valeur debouncée)
-    if (debouncedQ.trim()) {
-      const searchTerm = debouncedQ.trim().toLowerCase();
-      const phoneNeedle = debouncedQ.replace(/\D+/g, ""); // Pour la recherche téléphone (chiffres uniquement)
-      
-      result = result.filter((d) => {
-        // Recherche par téléphone (chiffres uniquement)
-        const clientPhone = (d.client?.phone || "").replace(/\D+/g, "");
-        const phoneMatch = phoneNeedle && clientPhone.includes(phoneNeedle);
-        
-        // Recherche par email (texte complet, insensible à la casse)
-        const clientEmail = (d.client?.email || "").toLowerCase();
-        const emailMatch = clientEmail.includes(searchTerm);
-        
-        return phoneMatch || emailMatch;
-      });
-    }
-    
-    return result;
-  }, [debouncedQ, quotesWithStatus, statusFilter]);
+  }, [filtered]);
 
-  // Pagination : calculer les devis à afficher pour la page courante
+  // Pagination : calculer les devis à afficher pour la page courante (utiliser quotesWithStatus qui contient les données formatées)
   const paginatedQuotes = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    return filtered.slice(startIndex, endIndex);
-  }, [filtered, currentPage]);
+    return quotesWithStatus.slice(startIndex, endIndex);
+  }, [quotesWithStatus, currentPage]);
 
   // Calculer le nombre total de pages
   const totalPages = useMemo(() => {
@@ -1263,8 +1296,20 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     setItems((prev) => prev.filter((_, idx) => idx !== i));
   }
 
-  // Calcul des totaux (similaire à QuotesPage) - optimisé avec Map
+  // Cache pour SPEED_BOAT_EXTRAS (évite les recherches répétées)
+  const speedBoatExtrasMapRef = useRef(new Map());
+  useEffect(() => {
+    // Construire le Map une seule fois au montage
+    if (speedBoatExtrasMapRef.current.size === 0) {
+      SPEED_BOAT_EXTRAS.forEach((extra) => {
+        speedBoatExtrasMapRef.current.set(extra.id, extra);
+      });
+    }
+  }, []);
+
+  // Calcul des totaux (similaire à QuotesPage) - optimisé avec Map et cache
   const computed = useMemo(() => {
+    const speedBoatExtrasMap = speedBoatExtrasMapRef.current;
     return items.map((it) => {
       const act = activitiesMap.get(it.activityId);
       const weekday = it.date ? new Date(it.date + "T12:00:00").getDay() : null;
@@ -1305,9 +1350,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               ? [it.speedBoatExtra] 
               : []);
           
+          // Utiliser le Map au lieu de find() pour O(1) au lieu de O(n)
           extrasArray.forEach((extraId) => {
             if (extraId) { // Ignorer les valeurs vides
-              const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === extraId);
+              const selectedExtra = speedBoatExtrasMap.get(extraId);
               if (selectedExtra) {
                 lineTotal += ad * selectedExtra.priceAdult;
                 lineTotal += ch * selectedExtra.priceChild;
@@ -1330,45 +1376,24 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         lineTotal = yamaha250 * prices.yamaha250 + ktm640 * prices.ktm640 + ktm530 * prices.ktm530;
       } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
         // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
-        // Vérifier HORS ZONE en premier car plus spécifique
-        {
-          const prices = getZeroTracasHorsZonePrices();
-          const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
-          const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
-          const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
-          const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
-          const visaSim = Number(it.zeroTracasVisaSim || 0);
-          const visaSeul = Number(it.zeroTracasVisaSeul || 0);
-          
-          lineTotal = 
-            transfertVisaSim * prices.transfertVisaSim +
-            transfertVisa * prices.transfertVisa +
-            transfert3Personnes * prices.transfert3Personnes +
-            transfertPlus3Personnes * prices.transfertPlus3Personnes +
-            visaSim * prices.visaSim +
-            visaSeul * prices.visaSeul;
-        }
+        const prices = getZeroTracasHorsZonePrices();
+        const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
+        const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
+        const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
+        const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
+        const visaSim = Number(it.zeroTracasVisaSim || 0);
+        const visaSeul = Number(it.zeroTracasVisaSeul || 0);
+        
+        lineTotal = 
+          transfertVisaSim * prices.transfertVisaSim +
+          transfertVisa * prices.transfertVisa +
+          transfert3Personnes * prices.transfert3Personnes +
+          transfertPlus3Personnes * prices.transfertPlus3Personnes +
+          visaSim * prices.visaSim +
+          visaSeul * prices.visaSeul;
       } else if (act && isZeroTracasActivity(act.name)) {
         // cas spécial ZERO TRACAS : calcul basé sur les différents types de services
-        {
-          const prices = getZeroTracasPrices();
-          const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
-          const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
-          const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
-          const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
-          const visaSim = Number(it.zeroTracasVisaSim || 0);
-          const visaSeul = Number(it.zeroTracasVisaSeul || 0);
-          
-          lineTotal = 
-            transfertVisaSim * prices.transfertVisaSim +
-            transfertVisa * prices.transfertVisa +
-            transfert3Personnes * prices.transfert3Personnes +
-            transfertPlus3Personnes * prices.transfertPlus3Personnes +
-            visaSim * prices.visaSim +
-            visaSeul * prices.visaSeul;
-        }
-        // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
-        const prices = getZeroTracasHorsZonePrices();
+        const prices = getZeroTracasPrices();
         const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
         const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
         const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
