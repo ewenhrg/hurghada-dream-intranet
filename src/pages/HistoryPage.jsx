@@ -673,28 +673,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     handlePaymentModalScroll();
   }, [handlePaymentModalScroll]);
 
-  // Scroller en haut de la modale de modification et de la page quand elle s'ouvre (optimisé avec useCallback)
-  const handleEditModalScroll = useCallback(() => {
-    if (!showEditModal || !editClient) return;
-    // Attendre que la modale soit montée avant de scroller
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      setTimeout(() => {
-        if (editModalRef.current) {
-          editModalRef.current.scrollTop = 0;
-        }
-        if (editModalContainerRef.current) {
-          editModalContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 150);
-    });
-  }, [showEditModal, editClient]);
-
+  // Réinitialiser le scroll interne de la modale quand elle s'ouvre (sans déplacer la page)
   useEffect(() => {
-    if (showEditModal && editClient) {
-      handleEditModalScroll();
+    if (showEditModal && editModalRef.current) {
+      // Réinitialiser uniquement le scroll interne de la modale, pas le scroll de la page
+      editModalRef.current.scrollTop = 0;
     }
-  }, [showEditModal, editClient, handleEditModalScroll]);
+  }, [showEditModal]);
 
   // Fonction pour supprimer automatiquement les devis non payés de plus de 20 jours (optimisé : mémoïsé)
   const cleanupOldUnpaidQuotes = useCallback(async () => {
