@@ -78,13 +78,16 @@ html, body {
   /* Optimisations de performance pour le scroll */
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  /* Forcer l'accélération GPU pour le scroll */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
+  /* Scroll fluide sans rollback */
+  scroll-behavior: auto;
+  overscroll-behavior: contain;
 }
 
 main {
   position: relative;
+  /* Optimisations pour le scroll fluide */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 body::before {
@@ -97,7 +100,7 @@ body::before {
     radial-gradient(55% 75% at 90% 0%, rgba(6, 182, 212, 0.18), transparent 65%),
     radial-gradient(65% 80% at 50% 100%, rgba(99, 102, 241, 0.15), transparent 70%);
   z-index: -1;
-  will-change: opacity;
+  /* Pas de will-change pour éviter les problèmes de scroll */
 }
 
 /* Désactiver les animations pour les utilisateurs qui préfèrent les réduire */
@@ -255,10 +258,7 @@ button {
     border-color var(--hd-transition-fast);
   color: var(--hd-text);
   position: relative;
-  /* Optimisations de performance */
-  will-change: transform;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
+  /* Optimisations de performance sans causer de rollback */
   contain: layout style paint;
 }
 
@@ -319,11 +319,11 @@ button {
   /* Réduire backdrop-blur pour améliorer les performances de scroll */
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  /* Optimisations de performance */
-  will-change: transform;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
+  /* Optimisations de performance sans causer de rollback */
   contain: layout style paint;
+  /* Éviter les problèmes de scroll avec sticky */
+  position: sticky;
+  top: 0;
 }
 
 .badge-soft {
@@ -340,7 +340,6 @@ button {
   border: 1px solid rgba(99, 102, 241, 0.3);
   box-shadow: 0 2px 8px -2px rgba(79, 70, 229, 0.3);
   transition: transform var(--hd-transition-fast), box-shadow var(--hd-transition-fast), background var(--hd-transition-fast);
-  will-change: transform;
 }
 
 .badge-soft:hover {
@@ -356,7 +355,6 @@ button {
   border: 1.5px solid rgba(6, 182, 212, 0.35);
   box-shadow: 0 2px 6px -2px rgba(6, 182, 212, 0.25);
   transition: transform var(--hd-transition-fast), box-shadow var(--hd-transition-fast), background var(--hd-transition-fast);
-  will-change: transform;
   font-weight: 600;
 }
 
@@ -372,7 +370,6 @@ button {
 .tag-danger,
 .tag-info {
   transition: transform var(--hd-transition-fast), box-shadow var(--hd-transition-fast);
-  will-change: transform;
 }
 
 .tag-success {
@@ -752,13 +749,32 @@ select:not([class*="rounded"]):hover {
 
 /* Optimisations globales pour le scroll - à la fin du fichier pour override */
 .scroll-container {
-  /* Forcer l'accélération GPU */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
   /* Isolation pour éviter les reflows */
   contain: layout style paint;
-  /* Optimiser le rendu */
-  will-change: scroll-position;
+  /* Scroll fluide sans rollback */
+  overscroll-behavior: contain;
+  /* Éviter les problèmes de scroll */
+  -webkit-overflow-scrolling: touch;
+  /* Pas de will-change qui peut causer des problèmes */
+  /* Pas de transform qui peut causer des rollbacks */
+}
+
+/* Optimisation pour les éléments sticky qui peuvent causer des problèmes de scroll */
+header[class*="sticky"] {
+  /* Éviter les problèmes de scroll avec sticky */
+  overscroll-behavior: contain;
+  /* Isolation pour éviter les reflows */
+  contain: layout style paint;
+}
+
+/* Optimisation pour éviter les problèmes de scroll avec les éléments en overflow */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* Éviter les problèmes de scroll */
+  scroll-behavior: auto;
 }
 
 /* Réduire backdrop-blur globalement pour meilleures performances de scroll */
@@ -831,7 +847,6 @@ select:not([class*="rounded"]):hover {
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
-  will-change: background-position;
 }
 
 /* Animations de transition de page */
@@ -892,10 +907,6 @@ button, a, input, select, textarea {
   transition: transform var(--hd-transition-fast), opacity var(--hd-transition-fast), box-shadow var(--hd-transition-fast);
 }
 
-button:not(:disabled) {
-  will-change: transform;
-}
-
 button:not(:disabled):hover {
   transform: translateY(-1px);
 }
@@ -920,7 +931,8 @@ button:not(:disabled):active {
   /* Améliorer les zones de scroll sur mobile */
   .overflow-x-auto, .overflow-y-auto {
     -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
+    overscroll-behavior: contain;
   }
 
   /* Optimiser les tableaux pour mobile */
@@ -1145,13 +1157,14 @@ button:not(:disabled):active {
 
 /* Optimisations globales pour le scroll - à la fin pour override */
 .scroll-container {
-  /* Forcer l'accélération GPU */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
   /* Isolation pour éviter les reflows */
   contain: layout style paint;
-  /* Optimiser le rendu */
-  will-change: scroll-position;
+  /* Scroll fluide sans rollback */
+  overscroll-behavior: contain;
+  /* Éviter les problèmes de scroll */
+  -webkit-overflow-scrolling: touch;
+  /* Pas de will-change qui peut causer des problèmes */
+  /* Pas de transform qui peut causer des rollbacks */
 }
 
 /* Réduire backdrop-blur globalement pour meilleures performances de scroll */
