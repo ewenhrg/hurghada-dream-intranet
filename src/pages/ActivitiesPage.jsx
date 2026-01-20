@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
 import { uuid, currency, emptyTransfers, saveLS, loadLS } from "../utils";
@@ -411,18 +411,30 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }
   }, [canModifyActivities, activitiesMap]);
 
-  // Filtrer les activités par recherche et par jour (utilise debouncedSearchQuery)
+  // Index de recherche pour améliorer les performances (créé une seule fois)
+  const searchIndexRef = useRef(new Map());
+  
+  // Mettre à jour l'index de recherche quand les activités changent
+  useEffect(() => {
+    const index = new Map();
+    activities.forEach((a) => {
+      const searchableText = `${a.name || ''} ${a.notes || ''} ${a.description || ''}`.toLowerCase();
+      index.set(a.id, searchableText);
+    });
+    searchIndexRef.current = index;
+  }, [activities]);
+
+  // Filtrer les activités par recherche et par jour (optimisé avec index)
   const filteredActivities = useMemo(() => {
     let filtered = activities;
+    const searchIndex = searchIndexRef.current;
 
-    // Filtrer par recherche (nom, notes ou description) avec debounce
+    // Filtrer par recherche (nom, notes ou description) avec debounce - optimisé avec index
     if (debouncedSearchQuery.trim()) {
       const query = debouncedSearchQuery.toLowerCase().trim();
       filtered = filtered.filter((a) => {
-        const nameMatch = a.name?.toLowerCase().includes(query);
-        const notesMatch = a.notes?.toLowerCase().includes(query);
-        const descriptionMatch = a.description?.toLowerCase().includes(query);
-        return nameMatch || notesMatch || descriptionMatch;
+        const searchableText = searchIndex.get(a.id) || '';
+        return searchableText.includes(query);
       });
     }
 
@@ -478,6 +490,73 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       setTimeout(() => el.focus(), 100);
     }
   }, [descriptionModal.isOpen, user?.name]);
+
+  // Composant de ligne de table mémorisé pour améliorer les performances
+  const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canModify }) => {
+    const hasDescription = !!activity.description;
+    const availableDaysList = useMemo(() => {
+      return WEEKDAYS.filter((d, dayIdx) => activity.availableDays?.[dayIdx]);
+    }, [activity.availableDays]);
+
+    return (
+      <tr 
+        className="border-t border-slate-200/60 transition-all duration-200 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30"
+      >
+        <td className="px-4 py-4 md:px-5 md:py-5 font-bold text-slate-800 text-base">{activity.name}</td>
+        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(activity.priceAdult, activity.currency)}</td>
+        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(activity.priceChild, activity.currency)}</td>
+        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(activity.priceBaby, activity.currency)}</td>
+        <td className="px-4 py-4 md:px-5 md:py-5">
+          <div className="flex gap-1.5 flex-wrap">
+            {availableDaysList.map((d) => (
+              <span
+                key={d.key}
+                className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 text-xs font-bold border border-emerald-300/60 shadow-sm"
+              >
+                {d.label}
+              </span>
+            ))}
+          </div>
+        </td>
+        <td className="px-4 py-4 md:px-5 md:py-5 text-slate-600 text-sm">{activity.notes || <span className="text-slate-400 italic">—</span>}</td>
+        <td className="px-4 py-3 md:px-5 md:py-4 text-right">
+          <div className="flex gap-2 justify-end">
+            <GhostBtn 
+              onClick={() => onOpenDescription(activity)} 
+              variant="primary" 
+              size="sm"
+              className={hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
+            >
+              📄 Description{hasDescription ? " ✓" : ""}
+            </GhostBtn>
+            {canModify && (
+              <>
+                <GhostBtn onClick={() => onEdit(activity)} variant="primary" size="sm">
+                  ✏️ Modifier
+                </GhostBtn>
+                <GhostBtn onClick={() => onDelete(activity.id)} variant="danger" size="sm">
+                  🗑️ Supprimer
+                </GhostBtn>
+              </>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  }, (prevProps, nextProps) => {
+    // Comparaison personnalisée pour éviter les re-renders inutiles
+    return (
+      prevProps.activity.id === nextProps.activity.id &&
+      prevProps.activity.name === nextProps.activity.name &&
+      prevProps.activity.priceAdult === nextProps.activity.priceAdult &&
+      prevProps.activity.priceChild === nextProps.activity.priceChild &&
+      prevProps.activity.priceBaby === nextProps.activity.priceBaby &&
+      prevProps.activity.notes === nextProps.activity.notes &&
+      prevProps.activity.description === nextProps.activity.description &&
+      JSON.stringify(prevProps.activity.availableDays) === JSON.stringify(nextProps.activity.availableDays) &&
+      prevProps.canModify === nextProps.canModify
+    );
+  });
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 animate-page-enter">
@@ -744,57 +823,16 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(grouped[cat.key] || []).map((a) => {
-                    const hasDescription = !!a.description;
-                    return (
-                      <tr 
-                        key={a.id}
-                        className="border-t border-slate-200/60 transition-all duration-200 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30"
-                      >
-                        <td className="px-4 py-4 md:px-5 md:py-5 font-bold text-slate-800 text-base">{a.name}</td>
-                        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(a.priceAdult, a.currency)}</td>
-                        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(a.priceChild, a.currency)}</td>
-                        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(a.priceBaby, a.currency)}</td>
-                        <td className="px-4 py-4 md:px-5 md:py-5">
-                          <div className="flex gap-1.5 flex-wrap">
-                            {WEEKDAYS.map((d, dayIdx) =>
-                              a.availableDays?.[dayIdx] ? (
-                                <span
-                                  key={d.key}
-                                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 text-xs font-bold border border-emerald-300/60 shadow-sm"
-                                >
-                                  {d.label}
-                                </span>
-                              ) : null,
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 md:px-5 md:py-5 text-slate-600 text-sm">{a.notes || <span className="text-slate-400 italic">—</span>}</td>
-                        <td className="px-4 py-3 md:px-5 md:py-4 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <GhostBtn 
-                              onClick={() => handleOpenDescriptionModal(a)} 
-                              variant="primary" 
-                              size="sm"
-                              className={hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
-                            >
-                              📄 Description{hasDescription ? " ✓" : ""}
-                            </GhostBtn>
-                            {canModifyActivities && (
-                              <>
-                                <GhostBtn onClick={() => handleEdit(a)} variant="primary" size="sm">
-                                  ✏️ Modifier
-                                </GhostBtn>
-                                <GhostBtn onClick={() => handleDelete(a.id)} variant="danger" size="sm">
-                                  🗑️ Supprimer
-                                </GhostBtn>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {(grouped[cat.key] || []).map((a) => (
+                    <ActivityRow
+                      key={a.id}
+                      activity={a}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onOpenDescription={handleOpenDescriptionModal}
+                      canModify={canModifyActivities}
+                    />
+                  ))}
                   {(!grouped[cat.key] || grouped[cat.key].length === 0) && (
                     <tr>
                       <td colSpan={7} className="px-4 py-12 md:py-16 text-center">
