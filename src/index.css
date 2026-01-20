@@ -819,6 +819,19 @@ table {
   contain-intrinsic-size: auto 500px;
 }
 
+/* Désactiver les transitions pendant le scroll pour améliorer les performances */
+.scrolling * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Optimisation spécifique pour la page activités */
+.scrolling table,
+.scrolling tr,
+.scrolling td {
+  transition: none !important;
+}
+
 /* Classes utilitaires pour animations - optimisées */
 .animate-fade-in {
   /* Commencer directement à opacity: 1 pour éviter les carrés blancs */

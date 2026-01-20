@@ -503,7 +503,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
     return (
       <tr 
-        className="border-t border-slate-200/60 transition-all duration-200 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30"
+        className="border-t border-slate-200/60"
       >
         <td className="px-4 py-4 md:px-5 md:py-5 font-bold text-slate-800 text-base">{activity.name}</td>
         <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(activity.priceAdult, activity.currency)}</td>
@@ -547,18 +547,27 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       </tr>
     );
   }, (prevProps, nextProps) => {
-    // Comparaison personnalisée pour éviter les re-renders inutiles
-    return (
-      prevProps.activity.id === nextProps.activity.id &&
-      prevProps.activity.name === nextProps.activity.name &&
-      prevProps.activity.priceAdult === nextProps.activity.priceAdult &&
-      prevProps.activity.priceChild === nextProps.activity.priceChild &&
-      prevProps.activity.priceBaby === nextProps.activity.priceBaby &&
-      prevProps.activity.notes === nextProps.activity.notes &&
-      prevProps.activity.description === nextProps.activity.description &&
-      JSON.stringify(prevProps.activity.availableDays) === JSON.stringify(nextProps.activity.availableDays) &&
-      prevProps.canModify === nextProps.canModify
-    );
+    // Comparaison personnalisée optimisée pour éviter les re-renders inutiles
+    if (prevProps.activity.id !== nextProps.activity.id) return false;
+    if (prevProps.activity.name !== nextProps.activity.name) return false;
+    if (prevProps.activity.priceAdult !== nextProps.activity.priceAdult) return false;
+    if (prevProps.activity.priceChild !== nextProps.activity.priceChild) return false;
+    if (prevProps.activity.priceBaby !== nextProps.activity.priceBaby) return false;
+    if (prevProps.activity.notes !== nextProps.activity.notes) return false;
+    if (prevProps.activity.description !== nextProps.activity.description) return false;
+    if (prevProps.canModify !== nextProps.canModify) return false;
+    
+    // Comparaison optimisée des availableDays sans JSON.stringify
+    const prevDays = prevProps.activity.availableDays;
+    const nextDays = nextProps.activity.availableDays;
+    if (!prevDays && !nextDays) return true;
+    if (!prevDays || !nextDays) return false;
+    if (prevDays.length !== nextDays.length) return false;
+    for (let i = 0; i < prevDays.length; i++) {
+      if (prevDays[i] !== nextDays[i]) return false;
+    }
+    
+    return true;
   });
 
   return (
@@ -580,7 +589,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         {user?.canAddActivity && (
           <PrimaryBtn
             onClick={handleToggleForm}
-            className="w-full sm:w-auto text-base font-bold px-6 py-3 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
+            className="w-full sm:w-auto text-base font-bold px-6 py-3 shadow-lg"
           >
             {showForm ? "❌ Annuler" : "➕ Ajouter une activité"}
           </PrimaryBtn>
@@ -612,7 +621,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               placeholder="Nom, notes ou description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="text-base shadow-md hover:shadow-lg transition-all"
+              className="text-base shadow-md"
             />
           </div>
           <div>
@@ -623,7 +632,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             <select
               value={selectedDay}
               onChange={(e) => setSelectedDay(e.target.value)}
-              className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md hover:shadow-lg focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+              className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
             >
               <option value="">📅 Tous les jours</option>
               {WEEKDAYS.map((day) => (
@@ -637,7 +646,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       </div>
 
       {showForm && (
-        <form ref={formRef} onSubmit={handleCreate} className="space-y-5 md:space-y-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 backdrop-blur-sm rounded-2xl p-5 md:p-7 lg:p-9 border-2 border-blue-200/60 shadow-xl">
+        <form ref={formRef} onSubmit={handleCreate} className="space-y-5 md:space-y-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-5 md:p-7 lg:p-9 border-2 border-blue-200/60 shadow-xl">
           <div className="flex items-center gap-4 mb-5 pb-4 border-b-2 border-blue-200/60">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
               <span className="text-2xl">{editingId ? "✏️" : "➕"}</span>
@@ -652,7 +661,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
           </div>
 
-          <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 md:p-6 border-2 border-blue-100/60 shadow-lg">
+          <div className="bg-white/90 rounded-xl p-5 md:p-6 border-2 border-blue-100/60 shadow-lg">
             <div className="flex items-center gap-3 mb-4 pb-3 border-b border-blue-100/60">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                 <span className="text-white text-sm">📋</span>
@@ -669,7 +678,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   placeholder="Ex: Snorkeling"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="text-base shadow-md hover:shadow-lg transition-all"
+                  className="text-base shadow-md"
                 />
               </div>
               <div>
@@ -680,7 +689,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 <select
                   value={form.category}
                   onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 backdrop-blur-sm px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md hover:shadow-lg focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                  className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c.key} value={c.key}>
@@ -773,7 +782,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             <TransfersEditor value={form.transfers} onChange={(v) => setForm((f) => ({ ...f, transfers: v }))} />
           </div>
 
-          <div className="bg-slate-50/90 backdrop-blur-sm rounded-xl p-5 md:p-6 border-2 border-slate-200/60 shadow-lg">
+          <div className="bg-slate-50/90 rounded-xl p-5 md:p-6 border-2 border-slate-200/60 shadow-lg">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center">
                 <span className="text-white text-sm">📝</span>
@@ -784,12 +793,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               placeholder="Informations supplémentaires, remarques..."
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              className="text-base shadow-md hover:shadow-lg transition-all"
+              className="text-base shadow-md"
             />
           </div>
 
           <div className="flex justify-end pt-5 border-t-2 border-blue-200/60">
-            <PrimaryBtn type="submit" className="text-base font-bold px-8 py-3 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5">
+            <PrimaryBtn type="submit" className="text-base font-bold px-8 py-3 shadow-lg">
               {editingId ? "💾 Modifier l'activité" : "✅ Enregistrer"}
             </PrimaryBtn>
           </div>
@@ -804,6 +813,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             key={cat.key} 
             data-category={cat.key}
             className="space-y-4 md:space-y-5"
+            style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 500px' }}
           >
             <div className="flex items-center gap-4 pb-3 border-b-2 border-slate-200/60">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
@@ -867,12 +877,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       {descriptionModal.isOpen && descriptionModal.activity && (
         <div 
           ref={descriptionModalRef} 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
         >
           <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scale-in">
             <div className="bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 px-6 py-5 border-b-2 border-blue-400/60">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                   <span className="text-xl">📄</span>
                 </div>
                 <h3 className="text-xl font-bold text-white">
@@ -888,7 +898,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 placeholder="Ajoutez une description pour cette activité..."
                 disabled={user?.name !== "Ewen"}
                 readOnly={user?.name !== "Ewen"}
-                className={`w-full h-48 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm md:text-base text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all resize-none ${
+                className={`w-full h-48 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm md:text-base text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 resize-none ${
                   user?.name !== "Ewen" ? "bg-slate-100 cursor-not-allowed" : ""
                 }`}
               />
