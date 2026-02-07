@@ -92,13 +92,13 @@ const lazyWithRetry = (importFn, retries = 3) => {
 const ActivitiesPage = lazyWithRetry(() => import("./pages/ActivitiesPage").then(module => ({ default: module.ActivitiesPage })));
 const QuotesPage = lazyWithRetry(() => import("./pages/QuotesPage").then(module => ({ default: module.QuotesPage })));
 const HistoryPage = lazyWithRetry(() => import("./pages/HistoryPage").then(module => ({ default: module.HistoryPage })));
+const UsersPage = lazyWithRetry(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
 const HotelsPage = lazyWithRetry(() => import("./pages/HotelsPage").then(module => ({ default: module.HotelsPage })));
 const TicketPage = lazyWithRetry(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
 // Page Modifications désactivée temporairement
 // const ModificationsPage = lazyWithRetry(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
 const SituationPage = lazyWithRetry(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
 const StopSalePage = lazyWithRetry(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
-const DemandesPage = lazyWithRetry(() => import("./pages/DemandesPage").then(module => ({ default: module.DemandesPage })));
 const RequestPage = lazyWithRetry(() => import("./pages/RequestPage").then(module => ({ default: module.RequestPage })));
 
 export default function App() {
@@ -114,7 +114,6 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [usedDates, setUsedDates] = useState([]);
   const [showDatesModal, setShowDatesModal] = useState(false);
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
 
@@ -265,26 +264,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fonction pour charger le nombre de demandes en attente
-  const loadPendingRequestsCount = useCallback(async () => {
-    if (!supabase || !ok) return;
-    try {
-      // Utiliser head: true pour ne récupérer que le count, pas les données
-      const { count, error } = await supabase
-        .from("client_requests")
-        .select("*", { count: "exact", head: true })
-        .eq("site_key", SITE_KEY)
-        .eq("status", "pending");
-
-      if (!error) {
-        setPendingRequestsCount(count || 0);
-      }
-    } catch (err) {
-      logger.warn("Erreur lors du chargement du nombre de demandes:", err);
-    }
-  }, [ok]);
-
-  // Fonction pour créer un devis à partir d'une demande
+  // Fonction pour créer un devis à partir d'une demande (conservée pour usage futur)
   const handleCreateQuoteFromRequest = useCallback(async (request) => {
     if (!request) return;
 
@@ -380,10 +360,6 @@ export default function App() {
           // Continuer quand même même si la mise à jour échoue
         } else {
           logger.log("✅ Demande marquée comme convertie en devis");
-          // Mettre à jour le compteur de demandes en attente
-          if (loadPendingRequestsCount) {
-            loadPendingRequestsCount();
-          }
         }
       } catch (err) {
         logger.warn("Exception lors de la mise à jour du statut de la demande:", err);
@@ -396,7 +372,7 @@ export default function App() {
          setTab("devis");
     
     toast.success("Demande chargée dans le formulaire de devis !");
-  }, [activitiesMap, activities, loadPendingRequestsCount, user?.name, setQuoteDraft, setTab]);
+  }, [activitiesMap, activities, user?.name, setQuoteDraft, setTab]);
 
   // charger supabase au montage et synchronisation des activités toutes les 10 secondes (optimisé)
   useEffect(() => {
@@ -413,23 +389,6 @@ export default function App() {
       clearInterval(interval);
     };
   }, [syncWithSupabase]);
-
-  // Charger le nombre de demandes en attente au montage et périodiquement
-  useEffect(() => {
-    if (!ok) return;
-    
-    // Charger immédiatement
-    loadPendingRequestsCount();
-
-    // Recharger toutes les 60 secondes pour réduire la charge
-    const interval = setInterval(() => {
-      loadPendingRequestsCount();
-    }, 60000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [ok, loadPendingRequestsCount]);
 
   // Persister le brouillon de devis avec debounce pour éviter trop d'écritures
   const quoteDraftSaveTimeoutRef = useRef(null);
@@ -928,6 +887,7 @@ export default function App() {
           import("./pages/TicketPage"),
           import("./pages/ModificationsPage"),
           import("./pages/SituationPage"),
+          import("./pages/UsersPage"),
         ]);
       } catch (error) {
         logger.warn("Préchargement des pages échoué", error);
@@ -1116,21 +1076,16 @@ export default function App() {
                     🛑 Stop &amp; Push
                   </Pill>
                 )}
+                {(user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
+                  <Pill active={tab === "users"} onClick={() => setTab("users")}>
+                    {t("nav.users")}
+                  </Pill>
+                )}
                 {(user?.name === "Ewen" || user?.name === "Léa" || user?.name === "Laly") && (
                   <Pill active={tab === "hotels"} onClick={() => setTab("hotels")}>
                     🏨 Hôtels
                   </Pill>
                 )}
-                <Pill active={tab === "demandes"} onClick={() => setTab("demandes")}>
-                  <span className="flex items-center gap-2">
-                    <span>📋 Demandes</span>
-                    {pendingRequestsCount > 0 && (
-                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
-                        {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
-                      </span>
-                    )}
-                  </span>
-                </Pill>
               </div>
             </nav>
             {user && (
@@ -1365,19 +1320,11 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "demandes" && (
-          <Section title="📋 Demandes clients" subtitle="Gérer les demandes de devis de vos clients">
-            <ErrorBoundary>
-              <Suspense fallback={<PageLoader />}>
-                <DemandesPage 
-                  activities={activities} 
-                  onRequestStatusChange={loadPendingRequestsCount}
-                  onCreateQuoteFromRequest={handleCreateQuoteFromRequest}
-                />
-              </Suspense>
-            </ErrorBoundary>
-          </Section>
-        )}
+          {tab === "users" && (user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
+            <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")}>
+              <UsersPage user={user} />
+            </Section>
+          )}
 
           {tab === "hotels" && (user?.name === "Ewen" || user?.name === "Léa" || user?.name === "Laly") && (
             <Section title="Gestion des hôtels" subtitle="Associez les hôtels à leurs quartiers">
