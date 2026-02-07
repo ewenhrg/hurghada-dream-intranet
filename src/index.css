@@ -65,7 +65,7 @@
   box-sizing: border-box;
 }
 
-html, body {
+html {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -89,10 +89,35 @@ html, body {
   /* Pas de transform sur html/body pour éviter les problèmes de scroll */
 }
 
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family: var(--hd-font-sans);
+  color: var(--hd-text-inverse);
+  background: var(--hd-bg-gradient);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Optimisations de performance pour le scroll */
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Scroll fluide sans rollback */
+  scroll-behavior: auto;
+  /* Ne pas bloquer le scroll avec overscroll-behavior */
+  overscroll-behavior-y: auto;
+  overscroll-behavior-x: contain;
+  /* NE PAS mettre touch-action sur html/body pour permettre le scroll avec la molette */
+  touch-action: auto !important;
+  /* Pas de transform sur html/body pour éviter les problèmes de scroll */
+}
+
 main {
   position: relative;
+  /* Le scroll se fait sur body, pas sur main */
+  /* Ne pas mettre overflow-y-auto ici - cela bloque le scroll avec la molette */
   /* Optimisations pour le scroll fluide */
-  /* Ne pas bloquer le scroll avec overscroll-behavior */
   overscroll-behavior-y: auto;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
@@ -773,10 +798,11 @@ select:not([class*="rounded"]):hover {
 
 /* Optimisations globales pour le scroll - à la fin du fichier pour override */
 .scroll-container {
-  /* Isolation pour éviter les reflows */
-  contain: layout style paint;
+  /* Isolation pour éviter les reflows - mais ne pas bloquer le scroll */
+  /* contain: layout style paint; - DÉSACTIVÉ car peut bloquer le scroll */
   /* Scroll fluide sans rollback */
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
+  overscroll-behavior-x: contain;
   /* Éviter les problèmes de scroll */
   -webkit-overflow-scrolling: touch;
   /* NE PAS mettre touch-action ici - cela bloque le scroll avec la molette */

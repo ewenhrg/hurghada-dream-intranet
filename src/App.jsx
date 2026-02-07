@@ -962,7 +962,7 @@ export default function App() {
   const mainPaddingClass = tab === "devis" ? "px-0" : "px-2 md:px-3 lg:px-6";
   // Construire les className complets
   const headerNavClassName = `glass-nav mx-auto flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between gap-3 md:gap-4 ${maxWidthClass} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`;
-  const mainClassName = `flex-1 overflow-y-auto py-4 md:py-10 ${mainPaddingClass} scroll-container`;
+  const mainClassName = `flex-1 py-4 md:py-10 ${mainPaddingClass} scroll-container`;
   const footerClassName = `mx-auto px-4 py-8 border-t mt-10 font-medium tracking-wide ${maxWidthClass}`;
   const contentContainerClassName = `mx-auto space-y-6 md:space-y-10 ${maxWidthClass} rounded-2xl p-4 md:p-6 lg:p-8`;
   // Construire les className pour les boutons de langue
