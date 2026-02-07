@@ -92,7 +92,6 @@ const lazyWithRetry = (importFn, retries = 3) => {
 const ActivitiesPage = lazyWithRetry(() => import("./pages/ActivitiesPage").then(module => ({ default: module.ActivitiesPage })));
 const QuotesPage = lazyWithRetry(() => import("./pages/QuotesPage").then(module => ({ default: module.QuotesPage })));
 const HistoryPage = lazyWithRetry(() => import("./pages/HistoryPage").then(module => ({ default: module.HistoryPage })));
-const UsersPage = lazyWithRetry(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
 const HotelsPage = lazyWithRetry(() => import("./pages/HotelsPage").then(module => ({ default: module.HotelsPage })));
 const TicketPage = lazyWithRetry(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
 // Page Modifications désactivée temporairement
@@ -929,7 +928,6 @@ export default function App() {
           import("./pages/TicketPage"),
           import("./pages/ModificationsPage"),
           import("./pages/SituationPage"),
-          import("./pages/UsersPage"),
         ]);
       } catch (error) {
         logger.warn("Préchargement des pages échoué", error);
@@ -1116,11 +1114,6 @@ export default function App() {
                 {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
                   <Pill active={tab === "stopsale"} onClick={() => setTab("stopsale")}>
                     🛑 Stop &amp; Push
-                  </Pill>
-                )}
-                {(user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
-                  <Pill active={tab === "users"} onClick={() => setTab("users")}>
-                    {t("nav.users")}
                   </Pill>
                 )}
                 {(user?.name === "Ewen" || user?.name === "Léa" || user?.name === "Laly") && (
@@ -1385,12 +1378,6 @@ export default function App() {
             </ErrorBoundary>
           </Section>
         )}
-
-          {tab === "users" && (user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
-            <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")}>
-              <UsersPage user={user} />
-            </Section>
-          )}
 
           {tab === "hotels" && (user?.name === "Ewen" || user?.name === "Léa" || user?.name === "Laly") && (
             <Section title="Gestion des hôtels" subtitle="Associez les hôtels à leurs quartiers">
