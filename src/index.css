@@ -81,8 +81,7 @@ html, body {
   /* Scroll fluide sans rollback */
   scroll-behavior: auto;
   overscroll-behavior: contain;
-  /* Permettre le scroll avec la molette ET le tactile */
-  touch-action: pan-x pan-y;
+  /* NE PAS mettre touch-action sur html/body pour permettre le scroll avec la molette */
   /* Pas de transform sur html/body pour éviter les problèmes de scroll */
 }
 
@@ -91,8 +90,8 @@ main {
   /* Optimisations pour le scroll fluide */
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  /* Permettre le scroll avec la molette ET le tactile */
-  touch-action: pan-x pan-y;
+  /* S'assurer que le scroll avec la molette fonctionne */
+  touch-action: auto !important;
 }
 
 body::before {
@@ -774,6 +773,7 @@ select:not([class*="rounded"]):hover {
   overscroll-behavior: contain;
   /* Éviter les problèmes de scroll */
   -webkit-overflow-scrolling: touch;
+  /* NE PAS mettre touch-action ici - cela bloque le scroll avec la molette */
   /* Pas de transform pour éviter les problèmes de scroll */
 }
 
@@ -793,6 +793,8 @@ header[class*="sticky"] {
   -webkit-overflow-scrolling: touch;
   /* Éviter les problèmes de scroll */
   scroll-behavior: auto;
+  /* Permettre le scroll tactile ET la molette sur les zones scrollables spécifiques */
+  /* Note: touch-action peut bloquer la molette sur certains navigateurs, donc on l'applique seulement aux petits conteneurs */
 }
 
 /* Optimisation pour éviter les carrés blancs pendant le scroll */
@@ -1028,11 +1030,20 @@ button:not(:disabled):active {
   transform: translateY(0) scale(0.98);
 }
 
-/* Améliorer le comportement tactile global */
+/* Améliorer le comportement tactile global - UNIQUEMENT pour les éléments interactifs */
 button, a[role="button"], [role="button"], [onclick] {
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(79, 70, 229, 0.2);
   cursor: pointer;
+}
+
+/* S'assurer que le scroll avec la molette fonctionne partout */
+html, body {
+  /* Permettre le scroll avec la molette - pas de restriction touch-action */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* S'assurer qu'aucune propriété ne bloque le scroll de la molette */
+  touch-action: auto !important;
 }
 
 /* Éviter les sélections de texte accidentelles lors des interactions tactiles */
@@ -1120,10 +1131,16 @@ button, a, [role="button"] {
   }
 
   /* Améliorer les zones de scroll tactiles - permettre scroll tactile ET molette */
-  .overflow-x-auto, .overflow-y-auto, .overflow-auto, [data-scrollable],
-  main, .scroll-container, body, html {
+  /* NE PAS mettre touch-action sur body/html/main/scroll-container - cela bloque la molette */
+  .overflow-x-auto, .overflow-y-auto, .overflow-auto, [data-scrollable] {
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
+    overscroll-behavior: contain;
+  }
+  
+  /* Pour main et scroll-container, ne pas mettre touch-action pour permettre la molette */
+  main, .scroll-container {
+    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
 
@@ -1165,9 +1182,14 @@ button, a, [role="button"] {
   }
 
   /* Zones de scroll - permettre le scroll tactile ET la molette */
-  .overflow-x-auto, .overflow-y-auto, .overflow-auto, [data-scrollable], 
-  main, .scroll-container, body, html {
+  /* NE PAS mettre touch-action sur body/html/main/scroll-container - cela bloque la molette */
+  .overflow-x-auto, .overflow-y-auto, .overflow-auto, [data-scrollable] {
     touch-action: pan-x pan-y;
+  }
+  
+  /* Pour main et scroll-container, ne pas mettre touch-action pour permettre la molette */
+  main, .scroll-container {
+    /* Pas de touch-action - permet le scroll avec la molette */
   }
 
   /* Tableaux scrollables */
