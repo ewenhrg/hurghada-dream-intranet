@@ -974,7 +974,7 @@ export default function App() {
   const footerText = "support 7 sur 7 = +33619921449";
 
   return (
-    <div className="min-h-screen flex flex-col bg-transparent overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-transparent overflow-x-hidden">
       {/* HEADER */}
       <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6" style={{ backgroundColor: 'rgba(7,13,31,0.98)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
         <div className={headerNavClassName}>
