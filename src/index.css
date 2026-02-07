@@ -81,6 +81,8 @@ html, body {
   /* Scroll fluide sans rollback */
   scroll-behavior: auto;
   overscroll-behavior: contain;
+  /* Permettre le scroll avec la molette ET le tactile */
+  touch-action: pan-x pan-y;
   /* Pas de transform sur html/body pour éviter les problèmes de scroll */
 }
 
@@ -89,6 +91,8 @@ main {
   /* Optimisations pour le scroll fluide */
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  /* Permettre le scroll avec la molette ET le tactile */
+  touch-action: pan-x pan-y;
 }
 
 body::before {
@@ -611,6 +615,20 @@ select:not([class*="rounded"]):hover {
     padding: 0.75rem 1rem;
     touch-action: manipulation; /* Éviter le double-tap zoom */
     -webkit-tap-highlight-color: rgba(79, 70, 229, 0.2);
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* S'assurer que tous les éléments cliquables fonctionnent au tactile */
+  a, [role="button"], [onclick], [data-clickable] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(79, 70, 229, 0.2);
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* Espacements réduits sur mobile */
@@ -1010,6 +1028,22 @@ button:not(:disabled):active {
   transform: translateY(0) scale(0.98);
 }
 
+/* Améliorer le comportement tactile global */
+button, a[role="button"], [role="button"], [onclick] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(79, 70, 229, 0.2);
+  cursor: pointer;
+}
+
+/* Éviter les sélections de texte accidentelles lors des interactions tactiles */
+button, a, [role="button"] {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 /* Désactiver les transitions pendant le scroll */
 .scrolling button,
 .scrolling a,
@@ -1058,6 +1092,87 @@ button:not(:disabled):active {
   /* Réduire les ombres sur mobile pour performance */
   .shadow-lg, .shadow-xl, .shadow-2xl {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+}
+
+/* Optimisations spécifiques pour les PC tactiles (appareils hybrides) */
+@media (pointer: fine) and (any-pointer: coarse) {
+  /* S'assurer que tous les éléments interactifs fonctionnent avec le tactile */
+  button, a, input, select, textarea, [role="button"], [tabindex] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(79, 70, 229, 0.2);
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Améliorer les interactions tactiles sur PC tactiles */
+  button:active, a:active, [role="button"]:active {
+    opacity: 0.85;
+    transform: scale(0.97);
+    transition: opacity 0.1s, transform 0.1s;
+  }
+
+  /* Éviter les doubles déclenchements */
+  button, a, [role="button"] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Améliorer les zones de scroll tactiles - permettre scroll tactile ET molette */
+  .overflow-x-auto, .overflow-y-auto, .overflow-auto, [data-scrollable],
+  main, .scroll-container, body, html {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    overscroll-behavior: contain;
+  }
+
+  /* S'assurer que les tableaux sont scrollables au tactile ET à la molette */
+  table {
+    touch-action: pan-x pan-y;
+  }
+
+  /* Améliorer les inputs pour le tactile */
+  input, textarea, select {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Améliorer les zones cliquables */
+  [onclick], [data-clickable] {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+}
+
+/* Règles générales pour tous les appareils tactiles */
+@media (any-pointer: coarse) {
+  /* S'assurer que tous les boutons ont une taille minimale tactile */
+  button, a[role="button"], [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem 1rem;
+  }
+
+  /* Améliorer le feedback tactile */
+  button:active, a:active, [role="button"]:active {
+    opacity: 0.8;
+  }
+
+  /* Éviter le zoom sur double-tap - UNIQUEMENT pour les éléments interactifs */
+  button, a, [role="button"], [onclick], [data-clickable], input, textarea, select {
+    touch-action: manipulation;
+  }
+
+  /* Zones de scroll - permettre le scroll tactile ET la molette */
+  .overflow-x-auto, .overflow-y-auto, .overflow-auto, [data-scrollable], 
+  main, .scroll-container, body, html {
+    touch-action: pan-x pan-y;
+  }
+
+  /* Tableaux scrollables */
+  table {
+    touch-action: pan-x pan-y;
   }
 }
 
