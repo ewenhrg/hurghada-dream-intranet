@@ -8,7 +8,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 
@@ -1282,6 +1282,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     zeroTracasTransfertPlus3Personnes: "",
     zeroTracasVisaSim: "",
     zeroTracasVisaSeul: "",
+    cairePrivatif4pax: false, // Pour CAIRE PRIVATIF
+    cairePrivatif5pax: false, // Pour CAIRE PRIVATIF
+    cairePrivatif6pax: false, // Pour CAIRE PRIVATIF
   });
 
   const sortedActivities = useMemo(() => {
@@ -1385,6 +1388,16 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         const ktm530 = Number(it.ktm530 || 0);
         const prices = getMotoCrossPrices();
         lineTotal = yamaha250 * prices.yamaha250 + ktm640 * prices.ktm640 + ktm530 * prices.ktm530;
+      } else if (act && isCairePrivatifActivity(act.name)) {
+        // cas spécial CAIRE PRIVATIF : calcul basé sur les cases à cocher (4pax, 5pax, 6pax)
+        const prices = getCairePrivatifPrices();
+        if (it.cairePrivatif4pax) {
+          lineTotal = prices.pax4;
+        } else if (it.cairePrivatif5pax) {
+          lineTotal = prices.pax5;
+        } else if (it.cairePrivatif6pax) {
+          lineTotal = prices.pax6;
+        }
       } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
         // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
         const prices = getZeroTracasHorsZonePrices();
@@ -1426,8 +1439,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       }
 
       // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits) (sauf pour les activités buggy et moto cross où on utilise les quantités spécifiques)
-      // Ne pas appliquer pour ZERO TRACAS et ZERO TRACAS HORS ZONE car le transfert est déjà inclus dans les prix
-      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name) && !isZeroTracasHorsZoneActivity(act?.name)) {
+      // Ne pas appliquer pour ZERO TRACAS, ZERO TRACAS HORS ZONE et CAIRE PRIVATIF car le transfert est déjà inclus dans les prix
+      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name) && !isZeroTracasHorsZoneActivity(act?.name) && !isCairePrivatifActivity(act?.name)) {
         if (act && isBuggyActivity(act.name)) {
           // Pour les activités buggy, le supplément est calculé sur le nombre total de buggys
           const totalBuggys = Number(it.buggySimple || 0) + Number(it.buggyFamily || 0);
@@ -1807,6 +1820,71 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         onChange={(e) => setItem(idx, { ktm530: e.target.value === "" ? "" : e.target.value })}
                         className="text-base md:text-lg py-3"
                       />
+                    </div>
+                  </div>
+                )}
+                {/* Champs spécifiques pour CAIRE PRIVATIF - Modifiables par tous */}
+                {c.act && isCairePrivatifActivity(c.act.name) && (
+                  <div className="bg-gradient-to-br from-blue-50/80 to-cyan-50/70 rounded-xl p-5 md:p-6 border-2 border-blue-300/70 shadow-lg mt-4">
+                    <p className="text-sm md:text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                      <span className="text-xl">✈️</span>
+                      <span>Nombre de personnes</span>
+                    </p>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 hover:border-blue-400 cursor-pointer transition-all">
+                        <input
+                          type="radio"
+                          name={`caire-privatif-${idx}`}
+                          checked={c.raw.cairePrivatif4pax || false}
+                          onChange={(e) => {
+                            setItem(idx, {
+                              cairePrivatif4pax: true,
+                              cairePrivatif5pax: false,
+                              cairePrivatif6pax: false,
+                            });
+                          }}
+                          className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
+                          4 pax - {getCairePrivatifPrices().pax4}€
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 hover:border-blue-400 cursor-pointer transition-all">
+                        <input
+                          type="radio"
+                          name={`caire-privatif-${idx}`}
+                          checked={c.raw.cairePrivatif5pax || false}
+                          onChange={(e) => {
+                            setItem(idx, {
+                              cairePrivatif4pax: false,
+                              cairePrivatif5pax: true,
+                              cairePrivatif6pax: false,
+                            });
+                          }}
+                          className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
+                          5 pax - {getCairePrivatifPrices().pax5}€
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 hover:border-blue-400 cursor-pointer transition-all">
+                        <input
+                          type="radio"
+                          name={`caire-privatif-${idx}`}
+                          checked={c.raw.cairePrivatif6pax || false}
+                          onChange={(e) => {
+                            setItem(idx, {
+                              cairePrivatif4pax: false,
+                              cairePrivatif5pax: false,
+                              cairePrivatif6pax: true,
+                            });
+                          }}
+                          className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
+                          6 pax - {getCairePrivatifPrices().pax6}€
+                        </span>
+                      </label>
                     </div>
                   </div>
                 )}

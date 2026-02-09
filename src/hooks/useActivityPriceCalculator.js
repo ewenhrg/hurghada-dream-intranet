@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { calculateCardPrice } from "../utils";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices } from "../utils/activityHelpers";
 
 /**
  * Hook personnalisé pour calculer les prix des activités
@@ -95,6 +95,16 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         const ktm530 = Number(it.ktm530 || 0);
         const prices = getMotoCrossPrices();
         lineTotal = yamaha250 * prices.yamaha250 + ktm640 * prices.ktm640 + ktm530 * prices.ktm530;
+      } else if (act && isCairePrivatifActivity(act.name)) {
+        // cas spécial CAIRE PRIVATIF : calcul basé sur les cases à cocher (4pax, 5pax, 6pax)
+        const prices = getCairePrivatifPrices();
+        if (it.cairePrivatif4pax) {
+          lineTotal = prices.pax4;
+        } else if (it.cairePrivatif5pax) {
+          lineTotal = prices.pax5;
+        } else if (it.cairePrivatif6pax) {
+          lineTotal = prices.pax6;
+        }
       } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
         // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
         // Vérifier HORS ZONE en premier car plus spécifique
@@ -222,8 +232,8 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       }
 
       // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits)
-      // Ne pas appliquer pour ZERO TRACAS et ZERO TRACAS HORS ZONE car le transfert est déjà inclus dans les prix
-      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name) && !isZeroTracasHorsZoneActivity(act?.name)) {
+      // Ne pas appliquer pour ZERO TRACAS, ZERO TRACAS HORS ZONE et CAIRE PRIVATIF car le transfert est déjà inclus dans les prix
+      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name) && !isZeroTracasHorsZoneActivity(act?.name) && !isCairePrivatifActivity(act?.name)) {
         if (act && isMotoCrossActivity(act.name)) {
           // Pour MOTO CROSS, le supplément est calculé sur le nombre total de motos
           const totalMotos = Number(it.yamaha250 || 0) + Number(it.ktm640 || 0) + Number(it.ktm530 || 0);

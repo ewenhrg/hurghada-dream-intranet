@@ -70,3 +70,18 @@ export function getZeroTracasHorsZonePrices() {
   };
 }
 
+// Helper pour vérifier si une activité est CAIRE PRIVATIF
+export function isCairePrivatifActivity(activityName) {
+  if (!activityName) return false;
+  const name = activityName.toLowerCase();
+  return name.includes("caire privatif");
+}
+
+// Helper pour obtenir les prix CAIRE PRIVATIF
+export function getCairePrivatifPrices() {
+  return {
+    pax4: 460,  // 4 personnes
+    pax5: 525,  // 5 personnes
+    pax6: 560,  // 6 personnes
+  };
+}
