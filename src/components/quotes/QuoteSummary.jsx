@@ -11,7 +11,16 @@ export const QuoteSummary = memo(function QuoteSummary({ computed, grandTotalCas
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <GhostBtn 
           type="button" 
-          onClick={onAddItem} 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("Bouton 'Ajouter une activité' cliqué");
+            if (onAddItem) {
+              onAddItem();
+            } else {
+              console.error("onAddItem n'est pas défini");
+            }
+          }} 
           variant="primary" 
           className="w-full lg:w-auto shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
         >

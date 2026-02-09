@@ -232,7 +232,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   }, []);
   
   const addItem = useCallback(() => {
-    setItems((prev) => [...prev, { ...blankItemMemo(), adults: globalAdults || "" }]);
+    try {
+      const newItem = { ...blankItemMemo(), adults: globalAdults || "" };
+      setItems((prev) => {
+        const updated = [...prev, newItem];
+        console.log("Ajout d'une activité. Nombre total d'activités:", updated.length);
+        return updated;
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'ajout d'une activité:", error);
+      toast.error("Erreur lors de l'ajout d'une activité. Veuillez réessayer.");
+    }
   }, [blankItemMemo, globalAdults]);
   
   const removeItem = useCallback((i) => {
