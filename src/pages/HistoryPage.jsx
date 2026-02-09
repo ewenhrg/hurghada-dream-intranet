@@ -8,7 +8,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 
@@ -1285,6 +1285,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     cairePrivatif4pax: false, // Pour CAIRE PRIVATIF
     cairePrivatif5pax: false, // Pour CAIRE PRIVATIF
     cairePrivatif6pax: false, // Pour CAIRE PRIVATIF
+    louxorPrivatif4pax: false, // Pour LOUXOR PRIVATIF
+    louxorPrivatif5pax: false, // Pour LOUXOR PRIVATIF
+    louxorPrivatif6pax: false, // Pour LOUXOR PRIVATIF
   });
 
   const sortedActivities = useMemo(() => {
@@ -1398,6 +1401,16 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         } else if (it.cairePrivatif6pax) {
           lineTotal = prices.pax6;
         }
+      } else if (act && isLouxorPrivatifActivity(act.name)) {
+        // cas spécial LOUXOR PRIVATIF : calcul basé sur les cases à cocher (4pax, 5pax, 6pax)
+        const prices = getLouxorPrivatifPrices();
+        if (it.louxorPrivatif4pax) {
+          lineTotal = prices.pax4;
+        } else if (it.louxorPrivatif5pax) {
+          lineTotal = prices.pax5;
+        } else if (it.louxorPrivatif6pax) {
+          lineTotal = prices.pax6;
+        }
       } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
         // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
         const prices = getZeroTracasHorsZonePrices();
@@ -1439,8 +1452,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       }
 
       // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits) (sauf pour les activités buggy et moto cross où on utilise les quantités spécifiques)
-      // Ne pas appliquer pour ZERO TRACAS, ZERO TRACAS HORS ZONE et CAIRE PRIVATIF car le transfert est déjà inclus dans les prix
-      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name) && !isZeroTracasHorsZoneActivity(act?.name) && !isCairePrivatifActivity(act?.name)) {
+      // Ne pas appliquer pour ZERO TRACAS, ZERO TRACAS HORS ZONE, CAIRE PRIVATIF et LOUXOR PRIVATIF car le transfert est déjà inclus dans les prix
+      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name) && !isZeroTracasHorsZoneActivity(act?.name) && !isCairePrivatifActivity(act?.name) && !isLouxorPrivatifActivity(act?.name)) {
         if (act && isBuggyActivity(act.name)) {
           // Pour les activités buggy, le supplément est calculé sur le nombre total de buggys
           const totalBuggys = Number(it.buggySimple || 0) + Number(it.buggyFamily || 0);
@@ -1888,6 +1901,73 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     </div>
                   </div>
                 )}
+
+                {/* Champs spécifiques pour LOUXOR PRIVATIF - Modifiables par tous */}
+                {c.act && isLouxorPrivatifActivity(c.act.name) && (
+                  <div className="bg-gradient-to-br from-blue-50/80 to-cyan-50/70 rounded-xl p-5 md:p-6 border-2 border-blue-300/70 shadow-lg mt-4">
+                    <p className="text-sm md:text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                      <span className="text-xl">✈️</span>
+                      <span>Nombre de personnes</span>
+                    </p>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 hover:border-blue-400 cursor-pointer transition-all">
+                        <input
+                          type="radio"
+                          name={`louxor-privatif-${idx}`}
+                          checked={c.raw.louxorPrivatif4pax || false}
+                          onChange={(e) => {
+                            setItem(idx, {
+                              louxorPrivatif4pax: true,
+                              louxorPrivatif5pax: false,
+                              louxorPrivatif6pax: false,
+                            });
+                          }}
+                          className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
+                          4 pax - {getLouxorPrivatifPrices().pax4}€
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 hover:border-blue-400 cursor-pointer transition-all">
+                        <input
+                          type="radio"
+                          name={`louxor-privatif-${idx}`}
+                          checked={c.raw.louxorPrivatif5pax || false}
+                          onChange={(e) => {
+                            setItem(idx, {
+                              louxorPrivatif4pax: false,
+                              louxorPrivatif5pax: true,
+                              louxorPrivatif6pax: false,
+                            });
+                          }}
+                          className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
+                          5 pax - {getLouxorPrivatifPrices().pax5}€
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 hover:border-blue-400 cursor-pointer transition-all">
+                        <input
+                          type="radio"
+                          name={`louxor-privatif-${idx}`}
+                          checked={c.raw.louxorPrivatif6pax || false}
+                          onChange={(e) => {
+                            setItem(idx, {
+                              louxorPrivatif4pax: false,
+                              louxorPrivatif5pax: false,
+                              louxorPrivatif6pax: true,
+                            });
+                          }}
+                          className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
+                          6 pax - {getLouxorPrivatifPrices().pax6}€
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 {/* Champs spécifiques pour ZERO TRACAS et ZERO TRACAS HORS ZONE - Modifiables par tous */}
                 {(c.act && isZeroTracasActivity(c.act.name)) || (c.act && isZeroTracasHorsZoneActivity(c.act.name)) ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 mt-4 bg-indigo-50/60 p-5 md:p-6 rounded-xl border-2 border-indigo-300/70">

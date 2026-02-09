@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -116,6 +116,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     cairePrivatif4pax: false, // Pour CAIRE PRIVATIF
     cairePrivatif5pax: false, // Pour CAIRE PRIVATIF
     cairePrivatif6pax: false, // Pour CAIRE PRIVATIF
+    louxorPrivatif4pax: false, // Pour LOUXOR PRIVATIF
+    louxorPrivatif5pax: false, // Pour LOUXOR PRIVATIF
+    louxorPrivatif6pax: false, // Pour LOUXOR PRIVATIF
   }), []);
 
   const defaultClient = draft?.client || {
@@ -795,6 +798,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       // Pour CAIRE PRIVATIF, vérifier qu'une case est cochée
       if (isCairePrivatifActivity(c.act?.name)) {
         return !(c.raw.cairePrivatif4pax || c.raw.cairePrivatif5pax || c.raw.cairePrivatif6pax);
+      }
+
+      // Pour LOUXOR PRIVATIF, vérifier qu'une case est cochée
+      if (isLouxorPrivatifActivity(c.act?.name)) {
+        return !(c.raw.louxorPrivatif4pax || c.raw.louxorPrivatif5pax || c.raw.louxorPrivatif6pax);
       }
 
       const totalParticipants = Number(c.raw.adults || 0) + Number(c.raw.children || 0) + Number(c.raw.babies || 0);
@@ -2217,6 +2225,72 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       />
                       <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
                         6 pax - {getCairePrivatifPrices().pax6}€
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Champs spécifiques pour LOUXOR PRIVATIF */}
+              {c.act && isLouxorPrivatifActivity(c.act.name) && (
+                <div className="bg-gradient-to-br from-blue-50/80 to-cyan-50/70 rounded-xl p-5 md:p-6 border-2 border-blue-300/70 shadow-lg mt-4">
+                  <p className="text-sm md:text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span className="text-xl">✈️</span>
+                    <span>Nombre de personnes</span>
+                  </p>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 hover:border-blue-400 cursor-pointer transition-all">
+                      <input
+                        type="radio"
+                        name={`louxor-privatif-${idx}`}
+                        checked={c.raw.louxorPrivatif4pax || false}
+                        onChange={(e) => {
+                          setItem(idx, {
+                            louxorPrivatif4pax: true,
+                            louxorPrivatif5pax: false,
+                            louxorPrivatif6pax: false,
+                          });
+                        }}
+                        className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
+                        4 pax - {getLouxorPrivatifPrices().pax4}€
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 hover:border-blue-400 cursor-pointer transition-all">
+                      <input
+                        type="radio"
+                        name={`louxor-privatif-${idx}`}
+                        checked={c.raw.louxorPrivatif5pax || false}
+                        onChange={(e) => {
+                          setItem(idx, {
+                            louxorPrivatif4pax: false,
+                            louxorPrivatif5pax: true,
+                            louxorPrivatif6pax: false,
+                          });
+                        }}
+                        className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
+                        5 pax - {getLouxorPrivatifPrices().pax5}€
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 hover:border-blue-400 cursor-pointer transition-all">
+                      <input
+                        type="radio"
+                        name={`louxor-privatif-${idx}`}
+                        checked={c.raw.louxorPrivatif6pax || false}
+                        onChange={(e) => {
+                          setItem(idx, {
+                            louxorPrivatif4pax: false,
+                            louxorPrivatif5pax: false,
+                            louxorPrivatif6pax: true,
+                          });
+                        }}
+                        className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
+                        6 pax - {getLouxorPrivatifPrices().pax6}€
                       </span>
                     </label>
                   </div>

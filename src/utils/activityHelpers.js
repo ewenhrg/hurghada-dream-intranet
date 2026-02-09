@@ -85,3 +85,19 @@ export function getCairePrivatifPrices() {
     pax6: 560,  // 6 personnes
   };
 }
+
+// Helper pour vérifier si une activité est LOUXOR PRIVATIF
+export function isLouxorPrivatifActivity(activityName) {
+  if (!activityName) return false;
+  const name = activityName.toLowerCase();
+  return name.includes("louxor privatif");
+}
+
+// Helper pour obtenir les prix LOUXOR PRIVATIF
+export function getLouxorPrivatifPrices() {
+  return {
+    pax4: 460,  // 4 personnes
+    pax5: 525,  // 5 personnes
+    pax6: 560,  // 6 personnes
+  };
+}
