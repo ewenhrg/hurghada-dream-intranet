@@ -246,12 +246,19 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   }, [blankItemMemo, globalAdults]);
   
   const removeItem = useCallback((i) => {
-    // Suppression directe sans confirmation
-    const itemToRemove = items[i];
-    const activityName = activitiesMap.get(itemToRemove?.activityId)?.name || "cette activité";
-    setItems((prev) => prev.filter((_, idx) => idx !== i));
-    toast.success(`Activité "${activityName}" supprimée du devis.`);
-  }, [items, activitiesMap]);
+    // Protection contre les doubles appels
+    setItems((prev) => {
+      // Vérifier que l'index existe avant de supprimer
+      if (i < 0 || i >= prev.length) {
+        console.warn("Tentative de suppression d'un index invalide:", i);
+        return prev;
+      }
+      const itemToRemove = prev[i];
+      const activityName = activitiesMap.get(itemToRemove?.activityId)?.name || "cette activité";
+      toast.success(`Activité "${activityName}" supprimée du devis.`);
+      return prev.filter((_, idx) => idx !== i);
+    });
+  }, [activitiesMap]);
 
   const handleConfirmDeleteItem = useCallback(() => {
     if (confirmDeleteItem.index !== null) {

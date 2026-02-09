@@ -1295,7 +1295,15 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     setItems((prev) => [...prev, blankItem()]);
   }
   function removeItem(i) {
-    setItems((prev) => prev.filter((_, idx) => idx !== i));
+    // Protection contre les doubles appels
+    setItems((prev) => {
+      // Vérifier que l'index existe avant de supprimer
+      if (i < 0 || i >= prev.length) {
+        console.warn("Tentative de suppression d'un index invalide:", i);
+        return prev;
+      }
+      return prev.filter((_, idx) => idx !== i);
+    });
   }
 
   // Cache pour SPEED_BOAT_EXTRAS (évite les recherches répétées)
