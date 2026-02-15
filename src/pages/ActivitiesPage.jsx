@@ -536,54 +536,54 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }, [activity.availableDays]);
 
     return (
-      <tr className="border-t border-slate-100 hover:bg-indigo-50/40 transition-colors">
-        <td className="px-4 py-3 font-medium text-slate-800 text-sm">{activity.name}</td>
-        <td className="px-4 py-3 text-slate-600 text-sm tabular-nums">{currency(activity.priceAdult, activity.currency)}</td>
-        <td className="px-4 py-3 text-slate-600 text-sm tabular-nums">{currency(activity.priceChild, activity.currency)}</td>
-        <td className="px-4 py-3 text-slate-600 text-sm tabular-nums">{currency(activity.priceBaby, activity.currency)}</td>
+      <tr className="border-t border-indigo-100 hover:bg-indigo-100/60 transition-colors">
+        <td className="px-4 py-3 font-semibold text-indigo-900 text-sm">{activity.name}</td>
+        <td className="px-4 py-3 text-emerald-700 text-sm tabular-nums font-medium">{currency(activity.priceAdult, activity.currency)}</td>
+        <td className="px-4 py-3 text-emerald-600 text-sm tabular-nums font-medium">{currency(activity.priceChild, activity.currency)}</td>
+        <td className="px-4 py-3 text-emerald-600 text-sm tabular-nums font-medium">{currency(activity.priceBaby, activity.currency)}</td>
         <td className="px-4 py-3">
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap">
             {availableDaysList.map((d) => (
               <span
                 key={d.key}
-                className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 text-xs font-medium"
+                className="px-2.5 py-1 rounded-lg bg-emerald-200 text-emerald-800 text-xs font-bold border border-emerald-300/60"
               >
                 {d.label}
               </span>
             ))}
           </div>
         </td>
-        <td className="px-4 py-3 text-slate-500 text-xs max-w-[140px] truncate" title={activity.notes || ""}>
+        <td className="px-4 py-3 text-slate-600 text-xs max-w-[140px] truncate" title={activity.notes || ""}>
           {activity.notes || "—"}
         </td>
         <td className="px-4 py-3 text-right">
-          <div className="flex gap-1.5 justify-end flex-wrap">
+          <div className="flex gap-2 justify-end flex-wrap">
             <button
               type="button"
               onClick={() => onOpenDescription(activity)}
-              className={`text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors ${
+              className={`text-xs font-semibold px-3 py-2 rounded-lg transition-colors ${
                 hasDescription
-                  ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  ? "bg-emerald-200 text-emerald-800 hover:bg-emerald-300 border border-emerald-300"
+                  : "bg-slate-200 text-slate-700 hover:bg-slate-300 border border-slate-300"
               }`}
             >
-              Description{hasDescription ? " ✓" : ""}
+              📝 Description{hasDescription ? " ✓" : ""}
             </button>
             {canModify && (
               <>
                 <button
                   type="button"
                   onClick={() => onEdit(activity)}
-                  className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
+                  className="text-xs font-semibold px-3 py-2 rounded-lg bg-indigo-200 text-indigo-800 hover:bg-indigo-300 border border-indigo-300 transition-colors"
                 >
-                  Modifier
+                  ✏️ Modifier
                 </button>
                 <button
                   type="button"
                   onClick={() => onDelete(activity.id)}
-                  className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                  className="text-xs font-semibold px-3 py-2 rounded-lg bg-red-200 text-red-800 hover:bg-red-300 border border-red-300 transition-colors"
                 >
-                  Supprimer
+                  🗑️ Supprimer
                 </button>
               </>
             )}
@@ -619,17 +619,17 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto">
-      {/* En-tête avec accent couleur */}
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-            <span className="text-white text-lg">🎯</span>
+      {/* En-tête coloré */}
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b-2 border-indigo-200 rounded-xl px-5 py-5 bg-gradient-to-r from-indigo-500/10 via-violet-500/10 to-blue-500/10">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/30">
+            <span className="text-white text-xl">🎯</span>
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-800 tracking-tight">
+            <h1 className="text-xl md:text-2xl font-bold text-indigo-900 tracking-tight">
               Gestion des activités
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-indigo-600 mt-1 font-medium">
               {totalActivities} activité{totalActivities !== 1 ? "s" : ""} · Prix, jours et transferts par quartier
             </p>
           </div>
@@ -637,18 +637,20 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         {user?.canAddActivity && (
           <PrimaryBtn
             onClick={handleToggleForm}
-            className="w-full sm:w-auto text-sm font-medium px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 border-indigo-600"
+            className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 border-0 shadow-lg shadow-indigo-500/25"
           >
-            {showForm ? "Annuler" : "Ajouter une activité"}
+            {showForm ? "Annuler" : "➕ Ajouter une activité"}
           </PrimaryBtn>
         )}
       </header>
 
-      {/* Filtres avec léger fond coloré */}
-      <section className="bg-white rounded-xl border border-indigo-100 p-4 md:p-5 shadow-sm bg-gradient-to-br from-white to-indigo-50/30">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="w-1 h-6 rounded-full bg-indigo-500" />
-          <h2 className="text-sm font-semibold text-indigo-900">Recherche et filtres</h2>
+      {/* Filtres - bloc coloré */}
+      <section className="rounded-xl border-2 border-indigo-200 p-5 md:p-6 shadow-md bg-gradient-to-br from-indigo-50 via-white to-violet-50">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-indigo-500 flex items-center justify-center shadow-md">
+            <span className="text-white text-lg">🔍</span>
+          </div>
+          <h2 className="text-base font-bold text-indigo-900">Recherche et filtres</h2>
         </div>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
@@ -680,19 +682,19 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </select>
           </div>
         </div>
-        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-indigo-100">
-          <span className="text-xs text-indigo-600/80">Catégories</span>
+        <div className="flex items-center gap-2 mt-4 pt-4 border-t-2 border-indigo-200/60">
+          <span className="text-xs font-semibold text-indigo-700">Catégories</span>
           <button
             type="button"
             onClick={openAllCategories}
-            className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
+            className="text-xs font-semibold px-3 py-2 rounded-lg bg-indigo-500 text-white hover:bg-indigo-600 transition-colors shadow-sm"
           >
             Ouvrir tout
           </button>
           <button
             type="button"
             onClick={closeAllCategories}
-            className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            className="text-xs font-semibold px-3 py-2 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
           >
             Fermer tout
           </button>
@@ -700,18 +702,20 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       </section>
 
       {showForm && (
-        <form ref={formRef} onSubmit={handleCreate} className="bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-white">
-            <h2 className="text-base font-semibold text-indigo-900">
-              {editingId ? "Modifier l'activité" : "Nouvelle activité"}
+        <form ref={formRef} onSubmit={handleCreate} className="bg-white rounded-xl border-2 border-indigo-200 shadow-lg overflow-hidden">
+          <div className="px-6 py-5 border-b-2 border-indigo-200 bg-gradient-to-r from-indigo-500 to-violet-600">
+            <h2 className="text-lg font-bold text-white">
+              {editingId ? "✏️ Modifier l'activité" : "➕ Nouvelle activité"}
             </h2>
-            <p className="text-xs text-indigo-600/80 mt-0.5">
+            <p className="text-sm text-white/90 mt-1">
               {editingId ? "Modifiez les champs ci-dessous" : "Renseignez les informations de l'activité"}
             </p>
           </div>
           <div className="p-5 md:p-6 space-y-6">
-            <div>
-              <h3 className="text-xs font-medium text-indigo-600 uppercase tracking-wider mb-3">Informations de base</h3>
+            <div className="rounded-xl p-4 bg-indigo-50/80 border border-indigo-200">
+              <h3 className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-500" /> Informations de base
+              </h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Nom *</label>
@@ -739,8 +743,10 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               </div>
             </div>
 
-            <div>
-              <h3 className="text-xs font-medium text-emerald-600 uppercase tracking-wider mb-3">Tarification</h3>
+            <div className="rounded-xl p-4 bg-emerald-50/80 border border-emerald-200">
+              <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" /> Tarification
+              </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Adulte</label>
@@ -793,30 +799,34 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               </div>
             </div>
 
-            <div>
-              <h3 className="text-xs font-medium text-amber-600 uppercase tracking-wider mb-3">Jours disponibles</h3>
+            <div className="rounded-xl p-4 bg-amber-50/80 border border-amber-200">
+              <h3 className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500" /> Jours disponibles
+              </h3>
               <DaysSelector value={form.availableDays} onChange={(v) => setForm((f) => ({ ...f, availableDays: v }))} />
             </div>
 
-            <div>
-              <h3 className="text-xs font-medium text-violet-600 uppercase tracking-wider mb-3">Transferts par quartier</h3>
+            <div className="rounded-xl p-4 bg-violet-50/80 border border-violet-200">
+              <h3 className="text-xs font-bold text-violet-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-violet-500" /> Transferts par quartier
+              </h3>
               <p className="text-xs text-slate-500 mb-3">Matin / Après-midi / Soir, heures et suppléments par quartier</p>
               <TransfersEditor value={form.transfers} onChange={(v) => setForm((f) => ({ ...f, transfers: v }))} />
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">Notes (facultatif)</label>
+            <div className="rounded-xl p-4 bg-slate-100/80 border border-slate-200">
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">📌 Notes (facultatif)</label>
               <TextInput
                 placeholder="Remarques, infos complémentaires..."
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                className="text-sm rounded-lg"
+                className="text-sm rounded-lg border-slate-200"
               />
             </div>
 
-            <div className="flex justify-end pt-2">
-              <PrimaryBtn type="submit" className="text-sm font-medium px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 border-indigo-600">
-                {editingId ? "Enregistrer les modifications" : "Créer l'activité"}
+            <div className="flex justify-end pt-4">
+              <PrimaryBtn type="submit" className="text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 border-0 shadow-lg shadow-indigo-500/25">
+                {editingId ? "💾 Enregistrer les modifications" : "✅ Créer l'activité"}
               </PrimaryBtn>
             </div>
           </div>
@@ -824,15 +834,19 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       )}
 
       {/* Liste des catégories en accordéon */}
-      <section className="bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-indigo-100 bg-gradient-to-r from-indigo-50/80 to-white">
-          <div className="flex items-center gap-2">
-            <span className="w-1 h-6 rounded-full bg-indigo-500" />
-            <h2 className="text-base font-semibold text-indigo-900">Activités par catégorie</h2>
+      <section className="bg-white rounded-xl border-2 border-indigo-200 shadow-lg overflow-hidden">
+        <div className="px-6 py-5 border-b-2 border-indigo-200 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-600">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+              <span className="text-white text-lg">📂</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">Activités par catégorie</h2>
+              <p className="text-sm text-white/90 mt-0.5">Cliquez sur une catégorie pour afficher les activités</p>
+            </div>
           </div>
-          <p className="text-xs text-indigo-600/80 mt-1 ml-3">Cliquez sur une catégorie pour afficher les activités</p>
         </div>
-        <div className="p-4 space-y-2">
+        <div className="p-4 space-y-3 bg-gradient-to-b from-slate-50/50 to-white">
           {CATEGORIES.map((cat) => {
             const activitiesInCategory = grouped[cat.key] || [];
             const isOpen = openCategories[cat.key];
@@ -842,30 +856,37 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               <div
                 key={cat.key}
                 data-category={cat.key}
-                className="rounded-lg border border-indigo-100 bg-white overflow-hidden transition-shadow hover:shadow-md hover:border-indigo-200"
-                style={{ contentVisibility: "auto", containIntrinsicSize: "auto 56px" }}
+                className="rounded-xl border-2 overflow-hidden transition-all hover:shadow-lg"
+                style={{
+                  contentVisibility: "auto",
+                  containIntrinsicSize: "auto 56px",
+                  borderColor: isOpen ? "rgb(99 102 241)" : "rgb(226 232 240)",
+                  backgroundColor: isOpen ? "rgb(238 242 255)" : "white",
+                }}
               >
                 <button
                   type="button"
                   onClick={() => toggleCategory(cat.key)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left border-b border-slate-100 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-300 ${
-                    isOpen ? "bg-indigo-50/70 hover:bg-indigo-50" : "bg-slate-50/50 hover:bg-indigo-50/50"
+                  className={`w-full flex items-center gap-3 px-4 py-4 text-left transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400 ${
+                    isOpen
+                      ? "bg-gradient-to-r from-indigo-100 to-violet-100 hover:from-indigo-200 hover:to-violet-200"
+                      : "bg-white hover:bg-indigo-50/80"
                   }`}
                   aria-expanded={isOpen}
                   aria-controls={`category-content-${cat.key}`}
                   id={`category-header-${cat.key}`}
                 >
-                  <span className="flex-shrink-0 w-8 h-8 rounded-md bg-indigo-500 text-white flex items-center justify-center text-sm font-semibold shadow-sm">
+                  <span className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-base font-bold shadow-md">
                     {cat.label.charAt(0)}
                   </span>
-                  <span className="flex-1 min-w-0 text-sm font-medium text-slate-800 truncate">
+                  <span className="flex-1 min-w-0 text-sm font-semibold text-slate-800 truncate">
                     {cat.label}
                   </span>
-                  <span className="text-xs text-indigo-600 font-medium tabular-nums bg-indigo-100 px-2 py-0.5 rounded">
+                  <span className="text-xs font-bold text-indigo-700 tabular-nums bg-indigo-200 px-3 py-1 rounded-lg">
                     {count} activité{count !== 1 ? "s" : ""}
                   </span>
                   <svg
-                    className={`flex-shrink-0 w-5 h-5 text-indigo-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                    className={`flex-shrink-0 w-5 h-5 text-indigo-600 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -885,14 +906,14 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
                     <table className="w-full text-sm min-w-[640px]">
                       <thead>
-                        <tr className="border-b border-indigo-100 bg-indigo-50/60">
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Activité</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Adulte</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Enfant</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Bébé</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Jours</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Notes</th>
-                          <th className="text-right py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Actions</th>
+                        <tr className="border-b-2 border-indigo-200 bg-gradient-to-r from-indigo-100 to-violet-100">
+                          <th className="text-left py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Activité</th>
+                          <th className="text-left py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Adulte</th>
+                          <th className="text-left py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Enfant</th>
+                          <th className="text-left py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Bébé</th>
+                          <th className="text-left py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Jours</th>
+                          <th className="text-left py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Notes</th>
+                          <th className="text-right py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -908,8 +929,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                         ))}
                         {activitiesInCategory.length === 0 && (
                           <tr>
-                            <td colSpan={7} className="py-12 text-center">
-                              <p className="text-sm text-slate-400">Aucune activité dans cette catégorie</p>
+                            <td colSpan={7} className="py-12 text-center bg-indigo-50/50">
+                              <p className="text-sm font-medium text-indigo-600">Aucune activité dans cette catégorie</p>
                             </td>
                           </tr>
                         )}
@@ -927,21 +948,21 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       {descriptionModal.isOpen && descriptionModal.activity && (
         <div
           ref={descriptionModalRef}
-          className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 bg-indigo-900/30 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
           onClick={handleCloseDescriptionModal}
         >
           <div
-            className="bg-white rounded-xl border border-indigo-200 shadow-xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-xl border-2 border-indigo-300 shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-5 py-4 border-b border-indigo-100 bg-indigo-50/50 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-indigo-900">
-                Description · {descriptionModal.activity.name}
+            <div className="px-6 py-4 border-b-2 border-indigo-200 bg-gradient-to-r from-indigo-500 to-violet-600 flex items-center justify-between">
+              <h3 className="text-base font-bold text-white">
+                📝 Description · {descriptionModal.activity.name}
               </h3>
               <button
                 type="button"
                 onClick={handleCloseDescriptionModal}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                className="p-2 rounded-lg text-white/90 hover:text-white hover:bg-white/20 transition-colors"
                 aria-label="Fermer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -949,7 +970,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 </svg>
               </button>
             </div>
-            <div className="p-5 flex-1 overflow-y-auto">
+            <div className="p-5 flex-1 overflow-y-auto bg-slate-50/50">
               <textarea
                 ref={textareaRefCallback}
                 value={descriptionModal.description}
@@ -957,25 +978,25 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 placeholder="Description de l'activité..."
                 disabled={user?.name !== "Ewen"}
                 readOnly={user?.name !== "Ewen"}
-                className={`w-full h-40 rounded-lg border border-indigo-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 resize-none ${
-                  user?.name !== "Ewen" ? "bg-slate-50 cursor-not-allowed" : ""
+                className={`w-full h-40 rounded-xl border-2 border-indigo-200 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 resize-none ${
+                  user?.name !== "Ewen" ? "bg-amber-50/50 cursor-not-allowed" : ""
                 }`}
               />
               {user?.name !== "Ewen" && (
-                <p className="text-xs text-amber-600 mt-2">Seul Ewen peut modifier la description.</p>
+                <p className="text-xs font-medium text-amber-700 mt-2 bg-amber-100 px-2 py-1.5 rounded-lg">Seul Ewen peut modifier la description.</p>
               )}
             </div>
-            <div className="px-5 py-4 border-t border-indigo-100 flex gap-2 justify-end bg-indigo-50/30">
+            <div className="px-6 py-4 border-t-2 border-indigo-200 flex gap-3 justify-end bg-gradient-to-r from-indigo-50 to-violet-50">
               <button
                 type="button"
                 onClick={handleCloseDescriptionModal}
-                className="text-sm font-medium px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors"
+                className="text-sm font-semibold px-4 py-2.5 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors"
               >
                 Fermer
               </button>
               {user?.name === "Ewen" && (
-                <PrimaryBtn onClick={handleSaveDescription} className="text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 border-indigo-600">
-                  Enregistrer
+                <PrimaryBtn onClick={handleSaveDescription} className="text-sm font-semibold px-5 py-2.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 border-0 shadow-md">
+                  💾 Enregistrer
                 </PrimaryBtn>
               )}
             </div>
