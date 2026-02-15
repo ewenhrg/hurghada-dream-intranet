@@ -1085,8 +1085,8 @@ export default function App() {
         {tab === "devis" ? (
           <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
               
-<div
-                  className="hd-content-card space-y-6 md:space-y-10 rounded-2xl p-4 md:p-6 lg:p-8"
+              <div 
+                  className="space-y-6 md:space-y-10 rounded-2xl p-4 md:p-6 lg:p-8"
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -1255,12 +1255,12 @@ export default function App() {
       {/* Modale des dates utilisées (même niveau que le bouton, hors scroll) */}
       {tab === "devis" && usedDates.length > 0 && showDatesModal && (
         <div
-          className="modal-overlay-enter fixed inset-0 z-[10000] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
           style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
           onClick={() => setShowDatesModal(false)}
         >
           <div
-            className="modal-panel-enter bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div

@@ -204,37 +204,6 @@ body::before {
   }
 }
 
-@keyframes pageEnter {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes modalOverlayEnter {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes modalPanelEnter {
-  from {
-    opacity: 0;
-    transform: scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
@@ -338,21 +307,9 @@ button {
 .hd-card:hover {
   transform: translateY(-2px);
   box-shadow: 
-    0 28px 56px -20px rgba(79, 70, 229, 0.45),
-    0 12px 24px -12px rgba(6, 182, 212, 0.25),
-    0 0 0 1px rgba(79, 70, 229, 0.2) inset;
+    0 24px 60px -25px rgba(79, 70, 229, 0.35),
+    0 0 0 1px rgba(79, 70, 229, 0.15) inset;
   border-color: var(--hd-border-hover);
-}
-
-/* Cartes type contenu principal : ombre colorée au survol */
-.hd-content-card {
-  transition: box-shadow var(--hd-transition-base), border-color var(--hd-transition-base);
-}
-.hd-content-card:hover {
-  box-shadow: 
-    0 30px 60px -35px rgba(15, 23, 42, 0.65),
-    0 20px 40px -25px rgba(79, 70, 229, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .hd-border-gradient {
@@ -956,33 +913,46 @@ table {
   transform: none !important;
 }
 
-/* Classes utilitaires pour animations - transitions d'apparition (courtes) */
+/* Classes utilitaires pour animations - optimisées */
 .animate-fade-in {
-  animation: fadeIn 0.25s ease-out both;
+  /* Commencer directement à opacity: 1 pour éviter les carrés blancs */
+  opacity: 1;
+  /* Animation désactivée par défaut pour performance */
+  /* animation: fadeIn 0.2s ease-out;
+  animation-fill-mode: both; */
 }
 
 .animate-slide-in {
-  animation: slideIn 0.25s ease-out both;
+  /* Commencer directement à opacity: 1 pour éviter les carrés blancs */
+  opacity: 1;
+  transform: translateX(0);
+  /* Animation désactivée par défaut pour performance */
+  /* animation: slideIn 0.2s ease-out;
+  animation-fill-mode: both; */
 }
 
 .animate-page-enter {
-  animation: pageEnter 0.28s ease-out both;
+  /* Commencer directement à opacity: 1 pour éviter les carrés blancs */
+  opacity: 1;
+  transform: translateY(0);
+  /* Animation désactivée par défaut pour performance */
+  /* animation: pageFadeIn 0.3s ease-out; */
 }
 
 .animate-slide-up {
-  animation: pageEnter 0.28s ease-out both;
+  /* Commencer directement à opacity: 1 pour éviter les carrés blancs */
+  opacity: 1;
+  transform: translateY(0);
+  /* Animation désactivée par défaut pour performance */
+  /* animation: slideUp 0.3s ease-out; */
 }
 
 .animate-scale-in {
-  animation: modalPanelEnter 0.22s ease-out both;
-}
-
-/* Modales : transition d'apparition overlay + panneau */
-.modal-overlay-enter {
-  animation: modalOverlayEnter 0.2s ease-out both;
-}
-.modal-panel-enter {
-  animation: modalPanelEnter 0.25s ease-out both;
+  /* Commencer directement à opacity: 1 pour éviter les carrés blancs */
+  opacity: 1;
+  transform: scale(1);
+  /* Animation désactivée par défaut pour performance */
+  /* animation: scaleIn 0.2s ease-out; */
 }
 
 /* Désactiver les animations pendant le scroll pour améliorer les performances */
@@ -1072,27 +1042,11 @@ table {
 /* Les animations sont désactivées par défaut pour éviter les carrés blancs */
 /* Utiliser les classes ci-dessus qui commencent directement à opacity: 1 */
 
-/* Focus visible : ring indigo/cyan bien visible (accessibilité) */
+/* Focus visible amélioré */
 *:focus-visible {
-  outline: none;
-  box-shadow: 
-    0 0 0 3px rgba(255, 255, 255, 0.95),
-    0 0 0 5px var(--hd-primary),
-    0 0 0 6px rgba(6, 182, 212, 0.4);
-  border-radius: 6px;
-}
-button:focus-visible,
-a:focus-visible,
-[role="button"]:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: none;
-  box-shadow: 
-    0 0 0 3px rgba(255, 255, 255, 0.95),
-    0 0 0 5px var(--hd-primary),
-    0 0 0 6px rgba(6, 182, 212, 0.4);
-  border-radius: 6px;
+  outline: 2px solid var(--hd-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* Transitions globales optimisées pour les éléments interactifs */
