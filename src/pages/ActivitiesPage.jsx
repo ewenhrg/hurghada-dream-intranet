@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
 import { uuid, currency, emptyTransfers, mergeTransfers, saveLS, loadLS } from "../utils";
-import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
+import { TextInput, NumberInput, PrimaryBtn } from "../components/ui";
 import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
 import { toast } from "../utils/toast.js";
@@ -528,7 +528,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   // Toutes les catégories sont maintenant toujours visibles pour éviter les carrés blancs
 
-  // Composant de ligne de table mémorisé pour améliorer les performances
+  // Ligne de table : style épuré
   const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canModify }) => {
     const hasDescription = !!activity.description;
     const availableDaysList = useMemo(() => {
@@ -536,44 +536,55 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }, [activity.availableDays]);
 
     return (
-      <tr 
-        className="border-t border-slate-200/60"
-      >
-        <td className="px-4 py-4 md:px-5 md:py-5 font-bold text-slate-800 text-base">{activity.name}</td>
-        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(activity.priceAdult, activity.currency)}</td>
-        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(activity.priceChild, activity.currency)}</td>
-        <td className="px-4 py-4 md:px-5 md:py-5 font-semibold text-slate-700">{currency(activity.priceBaby, activity.currency)}</td>
-        <td className="px-4 py-4 md:px-5 md:py-5">
-          <div className="flex gap-1.5 flex-wrap">
+      <tr className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
+        <td className="px-4 py-3 font-medium text-slate-800 text-sm">{activity.name}</td>
+        <td className="px-4 py-3 text-slate-600 text-sm tabular-nums">{currency(activity.priceAdult, activity.currency)}</td>
+        <td className="px-4 py-3 text-slate-600 text-sm tabular-nums">{currency(activity.priceChild, activity.currency)}</td>
+        <td className="px-4 py-3 text-slate-600 text-sm tabular-nums">{currency(activity.priceBaby, activity.currency)}</td>
+        <td className="px-4 py-3">
+          <div className="flex gap-1 flex-wrap">
             {availableDaysList.map((d) => (
               <span
                 key={d.key}
-                className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 text-xs font-bold border border-emerald-300/60 shadow-sm"
+                className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-medium"
               >
                 {d.label}
               </span>
             ))}
           </div>
         </td>
-        <td className="px-4 py-4 md:px-5 md:py-5 text-slate-600 text-sm">{activity.notes || <span className="text-slate-400 italic">—</span>}</td>
-        <td className="px-4 py-3 md:px-5 md:py-4 text-right">
-          <div className="flex gap-2 justify-end">
-            <GhostBtn 
-              onClick={() => onOpenDescription(activity)} 
-              variant="primary" 
-              size="sm"
-              className={hasDescription ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" : ""}
+        <td className="px-4 py-3 text-slate-500 text-xs max-w-[140px] truncate" title={activity.notes || ""}>
+          {activity.notes || "—"}
+        </td>
+        <td className="px-4 py-3 text-right">
+          <div className="flex gap-1.5 justify-end flex-wrap">
+            <button
+              type="button"
+              onClick={() => onOpenDescription(activity)}
+              className={`text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors ${
+                hasDescription
+                  ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
             >
-              📄 Description{hasDescription ? " ✓" : ""}
-            </GhostBtn>
+              Description{hasDescription ? " ✓" : ""}
+            </button>
             {canModify && (
               <>
-                <GhostBtn onClick={() => onEdit(activity)} variant="primary" size="sm">
-                  ✏️ Modifier
-                </GhostBtn>
-                <GhostBtn onClick={() => onDelete(activity.id)} variant="danger" size="sm">
-                  🗑️ Supprimer
-                </GhostBtn>
+                <button
+                  type="button"
+                  onClick={() => onEdit(activity)}
+                  className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                >
+                  Modifier
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(activity.id)}
+                  className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                >
+                  Supprimer
+                </button>
               </>
             )}
           </div>
@@ -604,71 +615,54 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     return true;
   });
 
+  const totalActivities = activities.length;
+
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b-2 border-slate-200/60">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-            <span className="text-2xl">🎯</span>
-          </div>
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 bg-clip-text text-transparent">
-              Gestion des activités
-            </h2>
-            <p className="text-sm md:text-base text-slate-600 font-medium mt-1">
-              Ajoutez une activité, ses prix, ses jours disponibles et ses transferts par quartier
-            </p>
-          </div>
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto">
+      {/* En-tête épuré */}
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+        <div>
+          <h1 className="text-xl md:text-2xl font-semibold text-slate-800 tracking-tight">
+            Gestion des activités
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {totalActivities} activité{totalActivities !== 1 ? "s" : ""} · Prix, jours et transferts par quartier
+          </p>
         </div>
         {user?.canAddActivity && (
           <PrimaryBtn
             onClick={handleToggleForm}
-            className="w-full sm:w-auto text-base font-bold px-6 py-3 shadow-lg"
+            className="w-full sm:w-auto text-sm font-medium px-5 py-2.5 rounded-lg"
           >
-            {showForm ? "❌ Annuler" : "➕ Ajouter une activité"}
+            {showForm ? "Annuler" : "Ajouter une activité"}
           </PrimaryBtn>
         )}
-      </div>
+      </header>
 
-      {/* Filtres et recherche */}
-      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-2xl border-2 border-slate-200/60 p-5 md:p-7 shadow-xl">
-        <div className="flex items-center gap-4 mb-5 pb-4 border-b-2 border-blue-200/40">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-            <span className="text-xl">🔍</span>
-          </div>
+      {/* Filtres compacts */}
+      <section className="bg-white rounded-xl border border-slate-200 p-4 md:p-5 shadow-sm">
+        <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
-              Recherche et filtres
-            </h3>
-            <p className="text-xs text-slate-600 mt-0.5">
-              Trouvez rapidement une activité
-            </p>
-          </div>
-        </div>
-        <div className="grid md:grid-cols-2 gap-5 md:gap-6">
-          <div>
-            <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              Rechercher une activité
+            <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
+              Recherche
             </label>
             <TextInput
               placeholder="Nom, notes ou description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="text-base shadow-md"
+              className="text-sm rounded-lg border-slate-200"
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-              Filtrer par jour
+            <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
+              Jour
             </label>
             <select
               value={selectedDay}
               onChange={(e) => setSelectedDay(e.target.value)}
-              className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-slate-300 focus:border-slate-400"
             >
-              <option value="">📅 Tous les jours</option>
+              <option value="">Tous les jours</option>
               {WEEKDAYS.map((day) => (
                 <option key={day.key} value={day.key}>
                   {day.label}
@@ -677,263 +671,214 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </select>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-blue-200/40 mt-2">
-          <span className="text-xs font-semibold text-slate-600">Catégories :</span>
+        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
+          <span className="text-xs text-slate-400">Catégories</span>
           <button
             type="button"
             onClick={openAllCategories}
-            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300/60 transition-colors"
+            className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
           >
             Ouvrir tout
           </button>
           <button
             type="button"
             onClick={closeAllCategories}
-            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300/60 transition-colors"
+            className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
           >
             Fermer tout
           </button>
         </div>
-      </div>
+      </section>
 
       {showForm && (
-        <form ref={formRef} onSubmit={handleCreate} className="space-y-5 md:space-y-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-5 md:p-7 lg:p-9 border-2 border-blue-200/60 shadow-xl">
-          <div className="flex items-center gap-4 mb-5 pb-4 border-b-2 border-blue-200/60">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-              <span className="text-2xl">{editingId ? "✏️" : "➕"}</span>
-            </div>
+        <form ref={formRef} onSubmit={handleCreate} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/50">
+            <h2 className="text-base font-semibold text-slate-800">
+              {editingId ? "Modifier l'activité" : "Nouvelle activité"}
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {editingId ? "Modifiez les champs ci-dessous" : "Renseignez les informations de l'activité"}
+            </p>
+          </div>
+          <div className="p-5 md:p-6 space-y-6">
             <div>
-              <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 bg-clip-text text-transparent">
-                {editingId ? "Modifier l'activité" : "Nouvelle activité"}
-              </h3>
-              <p className="text-xs text-slate-600 mt-0.5">
-                {editingId ? "Modifiez les informations de l'activité" : "Remplissez les informations de la nouvelle activité"}
-              </p>
+              <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Informations de base</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Nom *</label>
+                  <TextInput
+                    placeholder="Ex: Snorkeling"
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    className="text-sm rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Catégorie *</label>
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-slate-300 focus:border-slate-400"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c.key} value={c.key}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="bg-white/90 rounded-xl p-5 md:p-6 border-2 border-blue-100/60 shadow-lg">
-            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-blue-100/60">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                <span className="text-white text-sm">📋</span>
+            <div>
+              <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Tarification</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Adulte</label>
+                  <NumberInput
+                    placeholder="0"
+                    value={form.priceAdult}
+                    onChange={(e) => setForm((f) => ({ ...f, priceAdult: e.target.value }))}
+                    className="text-sm rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Enfant</label>
+                  <NumberInput
+                    placeholder="0"
+                    value={form.priceChild}
+                    onChange={(e) => setForm((f) => ({ ...f, priceChild: e.target.value }))}
+                    className="text-sm rounded-lg"
+                  />
+                  <TextInput
+                    placeholder="Âge (ex: 5-12 ans)"
+                    value={form.ageChild}
+                    onChange={(e) => setForm((f) => ({ ...f, ageChild: e.target.value }))}
+                    className="mt-1.5 text-xs rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Bébé</label>
+                  <NumberInput
+                    placeholder="0"
+                    value={form.priceBaby}
+                    onChange={(e) => setForm((f) => ({ ...f, priceBaby: e.target.value }))}
+                    className="text-sm rounded-lg"
+                  />
+                  <TextInput
+                    placeholder="Âge (ex: 0-4 ans)"
+                    value={form.ageBaby}
+                    onChange={(e) => setForm((f) => ({ ...f, ageBaby: e.target.value }))}
+                    className="mt-1.5 text-xs rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Devise</label>
+                  <TextInput
+                    placeholder="EUR"
+                    value={form.currency}
+                    onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))}
+                    className="text-sm rounded-lg font-medium"
+                  />
+                </div>
               </div>
-              <label className="text-sm md:text-base font-bold text-slate-800">Informations de base</label>
             </div>
-            <div className="grid md:grid-cols-2 gap-5 md:gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  Nom de l'activité *
-                </label>
-                <TextInput
-                  placeholder="Ex: Snorkeling"
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="text-base shadow-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                  Catégorie *
-                </label>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  className="w-full rounded-xl border-2 border-blue-300/60 bg-white/98 px-4 py-3 text-sm md:text-base font-medium text-slate-800 shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.key} value={c.key}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl p-5 md:p-6 border-2 border-emerald-200/60 shadow-lg">
-            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-emerald-200/60">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                <span className="text-white text-sm">💰</span>
-              </div>
-              <label className="text-sm md:text-base font-bold text-slate-800">Tarification</label>
+            <div>
+              <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Jours disponibles</h3>
+              <DaysSelector value={form.availableDays} onChange={(v) => setForm((f) => ({ ...f, availableDays: v }))} />
             </div>
-            <div className="grid md:grid-cols-4 gap-4 md:gap-5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-2">Prix adulte</label>
-                <NumberInput
-                  placeholder="0.00"
-                  value={form.priceAdult}
-                  onChange={(e) => setForm((f) => ({ ...f, priceAdult: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-2">Prix enfant</label>
-                <NumberInput
-                  placeholder="0.00"
-                  value={form.priceChild}
-                  onChange={(e) => setForm((f) => ({ ...f, priceChild: e.target.value }))}
-                />
-                <TextInput
-                  placeholder="Âge (ex: 5-12 ans)"
-                  value={form.ageChild}
-                  onChange={(e) => setForm((f) => ({ ...f, ageChild: e.target.value }))}
-                  className="mt-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-2">Prix bébé</label>
-                <NumberInput
-                  placeholder="0.00"
-                  value={form.priceBaby}
-                  onChange={(e) => setForm((f) => ({ ...f, priceBaby: e.target.value }))}
-                />
-                <TextInput
-                  placeholder="Âge (ex: 0-4 ans)"
-                  value={form.ageBaby}
-                  onChange={(e) => setForm((f) => ({ ...f, ageBaby: e.target.value }))}
-                  className="mt-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-2">Devise</label>
-                <TextInput
-                  placeholder="EUR"
-                  value={form.currency}
-                  onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))}
-                  className="text-base font-semibold"
-                />
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-xl p-5 md:p-6 border-2 border-amber-200/60 shadow-lg">
-            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-amber-200/60">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
-                <span className="text-white text-sm">📅</span>
-              </div>
-              <label className="text-sm md:text-base font-bold text-slate-800">Jours disponibles</label>
+            <div>
+              <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Transferts par quartier</h3>
+              <p className="text-xs text-slate-500 mb-3">Matin / Après-midi / Soir, heures et suppléments par quartier</p>
+              <TransfersEditor value={form.transfers} onChange={(v) => setForm((f) => ({ ...f, transfers: v }))} />
             </div>
-            <DaysSelector value={form.availableDays} onChange={(v) => setForm((f) => ({ ...f, availableDays: v }))} />
-          </div>
 
-          <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 rounded-xl p-5 md:p-6 border-2 border-purple-200/60 shadow-lg">
-            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-purple-200/60">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-                <span className="text-white text-sm">🚗</span>
-              </div>
-              <div className="flex-1">
-                <label className="text-sm md:text-base font-bold text-slate-800 block">Transferts par quartier</label>
-                <p className="text-xs text-slate-600 mt-1 font-medium">
-                  Activez Matin / Après-midi / Soir et indiquez les heures et suppléments pour chaque quartier
-                </p>
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">Notes (facultatif)</label>
+              <TextInput
+                placeholder="Remarques, infos complémentaires..."
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                className="text-sm rounded-lg"
+              />
             </div>
-            <TransfersEditor value={form.transfers} onChange={(v) => setForm((f) => ({ ...f, transfers: v }))} />
-          </div>
 
-          <div className="bg-slate-50/90 rounded-xl p-5 md:p-6 border-2 border-slate-200/60 shadow-lg">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center">
-                <span className="text-white text-sm">📝</span>
-              </div>
-              <label className="text-sm md:text-base font-bold text-slate-800">Notes (facultatif)</label>
+            <div className="flex justify-end pt-2">
+              <PrimaryBtn type="submit" className="text-sm font-medium px-5 py-2.5 rounded-lg">
+                {editingId ? "Enregistrer les modifications" : "Créer l'activité"}
+              </PrimaryBtn>
             </div>
-            <TextInput
-              placeholder="Informations supplémentaires, remarques..."
-              value={form.notes}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              className="text-base shadow-md"
-            />
-          </div>
-
-          <div className="flex justify-end pt-5 border-t-2 border-blue-200/60">
-            <PrimaryBtn type="submit" className="text-base font-bold px-8 py-3 shadow-lg">
-              {editingId ? "💾 Modifier l'activité" : "✅ Enregistrer"}
-            </PrimaryBtn>
           </div>
         </form>
       )}
 
-      {/* Liste des catégories en accordéon : fermées par défaut, clic pour ouvrir */}
-      <div className="bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 rounded-2xl border-2 border-slate-200/60 p-5 md:p-6 shadow-xl">
-        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200/60">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-            <span className="text-xl">📂</span>
-          </div>
-          <div>
-            <h3 className="text-lg md:text-xl font-bold text-slate-800">Activités par catégorie</h3>
-            <p className="text-xs text-slate-600 font-medium">Cliquez sur une catégorie pour afficher ou masquer les activités</p>
-          </div>
+      {/* Liste des catégories en accordéon */}
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/50">
+          <h2 className="text-base font-semibold text-slate-800">Activités par catégorie</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Cliquez sur une catégorie pour afficher les activités</p>
         </div>
-        <div className="space-y-3 md:space-y-4">
-        {CATEGORIES.map((cat) => {
-          const activitiesInCategory = grouped[cat.key] || [];
-          const isOpen = openCategories[cat.key];
-          const count = activitiesInCategory.length;
+        <div className="p-4 space-y-2">
+          {CATEGORIES.map((cat) => {
+            const activitiesInCategory = grouped[cat.key] || [];
+            const isOpen = openCategories[cat.key];
+            const count = activitiesInCategory.length;
 
-          return (
-            <div
-              key={cat.key}
-              data-category={cat.key}
-              className="rounded-2xl border-2 border-slate-200/70 bg-white/98 shadow-lg overflow-hidden transition-shadow hover:shadow-xl"
-              style={{ contentVisibility: "auto", containIntrinsicSize: "auto 80px" }}
-            >
-              <button
-                type="button"
-                onClick={() => toggleCategory(cat.key)}
-                className="w-full flex items-center gap-4 px-5 py-4 md:px-6 md:py-5 text-left bg-gradient-to-r from-slate-50 via-blue-50/50 to-indigo-50/50 hover:from-blue-50 hover:to-indigo-50 border-b border-slate-200/60 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:ring-inset"
-                aria-expanded={isOpen}
-                aria-controls={`category-content-${cat.key}`}
-                id={`category-header-${cat.key}`}
+            return (
+              <div
+                key={cat.key}
+                data-category={cat.key}
+                className="rounded-lg border border-slate-200 bg-white overflow-hidden transition-shadow hover:shadow-md"
+                style={{ contentVisibility: "auto", containIntrinsicSize: "auto 56px" }}
               >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md flex-shrink-0">
-                  <span className="text-white text-lg font-bold">{cat.label.charAt(0)}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent truncate">
-                    {cat.label}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                    {count} activité{count !== 1 ? "s" : ""}
-                  </p>
-                </div>
-                <span
-                  className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-slate-200/60 text-slate-600 transition-transform duration-200 ${
-                    isOpen ? "rotate-180" : ""
-                  }`}
-                  aria-hidden
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(cat.key)}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left bg-slate-50/50 hover:bg-slate-50 border-b border-slate-100 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-300"
+                  aria-expanded={isOpen}
+                  aria-controls={`category-content-${cat.key}`}
+                  id={`category-header-${cat.key}`}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <span className="flex-shrink-0 w-8 h-8 rounded-md bg-slate-200 text-slate-600 flex items-center justify-center text-sm font-semibold">
+                    {cat.label.charAt(0)}
+                  </span>
+                  <span className="flex-1 min-w-0 text-sm font-medium text-slate-800 truncate">
+                    {cat.label}
+                  </span>
+                  <span className="text-xs text-slate-500 tabular-nums">
+                    {count} activité{count !== 1 ? "s" : ""}
+                  </span>
+                  <svg
+                    className={`flex-shrink-0 w-5 h-5 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
-                </span>
-                <span className="hidden sm:inline px-3 py-1.5 text-sm font-bold text-slate-600 bg-white/80 rounded-lg border border-slate-200/80 shadow-sm">
-                  {count}
-                </span>
-              </button>
+                </button>
 
-              <div
-                id={`category-content-${cat.key}`}
-                role="region"
-                aria-labelledby={`category-header-${cat.key}`}
-                className={`overflow-hidden transition-all duration-300 ease-out ${
-                  isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-                }`}
-              >
-                <div className="rounded-b-2xl border-t-0 border-2 border-slate-200/60 bg-white/95 shadow-inner">
-                  <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0" style={{ WebkitOverflowScrolling: "touch" }}>
-                    <table className="w-full text-sm md:text-base min-w-full">
-                      <thead className="bg-gradient-to-r from-blue-50/80 via-indigo-50/80 to-purple-50/80 text-slate-800 text-xs md:text-sm font-bold border-b-2 border-blue-200/60">
-                        <tr>
-                          <th className="text-left px-4 py-3 md:px-5 md:py-4">Activité</th>
-                          <th className="text-left px-4 py-3 md:px-5 md:py-4">💰 Adulte</th>
-                          <th className="text-left px-4 py-3 md:px-5 md:py-4">👶 Enfant</th>
-                          <th className="text-left px-4 py-3 md:px-5 md:py-4">🍼 Bébé</th>
-                          <th className="text-left px-4 py-3 md:px-5 md:py-4">📅 Jours</th>
-                          <th className="text-left px-4 py-3 md:px-5 md:py-4">📝 Notes</th>
-                          <th className="text-right px-4 py-3 md:px-5 md:py-4">⚙️ Actions</th>
+                <div
+                  id={`category-content-${cat.key}`}
+                  role="region"
+                  aria-labelledby={`category-header-${cat.key}`}
+                  className={`overflow-hidden transition-all duration-200 ease-out ${
+                    isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+                    <table className="w-full text-sm min-w-[640px]">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50/80">
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Activité</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Adulte</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Enfant</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Bébé</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Jours</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Notes</th>
+                          <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -949,13 +894,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                         ))}
                         {activitiesInCategory.length === 0 && (
                           <tr>
-                            <td colSpan={7} className="px-4 py-10 md:py-14 text-center">
-                              <div className="flex flex-col items-center gap-2">
-                                <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">
-                                  <span className="text-2xl">📭</span>
-                                </div>
-                                <p className="text-slate-500 font-semibold text-sm">Aucune activité dans cette catégorie</p>
-                              </div>
+                            <td colSpan={7} className="py-12 text-center">
+                              <p className="text-sm text-slate-400">Aucune activité dans cette catégorie</p>
                             </td>
                           </tr>
                         )}
@@ -964,61 +904,63 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
-      </div>
+      </section>
 
-      {/* Modal de description */}
+      {/* Modal description */}
       {descriptionModal.isOpen && descriptionModal.activity && (
-        <div 
-          ref={descriptionModalRef} 
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+        <div
+          ref={descriptionModalRef}
+          className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={handleCloseDescriptionModal}
         >
-          <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scale-in">
-            <div className="bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 px-6 py-5 border-b-2 border-blue-400/60">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                  <span className="text-xl">📄</span>
-                </div>
-                <h3 className="text-xl font-bold text-white">
-                  Description - {descriptionModal.activity.name}
-                </h3>
-              </div>
+          <div
+            className="bg-white rounded-xl border border-slate-200 shadow-xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-800">
+                Description · {descriptionModal.activity.name}
+              </h3>
+              <button
+                type="button"
+                onClick={handleCloseDescriptionModal}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                aria-label="Fermer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <div className="p-6 flex-1 overflow-y-auto">
+            <div className="p-5 flex-1 overflow-y-auto">
               <textarea
                 ref={textareaRefCallback}
                 value={descriptionModal.description}
                 onChange={(e) => setDescriptionModal((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="Ajoutez une description pour cette activité..."
+                placeholder="Description de l'activité..."
                 disabled={user?.name !== "Ewen"}
                 readOnly={user?.name !== "Ewen"}
-                className={`w-full h-48 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm md:text-base text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 resize-none ${
-                  user?.name !== "Ewen" ? "bg-slate-100 cursor-not-allowed" : ""
+                className={`w-full h-40 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-300 focus:border-slate-400 resize-none ${
+                  user?.name !== "Ewen" ? "bg-slate-50 cursor-not-allowed" : ""
                 }`}
               />
               {user?.name !== "Ewen" && (
-                <p className="text-xs text-amber-600 mt-2 font-medium">
-                  ⚠️ Seul Ewen peut modifier la description.
-                </p>
-              )}
-              {user?.name === "Ewen" && (
-                <p className="text-xs text-slate-500 mt-2">
-                  💡 Cette description sera sauvegardée avec l'activité.
-                </p>
+                <p className="text-xs text-amber-600 mt-2">Seul Ewen peut modifier la description.</p>
               )}
             </div>
-            <div className="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
-              <GhostBtn
+            <div className="px-5 py-4 border-t border-slate-200 flex gap-2 justify-end bg-slate-50/50">
+              <button
+                type="button"
                 onClick={handleCloseDescriptionModal}
-                variant="primary"
+                className="text-sm font-medium px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors"
               >
                 Fermer
-              </GhostBtn>
+              </button>
               {user?.name === "Ewen" && (
-                <PrimaryBtn onClick={handleSaveDescription}>
+                <PrimaryBtn onClick={handleSaveDescription} className="text-sm font-medium px-4 py-2 rounded-lg">
                   Enregistrer
                 </PrimaryBtn>
               )}
