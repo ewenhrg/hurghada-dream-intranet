@@ -481,7 +481,21 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     });
     return base;
   }, [filteredActivities]);
-  
+
+  // Quand une recherche ou un filtre par jour est actif, ouvrir automatiquement les catégories qui ont des résultats
+  const hasActiveFilter = Boolean(debouncedSearchQuery.trim() || selectedDay !== "");
+  useEffect(() => {
+    if (!hasActiveFilter) return;
+    setOpenCategories((prev) => {
+      const next = { ...prev };
+      CATEGORIES.forEach((c) => {
+        const count = (grouped[c.key] || []).length;
+        if (count > 0) next[c.key] = true;
+      });
+      return next;
+    });
+  }, [hasActiveFilter, debouncedSearchQuery, selectedDay, grouped]);
+
   // Mémoriser les handlers pour éviter les re-renders
   const handleToggleForm = useCallback(() => {
     if (showForm) {
