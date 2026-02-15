@@ -1,5 +1,5 @@
 import { NEIGHBORHOODS } from "./constants";
-import { isBuggyActivity, isMotoCrossActivity } from "./utils/activityHelpers";
+import { isBuggyActivity, isMotoCrossActivity, isSpeedBoatActivity } from "./utils/activityHelpers";
 import { SPEED_BOAT_EXTRAS } from "./constants/activityExtras";
 import { logger } from "./utils/logger";
 
@@ -252,7 +252,7 @@ export function generateQuoteHTML(quote) {
     const transferSurchargeAmount = calculateTransferSurcharge(item);
     
     // Vérifier si c'est Speed Boat et récupérer les extras
-    const isSpeedBoat = item.activityName && item.activityName.toLowerCase().includes("speed boat");
+    const isSpeedBoat = item.activityName && isSpeedBoatActivity(item.activityName);
     let extrasInfo = [];
     
     if (isSpeedBoat) {

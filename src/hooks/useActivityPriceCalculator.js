@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { calculateCardPrice } from "../utils";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
+import { isSpeedBoatActivity } from "../utils/activityHelpers";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 
 /**
@@ -40,7 +41,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       const currencyCode = act?.currency || "EUR";
 
       // cas spécial Speed Boat
-      if (act && act.name && act.name.toLowerCase().includes("speed boat")) {
+      if (act && isSpeedBoatActivity(act.name)) {
         const ad = Number(it.adults || 0);
         const ch = Number(it.children || 0);
 

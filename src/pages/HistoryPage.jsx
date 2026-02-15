@@ -8,7 +8,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 
@@ -1337,7 +1337,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       const currencyCode = act?.currency || "EUR";
 
       // cas spécial Speed Boat
-      if (act && act.name && act.name.toLowerCase().includes("speed boat")) {
+      if (act && isSpeedBoatActivity(act.name)) {
         const ad = Number(it.adults || 0);
         const ch = Number(it.children || 0);
 
@@ -2044,7 +2044,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       </select>
                     </div>
                   )}
-                  {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") ? (
+                  {c.act && isSpeedBoatActivity(c.act.name) ? (
                     <div className="lg:col-span-2 space-y-4 md:space-y-5">
                       <div>
                         <p className="text-sm md:text-base font-bold text-slate-800 mb-3">⚡ Extras Speed Boat (plusieurs sélections possibles)</p>
@@ -2145,7 +2145,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   )}
                 </div>
                 {/* Extra dauphin (uniquement pour Speed Boat) - Modifiable par tous */}
-                {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") && (
+                {c.act && isSpeedBoatActivity(c.act.name) && (
                   <div className="flex items-center gap-3 mt-4 p-4 bg-cyan-50/60 rounded-xl border-2 border-cyan-300/70">
                     <input
                       type="checkbox"

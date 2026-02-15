@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -1449,7 +1449,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 </div>
 
               {/* extra - Cases à cocher pour Speed Boat, champs classiques pour les autres */}
-              {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") ? (
+              {c.act && isSpeedBoatActivity(c.act.name) ? (
                 <div className="space-y-5">
                   <div>
                     <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">Extras Speed Boat (plusieurs sélections possibles)</label>
@@ -2376,7 +2376,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ) : null}
 
               {/* Extra dauphin (uniquement pour Speed Boat) */}
-              {c.act && c.act.name && c.act.name.toLowerCase().includes("speed boat") && (
+              {c.act && isSpeedBoatActivity(c.act.name) && (
                 <div className="flex items-center gap-2 mt-2">
                   <input
                     type="checkbox"

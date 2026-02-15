@@ -17,6 +17,13 @@ export function getBuggyPrices(activityName) {
   return { simple: 0, family: 0 };
 }
 
+// Helper pour vérifier si une activité est Speed Boat (ex: "SPEED BOAT", "SPEEDBOAT", "Speed Boat")
+export function isSpeedBoatActivity(activityName) {
+  if (!activityName) return false;
+  const name = activityName.toLowerCase().trim();
+  return name.includes("speed boat") || name === "speedboat";
+}
+
 // Helper pour vérifier si une activité utilise les champs moto cross (ex: "MOTOCROSS", "Moto cross")
 export function isMotoCrossActivity(activityName) {
   if (!activityName) return false;
