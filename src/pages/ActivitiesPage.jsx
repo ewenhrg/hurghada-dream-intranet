@@ -704,10 +704,10 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       {showForm && (
         <form ref={formRef} onSubmit={handleCreate} className="bg-white rounded-xl border-2 border-indigo-200 shadow-lg overflow-hidden">
           <div className="px-6 py-5 border-b-2 border-indigo-300 bg-indigo-800">
-            <h2 className="text-lg font-bold text-white" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
+            <h2 className="text-lg font-bold mt-0" style={{ color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
               {editingId ? "✏️ Modifier l'activité" : "➕ Nouvelle activité"}
             </h2>
-            <p className="text-sm text-white font-medium mt-1" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
+            <p className="text-sm font-medium mt-1" style={{ color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
               {editingId ? "Modifiez les champs ci-dessous" : "Renseignez les informations de l'activité"}
             </p>
           </div>
@@ -841,8 +841,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               <span className="text-white text-lg">📂</span>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>Activités par catégorie</h2>
-              <p className="text-sm text-white font-medium mt-0.5" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>Cliquez sur une catégorie pour afficher les activités</p>
+              <h2 className="text-lg font-bold mt-0" style={{ color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>Activités par catégorie</h2>
+              <p className="text-sm font-medium mt-0.5" style={{ color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>Cliquez sur une catégorie pour afficher les activités</p>
             </div>
           </div>
         </div>
@@ -876,7 +876,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   aria-controls={`category-content-${cat.key}`}
                   id={`category-header-${cat.key}`}
                 >
-                  <span className="flex-shrink-0 w-10 h-10 rounded-xl bg-indigo-800 flex items-center justify-center text-base font-bold shadow-md text-white" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>
+                  <span className="flex-shrink-0 w-10 h-10 rounded-xl bg-indigo-800 flex items-center justify-center text-base font-bold shadow-md" style={{ color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>
                     {cat.label.charAt(0)}
                   </span>
                   <span className="flex-1 min-w-0 text-sm font-semibold text-slate-800 truncate">
