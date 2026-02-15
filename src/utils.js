@@ -153,6 +153,30 @@ export function emptyTransfers() {
   return obj;
 }
 
+/**
+ * Fusionne les transfers venant de Supabase avec la structure complète (emptyTransfers).
+ * Évite de perdre les heures de prise en charge quand la DB renvoie un objet vide ou partiel.
+ */
+export function mergeTransfers(fromDb) {
+  const base = emptyTransfers();
+  if (!fromDb || typeof fromDb !== "object") return base;
+  NEIGHBORHOODS.forEach((n) => {
+    const key = n.key;
+    if (fromDb[key] && typeof fromDb[key] === "object") {
+      base[key] = {
+        morningEnabled: fromDb[key].morningEnabled ?? base[key].morningEnabled,
+        morningTime: fromDb[key].morningTime ?? base[key].morningTime,
+        afternoonEnabled: fromDb[key].afternoonEnabled ?? base[key].afternoonEnabled,
+        afternoonTime: fromDb[key].afternoonTime ?? base[key].afternoonTime,
+        eveningEnabled: fromDb[key].eveningEnabled ?? base[key].eveningEnabled,
+        eveningTime: fromDb[key].eveningTime ?? base[key].eveningTime,
+        surcharge: Number(fromDb[key].surcharge) || base[key].surcharge,
+      };
+    }
+  });
+  return base;
+}
+
 export function saveLS(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));

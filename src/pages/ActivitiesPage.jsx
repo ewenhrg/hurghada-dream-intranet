@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
-import { uuid, currency, emptyTransfers, saveLS, loadLS } from "../utils";
+import { uuid, currency, emptyTransfers, mergeTransfers, saveLS, loadLS } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
@@ -126,7 +126,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       currency: activity.currency || "EUR",
       availableDays: activity.availableDays || [false, false, false, false, false, false, false],
       notes: activity.notes || "",
-      transfers: activity.transfers || emptyTransfers(),
+      transfers: mergeTransfers(activity.transfers),
     });
     setEditingId(activity.id);
     setShowForm(true);

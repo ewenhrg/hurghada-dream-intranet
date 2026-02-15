@@ -49,7 +49,7 @@ function ScrollOptimizer({ children }) {
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
-import { uuid, emptyTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
+import { uuid, emptyTransfers, mergeTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
 import { configureUserPermissions, loadUserFromSession } from "./utils/userPermissions";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
@@ -212,7 +212,7 @@ export default function App() {
               availableDays: row.available_days || [false, false, false, false, false, false, false],
               notes: row.notes || "",
               description: row.description || "",
-              transfers: row.transfers || emptyTransfers(),
+              transfers: mergeTransfers(row.transfers),
             };
           });
 
@@ -725,7 +725,8 @@ export default function App() {
           ? row.available_days
           : [false, false, false, false, false, false, false],
         notes: row.notes || "",
-        transfers: row.transfers || emptyTransfers(),
+        description: row.description || "",
+        transfers: mergeTransfers(row.transfers),
       };
     };
 
