@@ -174,14 +174,9 @@ export default function App() {
   const syncWithSupabase = useCallback(async () => {
     if (!supabase) return;
     try {
-      // Vérifier le cache
+      // Invalider le cache à chaque sync pour toujours avoir la liste à jour (évite les activités "disparues")
       const cacheKey = createCacheKey("activities", SITE_KEY);
-      const cached = activitiesCache.get(cacheKey);
-      if (cached) {
-        setActivities(cached);
-        setRemoteEnabled(true);
-        return;
-      }
+      activitiesCache.delete(cacheKey);
 
       // Vérifier si Supabase est configuré (pas un stub)
       const { error: testError } = await supabase.from("activities").select("id").limit(1);
@@ -191,23 +186,19 @@ export default function App() {
         setRemoteEnabled(true);
       }
 
-      // Récupérer toutes les activités - sélection spécifique pour réduire la taille des données
+      // Récupérer toutes les activités - une ligne par activité (pas de déduplication pour ne rien perdre)
       const { data, error } = await supabase
         .from("activities")
         .select("id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes, description, transfers")
         .eq("site_key", SITE_KEY)
         .order("id", { ascending: false });
       if (!error && Array.isArray(data)) {
-        // LIRE UNIQUEMENT depuis Supabase (source de vérité absolue)
-        // IGNORER COMPLÈTEMENT le localStorage local pour éviter les doublons
+        // LIRE UNIQUEMENT depuis Supabase (source de vérité absolue) - garder toutes les lignes
         if (data.length > 0) {
-          // Créer un Map des activités Supabase par leur ID Supabase
-          const supabaseActivitiesMap = new Map();
-          data.forEach((row) => {
+          const supabaseActivities = data.map((row) => {
             const supabaseId = row.id;
             const localId = supabaseId?.toString?.() || uuid();
-            
-            supabaseActivitiesMap.set(supabaseId, {
+            return {
               id: localId,
               supabase_id: supabaseId,
               name: row.name,
@@ -222,28 +213,9 @@ export default function App() {
               notes: row.notes || "",
               description: row.description || "",
               transfers: row.transfers || emptyTransfers(),
-            });
+            };
           });
 
-          const supabaseActivities = [];
-          const uniqueKeys = new Set();
-
-          // Fonction pour créer une clé unique d'une activité
-          const getUniqueKey = (activity) => {
-            return `${SITE_KEY}_${activity.name}_${activity.category || 'desert'}`;
-          };
-
-          // Ajouter UNIQUEMENT les activités Supabase (source de vérité absolue)
-          supabaseActivitiesMap.forEach((supabaseActivity) => {
-            const key = getUniqueKey(supabaseActivity);
-            if (!uniqueKeys.has(key)) {
-              supabaseActivities.push(supabaseActivity);
-              uniqueKeys.add(key);
-            }
-            // Si uniqueKeys.has(key) est true, on ignore cette activité (doublon dans Supabase)
-          });
-
-          // Mettre à jour le state, le localStorage et le cache avec UNIQUEMENT les données Supabase
           setActivities(supabaseActivities);
           saveLS(LS_KEYS.activities, supabaseActivities);
           activitiesCache.set(cacheKey, supabaseActivities);
