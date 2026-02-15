@@ -536,7 +536,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }, [activity.availableDays]);
 
     return (
-      <tr className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
+      <tr className="border-t border-slate-100 hover:bg-indigo-50/40 transition-colors">
         <td className="px-4 py-3 font-medium text-slate-800 text-sm">{activity.name}</td>
         <td className="px-4 py-3 text-slate-600 text-sm tabular-nums">{currency(activity.priceAdult, activity.currency)}</td>
         <td className="px-4 py-3 text-slate-600 text-sm tabular-nums">{currency(activity.priceChild, activity.currency)}</td>
@@ -546,7 +546,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             {availableDaysList.map((d) => (
               <span
                 key={d.key}
-                className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-medium"
+                className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 text-xs font-medium"
               >
                 {d.label}
               </span>
@@ -563,7 +563,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               onClick={() => onOpenDescription(activity)}
               className={`text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors ${
                 hasDescription
-                  ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
@@ -574,7 +574,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 <button
                   type="button"
                   onClick={() => onEdit(activity)}
-                  className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                  className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
                 >
                   Modifier
                 </button>
@@ -619,48 +619,57 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto">
-      {/* En-tête épuré */}
+      {/* En-tête avec accent couleur */}
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold text-slate-800 tracking-tight">
-            Gestion des activités
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {totalActivities} activité{totalActivities !== 1 ? "s" : ""} · Prix, jours et transferts par quartier
-          </p>
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <span className="text-white text-lg">🎯</span>
+          </div>
+          <div>
+            <h1 className="text-xl md:text-2xl font-semibold text-slate-800 tracking-tight">
+              Gestion des activités
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              {totalActivities} activité{totalActivities !== 1 ? "s" : ""} · Prix, jours et transferts par quartier
+            </p>
+          </div>
         </div>
         {user?.canAddActivity && (
           <PrimaryBtn
             onClick={handleToggleForm}
-            className="w-full sm:w-auto text-sm font-medium px-5 py-2.5 rounded-lg"
+            className="w-full sm:w-auto text-sm font-medium px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 border-indigo-600"
           >
             {showForm ? "Annuler" : "Ajouter une activité"}
           </PrimaryBtn>
         )}
       </header>
 
-      {/* Filtres compacts */}
-      <section className="bg-white rounded-xl border border-slate-200 p-4 md:p-5 shadow-sm">
+      {/* Filtres avec léger fond coloré */}
+      <section className="bg-white rounded-xl border border-indigo-100 p-4 md:p-5 shadow-sm bg-gradient-to-br from-white to-indigo-50/30">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="w-1 h-6 rounded-full bg-indigo-500" />
+          <h2 className="text-sm font-semibold text-indigo-900">Recherche et filtres</h2>
+        </div>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-medium text-indigo-700/80 uppercase tracking-wider mb-1.5">
               Recherche
             </label>
             <TextInput
               placeholder="Nom, notes ou description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="text-sm rounded-lg border-slate-200"
+              className="text-sm rounded-lg border-indigo-200 focus:ring-indigo-500/30 focus:border-indigo-400"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-medium text-indigo-700/80 uppercase tracking-wider mb-1.5">
               Jour
             </label>
             <select
               value={selectedDay}
               onChange={(e) => setSelectedDay(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-slate-300 focus:border-slate-400"
+              className="w-full rounded-lg border border-indigo-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
             >
               <option value="">Tous les jours</option>
               {WEEKDAYS.map((day) => (
@@ -671,12 +680,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </select>
           </div>
         </div>
-        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-          <span className="text-xs text-slate-400">Catégories</span>
+        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-indigo-100">
+          <span className="text-xs text-indigo-600/80">Catégories</span>
           <button
             type="button"
             onClick={openAllCategories}
-            className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            className="text-xs font-medium px-2.5 py-1.5 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
           >
             Ouvrir tout
           </button>
@@ -691,18 +700,18 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       </section>
 
       {showForm && (
-        <form ref={formRef} onSubmit={handleCreate} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/50">
-            <h2 className="text-base font-semibold text-slate-800">
+        <form ref={formRef} onSubmit={handleCreate} className="bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-white">
+            <h2 className="text-base font-semibold text-indigo-900">
               {editingId ? "Modifier l'activité" : "Nouvelle activité"}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-indigo-600/80 mt-0.5">
               {editingId ? "Modifiez les champs ci-dessous" : "Renseignez les informations de l'activité"}
             </p>
           </div>
           <div className="p-5 md:p-6 space-y-6">
             <div>
-              <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Informations de base</h3>
+              <h3 className="text-xs font-medium text-indigo-600 uppercase tracking-wider mb-3">Informations de base</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Nom *</label>
@@ -718,7 +727,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   <select
                     value={form.category}
                     onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-slate-300 focus:border-slate-400"
+                    className="w-full rounded-lg border border-indigo-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c.key} value={c.key}>
@@ -731,7 +740,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
 
             <div>
-              <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Tarification</h3>
+              <h3 className="text-xs font-medium text-emerald-600 uppercase tracking-wider mb-3">Tarification</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Adulte</label>
@@ -785,12 +794,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
 
             <div>
-              <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Jours disponibles</h3>
+              <h3 className="text-xs font-medium text-amber-600 uppercase tracking-wider mb-3">Jours disponibles</h3>
               <DaysSelector value={form.availableDays} onChange={(v) => setForm((f) => ({ ...f, availableDays: v }))} />
             </div>
 
             <div>
-              <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Transferts par quartier</h3>
+              <h3 className="text-xs font-medium text-violet-600 uppercase tracking-wider mb-3">Transferts par quartier</h3>
               <p className="text-xs text-slate-500 mb-3">Matin / Après-midi / Soir, heures et suppléments par quartier</p>
               <TransfersEditor value={form.transfers} onChange={(v) => setForm((f) => ({ ...f, transfers: v }))} />
             </div>
@@ -806,7 +815,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
 
             <div className="flex justify-end pt-2">
-              <PrimaryBtn type="submit" className="text-sm font-medium px-5 py-2.5 rounded-lg">
+              <PrimaryBtn type="submit" className="text-sm font-medium px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 border-indigo-600">
                 {editingId ? "Enregistrer les modifications" : "Créer l'activité"}
               </PrimaryBtn>
             </div>
@@ -815,10 +824,13 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       )}
 
       {/* Liste des catégories en accordéon */}
-      <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/50">
-          <h2 className="text-base font-semibold text-slate-800">Activités par catégorie</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Cliquez sur une catégorie pour afficher les activités</p>
+      <section className="bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-indigo-100 bg-gradient-to-r from-indigo-50/80 to-white">
+          <div className="flex items-center gap-2">
+            <span className="w-1 h-6 rounded-full bg-indigo-500" />
+            <h2 className="text-base font-semibold text-indigo-900">Activités par catégorie</h2>
+          </div>
+          <p className="text-xs text-indigo-600/80 mt-1 ml-3">Cliquez sur une catégorie pour afficher les activités</p>
         </div>
         <div className="p-4 space-y-2">
           {CATEGORIES.map((cat) => {
@@ -830,28 +842,30 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               <div
                 key={cat.key}
                 data-category={cat.key}
-                className="rounded-lg border border-slate-200 bg-white overflow-hidden transition-shadow hover:shadow-md"
+                className="rounded-lg border border-indigo-100 bg-white overflow-hidden transition-shadow hover:shadow-md hover:border-indigo-200"
                 style={{ contentVisibility: "auto", containIntrinsicSize: "auto 56px" }}
               >
                 <button
                   type="button"
                   onClick={() => toggleCategory(cat.key)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left bg-slate-50/50 hover:bg-slate-50 border-b border-slate-100 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-300"
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left border-b border-slate-100 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-300 ${
+                    isOpen ? "bg-indigo-50/70 hover:bg-indigo-50" : "bg-slate-50/50 hover:bg-indigo-50/50"
+                  }`}
                   aria-expanded={isOpen}
                   aria-controls={`category-content-${cat.key}`}
                   id={`category-header-${cat.key}`}
                 >
-                  <span className="flex-shrink-0 w-8 h-8 rounded-md bg-slate-200 text-slate-600 flex items-center justify-center text-sm font-semibold">
+                  <span className="flex-shrink-0 w-8 h-8 rounded-md bg-indigo-500 text-white flex items-center justify-center text-sm font-semibold shadow-sm">
                     {cat.label.charAt(0)}
                   </span>
                   <span className="flex-1 min-w-0 text-sm font-medium text-slate-800 truncate">
                     {cat.label}
                   </span>
-                  <span className="text-xs text-slate-500 tabular-nums">
+                  <span className="text-xs text-indigo-600 font-medium tabular-nums bg-indigo-100 px-2 py-0.5 rounded">
                     {count} activité{count !== 1 ? "s" : ""}
                   </span>
                   <svg
-                    className={`flex-shrink-0 w-5 h-5 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                    className={`flex-shrink-0 w-5 h-5 text-indigo-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -871,14 +885,14 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
                     <table className="w-full text-sm min-w-[640px]">
                       <thead>
-                        <tr className="border-b border-slate-200 bg-slate-50/80">
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Activité</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Adulte</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Enfant</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Bébé</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Jours</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Notes</th>
-                          <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                        <tr className="border-b border-indigo-100 bg-indigo-50/60">
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Activité</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Adulte</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Enfant</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Bébé</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Jours</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Notes</th>
+                          <th className="text-right py-3 px-4 text-xs font-semibold text-indigo-800 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -917,11 +931,11 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           onClick={handleCloseDescriptionModal}
         >
           <div
-            className="bg-white rounded-xl border border-slate-200 shadow-xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-xl border border-indigo-200 shadow-xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-800">
+            <div className="px-5 py-4 border-b border-indigo-100 bg-indigo-50/50 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-indigo-900">
                 Description · {descriptionModal.activity.name}
               </h3>
               <button
@@ -943,7 +957,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 placeholder="Description de l'activité..."
                 disabled={user?.name !== "Ewen"}
                 readOnly={user?.name !== "Ewen"}
-                className={`w-full h-40 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-300 focus:border-slate-400 resize-none ${
+                className={`w-full h-40 rounded-lg border border-indigo-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 resize-none ${
                   user?.name !== "Ewen" ? "bg-slate-50 cursor-not-allowed" : ""
                 }`}
               />
@@ -951,7 +965,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 <p className="text-xs text-amber-600 mt-2">Seul Ewen peut modifier la description.</p>
               )}
             </div>
-            <div className="px-5 py-4 border-t border-slate-200 flex gap-2 justify-end bg-slate-50/50">
+            <div className="px-5 py-4 border-t border-indigo-100 flex gap-2 justify-end bg-indigo-50/30">
               <button
                 type="button"
                 onClick={handleCloseDescriptionModal}
@@ -960,7 +974,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 Fermer
               </button>
               {user?.name === "Ewen" && (
-                <PrimaryBtn onClick={handleSaveDescription} className="text-sm font-medium px-4 py-2 rounded-lg">
+                <PrimaryBtn onClick={handleSaveDescription} className="text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 border-indigo-600">
                   Enregistrer
                 </PrimaryBtn>
               )}
