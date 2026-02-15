@@ -17,11 +17,11 @@ export function getBuggyPrices(activityName) {
   return { simple: 0, family: 0 };
 }
 
-// Helper pour vérifier si une activité utilise les champs moto cross
+// Helper pour vérifier si une activité utilise les champs moto cross (ex: "MOTOCROSS", "Moto cross")
 export function isMotoCrossActivity(activityName) {
   if (!activityName) return false;
   const name = activityName.toLowerCase();
-  return name.includes("moto cross");
+  return name.includes("moto cross") || name.includes("motocross");
 }
 
 // Helper pour obtenir les prix moto cross
