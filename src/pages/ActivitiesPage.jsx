@@ -85,6 +85,26 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   // État pour la modal de description
   const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, activity: null, description: "" });
 
+  // Catégories repliables (fermées par défaut) : cliquer pour ouvrir/fermer
+  const [openCategories, setOpenCategories] = useState(() => {
+    const initial = {};
+    CATEGORIES.forEach((c) => (initial[c.key] = false));
+    return initial;
+  });
+  const toggleCategory = useCallback((catKey) => {
+    setOpenCategories((prev) => ({ ...prev, [catKey]: !prev[catKey] }));
+  }, []);
+  const openAllCategories = useCallback(() => {
+    const next = {};
+    CATEGORIES.forEach((c) => (next[c.key] = true));
+    setOpenCategories(next);
+  }, []);
+  const closeAllCategories = useCallback(() => {
+    const next = {};
+    CATEGORIES.forEach((c) => (next[c.key] = false));
+    setOpenCategories(next);
+  }, []);
+
   // Sauvegarder le formulaire dans localStorage avec debounce (500ms pour réduire les écritures)
   useEffect(() => {
     sessionStorage.setItem('activitiesPageMounted', 'true');
@@ -643,6 +663,23 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </select>
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-blue-200/40 mt-2">
+          <span className="text-xs font-semibold text-slate-600">Catégories :</span>
+          <button
+            type="button"
+            onClick={openAllCategories}
+            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300/60 transition-colors"
+          >
+            Ouvrir tout
+          </button>
+          <button
+            type="button"
+            onClick={closeAllCategories}
+            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300/60 transition-colors"
+          >
+            Fermer tout
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -805,74 +842,120 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         </form>
       )}
 
-      {CATEGORIES.map((cat, catIdx) => {
-        const activitiesInCategory = grouped[cat.key] || [];
-        
-        return (
-          <div 
-            key={cat.key} 
-            data-category={cat.key}
-            className="space-y-4 md:space-y-5"
-            style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 500px' }}
-          >
-            <div className="flex items-center gap-4 pb-3 border-b-2 border-slate-200/60">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                <span className="text-white text-lg font-bold">{cat.label.charAt(0)}</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
-                  {cat.label}
-                </h3>
-              </div>
-              <span className="px-4 py-2 text-sm font-bold text-slate-700 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full border-2 border-slate-300/60 shadow-sm">
-                {activitiesInCategory.length} activité{activitiesInCategory.length > 1 ? "s" : ""}
-              </span>
-            </div>
-            <div className="rounded-2xl border-2 border-slate-200/60 bg-white/95 shadow-xl overflow-hidden">
-              <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
-                <table className="w-full text-sm md:text-base min-w-full">
-                  <thead className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 text-slate-800 text-xs md:text-sm font-bold border-b-2 border-blue-200/60">
-                    <tr>
-                      <th className="text-left px-4 py-4 md:px-5 md:py-5">Activité</th>
-                      <th className="text-left px-4 py-4 md:px-5 md:py-5">💰 Adulte</th>
-                      <th className="text-left px-4 py-4 md:px-5 md:py-5">👶 Enfant</th>
-                      <th className="text-left px-4 py-4 md:px-5 md:py-5">🍼 Bébé</th>
-                      <th className="text-left px-4 py-4 md:px-5 md:py-5">📅 Jours</th>
-                      <th className="text-left px-4 py-4 md:px-5 md:py-5">📝 Notes</th>
-                      <th className="text-right px-4 py-4 md:px-5 md:py-5">⚙️ Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activitiesInCategory.map((a) => (
-                      <ActivityRow
-                        key={a.id}
-                        activity={a}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onOpenDescription={handleOpenDescriptionModal}
-                        canModify={canModifyActivities}
-                      />
-                    ))}
-                    {activitiesInCategory.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-12 md:py-16 text-center">
-                          <div className="flex flex-col items-center gap-3">
-                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                              <span className="text-3xl">📭</span>
-                            </div>
-                            <p className="text-slate-500 font-semibold text-base">Aucune activité dans cette catégorie</p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+      {/* Liste des catégories en accordéon : fermées par défaut, clic pour ouvrir */}
+      <div className="bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 rounded-2xl border-2 border-slate-200/60 p-5 md:p-6 shadow-xl">
+        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200/60">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+            <span className="text-xl">📂</span>
           </div>
-        );
-      })}
-      
+          <div>
+            <h3 className="text-lg md:text-xl font-bold text-slate-800">Activités par catégorie</h3>
+            <p className="text-xs text-slate-600 font-medium">Cliquez sur une catégorie pour afficher ou masquer les activités</p>
+          </div>
+        </div>
+        <div className="space-y-3 md:space-y-4">
+        {CATEGORIES.map((cat) => {
+          const activitiesInCategory = grouped[cat.key] || [];
+          const isOpen = openCategories[cat.key];
+          const count = activitiesInCategory.length;
+
+          return (
+            <div
+              key={cat.key}
+              data-category={cat.key}
+              className="rounded-2xl border-2 border-slate-200/70 bg-white/98 shadow-lg overflow-hidden transition-shadow hover:shadow-xl"
+              style={{ contentVisibility: "auto", containIntrinsicSize: "auto 80px" }}
+            >
+              <button
+                type="button"
+                onClick={() => toggleCategory(cat.key)}
+                className="w-full flex items-center gap-4 px-5 py-4 md:px-6 md:py-5 text-left bg-gradient-to-r from-slate-50 via-blue-50/50 to-indigo-50/50 hover:from-blue-50 hover:to-indigo-50 border-b border-slate-200/60 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:ring-inset"
+                aria-expanded={isOpen}
+                aria-controls={`category-content-${cat.key}`}
+                id={`category-header-${cat.key}`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md flex-shrink-0">
+                  <span className="text-white text-lg font-bold">{cat.label.charAt(0)}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent truncate">
+                    {cat.label}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                    {count} activité{count !== 1 ? "s" : ""}
+                  </p>
+                </div>
+                <span
+                  className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-slate-200/60 text-slate-600 transition-transform duration-200 ${
+                    isOpen ? "rotate-180" : ""
+                  }`}
+                  aria-hidden
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+                <span className="hidden sm:inline px-3 py-1.5 text-sm font-bold text-slate-600 bg-white/80 rounded-lg border border-slate-200/80 shadow-sm">
+                  {count}
+                </span>
+              </button>
+
+              <div
+                id={`category-content-${cat.key}`}
+                role="region"
+                aria-labelledby={`category-header-${cat.key}`}
+                className={`overflow-hidden transition-all duration-300 ease-out ${
+                  isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+                }`}
+              >
+                <div className="rounded-b-2xl border-t-0 border-2 border-slate-200/60 bg-white/95 shadow-inner">
+                  <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0" style={{ WebkitOverflowScrolling: "touch" }}>
+                    <table className="w-full text-sm md:text-base min-w-full">
+                      <thead className="bg-gradient-to-r from-blue-50/80 via-indigo-50/80 to-purple-50/80 text-slate-800 text-xs md:text-sm font-bold border-b-2 border-blue-200/60">
+                        <tr>
+                          <th className="text-left px-4 py-3 md:px-5 md:py-4">Activité</th>
+                          <th className="text-left px-4 py-3 md:px-5 md:py-4">💰 Adulte</th>
+                          <th className="text-left px-4 py-3 md:px-5 md:py-4">👶 Enfant</th>
+                          <th className="text-left px-4 py-3 md:px-5 md:py-4">🍼 Bébé</th>
+                          <th className="text-left px-4 py-3 md:px-5 md:py-4">📅 Jours</th>
+                          <th className="text-left px-4 py-3 md:px-5 md:py-4">📝 Notes</th>
+                          <th className="text-right px-4 py-3 md:px-5 md:py-4">⚙️ Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activitiesInCategory.map((a) => (
+                          <ActivityRow
+                            key={a.id}
+                            activity={a}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                            onOpenDescription={handleOpenDescriptionModal}
+                            canModify={canModifyActivities}
+                          />
+                        ))}
+                        {activitiesInCategory.length === 0 && (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-10 md:py-14 text-center">
+                              <div className="flex flex-col items-center gap-2">
+                                <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">
+                                  <span className="text-2xl">📭</span>
+                                </div>
+                                <p className="text-slate-500 font-semibold text-sm">Aucune activité dans cette catégorie</p>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        </div>
+      </div>
+
       {/* Modal de description */}
       {descriptionModal.isOpen && descriptionModal.activity && (
         <div 
