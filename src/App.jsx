@@ -1122,105 +1122,6 @@ export default function App() {
                   </Suspense>
                 </ErrorBoundary>
               </div>
-              
-              {/* Boutons flottants : dates utilisées */}
-              <div className="fixed bottom-6 left-6 z-[9999] flex items-center gap-3">
-                {/* Bouton flottant pour voir les dates utilisées */}
-                {usedDates.length > 0 && (
-                  <button
-                    onClick={() => setShowDatesModal(true)}
-                    className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                    style={{
-                      backgroundColor: 'rgba(251, 191, 36, 0.95)',
-                      boxShadow: '0 8px 24px -8px rgba(180, 83, 9, 0.6)',
-                      position: 'fixed',
-                      bottom: '1.5rem',
-                      left: '1.5rem',
-                      zIndex: 9999
-                    }}
-                    title="Voir les dates utilisées"
-                  >
-                    <div className="relative">
-                      <span className="text-2xl">📅</span>
-                      <span 
-                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                        style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)' }}
-                      >
-                        {usedDates.length}
-                      </span>
-                    </div>
-                  </button>
-                )}
-              </div>
-
-              {/* Modale des dates utilisées */}
-              {usedDates.length > 0 && showDatesModal && (
-                    <div 
-                      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-                      onClick={() => setShowDatesModal(false)}
-                    >
-                      <div 
-                        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div 
-                          className="px-6 py-4 border-b flex items-center justify-between"
-                          style={{ backgroundColor: 'rgba(255, 251, 235, 0.5)' }}
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                            <h3 className="text-lg font-semibold text-amber-900">
-                              Dates déjà utilisées ({usedDates.length})
-                            </h3>
-                          </div>
-                          <button
-                            onClick={() => setShowDatesModal(false)}
-                            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-amber-100 transition-colors"
-                          >
-                            <span className="text-xl text-amber-700">×</span>
-                          </button>
-                        </div>
-                        <div className="p-6 overflow-y-auto flex-1">
-                          <div className="space-y-4">
-                            {usedDates.map(([date, activities]) => (
-                              <div
-                                key={date}
-                                className="rounded-xl p-4 border border-amber-200"
-                                style={{
-                                  backgroundColor: 'rgba(255, 251, 235, 0.5)',
-                                  boxShadow: '0 2px 8px -4px rgba(217, 119, 6, 0.2)'
-                                }}
-                              >
-                                <p className="text-sm font-semibold text-amber-900 mb-2">
-                                  {new Date(date + "T12:00:00").toLocaleDateString('fr-FR', { 
-                                    weekday: 'long', 
-                                    day: 'numeric', 
-                                    month: 'long' 
-                                  })}
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                  {activities.map((activity, idx) => (
-                                    <span
-                                      key={idx}
-                                      className="px-3 py-1 rounded-lg text-xs font-medium"
-                                      style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                        color: 'rgba(180, 83, 9, 0.9)',
-                                        border: '1px solid rgba(217, 119, 6, 0.3)'
-                                      }}
-                                    >
-                                      {activity}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-              )}
           </div>
         ) : (
           <div
@@ -1326,6 +1227,100 @@ export default function App() {
       >
         {footerText}
       </footer>
+
+      {/* Bouton dates utilisées : fixé au viewport (hors scroll) pour être visible tout le temps sur l'onglet Devis */}
+      {tab === "devis" && usedDates.length > 0 && (
+        <div className="fixed bottom-6 left-6 z-[9999]" aria-hidden>
+          <button
+            type="button"
+            onClick={() => setShowDatesModal(true)}
+            className="relative w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+            style={{
+              backgroundColor: "rgba(251, 191, 36, 0.95)",
+              boxShadow: "0 8px 24px -8px rgba(180, 83, 9, 0.6)",
+            }}
+            title="Voir les dates utilisées"
+          >
+            <span className="text-2xl">📅</span>
+            <span
+              className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white"
+              style={{ backgroundColor: "rgba(239, 68, 68, 0.9)" }}
+            >
+              {usedDates.length}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Modale des dates utilisées (même niveau que le bouton, hors scroll) */}
+      {tab === "devis" && usedDates.length > 0 && showDatesModal && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          onClick={() => setShowDatesModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="px-6 py-4 border-b flex items-center justify-between"
+              style={{ backgroundColor: "rgba(255, 251, 235, 0.5)" }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                <h3 className="text-lg font-semibold text-amber-900">
+                  Dates déjà utilisées ({usedDates.length})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDatesModal(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-amber-100 transition-colors"
+              >
+                <span className="text-xl text-amber-700">×</span>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="space-y-4">
+                {usedDates.map(([date, activities]) => (
+                  <div
+                    key={date}
+                    className="rounded-xl p-4 border border-amber-200"
+                    style={{
+                      backgroundColor: "rgba(255, 251, 235, 0.5)",
+                      boxShadow: "0 2px 8px -4px rgba(217, 119, 6, 0.2)",
+                    }}
+                  >
+                    <p className="text-sm font-semibold text-amber-900 mb-2">
+                      {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                      })}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {activities.map((activity, idx) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1 rounded-lg text-xs font-medium"
+                          style={{
+                            backgroundColor: "rgba(255, 255, 255, 0.9)",
+                            color: "rgba(180, 83, 9, 0.9)",
+                            border: "1px solid rgba(217, 119, 6, 0.3)",
+                          }}
+                        >
+                          {activity}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
