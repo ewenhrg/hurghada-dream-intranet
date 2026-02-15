@@ -707,7 +707,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             <h2 className="text-lg font-bold text-white">
               {editingId ? "✏️ Modifier l'activité" : "➕ Nouvelle activité"}
             </h2>
-            <p className="text-sm text-white/90 mt-1">
+            <p className="text-sm text-white font-medium mt-1 drop-shadow-sm">
               {editingId ? "Modifiez les champs ci-dessous" : "Renseignez les informations de l'activité"}
             </p>
           </div>
@@ -842,7 +842,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">Activités par catégorie</h2>
-              <p className="text-sm text-white/90 mt-0.5">Cliquez sur une catégorie pour afficher les activités</p>
+              <p className="text-sm text-white font-medium mt-0.5 drop-shadow-sm">Cliquez sur une catégorie pour afficher les activités</p>
             </div>
           </div>
         </div>
@@ -876,7 +876,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   aria-controls={`category-content-${cat.key}`}
                   id={`category-header-${cat.key}`}
                 >
-                  <span className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-base font-bold shadow-md">
+                  <span className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-base font-bold shadow-md text-white drop-shadow-md">
                     {cat.label.charAt(0)}
                   </span>
                   <span className="flex-1 min-w-0 text-sm font-semibold text-slate-800 truncate">
