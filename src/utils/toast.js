@@ -32,8 +32,8 @@ function removeToast(toastElement) {
   }, 300);
 }
 
-// Afficher un toast
-function showToast(message, type = "info", duration = 4000) {
+// Afficher un toast (durée par défaut 2 s pour éviter l'accumulation de notifs)
+function showToast(message, type = "info", duration = 2000) {
   if (!toastContainer) initToast();
 
   const toast = document.createElement("div");
