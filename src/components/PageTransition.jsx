@@ -27,11 +27,9 @@ export function PageTransition({ children }) {
 
   return (
     <div
-      className={`animate-page-enter ${
-        transitionStage === "exiting" ? "opacity-0" : "opacity-100"
-      }`}
+      className={transitionStage === "exiting" ? "opacity-0" : "animate-page-enter"}
       style={{
-        transition: "opacity 0.15s ease-out",
+        transition: transitionStage === "exiting" ? "opacity 0.2s ease-in" : "none",
       }}
     >
       {children}

@@ -948,11 +948,11 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       {descriptionModal.isOpen && descriptionModal.activity && (
         <div
           ref={descriptionModalRef}
-          className="fixed inset-0 bg-indigo-900/30 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          className="modal-overlay-enter fixed inset-0 bg-indigo-900/30 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
           onClick={handleCloseDescriptionModal}
         >
           <div
-            className="bg-white rounded-xl border-2 border-indigo-300 shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
+            className="modal-panel-enter bg-white rounded-xl border-2 border-indigo-300 shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 py-4 border-b-2 border-indigo-200 bg-gradient-to-r from-indigo-500 to-violet-600 flex items-center justify-between">
