@@ -1085,7 +1085,7 @@ export default function App() {
                     {t("nav.users")}
                   </Pill>
                 )}
-                {(user?.name === "Ewen" || user?.name === "Léa" || user?.name === "Laly") && (
+                {(user?.name === "Ewen" || user?.name === "Léa") && (
                   <Pill active={tab === "hotels"} onClick={() => setTab("hotels")}>
                     🏨 Hôtels
                   </Pill>
@@ -1231,7 +1231,7 @@ export default function App() {
             </Section>
           )}
 
-          {tab === "hotels" && (user?.name === "Ewen" || user?.name === "Léa" || user?.name === "Laly") && (
+          {tab === "hotels" && (user?.name === "Ewen" || user?.name === "Léa") && (
             <Section title="Gestion des hôtels" subtitle="Associez les hôtels à leurs quartiers">
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>

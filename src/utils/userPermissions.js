@@ -1,24 +1,26 @@
 /**
  * Helper pour gérer les permissions utilisateur
- * Évite la duplication de code dans App.jsx
+ * Utilise la config centralisée (constants/permissions.js) pour la cohérence
  */
 
 import { logger } from "./logger";
+import { getDefaultPermissionForm } from "../constants/permissions";
 
 /**
- * Configure les permissions par défaut pour un utilisateur
- * @param {Object} userData - Données utilisateur
- * @returns {Object} - Données utilisateur avec permissions configurées
+ * Applique les valeurs par défaut manquantes puis les overrides Léa / Ewen
+ * @param {Object} userData - Données utilisateur (session)
+ * @returns {Object|null} - Données utilisateur avec permissions configurées
  */
 export function configureUserPermissions(userData) {
   if (!userData) return null;
 
-  // S'assurer que les valeurs par défaut sont correctes pour l'accès aux pages
-  if (userData.canAccessActivities === undefined) userData.canAccessActivities = true;
-  if (userData.canAccessHistory === undefined) userData.canAccessHistory = true;
-  if (userData.canAccessTickets === undefined) userData.canAccessTickets = true;
+  const defaults = getDefaultPermissionForm();
+  Object.entries(defaults).forEach(([key, value]) => {
+    if (userData[key] === undefined) {
+      userData[key] = value;
+    }
+  });
 
-  // Donner tous les accès à Léa sauf canResetData
   if (userData.name === "Léa") {
     userData.canDeleteQuote = true;
     userData.canAddActivity = true;
@@ -30,11 +32,18 @@ export function configureUserPermissions(userData) {
     userData.canAccessModifications = true;
     userData.canAccessSituation = true;
     userData.canAccessUsers = true;
-    userData.canResetData = false; // Ne pas donner l'accès au reset
+    userData.canResetData = false;
   }
 
-  // Donner tous les accès à Ewen
   if (userData.name === "Ewen") {
+    userData.canDeleteQuote = true;
+    userData.canAddActivity = true;
+    userData.canEditActivity = true;
+    userData.canDeleteActivity = true;
+    userData.canResetData = true;
+    userData.canAccessActivities = true;
+    userData.canAccessHistory = true;
+    userData.canAccessTickets = true;
     userData.canAccessModifications = true;
     userData.canAccessSituation = true;
     userData.canAccessUsers = true;
@@ -59,4 +68,3 @@ export function loadUserFromSession() {
     return null;
   }
 }
-

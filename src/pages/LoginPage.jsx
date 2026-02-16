@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { logger } from "../utils/logger";
+import { dbUserToSessionUser } from "../constants/permissions";
 
 export function LoginPage({ onSuccess }) {
   const [code, setCode] = useState("");
@@ -37,35 +38,27 @@ export function LoginPage({ onSuccess }) {
           return;
         }
 
-        // Sauvegarder les informations utilisateur dans sessionStorage
-        const userPermissions = {
-          id: data.id,
-          name: data.name,
-          code: data.code,
-          canDeleteQuote: data.can_delete_quote || false,
-          canAddActivity: data.can_add_activity || false,
-          canEditActivity: data.can_edit_activity || false,
-          canDeleteActivity: data.can_delete_activity || false,
-          canResetData: data.can_reset_data || false,
-          canAccessActivities: data.can_access_activities !== false, // true par défaut si null
-          canAccessHistory: data.can_access_history !== false, // true par défaut si null
-          canAccessTickets: data.can_access_tickets !== false, // true par défaut si null
-          canAccessModifications: data.can_access_modifications || false,
-          canAccessSituation: data.can_access_situation || false,
-          canAccessUsers: data.can_access_users || false,
-        };
-        
-        // Donner tous les accès à Léa et Laly sauf canResetData
-        if (data.name === "Léa" || data.name === "Laly") {
+        // Construire la session à partir de la base (source unique des permissions)
+        const userPermissions = dbUserToSessionUser(data);
+        if (!userPermissions) {
+          setError("Données utilisateur invalides.");
+          setLoading(false);
+          return;
+        }
+        // Override pour Léa : tous les accès sauf reset
+        if (data.name === "Léa") {
           userPermissions.canDeleteQuote = true;
           userPermissions.canAddActivity = true;
           userPermissions.canEditActivity = true;
           userPermissions.canDeleteActivity = true;
           userPermissions.canAccessActivities = true;
           userPermissions.canAccessHistory = true;
-          userPermissions.canResetData = false; // Ne pas donner l'accès au reset
+          userPermissions.canAccessTickets = true;
+          userPermissions.canAccessModifications = true;
+          userPermissions.canAccessSituation = true;
+          userPermissions.canAccessUsers = true;
+          userPermissions.canResetData = false;
         }
-        
         sessionStorage.setItem("hd_ok", "1");
         sessionStorage.setItem("hd_user", JSON.stringify(userPermissions));
 
@@ -75,16 +68,25 @@ export function LoginPage({ onSuccess }) {
         // Code par défaut : Ewen
         if (code === "040203") {
           sessionStorage.setItem("hd_ok", "1");
-          sessionStorage.setItem("hd_user", JSON.stringify({
-            id: 1,
-            name: "Ewen",
-            code: "040203",
-            canDeleteQuote: true,
-            canAddActivity: true,
-            canEditActivity: true,
-            canDeleteActivity: true,
-            canResetData: true,
-          }));
+          sessionStorage.setItem(
+            "hd_user",
+            JSON.stringify({
+              id: 1,
+              name: "Ewen",
+              code: "040203",
+              canDeleteQuote: true,
+              canAddActivity: true,
+              canEditActivity: true,
+              canDeleteActivity: true,
+              canResetData: true,
+              canAccessActivities: true,
+              canAccessHistory: true,
+              canAccessTickets: true,
+              canAccessModifications: true,
+              canAccessSituation: true,
+              canAccessUsers: true,
+            })
+          );
           onSuccess();
         } else {
           setError("Code d'accès incorrect. Veuillez réessayer.");

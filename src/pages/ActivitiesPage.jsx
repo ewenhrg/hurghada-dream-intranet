@@ -22,8 +22,14 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   // Debounce de la recherche pour améliorer les performances
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
-  // Vérifier si l'utilisateur peut modifier/supprimer les activités (Léa, Laly, Ewen et utilisateurs avec accès Situation)
-  const canModifyActivities = user?.name === "Léa" || user?.name === "Laly" || user?.name === "Ewen" || user?.canAccessSituation || user?.name === "situation";
+  // Vérifier si l'utilisateur peut modifier/supprimer les activités (noms fixes ou permissions en base)
+  const canModifyActivities =
+    user?.name === "Léa" ||
+    user?.name === "Ewen" ||
+    user?.canAccessSituation === true ||
+    user?.name === "situation" ||
+    user?.canEditActivity === true ||
+    user?.canDeleteActivity === true;
 
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
@@ -139,7 +145,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   const handleEdit = useCallback((activity) => {
     if (!canModifyActivities) {
-      toast.warning("Seuls Léa, Laly et Ewen peuvent modifier les activités.");
+      toast.warning("Seuls Léa et Ewen peuvent modifier les activités.");
       return;
     }
     setForm({
@@ -235,7 +241,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     
     // Vérifier les permissions
     if (isEditing && !canModifyActivities) {
-      toast.warning("Seuls Léa, Laly et Ewen peuvent modifier les activités.");
+      toast.warning("Seuls Léa et Ewen peuvent modifier les activités.");
       return;
     }
     if (!isEditing && !user?.canAddActivity) {
@@ -706,7 +712,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   const handleDelete = useCallback(async (id) => {
     if (!canModifyActivities) {
-      toast.warning("Seuls Léa, Laly et Ewen peuvent supprimer les activités.");
+      toast.warning("Seuls Léa et Ewen peuvent supprimer les activités.");
       return;
     }
     const activityToDelete = activitiesMap.get(id);
@@ -984,35 +990,39 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               {showForm ? "Annuler" : "➕ Ajouter une activité"}
             </PrimaryBtn>
           )}
-          {supabase && (
-            <PrimaryBtn
-              onClick={handleVerifyAndSync}
-              className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border-0 shadow-lg shadow-green-500/25"
-            >
-              🔍 Vérifier & Synchroniser
-            </PrimaryBtn>
+          {user?.name === "Ewen" && (
+            <>
+              {supabase && (
+                <PrimaryBtn
+                  onClick={handleVerifyAndSync}
+                  className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border-0 shadow-lg shadow-green-500/25"
+                >
+                  🔍 Vérifier & Synchroniser
+                </PrimaryBtn>
+              )}
+              <PrimaryBtn
+                onClick={handleBackup}
+                className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 border-0 shadow-lg shadow-amber-500/25"
+              >
+                💾 Sauvegarder tout
+              </PrimaryBtn>
+              <>
+                <input
+                  ref={restoreFileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={handleRestoreFileChange}
+                />
+                <PrimaryBtn
+                  onClick={handleRestoreClick}
+                  className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 border-0 shadow-lg shadow-sky-500/25"
+                >
+                  📂 Restaurer une sauvegarde
+                </PrimaryBtn>
+              </>
+            </>
           )}
-          <PrimaryBtn
-            onClick={handleBackup}
-            className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 border-0 shadow-lg shadow-amber-500/25"
-          >
-            💾 Sauvegarder tout
-          </PrimaryBtn>
-          <>
-            <input
-              ref={restoreFileInputRef}
-              type="file"
-              accept=".json,application/json"
-              className="hidden"
-              onChange={handleRestoreFileChange}
-            />
-            <PrimaryBtn
-              onClick={handleRestoreClick}
-              className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 border-0 shadow-lg shadow-sky-500/25"
-            >
-              📂 Restaurer une sauvegarde
-            </PrimaryBtn>
-          </>
         </div>
       </header>
 
