@@ -265,8 +265,22 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       // Création
       next = [activityData, ...activities];
     }
+    
+    // SAUVEGARDE LOCALE IMMÉDIATE (AVANT Supabase) pour garantir la persistance
     setActivities(next);
     saveLS(LS_KEYS.activities, next);
+    
+    // Vérification que la sauvegarde locale s'est bien passée
+    const savedActivities = loadLS(LS_KEYS.activities, []);
+    const savedActivity = savedActivities.find((a) => a.id === activityData.id);
+    if (savedActivity) {
+      logger.log(`✅ Sauvegarde locale confirmée pour "${activityData.name}" (ID: ${activityData.id})`);
+      logger.log(`📦 Total d'activités sauvegardées localement: ${savedActivities.length}`);
+    } else {
+      logger.error(`❌ ERREUR: L'activité "${activityData.name}" n'a pas été trouvée dans le localStorage après sauvegarde!`);
+      toast.error("Erreur lors de la sauvegarde locale. Veuillez réessayer.");
+      return; // Arrêter ici si la sauvegarde locale a échoué
+    }
 
     // Envoyer à Supabase si configuré (essayer toujours si supabase existe)
     if (supabase) {
@@ -302,12 +316,36 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         if (isEditing && supabaseId) {
           // MODIFICATION : utiliser UPDATE avec l'ID Supabase
           logger.log("🔄 Mise à jour dans Supabase (ID:", supabaseId, "):", supabaseData);
+          
+          // S'assurer que la sauvegarde locale est à jour AVANT la mise à jour Supabase
+          const currentSavedActivities = loadLS(LS_KEYS.activities, []);
+          const currentActivity = currentSavedActivities.find((a) => a.id === activityData.id);
+          if (!currentActivity) {
+            logger.error(`❌ ERREUR CRITIQUE: L'activité "${activityData.name}" n'existe pas dans le localStorage avant la mise à jour Supabase!`);
+            toast.error("Erreur: activité non trouvée localement. La modification a été annulée.");
+            return;
+          }
+          
           const result = await supabase
             .from("activities")
             .update(supabaseData)
             .eq("id", supabaseId);
           data = result.data;
           error = result.error;
+          
+          // Après la mise à jour Supabase, s'assurer que la sauvegarde locale est toujours à jour
+          if (!error) {
+            const finalSavedActivities = loadLS(LS_KEYS.activities, []);
+            const finalActivity = finalSavedActivities.find((a) => a.id === activityData.id);
+            if (finalActivity) {
+              logger.log(`✅ Sauvegarde locale confirmée après mise à jour Supabase pour "${activityData.name}"`);
+            } else {
+              logger.error(`❌ ERREUR: L'activité "${activityData.name}" a disparu du localStorage après la mise à jour Supabase!`);
+              // Réessayer la sauvegarde locale
+              setActivities(next);
+              saveLS(LS_KEYS.activities, next);
+            }
+          }
         } else {
           // CRÉATION : vérifier d'abord si une activité similaire existe déjà dans Supabase
           const { data: existingActivities, error: checkError } = await supabase
@@ -325,7 +363,17 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             next = next.map((a) => (a.id === activityData.id ? { ...a, supabase_id: existingSupabaseId } : a));
             setActivities(next);
             saveLS(LS_KEYS.activities, next);
-            logger.log("✅ Activité trouvée dans Supabase, réutilisation de l'ID:", existingSupabaseId);
+            
+            // Vérification que la mise à jour avec supabase_id s'est bien passée
+            const updatedSavedActivities = loadLS(LS_KEYS.activities, []);
+            const updatedActivity = updatedSavedActivities.find((a) => a.id === activityData.id);
+            if (updatedActivity && updatedActivity.supabase_id === existingSupabaseId) {
+              logger.log(`✅ Activité trouvée dans Supabase, réutilisation de l'ID: ${existingSupabaseId}`);
+              logger.log(`📦 Sauvegarde locale confirmée avec supabase_id pour "${activityData.name}"`);
+            } else {
+              logger.error(`❌ ERREUR: La mise à jour avec supabase_id a échoué pour "${activityData.name}"`);
+            }
+            
             data = existingActivities;
             error = null;
           } else {
@@ -343,6 +391,16 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               next = next.map((a) => (a.id === activityData.id ? { ...a, supabase_id: newSupabaseId } : a));
               setActivities(next);
               saveLS(LS_KEYS.activities, next);
+              
+              // Vérification que la mise à jour avec supabase_id s'est bien passée
+              const updatedSavedActivities = loadLS(LS_KEYS.activities, []);
+              const updatedActivity = updatedSavedActivities.find((a) => a.id === activityData.id);
+              if (updatedActivity && updatedActivity.supabase_id === newSupabaseId) {
+                logger.log(`✅ Nouveau supabase_id sauvegardé localement: ${newSupabaseId} pour "${activityData.name}"`);
+                logger.log(`📦 Sauvegarde locale confirmée avec supabase_id`);
+              } else {
+                logger.error(`❌ ERREUR: La mise à jour avec le nouveau supabase_id a échoué pour "${activityData.name}"`);
+              }
             }
           }
         }
@@ -368,6 +426,16 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           const action = isEditing ? "modifiée" : "créée";
           logger.log(`✅ Activité ${action} avec succès dans Supabase!`);
           logger.log("Données retournées:", data);
+          
+          // Confirmation visuelle de la sauvegarde complète (locale + Supabase)
+          toast.success(
+            `✅ Activité "${activityData.name}" ${action} avec succès!\n` +
+            `📦 Sauvegardée localement et dans Supabase.`
+          );
+          
+          // Vérification finale que tout est bien sauvegardé
+          const finalSavedActivities = loadLS(LS_KEYS.activities, []);
+          logger.log(`📊 Vérification finale: ${finalSavedActivities.length} activités dans le localStorage`);
         }
       } catch (err) {
         logger.error("❌ EXCEPTION lors de l'envoi à Supabase:", err);
@@ -375,7 +443,15 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       }
     } else {
       logger.warn("⚠️ Supabase n'est pas disponible (stub)");
-      toast.warning("Supabase n'est pas configuré. L'activité est sauvegardée uniquement en local.");
+      const action = isEditing ? "modifiée" : "créée";
+      toast.success(
+        `✅ Activité "${activityData.name}" ${action}!\n` +
+        `📦 Sauvegardée localement (Supabase non configuré).`
+      );
+      
+      // Vérification que la sauvegarde locale s'est bien passée
+      const finalSavedActivities = loadLS(LS_KEYS.activities, []);
+      logger.log(`📊 Vérification finale (sans Supabase): ${finalSavedActivities.length} activités dans le localStorage`);
     }
 
     setForm({
