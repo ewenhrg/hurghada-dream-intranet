@@ -9,6 +9,12 @@ import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { useDebounce } from "../hooks/useDebounce";
 import { TableRowSkeleton } from "../components/Skeleton";
+import {
+  downloadBackup,
+  parseBackupFile,
+  restoreFromBackup,
+  getBackupFilename,
+} from "../utils/activitiesBackup";
 
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,6 +87,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   const saveTimeoutRef = useRef(null);
   const formRef = useRef(null);
   const descriptionModalRef = useRef(null);
+  const restoreFileInputRef = useRef(null);
   
   // État pour la modal de description
   const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, activity: null, description: "" });
@@ -623,6 +630,80 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }
   }, [activities, setActivities, supabase]);
 
+  // Sauvegarde complète de toutes les activités (fichier JSON téléchargé)
+  const handleBackup = useCallback(() => {
+    const list = loadLS(LS_KEYS.activities, []);
+    if (list.length === 0) {
+      toast.warning("Aucune activité à sauvegarder.");
+      return;
+    }
+    try {
+      const backup = downloadBackup(list, SITE_KEY);
+      saveLS(LS_KEYS.activities, list);
+      logger.log(`💾 Sauvegarde créée: ${backup.count} activités → ${getBackupFilename()}`);
+      toast.success(
+        `✅ Sauvegarde créée !\n${backup.count} activité(s) exportée(s).\nFichier téléchargé.`
+      );
+    } catch (err) {
+      logger.error("❌ Erreur lors de la sauvegarde:", err);
+      toast.error("Erreur lors de la création de la sauvegarde.");
+    }
+  }, []);
+
+  // Restauration depuis un fichier de sauvegarde
+  const handleRestoreClick = useCallback(() => {
+    restoreFileInputRef.current?.click();
+  }, []);
+
+  const handleRestoreFileChange = useCallback(
+    (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      e.target.value = "";
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const raw = reader.result;
+        const { ok, backup, error } = parseBackupFile(raw);
+        if (!ok || !backup) {
+          toast.error(`Fichier invalide: ${error}`);
+          return;
+        }
+        const count = backup.activities?.length || 0;
+        if (count === 0) {
+          toast.warning("La sauvegarde ne contient aucune activité.");
+          return;
+        }
+
+        const currentActivities = loadLS(LS_KEYS.activities, []);
+        const mode = currentActivities.length === 0 ? "replace" : null;
+        if (mode === "replace") {
+          setActivities(backup.activities);
+          saveLS(LS_KEYS.activities, backup.activities);
+          logger.log(`📂 Restauration: ${count} activités (remplacement)`);
+          toast.success(`✅ Restauration terminée ! ${count} activité(s) restaurée(s).`);
+          return;
+        }
+
+        const replace = window.confirm(
+          `La sauvegarde contient ${count} activité(s). Vous avez actuellement ${currentActivities.length} activité(s).\n\n` +
+            `Cliquer OK pour REMPLACER toutes les activités par la sauvegarde.\n` +
+            `Cliquer Annuler pour FUSIONNER (garder les actuelles + ajouter les manquantes).`
+        );
+        const finalList = replace
+          ? restoreFromBackup(backup, "replace")
+          : restoreFromBackup(backup, "merge", currentActivities);
+        setActivities(finalList);
+        saveLS(LS_KEYS.activities, finalList);
+        logger.log(`📂 Restauration: ${finalList.length} activités (${replace ? "remplacement" : "fusion"})`);
+        toast.success(`✅ Restauration terminée ! ${finalList.length} activité(s).`);
+      };
+      reader.onerror = () => toast.error("Impossible de lire le fichier.");
+      reader.readAsText(file, "UTF-8");
+    },
+    [setActivities]
+  );
+
   const handleDelete = useCallback(async (id) => {
     if (!canModifyActivities) {
       toast.warning("Seuls Léa, Laly et Ewen peuvent supprimer les activités.");
@@ -911,6 +992,27 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               🔍 Vérifier & Synchroniser
             </PrimaryBtn>
           )}
+          <PrimaryBtn
+            onClick={handleBackup}
+            className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 border-0 shadow-lg shadow-amber-500/25"
+          >
+            💾 Sauvegarder tout
+          </PrimaryBtn>
+          <>
+            <input
+              ref={restoreFileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleRestoreFileChange}
+            />
+            <PrimaryBtn
+              onClick={handleRestoreClick}
+              className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 border-0 shadow-lg shadow-sky-500/25"
+            >
+              📂 Restaurer une sauvegarde
+            </PrimaryBtn>
+          </>
         </div>
       </header>
 
