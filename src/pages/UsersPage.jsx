@@ -177,42 +177,72 @@ export function UsersPage() {
     return labels;
   }
 
+  const groupStyles = {
+    page_access: "bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-200/80",
+    actions: "bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200/80",
+    admin: "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/80",
+  };
+  const groupTitleStyles = {
+    page_access: "text-indigo-800",
+    actions: "text-emerald-800",
+    admin: "text-amber-800",
+  };
+  const badgeColors = [
+    "bg-indigo-100 text-indigo-700",
+    "bg-violet-100 text-violet-700",
+    "bg-emerald-100 text-emerald-700",
+    "bg-teal-100 text-teal-700",
+    "bg-amber-100 text-amber-700",
+    "bg-rose-100 text-rose-700",
+    "bg-sky-100 text-sky-700",
+  ];
+
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-800">Gestion des utilisateurs</h3>
-          <p className="text-sm text-gray-600">
-            Créez et gérez les utilisateurs avec leurs codes d'accès et permissions. Les permissions sont bien séparées par catégorie.
-          </p>
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl px-5 py-5 bg-gradient-to-r from-violet-500/15 via-indigo-500/15 to-blue-500/15 border-2 border-violet-200/60">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30 text-white text-xl">
+            👥
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-800">Gestion des utilisateurs</h3>
+            <p className="text-sm text-gray-600 mt-0.5">
+              Codes d'accès et permissions par catégorie.
+            </p>
+          </div>
         </div>
-        <PrimaryBtn onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Annuler" : "Nouvel utilisateur"}
+        <PrimaryBtn
+          onClick={() => setShowForm(!showForm)}
+          className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 border-0 shadow-lg shadow-violet-500/25"
+        >
+          {showForm ? "Annuler" : "➕ Nouvel utilisateur"}
         </PrimaryBtn>
-      </div>
+      </header>
 
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-100/60 p-6 space-y-6 shadow-lg"
+          className="bg-white/95 backdrop-blur-sm rounded-2xl border-2 border-violet-100 p-6 space-y-6 shadow-xl shadow-violet-500/10"
         >
-          <h4 className="text-base font-semibold text-gray-800">
+          <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <span className="text-violet-500">✏️</span>
             {editingUser ? "Modifier l'utilisateur" : "Créer un nouvel utilisateur"}
           </h4>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50/80 border border-slate-200/80">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Nom</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Nom</label>
               <TextInput
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Ex: Rayan"
                 required
+                className="border-violet-200 focus:ring-violet-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Code (6 chiffres)</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Code (6 chiffres)</label>
               <TextInput
                 type="text"
                 value={form.code}
@@ -223,48 +253,59 @@ export function UsersPage() {
                 placeholder="Ex: 180203"
                 maxLength={6}
                 required
+                className="border-violet-200 focus:ring-violet-500 font-mono"
               />
             </div>
           </div>
 
           {PERMISSION_GROUPS.map((group) => (
-            <div key={group.id} className="border-t border-gray-200 pt-4 mt-4">
-              <p className="text-sm font-semibold text-gray-800 mb-1">{group.label}</p>
+            <div
+              key={group.id}
+              className={`rounded-xl border-2 p-4 ${groupStyles[group.id] || "bg-gray-50 border-gray-200"}`}
+            >
+              <p className={`text-sm font-bold mb-1 ${groupTitleStyles[group.id] || "text-gray-800"}`}>
+                {group.label}
+              </p>
               {group.description && (
-                <p className="text-xs text-gray-500 mb-3">{group.description}</p>
+                <p className="text-xs text-gray-600 mb-3">{group.description}</p>
               )}
               <div className="space-y-2">
                 {group.permissions.map((p) => (
-                  <label key={p.formKey} className="flex items-center gap-2 cursor-pointer">
+                  <label key={p.formKey} className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={form[p.formKey] === true}
                       onChange={(e) =>
                         setForm((f) => ({ ...f, [p.formKey]: e.target.checked }))
                       }
-                      className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-2 border-violet-300 text-violet-600 focus:ring-violet-500 focus:ring-2"
                     />
-                    <span className="text-sm text-gray-700">{p.label}</span>
+                    <span className="text-sm text-gray-700 group-hover:text-gray-900">{p.label}</span>
                   </label>
                 ))}
               </div>
             </div>
           ))}
 
-          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+          <div className="flex gap-3 justify-end pt-4 border-t-2 border-gray-200">
             <GhostBtn type="button" onClick={resetForm} variant="neutral">
               Annuler
             </GhostBtn>
-            <PrimaryBtn type="submit" disabled={loading}>
+            <PrimaryBtn
+              type="submit"
+              disabled={loading}
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 border-0 shadow-md"
+            >
               {loading ? "Enregistrement..." : editingUser ? "Modifier" : "Créer"}
             </PrimaryBtn>
           </div>
         </form>
       )}
 
-      <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-100/60 shadow-lg overflow-hidden">
-        <div className="p-4 border-b bg-blue-50/70">
-          <h4 className="text-sm font-semibold text-gray-800">
+      <div className="rounded-2xl border-2 border-violet-100 shadow-xl shadow-violet-500/10 overflow-hidden bg-white/95">
+        <div className="p-4 bg-gradient-to-r from-violet-500/20 via-indigo-500/20 to-blue-500/20 border-b-2 border-violet-100">
+          <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+            <span className="text-violet-600">📋</span>
             Liste des utilisateurs ({users.length})
           </h4>
         </div>
@@ -275,8 +316,8 @@ export function UsersPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-blue-50/70 text-gray-700 text-xs">
-                <tr>
+              <thead>
+                <tr className="bg-gradient-to-r from-violet-100/80 to-indigo-100/80 text-gray-800 text-xs font-semibold">
                   <th className="px-4 py-3 text-left">Nom</th>
                   <th className="px-4 py-3 text-left">Code</th>
                   <th className="px-4 py-3 text-left">Permissions</th>
@@ -285,25 +326,32 @@ export function UsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => {
+                {users.map((u, idx) => {
                   const activeLabels = getActivePermissionLabels(u);
                   return (
-                    <tr key={u.id} className="border-t hover:bg-blue-50/30 transition-colors">
-                      <td className="px-4 py-3 font-medium text-gray-800">{u.name}</td>
-                      <td className="px-4 py-3 font-mono text-gray-700">{u.code}</td>
+                    <tr
+                      key={u.id}
+                      className={`border-t border-violet-100/60 transition-colors ${
+                        idx % 2 === 0 ? "bg-white hover:bg-violet-50/50" : "bg-violet-50/30 hover:bg-violet-50/70"
+                      }`}
+                    >
+                      <td className="px-4 py-3 font-semibold text-gray-800">{u.name}</td>
+                      <td className="px-4 py-3 font-mono text-violet-700 font-medium">{u.code}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {activeLabels.length > 0 ? (
-                            activeLabels.map((label) => (
+                            activeLabels.map((label, i) => (
                               <span
                                 key={label}
-                                className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-medium"
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                  badgeColors[i % badgeColors.length]
+                                }`}
                               >
                                 {label}
                               </span>
                             ))
                           ) : (
-                            <span className="text-[10px] text-gray-400">Aucune permission</span>
+                            <span className="text-[10px] text-gray-400 italic">Aucune permission</span>
                           )}
                         </div>
                       </td>
@@ -314,7 +362,7 @@ export function UsersPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex gap-2 justify-end">
-                          <GhostBtn onClick={() => handleEdit(u)} size="sm">
+                          <GhostBtn onClick={() => handleEdit(u)} size="sm" className="text-indigo-600 hover:bg-indigo-50">
                             ✏️ Modifier
                           </GhostBtn>
                           <GhostBtn
