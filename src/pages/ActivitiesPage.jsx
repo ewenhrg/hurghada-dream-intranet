@@ -472,6 +472,157 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     localStorage.removeItem(LS_KEYS.activityForm);
   }, [form, editingId, canModifyActivities, user?.canAddActivity, activitiesMap, activities, setActivities]);
 
+  // Fonction de vérification et synchronisation des activités
+  const handleVerifyAndSync = useCallback(async () => {
+    if (!supabase) {
+      toast.warning("Supabase n'est pas configuré. Impossible de vérifier la synchronisation.");
+      return;
+    }
+
+    logger.log("🔍 Vérification de la synchronisation des activités...");
+    toast.info("Vérification en cours...");
+
+    try {
+      // 1. Récupérer toutes les activités locales
+      const localActivities = loadLS(LS_KEYS.activities, []);
+      logger.log(`📦 Activités locales: ${localActivities.length}`);
+
+      // 2. Récupérer toutes les activités depuis Supabase
+      const { data: supabaseActivities, error: fetchError } = await supabase
+        .from("activities")
+        .select("id, name, category, site_key")
+        .eq("site_key", SITE_KEY);
+
+      if (fetchError) {
+        logger.error("❌ Erreur lors de la récupération depuis Supabase:", fetchError);
+        toast.error("Erreur lors de la vérification. Vérifiez la console.");
+        return;
+      }
+
+      logger.log(`☁️ Activités dans Supabase: ${supabaseActivities?.length || 0}`);
+
+      // 3. Identifier les activités locales sans supabase_id
+      const activitiesWithoutSupabaseId = localActivities.filter((a) => !a.supabase_id);
+      logger.log(`⚠️ Activités locales sans supabase_id: ${activitiesWithoutSupabaseId.length}`);
+
+      // 4. Identifier les activités qui existent dans Supabase mais pas localement
+      const supabaseIds = new Set(supabaseActivities?.map((a) => a.id) || []);
+      const localSupabaseIds = new Set(
+        localActivities.filter((a) => a.supabase_id).map((a) => a.supabase_id)
+      );
+      const missingInLocal = supabaseActivities?.filter(
+        (a) => !localSupabaseIds.has(a.id)
+      ) || [];
+
+      // 5. Synchroniser les activités sans supabase_id
+      let syncedCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      for (const activity of activitiesWithoutSupabaseId) {
+        try {
+          // Préparer les données pour Supabase
+          const supabaseData = {
+            site_key: SITE_KEY,
+            name: activity.name,
+            category: activity.category || "desert",
+            price_adult: activity.priceAdult || 0,
+            price_child: activity.priceChild || 0,
+            price_baby: activity.priceBaby || 0,
+            age_child: activity.ageChild || "",
+            age_baby: activity.ageBaby || "",
+            currency: activity.currency || "EUR",
+            available_days: activity.availableDays || [false, false, false, false, false, false, false],
+            notes: activity.notes || "",
+            transfers: activity.transfers || {},
+          };
+
+          // Vérifier si l'activité existe déjà dans Supabase
+          const { data: existing } = await supabase
+            .from("activities")
+            .select("id")
+            .eq("site_key", SITE_KEY)
+            .eq("name", activity.name)
+            .eq("category", activity.category || "desert")
+            .limit(1);
+
+          let supabaseId;
+          if (existing && existing.length > 0) {
+            // Utiliser l'ID existant
+            supabaseId = existing[0].id;
+            logger.log(`✅ Activité "${activity.name}" trouvée dans Supabase (ID: ${supabaseId})`);
+          } else {
+            // Créer une nouvelle activité
+            const { data: newActivity, error: insertError } = await supabase
+              .from("activities")
+              .insert(supabaseData)
+              .select("id")
+              .single();
+
+            if (insertError) {
+              throw insertError;
+            }
+            supabaseId = newActivity.id;
+            logger.log(`✅ Activité "${activity.name}" créée dans Supabase (ID: ${supabaseId})`);
+          }
+
+          // Mettre à jour l'activité locale avec le supabase_id
+          const updatedActivities = localActivities.map((a) =>
+            a.id === activity.id ? { ...a, supabase_id: supabaseId } : a
+          );
+          setActivities(updatedActivities);
+          saveLS(LS_KEYS.activities, updatedActivities);
+          syncedCount++;
+        } catch (err) {
+          errorCount++;
+          errors.push({ name: activity.name, error: err.message || err });
+          logger.error(`❌ Erreur lors de la synchronisation de "${activity.name}":`, err);
+        }
+      }
+
+      // 6. Afficher le rapport
+      const report = [
+        `📊 Rapport de vérification:`,
+        `📦 Activités locales: ${localActivities.length}`,
+        `☁️ Activités dans Supabase: ${supabaseActivities?.length || 0}`,
+        `✅ Activités synchronisées: ${syncedCount}`,
+        missingInLocal.length > 0 ? `⚠️ Activités dans Supabase non trouvées localement: ${missingInLocal.length}` : null,
+        errorCount > 0 ? `❌ Erreurs: ${errorCount}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      logger.log(report);
+
+      if (syncedCount > 0) {
+        toast.success(
+          `✅ Synchronisation terminée!\n` +
+          `${syncedCount} activité(s) synchronisée(s).\n` +
+          `Vérifiez la console pour plus de détails.`
+        );
+      } else if (activitiesWithoutSupabaseId.length === 0) {
+        toast.success(
+          `✅ Toutes les activités sont synchronisées!\n` +
+          `${localActivities.length} activité(s) locale(s).\n` +
+          `${supabaseActivities?.length || 0} activité(s) dans Supabase.`
+        );
+      } else {
+        toast.warning(
+          `⚠️ Synchronisation partielle.\n` +
+          `${syncedCount} synchronisée(s), ${errorCount} erreur(s).\n` +
+          `Vérifiez la console pour plus de détails.`
+        );
+      }
+
+      if (errors.length > 0) {
+        logger.error("❌ Erreurs détaillées:", errors);
+      }
+    } catch (err) {
+      logger.error("❌ Erreur lors de la vérification:", err);
+      toast.error("Erreur lors de la vérification. Vérifiez la console.");
+    }
+  }, [activities, setActivities, supabase]);
+
   const handleDelete = useCallback(async (id) => {
     if (!canModifyActivities) {
       toast.warning("Seuls Léa, Laly et Ewen peuvent supprimer les activités.");
@@ -743,14 +894,24 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             </p>
           </div>
         </div>
-        {user?.canAddActivity && (
-          <PrimaryBtn
-            onClick={handleToggleForm}
-            className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 border-0 shadow-lg shadow-indigo-500/25"
-          >
-            {showForm ? "Annuler" : "➕ Ajouter une activité"}
-          </PrimaryBtn>
-        )}
+        <div className="flex flex-col sm:flex-row gap-3">
+          {user?.canAddActivity && (
+            <PrimaryBtn
+              onClick={handleToggleForm}
+              className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 border-0 shadow-lg shadow-indigo-500/25"
+            >
+              {showForm ? "Annuler" : "➕ Ajouter une activité"}
+            </PrimaryBtn>
+          )}
+          {supabase && (
+            <PrimaryBtn
+              onClick={handleVerifyAndSync}
+              className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border-0 shadow-lg shadow-green-500/25"
+            >
+              🔍 Vérifier & Synchroniser
+            </PrimaryBtn>
+          )}
+        </div>
       </header>
 
       {/* Filtres - bloc coloré */}
