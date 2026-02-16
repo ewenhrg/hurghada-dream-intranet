@@ -405,32 +405,65 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     const activityName = activityToDelete?.name || "cette activité";
     if (!window.confirm(`Êtes-vous sûr de vouloir supprimer l'activité "${activityName}" ?\n\nCette action est irréversible et supprimera définitivement l'activité.`)) return;
     
+    // Log détaillé de la suppression pour audit
+    logger.warn("🗑️ SUPPRESSION D'ACTIVITÉ INITIÉE:", {
+      id: id,
+      supabase_id: activityToDelete?.supabase_id,
+      name: activityName,
+      category: activityToDelete?.category,
+      timestamp: new Date().toISOString(),
+      user: user?.name || "Utilisateur inconnu"
+    });
+    
     setActivities((prevActivities) => {
       const next = prevActivities.filter((a) => a.id !== id);
       saveLS(LS_KEYS.activities, next);
+      logger.log(`📦 Activité supprimée localement. ${next.length} activités restantes.`);
       return next;
     });
     
     // Supprimer de Supabase si configuré
     if (supabase && activityToDelete?.supabase_id) {
       try {
-        const { error } = await supabase
+        logger.log(`🔄 Tentative de suppression dans Supabase (ID: ${activityToDelete.supabase_id})...`);
+        const { error, data } = await supabase
           .from("activities")
           .delete()
-          .eq("id", activityToDelete.supabase_id);
+          .eq("id", activityToDelete.supabase_id)
+          .select(); // Récupérer les données supprimées pour confirmation
         
         if (error) {
-          logger.error("❌ Erreur lors de la suppression dans Supabase:", error);
+          logger.error("❌ Erreur lors de la suppression dans Supabase:", {
+            error: error,
+            activity_id: activityToDelete.supabase_id,
+            activity_name: activityName,
+            error_code: error.code,
+            error_message: error.message
+          });
           toast.error("Erreur lors de la suppression dans Supabase. L'activité a été supprimée localement.");
         } else {
-          logger.log("✅ Activité supprimée de Supabase avec succès!");
+          logger.log("✅ Activité supprimée de Supabase avec succès!", {
+            supabase_id: activityToDelete.supabase_id,
+            activity_name: activityName,
+            deleted_data: data
+          });
         }
       } catch (err) {
-        logger.error("❌ Exception lors de la suppression dans Supabase:", err);
+        logger.error("❌ Exception lors de la suppression dans Supabase:", {
+          exception: err,
+          activity_id: activityToDelete.supabase_id,
+          activity_name: activityName,
+          stack: err.stack
+        });
         toast.error("Exception lors de la suppression dans Supabase. L'activité a été supprimée localement.");
       }
+    } else {
+      logger.warn("⚠️ Suppression locale uniquement (pas de supabase_id ou Supabase non configuré)", {
+        has_supabase: !!supabase,
+        has_supabase_id: !!activityToDelete?.supabase_id
+      });
     }
-  }, [canModifyActivities, activitiesMap]);
+  }, [canModifyActivities, activitiesMap, user]);
 
   // Index de recherche pour améliorer les performances (créé une seule fois)
   const searchIndexRef = useRef(new Map());

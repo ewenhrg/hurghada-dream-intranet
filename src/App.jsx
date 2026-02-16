@@ -220,10 +220,21 @@ export default function App() {
           saveLS(LS_KEYS.activities, supabaseActivities);
           activitiesCache.set(cacheKey, supabaseActivities);
         } else {
-          // Si Supabase est vide, vider aussi le state et le localStorage
-          logger.log("📦 Supabase: aucune activité trouvée, vidage des activités locales");
-          setActivities([]);
-          saveLS(LS_KEYS.activities, []);
+          // PROTECTION CRITIQUE : Ne pas vider les activités locales si Supabase est vide
+          // Cela pourrait être dû à une erreur temporaire, une perte de connexion, ou un problème de base de données
+          const localActivities = loadLS(LS_KEYS.activities, []);
+          if (localActivities.length > 0) {
+            logger.warn("⚠️ ATTENTION : Supabase retourne un tableau vide mais il y a des activités locales. Conservation des activités locales pour éviter une perte de données.");
+            logger.warn(`📦 ${localActivities.length} activités locales conservées. Vérifiez la connexion Supabase et l'état de la base de données.`);
+            // Conserver les activités locales au lieu de les vider
+            setActivities(localActivities);
+            // Ne pas écraser le localStorage avec un tableau vide
+          } else {
+            // Seulement vider si vraiment aucune activité n'existe nulle part
+            logger.log("📦 Supabase: aucune activité trouvée et aucune activité locale. Initialisation vide.");
+            setActivities([]);
+            saveLS(LS_KEYS.activities, []);
+          }
         }
       } else if (error) {
         logger.warn("⚠️ Erreur lors de la récupération des activités depuis Supabase:", error);
@@ -783,11 +794,31 @@ export default function App() {
             });
           } else if (payload.eventType === 'DELETE') {
             // Supprimer l'activité locale correspondante
+            const deletedId = payload.old.id;
+            const deletedActivity = payload.old;
+            
+            logger.warn("🗑️ SUPPRESSION D'ACTIVITÉ DÉTECTÉE VIA REALTIME:", {
+              supabase_id: deletedId,
+              activity_name: deletedActivity?.name,
+              activity_site_key: deletedActivity?.site_key,
+              timestamp: new Date().toISOString(),
+              payload: payload.old
+            });
+            
             setActivities((prevActivities) => {
-              const deletedId = payload.old.id;
+              const activityBeforeDelete = prevActivities.find((a) => 
+                a.supabase_id === deletedId || a.id === deletedId?.toString()
+              );
+              
               const filtered = prevActivities.filter((a) => {
                 return a.supabase_id !== deletedId && a.id !== deletedId?.toString();
               });
+              
+              logger.log(`📦 Activité supprimée via Realtime. ${prevActivities.length} → ${filtered.length} activités.`, {
+                deleted_activity: activityBeforeDelete,
+                remaining_count: filtered.length
+              });
+              
               saveLS(LS_KEYS.activities, filtered);
               return filtered;
             });
