@@ -46,15 +46,15 @@ export function isZeroTracasActivity(activityName) {
   return name.includes("zero tracas");
 }
 
-// Helper pour obtenir les prix ZERO TRACAS
+// Helper pour obtenir les prix ZERO TRACAS (+5€ sur chaque option visa)
 export function getZeroTracasPrices() {
   return {
-    transfertVisaSim: 45,        // transfert + visa + sim
-    transfertVisa: 40,            // transfert + visa
+    transfertVisaSim: 50,        // transfert + visa + sim (45+5)
+    transfertVisa: 45,            // transfert + visa (40+5)
     transfert3Personnes: 20,      // transfert 3 personnes
     transfertPlus3Personnes: 25,  // transfert plus de 3 personnes
-    visaSim: 40,                  // visa + sim
-    visaSeul: 30,                 // visa seul
+    visaSim: 45,                  // visa + sim (40+5)
+    visaSeul: 35,                 // visa seul (30+5)
   };
 }
 
@@ -65,15 +65,15 @@ export function isZeroTracasHorsZoneActivity(activityName) {
   return name.includes("zero tracas hors zone");
 }
 
-// Helper pour obtenir les prix ZERO TRACAS HORS ZONE
+// Helper pour obtenir les prix ZERO TRACAS HORS ZONE (+5€ sur chaque option visa)
 export function getZeroTracasHorsZonePrices() {
   return {
-    transfertVisaSim: 50,        // transfert + visa + sim
-    transfertVisa: 45,            // transfert + visa
+    transfertVisaSim: 55,        // transfert + visa + sim (50+5)
+    transfertVisa: 50,            // transfert + visa (45+5)
     transfert3Personnes: 25,      // transfert 3 personnes
     transfertPlus3Personnes: 30,  // transfert plus de 3 personnes
-    visaSim: 40,                  // visa + sim
-    visaSeul: 30,                 // visa seul
+    visaSim: 45,                  // visa + sim (40+5)
+    visaSeul: 35,                 // visa seul (30+5)
   };
 }
 

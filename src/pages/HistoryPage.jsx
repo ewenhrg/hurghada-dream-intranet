@@ -1972,7 +1972,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 {(c.act && isZeroTracasActivity(c.act.name)) || (c.act && isZeroTracasHorsZoneActivity(c.act.name)) ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 mt-4 bg-indigo-50/60 p-5 md:p-6 rounded-xl border-2 border-indigo-300/70">
                     <div>
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "50€" : "45€"})</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "55€" : "50€"})</p>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertVisaSim ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasTransfertVisaSim: e.target.value === "" ? "" : e.target.value })}
@@ -1981,7 +1981,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       />
                     </div>
                     <div>
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa ({isZeroTracasHorsZoneActivity(c.act.name) ? "45€" : "40€"})</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa ({isZeroTracasHorsZoneActivity(c.act.name) ? "50€" : "45€"})</p>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertVisa ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasTransfertVisa: e.target.value === "" ? "" : e.target.value })}
@@ -2008,7 +2008,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       />
                     </div>
                     <div>
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">📱 Visa + SIM (40€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">📱 Visa + SIM (45€)</p>
                       <NumberInput 
                         value={c.raw.zeroTracasVisaSim ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasVisaSim: e.target.value === "" ? "" : e.target.value })}
@@ -2017,7 +2017,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       />
                     </div>
                     <div>
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">📄 Visa seul (30€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">📄 Visa seul (35€)</p>
                       <NumberInput 
                         value={c.raw.zeroTracasVisaSeul ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasVisaSeul: e.target.value === "" ? "" : e.target.value })}

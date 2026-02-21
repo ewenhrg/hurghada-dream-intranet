@@ -2307,7 +2307,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
                     <div>
                       <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
-                        🚗 Transfert + Visa + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "50€" : "45€"})
+                        🚗 Transfert + Visa + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "55€" : "50€"})
                       </label>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertVisaSim ?? ""} 
@@ -2318,7 +2318,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                     <div>
                       <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
-                        🚗 Transfert + Visa ({isZeroTracasHorsZoneActivity(c.act.name) ? "45€" : "40€"})
+                        🚗 Transfert + Visa ({isZeroTracasHorsZoneActivity(c.act.name) ? "50€" : "45€"})
                       </label>
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertVisa ?? ""} 
@@ -2351,7 +2351,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                     <div>
                       <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
-                        📱 Visa + SIM (40€)
+                        📱 Visa + SIM (45€)
                       </label>
                       <NumberInput 
                         value={c.raw.zeroTracasVisaSim ?? ""} 
@@ -2362,7 +2362,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                     <div>
                       <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
-                        📄 Visa seul (30€)
+                        📄 Visa seul (35€)
                       </label>
                       <NumberInput 
                         value={c.raw.zeroTracasVisaSeul ?? ""} 
