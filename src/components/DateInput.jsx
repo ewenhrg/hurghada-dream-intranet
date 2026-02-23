@@ -8,6 +8,14 @@ function formatForDisplay(dateStr) {
   return `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
 }
 
+/** Garde uniquement les chiffres, max 8 (DDMMAAAA), et insère les "/" automatiquement. */
+function formatWithSlashes(input) {
+  const digits = (input || "").replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
 function parseTypedDate(input) {
   if (!input || typeof input !== "string") return "";
   const cleaned = input.trim().replace(/\s+/g, "");
@@ -46,12 +54,13 @@ export function DateInput({ value = "", onChange, className = "", min, max }) {
   const handleTextChange = useCallback(
     (e) => {
       const raw = e.target.value;
-      setText(raw);
-      if (!raw.trim()) {
+      const formatted = formatWithSlashes(raw);
+      setText(formatted);
+      if (!formatted) {
         onChange("");
         return;
       }
-      const parsed = parseTypedDate(raw);
+      const parsed = parseTypedDate(formatted);
       if (parsed) onChange(parsed);
     },
     [onChange]
@@ -100,25 +109,27 @@ export function DateInput({ value = "", onChange, className = "", min, max }) {
           autoComplete="off"
         />
       </div>
-      <input
-        ref={nativeRef}
-        type="date"
-        value={value || ""}
-        onChange={handleNativeChange}
-        min={min}
-        max={max}
-        className="absolute w-0 h-0 opacity-0 pointer-events-none"
-        tabIndex={-1}
-        aria-hidden="true"
-      />
-      <button
-        type="button"
-        onClick={() => nativeRef.current?.click()}
-        title="Ouvrir le calendrier"
-        className="flex-shrink-0 px-3 py-2 rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-md transition-all min-h-[44px] min-w-[44px] touch-manipulation text-xl"
-      >
-        📅
-      </button>
+      {/* Le clic doit être un vrai clic utilisateur sur l'input date pour ouvrir le calendrier */}
+      <div className="relative flex-shrink-0 min-w-[44px] min-h-[44px]">
+        <input
+          ref={nativeRef}
+          type="date"
+          value={value || ""}
+          onChange={handleNativeChange}
+          min={min}
+          max={max}
+          title="Ouvrir le calendrier"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          tabIndex={0}
+          aria-label="Ouvrir le calendrier"
+        />
+        <span
+          className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] text-xl"
+          aria-hidden="true"
+        >
+          📅
+        </span>
+      </div>
     </div>
   );
 }
