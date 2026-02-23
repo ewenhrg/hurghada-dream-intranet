@@ -109,8 +109,8 @@ export function DateInput({ value = "", onChange, className = "", min, max }) {
           autoComplete="off"
         />
       </div>
-      {/* Le clic doit être un vrai clic utilisateur sur l'input date pour ouvrir le calendrier */}
-      <div className="relative flex-shrink-0 min-w-[44px] min-h-[44px]">
+      {/* Zone cliquable = tout le bouton ; l'input date couvre toute la surface */}
+      <div className="relative flex-shrink-0 w-[44px] h-[44px] cursor-pointer">
         <input
           ref={nativeRef}
           type="date"
@@ -119,7 +119,8 @@ export function DateInput({ value = "", onChange, className = "", min, max }) {
           min={min}
           max={max}
           title="Ouvrir le calendrier"
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className="absolute top-0 left-0 right-0 bottom-0 w-full h-full m-0 p-0 opacity-0 cursor-pointer border-0"
+          style={{ minWidth: "100%", minHeight: "100%" }}
           tabIndex={0}
           aria-label="Ouvrir le calendrier"
         />
