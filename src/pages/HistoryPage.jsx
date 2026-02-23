@@ -1602,7 +1602,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     >
       <div 
         ref={editModalRef} 
-        className="bg-white/99 backdrop-blur-md rounded-2xl border-2 border-blue-300/80 shadow-2xl p-6 md:p-8 lg:p-10 max-w-6xl w-full overflow-y-auto"
+        className="bg-white rounded-2xl border-2 border-blue-300/80 shadow-2xl p-6 md:p-8 lg:p-10 max-w-6xl w-full overflow-y-auto"
         style={{
           maxHeight: 'calc(100vh - 4rem)',
           margin: 'auto',
