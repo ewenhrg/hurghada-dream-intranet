@@ -1,4 +1,5 @@
-import { TextInput, GhostBtn } from "../ui";
+import { GhostBtn } from "../ui";
+import { DateInput } from "../DateInput";
 
 export function DatesSection({ client, setClient, onAutoFillDates }) {
   return (
@@ -10,19 +11,17 @@ export function DatesSection({ client, setClient, onAutoFillDates }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
         <div>
           <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Date d'arrivée</label>
-          <TextInput 
-            type="date" 
-            value={client.arrivalDate || ""} 
-            onChange={(e) => setClient((c) => ({ ...c, arrivalDate: e.target.value }))} 
+          <DateInput
+            value={client.arrivalDate || ""}
+            onChange={(v) => setClient((c) => ({ ...c, arrivalDate: v }))}
           />
         </div>
         <div>
           <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Date de départ</label>
           <div className="flex gap-2">
-            <TextInput 
-              type="date" 
-              value={client.departureDate || ""} 
-              onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
+            <DateInput
+              value={client.departureDate || ""}
+              onChange={(v) => setClient((c) => ({ ...c, departureDate: v }))}
               className="flex-1"
             />
             <GhostBtn

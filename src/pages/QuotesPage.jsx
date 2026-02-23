@@ -5,6 +5,7 @@ import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber } from "../utils";
 import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
+import { DateInput } from "../components/DateInput";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { toast } from "../utils/toast.js";
@@ -1198,11 +1199,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                 Date d'arrivée *
               </label>
-              <TextInput 
-                type="date" 
-                value={client.arrivalDate || ""} 
-                onChange={(e) => setClient((c) => ({ ...c, arrivalDate: e.target.value }))}
-                className="w-full"
+              <DateInput
+                value={client.arrivalDate || ""}
+                onChange={(v) => setClient((c) => ({ ...c, arrivalDate: v }))}
               />
             </div>
             <div className="space-y-2 animate-fade-in">
@@ -1211,10 +1210,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 Date de départ *
               </label>
               <div className="flex flex-col sm:flex-row gap-3">
-                <TextInput 
-                  type="date" 
-                  value={client.departureDate || ""} 
-                  onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
+                <DateInput
+                  value={client.departureDate || ""}
+                  onChange={(v) => setClient((c) => ({ ...c, departureDate: v }))}
                   className="flex-1"
                 />
                 <div className="flex gap-2">
