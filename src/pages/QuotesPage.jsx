@@ -1217,24 +1217,23 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
                   className="flex-1"
                 />
-                {client.arrivalDate && client.departureDate && (
-                  <div className="flex gap-2">
-                    <GhostBtn
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleAutoFillDates();
-                      }}
-                      variant="primary"
-                      size="sm"
-                      title="Remplir automatiquement les dates des activités"
-                      className="whitespace-nowrap shadow-md hover:shadow-lg transition-all"
-                    >
-                      ✨ Auto-dates
-                    </GhostBtn>
-                  </div>
-                )}
+                <div className="flex gap-2">
+                  <GhostBtn
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (client.arrivalDate && client.departureDate) handleAutoFillDates();
+                    }}
+                    variant="primary"
+                    size="sm"
+                    disabled={!client.arrivalDate || !client.departureDate}
+                    title={client.arrivalDate && client.departureDate ? "Remplir automatiquement les dates des activités" : "Renseignez les dates d'arrivée et de départ pour activer"}
+                    className="whitespace-nowrap shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    ✨ Auto-dates
+                  </GhostBtn>
+                </div>
               </div>
             </div>
           </div>

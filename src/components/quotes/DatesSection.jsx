@@ -25,22 +25,21 @@ export function DatesSection({ client, setClient, onAutoFillDates }) {
               onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
               className="flex-1"
             />
-            {client.arrivalDate && client.departureDate && (
-              <GhostBtn
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onAutoFillDates();
-                }}
-                variant="primary"
-                size="sm"
-                title="Remplir automatiquement les dates des activités avec les dates du séjour"
-                className="whitespace-nowrap"
-              >
-                📅 Auto-dates
-              </GhostBtn>
-            )}
+            <GhostBtn
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (client.arrivalDate && client.departureDate) onAutoFillDates();
+              }}
+              variant="primary"
+              size="sm"
+              disabled={!client.arrivalDate || !client.departureDate}
+              title={client.arrivalDate && client.departureDate ? "Remplir automatiquement les dates des activités avec les dates du séjour" : "Renseignez les dates d'arrivée et de départ pour activer"}
+              className="whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              📅 Auto-dates
+            </GhostBtn>
           </div>
         </div>
       </div>
