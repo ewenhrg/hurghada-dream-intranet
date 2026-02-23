@@ -95,6 +95,14 @@ export function DateInput({ value = "", onChange, className = "", min, max }) {
     [onChange]
   );
 
+  const openCalendar = useCallback(() => {
+    if (typeof nativeRef.current?.showPicker === "function") {
+      nativeRef.current.showPicker();
+    } else {
+      nativeRef.current?.click();
+    }
+  }, []);
+
   return (
     <div className="flex gap-2 flex-1 min-w-0">
       <div className="flex-1 min-w-0">
@@ -109,28 +117,25 @@ export function DateInput({ value = "", onChange, className = "", min, max }) {
           autoComplete="off"
         />
       </div>
-      {/* Zone cliquable = tout le bouton ; l'input date couvre toute la surface */}
-      <div className="relative flex-shrink-0 w-[44px] h-[44px] cursor-pointer">
-        <input
-          ref={nativeRef}
-          type="date"
-          value={value || ""}
-          onChange={handleNativeChange}
-          min={min}
-          max={max}
-          title="Ouvrir le calendrier"
-          className="absolute top-0 left-0 right-0 bottom-0 w-full h-full m-0 p-0 opacity-0 cursor-pointer border-0"
-          style={{ minWidth: "100%", minHeight: "100%" }}
-          tabIndex={0}
-          aria-label="Ouvrir le calendrier"
-        />
-        <span
-          className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] text-xl"
-          aria-hidden="true"
-        >
-          📅
-        </span>
-      </div>
+      <input
+        ref={nativeRef}
+        type="date"
+        value={value || ""}
+        onChange={handleNativeChange}
+        min={min}
+        max={max}
+        className="absolute opacity-0 w-0 h-0 overflow-hidden pointer-events-none"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+      <button
+        type="button"
+        onClick={openCalendar}
+        title="Ouvrir le calendrier"
+        className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-md transition-all text-xl cursor-pointer touch-manipulation"
+      >
+        📅
+      </button>
     </div>
   );
 }
