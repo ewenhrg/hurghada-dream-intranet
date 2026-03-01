@@ -101,13 +101,21 @@ const SituationPage = lazyWithRetry(() => import("./pages/SituationPage").then(m
 const StopSalePage = lazyWithRetry(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
 const RequestPage = lazyWithRetry(() => import("./pages/RequestPage").then(module => ({ default: module.RequestPage })));
 
+const LAST_GOOD_ACTIVITIES_KEY = "hd_activities_last_good";
+const MIN_RELIABLE_ACTIVITIES_COUNT = 10;
+
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const [ok, setOk] = useState(false);
   const [tab, setTab] = useState("devis");
-  // Démarrer depuis le localStorage pour éviter de retomber à 2 activités si Supabase est indisponible.
-  const [activities, setActivities] = useState(() => loadLS(LS_KEYS.activities, getDefaultActivities()));
+  // Démarrer depuis la meilleure source locale disponible (courante ou "last good").
+  const [activities, setActivities] = useState(() => {
+    const current = loadLS(LS_KEYS.activities, []);
+    const lastGood = loadLS(LAST_GOOD_ACTIVITIES_KEY, []);
+    const bestLocal = Array.isArray(lastGood) && lastGood.length > current.length ? lastGood : current;
+    return bestLocal.length > 0 ? bestLocal : getDefaultActivities();
+  });
   const [quotes, setQuotes] = useState(() => loadLS(LS_KEYS.quotes, []));
   const [quoteDraft, setQuoteDraft] = useState(() => loadLS(LS_KEYS.quoteForm, null));
   const [remoteEnabled, setRemoteEnabled] = useState(false);
@@ -259,13 +267,37 @@ export default function App() {
           );
         }
 
-        // LIRE UNIQUEMENT depuis Supabase (source de vérité absolue) - garder toutes les lignes
+        // LIRE depuis Supabase, mais protéger contre les listes anormalement petites.
         if (finalRows.length > 0) {
           const supabaseActivities = mapActivitiesFromRows(finalRows);
+          const localActivities = loadLS(LS_KEYS.activities, []);
+          const lastGoodActivities = loadLS(LAST_GOOD_ACTIVITIES_KEY, []);
+          const trustedLocal =
+            Array.isArray(lastGoodActivities) && lastGoodActivities.length > localActivities.length
+              ? lastGoodActivities
+              : localActivities;
+          const trustedCount = trustedLocal.length;
+          const remoteCount = supabaseActivities.length;
+          const suspiciousShrink =
+            trustedCount >= MIN_RELIABLE_ACTIVITIES_COUNT &&
+            remoteCount < MIN_RELIABLE_ACTIVITIES_COUNT &&
+            remoteCount < trustedCount;
 
-          setActivities(supabaseActivities);
-          saveLS(LS_KEYS.activities, supabaseActivities);
-          activitiesCache.set(cacheKey, supabaseActivities);
+          if (suspiciousShrink) {
+            logger.warn(
+              `⚠️ Sync activités ignorée (taille suspecte): distant=${remoteCount}, local fiable=${trustedCount}. Conservation locale.`
+            );
+            setActivities(trustedLocal);
+            saveLS(LS_KEYS.activities, trustedLocal);
+            activitiesCache.set(cacheKey, trustedLocal);
+          } else {
+            setActivities(supabaseActivities);
+            saveLS(LS_KEYS.activities, supabaseActivities);
+            activitiesCache.set(cacheKey, supabaseActivities);
+            if (remoteCount >= MIN_RELIABLE_ACTIVITIES_COUNT) {
+              saveLS(LAST_GOOD_ACTIVITIES_KEY, supabaseActivities);
+            }
+          }
         } else {
           // PROTECTION CRITIQUE : Ne pas vider les activités locales si Supabase est vide
           // Cela pourrait être dû à une erreur temporaire, une perte de connexion, ou un problème de base de données
@@ -291,9 +323,14 @@ export default function App() {
     } catch (err) {
       logger.warn("Erreur synchronisation Supabase:", err);
       const localActivities = loadLS(LS_KEYS.activities, []);
-      if (localActivities.length > 0) {
-        setActivities(localActivities);
-        logger.warn(`📦 Fallback local activé: ${localActivities.length} activité(s) conservée(s).`);
+      const lastGoodActivities = loadLS(LAST_GOOD_ACTIVITIES_KEY, []);
+      const trustedLocal =
+        Array.isArray(lastGoodActivities) && lastGoodActivities.length > localActivities.length
+          ? lastGoodActivities
+          : localActivities;
+      if (trustedLocal.length > 0) {
+        setActivities(trustedLocal);
+        logger.warn(`📦 Fallback local activé: ${trustedLocal.length} activité(s) conservée(s).`);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
