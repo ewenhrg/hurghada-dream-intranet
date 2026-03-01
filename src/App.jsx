@@ -902,6 +902,19 @@ export default function App() {
               const filtered = prevActivities.filter((a) => {
                 return a.supabase_id !== deletedId && a.id !== deletedId?.toString();
               });
+
+              const suspiciousShrink =
+                prevActivities.length >= MIN_RELIABLE_ACTIVITIES_COUNT &&
+                filtered.length < MIN_RELIABLE_ACTIVITIES_COUNT;
+              if (suspiciousShrink) {
+                logger.warn(
+                  `⚠️ Suppression Realtime ignorée (réduction suspecte): ${prevActivities.length} -> ${filtered.length}. Resync forcée.`
+                );
+                setTimeout(() => {
+                  syncWithSupabase();
+                }, 0);
+                return prevActivities;
+              }
               
               logger.log(`📦 Activité supprimée via Realtime. ${prevActivities.length} → ${filtered.length} activités.`, {
                 deleted_activity: activityBeforeDelete,
@@ -931,7 +944,7 @@ export default function App() {
       logger.log('🔌 Déconnexion de l\'abonnement Realtime pour les activités');
       supabase.removeChannel(activitiesChannel);
     };
-  }, [remoteEnabled]);
+  }, [remoteEnabled, syncWithSupabase]);
 
   // Références pour les timeouts de sauvegarde debounce
   const activitiesSaveTimeoutRef = useRef(null);
@@ -943,7 +956,10 @@ export default function App() {
       clearTimeout(activitiesSaveTimeoutRef.current);
     }
     activitiesSaveTimeoutRef.current = setTimeout(() => {
-    saveLS(LS_KEYS.activities, activities);
+      saveLS(LS_KEYS.activities, activities);
+      if (activities.length >= MIN_RELIABLE_ACTIVITIES_COUNT) {
+        saveLS(LAST_GOOD_ACTIVITIES_KEY, activities);
+      }
     }, 300);
 
     return () => {
