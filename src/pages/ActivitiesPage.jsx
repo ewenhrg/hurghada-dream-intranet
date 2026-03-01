@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
 import { uuid, currency, emptyTransfers, mergeTransfers, saveLS, loadLS } from "../utils";
 import { TextInput, NumberInput, PrimaryBtn } from "../components/ui";
@@ -500,10 +500,11 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       const localActivities = loadLS(LS_KEYS.activities, []);
       logger.log(`📦 Activités locales: ${localActivities.length}`);
 
-      // 2. Récupérer toutes les activités depuis Supabase
-      const { data: supabaseActivities, error: fetchError } = await supabase
+      // 2. Récupérer les activités Supabase avec la même logique que l'app
+      const selectColumns = "id, name, category, site_key";
+      const { data: primaryRows, error: fetchError } = await supabase
         .from("activities")
-        .select("id, name, category, site_key")
+        .select(selectColumns)
         .eq("site_key", SITE_KEY);
 
       if (fetchError) {
@@ -512,7 +513,48 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         return;
       }
 
-      logger.log(`☁️ Activités dans Supabase: ${supabaseActivities?.length || 0}`);
+      let supabaseActivities = primaryRows || [];
+      let sourceLabel = `site_key=${SITE_KEY}`;
+      let sourceSiteKey = SITE_KEY;
+
+      const checks = [];
+      const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
+      if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
+        checks.push(
+          supabase
+            .from("activities")
+            .select(selectColumns)
+            .eq("site_key", fallbackSiteKey)
+            .then((res) => ({ sourceLabel: `site_key=${fallbackSiteKey}`, sourceSiteKey: fallbackSiteKey, ...res }))
+        );
+      }
+      checks.push(
+        supabase
+          .from("activities")
+          .select(selectColumns)
+          .then((res) => ({ sourceLabel: "sans filtre site_key", sourceSiteKey: null, ...res }))
+      );
+
+      const results = await Promise.all(checks);
+      results.forEach((res) => {
+        if (!res?.error && Array.isArray(res?.data) && res.data.length > supabaseActivities.length) {
+          supabaseActivities = res.data;
+          sourceLabel = res.sourceLabel;
+          sourceSiteKey = res.sourceSiteKey;
+        }
+      });
+
+      // Si source "sans filtre", prendre le site_key majoritaire comme clé de sync.
+      if (!sourceSiteKey && supabaseActivities.length > 0) {
+        const counts = new Map();
+        supabaseActivities.forEach((a) => {
+          const key = a.site_key || "";
+          counts.set(key, (counts.get(key) || 0) + 1);
+        });
+        sourceSiteKey = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || SITE_KEY;
+      }
+
+      logger.log(`☁️ Activités dans Supabase (${sourceLabel}): ${supabaseActivities?.length || 0}`);
 
       // 3. Identifier les activités locales sans supabase_id
       const activitiesWithoutSupabaseId = localActivities.filter((a) => !a.supabase_id);
@@ -536,7 +578,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         try {
           // Préparer les données pour Supabase
           const supabaseData = {
-            site_key: SITE_KEY,
+            site_key: sourceSiteKey || SITE_KEY,
             name: activity.name,
             category: activity.category || "desert",
             price_adult: activity.priceAdult || 0,
@@ -554,7 +596,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           const { data: existing } = await supabase
             .from("activities")
             .select("id")
-            .eq("site_key", SITE_KEY)
+            .eq("site_key", sourceSiteKey || SITE_KEY)
             .eq("name", activity.name)
             .eq("category", activity.category || "desert")
             .limit(1);
@@ -596,6 +638,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       // 6. Afficher le rapport
       const report = [
         `📊 Rapport de vérification:`,
+        `🌐 Source utilisée: ${sourceLabel}`,
         `📦 Activités locales: ${localActivities.length}`,
         `☁️ Activités dans Supabase: ${supabaseActivities?.length || 0}`,
         `✅ Activités synchronisées: ${syncedCount}`,
