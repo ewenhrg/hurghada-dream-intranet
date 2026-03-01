@@ -688,6 +688,10 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           saveLS(LS_KEYS.activities, backup.activities);
           logger.log(`📂 Restauration: ${count} activités (remplacement)`);
           toast.success(`✅ Restauration terminée ! ${count} activité(s) restaurée(s).`);
+          toast.info("🔄 Synchronisation avec Supabase en cours...");
+          setTimeout(() => {
+            handleVerifyAndSync();
+          }, 0);
           return;
         }
 
@@ -703,11 +707,15 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         saveLS(LS_KEYS.activities, finalList);
         logger.log(`📂 Restauration: ${finalList.length} activités (${replace ? "remplacement" : "fusion"})`);
         toast.success(`✅ Restauration terminée ! ${finalList.length} activité(s).`);
+        toast.info("🔄 Synchronisation avec Supabase en cours...");
+        setTimeout(() => {
+          handleVerifyAndSync();
+        }, 0);
       };
       reader.onerror = () => toast.error("Impossible de lire le fichier.");
       reader.readAsText(file, "UTF-8");
     },
-    [setActivities]
+    [setActivities, handleVerifyAndSync]
   );
 
   const handleDelete = useCallback(async (id) => {
