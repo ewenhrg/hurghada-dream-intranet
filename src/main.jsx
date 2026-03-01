@@ -10,21 +10,16 @@ import "./index.css"; // 👈 c'est ici qu'on charge le CSS (où il y aura @tail
 // Initialiser le système de toasts au démarrage
 initToast();
 
-// Enregistrer le Service Worker pour PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        logger.log('Service Worker enregistré avec succès:', registration.scope);
-        
-        // Vérifier les mises à jour périodiquement
-        setInterval(() => {
-          registration.update();
-        }, 60000); // Vérifier toutes les minutes
-      })
-      .catch((error) => {
-        logger.log('Échec de l\'enregistrement du Service Worker:', error);
-      });
+// Désactiver temporairement le Service Worker pour éviter les versions figées en cache.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+      logger.log("Service Worker désenregistré (mode cache-safe).");
+    } catch (error) {
+      logger.warn("Impossible de désenregistrer le Service Worker:", error);
+    }
   });
 }
 
