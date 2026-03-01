@@ -36,13 +36,23 @@ export function getMotoCrossPrices() {
   return { yamaha250: 100, ktm640: 120, ktm530: 160 };
 }
 
+function normalizeActivityName(activityName) {
+  if (!activityName) return "";
+  return String(activityName)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 // Helper pour vérifier si une activité est ZERO TRACAS
 // Important : doit retourner false pour "ZERO TRACAS HORS ZONE"
 export function isZeroTracasActivity(activityName) {
-  if (!activityName) return false;
-  const name = activityName.toLowerCase();
+  const name = normalizeActivityName(activityName);
+  if (!name) return false;
   // Vérifier d'abord si c'est HORS ZONE (plus spécifique)
-  if (name.includes("zero tracas hors zone")) return false;
+  if (name.includes("zero tracas hors zone") || name.includes("zero tracas horszone")) return false;
   return name.includes("zero tracas");
 }
 
@@ -60,9 +70,9 @@ export function getZeroTracasPrices() {
 
 // Helper pour vérifier si une activité est ZERO TRACAS HORS ZONE
 export function isZeroTracasHorsZoneActivity(activityName) {
-  if (!activityName) return false;
-  const name = activityName.toLowerCase();
-  return name.includes("zero tracas hors zone");
+  const name = normalizeActivityName(activityName);
+  if (!name) return false;
+  return name.includes("zero tracas hors zone") || name.includes("zero tracas horszone");
 }
 
 // Helper pour obtenir les prix ZERO TRACAS HORS ZONE (+5€ sur chaque option visa)
