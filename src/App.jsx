@@ -101,21 +101,13 @@ const SituationPage = lazyWithRetry(() => import("./pages/SituationPage").then(m
 const StopSalePage = lazyWithRetry(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
 const RequestPage = lazyWithRetry(() => import("./pages/RequestPage").then(module => ({ default: module.RequestPage })));
 
-const LAST_GOOD_ACTIVITIES_KEY = "hd_activities_last_good";
-const MIN_RELIABLE_ACTIVITIES_COUNT = 10;
-
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const [ok, setOk] = useState(false);
   const [tab, setTab] = useState("devis");
-  // Démarrer depuis la meilleure source locale disponible (courante ou "last good").
-  const [activities, setActivities] = useState(() => {
-    const current = loadLS(LS_KEYS.activities, []);
-    const lastGood = loadLS(LAST_GOOD_ACTIVITIES_KEY, []);
-    const bestLocal = Array.isArray(lastGood) && lastGood.length > current.length ? lastGood : current;
-    return bestLocal.length > 0 ? bestLocal : getDefaultActivities();
-  });
+  // Source de vérité: Supabase (les données locales servent seulement de cache temporaire d'affichage).
+  const [activities, setActivities] = useState(() => loadLS(LS_KEYS.activities, getDefaultActivities()));
   const [quotes, setQuotes] = useState(() => loadLS(LS_KEYS.quotes, []));
   const [quoteDraft, setQuoteDraft] = useState(() => loadLS(LS_KEYS.quoteForm, null));
   const [remoteEnabled, setRemoteEnabled] = useState(false);
@@ -267,53 +259,16 @@ export default function App() {
           );
         }
 
-        // LIRE depuis Supabase, mais protéger contre les listes anormalement petites.
+        // LIRE depuis Supabase (source de vérité partagée entre tous les PC).
         if (finalRows.length > 0) {
           const supabaseActivities = mapActivitiesFromRows(finalRows);
-          const localActivities = loadLS(LS_KEYS.activities, []);
-          const lastGoodActivities = loadLS(LAST_GOOD_ACTIVITIES_KEY, []);
-          const trustedLocal =
-            Array.isArray(lastGoodActivities) && lastGoodActivities.length > localActivities.length
-              ? lastGoodActivities
-              : localActivities;
-          const trustedCount = trustedLocal.length;
-          const remoteCount = supabaseActivities.length;
-          const suspiciousShrink =
-            trustedCount >= MIN_RELIABLE_ACTIVITIES_COUNT &&
-            remoteCount < MIN_RELIABLE_ACTIVITIES_COUNT &&
-            remoteCount < trustedCount;
-
-          if (suspiciousShrink) {
-            logger.warn(
-              `⚠️ Sync activités ignorée (taille suspecte): distant=${remoteCount}, local fiable=${trustedCount}. Conservation locale.`
-            );
-            setActivities(trustedLocal);
-            saveLS(LS_KEYS.activities, trustedLocal);
-            activitiesCache.set(cacheKey, trustedLocal);
-          } else {
-            setActivities(supabaseActivities);
-            saveLS(LS_KEYS.activities, supabaseActivities);
-            activitiesCache.set(cacheKey, supabaseActivities);
-            if (remoteCount >= MIN_RELIABLE_ACTIVITIES_COUNT) {
-              saveLS(LAST_GOOD_ACTIVITIES_KEY, supabaseActivities);
-            }
-          }
+          setActivities(supabaseActivities);
+          saveLS(LS_KEYS.activities, supabaseActivities);
+          activitiesCache.set(cacheKey, supabaseActivities);
         } else {
-          // PROTECTION CRITIQUE : Ne pas vider les activités locales si Supabase est vide
-          // Cela pourrait être dû à une erreur temporaire, une perte de connexion, ou un problème de base de données
-          const localActivities = loadLS(LS_KEYS.activities, []);
-          if (localActivities.length > 0) {
-            logger.warn("⚠️ ATTENTION : Supabase retourne un tableau vide mais il y a des activités locales. Conservation des activités locales pour éviter une perte de données.");
-            logger.warn(`📦 ${localActivities.length} activités locales conservées. Vérifiez la connexion Supabase et l'état de la base de données.`);
-            // Conserver les activités locales au lieu de les vider
-            setActivities(localActivities);
-            // Ne pas écraser le localStorage avec un tableau vide
-          } else {
-            // Seulement vider si vraiment aucune activité n'existe nulle part
-            logger.log("📦 Supabase: aucune activité trouvée et aucune activité locale. Initialisation vide.");
-            setActivities([]);
-            saveLS(LS_KEYS.activities, []);
-          }
+          logger.warn(`📦 Supabase: aucune activité trouvée pour la source sélectionnée (${finalSource}).`);
+          setActivities([]);
+          saveLS(LS_KEYS.activities, []);
         }
       } else if (error) {
         logger.warn("⚠️ Erreur lors de la récupération des activités depuis Supabase:", error);
@@ -322,16 +277,6 @@ export default function App() {
       // Synchronisation des devis se fait dans un useEffect séparé pour éviter les doublons
     } catch (err) {
       logger.warn("Erreur synchronisation Supabase:", err);
-      const localActivities = loadLS(LS_KEYS.activities, []);
-      const lastGoodActivities = loadLS(LAST_GOOD_ACTIVITIES_KEY, []);
-      const trustedLocal =
-        Array.isArray(lastGoodActivities) && lastGoodActivities.length > localActivities.length
-          ? lastGoodActivities
-          : localActivities;
-      if (trustedLocal.length > 0) {
-        setActivities(trustedLocal);
-        logger.warn(`📦 Fallback local activé: ${trustedLocal.length} activité(s) conservée(s).`);
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -903,19 +848,6 @@ export default function App() {
                 return a.supabase_id !== deletedId && a.id !== deletedId?.toString();
               });
 
-              const suspiciousShrink =
-                prevActivities.length >= MIN_RELIABLE_ACTIVITIES_COUNT &&
-                filtered.length < MIN_RELIABLE_ACTIVITIES_COUNT;
-              if (suspiciousShrink) {
-                logger.warn(
-                  `⚠️ Suppression Realtime ignorée (réduction suspecte): ${prevActivities.length} -> ${filtered.length}. Resync forcée.`
-                );
-                setTimeout(() => {
-                  syncWithSupabase();
-                }, 0);
-                return prevActivities;
-              }
-              
               logger.log(`📦 Activité supprimée via Realtime. ${prevActivities.length} → ${filtered.length} activités.`, {
                 deleted_activity: activityBeforeDelete,
                 remaining_count: filtered.length
@@ -944,7 +876,7 @@ export default function App() {
       logger.log('🔌 Déconnexion de l\'abonnement Realtime pour les activités');
       supabase.removeChannel(activitiesChannel);
     };
-  }, [remoteEnabled, syncWithSupabase]);
+  }, [remoteEnabled]);
 
   // Références pour les timeouts de sauvegarde debounce
   const activitiesSaveTimeoutRef = useRef(null);
@@ -957,9 +889,6 @@ export default function App() {
     }
     activitiesSaveTimeoutRef.current = setTimeout(() => {
       saveLS(LS_KEYS.activities, activities);
-      if (activities.length >= MIN_RELIABLE_ACTIVITIES_COUNT) {
-        saveLS(LAST_GOOD_ACTIVITIES_KEY, activities);
-      }
     }, 300);
 
     return () => {
