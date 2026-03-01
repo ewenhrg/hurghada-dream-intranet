@@ -25,10 +25,15 @@ function getEnv(key) {
   return undefined;
 }
 
+// Filet de sécurité: utiliser le projet principal même si les variables env ne sont pas injectées.
+const FALLBACK_SUPABASE_URL = "https://uvqzqlfzhgbknkpvybbj.supabase.co";
+const FALLBACK_SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2cXpxbGZ6aGdia25rcHZ5YmJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MTk2NTEsImV4cCI6MjA3NzQ5NTY1MX0.0dzHyZxIadZe2gFo9Qiu5fg8ivmOOr3kT3WF3Ro6E60";
+
 const SUPABASE_URL =
-  getEnv("VITE_SUPABASE_URL") || getEnv("REACT_APP_SUPABASE_URL") || "";
+  getEnv("VITE_SUPABASE_URL") || getEnv("REACT_APP_SUPABASE_URL") || FALLBACK_SUPABASE_URL;
 const SUPABASE_ANON_KEY =
-  getEnv("VITE_SUPABASE_ANON_KEY") || getEnv("REACT_APP_SUPABASE_ANON_KEY") || "";
+  getEnv("VITE_SUPABASE_ANON_KEY") || getEnv("REACT_APP_SUPABASE_ANON_KEY") || FALLBACK_SUPABASE_ANON_KEY;
 export const SITE_KEY =
   getEnv("VITE_SITE_KEY") || getEnv("REACT_APP_SITE_KEY") || "hurghada_dream_0606";
 

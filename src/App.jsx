@@ -106,8 +106,8 @@ export default function App() {
   const navigate = useNavigate();
   const [ok, setOk] = useState(false);
   const [tab, setTab] = useState("devis");
-  // Forcer la lecture uniquement depuis Supabase, ignorer le localStorage local
-  const [activities, setActivities] = useState(() => getDefaultActivities());
+  // Démarrer depuis le localStorage pour éviter de retomber à 2 activités si Supabase est indisponible.
+  const [activities, setActivities] = useState(() => loadLS(LS_KEYS.activities, getDefaultActivities()));
   const [quotes, setQuotes] = useState(() => loadLS(LS_KEYS.quotes, []));
   const [quoteDraft, setQuoteDraft] = useState(() => loadLS(LS_KEYS.quoteForm, null));
   const [remoteEnabled, setRemoteEnabled] = useState(false);
@@ -181,9 +181,12 @@ export default function App() {
       // Vérifier si Supabase est configuré (pas un stub)
       const { error: testError } = await supabase.from("activities").select("id").limit(1);
       
-      // Si pas d'erreur de connexion/config, Supabase est disponible
-      if (!testError || testError.code !== "PGRST116") {
+      // Supabase est considéré disponible uniquement sans erreur.
+      if (!testError) {
         setRemoteEnabled(true);
+      } else {
+        setRemoteEnabled(false);
+        logger.warn("⚠️ Supabase indisponible, conservation des activités locales.", testError);
       }
 
       // Récupérer toutes les activités - une ligne par activité (pas de déduplication pour ne rien perdre)
@@ -217,38 +220,43 @@ export default function App() {
         .order("id", { ascending: false });
       if (!error && Array.isArray(data)) {
         let finalRows = data;
+        let finalSource = `site_key=${SITE_KEY}`;
 
-        // Fallback 1 (ciblé) : si le filtre site_key renvoie trop peu d'activités,
-        // tenter la clé alternative historique (URL Supabase) utilisée dans certaines anciennes données.
-        if (finalRows.length <= 1) {
-          const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
-          if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
-            const { data: altRows, error: altRowsError } = await supabase
+        // Comparer plusieurs sources et garder automatiquement la liste la plus complète.
+        const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
+        const checks = [];
+
+        if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
+          checks.push(
+            supabase
               .from("activities")
               .select(selectColumns)
               .eq("site_key", fallbackSiteKey)
-              .order("id", { ascending: false });
-            if (!altRowsError && Array.isArray(altRows) && altRows.length > finalRows.length) {
-              logger.warn(
-                `⚠️ Fallback activités via clé alternative activé: ${finalRows.length} ligne(s) pour site_key=${SITE_KEY}, ${altRows.length} ligne(s) pour site_key=${fallbackSiteKey}.`
-              );
-              finalRows = altRows;
-            }
-          }
+              .order("id", { ascending: false })
+              .then((res) => ({ source: `site_key=${fallbackSiteKey}`, ...res }))
+          );
         }
 
-        // Fallback 2 (large) : dernier recours sans filtre pour éviter un écran vide côté utilisateur.
-        if (finalRows.length <= 1) {
-          const { data: allRows, error: allRowsError } = await supabase
+        checks.push(
+          supabase
             .from("activities")
             .select(selectColumns)
-            .order("id", { ascending: false });
-          if (!allRowsError && Array.isArray(allRows) && allRows.length > finalRows.length) {
-            logger.warn(
-              `⚠️ Fallback activités activé: ${finalRows.length} ligne(s) pour site_key=${SITE_KEY}, ${allRows.length} ligne(s) sans filtre.`
-            );
-            finalRows = allRows;
+            .order("id", { ascending: false })
+            .then((res) => ({ source: "sans filtre site_key", ...res }))
+        );
+
+        const checkedResults = await Promise.all(checks);
+        checkedResults.forEach((result) => {
+          if (!result?.error && Array.isArray(result?.data) && result.data.length > finalRows.length) {
+            finalRows = result.data;
+            finalSource = result.source;
           }
+        });
+
+        if (finalSource !== `site_key=${SITE_KEY}`) {
+          logger.warn(
+            `⚠️ Source activités basculée automatiquement: site_key=${SITE_KEY} (${data.length}) -> ${finalSource} (${finalRows.length}).`
+          );
         }
 
         // LIRE UNIQUEMENT depuis Supabase (source de vérité absolue) - garder toutes les lignes
@@ -282,6 +290,11 @@ export default function App() {
       // Synchronisation des devis se fait dans un useEffect séparé pour éviter les doublons
     } catch (err) {
       logger.warn("Erreur synchronisation Supabase:", err);
+      const localActivities = loadLS(LS_KEYS.activities, []);
+      if (localActivities.length > 0) {
+        setActivities(localActivities);
+        logger.warn(`📦 Fallback local activé: ${localActivities.length} activité(s) conservée(s).`);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
