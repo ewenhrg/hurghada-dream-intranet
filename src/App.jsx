@@ -47,7 +47,7 @@ function ScrollOptimizer({ children }) {
   return <>{children}</>;
 }
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "./lib/supabase";
+import { supabase, __SUPABASE_DEBUG__ } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
 import { uuid, emptyTransfers, mergeTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
 import { configureUserPermissions, loadUserFromSession } from "./utils/userPermissions";
@@ -218,8 +218,26 @@ export default function App() {
       if (!error && Array.isArray(data)) {
         let finalRows = data;
 
-        // Fallback de sécurité : si le filtre site_key renvoie trop peu d'activités,
-        // tenter un chargement global pour éviter un écran vide côté utilisateur.
+        // Fallback 1 (ciblé) : si le filtre site_key renvoie trop peu d'activités,
+        // tenter la clé alternative historique (URL Supabase) utilisée dans certaines anciennes données.
+        if (finalRows.length <= 1) {
+          const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
+          if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
+            const { data: altRows, error: altRowsError } = await supabase
+              .from("activities")
+              .select(selectColumns)
+              .eq("site_key", fallbackSiteKey)
+              .order("id", { ascending: false });
+            if (!altRowsError && Array.isArray(altRows) && altRows.length > finalRows.length) {
+              logger.warn(
+                `⚠️ Fallback activités via clé alternative activé: ${finalRows.length} ligne(s) pour site_key=${SITE_KEY}, ${altRows.length} ligne(s) pour site_key=${fallbackSiteKey}.`
+              );
+              finalRows = altRows;
+            }
+          }
+        }
+
+        // Fallback 2 (large) : dernier recours sans filtre pour éviter un écran vide côté utilisateur.
         if (finalRows.length <= 1) {
           const { data: allRows, error: allRowsError } = await supabase
             .from("activities")
