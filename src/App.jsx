@@ -187,34 +187,55 @@ export default function App() {
       }
 
       // Récupérer toutes les activités - une ligne par activité (pas de déduplication pour ne rien perdre)
+      const selectColumns = "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes, description, transfers";
+      const mapActivitiesFromRows = (rows) =>
+        rows.map((row) => {
+          const supabaseId = row.id;
+          const localId = supabaseId?.toString?.() || uuid();
+          return {
+            id: localId,
+            supabase_id: supabaseId,
+            name: row.name,
+            category: row.category || "desert",
+            priceAdult: row.price_adult || 0,
+            priceChild: row.price_child || 0,
+            priceBaby: row.price_baby || 0,
+            ageChild: row.age_child || "",
+            ageBaby: row.age_baby || "",
+            currency: row.currency || "EUR",
+            availableDays: row.available_days || [false, false, false, false, false, false, false],
+            notes: row.notes || "",
+            description: row.description || "",
+            transfers: mergeTransfers(row.transfers),
+          };
+        });
+
       const { data, error } = await supabase
         .from("activities")
-        .select("id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes, description, transfers")
+        .select(selectColumns)
         .eq("site_key", SITE_KEY)
         .order("id", { ascending: false });
       if (!error && Array.isArray(data)) {
+        let finalRows = data;
+
+        // Fallback de sécurité : si le filtre site_key renvoie trop peu d'activités,
+        // tenter un chargement global pour éviter un écran vide côté utilisateur.
+        if (finalRows.length <= 1) {
+          const { data: allRows, error: allRowsError } = await supabase
+            .from("activities")
+            .select(selectColumns)
+            .order("id", { ascending: false });
+          if (!allRowsError && Array.isArray(allRows) && allRows.length > finalRows.length) {
+            logger.warn(
+              `⚠️ Fallback activités activé: ${finalRows.length} ligne(s) pour site_key=${SITE_KEY}, ${allRows.length} ligne(s) sans filtre.`
+            );
+            finalRows = allRows;
+          }
+        }
+
         // LIRE UNIQUEMENT depuis Supabase (source de vérité absolue) - garder toutes les lignes
-        if (data.length > 0) {
-          const supabaseActivities = data.map((row) => {
-            const supabaseId = row.id;
-            const localId = supabaseId?.toString?.() || uuid();
-            return {
-              id: localId,
-              supabase_id: supabaseId,
-              name: row.name,
-              category: row.category || "desert",
-              priceAdult: row.price_adult || 0,
-              priceChild: row.price_child || 0,
-              priceBaby: row.price_baby || 0,
-              ageChild: row.age_child || "",
-              ageBaby: row.age_baby || "",
-              currency: row.currency || "EUR",
-              availableDays: row.available_days || [false, false, false, false, false, false, false],
-              notes: row.notes || "",
-              description: row.description || "",
-              transfers: mergeTransfers(row.transfers),
-            };
-          });
+        if (finalRows.length > 0) {
+          const supabaseActivities = mapActivitiesFromRows(finalRows);
 
           setActivities(supabaseActivities);
           saveLS(LS_KEYS.activities, supabaseActivities);
