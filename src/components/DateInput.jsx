@@ -132,7 +132,7 @@ export function DateInput({ value = "", onChange, className = "", min, max }) {
         type="button"
         onClick={openCalendar}
         title="Ouvrir le calendrier"
-        className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl border border-[rgba(148,163,184,0.35)] bg-[var(--hd-surface-input)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-md transition-all text-xl cursor-pointer touch-manipulation"
+        className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-md transition-all text-xl cursor-pointer touch-manipulation"
       >
         📅
       </button>

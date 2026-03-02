@@ -141,7 +141,7 @@ export function DocumentsPage({ user }) {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border-2 border-indigo-200 p-6 shadow-lg space-y-4 bg-[var(--hd-surface)]"
+          className="bg-white rounded-2xl border-2 border-indigo-200 p-6 shadow-lg space-y-4"
         >
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">Titre *</label>
@@ -176,7 +176,7 @@ export function DocumentsPage({ user }) {
               onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
               placeholder="Commentaire ou description..."
               rows={3}
-              className="w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[var(--hd-surface-input)] px-4 py-3 text-base text-slate-800 placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 min-h-[44px]"
+              className="w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 min-h-[44px]"
             />
           </div>
           <div className="flex gap-3">
@@ -194,7 +194,7 @@ export function DocumentsPage({ user }) {
         {list.length === 0 ? (
           <p className="text-slate-500 py-8 text-center">Aucun document pour l'instant. Cliquez sur « Ajouter un document ».</p>
         ) : (
-          <ul className="divide-y divide-slate-200 rounded-2xl border border-slate-200 shadow-sm overflow-hidden bg-[var(--hd-surface)]">
+          <ul className="divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             {list.map((doc) => (
               <li key={doc.id} className="p-4 md:p-5 hover:bg-slate-50/50 transition-colors">
                 <div className="flex flex-wrap items-start justify-between gap-3">
