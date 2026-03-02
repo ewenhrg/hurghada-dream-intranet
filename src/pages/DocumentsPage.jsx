@@ -6,6 +6,9 @@ import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 
 const BUCKET = "documents";
+// Limite côté app (doit correspondre au file_size_limit du bucket Supabase, ex. 50 Mo)
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+const MAX_FILE_SIZE_MB = 50;
 
 export function DocumentsPage({ user }) {
   const [list, setList] = useState([]);
@@ -54,11 +57,15 @@ export function DocumentsPage({ user }) {
       return;
     }
 
+    if (form.file && form.file.size > MAX_FILE_SIZE_BYTES) {
+      toast.error(`Fichier trop volumineux. Taille max : ${MAX_FILE_SIZE_MB} Mo.`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       let fileUrl = "";
       if (form.file && form.file.size > 0) {
-        const ext = form.file.name.split(".").pop() || "bin";
         const path = `${SITE_KEY}/${Date.now()}_${form.file.name}`;
         const { error: uploadError } = await supabase.storage
           .from(BUCKET)
@@ -66,7 +73,10 @@ export function DocumentsPage({ user }) {
 
         if (uploadError) {
           logger.error("Erreur upload:", uploadError);
-          toast.error("Erreur lors de l'upload du fichier.");
+          const msg = uploadError.message?.includes("maximum allowed size")
+            ? `Fichier trop volumineux (max ${MAX_FILE_SIZE_MB} Mo). Augmente la limite dans Supabase Storage si besoin.`
+            : "Erreur lors de l'upload du fichier.";
+          toast.error(msg);
           setSubmitting(false);
           return;
         }

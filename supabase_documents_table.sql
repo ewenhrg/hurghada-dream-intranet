@@ -37,18 +37,21 @@ ON public.documents FOR DELETE TO public USING (true);
 -- ============================================================
 -- Stockage des fichiers (optionnel)
 -- Crée un bucket "documents" dans Supabase : Storage > New bucket
--- Nom : documents | Public: Oui (pour que les liens fonctionnent)
+-- Nom : documents | Public: Oui | Taille max : 50 Mo
 -- ============================================================
--- Si tu préfères le faire en SQL (Supabase) :
+-- 50 Mo = 52428800 octets (augmenté pour les PDF volumineux)
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'documents',
   'documents',
   true,
-  10485760,
+  52428800,
   ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- Si le bucket existe déjà avec une ancienne limite (ex. 10 Mo), exécute cette ligne pour passer à 50 Mo :
+-- UPDATE storage.buckets SET file_size_limit = 52428800 WHERE id = 'documents';
 
 -- Politique : tout le monde peut lire les fichiers du bucket documents
 CREATE POLICY "Public read documents bucket"
