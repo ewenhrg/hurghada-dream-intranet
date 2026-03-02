@@ -3,7 +3,12 @@ import { supabase } from "../lib/supabase";
 import { logger } from "../utils/logger";
 import { dbUserToSessionUser } from "../constants/permissions";
 
-const PARTICLES = 48;
+const PARTICLES = 64;
+const PARTICLES_UP = 32;
+const STARS = 40;
+const FALLING_LINES = 18;
+const COMETS = 4;
+const SHAPES = 12;
 const TITLE_LETTERS = "Portail interne".split("");
 const FEATURES = [
   { label: "Sync temps réel", icon: "⚡" },
@@ -130,31 +135,91 @@ export function LoginPage({ onSuccess }) {
         }}
       />
 
-      {/* Blobs très animés */}
+      {/* Blobs aurora (plus nombreux, plus animés) */}
       <div
-        className="pointer-events-none absolute -top-60 -right-60 h-[700px] w-[700px] rounded-full bg-gradient-to-br from-cyan-500/35 via-indigo-500/30 to-transparent blur-[140px]"
-        style={{ animation: "login-gradient-shift 10s ease-in-out infinite" }}
+        className="pointer-events-none absolute -top-60 -right-60 h-[750px] w-[750px] rounded-full bg-gradient-to-br from-cyan-500/40 via-indigo-500/35 to-transparent blur-[150px]"
+        style={{ animation: "login-aurora 12s ease-in-out infinite" }}
       />
       <div
-        className="pointer-events-none absolute bottom-[-20%] left-[-10%] h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-fuchsia-500/30 via-violet-500/25 to-transparent blur-[120px]"
-        style={{ animation: "login-gradient-shift 14s ease-in-out infinite 2s" }}
+        className="pointer-events-none absolute bottom-[-25%] left-[-15%] h-[650px] w-[650px] rounded-full bg-gradient-to-tr from-fuchsia-500/35 via-violet-500/30 to-transparent blur-[130px]"
+        style={{ animation: "login-aurora 15s ease-in-out infinite 2s" }}
       />
       <div
-        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full bg-gradient-to-r from-indigo-500/25 to-cyan-500/20 blur-[100px]"
-        style={{ animation: "login-gradient-shift 18s ease-in-out infinite 4s" }}
+        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[550px] w-[550px] rounded-full bg-gradient-to-r from-indigo-500/30 to-cyan-500/25 blur-[110px]"
+        style={{ animation: "login-aurora 18s ease-in-out infinite 4s" }}
+      />
+      <div
+        className="pointer-events-none absolute top-[20%] right-[10%] h-[400px] w-[400px] rounded-full bg-gradient-to-bl from-cyan-400/25 to-fuchsia-400/20 blur-[100px]"
+        style={{ animation: "login-pulse-soft 8s ease-in-out infinite 1s" }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[30%] left-[5%] h-[350px] w-[350px] rounded-full bg-gradient-to-tr from-violet-500/20 to-cyan-500/15 blur-[90px]"
+        style={{ animation: "login-pulse-soft 10s ease-in-out infinite 3s" }}
       />
 
-      {/* Grille + lignes néon */}
+      {/* Grille néon */}
       <div
-        className="absolute inset-0 opacity-[0.08]"
+        className="absolute inset-0 opacity-[0.07]"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(6, 182, 212, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(6, 182, 212, 0.4) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
+            "linear-gradient(rgba(6, 182, 212, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(6, 182, 212, 0.5) 1px, transparent 1px)",
+          backgroundSize: "36px 36px",
         }}
       />
 
-      {/* Particules massives */}
+      {/* Scan line */}
+      <div
+        className="pointer-events-none absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent z-[1]"
+        style={{ animation: "login-scan 8s linear infinite" }}
+      />
+
+      {/* Comètes */}
+      {Array.from({ length: COMETS }).map((_, i) => (
+        <div
+          key={`comet-${i}`}
+          className="pointer-events-none absolute w-2 h-2 rounded-full bg-cyan-300/80 shadow-[0_0_20px_#22d3ee] z-[1]"
+          style={{
+            left: `${-5 + i * 10}%`,
+            top: `${i * 20}%`,
+            animation: `login-comet ${12 + i * 3}s linear infinite`,
+            animationDelay: `${i * 4}s`,
+          }}
+        />
+      ))}
+
+      {/* Lignes tombantes (matrix style) */}
+      {Array.from({ length: FALLING_LINES }).map((_, i) => (
+        <div
+          key={`line-${i}`}
+          className="pointer-events-none absolute w-px bg-gradient-to-b from-transparent via-cyan-400/30 to-transparent z-[1]"
+          style={{
+            left: `${(i * 5.5 + 2) % 100}%`,
+            height: "80px",
+            animation: `login-line-fall ${6 + (i % 4)}s linear infinite`,
+            animationDelay: `${i * 0.5}s`,
+          }}
+        />
+      ))}
+
+      {/* Particules : montées */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {Array.from({ length: PARTICLES_UP }).map((_, i) => (
+          <div
+            key={`up-${i}`}
+            className="absolute rounded-full bg-cyan-400/50"
+            style={{
+              width: `${(i % 3) + 1}px`,
+              height: `${(i % 3) + 1}px`,
+              left: `${(i * 11 + 3) % 100}%`,
+              bottom: "-10px",
+              animation: `login-float-up ${8 + (i % 5)}s linear infinite`,
+              animationDelay: `${i * 0.4}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Particules : flottantes + dérive */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {Array.from({ length: PARTICLES }).map((_, i) => (
           <div
@@ -165,25 +230,65 @@ export function LoginPage({ onSuccess }) {
               height: `${(i % 3) + 2}px`,
               left: `${(i * 13 + 7) % 100}%`,
               top: `${(i * 17 + 3) % 100}%`,
-              animation: `login-float-particle ${6 + (i % 6)}s ease-in-out infinite`,
-              animationDelay: `${i * 0.15}s`,
+              animation: i % 3 === 0 ? `login-float-particle ${6 + (i % 6)}s ease-in-out infinite` : `login-float-drift ${5 + (i % 4)}s ease-in-out infinite`,
+              animationDelay: `${i * 0.12}s`,
             }}
           />
         ))}
       </div>
 
-      {/* Formes flottantes (hex / orbes) */}
+      {/* Étoiles qui scintillent */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {Array.from({ length: STARS }).map((_, i) => (
+          <div
+            key={`star-${i}`}
+            className="absolute rounded-full bg-white/60"
+            style={{
+              width: `${(i % 2) + 1}px`,
+              height: `${(i % 2) + 1}px`,
+              left: `${(i * 7 + 11) % 100}%`,
+              top: `${(i * 13 + 5) % 100}%`,
+              animation: "login-twinkle 2s ease-in-out infinite",
+              animationDelay: `${(i * 0.1) % 2}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Formes géométriques flottantes (cercles, carrés, triangles) */}
+      {Array.from({ length: SHAPES }).map((_, i) => {
+        const isCircle = i % 3 === 0;
+        const isSquare = i % 3 === 1;
+        return (
+          <div
+            key={`shape-${i}`}
+            className="pointer-events-none absolute border border-cyan-500/15"
+            style={{
+              width: 40 + (i % 4) * 20,
+              height: 40 + (i % 4) * 20,
+              left: `${(i * 8 + 5) % 92}%`,
+              top: `${(i * 12 + 8) % 85}%`,
+              borderRadius: isCircle ? "50%" : "4px",
+              transform: isSquare ? "rotate(45deg)" : undefined,
+              animation: `login-float-diagonal ${10 + i}s ease-in-out infinite`,
+              animationDelay: `${i * 0.6}s`,
+            }}
+          />
+        );
+      })}
+
+      {/* Orbes qui tournent */}
       {[...Array(6)].map((_, i) => (
         <div
-          key={i}
+          key={`orb-${i}`}
           className="pointer-events-none absolute rounded-full border border-cyan-500/20"
           style={{
-            width: 60 + i * 25,
-            height: 60 + i * 25,
-            left: `${15 + i * 15}%`,
-            top: `${20 + (i % 3) * 25}%`,
-            animation: `login-float-particle ${12 + i * 2}s ease-in-out infinite`,
-            animationDelay: `${i * 0.8}s`,
+            width: 50 + i * 22,
+            height: 50 + i * 22,
+            left: `${12 + i * 14}%`,
+            top: `${18 + (i % 3) * 28}%`,
+            animation: `login-float-particle ${11 + i * 2}s ease-in-out infinite, login-spin-slow ${20 + i * 5}s linear infinite`,
+            animationDelay: `${i * 0.7}s`,
           }}
         />
       ))}
@@ -246,17 +351,18 @@ export function LoginPage({ onSuccess }) {
           </div>
         </section>
 
-        {/* Carte 3D néon */}
+        {/* Carte 3D néon + flottante */}
         <aside className="w-full max-w-[440px] flex-shrink-0 login-enter-7">
-          <div
-            ref={cardRef}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            className="login-panel rounded-[1.75rem] p-8 md:p-10 transition-transform duration-300 ease-out"
-            style={{
-              transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1, 1, 1)`,
-            }}
-          >
+          <div className="relative" style={{ animation: "login-card-float 5s ease-in-out infinite" }}>
+            <div
+              ref={cardRef}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              className="login-panel rounded-[1.75rem] p-8 md:p-10 transition-transform duration-300 ease-out"
+              style={{
+                transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1, 1, 1)`,
+              }}
+            >
             <div className="absolute inset-x-0 top-0 h-1 rounded-t-[1.75rem] overflow-hidden">
               <div
                 className="h-full w-full bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-cyan-400 bg-[length:200%_100%]"
@@ -392,6 +498,7 @@ export function LoginPage({ onSuccess }) {
                 <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-widest">Intranet · Ewen</p>
               </div>
             </div>
+          </div>
           </div>
         </aside>
       </div>

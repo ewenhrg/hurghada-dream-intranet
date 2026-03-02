@@ -385,6 +385,63 @@ body::before {
 .login-enter-6 { animation: login-slide-up-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both; }
 .login-enter-7 { animation: login-scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both; }
 
+/* === Login ULTRA : encore plus d'animations === */
+@keyframes login-float-up {
+  0% { transform: translateY(0) translateX(0); opacity: 0.2; }
+  50% { opacity: 0.7; }
+  100% { transform: translateY(-100vh) translateX(20px); opacity: 0; }
+}
+@keyframes login-float-drift {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(30px) translateY(-15px); }
+}
+@keyframes login-spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes login-twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+@keyframes login-comet {
+  0% { transform: translate(-100px, -100px) scale(0.5); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.4; }
+  100% { transform: translate(100vw, 100vh) scale(0.5); opacity: 0; }
+}
+@keyframes login-wave {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+}
+@keyframes login-aurora {
+  0%, 100% { opacity: 0.6; transform: translate(0, 0) scale(1); }
+  25% { opacity: 0.9; transform: translate(5%, 5%) scale(1.1); }
+  50% { opacity: 0.7; transform: translate(-5%, -5%) scale(0.95); }
+  75% { opacity: 0.85; transform: translate(-3%, 4%) scale(1.05); }
+}
+@keyframes login-scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes login-card-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes login-line-fall {
+  0% { transform: translateY(-20px); opacity: 0; }
+  10% { opacity: 0.4; }
+  90% { opacity: 0.3; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+@keyframes login-pulse-soft {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.1); }
+}
+@keyframes login-float-diagonal {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(15px, -25px) rotate(5deg); }
+  75% { transform: translate(-10px, 15px) rotate(-5deg); }
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--hd-font-display);
   letter-spacing: -0.02em;
