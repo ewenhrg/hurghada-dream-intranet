@@ -225,6 +225,26 @@ body::before {
   }
 }
 
+/* Page Login : panneau formulaire (reste clair, non surchargé par les règles globales) */
+.login-panel {
+  background: linear-gradient(165deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.8),
+    0 25px 50px -12px rgba(15, 23, 42, 0.4),
+    0 0 80px -20px rgba(99, 102, 241, 0.35);
+}
+
+@keyframes login-glow {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.05); }
+}
+
+@keyframes login-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(2%, -3%) scale(1.02); }
+  66% { transform: translate(-1%, 2%) scale(0.98); }
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--hd-font-display);
   letter-spacing: -0.02em;
