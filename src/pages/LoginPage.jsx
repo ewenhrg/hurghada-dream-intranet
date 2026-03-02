@@ -22,8 +22,16 @@ export function LoginPage({ onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [showCode, setShowCode] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [mouseLight, setMouseLight] = useState({ x: 0, y: 0 });
+  const [hasMouse, setHasMouse] = useState(false);
   const inputRef = useRef(null);
   const cardRef = useRef(null);
+  const pageRef = useRef(null);
+
+  const handlePageMouseMove = useCallback((e) => {
+    setHasMouse(true);
+    setMouseLight({ x: e.clientX, y: e.clientY });
+  }, []);
 
   const handleMouseMove = useCallback((e) => {
     const card = cardRef.current;
@@ -125,7 +133,39 @@ export function LoginPage({ onSuccess }) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#030712] text-white">
+    <div
+      ref={pageRef}
+      onMouseMove={handlePageMouseMove}
+      className="relative min-h-screen overflow-hidden bg-[#030712] text-white"
+    >
+      {/* Soleil en haut à gauche */}
+      <div className="absolute top-0 left-0 z-[2] pointer-events-none" aria-hidden>
+        <div
+          className="absolute -top-24 -left-24 w-64 h-64 rounded-full opacity-90"
+          style={{
+            background: "radial-gradient(circle at 30% 30%, #fffef0 0%, #fef08a 25%, #facc15 50%, #eab308 70%, transparent 72%)",
+            boxShadow: "0 0 120px 40px rgba(254, 240, 138, 0.4), 0 0 200px 80px rgba(250, 204, 21, 0.2)",
+          }}
+        />
+        <div
+          className="absolute -top-32 -left-32 w-80 h-80 rounded-full opacity-40"
+          style={{
+            background: "radial-gradient(circle, rgba(254, 240, 138, 0.6) 0%, transparent 70%)",
+            filter: "blur(20px)",
+          }}
+        />
+      </div>
+
+      {/* Éclairage qui suit la souris */}
+      {hasMouse && (
+        <div
+          className="fixed inset-0 pointer-events-none z-[1] transition-opacity duration-200"
+          style={{
+            background: `radial-gradient(circle 350px at ${mouseLight.x}px ${mouseLight.y}px, rgba(255, 254, 240, 0.14) 0%, rgba(254, 240, 138, 0.06) 30%, transparent 55%)`,
+          }}
+        />
+      )}
+
       {/* Fond : dégradés intenses */}
       <div
         className="absolute inset-0"
