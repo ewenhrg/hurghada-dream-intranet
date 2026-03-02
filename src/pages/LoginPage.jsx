@@ -138,24 +138,6 @@ export function LoginPage({ onSuccess }) {
       onMouseMove={handlePageMouseMove}
       className="relative min-h-screen overflow-hidden bg-[#030712] text-white"
     >
-      {/* Soleil en haut à gauche */}
-      <div className="absolute top-0 left-0 z-[2] pointer-events-none" aria-hidden>
-        <div
-          className="absolute -top-24 -left-24 w-64 h-64 rounded-full opacity-90"
-          style={{
-            background: "radial-gradient(circle at 30% 30%, #fffef0 0%, #fef08a 25%, #facc15 50%, #eab308 70%, transparent 72%)",
-            boxShadow: "0 0 120px 40px rgba(254, 240, 138, 0.4), 0 0 200px 80px rgba(250, 204, 21, 0.2)",
-          }}
-        />
-        <div
-          className="absolute -top-32 -left-32 w-80 h-80 rounded-full opacity-40"
-          style={{
-            background: "radial-gradient(circle, rgba(254, 240, 138, 0.6) 0%, transparent 70%)",
-            filter: "blur(20px)",
-          }}
-        />
-      </div>
-
       {/* Éclairage qui suit la souris */}
       {hasMouse && (
         <div
