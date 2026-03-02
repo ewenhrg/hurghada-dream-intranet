@@ -225,13 +225,53 @@ body::before {
   }
 }
 
-/* Page Login : panneau formulaire (reste clair, non surchargé par les règles globales) */
+/* Page Login : panneau formulaire pro avec bordure animée */
 .login-panel {
   background: linear-gradient(165deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%) !important;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.8),
-    0 25px 50px -12px rgba(15, 23, 42, 0.4),
-    0 0 80px -20px rgba(99, 102, 241, 0.35);
+    0 0 0 1px rgba(255, 255, 255, 0.9),
+    0 30px 60px -15px rgba(15, 23, 42, 0.5),
+    0 0 0 1px rgba(99, 102, 241, 0.1),
+    0 0 120px -30px rgba(99, 102, 241, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+.login-panel::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from 0deg, #6366f1, #06b6d4, #8b5cf6, #6366f1);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: login-border-spin 8s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.login-panel > * { position: relative; z-index: 1; }
+.login-btn-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%);
+  background-size: 200% 200%;
+  animation: login-text-gradient 4s ease infinite;
+}
+.login-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 0 40px -5px rgba(99, 102, 241, 0.7), 0 0 80px -20px rgba(124, 58, 237, 0.4);
+  transform: translateY(-2px) scale(1.01);
+}
+.login-input-glow:focus {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 0 30px -5px rgba(99, 102, 241, 0.4);
+}
+.login-error-shake { animation: login-shake 0.5s ease-out; }
+.login-text-gradient-anim {
+  background: linear-gradient(90deg, #818cf8, #06b6d4, #a78bfa, #818cf8);
+  background-size: 300% 100%;
+  animation: login-text-gradient 5s ease infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 @keyframes login-glow {
@@ -244,6 +284,70 @@ body::before {
   33% { transform: translate(2%, -3%) scale(1.02); }
   66% { transform: translate(-1%, 2%) scale(0.98); }
 }
+
+/* Login "next level" */
+@keyframes login-gradient-shift {
+  0%, 100% { opacity: 1; transform: scale(1) translate(0, 0); }
+  25% { opacity: 0.9; transform: scale(1.1) translate(5%, -5%); }
+  50% { opacity: 1; transform: scale(0.95) translate(-5%, 5%); }
+  75% { opacity: 0.95; transform: scale(1.05) translate(3%, 3%); }
+}
+
+@keyframes login-shine {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(200%) skewX(-15deg); }
+}
+
+@keyframes login-pulse-glow {
+  0%, 100% { opacity: 0.5; filter: blur(20px); }
+  50% { opacity: 0.9; filter: blur(28px); }
+}
+
+@keyframes login-float-particle {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+  50% { transform: translate(10px, -30px) scale(1.2); opacity: 0.8; }
+}
+
+@keyframes login-slide-up-in {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes login-scale-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes login-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+
+@keyframes login-border-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes login-text-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes login-underline {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.login-enter-1 { animation: login-slide-up-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.login-enter-2 { animation: login-slide-up-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both; }
+.login-enter-3 { animation: login-slide-up-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both; }
+.login-enter-4 { animation: login-slide-up-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both; }
+.login-enter-5 { animation: login-slide-up-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both; }
+.login-enter-6 { animation: login-slide-up-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both; }
+.login-enter-7 { animation: login-scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both; }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--hd-font-display);
