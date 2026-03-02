@@ -9,7 +9,8 @@ export const translations = {
     "nav.modifications": "Modifications",
     "nav.situation": "Situation",
     "nav.users": "Utilisateurs",
-    
+    "nav.documents": "Documents",
+
     // Header
     "header.title": "Hurghada Dream — Bureaux",
     "header.subtitle": "Mini site interne (devis, activités, historique)",
@@ -39,7 +40,9 @@ export const translations = {
     "page.modifications.subtitle": "Gérez les modifications et annulations pour les devis payés uniquement.",
     "page.users.title": "Gestion des utilisateurs",
     "page.users.subtitle": "Créez et gérez les utilisateurs avec leurs codes d'accès et permissions.",
-    
+    "page.documents.title": "Documents",
+    "page.documents.subtitle": "Liens, fichiers et notes partagés.",
+
     // QuotesPage
     "quotes.client": "Client",
     "quotes.phone": "Téléphone",
@@ -81,7 +84,8 @@ export const translations = {
     "nav.modifications": "Modifications",
     "nav.situation": "Situation",
     "nav.users": "Users",
-    
+    "nav.documents": "Documents",
+
     // Header
     "header.title": "Hurghada Dream — Offices",
     "header.subtitle": "Internal mini site (quotes, activities, history)",
@@ -111,7 +115,9 @@ export const translations = {
     "page.modifications.subtitle": "Manage modifications and cancellations for paid quotes only.",
     "page.users.title": "Users management",
     "page.users.subtitle": "Create and manage users with their access codes and permissions.",
-    
+    "page.documents.title": "Documents",
+    "page.documents.subtitle": "Shared links, files and notes.",
+
     // QuotesPage
     "quotes.client": "Client",
     "quotes.phone": "Phone",

@@ -97,8 +97,11 @@ const HotelsPage = lazyWithRetry(() => import("./pages/HotelsPage").then(module 
 const TicketPage = lazyWithRetry(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
 // Page Modifications désactivée temporairement
 // const ModificationsPage = lazyWithRetry(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
+// Page Situation en standby : remettre à false pour réafficher dans le menu et le contenu
+const SITUATION_PAGE_STANDBY = true;
 const SituationPage = lazyWithRetry(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
 const StopSalePage = lazyWithRetry(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
+const DocumentsPage = lazyWithRetry(() => import("./pages/DocumentsPage").then(module => ({ default: module.DocumentsPage })));
 const RequestPage = lazyWithRetry(() => import("./pages/RequestPage").then(module => ({ default: module.RequestPage })));
 
 export default function App() {
@@ -1088,7 +1091,7 @@ export default function App() {
                     {t("nav.modifications")}
                   </Pill>
                 )} */}
-                {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
+                {!SITUATION_PAGE_STANDBY && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
                   <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
                     {t("nav.situation")}
                   </Pill>
@@ -1108,6 +1111,9 @@ export default function App() {
                     🏨 Hôtels
                   </Pill>
                 )}
+                <Pill active={tab === "documents"} onClick={() => setTab("documents")}>
+                  {t("nav.documents")}
+                </Pill>
               </div>
             </nav>
             {user && (
@@ -1233,7 +1239,7 @@ export default function App() {
           </Section>
         )} */}
 
-        {tab === "situation" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
+        {!SITUATION_PAGE_STANDBY && tab === "situation" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
           <SituationPage activities={activities} user={user} />
         )}
 
@@ -1254,6 +1260,16 @@ export default function App() {
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <HotelsPage user={user} />
+                </Suspense>
+              </ErrorBoundary>
+            </Section>
+          )}
+
+          {tab === "documents" && (
+            <Section title={t("page.documents.title")} subtitle={t("page.documents.subtitle")}>
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>
+                  <DocumentsPage user={user} />
                 </Suspense>
               </ErrorBoundary>
             </Section>
