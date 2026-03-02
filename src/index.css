@@ -225,53 +225,89 @@ body::before {
   }
 }
 
-/* Page Login : panneau formulaire pro avec bordure animée */
+/* Page Login : carte DARK néon / glassmorphism (pas de bg-white) */
 .login-panel {
-  background: linear-gradient(165deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%) !important;
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(15, 23, 42, 0.95) 100%) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.9),
-    0 30px 60px -15px rgba(15, 23, 42, 0.5),
-    0 0 0 1px rgba(99, 102, 241, 0.1),
-    0 0 120px -30px rgba(99, 102, 241, 0.4);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(99, 102, 241, 0.2),
+    0 25px 50px -12px rgba(0, 0, 0, 0.6),
+    0 0 100px -20px rgba(99, 102, 241, 0.35),
+    0 0 0 1px rgba(6, 182, 212, 0.1);
   position: relative;
   overflow: hidden;
+  transform-style: preserve-3d;
+  perspective: 1000px;
 }
 .login-panel::before {
   content: "";
   position: absolute;
-  inset: -2px;
+  inset: -3px;
   border-radius: inherit;
-  padding: 2px;
-  background: conic-gradient(from 0deg, #6366f1, #06b6d4, #8b5cf6, #6366f1);
+  padding: 3px;
+  background: conic-gradient(from 0deg, #06b6d4, #8b5cf6, #ec4899, #06b6d4);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: login-border-spin 8s linear infinite;
+  animation: login-border-spin 6s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.9;
+}
+.login-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 60%);
   pointer-events: none;
   z-index: 0;
 }
 .login-panel > * { position: relative; z-index: 1; }
 .login-btn-primary {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%);
+  background: linear-gradient(135deg, #06b6d4 0%, #6366f1 50%, #ec4899 100%);
   background-size: 200% 200%;
-  animation: login-text-gradient 4s ease infinite;
+  animation: login-text-gradient 3s ease infinite;
+  box-shadow: 0 0 30px -5px rgba(6, 182, 212, 0.5), 0 0 60px -15px rgba(139, 92, 246, 0.3);
 }
 .login-btn-primary:hover:not(:disabled) {
-  box-shadow: 0 0 40px -5px rgba(99, 102, 241, 0.7), 0 0 80px -20px rgba(124, 58, 237, 0.4);
-  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 0 50px -5px rgba(6, 182, 212, 0.7), 0 0 80px -10px rgba(236, 72, 153, 0.4);
+  transform: translateY(-3px) scale(1.02);
 }
-.login-input-glow:focus {
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 0 30px -5px rgba(99, 102, 241, 0.4);
+.login-input-dark {
+  background: rgba(15, 23, 42, 0.6) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  color: #f1f5f9 !important;
+}
+.login-input-dark::placeholder { color: rgba(248, 250, 252, 0.4) !important; }
+.login-input-dark:focus {
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.4), 0 0 40px -10px rgba(6, 182, 212, 0.5) !important;
+  border-color: #06b6d4 !important;
+  background: rgba(15, 23, 42, 0.8) !important;
 }
 .login-error-shake { animation: login-shake 0.5s ease-out; }
 .login-text-gradient-anim {
-  background: linear-gradient(90deg, #818cf8, #06b6d4, #a78bfa, #818cf8);
-  background-size: 300% 100%;
-  animation: login-text-gradient 5s ease infinite;
+  background: linear-gradient(90deg, #22d3ee, #06b6d4, #a78bfa, #ec4899, #22d3ee);
+  background-size: 400% 100%;
+  animation: login-text-gradient 4s ease infinite;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+@keyframes login-neon-pulse {
+  0%, 100% { opacity: 0.7; filter: drop-shadow(0 0 8px currentColor); }
+  50% { opacity: 1; filter: drop-shadow(0 0 20px currentColor); }
+}
+.login-letter {
+  display: inline-block;
+  animation: login-letter-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes login-letter-pop {
+  from { opacity: 0; transform: translateY(20px) scale(0.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes login-glow {

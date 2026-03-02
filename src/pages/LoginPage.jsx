@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logger } from "../utils/logger";
 import { dbUserToSessionUser } from "../constants/permissions";
 
-const PARTICLES = 24;
+const PARTICLES = 48;
+const TITLE_LETTERS = "Portail interne".split("");
 const FEATURES = [
   { label: "Sync temps réel", icon: "⚡" },
   { label: "Historique complet", icon: "📋" },
@@ -15,7 +16,22 @@ export function LoginPage({ onSuccess }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showCode, setShowCode] = useState(false);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const inputRef = useRef(null);
+  const cardRef = useRef(null);
+
+  const handleMouseMove = useCallback((e) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = (e.clientX - cx) / (rect.width / 2);
+    const dy = (e.clientY - cy) / (rect.height / 2);
+    setTilt({ x: dy * -8, y: dx * 8 });
+  }, []);
+
+  const handleMouseLeave = useCallback(() => setTilt({ x: 0, y: 0 }), []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -104,75 +120,109 @@ export function LoginPage({ onSuccess }) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#050810] text-white">
-      {/* Fond animé : dégradés qui bougent */}
+    <div className="relative min-h-screen overflow-hidden bg-[#030712] text-white">
+      {/* Fond : dégradés intenses */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 140% 100% at 10% 0%, rgba(79, 70, 229, 0.35) 0%, transparent 50%), radial-gradient(ellipse 100% 80% at 90% 80%, rgba(6, 182, 212, 0.25) 0%, transparent 50%), radial-gradient(ellipse 80% 60% at 50% 50%, rgba(124, 58, 237, 0.2) 0%, transparent 55%), #050810",
+            "radial-gradient(ellipse 150% 120% at 0% 0%, rgba(6, 182, 212, 0.4) 0%, transparent 45%), radial-gradient(ellipse 120% 100% at 100% 100%, rgba(236, 72, 153, 0.35) 0%, transparent 45%), radial-gradient(ellipse 100% 80% at 50% 50%, rgba(99, 102, 241, 0.25) 0%, transparent 60%), #030712",
         }}
       />
 
-      {/* Blobs animés */}
+      {/* Blobs très animés */}
       <div
-        className="pointer-events-none absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-indigo-500/40 via-violet-500/30 to-transparent blur-[120px]"
-        style={{ animation: "login-gradient-shift 12s ease-in-out infinite" }}
+        className="pointer-events-none absolute -top-60 -right-60 h-[700px] w-[700px] rounded-full bg-gradient-to-br from-cyan-500/35 via-indigo-500/30 to-transparent blur-[140px]"
+        style={{ animation: "login-gradient-shift 10s ease-in-out infinite" }}
       />
       <div
-        className="pointer-events-none absolute bottom-[-10%] left-[-5%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-cyan-500/35 via-blue-500/25 to-transparent blur-[100px]"
-        style={{ animation: "login-gradient-shift 15s ease-in-out infinite 2s" }}
+        className="pointer-events-none absolute bottom-[-20%] left-[-10%] h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-fuchsia-500/30 via-violet-500/25 to-transparent blur-[120px]"
+        style={{ animation: "login-gradient-shift 14s ease-in-out infinite 2s" }}
       />
       <div
-        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full bg-gradient-to-r from-violet-500/25 to-fuchsia-500/20 blur-[90px]"
+        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full bg-gradient-to-r from-indigo-500/25 to-cyan-500/20 blur-[100px]"
         style={{ animation: "login-gradient-shift 18s ease-in-out infinite 4s" }}
       />
 
-      {/* Grille perspective */}
+      {/* Grille + lignes néon */}
       <div
-        className="absolute inset-0 opacity-[0.06]"
+        className="absolute inset-0 opacity-[0.08]"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
-          backgroundSize: "50px 50px",
+            "linear-gradient(rgba(6, 182, 212, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(6, 182, 212, 0.4) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
         }}
       />
 
-      {/* Particules flottantes */}
+      {/* Particules massives */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {Array.from({ length: PARTICLES }).map((_, i) => (
           <div
             key={i}
-            className="absolute w-2 h-2 rounded-full bg-white/30 blur-[1px]"
+            className="absolute rounded-full bg-cyan-400/40 blur-[0.5px]"
             style={{
-              left: `${(i * 7 + 13) % 100}%`,
-              top: `${(i * 11 + 7) % 100}%`,
-              animation: `login-float-particle ${8 + (i % 5)}s ease-in-out infinite`,
-              animationDelay: `${i * 0.4}s`,
+              width: `${(i % 3) + 2}px`,
+              height: `${(i % 3) + 2}px`,
+              left: `${(i * 13 + 7) % 100}%`,
+              top: `${(i * 17 + 3) % 100}%`,
+              animation: `login-float-particle ${6 + (i % 6)}s ease-in-out infinite`,
+              animationDelay: `${i * 0.15}s`,
             }}
           />
         ))}
       </div>
 
+      {/* Formes flottantes (hex / orbes) */}
+      {[...Array(6)].map((_, i) => (
+        <div
+          key={i}
+          className="pointer-events-none absolute rounded-full border border-cyan-500/20"
+          style={{
+            width: 60 + i * 25,
+            height: 60 + i * 25,
+            left: `${15 + i * 15}%`,
+            top: `${20 + (i % 3) * 25}%`,
+            animation: `login-float-particle ${12 + i * 2}s ease-in-out infinite`,
+            animationDelay: `${i * 0.8}s`,
+          }}
+        />
+      ))}
+
+      {/* Bruit / texture */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.03] mix-blend-overlay"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+        }}
+      />
+
       <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between min-h-screen w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-10 md:py-16 gap-12 lg:gap-20">
-        {/* Gauche : hero */}
+        {/* Hero gauche */}
         <section className="flex-1 text-center lg:text-left space-y-8 lg:space-y-10 max-w-xl lg:max-w-none">
-          <div className="login-enter-1 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-md px-4 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-white/95">
+          <div className="login-enter-1 inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 backdrop-blur-md px-4 py-2.5 text-xs font-bold uppercase tracking-[0.25em] text-cyan-300">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+              <span className="absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80 animate-ping" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]" />
             </span>
             Accès sécurisé
           </div>
 
-          <h1 className="login-enter-2 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-[1.05] tracking-tight">
-            <span className="text-white drop-shadow-lg">Hurghada Dream</span>
-            <span className="login-text-gradient-anim block mt-3 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold drop-shadow-lg">
-              Portail interne
+          <h1 className="login-enter-2 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight">
+            <span className="text-white drop-shadow-[0_0_30px_rgba(6,182,212,0.3)]">Hurghada Dream</span>
+            <span className="block mt-3 flex flex-wrap justify-center lg:justify-start">
+              {TITLE_LETTERS.map((letter, i) => (
+                <span
+                  key={i}
+                  className="login-letter login-text-gradient-anim"
+                  style={{ animationDelay: `${0.4 + i * 0.04}s` }}
+                >
+                  {letter === " " ? "\u00A0" : letter}
+                </span>
+              ))}
             </span>
           </h1>
 
-          <p className="login-enter-3 text-lg md:text-xl text-white/80 leading-relaxed max-w-lg mx-auto lg:mx-0">
+          <p className="login-enter-3 text-lg md:text-xl text-slate-300 leading-relaxed max-w-lg mx-auto lg:mx-0">
             Devis, activités, tickets et équipes. Un seul endroit, synchronisé en temps réel.
           </p>
 
@@ -180,8 +230,7 @@ export function LoginPage({ onSuccess }) {
             {FEATURES.map((f, i) => (
               <li
                 key={f.label}
-                className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-white/90 transition-all duration-300 hover:bg-white/10 hover:border-white/25 hover:scale-105"
-                style={{ animationDelay: `${0.5 + i * 0.05}s` }}
+                className="flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/5 backdrop-blur-sm px-4 py-2.5 text-sm font-semibold text-cyan-100/90 transition-all duration-300 hover:bg-cyan-500/15 hover:border-cyan-400/40 hover:scale-105 hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.4)]"
               >
                 <span className="text-lg opacity-90">{f.icon}</span>
                 {f.label}
@@ -189,7 +238,7 @@ export function LoginPage({ onSuccess }) {
             ))}
           </ul>
 
-          <div className="login-enter-5 flex flex-wrap justify-center lg:justify-start gap-4 text-sm text-white/60">
+          <div className="login-enter-5 flex flex-wrap justify-center lg:justify-start gap-4 text-sm text-slate-400">
             <span className="flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-4 py-2">
               <span className="text-xl">📞</span>
               +33 6 19 92 14 49
@@ -197,26 +246,33 @@ export function LoginPage({ onSuccess }) {
           </div>
         </section>
 
-        {/* Carte formulaire */}
+        {/* Carte 3D néon */}
         <aside className="w-full max-w-[440px] flex-shrink-0 login-enter-7">
-          <div className="login-panel rounded-[1.75rem] p-8 md:p-10 transition-all duration-500 hover:shadow-[0_0_80px_-15px_rgba(99,102,241,0.5)]">
-            {/* Bandeau gradient animé en haut */}
+          <div
+            ref={cardRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            className="login-panel rounded-[1.75rem] p-8 md:p-10 transition-transform duration-300 ease-out"
+            style={{
+              transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1, 1, 1)`,
+            }}
+          >
             <div className="absolute inset-x-0 top-0 h-1 rounded-t-[1.75rem] overflow-hidden">
               <div
-                className="h-full w-full bg-gradient-to-r from-indigo-500 via-cyan-500 via-violet-500 to-indigo-500 bg-[length:200%_100%]"
-                style={{ animation: "login-text-gradient 3s linear infinite" }}
+                className="h-full w-full bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-cyan-400 bg-[length:200%_100%]"
+                style={{ animation: "login-text-gradient 2.5s linear infinite" }}
               />
             </div>
 
             <div className="relative pt-1">
-              {/* Logo */}
+              {/* Logo néon */}
               <div className="text-center mb-8">
                 <div className="relative inline-block mb-5">
                   <div
-                    className="absolute -inset-3 rounded-3xl bg-gradient-to-r from-indigo-500/50 to-violet-500/50 blur-2xl opacity-60"
-                    style={{ animation: "login-pulse-glow 3s ease-in-out infinite" }}
+                    className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-cyan-500/40 to-fuchsia-500/40 blur-3xl opacity-70"
+                    style={{ animation: "login-pulse-glow 2.5s ease-in-out infinite" }}
                   />
-                  <div className="relative flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-xl shadow-indigo-500/40 ring-2 ring-white/20">
+                  <div className="relative flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-500 via-indigo-500 to-fuchsia-500 shadow-[0_0_40px_-5px_rgba(6,182,212,0.6)] ring-2 ring-white/30">
                     <img
                       src="/logo.png"
                       alt=""
@@ -234,13 +290,13 @@ export function LoginPage({ onSuccess }) {
                     />
                   </div>
                 </div>
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-800">Connexion</h2>
-                <p className="text-sm text-slate-500 mt-1 font-medium">Code personnel à 6 chiffres</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-white drop-shadow-[0_0_20px_rgba(6,182,212,0.3)]">Connexion</h2>
+                <p className="text-sm text-cyan-200/80 mt-1 font-medium">Code personnel à 6 chiffres</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label htmlFor="login-code" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  <label htmlFor="login-code" className="block text-xs font-bold uppercase tracking-wider text-cyan-200/90 mb-2">
                     Code d'accès
                   </label>
                   <div className="relative group">
@@ -261,18 +317,18 @@ export function LoginPage({ onSuccess }) {
                       autoComplete="one-time-code"
                       autoFocus
                       disabled={loading}
-                      className="login-input-glow w-full rounded-2xl border-2 border-slate-200 bg-white/90 text-slate-900 placeholder:text-slate-400 px-5 py-4 pl-12 pr-14 text-center text-xl font-bold tracking-[0.5em] outline-none transition-all duration-300 focus:border-indigo-500 focus:bg-white disabled:opacity-70"
+                      className="login-input-dark w-full rounded-2xl border-2 px-5 py-4 pl-12 pr-14 text-center text-xl font-bold tracking-[0.5em] outline-none transition-all duration-300 disabled:opacity-70 placeholder:text-slate-400"
                       style={{ WebkitTextSecurity: showCode ? "none" : "disc" }}
                       aria-invalid={!!error}
                       aria-describedby={error ? "login-error" : undefined}
                     />
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-indigo-500 group-focus-within:text-indigo-600 transition-colors">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-cyan-400 group-focus-within:text-cyan-300 transition-colors">
                       HD
                     </span>
                     <button
                       type="button"
                       onClick={() => setShowCode(!showCode)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-200"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-xl text-slate-400 hover:text-cyan-300 hover:bg-cyan-500/20 transition-all duration-200"
                       aria-label={showCode ? "Masquer le code" : "Afficher le code"}
                     >
                       {showCode ? (
@@ -291,7 +347,7 @@ export function LoginPage({ onSuccess }) {
                         <span
                           key={i}
                           className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
-                            i < code.length ? "bg-indigo-500 scale-110" : "bg-slate-200"
+                            i < code.length ? "bg-cyan-400 shadow-[0_0_6px_#22d3ee]" : "bg-slate-500/50"
                           }`}
                         />
                       ))}
@@ -304,7 +360,7 @@ export function LoginPage({ onSuccess }) {
                   <div
                     id="login-error"
                     role="alert"
-                    className={`login-error-shake flex items-center gap-3 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700`}
+                    className="login-error-shake flex items-center gap-3 rounded-xl border-2 border-red-500/50 bg-red-950/80 backdrop-blur-sm px-4 py-3 text-sm font-semibold text-red-200"
                   >
                     <span className="text-xl" aria-hidden>⚠️</span>
                     {error}
@@ -331,9 +387,9 @@ export function LoginPage({ onSuccess }) {
                 </button>
               </form>
 
-              <div className="mt-8 pt-6 border-t border-slate-200/80 text-center">
-                <p className="text-xs font-semibold text-slate-500">Réservé à l'équipe Hurghada Dream</p>
-                <p className="text-[11px] text-slate-400 mt-1 uppercase tracking-widest">Intranet · Ewen</p>
+              <div className="mt-8 pt-6 border-t border-white/10 text-center">
+                <p className="text-xs font-semibold text-slate-400">Réservé à l'équipe Hurghada Dream</p>
+                <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-widest">Intranet · Ewen</p>
               </div>
             </div>
           </div>
