@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { logger } from "../utils/logger";
 import { dbUserToSessionUser } from "../constants/permissions";
+import { SITE_KEY } from "../constants";
 
 const PARTICLES = 64;
 const PARTICLES_UP = 32;
@@ -24,6 +25,7 @@ export function LoginPage({ onSuccess }) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [mouseLight, setMouseLight] = useState({ x: 0, y: 0 });
   const [hasMouse, setHasMouse] = useState(false);
+  const [documents, setDocuments] = useState([]);
   const inputRef = useRef(null);
   const cardRef = useRef(null);
   const pageRef = useRef(null);
@@ -45,6 +47,18 @@ export function LoginPage({ onSuccess }) {
   }, []);
 
   const handleMouseLeave = useCallback(() => setTilt({ x: 0, y: 0 }), []);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase
+      .from("documents")
+      .select("id, title, link, file_url")
+      .eq("site_key", SITE_KEY)
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data) setDocuments(data);
+      });
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -371,6 +385,26 @@ export function LoginPage({ onSuccess }) {
               +33 6 19 92 14 49
             </span>
           </div>
+
+          {/* Documents / liens : boutons par titre uniquement */}
+          {documents.length > 0 && (
+            <div className="login-enter-6 flex flex-wrap justify-center lg:justify-start gap-2 mt-4">
+              {documents.map((doc) => {
+                const url = doc.link || doc.file_url;
+                return (
+                  <button
+                    key={doc.id}
+                    type="button"
+                    onClick={() => url && window.open(url, "_blank", "noopener,noreferrer")}
+                    disabled={!url}
+                    className="px-4 py-2 rounded-xl border border-white/20 bg-white/10 text-sm font-semibold text-white/95 hover:bg-white/20 hover:border-white/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {doc.title}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {/* Carte 3D néon + flottante */}
