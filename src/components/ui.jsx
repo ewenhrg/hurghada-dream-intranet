@@ -12,7 +12,7 @@ export const Pill = memo(({ active, children, onClick, ...props }) => {
         "px-4 md:px-6 py-2.5 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-transform duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8b5cf6]/50 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation " +
         (active
           ? "bg-gradient-to-r from-[#4f46e5] via-[#6366f1] to-[#06b6d4] text-white shadow-[0_16px_32px_-16px_rgba(79,70,229,0.7)] hover:shadow-[0_18px_36px_-18px_rgba(79,70,229,0.75)] hover:-translate-y-[1px] active:scale-[0.98]"
-          : "bg-white/95 text-[#000000] border border-[rgba(148,163,184,0.35)] hover:border-[rgba(79,70,229,0.55)] hover:text-[#4338ca] hover:bg-white hover:shadow-[0_14px_24px_-20px_rgba(79,70,229,0.45)] hover:-translate-y-[1px] active:scale-[0.98]")
+          : "bg-[var(--hd-surface)] text-[#1e293b] border border-[rgba(148,163,184,0.35)] hover:border-[rgba(79,70,229,0.55)] hover:text-[#4338ca] hover:bg-[var(--hd-surface-strong)] hover:shadow-[0_14px_24px_-20px_rgba(79,70,229,0.45)] hover:-translate-y-[1px] active:scale-[0.98]")
       }
     >
       {children}
@@ -26,7 +26,7 @@ export const TextInput = memo(({ className = "", ...props }) => (
   <input
     {...props}
     className={
-      "w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] backdrop-blur-sm px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] touch-manipulation " +
+      "w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[var(--hd-surface-input)] px-4 py-3 text-base text-slate-800 placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.2)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.25)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.25)] min-h-[44px] touch-manipulation " +
       className
     }
     style={{ fontSize: '16px' }} // Prévenir le zoom automatique sur iOS
@@ -40,7 +40,7 @@ export const NumberInput = memo(({ className = "", ...props }) => (
     type="number"
     {...props}
     className={
-      "w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] backdrop-blur-sm px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] touch-manipulation " +
+      "w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[var(--hd-surface-input)] px-4 py-3 text-base text-slate-800 placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.2)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.25)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.25)] min-h-[44px] touch-manipulation " +
       className
     }
     style={{ fontSize: '16px' }} // Prévenir le zoom automatique sur iOS
@@ -86,7 +86,7 @@ const GHOST_VARIANTS = {
   primary:
     "text-[#4338ca] border-[rgba(79,70,229,0.4)] hover:bg-[rgba(79,70,229,0.12)]",
   neutral:
-    "text-slate-600 border-[rgba(148,163,184,0.35)] hover:bg-white",
+    "text-slate-600 border-[rgba(148,163,184,0.35)] hover:bg-[var(--hd-surface-strong)]",
   danger:
     "text-[#dc2626] border-[rgba(239,68,68,0.45)] hover:bg-[rgba(239,68,68,0.12)]",
   success:
@@ -105,7 +105,7 @@ export const GhostBtn = memo(({ className = "", size, variant = "neutral", onCli
       {...props}
       {...touchHandlers}
       className={
-        "inline-flex items-center justify-center gap-2 rounded-xl font-semibold border shadow-[0_14px_30px_-24px_rgba(15,23,42,0.4)] transition-all duration-200 ease-out hover:-translate-y-[1px] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4f46e5]/20 bg-white/95 backdrop-blur-sm min-h-[44px] min-w-[44px] touch-manipulation hover:shadow-[0_16px_32px_-24px_rgba(15,23,42,0.45)] " +
+        "inline-flex items-center justify-center gap-2 rounded-xl font-semibold border shadow-[0_14px_30px_-24px_rgba(15,23,42,0.25)] transition-all duration-200 ease-out hover:-translate-y-[1px] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4f46e5]/20 bg-[var(--hd-surface)] min-h-[44px] min-w-[44px] touch-manipulation hover:shadow-[0_16px_32px_-24px_rgba(15,23,42,0.3)] " +
         sizeClasses +
         " " +
         variantClass +
