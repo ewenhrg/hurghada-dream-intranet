@@ -107,7 +107,8 @@ function QuoteCardComponent({
       }
       
       // Valeurs numériques avec valeurs par défaut
-      baseItem.adults = item.adults ?? 2;
+      // IMPORTANT : ne jamais modifier la valeur choisie dans le devis
+      baseItem.adults = item.adults ?? 0;
       baseItem.children = item.children ?? 0;
       baseItem.babies = item.babies ?? 0;
       baseItem.buggySimple = item.buggySimple ?? 0;
@@ -1531,38 +1532,61 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       clientDepartureDate: cleanedClient.departureDate || "",
       notes: notes.trim(),
       createdByName: quote.createdByName || "", // Garder le créateur original
-      items: validComputed.map((c) => ({
-        activityId: c.act.id,
-        activityName: c.act.name || "",
-        date: c.raw.date,
-        adults: Number(c.raw.adults || 0),
-        children: Number(c.raw.children || 0),
-        babies: Number(c.raw.babies || 0),
-        extraLabel: c.raw.extraLabel || "",
-        extraAmount: Number(c.raw.extraAmount || 0),
-        extraDolphin: c.raw.extraDolphin || false,
-        speedBoatExtra: Array.isArray(c.raw.speedBoatExtra) ? c.raw.speedBoatExtra : (c.raw.speedBoatExtra ? [c.raw.speedBoatExtra] : []),
-        buggySimple: Number(c.raw.buggySimple || 0),
-        buggyFamily: Number(c.raw.buggyFamily || 0),
-        yamaha250: Number(c.raw.yamaha250 || 0),
-        ktm640: Number(c.raw.ktm640 || 0),
-        ktm530: Number(c.raw.ktm530 || 0),
-        zeroTracasTransfertVisaSim: Number(c.raw.zeroTracasTransfertVisaSim || 0),
-        zeroTracasTransfertVisa: Number(c.raw.zeroTracasTransfertVisa || 0),
-        zeroTracasTransfert3Personnes: Number(c.raw.zeroTracasTransfert3Personnes || 0),
-        zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
-        zeroTracasVisaSim: Number(c.raw.zeroTracasVisaSim || 0),
-        zeroTracasVisaSeul: Number(c.raw.zeroTracasVisaSeul || 0),
-        neighborhood: client.neighborhood,
-        slot: c.raw.slot,
-        pickupTime: c.pickupTime || "",
-        lineTotal: c.lineTotal,
-        transferSurchargePerAdult: c.transferInfo?.surcharge || 0,
-        // Préserver le ticketNumber existant - ne peut pas être modifié si déjà rempli
-        ticketNumber: (c.raw.ticketNumber && c.raw.ticketNumber.trim()) 
-          ? c.raw.ticketNumber 
-          : (quote.items?.find((item) => item.activityId === c.act.id && item.date === c.raw.date)?.ticketNumber || ""),
-      })),
+      items: validComputed.map((c, idx) => {
+        const originalItem = quote.items?.[idx];
+
+        const rawAdults = c.raw.adults;
+        const rawChildren = c.raw.children;
+        const rawBabies = c.raw.babies;
+
+        const adults =
+          rawAdults === "" || rawAdults === null || rawAdults === undefined
+            ? (typeof originalItem?.adults === "number" ? originalItem.adults : 0)
+            : Number(rawAdults || 0);
+
+        const children =
+          rawChildren === "" || rawChildren === null || rawChildren === undefined
+            ? (typeof originalItem?.children === "number" ? originalItem.children : 0)
+            : Number(rawChildren || 0);
+
+        const babies =
+          rawBabies === "" || rawBabies === null || rawBabies === undefined
+            ? (typeof originalItem?.babies === "number" ? originalItem.babies : 0)
+            : Number(rawBabies || 0);
+
+        return ({
+          activityId: c.act.id,
+          activityName: c.act.name || "",
+          date: c.raw.date,
+          adults,
+          children,
+          babies,
+          extraLabel: c.raw.extraLabel || "",
+          extraAmount: Number(c.raw.extraAmount || 0),
+          extraDolphin: c.raw.extraDolphin || false,
+          speedBoatExtra: Array.isArray(c.raw.speedBoatExtra) ? c.raw.speedBoatExtra : (c.raw.speedBoatExtra ? [c.raw.speedBoatExtra] : []),
+          buggySimple: Number(c.raw.buggySimple || 0),
+          buggyFamily: Number(c.raw.buggyFamily || 0),
+          yamaha250: Number(c.raw.yamaha250 || 0),
+          ktm640: Number(c.raw.ktm640 || 0),
+          ktm530: Number(c.raw.ktm530 || 0),
+          zeroTracasTransfertVisaSim: Number(c.raw.zeroTracasTransfertVisaSim || 0),
+          zeroTracasTransfertVisa: Number(c.raw.zeroTracasTransfertVisa || 0),
+          zeroTracasTransfert3Personnes: Number(c.raw.zeroTracasTransfert3Personnes || 0),
+          zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
+          zeroTracasVisaSim: Number(c.raw.zeroTracasVisaSim || 0),
+          zeroTracasVisaSeul: Number(c.raw.zeroTracasVisaSeul || 0),
+          neighborhood: client.neighborhood,
+          slot: c.raw.slot,
+          pickupTime: c.pickupTime || "",
+          lineTotal: c.lineTotal,
+          transferSurchargePerAdult: c.transferInfo?.surcharge || 0,
+          // Préserver le ticketNumber existant - ne peut pas être modifié si déjà rempli
+          ticketNumber: (c.raw.ticketNumber && c.raw.ticketNumber.trim()) 
+            ? c.raw.ticketNumber 
+            : (quote.items?.find((item) => item.activityId === c.act.id && item.date === c.raw.date)?.ticketNumber || ""),
+        });
+      }),
       total: validGrandTotal,
       totalCash: Math.round(validGrandTotal),
       totalCard: calculateCardPrice(validGrandTotal),
