@@ -992,24 +992,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
   return (
     <div className="relative min-h-[calc(100vh-80px)] px-3 md:px-6 py-4 md:py-8">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.07]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_#38bdf833_0,_transparent_55%),radial-gradient(circle_at_bottom,_#6366f166_0,_transparent_60%)]" />
-      </div>
-
-      <div className="relative max-w-6xl mx-auto space-y-6 md:space-y-8 lg:space-y-10">
-        <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold tracking-[0.25em] uppercase text-slate-500">
-              Devis client
-            </p>
-            <h1 className="mt-1 text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-slate-900">
-              Construction du devis
-            </h1>
-            <p className="mt-1 text-sm md:text-base text-slate-500">
-              Renseignez le client, les dates et les activités. Le total se met à jour automatiquement.
-            </p>
-          </div>
-        </header>
+      <div className="max-w-6xl mx-auto space-y-6 md:space-y-8 lg:space-y-10">
         {/* Section Stop Sales et Push Sales - Compacte et repliable */}
         {(stopSales.length > 0 || pushSales.length > 0) && (
           <StopPushSalesSummary
