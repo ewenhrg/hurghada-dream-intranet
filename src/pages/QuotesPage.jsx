@@ -1043,16 +1043,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
         
         {/* Infos client */}
-        <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border-2 border-blue-200/60 shadow-xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
+        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
           <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-blue-200/40">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
               <span className="text-2xl">👤</span>
             </div>
             <div>
-              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 bg-clip-text text-transparent">
+              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-50">
                 Informations client
               </h3>
-              <p className="text-xs md:text-sm text-slate-600 mt-1">
+              <p className="text-xs md:text-sm text-slate-300 mt-1">
                 Renseignez les détails de votre client
               </p>
             </div>
@@ -1060,7 +1060,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '50ms' }}>
               <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                 Nom complet *
               </label>
               <TextInput 
@@ -1071,8 +1071,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
-              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                 Téléphone *
               </label>
               <TextInput 
@@ -1086,8 +1086,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '150ms' }}>
-              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
                 Email
               </label>
               <TextInput 
@@ -1099,8 +1099,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '200ms' }}>
-              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                 Hôtel
               </label>
               <div className="flex gap-2">
@@ -1138,17 +1138,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 )}
               </div>
               {client.hotel && hotels.some((h) => h.name.toLowerCase().trim() === client.hotel.toLowerCase().trim()) && (
-                <div className="flex items-center gap-2 mt-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
-                  <span className="text-green-600">✓</span>
-                  <p className="text-xs font-medium text-green-700">
+                <div className="flex items-center gap-2 mt-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-400/80 rounded-lg">
+                  <span className="text-emerald-300">✓</span>
+                  <p className="text-xs font-medium text-emerald-200">
                     Hôtel reconnu dans la base de données
                   </p>
                 </div>
               )}
             </div>
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '250ms' }}>
-              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
                 Numéro de chambre
               </label>
               <TextInput 
@@ -1159,14 +1159,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '300ms' }}>
-              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-300"></span>
                 Quartier
               </label>
               <select
                 value={client.neighborhood}
                 onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
-                className="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md"
+                className="w-full rounded-xl border-2 border-slate-600 bg-slate-900/60 px-4 py-2.5 text-sm font-medium text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md"
               >
                 <option value="">— Sélectionner un quartier —</option>
                 {NEIGHBORHOODS.map((n) => (
@@ -1180,24 +1180,24 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Dates séjour */}
-        <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border-2 border-indigo-200/60 shadow-xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
+        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
           <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-indigo-200/40">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
               <span className="text-2xl">📅</span>
             </div>
             <div>
-              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 bg-clip-text text-transparent">
+              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-50">
                 Dates du séjour
               </h3>
-              <p className="text-xs md:text-sm text-slate-600 mt-1">
+              <p className="text-xs md:text-sm text-slate-300 mt-1">
                 Définissez les dates d'arrivée et de départ
               </p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
             <div className="space-y-2 animate-fade-in">
-              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
                 Date d'arrivée *
               </label>
               <DateInput
@@ -1206,8 +1206,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2 animate-fade-in">
-              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
                 Date de départ *
               </label>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -1282,31 +1282,31 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
         {/* Lignes */}
         <div className="space-y-5 md:space-y-6 lg:space-y-8">
-          <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-slate-200/60">
+          <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-slate-700/70">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
               <span className="text-xl">🎯</span>
             </div>
             <div>
-              <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+              <h3 className="text-xl md:text-2xl font-bold text-slate-100">
                 Activités
               </h3>
-              <p className="text-sm text-slate-600 mt-0.5">
+              <p className="text-sm text-slate-300 mt-0.5">
                 {computed.length} activité{computed.length > 1 ? 's' : ''} configurée{computed.length > 1 ? 's' : ''}
               </p>
             </div>
           </div>
           {computed.map((c, idx) => (
-            <div key={idx} className="bg-white rounded-2xl border-2 border-slate-200/60 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
+            <div key={idx} className="bg-slate-900/95 rounded-2xl border border-slate-800 shadow-2xl hover:shadow-[0_0_40px_rgba(15,23,42,0.9)] transition-all duration-300 overflow-hidden animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
               {/* En-tête de l'activité */}
-              <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b-2 border-blue-200/60 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 border-b border-slate-700 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-base font-bold shadow-md">
                     {idx + 1}
                   </span>
                   <div>
-                    <p className="text-base font-bold text-blue-900">Activité #{idx + 1}</p>
+                    <p className="text-base font-bold text-slate-50">Activité #{idx + 1}</p>
                     {c.act && (
-                      <p className="text-xs text-blue-700 mt-0.5 font-medium">{c.act.name}</p>
+                      <p className="text-xs text-slate-300 mt-0.5 font-medium">{c.act.name}</p>
                     )}
                   </div>
                 </div>
@@ -1322,7 +1322,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               </div>
               
               {/* Contenu de l'activité */}
-              <div className="p-4 md:p-6 lg:p-8 space-y-5 md:space-y-6">
+              <div className="p-4 md:p-6 lg:p-8 space-y-5 md:space-y-6 bg-slate-900/60">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
                   <div className="sm:col-span-2 lg:col-span-1">
                     <label className="block text-sm font-medium text-slate-700 mb-2">Activité *</label>
@@ -2390,10 +2390,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               )}
 
               {/* Sous-total de l'activité */}
-              <div className="mt-6 pt-6 border-t border-slate-200">
-                <div className="flex items-center justify-between bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <p className="text-sm font-medium text-slate-700">Sous-total de cette activité</p>
-                  <p className="text-xl font-bold text-slate-900">
+              <div className="mt-6 pt-6 border-t border-slate-700/80">
+                <div className="flex items-center justify-between bg-slate-900/80 rounded-lg p-4 border border-slate-600">
+                  <p className="text-sm font-medium text-slate-100">Sous-total de cette activité</p>
+                  <p className="text-xl font-bold text-slate-50">
                     {currencyNoCents(Math.round(c.lineTotal), c.currency)}
                   </p>
                 </div>
