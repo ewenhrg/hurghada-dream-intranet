@@ -991,25 +991,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
 
   return (
-    <div className="space-y-6 md:space-y-8 lg:space-y-10 p-3 md:p-4 lg:p-6">
+    <div className="relative min-h-[calc(100vh-80px)] px-3 md:px-6 py-4 md:py-8">
+      <div className="max-w-6xl mx-auto space-y-6 md:space-y-8 lg:space-y-10">
         {/* Section Stop Sales et Push Sales - Compacte et repliable */}
         {(stopSales.length > 0 || pushSales.length > 0) && (
-          <StopPushSalesSummary 
-            stopSales={formattedStopSales} 
+          <StopPushSalesSummary
+            stopSales={formattedStopSales}
             pushSales={formattedPushSales}
             activities={activities}
           />
         )}
 
-        <form 
-          onSubmit={handleCreateQuote} 
+        <form
+          onSubmit={handleCreateQuote}
           onKeyDown={(e) => {
             // Désactiver la touche Entrée pour soumettre le formulaire
             if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
               e.preventDefault();
             }
           }}
-          className="space-y-5 md:space-y-6 lg:space-y-8"
+          className="space-y-5 md:space-y-6 lg:space-y-8 bg-white/80 rounded-3xl border border-slate-200 shadow-[0_18px_45px_rgba(15,23,42,0.12)] backdrop-blur-sm p-4 md:p-6 lg:p-8"
         >
         {/* Barre d'information et actions */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 md:p-6 bg-gradient-to-r from-indigo-50 via-blue-50 to-cyan-50 rounded-2xl border-2 border-indigo-200/60 shadow-lg backdrop-blur-sm animate-fade-in">
