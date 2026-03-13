@@ -1451,19 +1451,16 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         lineTotal += Number(it.babies || 0) * Number(act.priceBaby || 0);
       }
 
-      // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits) (sauf pour les activités buggy et moto cross où on utilise les quantités spécifiques)
+      // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits)
       // Ne pas appliquer pour ZERO TRACAS, ZERO TRACAS HORS ZONE, CAIRE PRIVATIF et LOUXOR PRIVATIF car le transfert est déjà inclus dans les prix
+      // IMPORTANT : cette logique doit rester strictement identique à celle utilisée dans `useActivityPriceCalculator`
       if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name) && !isZeroTracasHorsZoneActivity(act?.name) && !isCairePrivatifActivity(act?.name) && !isLouxorPrivatifActivity(act?.name)) {
-        if (act && isBuggyActivity(act.name)) {
-          // Pour les activités buggy, le supplément est calculé sur le nombre total de buggys
-          const totalBuggys = Number(it.buggySimple || 0) + Number(it.buggyFamily || 0);
-          lineTotal += Number(transferInfo.surcharge || 0) * totalBuggys;
-        } else if (act && isMotoCrossActivity(act.name)) {
+        if (act && isMotoCrossActivity(act.name)) {
           // Pour MOTO CROSS, le supplément est calculé sur le nombre total de motos
           const totalMotos = Number(it.yamaha250 || 0) + Number(it.ktm640 || 0) + Number(it.ktm530 || 0);
           lineTotal += Number(transferInfo.surcharge || 0) * totalMotos;
         } else {
-          // Pour toutes les autres activités, le supplément est calculé sur le nombre d'adultes + enfants (bébés gratuits)
+          // Pour toutes les autres activités (y compris buggy), le supplément est calculé sur le nombre d'adultes + enfants (bébés gratuits)
           const adults = Number(it.adults || 0);
           const children = Number(it.children || 0);
           lineTotal += Number(transferInfo.surcharge || 0) * (adults + children);
