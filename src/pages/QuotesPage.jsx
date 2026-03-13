@@ -1059,8 +1059,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '50ms' }}>
-              <label className="block text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+              <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.9)]"></span>
                 Nom complet *
               </label>
               <TextInput 
@@ -1071,8 +1071,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
-              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+              <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.9)]"></span>
                 Téléphone *
               </label>
               <TextInput 
@@ -1086,8 +1086,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '150ms' }}>
-              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
+              <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-300 shadow-[0_0_10px_rgba(129,140,248,0.9)]"></span>
                 Email
               </label>
               <TextInput 
@@ -1099,8 +1099,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '200ms' }}>
-              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+              <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.9)]"></span>
                 Hôtel
               </label>
               <div className="flex gap-2">
@@ -1147,8 +1147,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               )}
             </div>
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '250ms' }}>
-              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
+              <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-300 shadow-[0_0_10px_rgba(129,140,248,0.9)]"></span>
                 Numéro de chambre
               </label>
               <TextInput 
@@ -1159,8 +1159,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '300ms' }}>
-              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-300"></span>
+              <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-300 shadow-[0_0_10px_rgba(147,51,234,0.9)]"></span>
                 Quartier
               </label>
               <select
@@ -1196,8 +1196,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
             <div className="space-y-2 animate-fade-in">
-              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+              <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_10px_rgba(129,140,248,0.9)]"></span>
                 Date d'arrivée *
               </label>
               <DateInput
@@ -1206,8 +1206,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2 animate-fade-in">
-              <label className="block text-sm font-semibold text-slate-100 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+              <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_10px_rgba(147,51,234,0.9)]"></span>
                 Date de départ *
               </label>
               <div className="flex flex-col sm:flex-row gap-3">
