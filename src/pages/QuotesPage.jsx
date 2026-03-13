@@ -992,7 +992,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
   return (
     <div className="relative min-h-[calc(100vh-80px)] px-3 md:px-6 py-4 md:py-8">
-      <div className="max-w-6xl mx-auto space-y-6 md:space-y-8 lg:space-y-10">
+      {/* Fond animé subtil pour la page devis */}
+      <div className="pointer-events-none absolute inset-0 opacity-30">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.22)_0,_transparent_55%),radial-gradient(circle_at_bottom,_rgba(129,140,248,0.25)_0,_transparent_55%)]" />
+      </div>
+
+      <div className="relative max-w-6xl mx-auto space-y-6 md:space-y-8 lg:space-y-10">
         {/* Section Stop Sales et Push Sales - Compacte et repliable */}
         {(stopSales.length > 0 || pushSales.length > 0) && (
           <StopPushSalesSummary
@@ -1010,19 +1015,22 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               e.preventDefault();
             }
           }}
-          className="space-y-5 md:space-y-6 lg:space-y-8 bg-white/80 rounded-3xl border border-slate-200 shadow-[0_18px_45px_rgba(15,23,42,0.12)] backdrop-blur-sm p-4 md:p-6 lg:p-8"
+          className="space-y-5 md:space-y-6 lg:space-y-8 bg-slate-950/90 rounded-[2.25rem] border border-cyan-400/40 shadow-[0_0_70px_rgba(56,189,248,0.45)] backdrop-blur-2xl p-4 md:p-6 lg:p-8"
         >
         {/* Barre d'information et actions */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 md:p-6 bg-gradient-to-r from-indigo-50 via-blue-50 to-cyan-50 rounded-2xl border-2 border-indigo-200/60 shadow-lg backdrop-blur-sm animate-fade-in">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 md:p-6 rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900/80 via-slate-950/90 to-slate-900/80 shadow-[0_0_40px_rgba(15,23,42,0.9)] animate-fade-in">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center shadow-md">
-              <span className="text-lg">💾</span>
+            <div className="relative">
+              <div className="absolute -inset-2 rounded-full bg-cyan-500/40 blur-xl opacity-70" />
+              <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 via-sky-500 to-indigo-500 flex items-center justify-center shadow-[0_0_25px_rgba(56,189,248,0.8)]">
+                <span className="text-lg text-white">💾</span>
+              </div>
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-800">
+              <p className="text-sm font-semibold text-slate-100">
                 Sauvegarde automatique
               </p>
-              <p className="text-xs text-slate-600 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5">
                 Vos modifications sont enregistrées en temps réel
               </p>
             </div>
@@ -1036,7 +1044,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               resetQuoteForm();
               toast.success("Formulaire réinitialisé.");
             }}
-            className="whitespace-nowrap shadow-md hover:shadow-lg transition-all"
+            className="whitespace-nowrap shadow-md hover:shadow-lg transition-all border border-red-500/60 bg-red-500/10 hover:bg-red-500/20 text-red-100"
           >
             🧹 Tout effacer
           </GhostBtn>
