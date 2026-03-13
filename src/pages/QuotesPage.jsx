@@ -2594,7 +2594,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
       )}
 
+      </div>
     </div>
   );
 }
-
