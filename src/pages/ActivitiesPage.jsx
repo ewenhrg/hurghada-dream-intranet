@@ -97,6 +97,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   
   // État pour la modal de description
   const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, activity: null, description: "" });
+  const [restoreLoading, setRestoreLoading] = useState(false);
 
   // Catégories repliables (fermées par défaut) : cliquer pour ouvrir/fermer
   const [openCategories, setOpenCategories] = useState(() => {
@@ -704,6 +705,45 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     restoreFileInputRef.current?.click();
   }, []);
 
+  // Restauration depuis la sauvegarde incluse dans le projet (74 activités du 01/03/2026)
+  const handleRestoreFromBuiltIn = useCallback(() => {
+    if (!window.confirm("Restaurer les 74 activités depuis la sauvegarde du 01/03/2026 ?\n\nCela remplacera la liste actuelle puis synchronisera avec Supabase (ré-insertion ou association des activités).")) return;
+    setRestoreLoading(true);
+    fetch("/hd_activities_restore.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("Fichier de sauvegarde introuvable.");
+        return res.text();
+      })
+      .then((raw) => {
+        const { ok, backup, error } = parseBackupFile(raw);
+        if (!ok || !backup) {
+          toast.error(`Sauvegarde invalide: ${error}`);
+          return;
+        }
+        const count = backup.activities?.length || 0;
+        if (count === 0) {
+          toast.warning("La sauvegarde ne contient aucune activité.");
+          return;
+        }
+        // Donner un id local unique et retirer supabase_id pour que la sync les ré-insère ou les associe
+        const restored = backup.activities.map((a) => ({
+          ...a,
+          id: a.id || uuid(),
+          supabase_id: undefined,
+        }));
+        setActivities(restored);
+        saveLS(LS_KEYS.activities, restored);
+        logger.log(`📂 Restauration (sauvegarde incluse): ${count} activités → sync Supabase`);
+        toast.success(`✅ ${count} activité(s) restaurée(s). Synchronisation Supabase en cours...`);
+        setTimeout(() => handleVerifyAndSync(), 0);
+      })
+      .catch((err) => {
+        logger.error("Erreur restauration sauvegarde incluse:", err);
+        toast.error("Impossible de charger la sauvegarde. Utilisez « Restaurer une sauvegarde » avec le fichier sur votre bureau.");
+      })
+      .finally(() => setRestoreLoading(false));
+  }, [setActivities, handleVerifyAndSync]);
+
   const handleRestoreFileChange = useCallback(
     (e) => {
       const file = e.target.files?.[0];
@@ -1073,6 +1113,13 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 border-0 shadow-lg shadow-sky-500/25"
                 >
                   📂 Restaurer une sauvegarde
+                </PrimaryBtn>
+                <PrimaryBtn
+                  onClick={handleRestoreFromBuiltIn}
+                  disabled={restoreLoading}
+                  className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 border-0 shadow-lg shadow-emerald-500/25 disabled:opacity-60"
+                >
+                  {restoreLoading ? "⏳ Chargement..." : "🔄 Restaurer les 74 activités (sauvegarde 01/03)"}
                 </PrimaryBtn>
               </>
             </>
