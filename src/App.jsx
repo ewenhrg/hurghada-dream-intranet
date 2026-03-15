@@ -262,14 +262,26 @@ export default function App() {
           );
         }
 
-        // LIRE depuis Supabase (source de vérité partagée). Ne jamais écraser par une liste vide si on a déjà des données (évite perte en cas d'erreur/filtre).
+        // Source de vérité = Supabase (plusieurs PC travaillent dessus).
+        const current = loadLS(LS_KEYS.activities, []);
         if (finalRows.length > 0) {
           const supabaseActivities = mapActivitiesFromRows(finalRows);
-          setActivities(supabaseActivities);
-          saveLS(LS_KEYS.activities, supabaseActivities);
-          activitiesCache.set(cacheKey, supabaseActivities);
+          // Sécurité : ne jamais remplacer par une liste beaucoup plus courte (évite suppression en masse accidentelle).
+          const minAcceptable = current.length > 0 ? Math.max(1, Math.floor(current.length * 0.8)) : 0;
+          if (current.length > 0 && supabaseActivities.length < minAcceptable) {
+            logger.warn(`🛡️ Sécurité: Supabase a ${supabaseActivities.length} activité(s), la session en avait ${current.length}. Conservation de la liste locale.`);
+            toast.warning(
+              `Supabase renvoie beaucoup moins d'activités (${supabaseActivities.length}) qu'attendu (${current.length}). Liste locale conservée pour éviter toute perte. Vérifiez la connexion ou restaurez une sauvegarde depuis la page Activités.`
+            );
+            setActivities(current);
+            saveLS(LS_KEYS.activities, current);
+            activitiesCache.set(cacheKey, current);
+          } else {
+            setActivities(supabaseActivities);
+            saveLS(LS_KEYS.activities, supabaseActivities);
+            activitiesCache.set(cacheKey, supabaseActivities);
+          }
         } else {
-          const current = loadLS(LS_KEYS.activities, []);
           logger.warn(`📦 Supabase: aucune activité pour ${finalSource}. Conservation des ${current.length} activité(s) actuelles.`);
           if (current.length === 0) {
             setActivities([]);
@@ -834,15 +846,14 @@ export default function App() {
               }
             });
           } else if (payload.eventType === 'DELETE') {
-            // Ne pas appliquer le DELETE en local : refaire une sync pour avoir l'état réel (évite suppression automatique intempestive).
+            // Sécurité : ne jamais appliquer un DELETE reçu en Realtime (évite que les activités disparaissent toutes seules).
             const deletedId = payload.old?.id;
             const deletedActivity = payload.old;
-            logger.warn("🗑️ SUPPRESSION D'ACTIVITÉ DÉTECTÉE VIA REALTIME (resync au lieu de retirer en local):", {
+            logger.warn("🗑️ SUPPRESSION D'ACTIVITÉ DÉTECTÉE VIA REALTIME (ignorée en local pour sécurité):", {
               supabase_id: deletedId,
-              activity_name: deletedActivity?.name,
-              activity_site_key: deletedActivity?.site_key
+              activity_name: deletedActivity?.name
             });
-            syncWithSupabase();
+            // On n'appelle pas syncWithSupabase() : la liste locale reste inchangée jusqu'au prochain chargement de page.
           }
         }
       )
