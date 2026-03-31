@@ -354,7 +354,7 @@ export function LoginPage({ onSuccess }) {
           </p>
 
           <ul className="login-enter-4 flex flex-wrap justify-center lg:justify-start gap-3">
-            {FEATURES.map((f, i) => (
+            {FEATURES.map((f) => (
               <li
                 key={f.label}
                 className="flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/5 backdrop-blur-sm px-4 py-2.5 text-sm font-semibold text-cyan-100/90 transition-all duration-300 hover:bg-cyan-500/15 hover:border-cyan-400/40 hover:scale-105 hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.4)]"

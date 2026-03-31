@@ -113,7 +113,7 @@ export function DocumentsPage({ user }) {
       if (error) throw error;
       toast.success("Document supprimé.");
       loadDocuments();
-    } catch (err) {
+    } catch {
       toast.error("Erreur lors de la suppression.");
     }
   };

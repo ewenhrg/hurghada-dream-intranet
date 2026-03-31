@@ -179,7 +179,7 @@ export function StopSalePage({ activities, user }) {
           await loadPushSales();
         }
 
-        const { data, error } = await supabase
+        const { data: _data, error } = await supabase
           .from("stop_sales")
           .insert({
             site_key: SITE_KEY,
@@ -233,7 +233,7 @@ export function StopSalePage({ activities, user }) {
           await loadStopSales();
         }
 
-        const { data, error } = await supabase
+        const { data: _data, error } = await supabase
           .from("push_sales")
           .insert({
             site_key: SITE_KEY,

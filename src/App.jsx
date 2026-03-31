@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, lazy, Suspense, useMemo, useCallback } from "react";
+import { useEffect, useState, useRef, lazy, Suspense, useCallback } from "react";
 
 // Composant pour optimiser le scroll en désactivant les animations pendant le scroll
 function ScrollOptimizer({ children }) {
@@ -46,11 +46,11 @@ function ScrollOptimizer({ children }) {
 
   return <>{children}</>;
 }
-import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
-import { uuid, emptyTransfers, mergeTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
-import { configureUserPermissions, loadUserFromSession } from "./utils/userPermissions";
+import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
+import { loadUserFromSession } from "./utils/userPermissions";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
 import { useLanguage } from "./contexts/LanguageContext";
@@ -106,7 +106,6 @@ const RequestPage = lazyWithRetry(() => import("./pages/RequestPage").then(modul
 
 export default function App() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [ok, setOk] = useState(false);
   const [tab, setTab] = useState("devis");
   // Source de vérité: Supabase (les données locales servent seulement de cache temporaire d'affichage).
@@ -119,16 +118,6 @@ export default function App() {
   const [showDatesModal, setShowDatesModal] = useState(false);
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
-
-  // Map des activités pour des recherches O(1) au lieu de O(n)
-  const activitiesMap = useMemo(() => {
-    const map = new Map();
-    activities.forEach((activity) => {
-      if (activity.id) map.set(activity.id, activity);
-      if (activity.supabase_id) map.set(activity.supabase_id, activity);
-    });
-    return map;
-  }, [activities]);
 
   // Réinitialiser les dates utilisées quand on change d'onglet
   useEffect(() => {
@@ -297,118 +286,10 @@ export default function App() {
     } catch (err) {
       logger.warn("Erreur synchronisation Supabase:", err);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fonction pour créer un devis à partir d'une demande (conservée pour usage futur)
-  const handleCreateQuoteFromRequest = useCallback(async (request) => {
-    if (!request) return;
-
-    // Convertir les activités sélectionnées de la demande en items de devis
-    const items = [];
-    if (request.selected_activities && Array.isArray(request.selected_activities)) {
-      request.selected_activities.forEach((selectedActivity) => {
-        // Trouver l'activité correspondante (optimisé avec Map pour O(1))
-        const activityId = selectedActivity.activityId?.toString();
-        const activity = activitiesMap.get(activityId) || 
-          activities.find((a) => a.supabase_id?.toString() === activityId);
-
-        if (activity) {
-          // Créer un item de devis à partir de l'activité sélectionnée
-          const item = {
-            activityId: activity.id || activity.supabase_id || selectedActivity.activityId,
-            date: selectedActivity.date || new Date().toISOString().slice(0, 10),
-            adults: selectedActivity.adults || "",
-            children: selectedActivity.children || 0,
-            babies: selectedActivity.babies || 0,
-            extraLabel: selectedActivity.extraLabel || "",
-            extraAmount: selectedActivity.extraAmount || "",
-            slot: selectedActivity.slot || "",
-            extraDolphin: selectedActivity.extraDolphin || false,
-            speedBoatExtra: selectedActivity.speedBoatExtra || [],
-            buggySimple: selectedActivity.buggySimple || "",
-            buggyFamily: selectedActivity.buggyFamily || "",
-            yamaha250: selectedActivity.yamaha250 || "",
-            ktm640: selectedActivity.ktm640 || "",
-            ktm530: selectedActivity.ktm530 || "",
-            allerSimple: selectedActivity.allerSimple || false,
-            allerRetour: selectedActivity.allerRetour || false,
-          };
-          items.push(item);
-        }
-      });
-    }
-
-    // Si aucune activité n'a été trouvée, créer un item vide
-    if (items.length === 0) {
-      items.push({
-        activityId: "",
-        date: new Date().toISOString().slice(0, 10),
-        adults: "",
-        children: 0,
-        babies: 0,
-        extraLabel: "",
-        extraAmount: "",
-        slot: "",
-        extraDolphin: false,
-        speedBoatExtra: [],
-        buggySimple: "",
-        buggyFamily: "",
-        yamaha250: "",
-        ktm640: "",
-        ktm530: "",
-        allerSimple: false,
-        allerRetour: false,
-      });
-    }
-
-    // Créer le draft avec les informations du client
-    const draft = {
-      client: {
-        name: request.client_name || "",
-        phone: request.client_phone || "",
-        email: request.client_email || "",
-        hotel: request.client_hotel || "",
-        room: request.client_room || "",
-        neighborhood: request.client_neighborhood || "",
-        arrivalDate: request.arrival_date || "",
-        departureDate: request.departure_date || "",
-      },
-      items: items,
-      notes: request.notes || "",
-    };
-
-    // Marquer la demande comme "convertie en devis" au lieu de la supprimer
-    if (supabase && request.id) {
-      try {
-        const { error } = await supabase
-          .from("client_requests")
-          .update({ 
-            status: "converted",
-            converted_at: new Date().toISOString(),
-            converted_by: user?.name || ""
-          })
-          .eq("id", request.id)
-          .eq("site_key", SITE_KEY);
-
-        if (error) {
-          logger.warn("Erreur lors de la mise à jour du statut de la demande:", error);
-          // Continuer quand même même si la mise à jour échoue
-        } else {
-          logger.log("✅ Demande marquée comme convertie en devis");
-        }
-      } catch (err) {
-        logger.warn("Exception lors de la mise à jour du statut de la demande:", err);
-        // Continuer quand même même si la mise à jour échoue
-      }
-    }
-
-    // Mettre à jour le draft et changer d'onglet
-    setQuoteDraft(draft);
-         setTab("devis");
-    
-    toast.success("Demande chargée dans le formulaire de devis !");
-  }, [activitiesMap, activities, user?.name, setQuoteDraft, setTab]);
+  // NOTE: la conversion d'une demande en devis est désactivée pour l'instant
+  // (fonction conservée dans l'historique git si besoin de la réactiver).
 
   // charger supabase au montage et synchronisation des activités toutes les 10 secondes (optimisé)
   useEffect(() => {

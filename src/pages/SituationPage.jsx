@@ -992,7 +992,7 @@ export function SituationPage({ activities = [], user }) {
   };
 
   // Fonction pour tenter d'envoyer automatiquement le message WhatsApp
-  const tryAutoSendMessage = async (whatsappWindow, maxAttempts = 5) => {
+  const _tryAutoSendMessage = async (whatsappWindow, maxAttempts = 5) => {
     if (!whatsappWindow || whatsappWindow.closed) {
       logger.warn("⚠️ Fenêtre WhatsApp fermée, impossible d'automatiser l'envoi");
       return false;
@@ -1030,7 +1030,7 @@ export function SituationPage({ activities = [], user }) {
               logger.log(`✅ Bouton d'envoi trouvé avec le sélecteur: ${selector}`);
               break;
             }
-          } catch (e) {
+          } catch {
             // Continuer avec le prochain sélecteur
           }
         }
@@ -1050,7 +1050,7 @@ export function SituationPage({ activities = [], user }) {
               logger.log(`✅ Zone de texte trouvée avec le sélecteur: ${selector}`);
               break;
             }
-          } catch (e) {
+          } catch {
             // Continuer avec le prochain sélecteur
           }
         }
@@ -1163,7 +1163,7 @@ export function SituationPage({ activities = [], user }) {
             toast.info("⏳ Chargement de la conversation WhatsApp... (3 secondes)", { duration: 3000 });
             await new Promise((resolve) => setTimeout(resolve, 3000));
             return whatsappWindowRef.current;
-          } catch (error) {
+          } catch {
             // Si on ne peut pas changer l'URL directement (CORS), utiliser window.open
             logger.warn("⚠️ Impossible de changer l'URL directement, utilisation de window.open...");
             const reusedWindow = window.open(whatsappUrl, windowName);

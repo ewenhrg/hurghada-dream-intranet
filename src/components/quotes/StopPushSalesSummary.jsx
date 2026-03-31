@@ -1,6 +1,6 @@
 import { useState, useMemo, memo } from "react";
 
-export const StopPushSalesSummary = memo(function StopPushSalesSummary({ stopSales, pushSales, activities }) {
+export const StopPushSalesSummary = memo(function StopPushSalesSummary({ stopSales, pushSales }) {
   const [expanded, setExpanded] = useState(false);
   const totalCount = stopSales.length + pushSales.length;
 

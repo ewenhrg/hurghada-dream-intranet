@@ -24,7 +24,7 @@ function Tooltip({ text, children, id, position = "top" }) {
         aria-describedby={id}
         aria-expanded={isVisible}
       >
-        <span className="text-xs font-bold">?</span>
+        {children ?? <span className="text-xs font-bold">?</span>}
       </button>
       {isVisible && (
         <div
@@ -282,7 +282,6 @@ export function RequestPage() {
         status: "pending",
       };
 
-      let result;
       if (token) {
         const { data: existing } = await supabase
           .from("client_requests")

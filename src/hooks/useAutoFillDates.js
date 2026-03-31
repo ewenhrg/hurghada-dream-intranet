@@ -136,7 +136,7 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
     const divingActivitiesWithoutDate = []; // Pour les activités de plongée qui n'ont pas pu être assignées
     const activitiesWithoutDate = []; // Pour les activités qui n'ont pas pu être assignées (jours non disponibles)
     
-    const updatedItems = items.map((item, idx) => {
+    const updatedItems = items.map((item) => {
       // Si pas d'activité sélectionnée, ne pas assigner de date
       if (!item.activityId) {
         return item;
@@ -262,7 +262,7 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
     });
 
     // Filtrer pour ne garder que les dates avec conflits (plus d'une activité)
-    const actualConflicts = Object.entries(conflictsByDate).filter(([date, activities]) => activities.length > 1);
+    const actualConflicts = Object.entries(conflictsByDate).filter(([, activities]) => activities.length > 1);
 
     // Mettre à jour les items
     setItems(updatedItems);

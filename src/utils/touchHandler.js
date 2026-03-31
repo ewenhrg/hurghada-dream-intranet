@@ -86,7 +86,7 @@ export const getTouchHandlers = (onClick) => {
   const handlerTimestamps = new WeakMap();
   const DEBOUNCE_TIME = 300; // 300ms pour éviter les doubles clics
   
-  const createDebouncedHandler = (eventType) => {
+  const createDebouncedHandler = () => {
     return (e) => {
       const now = Date.now();
       const lastTime = handlerTimestamps.get(onClick) || 0;

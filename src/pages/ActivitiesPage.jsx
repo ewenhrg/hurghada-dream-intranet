@@ -611,7 +611,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       logger.log(`⚠️ Activités locales sans supabase_id: ${activitiesWithoutSupabaseId.length}`);
 
       // 4. Identifier les activités qui existent dans Supabase mais pas localement
-      const supabaseIds = new Set(supabaseActivities?.map((a) => a.id) || []);
       const localSupabaseIds = new Set(
         localActivities.filter((a) => a.supabase_id).map((a) => a.supabase_id)
       );

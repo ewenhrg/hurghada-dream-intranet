@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { TextInput } from "./ui";
 import { toast } from "../utils/toast.js";
-import { logger } from "../utils/logger";
 
 // Composant calendrier personnalisé avec jours colorés
 export function ColoredDatePicker({ value, onChange, activity, stopSales = [], pushSales = [] }) {
@@ -30,7 +29,7 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
   const parseDateFromDisplay = (dateStr) => {
     if (!dateStr) return "";
     // Supprimer les espaces et séparateurs multiples
-    const cleaned = dateStr.trim().replace(/[\/\s-]+/g, "/");
+    const cleaned = dateStr.trim().replace(/[/\s-]+/g, "/");
     const parts = cleaned.split("/");
     
     if (parts.length === 3) {

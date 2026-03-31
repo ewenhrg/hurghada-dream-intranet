@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { activitiesCache, salesCache, appCache, createCacheKey } from '../utils/cache';
+import { appCache } from '../utils/cache';
 
 /**
  * Hook optimisé pour les requêtes Supabase avec cache
@@ -63,6 +63,7 @@ export function useSupabaseQuery(queryFn, dependencies = [], options = {}) {
     }
   }, [queryFn, cacheKey, cache, enabled]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     // Annuler la requête précédente si elle est en cours
     if (queryRef.current) {

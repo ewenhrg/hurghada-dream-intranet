@@ -1,12 +1,11 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
-import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
@@ -142,12 +141,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const [notes, setNotes] = useState(() => draft?.notes || "");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
-  const [ticketNumbers, setTicketNumbers] = useState({});
-  const [paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" }
+  const [_ticketNumbers, setTicketNumbers] = useState({});
+  const [_paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" } (réservé)
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // État pour les suggestions de dates automatiques
-  const [autoFillDates, setAutoFillDates] = useState(false);
+  const [_autoFillDates] = useState(false);
   
   // État pour le nombre d'adultes global
   const [globalAdults, setGlobalAdults] = useState("");
@@ -159,9 +158,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     return String(n);
   }, []);
 
-  // États pour les confirmations
-  const [confirmDeleteItem, setConfirmDeleteItem] = useState({ isOpen: false, index: null, activityName: "" });
-  const [confirmResetForm, setConfirmResetForm] = useState(false);
+  const [_confirmResetForm] = useState(false);
   
   // État pour la modal de suggestions
   const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
@@ -194,7 +191,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     
     // Retourner seulement les catégories qui ont des activités
     return Object.entries(grouped)
-      .filter(([_, data]) => data.activities.length > 0)
+      .filter(([, data]) => data.activities.length > 0)
       .map(([key, data]) => ({ key, ...data }));
   }, [suggestedActivities]);
 
@@ -274,14 +271,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     });
   }, [activitiesMap]);
 
-  const handleConfirmDeleteItem = useCallback(() => {
-    if (confirmDeleteItem.index !== null) {
-      setItems((prev) => prev.filter((_, idx) => idx !== confirmDeleteItem.index));
-      toast.success("Activité supprimée du devis.");
-    }
-    setConfirmDeleteItem({ isOpen: false, index: null, activityName: "" });
-  }, [confirmDeleteItem.index]);
-  
   const resetQuoteForm = useCallback(() => {
     const emptyClient = {
       name: "",
@@ -462,7 +451,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             table: 'stop_sales',
             filter: `site_key=eq.${SITE_KEY}`
           }, 
-          (payload) => {
+          () => {
             // Recharger les données quand il y a un changement
             loadStopSalesAndPushSales();
           }
@@ -479,7 +468,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             table: 'push_sales',
             filter: `site_key=eq.${SITE_KEY}`
           }, 
-          (payload) => {
+          () => {
             // Recharger les données quand il y a un changement
             loadStopSalesAndPushSales();
           }
@@ -511,8 +500,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   // Hook pour le remplissage automatique des dates
   const handleAutoFillDates = useAutoFillDates(client, items, setItems, activitiesMap, stopSalesMap, pushSalesMap);
 
-  // Fonction pour générer les suggestions d'activités basées sur les dates
-  const generateSuggestions = useCallback(() => {
+  // Fonction pour générer les suggestions d'activités basées sur les dates (désactivée pour l'instant)
+  const _generateSuggestions = useCallback(() => {
     if (!client.arrivalDate || !client.departureDate) {
       toast.warning("Veuillez renseigner les dates d'arrivée et de départ du client.");
       return;
@@ -706,7 +695,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   }, [items, activitiesMap, client.neighborhood, setItem]);
 
   // Hook pour calculer les prix des activités
-  const { computed, grandCurrency, grandTotal, grandTotalCash, grandTotalCard } = useActivityPriceCalculator(
+  const { computed, grandCurrency, grandTotalCash, grandTotalCard } = useActivityPriceCalculator(
     items,
     activitiesMap,
     client.neighborhood,
@@ -2236,7 +2225,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         type="radio"
                         name={`caire-privatif-${idx}`}
                         checked={c.raw.cairePrivatif4pax || false}
-                        onChange={(e) => {
+                        onChange={() => {
                           setItem(idx, {
                             cairePrivatif4pax: true,
                             cairePrivatif5pax: false,
@@ -2254,7 +2243,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         type="radio"
                         name={`caire-privatif-${idx}`}
                         checked={c.raw.cairePrivatif5pax || false}
-                        onChange={(e) => {
+                        onChange={() => {
                           setItem(idx, {
                             cairePrivatif4pax: false,
                             cairePrivatif5pax: true,
@@ -2272,7 +2261,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         type="radio"
                         name={`caire-privatif-${idx}`}
                         checked={c.raw.cairePrivatif6pax || false}
-                        onChange={(e) => {
+                        onChange={() => {
                           setItem(idx, {
                             cairePrivatif4pax: false,
                             cairePrivatif5pax: false,
@@ -2302,7 +2291,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         type="radio"
                         name={`louxor-privatif-${idx}`}
                         checked={c.raw.louxorPrivatif4pax || false}
-                        onChange={(e) => {
+                        onChange={() => {
                           setItem(idx, {
                             louxorPrivatif4pax: true,
                             louxorPrivatif5pax: false,
@@ -2320,7 +2309,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         type="radio"
                         name={`louxor-privatif-${idx}`}
                         checked={c.raw.louxorPrivatif5pax || false}
-                        onChange={(e) => {
+                        onChange={() => {
                           setItem(idx, {
                             louxorPrivatif4pax: false,
                             louxorPrivatif5pax: true,
@@ -2338,7 +2327,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         type="radio"
                         name={`louxor-privatif-${idx}`}
                         checked={c.raw.louxorPrivatif6pax || false}
-                        onChange={(e) => {
+                        onChange={() => {
                           setItem(idx, {
                             louxorPrivatif4pax: false,
                             louxorPrivatif5pax: false,

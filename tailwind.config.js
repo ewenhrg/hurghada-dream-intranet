@@ -1,24 +1,11 @@
+/* eslint-env node */
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
-  // Optimisation : purge CSS agressive en production
-  purge: {
-    enabled: process.env.NODE_ENV === 'production',
-    content: [
-      "./index.html",
-      "./src/**/*.{js,jsx,ts,tsx}",
-    ],
-    // Options de purge pour réduire la taille
-    options: {
-      safelist: [
-        // Garder les classes dynamiques importantes
-        /^(bg|text|border)-(primary|secondary|accent|success|warning|danger|info)/,
-      ],
-    },
-  },
+  // Tailwind v3+ purge automatiquement via `content`.
   theme: {
     extend: {
       colors: {

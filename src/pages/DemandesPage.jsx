@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, NEIGHBORHOODS } from "../constants";
 import { TextInput, PrimaryBtn, GhostBtn, Pill } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { generateRequestLink, generateRequestToken } from "../utils/tokenGenerator";
-import { appCache, createCacheKey } from "../utils/cache";
+// NOTE: cache non utilisé ici pour l'instant
 
 export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteFromRequest }) {
   const [requests, setRequests] = useState([]);
@@ -159,21 +159,11 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
   }, [activitiesMap]);
 
 
-  // Copier le lien générique (ou le lien spécifique si token fourni)
-  const copyRequestLink = (token) => {
-    // Si un token est fourni, utiliser le lien spécifique, sinon utiliser le lien générique
-    const baseUrl = window.location.origin;
-    const link = token ? generateRequestLink(token) : `${baseUrl}/request`;
-    navigator.clipboard.writeText(link);
-    toast.success("Lien copié dans le presse-papiers !");
-  };
-
   // Générer un lien générique réutilisable pour tous
   const handleGenerateNewLink = () => {
     // Générer un lien unique avec token pour éviter la détection de spam WhatsApp
     // Chaque fois qu'on génère un lien, il sera différent
     const token = generateRequestToken();
-    const baseUrl = window.location.origin;
     const link = generateRequestLink(token);
     setGeneratedLink(link);
     

@@ -497,7 +497,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             table: 'stop_sales',
             filter: `site_key=eq.${SITE_KEY}`
           }, 
-          (payload) => {
+          () => {
             // Recharger les données quand il y a un changement
             loadStopSalesAndPushSales();
           }
@@ -514,7 +514,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             table: 'push_sales',
             filter: `site_key=eq.${SITE_KEY}`
           }, 
-          (payload) => {
+          () => {
             // Recharger les données quand il y a un changement
             loadStopSalesAndPushSales();
           }
@@ -1250,7 +1250,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 }
 
 // Composant modale de modification de devis
-function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, user, canModifyActivities, stopSales = [], pushSales = [], onClose, onSave, editModalRef, editModalContainerRef }) {
+function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, stopSales = [], pushSales = [], onClose, onSave, editModalRef, editModalContainerRef }) {
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
     const map = new Map();
@@ -1870,7 +1870,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           type="radio"
                           name={`caire-privatif-${idx}`}
                           checked={c.raw.cairePrivatif4pax || false}
-                          onChange={(e) => {
+                          onChange={() => {
                             setItem(idx, {
                               cairePrivatif4pax: true,
                               cairePrivatif5pax: false,
@@ -1888,7 +1888,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           type="radio"
                           name={`caire-privatif-${idx}`}
                           checked={c.raw.cairePrivatif5pax || false}
-                          onChange={(e) => {
+                          onChange={() => {
                             setItem(idx, {
                               cairePrivatif4pax: false,
                               cairePrivatif5pax: true,
@@ -1906,7 +1906,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           type="radio"
                           name={`caire-privatif-${idx}`}
                           checked={c.raw.cairePrivatif6pax || false}
-                          onChange={(e) => {
+                          onChange={() => {
                             setItem(idx, {
                               cairePrivatif4pax: false,
                               cairePrivatif5pax: false,
@@ -1936,7 +1936,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           type="radio"
                           name={`louxor-privatif-${idx}`}
                           checked={c.raw.louxorPrivatif4pax || false}
-                          onChange={(e) => {
+                          onChange={() => {
                             setItem(idx, {
                               louxorPrivatif4pax: true,
                               louxorPrivatif5pax: false,
@@ -1954,7 +1954,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           type="radio"
                           name={`louxor-privatif-${idx}`}
                           checked={c.raw.louxorPrivatif5pax || false}
-                          onChange={(e) => {
+                          onChange={() => {
                             setItem(idx, {
                               louxorPrivatif4pax: false,
                               louxorPrivatif5pax: true,
@@ -1972,7 +1972,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           type="radio"
                           name={`louxor-privatif-${idx}`}
                           checked={c.raw.louxorPrivatif6pax || false}
-                          onChange={(e) => {
+                          onChange={() => {
                             setItem(idx, {
                               louxorPrivatif4pax: false,
                               louxorPrivatif5pax: false,

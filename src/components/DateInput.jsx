@@ -19,7 +19,7 @@ function formatWithSlashes(input) {
 function parseTypedDate(input) {
   if (!input || typeof input !== "string") return "";
   const cleaned = input.trim().replace(/\s+/g, "");
-  const parts = cleaned.split(/[\/\-.]/).filter(Boolean);
+  const parts = cleaned.split(/[/\-.]/).filter(Boolean);
   if (parts.length !== 3) return "";
   const a = parts[0];
   const b = parts[1].padStart(2, "0");

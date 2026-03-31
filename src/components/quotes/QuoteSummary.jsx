@@ -5,7 +5,7 @@ import { currencyNoCents } from "../../utils";
 /**
  * Composant pour afficher le résumé des totaux du devis
  */
-export const QuoteSummary = memo(function QuoteSummary({ computed, grandTotalCash, grandTotalCard, grandCurrency, onAddItem }) {
+export const QuoteSummary = memo(function QuoteSummary({ grandTotalCash, grandTotalCard, grandCurrency, onAddItem }) {
   return (
     <div className="bg-slate-900/95 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-sm p-6 md:p-8 animate-scale-in">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">

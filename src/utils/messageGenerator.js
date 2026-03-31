@@ -27,7 +27,7 @@ Hurghada Dream`;
  * @param {Object} data - Les données du client
  * @returns {string} - Le lien unique avec token
  */
-function generateUniqueFormLink(data) {
+function generateUniqueFormLink() {
   // Générer un token unique basé sur les données du client pour avoir un lien différent pour chacun
   // Cela évite que WhatsApp détecte des liens identiques comme du spam
   const token = generateRequestToken();
