@@ -19,6 +19,7 @@ import {
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDay, setSelectedDay] = useState("");
+  const [duplicatesModalOpen, setDuplicatesModalOpen] = useState(false);
   // Debounce de la recherche pour améliorer les performances
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
@@ -118,6 +119,54 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     CATEGORIES.forEach((c) => (next[c.key] = false));
     setOpenCategories(next);
   }, []);
+
+  const normalizeActivityName = useCallback((name) => {
+    const s = String(name || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+    // Retirer les accents pour éviter "Café" vs "Cafe"
+    try {
+      return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    } catch {
+      return s;
+    }
+  }, []);
+
+  const duplicateNameGroups = useMemo(() => {
+    const map = new Map(); // normalizedName -> activities[]
+    activities.forEach((a) => {
+      const key = normalizeActivityName(a?.name);
+      if (!key) return;
+      const prev = map.get(key);
+      if (prev) prev.push(a);
+      else map.set(key, [a]);
+    });
+
+    const groups = [];
+    map.forEach((list, key) => {
+      if (list.length >= 2) {
+        // Trier pour avoir quelque chose de stable à l'affichage
+        const sorted = [...list].sort((x, y) => String(x?.name || "").localeCompare(String(y?.name || ""), "fr", { sensitivity: "base" }));
+        groups.push({ key, name: sorted[0]?.name || key, activities: sorted });
+      }
+    });
+
+    // Trier par nom affiché
+    groups.sort((a, b) => String(a.name).localeCompare(String(b.name), "fr", { sensitivity: "base" }));
+    return groups;
+  }, [activities, normalizeActivityName]);
+
+  const duplicatesCount = duplicateNameGroups.length;
+
+  const handleDetectDuplicates = useCallback(() => {
+    if (duplicatesCount === 0) {
+      toast.success("✅ Aucun doublon détecté (même nom).");
+      return;
+    }
+    toast.warning(`⚠️ ${duplicatesCount} groupe(s) de doublons détecté(s).`);
+    setDuplicatesModalOpen(true);
+  }, [duplicatesCount]);
 
   // Sauvegarder le formulaire dans localStorage avec debounce (500ms pour réduire les écritures)
   useEffect(() => {
@@ -1076,6 +1125,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
+          <PrimaryBtn
+            onClick={handleDetectDuplicates}
+            className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-pink-600 hover:from-fuchsia-700 hover:to-pink-700 border-0 shadow-lg shadow-pink-500/25"
+          >
+            🧩 Détecter les doublons
+          </PrimaryBtn>
           {user?.canAddActivity && (
             <PrimaryBtn
               onClick={handleToggleForm}
@@ -1126,6 +1181,103 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           )}
         </div>
       </header>
+
+      {/* Modal doublons */}
+      {duplicatesModalOpen && (
+        <div
+          className="fixed inset-0 bg-indigo-900/30 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setDuplicatesModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl border-2 border-indigo-300 shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b-2 border-indigo-200 bg-gradient-to-r from-fuchsia-600 to-pink-600 flex items-center justify-between">
+              <div className="min-w-0">
+                <h3 className="text-base font-bold text-white truncate">
+                  🧩 Doublons détectés
+                </h3>
+                <p className="text-xs font-medium text-white/90 mt-0.5">
+                  {duplicatesCount} groupe(s) · mêmes noms (insensible à la casse / espaces / accents)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDuplicatesModalOpen(false)}
+                className="p-2 rounded-lg text-white/90 hover:text-white hover:bg-white/20 transition-colors"
+                aria-label="Fermer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-5 flex-1 overflow-y-auto bg-slate-50/50 space-y-4">
+              {duplicateNameGroups.map((g) => (
+                <div key={g.key} className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b bg-slate-50 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-900 truncate">{g.name}</p>
+                      <p className="text-xs text-slate-600">{g.activities.length} entrées</p>
+                    </div>
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-pink-100 text-pink-700 border border-pink-200">
+                      DOUBLON
+                    </span>
+                  </div>
+                  <div className="divide-y">
+                    {g.activities.map((a) => (
+                      <div key={a.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{a.name || "—"}</p>
+                          <p className="text-xs text-slate-600">
+                            Catégorie: <span className="font-medium">{a.category || "desert"}</span>
+                            {" · "}
+                            Local id: <span className="font-mono">{String(a.id || "")}</span>
+                            {a.supabase_id ? (
+                              <>
+                                {" · "}
+                                Supabase id: <span className="font-mono">{String(a.supabase_id)}</span>
+                              </>
+                            ) : null}
+                          </p>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          {canModifyActivities && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDuplicatesModalOpen(false);
+                                handleEdit(a);
+                              }}
+                              className="text-xs font-semibold px-3 py-2 rounded-lg bg-indigo-200 text-indigo-800 hover:bg-indigo-300 border border-indigo-300 transition-colors"
+                            >
+                              ✏️ Ouvrir
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {duplicatesCount === 0 && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <p className="text-sm font-semibold text-emerald-800">✅ Aucun doublon détecté.</p>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t-2 border-indigo-200 flex gap-3 justify-end bg-gradient-to-r from-indigo-50 to-violet-50">
+              <button
+                type="button"
+                onClick={() => setDuplicatesModalOpen(false)}
+                className="text-sm font-semibold px-4 py-2.5 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filtres - bloc coloré */}
       <section className="rounded-xl border-2 border-indigo-200 p-5 md:p-6 shadow-md bg-gradient-to-br from-indigo-50 via-white to-violet-50">

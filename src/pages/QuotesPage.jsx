@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber } from "../utils";
+import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, loadLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
 import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
@@ -151,6 +151,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   
   // État pour le nombre d'adultes global
   const [globalAdults, setGlobalAdults] = useState("");
+
+  const normalizeCountForForm = useCallback((raw, { allowEmpty = true, min = 0, max = 999 } = {}) => {
+    if (allowEmpty && (raw === "" || raw === null || raw === undefined)) return "";
+    // Conserver "" si l'utilisateur vide le champ, sinon normaliser en entier borné
+    const n = toBoundedInt10(raw, { min, max, fallback: 0 });
+    return String(n);
+  }, []);
 
   // États pour les confirmations
   const [confirmDeleteItem, setConfirmDeleteItem] = useState({ isOpen: false, index: null, activityName: "" });
@@ -866,9 +873,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         activityId: c.act.id,
         activityName: c.act.name || "",
         date: c.raw.date,
-        adults: Number(c.raw.adults || 0),
-        children: Number(c.raw.children || 0),
-        babies: Number(c.raw.babies || 0),
+        adults: toBoundedInt10(c.raw.adults, { min: 0, max: 999, fallback: 0 }),
+        children: toBoundedInt10(c.raw.children, { min: 0, max: 999, fallback: 0 }),
+        babies: toBoundedInt10(c.raw.babies, { min: 0, max: 999, fallback: 0 }),
         extraLabel: c.raw.extraLabel || "",
         extraAmount: c.raw.extraAmount !== undefined && c.raw.extraAmount !== null && c.raw.extraAmount !== "" ? Number(c.raw.extraAmount) : 0,
         extraDolphin: c.raw.extraDolphin || false,
@@ -1266,7 +1273,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               <NumberInput
                 value={globalAdults}
                 onChange={(e) => {
-                  const value = e.target.value === "" ? "" : e.target.value;
+                  const value = normalizeCountForForm(e.target.value, { allowEmpty: true, min: 0, max: 999 });
                   setGlobalAdults(value);
                   setItems((prev) =>
                     prev.map((item) => ({
@@ -1575,13 +1582,19 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 pt-4 border-t border-orange-200/60">
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 mb-2">👥 Adultes (info uniquement)</label>
-                      <NumberInput value={c.raw.adults ?? ""} onChange={(e) => setItem(idx, { adults: e.target.value === "" ? "" : e.target.value })} />
+                      <NumberInput
+                        value={c.raw.adults ?? ""}
+                        onChange={(e) => setItem(idx, { adults: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 mb-2">
                         👶 Enfants{c.act?.ageChild ? <span className="text-slate-400 ml-1">({c.act.ageChild})</span> : ""} (info uniquement)
                       </label>
-                      <NumberInput value={c.raw.children ?? ""} onChange={(e) => setItem(idx, { children: e.target.value === "" ? "" : e.target.value })} />
+                      <NumberInput
+                        value={c.raw.children ?? ""}
+                        onChange={(e) => setItem(idx, { children: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1655,19 +1668,28 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
-                      <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+                      <NumberInput
+                        value={c.raw.adults}
+                        onChange={(e) => setItem(idx, { adults: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-2">
                         Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} />
+                      <NumberInput
+                        value={c.raw.children}
+                        onChange={(e) => setItem(idx, { children: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      <NumberInput
+                        value={c.raw.babies}
+                        onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
                     </div>
                   </div>
                 </>
@@ -1723,19 +1745,28 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
-                      <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+                      <NumberInput
+                        value={c.raw.adults}
+                        onChange={(e) => setItem(idx, { adults: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-2">
                         Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} />
+                      <NumberInput
+                        value={c.raw.children}
+                        onChange={(e) => setItem(idx, { children: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      <NumberInput
+                        value={c.raw.babies}
+                        onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
                     </div>
                   </div>
                 </>
@@ -1791,19 +1822,28 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <div>
                       <p className="text-xs text-gray-400 mb-2">Adultes (informations uniquement)</p>
-                      <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} />
+                      <NumberInput
+                        value={c.raw.adults}
+                        onChange={(e) => setItem(idx, { adults: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-2">
                         Enfants{c.act?.ageChild ? <span className="text-gray-400 ml-1">({c.act.ageChild})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} />
+                      <NumberInput
+                        value={c.raw.children}
+                        onChange={(e) => setItem(idx, { children: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      <NumberInput
+                        value={c.raw.babies}
+                        onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
                     </div>
                   </div>
                 </>
@@ -2153,19 +2193,31 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-2">Adultes</label>
-                      <NumberInput value={c.raw.adults} onChange={(e) => setItem(idx, { adults: e.target.value })} placeholder="0" />
+                      <NumberInput
+                        value={c.raw.adults}
+                        onChange={(e) => setItem(idx, { adults: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                        placeholder="0"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-2">
                         Enfants{c.act?.ageChild ? <span className="text-slate-500 ml-1 font-normal">({c.act.ageChild})</span> : ""}
                       </label>
-                      <NumberInput value={c.raw.children} onChange={(e) => setItem(idx, { children: e.target.value })} placeholder="0" />
+                      <NumberInput
+                        value={c.raw.children}
+                        onChange={(e) => setItem(idx, { children: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                        placeholder="0"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-slate-500 ml-1 font-normal">({c.act.ageBaby})</span> : ""}
                       </label>
-                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} placeholder="0" />
+                      <NumberInput
+                        value={c.raw.babies}
+                        onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                        placeholder="0"
+                      />
                     </div>
                   </div>
                 </div>

@@ -35,6 +35,7 @@ export const LS_KEYS = {
   activityForm: "hd_activity_form", // Formulaire d'activité en cours
   messageTemplates: "hd_message_templates", // Templates de messages par activité
   exteriorHotels: "hd_exterior_hotels", // Liste des hôtels avec RDV à l'extérieur
+  users: "hd_users", // Cache utilisateurs pour sécurité anti-suppression auto
 };
 
 export const WEEKDAYS = [

@@ -195,6 +195,39 @@ export function loadLS(key, fallback) {
   }
 }
 
+/**
+ * Convertit une valeur en entier base 10 de façon sûre.
+ * - Accepte number/string (ex: "08", "8", 8)
+ * - Refuse NaN / Infinity / "8e2" (retourne fallback)
+ */
+export function toInt10(value, fallback = 0) {
+  if (value === "" || value === null || value === undefined) return fallback;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? Math.trunc(value) : fallback;
+  }
+  if (typeof value === "string") {
+    const s = value.trim();
+    if (s === "") return fallback;
+    // Autoriser uniquement un entier +/- en base 10 (pas d'exponentiel, pas de décimal)
+    if (!/^[+-]?\d+$/.test(s)) return fallback;
+    const n = Number.parseInt(s, 10);
+    return Number.isFinite(n) ? n : fallback;
+  }
+  return fallback;
+}
+
+/**
+ * Normalise un compteur (adultes/enfants/bébés, etc.)
+ * - entier
+ * - borné (min/max)
+ * - fallback si valeur invalide
+ */
+export function toBoundedInt10(value, { min = 0, max = 999, fallback = 0 } = {}) {
+  const n = toInt10(value, fallback);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
 // Calculer le montant total du supplément transfert pour un item
 export function calculateTransferSurcharge(item) {
   if (!item || !item.transferSurchargePerAdult || item.transferSurchargePerAdult === 0) {

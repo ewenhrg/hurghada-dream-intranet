@@ -3,6 +3,8 @@ import { supabase } from "../lib/supabase";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
+import { LS_KEYS } from "../constants";
+import { loadLS, saveLS } from "../utils";
 import {
   PERMISSION_GROUPS,
   PERMISSION_FORM_TO_DB,
@@ -12,7 +14,7 @@ import {
 } from "../constants/permissions";
 
 export function UsersPage() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState(() => loadLS(LS_KEYS.users, []));
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -34,7 +36,19 @@ export function UsersPage() {
         logger.error("Erreur lors du chargement des utilisateurs:", error);
         toast.error("Erreur lors du chargement des utilisateurs: " + (error.message || "Erreur inconnue"));
       } else {
-        setUsers(data || []);
+        const fromSupabase = data || [];
+        const current = loadLS(LS_KEYS.users, []);
+        const minAcceptable = current.length > 0 ? Math.max(1, Math.floor(current.length * 0.8)) : 0;
+        if (current.length > 0 && fromSupabase.length < minAcceptable) {
+          logger.warn(`🛡️ Utilisateurs: Supabase en renvoie ${fromSupabase.length}, la session en avait ${current.length}. Conservation de la liste locale.`);
+          toast.warning(
+            `Supabase renvoie moins d'utilisateurs (${fromSupabase.length}) qu'attendu (${current.length}). Liste locale conservée pour éviter toute perte.`
+          );
+          setUsers(current);
+        } else {
+          setUsers(fromSupabase);
+          saveLS(LS_KEYS.users, fromSupabase);
+        }
       }
     } catch (err) {
       logger.error("Exception lors du chargement des utilisateurs:", err);
