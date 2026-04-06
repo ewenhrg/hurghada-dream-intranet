@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
@@ -13,9 +13,41 @@ import {
   formToDbUser,
 } from "../constants/permissions";
 
+const LOCAL_ONLY_KEY = "_localOnly";
+
+/** Fusionne le cache local avec Supabase quand la base renvoie moins de lignes (perte / suppression massive). */
+function mergeUsersWhenRemoteShrunk(fromSupabase, cached) {
+  const remote = fromSupabase || [];
+  const prev = Array.isArray(cached) ? cached : [];
+  if (prev.length === 0 || remote.length >= prev.length) {
+    return { merged: remote, localOnlyAdded: 0, usedMerge: false };
+  }
+  const remoteCodes = new Set(remote.map((u) => u?.code).filter(Boolean));
+  const merged = [...remote];
+  let localOnlyAdded = 0;
+  const seen = new Set(remoteCodes);
+  for (const row of prev) {
+    if (!row?.code || seen.has(row.code)) continue;
+    const { [LOCAL_ONLY_KEY]: _drop, ...rest } = row;
+    merged.push({ ...rest, [LOCAL_ONLY_KEY]: true });
+    seen.add(row.code);
+    localOnlyAdded += 1;
+  }
+  return { merged, localOnlyAdded, usedMerge: localOnlyAdded > 0 };
+}
+
+function stripLocalOnlyFlagForStorage(list) {
+  return (list || []).map((u) => {
+    if (!u?.[LOCAL_ONLY_KEY]) return u;
+    const { [LOCAL_ONLY_KEY]: _, ...rest } = u;
+    return rest;
+  });
+}
+
 export function UsersPage() {
   const [users, setUsers] = useState(() => loadLS(LS_KEYS.users, []));
   const [loading, setLoading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState(() => ({
@@ -24,7 +56,11 @@ export function UsersPage() {
     ...getDefaultPermissionForm(),
   }));
 
-  async function loadUsers() {
+  const localOnlyUsers = useMemo(() => (users || []).filter((u) => u?.[LOCAL_ONLY_KEY]), [users]);
+
+  const remoteUsersCount = useMemo(() => (users || []).filter((u) => !u?.[LOCAL_ONLY_KEY]).length, [users]);
+
+  const loadUsers = useCallback(async () => {
     if (!supabase) return;
     setLoading(true);
     try {
@@ -38,13 +74,20 @@ export function UsersPage() {
       } else {
         const fromSupabase = data || [];
         const current = loadLS(LS_KEYS.users, []);
-        const minAcceptable = current.length > 0 ? Math.max(1, Math.floor(current.length * 0.8)) : 0;
-        if (current.length > 0 && fromSupabase.length < minAcceptable) {
-          logger.warn(`🛡️ Utilisateurs: Supabase en renvoie ${fromSupabase.length}, la session en avait ${current.length}. Conservation de la liste locale.`);
-          toast.warning(
-            `Supabase renvoie moins d'utilisateurs (${fromSupabase.length}) qu'attendu (${current.length}). Liste locale conservée pour éviter toute perte.`
+        const { merged, localOnlyAdded, usedMerge } = mergeUsersWhenRemoteShrunk(fromSupabase, current);
+
+        if (usedMerge && fromSupabase.length < current.length) {
+          logger.warn(
+            `🛡️ Utilisateurs: Supabase en renvoie ${fromSupabase.length}, le cache en avait ${current.length}. Fusion avec les entrées locales (codes absents de la base).`
           );
-          setUsers(current);
+          toast.warning(
+            `La base ne contient que ${fromSupabase.length} utilisateur(s) alors que le cache en avait ${current.length}. ` +
+              (localOnlyAdded > 0
+                ? `${localOnlyAdded} compte(s) récupéré(s) depuis le cache — utilisez « Réinsérer dans Supabase » pour les restaurer.`
+                : "Vérifiez les données dans Supabase.")
+          );
+          setUsers(merged);
+          saveLS(LS_KEYS.users, stripLocalOnlyFlagForStorage(merged));
         } else {
           setUsers(fromSupabase);
           saveLS(LS_KEYS.users, fromSupabase);
@@ -56,11 +99,89 @@ export function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  const handleExportUsersBackup = useCallback(() => {
+    const raw = loadLS(LS_KEYS.users, users);
+    const payload = stripLocalOnlyFlagForStorage(raw);
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `hd_users_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast.success("Export téléchargé. Conservez ce fichier en lieu sûr.");
+  }, [users]);
+
+  const handleForceUseSupabaseOnly = useCallback(async () => {
+    if (
+      !window.confirm(
+        "Cela remplace la liste affichée par le contenu actuel de Supabase uniquement. " +
+          "Les comptes présents seulement dans le cache seront retirés de l’affichage (pas de suppression en base si déjà absents). Continuer ?"
+      )
+    ) {
+      return;
+    }
+    if (!supabase) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.from("users").select("*").order("created_at", { ascending: false });
+      if (error) {
+        toast.error(error.message || "Erreur");
+        return;
+      }
+      const rows = data || [];
+      setUsers(rows);
+      saveLS(LS_KEYS.users, rows);
+      toast.success("Liste alignée sur Supabase.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleRestoreMissingToSupabase = useCallback(async () => {
+    if (localOnlyUsers.length === 0) {
+      toast.warning("Aucun compte « cache seul » à réinsérer.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Réinsérer ${localOnlyUsers.length} utilisateur(s) dans Supabase à partir du cache ? ` +
+          "Les codes déjà présents en base seront ignorés (erreur doublon)."
+      )
+    ) {
+      return;
+    }
+    if (!supabase) return;
+    setRestoring(true);
+    try {
+      let ok = 0;
+      let fail = 0;
+      for (const row of localOnlyUsers) {
+        const form = dbUserToFormUser(row);
+        const payload = formToDbUser(form);
+        const { error } = await supabase.from("users").insert(payload);
+        if (error) {
+          logger.error("Réimport utilisateur:", row.code, error);
+          fail += 1;
+        } else {
+          ok += 1;
+        }
+      }
+      if (ok > 0) toast.success(`${ok} utilisateur(s) réinséré(s) dans Supabase.`);
+      if (fail > 0) toast.warning(`${fail} échec(s) (doublon ou erreur) — vérifiez la console.`);
+      await loadUsers();
+    } catch (err) {
+      logger.error(err);
+      toast.error(err?.message || "Erreur lors de la réinsertion.");
+    } finally {
+      setRestoring(false);
+    }
+  }, [localOnlyUsers, loadUsers]);
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [loadUsers]);
 
   function resetForm() {
     setForm({
@@ -98,23 +219,36 @@ export function UsersPage() {
       const userData = formToDbUser(form);
 
       if (editingUser) {
-        const { error } = await supabase
-          .from("users")
-          .update(userData)
-          .eq("id", editingUser.id)
-          .select()
-          .single();
-
-        if (error) {
-          logger.error("Erreur lors de la modification de l'utilisateur:", error);
-          toast.error("Erreur lors de la modification: " + (error.message || "Erreur inconnue"));
+        if (editingUser[LOCAL_ONLY_KEY]) {
+          const { error } = await supabase.from("users").insert(userData).select().single();
+          if (error) {
+            logger.error("Erreur lors de la réinsertion de l'utilisateur (cache):", error);
+            toast.error("Erreur: " + (error.message || "Erreur inconnue"));
+          } else {
+            logger.log("✅ Utilisateur réinséré depuis le cache!", userData);
+            await loadUsers();
+            resetForm();
+            toast.success("Utilisateur enregistré dans Supabase.");
+          }
         } else {
-          logger.log("✅ Utilisateur modifié avec succès!", userData);
-          await loadUsers();
-          resetForm();
-          toast.success(
-            "Utilisateur modifié avec succès.\nL'utilisateur devra se reconnecter pour que les nouvelles permissions soient prises en compte."
-          );
+          const { error } = await supabase
+            .from("users")
+            .update(userData)
+            .eq("id", editingUser.id)
+            .select()
+            .single();
+
+          if (error) {
+            logger.error("Erreur lors de la modification de l'utilisateur:", error);
+            toast.error("Erreur lors de la modification: " + (error.message || "Erreur inconnue"));
+          } else {
+            logger.log("✅ Utilisateur modifié avec succès!", userData);
+            await loadUsers();
+            resetForm();
+            toast.success(
+              "Utilisateur modifié avec succès.\nL'utilisateur devra se reconnecter pour que les nouvelles permissions soient prises en compte."
+            );
+          }
         }
       } else {
         const { error } = await supabase
@@ -145,8 +279,37 @@ export function UsersPage() {
     }
   }
 
-  async function handleDelete(userId, userName) {
-    if (
+  async function handleDelete(u) {
+    const isLocalOnly = Boolean(u?.[LOCAL_ONLY_KEY]);
+    const userName = u?.name || "Utilisateur";
+
+    if (isLocalOnly) {
+      if (
+        !window.confirm(
+          `Retirer « ${userName} » du cache uniquement ? (Ce compte n’est pas dans Supabase.)`
+        )
+      ) {
+        return;
+      }
+      const code = u.code;
+      const next = users.filter((row) => !(row[LOCAL_ONLY_KEY] && row.code === code));
+      setUsers(next);
+      saveLS(LS_KEYS.users, stripLocalOnlyFlagForStorage(next));
+      toast.success("Entrée retirée du cache.");
+      return;
+    }
+
+    if (remoteUsersCount <= 1) {
+      if (
+        !window.confirm(
+          `ATTENTION : c’est le dernier utilisateur présent dans la base. ` +
+            `La suppression bloquera toute connexion sauf si vous en recréez un autre. ` +
+            `Confirmer la suppression de « ${userName} » ?`
+        )
+      ) {
+        return;
+      }
+    } else if (
       !window.confirm(
         `Êtes-vous sûr de vouloir supprimer l'utilisateur "${userName}" ?\n\nCette action est irréversible.`
       )
@@ -156,7 +319,7 @@ export function UsersPage() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from("users").delete().eq("id", userId);
+      const { error } = await supabase.from("users").delete().eq("id", u.id);
 
       if (error) {
         logger.error("Erreur lors de la suppression de l'utilisateur:", error);
@@ -232,6 +395,38 @@ export function UsersPage() {
           {showForm ? "Annuler" : "➕ Nouvel utilisateur"}
         </PrimaryBtn>
       </header>
+
+      {localOnlyUsers.length > 0 && (
+        <div
+          className="rounded-xl border-2 border-amber-300/80 bg-amber-50 px-4 py-4 text-sm text-amber-950 shadow-sm space-y-3"
+          role="status"
+        >
+          <p className="font-semibold">Comptes récupérés depuis le cache (absents de Supabase)</p>
+          <p className="text-amber-900/90 leading-relaxed">
+            {localOnlyUsers.length} utilisateur(s) affiché(s) uniquement depuis le stockage du navigateur. Utilisez le bouton
+            ci-dessous pour les réinsérer dans la base, ou exportez un fichier JSON avant toute manipulation.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <PrimaryBtn
+              type="button"
+              disabled={restoring || loading}
+              onClick={handleRestoreMissingToSupabase}
+              className="bg-amber-600 hover:bg-amber-700 border-0 text-white"
+            >
+              {restoring ? "Réinsertion…" : "↻ Réinsérer dans Supabase"}
+            </PrimaryBtn>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <GhostBtn type="button" onClick={handleExportUsersBackup} variant="neutral" className="text-xs">
+          💾 Exporter la liste (cache)
+        </GhostBtn>
+        <GhostBtn type="button" onClick={handleForceUseSupabaseOnly} variant="neutral" className="text-xs">
+          Afficher uniquement Supabase (ignore le cache)
+        </GhostBtn>
+      </div>
 
       {showForm && (
         <form
@@ -344,12 +539,21 @@ export function UsersPage() {
                   const activeLabels = getActivePermissionLabels(u);
                   return (
                     <tr
-                      key={u.id}
+                      key={u[LOCAL_ONLY_KEY] ? `loc-${u.code}` : u.id}
                       className={`border-t border-violet-100/60 transition-colors ${
                         idx % 2 === 0 ? "bg-white hover:bg-violet-50/50" : "bg-violet-50/30 hover:bg-violet-50/70"
                       }`}
                     >
-                      <td className="px-4 py-3 font-semibold text-gray-800">{u.name}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-800">
+                        <span className="inline-flex items-center gap-2 flex-wrap">
+                          {u.name}
+                          {u[LOCAL_ONLY_KEY] && (
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200/80">
+                              Cache seulement
+                            </span>
+                          )}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 font-mono text-violet-700 font-medium">{u.code}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
@@ -380,11 +584,11 @@ export function UsersPage() {
                             ✏️ Modifier
                           </GhostBtn>
                           <GhostBtn
-                            onClick={() => handleDelete(u.id, u.name)}
+                            onClick={() => handleDelete(u)}
                             variant="danger"
                             size="sm"
                           >
-                            🗑️ Supprimer
+                            {u[LOCAL_ONLY_KEY] ? "Retirer du cache" : "🗑️ Supprimer"}
                           </GhostBtn>
                         </div>
                       </td>
