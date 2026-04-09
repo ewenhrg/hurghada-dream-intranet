@@ -14,6 +14,7 @@ import {
   parseBackupFile,
   restoreFromBackup,
   getBackupFilename,
+  dedupeActivities,
 } from "../utils/activitiesBackup";
 
 export function ActivitiesPage({ activities, setActivities, user }) {
@@ -813,10 +814,15 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           id: a.id || uuid(),
           supabase_id: undefined,
         }));
-        setActivities(restored);
-        saveLS(LS_KEYS.activities, restored);
-        logger.log(`📂 Restauration (sauvegarde incluse): ${count} activités → sync Supabase`);
-        toast.success(`✅ ${count} activité(s) restaurée(s). Synchronisation Supabase en cours...`);
+        const { activities: deduped, removed: dupRemoved } = dedupeActivities(restored);
+        setActivities(deduped);
+        saveLS(LS_KEYS.activities, deduped);
+        logger.log(
+          `📂 Restauration (sauvegarde incluse): ${deduped.length} activités après déduplication${dupRemoved > 0 ? ` (${dupRemoved} doublon(s) retiré(s))` : ""} → sync Supabase`
+        );
+        toast.success(
+          `✅ ${deduped.length} activité(s) restaurée(s).${dupRemoved > 0 ? ` ${dupRemoved} doublon(s) fusionné(s) automatiquement.` : ""} Synchronisation Supabase en cours...`
+        );
         setTimeout(() => handleVerifyAndSync(), 0);
       })
       .catch((err) => {
@@ -849,10 +855,15 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         const currentActivities = loadLS(LS_KEYS.activities, []);
         const mode = currentActivities.length === 0 ? "replace" : null;
         if (mode === "replace") {
-          setActivities(backup.activities);
-          saveLS(LS_KEYS.activities, backup.activities);
-          logger.log(`📂 Restauration: ${count} activités (remplacement)`);
-          toast.success(`✅ Restauration terminée ! ${count} activité(s) restaurée(s).`);
+          const { activities: deduped, removed: duplicatesRemoved } = dedupeActivities(backup.activities);
+          setActivities(deduped);
+          saveLS(LS_KEYS.activities, deduped);
+          logger.log(
+            `📂 Restauration: ${deduped.length} activités (remplacement)${duplicatesRemoved > 0 ? ` — ${duplicatesRemoved} doublon(s) retiré(s)` : ""}`
+          );
+          toast.success(
+            `✅ Restauration terminée ! ${deduped.length} activité(s).${duplicatesRemoved > 0 ? ` ${duplicatesRemoved} doublon(s) fusionné(s).` : ""}`
+          );
           toast.info("🔄 Synchronisation avec Supabase en cours...");
           setTimeout(() => {
             handleVerifyAndSync();
@@ -865,13 +876,17 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             `Cliquer OK pour REMPLACER toutes les activités par la sauvegarde.\n` +
             `Cliquer Annuler pour FUSIONNER (garder les actuelles + ajouter les manquantes).`
         );
-        const finalList = replace
+        const { activities: finalList, duplicatesRemoved } = replace
           ? restoreFromBackup(backup, "replace")
           : restoreFromBackup(backup, "merge", currentActivities);
         setActivities(finalList);
         saveLS(LS_KEYS.activities, finalList);
-        logger.log(`📂 Restauration: ${finalList.length} activités (${replace ? "remplacement" : "fusion"})`);
-        toast.success(`✅ Restauration terminée ! ${finalList.length} activité(s).`);
+        logger.log(
+          `📂 Restauration: ${finalList.length} activités (${replace ? "remplacement" : "fusion"})${duplicatesRemoved > 0 ? ` — ${duplicatesRemoved} doublon(s) retiré(s)` : ""}`
+        );
+        toast.success(
+          `✅ Restauration terminée ! ${finalList.length} activité(s).${duplicatesRemoved > 0 ? ` ${duplicatesRemoved} doublon(s) fusionné(s).` : ""}`
+        );
         toast.info("🔄 Synchronisation avec Supabase en cours...");
         setTimeout(() => {
           handleVerifyAndSync();
