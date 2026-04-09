@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-04-06T20:25:27.519Z",
+  "exportedAt": "2026-04-09T20:09:01.147Z",
   "site_key": "https://uvqzqlfzhgbknkpvybbj.supabase.co",
   "count": 73,
   "activities": [
@@ -2578,7 +2578,7 @@
           "afternoonTime": "12:30",
           "eveningEnabled": false,
           "eveningTime": "",
-          "surcharge": 10
+          "surcharge": 20
         },
         "makadi": {
           "morningEnabled": true,
@@ -2587,7 +2587,7 @@
           "afternoonTime": "12:30",
           "eveningEnabled": false,
           "eveningTime": "",
-          "surcharge": 5
+          "surcharge": 15
         },
         "salh_hasheesh": {
           "morningEnabled": true,
@@ -2596,7 +2596,7 @@
           "afternoonTime": "12:30",
           "eveningEnabled": false,
           "eveningTime": "",
-          "surcharge": 5
+          "surcharge": 15
         },
         "el_gouna": {
           "morningEnabled": true,
@@ -2605,7 +2605,7 @@
           "afternoonTime": "12:30",
           "eveningEnabled": false,
           "eveningTime": "",
-          "surcharge": 10
+          "surcharge": 20
         },
         "hurghada_cora": {
           "morningEnabled": true,
@@ -2973,112 +2973,6 @@
       }
     },
     {
-      "id": "8e561296-7922-4fc5-870d-a0778325a161",
-      "supabase_id": "8e561296-7922-4fc5-870d-a0778325a161",
-      "name": "SPA LUXURY 1",
-      "category": "exploration_bien_etre",
-      "priceAdult": 40,
-      "priceChild": 40,
-      "priceBaby": 35,
-      "ageChild": "Interdit -9ans",
-      "ageBaby": "Interdit -9ans",
-      "currency": "EUR",
-      "availableDays": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "notes": "",
-      "description": "",
-      "transfers": {
-        "soma_bay": {
-          "morningEnabled": true,
-          "morningTime": "09:00",
-          "afternoonEnabled": true,
-          "afternoonTime": "14:00",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 10
-        },
-        "makadi": {
-          "morningEnabled": true,
-          "morningTime": "09:00",
-          "afternoonEnabled": true,
-          "afternoonTime": "14:00",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 5
-        },
-        "salh_hasheesh": {
-          "morningEnabled": true,
-          "morningTime": "09:00",
-          "afternoonEnabled": true,
-          "afternoonTime": "14:00",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 5
-        },
-        "el_gouna": {
-          "morningEnabled": true,
-          "morningTime": "09:00",
-          "afternoonEnabled": true,
-          "afternoonTime": "14:00",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 10
-        },
-        "hurghada_cora": {
-          "morningEnabled": true,
-          "morningTime": "09:00",
-          "afternoonEnabled": true,
-          "afternoonTime": "14:00",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_kawther": {
-          "morningEnabled": true,
-          "morningTime": "09:00",
-          "afternoonEnabled": true,
-          "afternoonTime": "14:00",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_sheraton": {
-          "morningEnabled": true,
-          "morningTime": "09:00",
-          "afternoonEnabled": true,
-          "afternoonTime": "14:00",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_arabia": {
-          "morningEnabled": true,
-          "morningTime": "09:00",
-          "afternoonEnabled": true,
-          "afternoonTime": "14:00",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_ahyaa": {
-          "morningEnabled": true,
-          "morningTime": "09:00",
-          "afternoonEnabled": true,
-          "afternoonTime": "04:00",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        }
-      }
-    },
-    {
       "id": "8dbdf5d8-71dd-42db-a619-efe8ed7aaa5e",
       "supabase_id": "8dbdf5d8-71dd-42db-a619-efe8ed7aaa5e",
       "name": "MOTOCROSS",
@@ -3178,112 +3072,6 @@
           "morningTime": "",
           "afternoonEnabled": true,
           "afternoonTime": "15:00",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        }
-      }
-    },
-    {
-      "id": "8a2eacd8-ab10-47a5-a9b1-592f1a259020",
-      "supabase_id": "8a2eacd8-ab10-47a5-a9b1-592f1a259020",
-      "name": "LOUXOR OVERNIGHT HB HILTON",
-      "category": "luxor_caire",
-      "priceAdult": 34,
-      "priceChild": 165,
-      "priceBaby": 25,
-      "ageChild": "4-11ans",
-      "ageBaby": "0-4ans",
-      "currency": "EUR",
-      "availableDays": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "notes": "",
-      "description": "",
-      "transfers": {
-        "soma_bay": {
-          "morningEnabled": true,
-          "morningTime": "05:20",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "makadi": {
-          "morningEnabled": true,
-          "morningTime": "05:15",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "salh_hasheesh": {
-          "morningEnabled": true,
-          "morningTime": "05:15",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "el_gouna": {
-          "morningEnabled": true,
-          "morningTime": "04:00",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_cora": {
-          "morningEnabled": true,
-          "morningTime": "05:00",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_kawther": {
-          "morningEnabled": true,
-          "morningTime": "04:45",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_sheraton": {
-          "morningEnabled": true,
-          "morningTime": "04:30",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_arabia": {
-          "morningEnabled": true,
-          "morningTime": "04:15",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_ahyaa": {
-          "morningEnabled": true,
-          "morningTime": "04:15",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
           "eveningEnabled": false,
           "eveningTime": "",
           "surcharge": 0
@@ -3397,6 +3185,112 @@
       }
     },
     {
+      "id": "88fdcf1f-98cb-4047-81ef-04306d264a24",
+      "supabase_id": "88fdcf1f-98cb-4047-81ef-04306d264a24",
+      "name": "City tour",
+      "category": "desert",
+      "priceAdult": 0,
+      "priceChild": 0,
+      "priceBaby": 0,
+      "ageChild": "",
+      "ageBaby": "",
+      "currency": "EUR",
+      "availableDays": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "notes": "",
+      "description": "",
+      "transfers": {
+        "soma_bay": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "makadi": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "salh_hasheesh": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "el_gouna": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_cora": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_kawther": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_sheraton": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_arabia": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_ahyaa": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        }
+      }
+    },
+    {
       "id": "84728391-865b-42a0-960d-eda9e7520d1a",
       "supabase_id": "84728391-865b-42a0-960d-eda9e7520d1a",
       "name": "DOLPHIN HOUSE",
@@ -3405,7 +3299,7 @@
       "priceChild": 20,
       "priceBaby": 0,
       "ageChild": "6-10ans",
-      "ageBaby": "0-10ans",
+      "ageBaby": "0-6ans",
       "currency": "EUR",
       "availableDays": [
         false,
@@ -4351,6 +4245,112 @@
       }
     },
     {
+      "id": "64864461-7b86-42c8-9e54-b5961509509a",
+      "supabase_id": "64864461-7b86-42c8-9e54-b5961509509a",
+      "name": "LOUXOR OVERNIGHT HB HILTON",
+      "category": "luxor_caire",
+      "priceAdult": 34,
+      "priceChild": 165,
+      "priceBaby": 25,
+      "ageChild": "4-11ans",
+      "ageBaby": "0-4ans",
+      "currency": "EUR",
+      "availableDays": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "notes": "",
+      "description": "",
+      "transfers": {
+        "soma_bay": {
+          "morningEnabled": true,
+          "morningTime": "05:20",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "makadi": {
+          "morningEnabled": true,
+          "morningTime": "05:15",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "salh_hasheesh": {
+          "morningEnabled": true,
+          "morningTime": "05:15",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "el_gouna": {
+          "morningEnabled": true,
+          "morningTime": "04:00",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_cora": {
+          "morningEnabled": true,
+          "morningTime": "05:00",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_kawther": {
+          "morningEnabled": true,
+          "morningTime": "04:45",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_sheraton": {
+          "morningEnabled": true,
+          "morningTime": "04:30",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_arabia": {
+          "morningEnabled": true,
+          "morningTime": "04:15",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_ahyaa": {
+          "morningEnabled": true,
+          "morningTime": "04:15",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        }
+      }
+    },
+    {
       "id": "62878297-5c07-4c07-a4eb-6509bf3655b6",
       "supabase_id": "62878297-5c07-4c07-a4eb-6509bf3655b6",
       "name": "EL GOUNA",
@@ -4554,112 +4554,6 @@
         "hurghada_ahyaa": {
           "morningEnabled": false,
           "morningTime": "",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        }
-      }
-    },
-    {
-      "id": "4d2f3dcc-c2c0-48b8-82c2-3e28d7ac1bf7",
-      "supabase_id": "4d2f3dcc-c2c0-48b8-82c2-3e28d7ac1bf7",
-      "name": "LOUXOR OVERNIGHT BB JOLIE VILLE",
-      "category": "luxor_caire",
-      "priceAdult": 280,
-      "priceChild": 150,
-      "priceBaby": 25,
-      "ageChild": "4-11ans",
-      "ageBaby": "0-4ans",
-      "currency": "EUR",
-      "availableDays": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "notes": "",
-      "description": "",
-      "transfers": {
-        "soma_bay": {
-          "morningEnabled": true,
-          "morningTime": "05:20",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "makadi": {
-          "morningEnabled": true,
-          "morningTime": "05:15",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "salh_hasheesh": {
-          "morningEnabled": true,
-          "morningTime": "05:15",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "el_gouna": {
-          "morningEnabled": true,
-          "morningTime": "04:00",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 10
-        },
-        "hurghada_cora": {
-          "morningEnabled": true,
-          "morningTime": "05:00",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_kawther": {
-          "morningEnabled": true,
-          "morningTime": "04:45",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_sheraton": {
-          "morningEnabled": true,
-          "morningTime": "04:30",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_arabia": {
-          "morningEnabled": true,
-          "morningTime": "04:15",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_ahyaa": {
-          "morningEnabled": true,
-          "morningTime": "04:15",
           "afternoonEnabled": false,
           "afternoonTime": "",
           "eveningEnabled": false,
@@ -5093,15 +4987,15 @@
       }
     },
     {
-      "id": "40346c1f-e4c2-41ca-ba23-52c367334fc4",
-      "supabase_id": "40346c1f-e4c2-41ca-ba23-52c367334fc4",
-      "name": "LOUXOR OVERNIGHT HB JOLIE VILLE",
-      "category": "luxor_caire",
-      "priceAdult": 295,
-      "priceChild": 165,
-      "priceBaby": 25,
-      "ageChild": "4-11ans",
-      "ageBaby": "0-4ans",
+      "id": "3b8bcd36-9861-4468-9e0a-1b120809675f",
+      "supabase_id": "3b8bcd36-9861-4468-9e0a-1b120809675f",
+      "name": "SPA LUXURY 1",
+      "category": "exploration_bien_etre",
+      "priceAdult": 40,
+      "priceChild": 40,
+      "priceBaby": 35,
+      "ageChild": "Interdit -9ans",
+      "ageBaby": "Interdit -9ans",
       "currency": "EUR",
       "availableDays": [
         true,
@@ -5117,81 +5011,81 @@
       "transfers": {
         "soma_bay": {
           "morningEnabled": true,
-          "morningTime": "05:20",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
           "eveningEnabled": false,
           "eveningTime": "",
-          "surcharge": 0
+          "surcharge": 10
         },
         "makadi": {
           "morningEnabled": true,
-          "morningTime": "05:15",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
           "eveningEnabled": false,
           "eveningTime": "",
-          "surcharge": 0
+          "surcharge": 5
         },
         "salh_hasheesh": {
           "morningEnabled": true,
-          "morningTime": "05:15",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
           "eveningEnabled": false,
           "eveningTime": "",
-          "surcharge": 0
+          "surcharge": 5
         },
         "el_gouna": {
           "morningEnabled": true,
-          "morningTime": "04:00",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
           "eveningEnabled": false,
           "eveningTime": "",
-          "surcharge": 0
+          "surcharge": 10
         },
         "hurghada_cora": {
           "morningEnabled": true,
-          "morningTime": "05:00",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
           "eveningEnabled": false,
           "eveningTime": "",
           "surcharge": 0
         },
         "hurghada_kawther": {
           "morningEnabled": true,
-          "morningTime": "04:45",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
           "eveningEnabled": false,
           "eveningTime": "",
           "surcharge": 0
         },
         "hurghada_sheraton": {
           "morningEnabled": true,
-          "morningTime": "04:30",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
           "eveningEnabled": false,
           "eveningTime": "",
           "surcharge": 0
         },
         "hurghada_arabia": {
           "morningEnabled": true,
-          "morningTime": "04:15",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "14:00",
           "eveningEnabled": false,
           "eveningTime": "",
           "surcharge": 0
         },
         "hurghada_ahyaa": {
           "morningEnabled": true,
-          "morningTime": "04:15",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "04:00",
           "eveningEnabled": false,
           "eveningTime": "",
           "surcharge": 0
@@ -5417,7 +5311,7 @@
       "category": "luxor_caire",
       "priceAdult": 85,
       "priceChild": 40,
-      "priceBaby": 18,
+      "priceBaby": 20,
       "ageChild": "6-11ans",
       "ageBaby": "0-6ans",
       "currency": "EUR",
@@ -5724,6 +5618,112 @@
           "afternoonTime": "",
           "eveningEnabled": false,
           "eveningTime": "",
+          "surcharge": 0
+        }
+      }
+    },
+    {
+      "id": "24dba00c-66d2-48dd-8e14-04b2f1856688",
+      "supabase_id": "24dba00c-66d2-48dd-8e14-04b2f1856688",
+      "name": "SPA ROYAL",
+      "category": "exploration_bien_etre",
+      "priceAdult": 35,
+      "priceChild": 35,
+      "priceBaby": 35,
+      "ageChild": "Interdit -9ans",
+      "ageBaby": "Interdit -9ans",
+      "currency": "EUR",
+      "availableDays": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "notes": "",
+      "description": "",
+      "transfers": {
+        "soma_bay": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": true,
+          "eveningTime": "16:00",
+          "surcharge": 10
+        },
+        "makadi": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": true,
+          "eveningTime": "16:00",
+          "surcharge": 5
+        },
+        "salh_hasheesh": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": true,
+          "eveningTime": "16:00",
+          "surcharge": 5
+        },
+        "el_gouna": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": true,
+          "eveningTime": "16:00",
+          "surcharge": 10
+        },
+        "hurghada_cora": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": true,
+          "eveningTime": "16:00",
+          "surcharge": 0
+        },
+        "hurghada_kawther": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": true,
+          "eveningTime": "16:00",
+          "surcharge": 0
+        },
+        "hurghada_sheraton": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": true,
+          "eveningTime": "16:00",
+          "surcharge": 0
+        },
+        "hurghada_arabia": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": false,
+          "eveningTime": "16:00",
+          "surcharge": 0
+        },
+        "hurghada_ahyaa": {
+          "morningEnabled": true,
+          "morningTime": "09:00",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": true,
+          "eveningTime": "16:00",
           "surcharge": 0
         }
       }
