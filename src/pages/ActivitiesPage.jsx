@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
 import { uuid, currency, emptyTransfers, mergeTransfers, saveLS, loadLS } from "../utils";
-import { TextInput, NumberInput, PrimaryBtn } from "../components/ui";
+import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
 import { toast } from "../utils/toast.js";
@@ -99,6 +99,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   // État pour la modal de description
   const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, activity: null, description: "" });
   const [restoreLoading, setRestoreLoading] = useState(false);
+  const [syncingCacheToSupabase, setSyncingCacheToSupabase] = useState(false);
 
   // Catégories repliables (fermées par défaut) : cliquer pour ouvrir/fermer
   const [openCategories, setOpenCategories] = useState(() => {
@@ -158,6 +159,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }, [activities, normalizeActivityName]);
 
   const duplicatesCount = duplicateNameGroups.length;
+
+  /** Activités présentes dans le cache mais sans ligne Supabase (à réinsérer). */
+  const activitiesCacheOnly = useMemo(
+    () => (activities || []).filter((a) => a && !a.supabase_id),
+    [activities]
+  );
 
   const handleDetectDuplicates = useCallback(() => {
     if (duplicatesCount === 0) {
@@ -618,10 +625,11 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         (a) => !localSupabaseIds.has(a.id)
       ) || [];
 
-      // 5. Synchroniser les activités sans supabase_id
+      // 5. Synchroniser les activités sans supabase_id (liste de travail mise à jour à chaque itération)
       let syncedCount = 0;
       let errorCount = 0;
       const errors = [];
+      let workingActivities = [...localActivities];
 
       for (const activity of activitiesWithoutSupabaseId) {
         try {
@@ -670,12 +678,11 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             logger.log(`✅ Activité "${activity.name}" créée dans Supabase (ID: ${supabaseId})`);
           }
 
-          // Mettre à jour l'activité locale avec le supabase_id
-          const updatedActivities = localActivities.map((a) =>
+          workingActivities = workingActivities.map((a) =>
             a.id === activity.id ? { ...a, supabase_id: supabaseId } : a
           );
-          setActivities(updatedActivities);
-          saveLS(LS_KEYS.activities, updatedActivities);
+          setActivities(workingActivities);
+          saveLS(LS_KEYS.activities, workingActivities);
           syncedCount++;
         } catch (err) {
           errorCount++;
@@ -727,6 +734,33 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       toast.error("Erreur lors de la vérification. Vérifiez la console.");
     }
   }, [activities, setActivities, supabase]);
+
+  /** Même logique que « Vérifier & Synchroniser », avec confirmation et libellé type page Utilisateurs. */
+  const handleReinsertCacheToSupabase = useCallback(async () => {
+    const n = activitiesCacheOnly.length;
+    if (!supabase) {
+      toast.warning("Supabase n'est pas configuré.");
+      return;
+    }
+    if (n === 0) {
+      toast.success("✅ Toutes les activités sont déjà liées à Supabase (aucune réinsertion nécessaire).");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Réinsérer ${n} activité(s) du cache local dans Supabase ?\n\n` +
+          "Les lignes sans id Supabase seront créées ou associées à une ligne existante (même nom + catégorie)."
+      )
+    ) {
+      return;
+    }
+    setSyncingCacheToSupabase(true);
+    try {
+      await handleVerifyAndSync();
+    } finally {
+      setSyncingCacheToSupabase(false);
+    }
+  }, [activitiesCacheOnly.length, supabase, handleVerifyAndSync]);
 
   // Sauvegarde complète de toutes les activités (fichier JSON téléchargé)
   const handleBackup = useCallback(() => {
@@ -1026,7 +1060,16 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
     return (
       <tr className="border-t border-indigo-100 hover:bg-indigo-100/60 transition-colors">
-        <td className="px-4 py-3 font-semibold text-indigo-900 text-sm">{activity.name}</td>
+        <td className="px-4 py-3 font-semibold text-indigo-900 text-sm">
+          <span className="inline-flex items-center gap-2 flex-wrap">
+            {activity.name}
+            {!activity.supabase_id && (
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200/80">
+                Cache seulement
+              </span>
+            )}
+          </span>
+        </td>
         <td className="px-4 py-3 text-emerald-700 text-sm tabular-nums font-medium">{currency(activity.priceAdult, activity.currency)}</td>
         <td className="px-4 py-3 text-emerald-600 text-sm tabular-nums font-medium">{currency(activity.priceChild, activity.currency)}</td>
         <td className="px-4 py-3 text-emerald-600 text-sm tabular-nums font-medium">{currency(activity.priceBaby, activity.currency)}</td>
@@ -1083,6 +1126,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }, (prevProps, nextProps) => {
     // Comparaison personnalisée optimisée pour éviter les re-renders inutiles
     if (prevProps.activity.id !== nextProps.activity.id) return false;
+    if (prevProps.activity.supabase_id !== nextProps.activity.supabase_id) return false;
     if (prevProps.activity.name !== nextProps.activity.name) return false;
     if (prevProps.activity.priceAdult !== nextProps.activity.priceAdult) return false;
     if (prevProps.activity.priceChild !== nextProps.activity.priceChild) return false;
@@ -1180,6 +1224,32 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           )}
         </div>
       </header>
+
+      {canModifyActivities && supabase && activitiesCacheOnly.length > 0 && (
+        <div
+          className="rounded-xl border-2 border-amber-300/80 bg-amber-50 px-4 py-4 text-sm text-amber-950 shadow-sm space-y-3"
+          role="status"
+        >
+          <p className="font-semibold">Activités uniquement en cache (pas encore dans Supabase)</p>
+          <p className="text-amber-900/90 leading-relaxed">
+            {activitiesCacheOnly.length} activité(s) n’ont pas d’identifiant Supabase. Utilisez le bouton ci-dessous pour les
+            créer ou les rattacher en base, comme sur la page Utilisateurs.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <PrimaryBtn
+              type="button"
+              disabled={syncingCacheToSupabase}
+              onClick={handleReinsertCacheToSupabase}
+              className="bg-amber-600 hover:bg-amber-700 border-0 text-white"
+            >
+              {syncingCacheToSupabase ? "Réinsertion…" : "↻ Réinsérer le cache dans Supabase"}
+            </PrimaryBtn>
+            <GhostBtn type="button" onClick={handleBackup} variant="neutral">
+              💾 Exporter le cache (JSON)
+            </GhostBtn>
+          </div>
+        </div>
+      )}
 
       {/* Modal doublons */}
       {duplicatesModalOpen && (
