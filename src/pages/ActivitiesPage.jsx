@@ -788,9 +788,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     restoreFileInputRef.current?.click();
   }, []);
 
-  // Restauration depuis la sauvegarde incluse dans le projet (74 activités du 01/03/2026)
+  // Restauration depuis public/hd_activities_restore.json (compte + date lus dans le fichier)
   const handleRestoreFromBuiltIn = useCallback(() => {
-    if (!window.confirm("Restaurer les 74 activités depuis la sauvegarde du 01/03/2026 ?\n\nCela remplacera la liste actuelle puis synchronisera avec Supabase (ré-insertion ou association des activités).")) return;
     setRestoreLoading(true);
     fetch("/hd_activities_restore.json")
       .then((res) => {
@@ -806,6 +805,28 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         const count = backup.activities?.length || 0;
         if (count === 0) {
           toast.warning("La sauvegarde ne contient aucune activité.");
+          return;
+        }
+        let dateLabel = "date inconnue";
+        if (backup.exportedAt) {
+          try {
+            dateLabel = new Date(backup.exportedAt).toLocaleString("fr-FR", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+          } catch {
+            /* ignore */
+          }
+        }
+        if (
+          !window.confirm(
+            `Restaurer ${count} activité(s) depuis la sauvegarde incluse (${dateLabel}) ?\n\n` +
+              "Cela remplacera la liste actuelle puis synchronisera avec Supabase (ré-insertion ou association des activités)."
+          )
+        ) {
           return;
         }
         // Donner un id local unique et retirer supabase_id pour que la sync les ré-insère ou les associe
@@ -1232,7 +1253,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                   disabled={restoreLoading}
                   className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 border-0 shadow-lg shadow-emerald-500/25 disabled:opacity-60"
                 >
-                  {restoreLoading ? "⏳ Chargement..." : "🔄 Restaurer les 74 activités (sauvegarde 01/03)"}
+                  {restoreLoading ? "⏳ Chargement..." : "🔄 Restaurer la sauvegarde incluse"}
                 </PrimaryBtn>
               </>
             </>

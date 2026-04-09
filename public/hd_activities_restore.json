@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-04-09T20:09:01.147Z",
+  "exportedAt": "2026-04-09T20:15:48.537Z",
   "site_key": "https://uvqzqlfzhgbknkpvybbj.supabase.co",
   "count": 73,
   "activities": [
@@ -3209,7 +3209,7 @@
       "transfers": {
         "soma_bay": {
           "morningEnabled": true,
-          "morningTime": "09:00",
+          "morningTime": "10:00",
           "afternoonEnabled": true,
           "afternoonTime": "14:00",
           "eveningEnabled": false,
@@ -3218,7 +3218,7 @@
         },
         "makadi": {
           "morningEnabled": true,
-          "morningTime": "09:00",
+          "morningTime": "10:00",
           "afternoonEnabled": true,
           "afternoonTime": "14:00",
           "eveningEnabled": false,
@@ -3227,7 +3227,7 @@
         },
         "salh_hasheesh": {
           "morningEnabled": true,
-          "morningTime": "09:00",
+          "morningTime": "10:00",
           "afternoonEnabled": true,
           "afternoonTime": "14:00",
           "eveningEnabled": false,
@@ -3236,7 +3236,7 @@
         },
         "el_gouna": {
           "morningEnabled": true,
-          "morningTime": "09:00",
+          "morningTime": "10:00",
           "afternoonEnabled": true,
           "afternoonTime": "14:00",
           "eveningEnabled": false,
@@ -3245,7 +3245,7 @@
         },
         "hurghada_cora": {
           "morningEnabled": true,
-          "morningTime": "09:00",
+          "morningTime": "10:00",
           "afternoonEnabled": true,
           "afternoonTime": "14:00",
           "eveningEnabled": false,
@@ -3254,7 +3254,7 @@
         },
         "hurghada_kawther": {
           "morningEnabled": true,
-          "morningTime": "09:00",
+          "morningTime": "10:00",
           "afternoonEnabled": true,
           "afternoonTime": "14:00",
           "eveningEnabled": false,
@@ -3263,7 +3263,7 @@
         },
         "hurghada_sheraton": {
           "morningEnabled": true,
-          "morningTime": "09:00",
+          "morningTime": "10:00",
           "afternoonEnabled": true,
           "afternoonTime": "14:00",
           "eveningEnabled": false,
@@ -3272,7 +3272,7 @@
         },
         "hurghada_arabia": {
           "morningEnabled": true,
-          "morningTime": "09:00",
+          "morningTime": "10:00",
           "afternoonEnabled": true,
           "afternoonTime": "14:00",
           "eveningEnabled": false,
@@ -3281,7 +3281,7 @@
         },
         "hurghada_ahyaa": {
           "morningEnabled": true,
-          "morningTime": "09:00",
+          "morningTime": "10:00",
           "afternoonEnabled": true,
           "afternoonTime": "14:00",
           "eveningEnabled": false,
@@ -5325,7 +5325,6 @@
         true
       ],
       "notes": "",
-      "description": "",
       "transfers": {
         "soma_bay": {
           "morningEnabled": true,
