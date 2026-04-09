@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "exportedAt": "2026-04-09T20:15:48.537Z",
+  "exportedAt": "2026-04-09T20:17:46.127Z",
   "site_key": "https://uvqzqlfzhgbknkpvybbj.supabase.co",
-  "count": 73,
+  "count": 72,
   "activities": [
     {
       "id": "fdea75e7-4bcb-48c4-82b9-650b01f9ca89",
@@ -2224,112 +2224,6 @@
           "morningTime": "",
           "afternoonEnabled": true,
           "afternoonTime": "13:00",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        }
-      }
-    },
-    {
-      "id": "b53ad6e0-5ac5-47ec-9d92-69fdf37698e9",
-      "supabase_id": "b53ad6e0-5ac5-47ec-9d92-69fdf37698e9",
-      "name": "OZERIA",
-      "category": "aquatique",
-      "priceAdult": 65,
-      "priceChild": 30,
-      "priceBaby": 0,
-      "ageChild": "3-9ans",
-      "ageBaby": "0-3ans",
-      "currency": "EUR",
-      "availableDays": [
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        false
-      ],
-      "notes": "",
-      "description": "",
-      "transfers": {
-        "soma_bay": {
-          "morningEnabled": true,
-          "morningTime": "07:30",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 10
-        },
-        "makadi": {
-          "morningEnabled": true,
-          "morningTime": "07:30",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 5
-        },
-        "salh_hasheesh": {
-          "morningEnabled": true,
-          "morningTime": "07:30",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 5
-        },
-        "el_gouna": {
-          "morningEnabled": true,
-          "morningTime": "07:30",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 8
-        },
-        "hurghada_cora": {
-          "morningEnabled": true,
-          "morningTime": "07:45",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": -2
-        },
-        "hurghada_kawther": {
-          "morningEnabled": true,
-          "morningTime": "08:10",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_sheraton": {
-          "morningEnabled": true,
-          "morningTime": "08:20",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_arabia": {
-          "morningEnabled": true,
-          "morningTime": "08:30",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
-          "eveningEnabled": false,
-          "eveningTime": "",
-          "surcharge": 0
-        },
-        "hurghada_ahyaa": {
-          "morningEnabled": true,
-          "morningTime": "08:10",
-          "afternoonEnabled": false,
-          "afternoonTime": "",
           "eveningEnabled": false,
           "eveningTime": "",
           "surcharge": 0
@@ -5325,6 +5219,7 @@
         true
       ],
       "notes": "",
+      "description": "",
       "transfers": {
         "soma_bay": {
           "morningEnabled": true,
@@ -7223,12 +7118,12 @@
       "ageBaby": "0-6ans",
       "currency": "EUR",
       "availableDays": [
-        true,
         false,
         true,
         false,
         true,
         false,
+        true,
         false
       ],
       "notes": "1 Adulte + 2 Enfants max",
