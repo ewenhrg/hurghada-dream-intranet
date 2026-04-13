@@ -12,6 +12,9 @@ import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivi
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 
+/** Délai avant suppression auto des devis « non payés » (au moins une ligne sans n° de ticket), à l’ouverture de l’historique. */
+const UNPAID_QUOTE_AUTO_DELETE_DAYS = 20;
+
 // Composant de carte de devis mémorisé pour améliorer les performances
 // Déclarer comme fonction normale pour le hoisting, puis mémoriser
 function QuoteCardComponent({ 
@@ -701,7 +704,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     }
   }, [showEditModal]);
 
-  // Fonction pour supprimer automatiquement les devis non payés de plus de 20 jours (optimisé : mémoïsé)
+  // Suppression automatique des devis non payés au-delà de UNPAID_QUOTE_AUTO_DELETE_DAYS (exécuté au chargement de l’historique)
   const cleanupOldUnpaidQuotes = useCallback(async () => {
     // Ne pas exécuter si quotes est vide
     if (!quotes || quotes.length === 0) {
@@ -709,7 +712,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     }
     
     const now = new Date();
-    const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000); // 15 jours en millisecondes
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const cutoffDate = new Date(now.getTime() - UNPAID_QUOTE_AUTO_DELETE_DAYS * msPerDay);
     
     // Identifier les devis à supprimer
     const quotesToDelete = quotes.filter((quote) => {
@@ -719,17 +723,19 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         return false; // Le devis est payé, ne pas le supprimer
       }
       
-      // Vérifier si le devis a été créé il y a plus de 15 jours
+      // Vérifier si le devis a été créé il y a plus de UNPAID_QUOTE_AUTO_DELETE_DAYS jours
       const createdAt = new Date(quote.createdAt);
       if (isNaN(createdAt.getTime())) {
         return false; // Date invalide, ne pas supprimer
       }
       
-      return createdAt < fifteenDaysAgo;
+      return createdAt < cutoffDate;
     });
 
     if (quotesToDelete.length > 0) {
-      logger.log(`🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de 15 jours`);
+      logger.log(
+        `🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de ${UNPAID_QUOTE_AUTO_DELETE_DAYS} jours`
+      );
       
       // Supprimer de la liste locale
       const remainingQuotes = quotes.filter((quote) => 
