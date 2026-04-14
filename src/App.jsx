@@ -61,6 +61,7 @@ import { PageTransition } from "./components/PageTransition";
 import { toast } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
+import { mergeActivitiesWhenRemoteShrunk, stripLocalOnlyActivityForStorage } from "./utils/activitiesBackup";
 
 // Fonction helper pour le lazy loading avec gestion d'erreur et retry
 const lazyWithRetry = (importFn, retries = 3) => {
@@ -258,13 +259,24 @@ export default function App() {
           // Sécurité : ne jamais remplacer par une liste beaucoup plus courte (évite suppression en masse accidentelle).
           const minAcceptable = current.length > 0 ? Math.max(1, Math.floor(current.length * 0.8)) : 0;
           if (current.length > 0 && supabaseActivities.length < minAcceptable) {
-            logger.warn(`🛡️ Sécurité: Supabase a ${supabaseActivities.length} activité(s), la session en avait ${current.length}. Conservation de la liste locale.`);
-            toast.warning(
-              `Supabase renvoie beaucoup moins d'activités (${supabaseActivities.length}) qu'attendu (${current.length}). Liste locale conservée pour éviter toute perte. Vérifiez la connexion ou restaurez une sauvegarde depuis la page Activités.`
+            const { merged, localOnlyAdded, usedMerge } = mergeActivitiesWhenRemoteShrunk(
+              finalRows,
+              current,
+              mapActivitiesFromRows
             );
-            setActivities(current);
-            saveLS(LS_KEYS.activities, current);
-            activitiesCache.set(cacheKey, current);
+            logger.warn(
+              `🛡️ Sécurité: Supabase a ${supabaseActivities.length} activité(s), la session en avait ${current.length}. Fusion cache + base (comme pour les utilisateurs).`
+            );
+            toast.warning(
+              `Supabase renvoie beaucoup moins d'activités (${supabaseActivities.length}) qu'attendu (${current.length}). ` +
+                (usedMerge && localOnlyAdded > 0
+                  ? `${localOnlyAdded} activité(s) récupérée(s) depuis le cache — ouvrez « Activités » puis « Réinsérer dans Supabase » pour les recréer en base. `
+                  : "Liste locale fusionnée avec la base. ") +
+                `Vérifiez la connexion ou restaurez une sauvegarde depuis la page Activités si besoin.`
+            );
+            setActivities(merged);
+            saveLS(LS_KEYS.activities, stripLocalOnlyActivityForStorage(merged));
+            activitiesCache.set(cacheKey, merged);
           } else {
             setActivities(supabaseActivities);
             saveLS(LS_KEYS.activities, supabaseActivities);

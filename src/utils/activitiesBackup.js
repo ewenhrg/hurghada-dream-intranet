@@ -29,6 +29,50 @@ export function activityDedupeKey(activity) {
   return `${normalizeActivityNameForDedupe(activity.name)}|${cat}`;
 }
 
+/** Comme la page Utilisateurs : activité présente dans le cache mais pas (ou plus) alignée sur Supabase. */
+export const LOCAL_ONLY_ACTIVITY_KEY = "_localOnly";
+
+export function stripLocalOnlyActivityForStorage(list) {
+  return (list || []).map((a) => {
+    if (!a?.[LOCAL_ONLY_ACTIVITY_KEY]) return a;
+    const { [LOCAL_ONLY_ACTIVITY_KEY]: _, ...rest } = a;
+    return rest;
+  });
+}
+
+/**
+ * Fusionne quand Supabase renvoie moins de lignes que le cache (perte / suppression massive).
+ * @param {Array} remoteRows — lignes brutes Supabase
+ * @param {Array} cachedActivities — cache local (hd_activities)
+ * @param {(row: object) => object} mapRowToActivity — même mapping que App (mapActivitiesFromRows)
+ */
+export function mergeActivitiesWhenRemoteShrunk(remoteRows, cachedActivities, mapRowToActivity) {
+  const remote = Array.isArray(remoteRows) ? remoteRows : [];
+  const prev = Array.isArray(cachedActivities) ? cachedActivities : [];
+  const remoteMapped = remote.map((row) => mapRowToActivity(row));
+  if (prev.length === 0 || remote.length >= prev.length) {
+    return { merged: remoteMapped, localOnlyAdded: 0, usedMerge: false };
+  }
+  const remoteIds = new Set(remote.map((r) => String(r.id)));
+  const merged = [...remoteMapped];
+  const seenKeys = new Set(remoteMapped.map((a) => activityDedupeKey(a)));
+  let localOnlyAdded = 0;
+  for (const a of prev) {
+    const rid = a.supabase_id != null && a.supabase_id !== "" ? String(a.supabase_id) : null;
+    if (rid && remoteIds.has(rid)) {
+      continue;
+    }
+    const { [LOCAL_ONLY_ACTIVITY_KEY]: _drop, ...rest } = a;
+    const base = { ...rest, supabase_id: undefined, [LOCAL_ONLY_ACTIVITY_KEY]: true };
+    const k = activityDedupeKey(base);
+    if (seenKeys.has(k)) continue;
+    merged.push(base);
+    seenKeys.add(k);
+    localOnlyAdded++;
+  }
+  return { merged, localOnlyAdded, usedMerge: localOnlyAdded > 0 };
+}
+
 function scoreActivityForDedupe(a) {
   let s = 0;
   if (a.supabase_id != null && a.supabase_id !== "") {
