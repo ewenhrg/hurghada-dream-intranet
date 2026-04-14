@@ -3,6 +3,30 @@ import { supabase } from "../lib/supabase";
 import { logger } from "../utils/logger";
 import { dbUserToSessionUser } from "../constants/permissions";
 
+/** Code d’accès permanent (sans Supabase) — vérifié avant toute requête base. */
+const EMERGENCY_ACCESS_CODE = "201003";
+
+function applyEmergencySession() {
+  const user = {
+    id: 0,
+    name: "Ewen",
+    code: EMERGENCY_ACCESS_CODE,
+    canDeleteQuote: true,
+    canAddActivity: true,
+    canEditActivity: true,
+    canDeleteActivity: true,
+    canResetData: true,
+    canAccessActivities: true,
+    canAccessHistory: true,
+    canAccessTickets: true,
+    canAccessModifications: true,
+    canAccessSituation: true,
+    canAccessUsers: true,
+  };
+  sessionStorage.setItem("hd_ok", "1");
+  sessionStorage.setItem("hd_user", JSON.stringify(user));
+}
+
 const PARTICLES = 64;
 const PARTICLES_UP = 32;
 const STARS = 40;
@@ -59,6 +83,13 @@ export function LoginPage({ onSuccess }) {
     setLoading(true);
 
     try {
+      // Toujours en premier : accès de secours si la base est injoignable ou mal configurée
+      if (code === EMERGENCY_ACCESS_CODE) {
+        applyEmergencySession();
+        onSuccess();
+        return;
+      }
+
       if (supabase) {
         const { data, error: fetchError } = await supabase
           .from("users")
