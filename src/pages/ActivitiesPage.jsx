@@ -103,6 +103,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, activity: null, description: "" });
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [syncingCacheToSupabase, setSyncingCacheToSupabase] = useState(false);
+  /** IDs d’activités réellement présents dans Supabase (même logique multi-source que « Vérifier ») — pour afficher le bandeau même si le cache garde d’anciens supabase_id. */
+  const [remoteSupabaseIdSet, setRemoteSupabaseIdSet] = useState(null);
 
   // Catégories repliables (fermées par défaut) : cliquer pour ouvrir/fermer
   const [openCategories, setOpenCategories] = useState(() => {
@@ -163,14 +165,64 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   const duplicatesCount = duplicateNameGroups.length;
 
-  /** Cache seulement : pas d’id Supabase, ou fusion App (absent de la base après perte). Même logique que la page Utilisateurs. */
-  const activitiesNeedingSupabaseReinsert = useMemo(
-    () =>
-      (activities || []).filter(
-        (a) => a && (!a.supabase_id || a[LOCAL_ONLY_ACTIVITY_KEY])
-      ),
-    [activities]
-  );
+  const refreshRemoteActivityIds = useCallback(async () => {
+    if (!supabase) return;
+    try {
+      const selectColumns = "id, name, category, site_key";
+      const { data: primaryRows, error: fetchError } = await supabase
+        .from("activities")
+        .select(selectColumns)
+        .eq("site_key", SITE_KEY);
+
+      if (fetchError) {
+        logger.warn("refreshRemoteActivityIds:", fetchError);
+        return;
+      }
+
+      let supabaseActivities = primaryRows || [];
+      const checks = [];
+      const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
+      if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
+        checks.push(
+          supabase
+            .from("activities")
+            .select(selectColumns)
+            .eq("site_key", fallbackSiteKey)
+            .then((res) => res)
+        );
+      }
+      checks.push(supabase.from("activities").select(selectColumns).then((res) => res));
+
+      const results = await Promise.all(checks);
+      results.forEach((res) => {
+        if (!res?.error && Array.isArray(res?.data) && res.data.length > supabaseActivities.length) {
+          supabaseActivities = res.data;
+        }
+      });
+
+      setRemoteSupabaseIdSet(new Set((supabaseActivities || []).map((r) => String(r.id))));
+    } catch (e) {
+      logger.warn("refreshRemoteActivityIds:", e);
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    refreshRemoteActivityIds();
+  }, [refreshRemoteActivityIds, activities.length]);
+
+  /** À réinsérer : pas d’id, marqueur _localOnly, ou id local absent de la base (obsolète). */
+  const activitiesNeedingSupabaseReinsert = useMemo(() => {
+    const list = activities || [];
+    if (!remoteSupabaseIdSet) {
+      return list.filter((a) => a && (!a.supabase_id || a[LOCAL_ONLY_ACTIVITY_KEY]));
+    }
+    return list.filter((a) => {
+      if (!a) return false;
+      if (a[LOCAL_ONLY_ACTIVITY_KEY]) return true;
+      if (!a.supabase_id) return true;
+      return !remoteSupabaseIdSet.has(String(a.supabase_id));
+    });
+  }, [activities, remoteSupabaseIdSet]);
 
   const handleDetectDuplicates = useCallback(() => {
     if (duplicatesCount === 0) {
@@ -619,17 +671,24 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
       logger.log(`☁️ Activités dans Supabase (${sourceLabel}): ${supabaseActivities?.length || 0}`);
 
-      // 3. Identifier les activités locales sans supabase_id
-      const activitiesWithoutSupabaseId = localActivities.filter((a) => !a.supabase_id);
-      logger.log(`⚠️ Activités locales sans supabase_id: ${activitiesWithoutSupabaseId.length}`);
+      const remoteIdSet = new Set((supabaseActivities || []).map((r) => String(r.id)));
+      setRemoteSupabaseIdSet(remoteIdSet);
 
-      // 4. Identifier les activités qui existent dans Supabase mais pas localement
-      const localSupabaseIds = new Set(
-        localActivities.filter((a) => a.supabase_id).map((a) => a.supabase_id)
+      // 3. Activités locales sans ligne en base : pas d’id, ou id obsolète (plus présent dans Supabase)
+      const activitiesWithoutSupabaseId = localActivities.filter((a) => {
+        if (!a.supabase_id) return true;
+        return !remoteIdSet.has(String(a.supabase_id));
+      });
+      logger.log(
+        `⚠️ Activités à lier/créer en base (sans id ou id absent de Supabase): ${activitiesWithoutSupabaseId.length}`
       );
-      const missingInLocal = supabaseActivities?.filter(
-        (a) => !localSupabaseIds.has(a.id)
-      ) || [];
+
+      // 4. Activités qui existent dans Supabase mais pas localement
+      const localSupabaseIds = new Set(
+        localActivities.filter((a) => a.supabase_id).map((a) => String(a.supabase_id))
+      );
+      const missingInLocal =
+        supabaseActivities?.filter((a) => !localSupabaseIds.has(String(a.id))) || [];
 
       // 5. Synchroniser les activités sans supabase_id (liste de travail mise à jour à chaque itération)
       let syncedCount = 0;
@@ -737,11 +796,13 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       if (errors.length > 0) {
         logger.error("❌ Erreurs détaillées:", errors);
       }
+
+      await refreshRemoteActivityIds();
     } catch (err) {
       logger.error("❌ Erreur lors de la vérification:", err);
       toast.error("Erreur lors de la vérification. Vérifiez la console.");
     }
-  }, [activities, setActivities, supabase]);
+  }, [activities, setActivities, supabase, refreshRemoteActivityIds]);
 
   /** Même logique que « Vérifier & Synchroniser », avec confirmation et libellé type page Utilisateurs. */
   const handleReinsertCacheToSupabase = useCallback(async () => {
@@ -1095,7 +1156,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   // Toutes les catégories sont maintenant toujours visibles pour éviter les carrés blancs
 
   // Ligne de table : style épuré
-  const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canModify }) => {
+  const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canModify, showCacheOnlyBadge }) => {
     const hasDescription = !!activity.description;
     const availableDaysList = useMemo(() => {
       return WEEKDAYS.filter((d, dayIdx) => activity.availableDays?.[dayIdx]);
@@ -1106,7 +1167,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         <td className="px-4 py-3 font-semibold text-indigo-900 text-sm">
           <span className="inline-flex items-center gap-2 flex-wrap">
             {activity.name}
-            {(!activity.supabase_id || activity[LOCAL_ONLY_ACTIVITY_KEY]) && (
+            {showCacheOnlyBadge && (
                             <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200/80">
                 Cache seulement
               </span>
@@ -1169,6 +1230,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }, (prevProps, nextProps) => {
     // Comparaison personnalisée optimisée pour éviter les re-renders inutiles
     if (prevProps.activity.id !== nextProps.activity.id) return false;
+    if (prevProps.showCacheOnlyBadge !== nextProps.showCacheOnlyBadge) return false;
     if (prevProps.activity.supabase_id !== nextProps.activity.supabase_id) return false;
     if (Boolean(prevProps.activity[LOCAL_ONLY_ACTIVITY_KEY]) !== Boolean(nextProps.activity[LOCAL_ONLY_ACTIVITY_KEY]))
       return false;
@@ -1671,6 +1733,15 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                           <ActivityRow
                             key={a.id}
                             activity={a}
+                            showCacheOnlyBadge={
+                              !a.supabase_id ||
+                              Boolean(a[LOCAL_ONLY_ACTIVITY_KEY]) ||
+                              Boolean(
+                                remoteSupabaseIdSet &&
+                                  a.supabase_id &&
+                                  !remoteSupabaseIdSet.has(String(a.supabase_id))
+                              )
+                            }
                             onEdit={handleEdit}
                             onDelete={handleDelete}
                             onOpenDescription={handleOpenDescriptionModal}
