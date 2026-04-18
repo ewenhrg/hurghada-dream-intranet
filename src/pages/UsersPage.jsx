@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
@@ -15,6 +15,21 @@ import {
 
 const LOCAL_ONLY_KEY = "_localOnly";
 
+function normalizeUserCode(code) {
+  if (code == null || code === "") return "";
+  return String(code).trim();
+}
+
+/** Même personne que la session (connexion par code ; id en secours). */
+function isSameUserRow(sessionUser, row) {
+  if (!sessionUser || !row) return false;
+  const a = normalizeUserCode(sessionUser.code);
+  const b = normalizeUserCode(row.code);
+  if (a && b && a === b) return true;
+  if (sessionUser.id != null && row.id != null && String(sessionUser.id) === String(row.id)) return true;
+  return false;
+}
+
 /** Fusionne le cache local avec Supabase quand la base renvoie moins de lignes (perte / suppression massive). */
 function mergeUsersWhenRemoteShrunk(fromSupabase, cached) {
   const remote = fromSupabase || [];
@@ -22,15 +37,28 @@ function mergeUsersWhenRemoteShrunk(fromSupabase, cached) {
   if (prev.length === 0 || remote.length >= prev.length) {
     return { merged: remote, localOnlyAdded: 0, usedMerge: false };
   }
-  const remoteCodes = new Set(remote.map((u) => u?.code).filter(Boolean));
+  const remoteCodes = new Set(
+    remote.map((u) => normalizeUserCode(u?.code)).filter(Boolean)
+  );
+  const remoteIds = new Set(remote.map((u) => u?.id).filter((id) => id != null));
   const merged = [...remote];
   let localOnlyAdded = 0;
   const seen = new Set(remoteCodes);
   for (const row of prev) {
-    if (!row?.code || seen.has(row.code)) continue;
+    const c = normalizeUserCode(row?.code);
+    if (!c || seen.has(c)) continue;
     const { [LOCAL_ONLY_KEY]: _drop, ...rest } = row;
     merged.push({ ...rest, [LOCAL_ONLY_KEY]: true });
-    seen.add(row.code);
+    seen.add(c);
+    localOnlyAdded += 1;
+  }
+  for (const row of prev) {
+    if (row?.id == null || remoteIds.has(row.id)) continue;
+    const c = normalizeUserCode(row?.code);
+    if (!c || seen.has(c)) continue;
+    const { [LOCAL_ONLY_KEY]: _drop, ...rest } = row;
+    merged.push({ ...rest, [LOCAL_ONLY_KEY]: true });
+    seen.add(c);
     localOnlyAdded += 1;
   }
   return { merged, localOnlyAdded, usedMerge: localOnlyAdded > 0 };
@@ -44,10 +72,12 @@ function stripLocalOnlyFlagForStorage(list) {
   });
 }
 
-export function UsersPage() {
+export function UsersPage({ user: sessionUser }) {
   const [users, setUsers] = useState(() => loadLS(LS_KEYS.users, []));
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  /** Après suppression de son propre compte : pas d’alerte « base vs cache » qui ressemble à une erreur bloquante. */
+  const suppressMergeWarningRef = useRef(false);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState(() => ({
@@ -80,14 +110,51 @@ export function UsersPage() {
           logger.warn(
             `🛡️ Utilisateurs: Supabase en renvoie ${fromSupabase.length}, le cache en avait ${current.length}. Fusion avec les entrées locales (codes absents de la base).`
           );
-          toast.warning(
-            `La base ne contient que ${fromSupabase.length} utilisateur(s) alors que le cache en avait ${current.length}. ` +
-              (localOnlyAdded > 0
-                ? `${localOnlyAdded} compte(s) récupéré(s) depuis le cache — utilisez « Réinsérer dans Supabase » pour les restaurer.`
-                : "Vérifiez les données dans Supabase.")
-          );
+          if (!suppressMergeWarningRef.current) {
+            toast.warning(
+              `La base ne contient que ${fromSupabase.length} utilisateur(s) alors que le cache en avait ${current.length}. ` +
+                (localOnlyAdded > 0
+                  ? `${localOnlyAdded} compte(s) récupéré(s) depuis le cache — utilisez « Réinsérer dans Supabase » pour les restaurer.`
+                  : "Vérifiez les données dans Supabase.")
+            );
+          } else {
+            suppressMergeWarningRef.current = false;
+          }
           setUsers(merged);
           saveLS(LS_KEYS.users, stripLocalOnlyFlagForStorage(merged));
+        } else if (!usedMerge && fromSupabase.length < current.length) {
+          const remoteIds = new Set((fromSupabase || []).map((r) => r.id).filter((id) => id != null));
+          const remoteCodes = new Set(
+            (fromSupabase || []).map((r) => normalizeUserCode(r?.code)).filter(Boolean)
+          );
+          const orphans = (current || []).filter((r) => {
+            if (r?.id == null || remoteIds.has(r.id)) return false;
+            const c = normalizeUserCode(r?.code);
+            return c && !remoteCodes.has(c);
+          });
+          if (orphans.length > 0) {
+            const withLocal = orphans.map((r) => {
+              const { [LOCAL_ONLY_KEY]: _drop, ...rest } = r;
+              return { ...rest, [LOCAL_ONLY_KEY]: true };
+            });
+            const recovered = [...(fromSupabase || []), ...withLocal];
+            logger.warn(
+              `🛡️ Utilisateurs: fusion de secours — ${orphans.length} ligne(s) du cache absentes de la base (par id).`
+            );
+            if (!suppressMergeWarningRef.current) {
+              toast.warning(
+                `La base ne contient que ${fromSupabase.length} utilisateur(s) alors que le cache en avait ${current.length}. ` +
+                  `${orphans.length} compte(s) récupéré(s) depuis le cache — utilisez « Réinsérer dans Supabase » pour les restaurer.`
+              );
+            } else {
+              suppressMergeWarningRef.current = false;
+            }
+            setUsers(recovered);
+            saveLS(LS_KEYS.users, stripLocalOnlyFlagForStorage(recovered));
+          } else {
+            setUsers(fromSupabase);
+            saveLS(LS_KEYS.users, fromSupabase);
+          }
         } else {
           setUsers(fromSupabase);
           saveLS(LS_KEYS.users, fromSupabase);
@@ -282,6 +349,7 @@ export function UsersPage() {
   async function handleDelete(u) {
     const isLocalOnly = Boolean(u?.[LOCAL_ONLY_KEY]);
     const userName = u?.name || "Utilisateur";
+    const deletingSelf = !isLocalOnly && isSameUserRow(sessionUser, u);
 
     if (isLocalOnly) {
       if (
@@ -299,7 +367,16 @@ export function UsersPage() {
       return;
     }
 
-    if (remoteUsersCount <= 1) {
+    if (deletingSelf) {
+      if (
+        !window.confirm(
+          `Supprimer votre compte « ${userName} » de la base ?\n\n` +
+            `Une copie reste dans le cache de ce navigateur : vous pourrez le réinsérer avec « Réinsérer dans Supabase ».`
+        )
+      ) {
+        return;
+      }
+    } else if (remoteUsersCount <= 1) {
       if (
         !window.confirm(
           `ATTENTION : c’est le dernier utilisateur présent dans la base. ` +
@@ -317,6 +394,19 @@ export function UsersPage() {
       return;
     }
 
+    if (deletingSelf) {
+      const cur = loadLS(LS_KEYS.users, []);
+      const hasRow = cur.some(
+        (r) =>
+          (r.id != null && u.id != null && String(r.id) === String(u.id)) ||
+          (normalizeUserCode(r?.code) && normalizeUserCode(r?.code) === normalizeUserCode(u.code))
+      );
+      if (!hasRow) {
+        saveLS(LS_KEYS.users, [...cur, u]);
+      }
+      suppressMergeWarningRef.current = true;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase.from("users").delete().eq("id", u.id);
@@ -324,14 +414,20 @@ export function UsersPage() {
       if (error) {
         logger.error("Erreur lors de la suppression de l'utilisateur:", error);
         toast.error("Erreur lors de la suppression: " + (error.message || "Erreur inconnue"));
+        if (deletingSelf) suppressMergeWarningRef.current = false;
       } else {
         logger.log("✅ Utilisateur supprimé avec succès!");
         await loadUsers();
-        toast.success("Utilisateur supprimé avec succès.");
+        toast.success(
+          deletingSelf
+            ? "Compte retiré de la base. Réinsérez-le depuis le bandeau jaune si besoin."
+            : "Utilisateur supprimé avec succès."
+        );
       }
     } catch (err) {
       logger.error("Exception lors de la suppression:", err);
       toast.error("Exception lors de la suppression: " + err.message);
+      if (deletingSelf) suppressMergeWarningRef.current = false;
     } finally {
       setLoading(false);
     }
