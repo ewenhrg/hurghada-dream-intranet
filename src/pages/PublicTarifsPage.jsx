@@ -4,7 +4,7 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY, CATEGORIES } from "../constants";
 import { logger } from "../utils/logger";
 import { getActivityTarifListLines } from "../utils/activityHelpers";
-import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay";
+import { formatActivityAvailableDaysSummary, getActivityDayLabelsList } from "../utils/activityDaysDisplay";
 
 /** Même jeu de colonnes que l’intranet (App.jsx) pour les prix / catégorie. */
 const SELECT_COLUMNS =
@@ -50,6 +50,78 @@ function formatMoney(n, currency) {
   } catch {
     return `${safe} ${cur}`;
   }
+}
+
+function TarifsMobileDayChips({ row }) {
+  const labels = getActivityDayLabelsList(row);
+  if (labels === null) {
+    return <p className="text-sm text-slate-500">—</p>;
+  }
+  if (labels.length === 0) {
+    return <p className="text-sm text-slate-600">Aucun jour</p>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {labels.map((d) => (
+        <span
+          key={d}
+          className="inline-flex rounded-md border border-indigo-200/90 bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-950"
+        >
+          {d}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function TarifsActivityMobileCard({ row }) {
+  const lines = getActivityTarifListLines(row);
+  return (
+    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+      <h3 className="text-base font-bold text-slate-900 leading-snug pr-1">{row.name}</h3>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Jours disponibles</p>
+        <TarifsMobileDayChips row={row} />
+      </div>
+
+      {lines ? (
+        <div className="rounded-xl border-2 border-indigo-600 bg-amber-50 px-3 py-3 shadow-md ring-2 ring-amber-200/80">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-indigo-900">
+            Grille tarifaire (plusieurs options)
+          </p>
+          <ul className="list-disc space-y-1.5 pl-5 text-[15px] font-semibold leading-relaxed text-neutral-950 marker:text-indigo-700">
+            {lines.map((line, idx) => (
+              <li key={`${row.id}-m-${idx}`} className="pl-0.5 break-words">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {[
+            { k: "Adulte", v: formatMoney(row.price_adult, row.currency) },
+            { k: "Enfant", v: formatMoney(row.price_child, row.currency) },
+            { k: "Bébé", v: formatMoney(row.price_baby, row.currency) },
+          ].map(({ k, v }) => (
+            <div
+              key={k}
+              className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5"
+            >
+              <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-slate-500">{k}</span>
+              <span className="min-w-0 truncate text-right text-sm font-bold tabular-nums text-slate-900">{v}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">Notes</p>
+        <p className="text-sm text-slate-800 whitespace-pre-wrap break-words">{row.notes ? String(row.notes) : "—"}</p>
+      </div>
+    </article>
+  );
 }
 
 /**
@@ -183,7 +255,7 @@ export function PublicTarifsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
       <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-sm">
-        <div className="mx-auto max-w-5xl px-4 py-6 md:py-8">
+        <div className="mx-auto max-w-5xl px-3 sm:px-4 py-6 md:py-8">
           <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-1">Hurghada Dream</p>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Tarifs des activités</h1>
           <p className="mt-2 text-sm text-slate-600 max-w-2xl">
@@ -222,7 +294,7 @@ export function PublicTarifsPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 md:py-8 space-y-6">
+      <main className="mx-auto max-w-5xl px-3 sm:px-4 py-6 md:py-8 space-y-6">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <label htmlFor="tarifs-search" className="block text-xs font-semibold text-slate-600 mb-2">
             Rechercher une activité
@@ -265,7 +337,15 @@ export function PublicTarifsPage() {
               <h2 className="text-lg font-semibold text-slate-900">{label}</h2>
               <p className="text-xs text-slate-500">{items.length} activité{items.length !== 1 ? "s" : ""}</p>
             </div>
-            <div className="overflow-x-auto">
+            {/* Mobile : cartes pleine largeur, pas de tableau horizontal */}
+            <div className="md:hidden space-y-3 p-3 bg-slate-50/40">
+              {items.map((r) => (
+                <TarifsActivityMobileCard key={r.id} row={r} />
+              ))}
+            </div>
+
+            {/* Tablette / desktop : tableau */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-[760px] w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 border-b border-slate-100">

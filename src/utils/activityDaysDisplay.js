@@ -14,3 +14,17 @@ export function formatActivityAvailableDaysSummary(activityLike) {
   }
   return parts.length > 0 ? parts.join(" · ") : "Aucun jour";
 }
+
+/**
+ * Liste des jours cochés (pour puces / mobile).
+ * @returns {string[]|null} null si données invalides ; [] si aucun jour coché
+ */
+export function getActivityDayLabelsList(activityLike) {
+  const days = activityLike?.availableDays ?? activityLike?.available_days;
+  if (!Array.isArray(days) || days.length !== 7) return null;
+  const labels = [];
+  for (let i = 0; i < 7; i += 1) {
+    if (days[i]) labels.push(DAY_LABELS[i]);
+  }
+  return labels;
+}

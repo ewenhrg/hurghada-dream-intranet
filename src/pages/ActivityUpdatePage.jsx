@@ -5,7 +5,7 @@ import { saveLS } from "../utils";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { getActivityTarifListLines } from "../utils/activityHelpers";
-import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay";
+import { formatActivityAvailableDaysSummary, getActivityDayLabelsList } from "../utils/activityDaysDisplay";
 
 function canEditActivityPrices(user) {
   if (!user) return false;
@@ -189,6 +189,103 @@ function ActivityNotesCell({ activity, disabled, patchActivity, scheduleSave }) 
   );
 }
 
+function MajPrixMobileDayChips({ activity }) {
+  const labels = getActivityDayLabelsList(activity);
+  if (labels === null) return <p className="text-sm text-slate-500">—</p>;
+  if (labels.length === 0) return <p className="text-sm text-slate-600">Aucun jour</p>;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {labels.map((d) => (
+        <span
+          key={d}
+          className="inline-flex rounded-md border border-indigo-200/90 bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-950"
+        >
+          {d}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function MajPrixActivityMobileCard({ activity, tarifLines, canEdit, patchActivity, scheduleSave }) {
+  const a = activity;
+  return (
+    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+      <div>
+        <h3 className="text-base font-bold text-slate-900 leading-snug">{a.name}</h3>
+        {a._localOnly && (
+          <span className="mt-1 inline-block text-[10px] font-medium text-amber-700">Cache seulement</span>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Jours disponibles</p>
+        <MajPrixMobileDayChips activity={a} />
+      </div>
+
+      {tarifLines ? (
+        <div className="rounded-lg border border-indigo-200/90 bg-indigo-50/90 px-3 py-2.5 shadow-sm">
+          <ul className="list-disc pl-5 space-y-1 text-sm font-medium text-slate-900 leading-relaxed marker:text-indigo-700">
+            {tarifLines.map((line, idx) => (
+              <li key={`${a.id}-m-${idx}`} className="break-words">
+                {line}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-slate-700 leading-snug border-t border-indigo-200/70 pt-2">
+            Tarifs du moteur de devis (base à 0) — modifiez le code ou renseignez des prix en base depuis Activités.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {[
+            { field: "priceAdult", label: "Prix adulte" },
+            { field: "priceChild", label: "Prix enfant" },
+            { field: "priceBaby", label: "Prix bébé" },
+          ].map(({ field, label }) => (
+            <div key={field} className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
+              <ActivityPriceCell
+                activity={a}
+                field={field}
+                fieldLabel={label}
+                disabled={!canEdit}
+                patchActivity={patchActivity}
+                scheduleSave={scheduleSave}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2">
+        <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">Notes</p>
+        <ActivityNotesCell
+          activity={a}
+          disabled={!canEdit}
+          patchActivity={patchActivity}
+          scheduleSave={scheduleSave}
+        />
+      </div>
+
+      <div className="flex items-center gap-2 border-t border-slate-100 pt-2 text-xs text-slate-600">
+        <span className="font-semibold text-slate-500">Sync</span>
+        {a.supabase_id ? (
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" title="Liée à Supabase" />
+            Supabase
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-flex h-2 w-2 rounded-full bg-amber-400" title="Pas d’ID Supabase" />
+            Local seulement
+          </span>
+        )}
+      </div>
+    </article>
+  );
+}
+
 export function ActivityUpdatePage({ activities, setActivities, user }) {
   const canEdit = canEditActivityPrices(user);
   const activitiesRef = useRef(activities);
@@ -293,7 +390,20 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
             <h3 className="text-base font-semibold text-slate-900">{label}</h3>
             <p className="text-xs text-slate-500">{items.length} activité{items.length !== 1 ? "s" : ""}</p>
           </div>
-          <div className="overflow-x-auto">
+          <div className="md:hidden space-y-3 p-3 bg-slate-50/40">
+            {items.map((a) => (
+              <MajPrixActivityMobileCard
+                key={a.id}
+                activity={a}
+                tarifLines={getActivityTarifListLines(a)}
+                canEdit={canEdit}
+                patchActivity={patchActivity}
+                scheduleSave={scheduleSave}
+              />
+            ))}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-[880px] w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 border-b border-slate-100">
