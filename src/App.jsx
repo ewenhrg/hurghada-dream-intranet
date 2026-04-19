@@ -186,7 +186,10 @@ export default function App() {
 
     let tabId = sessionStorage.getItem("hd_presence_tab");
     if (!tabId) {
-      tabId = uuid();
+      tabId =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : uuid();
       sessionStorage.setItem("hd_presence_tab", tabId);
     }
 
@@ -194,10 +197,24 @@ export default function App() {
       config: { presence: { key: tabId } },
     });
 
+    /** Realtime réutilise le même objet : cloner pour forcer un re-render React à chaque sync/join/leave. */
+    const pushPresenceSnapshot = () => {
+      try {
+        const raw = channel.presenceState();
+        setPresenceState(structuredClone(raw));
+      } catch {
+        try {
+          setPresenceState(JSON.parse(JSON.stringify(channel.presenceState())));
+        } catch {
+          setPresenceState({ ...channel.presenceState() });
+        }
+      }
+    };
+
     channel
-      .on("presence", { event: "sync" }, () => {
-        setPresenceState(channel.presenceState());
-      })
+      .on("presence", { event: "sync" }, pushPresenceSnapshot)
+      .on("presence", { event: "join" }, pushPresenceSnapshot)
+      .on("presence", { event: "leave" }, pushPresenceSnapshot)
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           const { error } = await channel.track({
@@ -209,6 +226,7 @@ export default function App() {
           if (error) {
             logger.warn("Présence intranet : échec du track", error);
           }
+          pushPresenceSnapshot();
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           logger.warn("Présence intranet : canal", status);
         }
