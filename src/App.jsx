@@ -46,7 +46,7 @@ function ScrollOptimizer({ children }) {
 
   return <>{children}</>;
 }
-import { Routes, Route, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
@@ -107,6 +107,9 @@ const SituationPage = lazyWithRetry(() => import("./pages/SituationPage").then(m
 const StopSalePage = lazyWithRetry(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
 const DocumentsPage = lazyWithRetry(() => import("./pages/DocumentsPage").then(module => ({ default: module.DocumentsPage })));
 const RequestPage = lazyWithRetry(() => import("./pages/RequestPage").then(module => ({ default: module.RequestPage })));
+const PublicTarifsPage = lazyWithRetry(() =>
+  import("./pages/PublicTarifsPage").then((m) => ({ default: m.PublicTarifsPage }))
+);
 const EwenDashboardPage = lazyWithRetry(() =>
   import("./pages/EwenDashboardPage").then((module) => ({ default: module.EwenDashboardPage }))
 );
@@ -918,6 +921,17 @@ export default function App() {
 
     return () => clearTimeout(timer);
   }, [ok]);
+
+  // Page tarifs publique (sans compte)
+  if (location.pathname === "/tarifs" || location.pathname === "/tarifs/") {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <PublicTarifsPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
 
   // Si on est sur la route publique /request (avec ou sans token), afficher RequestPage sans authentification
   if (location.pathname.startsWith("/request")) {
