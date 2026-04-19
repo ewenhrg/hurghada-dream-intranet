@@ -91,6 +91,9 @@ const lazyWithRetry = (importFn, retries = 3) => {
 };
 
 const ActivitiesPage = lazyWithRetry(() => import("./pages/ActivitiesPage").then(module => ({ default: module.ActivitiesPage })));
+const ActivityUpdatePage = lazyWithRetry(() =>
+  import("./pages/ActivityUpdatePage").then((module) => ({ default: module.ActivityUpdatePage }))
+);
 const QuotesPage = lazyWithRetry(() => import("./pages/QuotesPage").then(module => ({ default: module.QuotesPage })));
 const HistoryPage = lazyWithRetry(() => import("./pages/HistoryPage").then(module => ({ default: module.HistoryPage })));
 const UsersPage = lazyWithRetry(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
@@ -890,6 +893,7 @@ export default function App() {
         await Promise.all([
           import("./pages/QuotesPage"),
           import("./pages/ActivitiesPage"),
+          import("./pages/ActivityUpdatePage"),
           import("./pages/HistoryPage"),
           import("./pages/TicketPage"),
           import("./pages/ModificationsPage"),
@@ -1078,9 +1082,14 @@ export default function App() {
                   {t("nav.devis")}
                 </Pill>
                 {user?.canAccessActivities !== false && (
+                <>
                 <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
                   {t("nav.activities")}
                 </Pill>
+                <Pill active={tab === "activity-update"} onClick={() => setTab("activity-update")}>
+                  {t("nav.activityUpdate")}
+                </Pill>
+                </>
                 )}
                 {user?.canAccessHistory !== false && (
                 <Pill active={tab === "history"} onClick={() => setTab("history")}>
@@ -1213,6 +1222,15 @@ export default function App() {
             }
           >
             <ActivitiesPage activities={activities} setActivities={setActivities} user={user} />
+          </Section>
+        )}
+
+        {tab === "activity-update" && user?.canAccessActivities !== false && (
+          <Section
+            title={t("page.activityUpdate.title")}
+            subtitle={t("page.activityUpdate.subtitle")}
+          >
+            <ActivityUpdatePage activities={activities} setActivities={setActivities} user={user} />
           </Section>
         )}
 

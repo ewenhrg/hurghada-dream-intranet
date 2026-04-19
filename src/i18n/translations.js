@@ -4,6 +4,7 @@ export const translations = {
     // Navigation
     "nav.devis": "Devis",
     "nav.activities": "Activités",
+    "nav.activityUpdate": "Maj prix",
     "nav.history": "Historique",
     "nav.tickets": "Tickets",
     "nav.modifications": "Modifications",
@@ -33,6 +34,8 @@ export const translations = {
     "page.devis.subtitle": "Supplément transfert = (par adulte/enfant) × (nombre d'adultes + enfants). Bébés gratuits. Alerte si jour hors-dispo, mais le devis peut être créé.",
     "page.activities.title": "Gestion des activités",
     "page.activities.subtitle": "Ajoutez, modifiez les prix, jours, transferts par quartier.",
+    "page.activityUpdate.title": "Mise à jour des prix et notes",
+    "page.activityUpdate.subtitle": "Tableau par catégorie — les mêmes données que l’onglet Activités (cache + Supabase).",
     "page.history.title": "Historique des devis",
     "page.history.subtitle": "Recherchez un devis par numéro de téléphone.",
     "page.tickets.title": "Liste des tickets",
@@ -82,6 +85,7 @@ export const translations = {
     // Navigation
     "nav.devis": "Quotes",
     "nav.activities": "Activities",
+    "nav.activityUpdate": "Price update",
     "nav.history": "History",
     "nav.tickets": "Tickets",
     "nav.modifications": "Modifications",
@@ -111,6 +115,8 @@ export const translations = {
     "page.devis.subtitle": "Transfer surcharge = (per adult/child) × (number of adults + children). Babies free. Alert if day unavailable, but quote can be created.",
     "page.activities.title": "Activities management",
     "page.activities.subtitle": "Add, edit prices, days, transfers by neighborhood.",
+    "page.activityUpdate.title": "Prices & notes update",
+    "page.activityUpdate.subtitle": "Table by category — same data as the Activities tab (cache + Supabase).",
     "page.history.title": "Quotes history",
     "page.history.subtitle": "Search for a quote by phone number.",
     "page.tickets.title": "Tickets list",
