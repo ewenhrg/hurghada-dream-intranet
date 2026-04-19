@@ -137,7 +137,7 @@ export function UsersPage({ user: sessionUser }) {
       const { data, error } = await supabase
         .from("users")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("id", { ascending: false });
       if (error) {
         logger.error("Erreur lors du chargement des utilisateurs:", error);
         toast.error("Erreur lors du chargement des utilisateurs: " + (error.message || "Erreur inconnue"));
@@ -232,7 +232,7 @@ export function UsersPage({ user: sessionUser }) {
     if (!supabase) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("users").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("users").select("*").order("id", { ascending: false });
       if (error) {
         toast.error(error.message || "Erreur");
         return;

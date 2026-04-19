@@ -1,9 +1,9 @@
 // Service Worker pour PWA
-const CACHE_NAME = 'hurghada-dream-v1';
+const CACHE_NAME = 'hurghada-dream-v2';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/logo.png',
+  '/vite.svg',
   '/manifest.json'
 ];
 
