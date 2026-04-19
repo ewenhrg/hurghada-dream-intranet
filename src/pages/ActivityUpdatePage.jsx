@@ -157,7 +157,19 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
     };
   }, []);
 
-  const grouped = useMemo(() => groupActivitiesByCategory(activities), [activities]);
+  const [search, setSearch] = useState("");
+
+  const filteredActivities = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return activities || [];
+    return (activities || []).filter((a) => {
+      const name = (a.name || "").toLowerCase();
+      const notes = (a.notes || "").toLowerCase();
+      return name.includes(q) || notes.includes(q);
+    });
+  }, [activities, search]);
+
+  const grouped = useMemo(() => groupActivitiesByCategory(filteredActivities), [filteredActivities]);
 
   const patchActivity = useCallback(
     (id, patch) => {
@@ -202,6 +214,37 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Lecture seule : vous n’avez pas la permission de modifier les prix. Les changements ne seront pas enregistrés en base.
         </div>
+      )}
+
+      <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm flex flex-col sm:flex-row sm:items-end gap-3">
+        <div className="flex-1 min-w-0">
+          <label htmlFor="activity-update-search" className="block text-xs font-semibold text-slate-600 mb-1.5">
+            Rechercher une activité
+          </label>
+          <input
+            id="activity-update-search"
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Nom ou mot dans les notes…"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            autoComplete="off"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setSearch("")}
+          disabled={!search.trim()}
+          className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none"
+        >
+          Effacer la recherche
+        </button>
+      </div>
+
+      {search.trim() && filteredActivities.length === 0 && (
+        <p className="text-sm text-slate-600 text-center py-6 rounded-xl border border-slate-200 bg-slate-50">
+          Aucune activité ne correspond à « {search.trim()} ».
+        </p>
       )}
 
       {grouped.map(({ key, label, items }) => (
