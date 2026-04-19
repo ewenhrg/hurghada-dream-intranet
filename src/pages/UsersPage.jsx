@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
@@ -72,12 +72,22 @@ function stripLocalOnlyFlagForStorage(list) {
   });
 }
 
+/** Retire une ligne utilisateur du cache (id ou code), pour éviter la fausse alerte « réinsérer » après suppression par un admin. */
+function removeUserRowFromStoredList(list, deletedUser) {
+  const dId = deletedUser?.id;
+  const dCode = normalizeUserCode(deletedUser?.code);
+  return (list || []).filter((r) => {
+    if (dId != null && r?.id != null && String(r.id) === String(dId)) return false;
+    const rc = normalizeUserCode(r?.code);
+    if (dCode && rc && rc === dCode) return false;
+    return true;
+  });
+}
+
 export function UsersPage({ user: sessionUser }) {
   const [users, setUsers] = useState(() => loadLS(LS_KEYS.users, []));
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  /** Après suppression de son propre compte : pas d’alerte « base vs cache » qui ressemble à une erreur bloquante. */
-  const suppressMergeWarningRef = useRef(false);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState(() => ({
@@ -110,16 +120,12 @@ export function UsersPage({ user: sessionUser }) {
           logger.warn(
             `🛡️ Utilisateurs: Supabase en renvoie ${fromSupabase.length}, le cache en avait ${current.length}. Fusion avec les entrées locales (codes absents de la base).`
           );
-          if (!suppressMergeWarningRef.current) {
-            toast.warning(
-              `La base ne contient que ${fromSupabase.length} utilisateur(s) alors que le cache en avait ${current.length}. ` +
-                (localOnlyAdded > 0
-                  ? `${localOnlyAdded} compte(s) récupéré(s) depuis le cache — utilisez « Réinsérer dans Supabase » pour les restaurer.`
-                  : "Vérifiez les données dans Supabase.")
-            );
-          } else {
-            suppressMergeWarningRef.current = false;
-          }
+          toast.warning(
+            `La base ne contient que ${fromSupabase.length} utilisateur(s) alors que le cache en avait ${current.length}. ` +
+              (localOnlyAdded > 0
+                ? `${localOnlyAdded} compte(s) récupéré(s) depuis le cache — utilisez « Réinsérer dans Supabase » pour les restaurer.`
+                : "Vérifiez les données dans Supabase.")
+          );
           setUsers(merged);
           saveLS(LS_KEYS.users, stripLocalOnlyFlagForStorage(merged));
         } else if (!usedMerge && fromSupabase.length < current.length) {
@@ -141,14 +147,10 @@ export function UsersPage({ user: sessionUser }) {
             logger.warn(
               `🛡️ Utilisateurs: fusion de secours — ${orphans.length} ligne(s) du cache absentes de la base (par id).`
             );
-            if (!suppressMergeWarningRef.current) {
-              toast.warning(
-                `La base ne contient que ${fromSupabase.length} utilisateur(s) alors que le cache en avait ${current.length}. ` +
-                  `${orphans.length} compte(s) récupéré(s) depuis le cache — utilisez « Réinsérer dans Supabase » pour les restaurer.`
-              );
-            } else {
-              suppressMergeWarningRef.current = false;
-            }
+            toast.warning(
+              `La base ne contient que ${fromSupabase.length} utilisateur(s) alors que le cache en avait ${current.length}. ` +
+                `${orphans.length} compte(s) récupéré(s) depuis le cache — utilisez « Réinsérer dans Supabase » pour les restaurer.`
+            );
             setUsers(recovered);
             saveLS(LS_KEYS.users, stripLocalOnlyFlagForStorage(recovered));
           } else {
@@ -404,36 +406,55 @@ export function UsersPage({ user: sessionUser }) {
       if (!hasRow) {
         saveLS(LS_KEYS.users, [...cur, u]);
       }
-      suppressMergeWarningRef.current = true;
     }
 
     const pin = window.prompt(
       "Code PIN de suppression Supabase (défini dans le SQL, table hd_delete_secrets) :"
     );
     if (pin === null) {
-      if (deletingSelf) suppressMergeWarningRef.current = false;
       return;
     }
     if (!String(pin).trim()) {
       toast.error("PIN requis pour supprimer l’utilisateur en base.");
-      if (deletingSelf) suppressMergeWarningRef.current = false;
+      return;
+    }
+
+    const userDbId = Number(u.id);
+    if (!Number.isFinite(userDbId) || userDbId <= 0) {
+      toast.error("ID utilisateur invalide pour la base.");
+      setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
       const { error } = await supabase.rpc("hd_delete_user_secure", {
-        p_user_id: u.id,
+        p_user_id: userDbId,
         p_pin: String(pin).trim(),
       });
 
       if (error) {
         logger.error("Erreur lors de la suppression de l'utilisateur:", error);
-        const msg = error.message || "Erreur inconnue";
-        toast.error(msg.toLowerCase().includes("pin") ? "Code PIN incorrect." : "Erreur lors de la suppression: " + msg);
-        if (deletingSelf) suppressMergeWarningRef.current = false;
+        const raw = (error.message || "").trim();
+        const em = raw.toLowerCase();
+        let msg = raw || "Erreur inconnue";
+        if (em.includes("pin incorrect") || em.includes("code pin incorrect")) {
+          msg = "Code PIN incorrect.";
+        } else if (em.includes("aucun utilisateur") || em.includes("introuvable")) {
+          msg = "Cet utilisateur n’existe plus dans Supabase (ID obsolète).";
+        } else if (em.includes("permission denied") || em.includes("rls") || em.includes("row-level security")) {
+          msg = "Supabase bloque le DELETE (RLS). Réexécutez le script SQL à jour sur la base.";
+        } else {
+          msg = "Erreur lors de la suppression : " + msg;
+        }
+        toast.error(msg.length > 220 ? `${msg.slice(0, 217)}…` : msg);
       } else {
         logger.log("✅ Utilisateur supprimé avec succès!");
+        if (!deletingSelf) {
+          const cur = loadLS(LS_KEYS.users, []);
+          const pruned = removeUserRowFromStoredList(cur, u);
+          saveLS(LS_KEYS.users, stripLocalOnlyFlagForStorage(pruned));
+        }
         await loadUsers();
         toast.success(
           deletingSelf
@@ -444,7 +465,6 @@ export function UsersPage({ user: sessionUser }) {
     } catch (err) {
       logger.error("Exception lors de la suppression:", err);
       toast.error("Exception lors de la suppression: " + err.message);
-      if (deletingSelf) suppressMergeWarningRef.current = false;
     } finally {
       setLoading(false);
     }

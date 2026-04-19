@@ -54,6 +54,10 @@ BEGIN
     RAISE EXCEPTION 'Code PIN incorrect';
   END IF;
 
+  -- Sans ceci, le DELETE peut être bloqué par le RLS si le propriétaire de la fonction
+  -- n’est pas le propriétaire de la table (cas fréquent sur Supabase).
+  PERFORM set_config('row_security', 'off', true);
+
   DELETE FROM public.activities
   WHERE id = p_activity_id;
 
@@ -86,6 +90,8 @@ BEGIN
   IF p_pin IS NULL OR btrim(p_pin) = '' OR p_pin <> expected THEN
     RAISE EXCEPTION 'Code PIN incorrect';
   END IF;
+
+  PERFORM set_config('row_security', 'off', true);
 
   DELETE FROM public.users
   WHERE id = p_user_id;

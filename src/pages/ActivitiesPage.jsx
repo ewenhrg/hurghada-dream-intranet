@@ -1025,23 +1025,38 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       return;
     }
 
+    const activityDbId = Number(activityToDelete.supabase_id);
+    if (!Number.isFinite(activityDbId) || activityDbId <= 0) {
+      toast.error("ID Supabase invalide pour cette activité. Réessayez après « Vérifier » ou resynchronisation.");
+      return;
+    }
+
     try {
-      logger.log(`🔄 Tentative de suppression dans Supabase (ID: ${activityToDelete.supabase_id})...`);
+      logger.log(`🔄 Tentative de suppression dans Supabase (ID: ${activityDbId})...`);
       const { error, data } = await supabase.rpc("hd_delete_activity_secure", {
-        p_activity_id: activityToDelete.supabase_id,
+        p_activity_id: activityDbId,
         p_pin: String(pin).trim(),
       });
 
       if (error) {
         logger.error("❌ Erreur lors de la suppression dans Supabase:", {
           error: error,
-          activity_id: activityToDelete.supabase_id,
+          activity_id: activityDbId,
           activity_name: activityName,
           error_code: error.code,
           error_message: error.message
         });
-        const em = (error.message || "").toLowerCase();
-        toast.error(em.includes("pin") ? "Code PIN incorrect." : "Suppression annulée: erreur Supabase.");
+        const raw = (error.message || "").trim();
+        const em = raw.toLowerCase();
+        let msg = raw || "Erreur inconnue";
+        if (em.includes("pin incorrect") || em.includes("code pin incorrect")) {
+          msg = "Code PIN incorrect.";
+        } else if (em.includes("aucune activité") || em.includes("introuvable")) {
+          msg = "Cette ligne n’existe plus dans Supabase (ID obsolète). Utilisez « Vérifier » ou supprimez-la du cache seulement.";
+        } else if (em.includes("permission denied") || em.includes("rls") || em.includes("row-level security")) {
+          msg = "Supabase bloque encore le DELETE (RLS). Réexécutez le script SQL à jour (row_security dans la RPC) ou contactez le support.";
+        }
+        toast.error(msg.length > 220 ? `${msg.slice(0, 217)}…` : msg);
         return;
       }
 
