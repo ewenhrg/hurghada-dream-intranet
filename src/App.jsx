@@ -1,56 +1,26 @@
-import { useEffect, useState, useRef, lazy, Suspense, useCallback } from "react";
-
-// Composant pour optimiser le scroll en désactivant les animations pendant le scroll
-function ScrollOptimizer({ children }) {
-  const scrollTimeoutRef = useRef(null);
-  const rafIdRef = useRef(null);
-
-  useEffect(() => {
-    let isScrolling = false;
-    
-    const handleScroll = () => {
-      // Utiliser requestAnimationFrame pour éviter les re-renders
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
-      
-      rafIdRef.current = requestAnimationFrame(() => {
-        if (!isScrolling) {
-          isScrolling = true;
-          document.body.classList.add('scrolling');
-        }
-        
-        // Réactiver les animations après 200ms sans scroll
-        if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current);
-        }
-        
-        scrollTimeoutRef.current = setTimeout(() => {
-          isScrolling = false;
-          document.body.classList.remove('scrolling');
-        }, 200);
-      });
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
-    };
-  }, []);
-
-  return <>{children}</>;
-}
+import { useEffect, useState, useRef, Suspense, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "./lib/supabase";
 import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
 import { loadUserFromSession } from "./utils/userPermissions";
+import {
+  ActivitiesPage,
+  ActivityUpdatePage,
+  QuotesPage,
+  HistoryPage,
+  UsersPage,
+  HotelsPage,
+  TicketPage,
+  SITUATION_PAGE_STANDBY,
+  SituationPage,
+  StopSalePage,
+  DocumentsPage,
+  RequestPage,
+  PublicTarifsPage,
+  EwenDashboardPage,
+} from "./config/lazyPages";
+import { ScrollOptimizer } from "./components/ScrollOptimizer";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
 import { useLanguage } from "./contexts/LanguageContext";
@@ -62,57 +32,6 @@ import { toast } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
 import { mergeActivitiesWhenRemoteShrunk, stripLocalOnlyActivityForStorage } from "./utils/activitiesBackup";
-
-// Fonction helper pour le lazy loading avec gestion d'erreur et retry
-const lazyWithRetry = (importFn, retries = 3) => {
-  return lazy(() => {
-    const loadModule = (attempt = 0) => {
-      return importFn().catch((error) => {
-        logger.warn(`Erreur de chargement du module (tentative ${attempt + 1}/${retries + 1})...`, error);
-        if (attempt < retries) {
-          // Retry après un court délai exponentiel
-          const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              resolve(loadModule(attempt + 1));
-            }, delay);
-          });
-        }
-        // Si toutes les tentatives échouent, recharger la page
-        logger.error("Impossible de charger le module après plusieurs tentatives, rechargement de la page...");
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-        throw error;
-      });
-    };
-    return loadModule();
-  });
-};
-
-const ActivitiesPage = lazyWithRetry(() => import("./pages/ActivitiesPage").then(module => ({ default: module.ActivitiesPage })));
-const ActivityUpdatePage = lazyWithRetry(() =>
-  import("./pages/ActivityUpdatePage").then((module) => ({ default: module.ActivityUpdatePage }))
-);
-const QuotesPage = lazyWithRetry(() => import("./pages/QuotesPage").then(module => ({ default: module.QuotesPage })));
-const HistoryPage = lazyWithRetry(() => import("./pages/HistoryPage").then(module => ({ default: module.HistoryPage })));
-const UsersPage = lazyWithRetry(() => import("./pages/UsersPage").then(module => ({ default: module.UsersPage })));
-const HotelsPage = lazyWithRetry(() => import("./pages/HotelsPage").then(module => ({ default: module.HotelsPage })));
-const TicketPage = lazyWithRetry(() => import("./pages/TicketPage").then(module => ({ default: module.TicketPage })));
-// Page Modifications désactivée temporairement
-// const ModificationsPage = lazyWithRetry(() => import("./pages/ModificationsPage").then(module => ({ default: module.ModificationsPage })));
-// Page Situation en standby : remettre à false pour réafficher dans le menu et le contenu
-const SITUATION_PAGE_STANDBY = true;
-const SituationPage = lazyWithRetry(() => import("./pages/SituationPage").then(module => ({ default: module.SituationPage })));
-const StopSalePage = lazyWithRetry(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
-const DocumentsPage = lazyWithRetry(() => import("./pages/DocumentsPage").then(module => ({ default: module.DocumentsPage })));
-const RequestPage = lazyWithRetry(() => import("./pages/RequestPage").then(module => ({ default: module.RequestPage })));
-const PublicTarifsPage = lazyWithRetry(() =>
-  import("./pages/PublicTarifsPage").then((m) => ({ default: m.PublicTarifsPage }))
-);
-const EwenDashboardPage = lazyWithRetry(() =>
-  import("./pages/EwenDashboardPage").then((module) => ({ default: module.EwenDashboardPage }))
-);
 
 export default function App() {
   const location = useLocation();
