@@ -17,6 +17,8 @@ CREATE INDEX IF NOT EXISTS idx_users_code ON public.users(code);
 -- Activer Row Level Security (RLS)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow delete users" ON public.users;
+
 -- Politique pour permettre la lecture (SELECT) - pour la connexion
 CREATE POLICY "Allow select users"
 ON public.users
@@ -39,12 +41,7 @@ TO public
 USING (true)
 WITH CHECK (true);
 
--- Politique pour permettre le DELETE (suppression)
-CREATE POLICY "Allow delete users"
-ON public.users
-FOR DELETE
-TO public
-USING (true);
+-- Les suppressions passent par hd_delete_user_secure (PIN). Voir supabase_secure_delete_rpcs.sql.
 
 -- Insérer l'utilisateur Ewen avec tous les accès
 INSERT INTO public.users (name, code, can_delete_quote, can_add_activity, can_edit_activity, can_delete_activity, can_reset_data)

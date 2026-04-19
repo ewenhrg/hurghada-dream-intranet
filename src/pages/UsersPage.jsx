@@ -407,13 +407,30 @@ export function UsersPage({ user: sessionUser }) {
       suppressMergeWarningRef.current = true;
     }
 
+    const pin = window.prompt(
+      "Code PIN de suppression Supabase (défini dans le SQL, table hd_delete_secrets) :"
+    );
+    if (pin === null) {
+      if (deletingSelf) suppressMergeWarningRef.current = false;
+      return;
+    }
+    if (!String(pin).trim()) {
+      toast.error("PIN requis pour supprimer l’utilisateur en base.");
+      if (deletingSelf) suppressMergeWarningRef.current = false;
+      return;
+    }
+
     setLoading(true);
     try {
-      const { error } = await supabase.from("users").delete().eq("id", u.id);
+      const { error } = await supabase.rpc("hd_delete_user_secure", {
+        p_user_id: u.id,
+        p_pin: String(pin).trim(),
+      });
 
       if (error) {
         logger.error("Erreur lors de la suppression de l'utilisateur:", error);
-        toast.error("Erreur lors de la suppression: " + (error.message || "Erreur inconnue"));
+        const msg = error.message || "Erreur inconnue";
+        toast.error(msg.toLowerCase().includes("pin") ? "Code PIN incorrect." : "Erreur lors de la suppression: " + msg);
         if (deletingSelf) suppressMergeWarningRef.current = false;
       } else {
         logger.log("✅ Utilisateur supprimé avec succès!");

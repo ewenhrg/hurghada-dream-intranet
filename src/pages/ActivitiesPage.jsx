@@ -1016,14 +1016,22 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       return;
     }
 
+    const pin = window.prompt(
+      "Code PIN de suppression Supabase (défini dans le SQL, table hd_delete_secrets) :"
+    );
+    if (pin === null) return;
+    if (!String(pin).trim()) {
+      toast.error("PIN requis pour supprimer l’activité en base.");
+      return;
+    }
+
     try {
       logger.log(`🔄 Tentative de suppression dans Supabase (ID: ${activityToDelete.supabase_id})...`);
-      const { error, data } = await supabase
-        .from("activities")
-        .delete()
-        .eq("id", activityToDelete.supabase_id)
-        .select(); // Récupérer les données supprimées pour confirmation
-      
+      const { error, data } = await supabase.rpc("hd_delete_activity_secure", {
+        p_activity_id: activityToDelete.supabase_id,
+        p_pin: String(pin).trim(),
+      });
+
       if (error) {
         logger.error("❌ Erreur lors de la suppression dans Supabase:", {
           error: error,
@@ -1032,7 +1040,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           error_code: error.code,
           error_message: error.message
         });
-        toast.error("Suppression annulée: erreur Supabase.");
+        const em = (error.message || "").toLowerCase();
+        toast.error(em.includes("pin") ? "Code PIN incorrect." : "Suppression annulée: erreur Supabase.");
         return;
       }
 
