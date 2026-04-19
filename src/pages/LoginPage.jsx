@@ -22,6 +22,7 @@ function applyEmergencySession() {
     canAccessModifications: true,
     canAccessSituation: true,
     canAccessUsers: true,
+    canAccessActivityPrices: true,
   };
   sessionStorage.setItem("hd_ok", "1");
   sessionStorage.setItem("hd_user", JSON.stringify(user));
@@ -121,6 +122,7 @@ export function LoginPage({ onSuccess }) {
           userPermissions.canAccessModifications = true;
           userPermissions.canAccessSituation = true;
           userPermissions.canAccessUsers = true;
+          userPermissions.canAccessActivityPrices = true;
           userPermissions.canResetData = false;
         }
         sessionStorage.setItem("hd_ok", "1");
@@ -146,6 +148,7 @@ export function LoginPage({ onSuccess }) {
               canAccessModifications: true,
               canAccessSituation: true,
               canAccessUsers: true,
+              canAccessActivityPrices: true,
             })
           );
           onSuccess();

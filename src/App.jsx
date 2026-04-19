@@ -136,6 +136,14 @@ export default function App() {
     }
   }, [tab]);
 
+  /** Maj prix : onglet réservé aux profils avec permission explicite. */
+  useEffect(() => {
+    if (!user || tab !== "activity-update") return;
+    if (user.canAccessActivities === false || user.canAccessActivityPrices !== true) {
+      setTab(user.canAccessActivities !== false ? "activities" : "devis");
+    }
+  }, [user, tab]);
+
   // Vérifier si l'utilisateur est déjà connecté
   useEffect(() => {
     const already = sessionStorage.getItem("hd_ok") === "1";
@@ -1082,14 +1090,14 @@ export default function App() {
                   {t("nav.devis")}
                 </Pill>
                 {user?.canAccessActivities !== false && (
-                <>
                 <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
                   {t("nav.activities")}
                 </Pill>
+                )}
+                {user?.canAccessActivities !== false && user?.canAccessActivityPrices === true && (
                 <Pill active={tab === "activity-update"} onClick={() => setTab("activity-update")}>
                   {t("nav.activityUpdate")}
                 </Pill>
-                </>
                 )}
                 {user?.canAccessHistory !== false && (
                 <Pill active={tab === "history"} onClick={() => setTab("history")}>
@@ -1225,7 +1233,9 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "activity-update" && user?.canAccessActivities !== false && (
+        {tab === "activity-update" &&
+          user?.canAccessActivities !== false &&
+          user?.canAccessActivityPrices === true && (
           <Section
             title={t("page.activityUpdate.title")}
             subtitle={t("page.activityUpdate.subtitle")}

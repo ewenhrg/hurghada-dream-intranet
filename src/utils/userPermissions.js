@@ -32,6 +32,7 @@ export function configureUserPermissions(userData) {
     userData.canAccessModifications = true;
     userData.canAccessSituation = true;
     userData.canAccessUsers = true;
+    userData.canAccessActivityPrices = true;
     userData.canResetData = false;
   }
 
@@ -47,6 +48,7 @@ export function configureUserPermissions(userData) {
     userData.canAccessModifications = true;
     userData.canAccessSituation = true;
     userData.canAccessUsers = true;
+    userData.canAccessActivityPrices = true;
   }
 
   return userData;

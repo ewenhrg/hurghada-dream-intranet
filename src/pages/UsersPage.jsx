@@ -593,16 +593,21 @@ export function UsersPage({ user: sessionUser }) {
               )}
               <div className="space-y-2">
                 {group.permissions.map((p) => (
-                  <label key={p.formKey} className="flex items-center gap-2 cursor-pointer group">
+                  <label key={p.formKey} className="flex items-start gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={form[p.formKey] === true}
                       onChange={(e) =>
                         setForm((f) => ({ ...f, [p.formKey]: e.target.checked }))
                       }
-                      className="rounded border-2 border-violet-300 text-violet-600 focus:ring-violet-500 focus:ring-2"
+                      className="mt-0.5 rounded border-2 border-violet-300 text-violet-600 focus:ring-violet-500 focus:ring-2"
                     />
-                    <span className="text-sm text-gray-700 group-hover:text-gray-900">{p.label}</span>
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-sm text-gray-700 group-hover:text-gray-900">{p.label}</span>
+                      {p.description && (
+                        <span className="text-xs text-gray-500 font-normal leading-snug">{p.description}</span>
+                      )}
+                    </span>
                   </label>
                 ))}
               </div>

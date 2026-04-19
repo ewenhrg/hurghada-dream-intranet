@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useEffect } from "react";
+import { useCallback, useMemo, useRef, useEffect, useState } from "react";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES } from "../constants";
 import { saveLS } from "../utils";
@@ -73,6 +73,74 @@ async function persistActivityRow(activity) {
   toast.success(`Enregistré : ${activity.name}`, 2200);
 }
 
+/** Champ prix : pendant le focus, le texte peut être vide pour permettre de remplacer un 0 sans qu’il « revienne » tout de suite. */
+function ActivityPriceCell({ activity, field, disabled, patchActivity, scheduleSave }) {
+  const committed = activity[field];
+  const numericCommitted = committed === undefined || committed === null ? 0 : Number(committed);
+  const safeCommitted = Number.isFinite(numericCommitted) ? numericCommitted : 0;
+
+  const [focused, setFocused] = useState(false);
+  const [text, setText] = useState(() => String(safeCommitted));
+
+  useEffect(() => {
+    if (!focused) {
+      setText(String(safeCommitted));
+    }
+  }, [activity.id, field, safeCommitted, focused]);
+
+  const displayValue = focused ? text : String(safeCommitted);
+
+  const commitNumeric = useCallback(
+    (rawString) => {
+      const trimmed = rawString.trim();
+      const n = trimmed === "" ? 0 : Number(trimmed);
+      const final = Number.isFinite(n) && n >= 0 ? n : 0;
+      patchActivity(activity.id, { [field]: final });
+      scheduleSave(activity.id);
+      return final;
+    },
+    [activity.id, field, patchActivity, scheduleSave]
+  );
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      disabled={disabled}
+      className="w-full min-w-[4.5rem] rounded-lg border border-slate-200 px-2 py-1.5 text-slate-900 disabled:opacity-60"
+      value={displayValue}
+      onFocus={(e) => {
+        setFocused(true);
+        setText(String(safeCommitted));
+        requestAnimationFrame(() => {
+          try {
+            e.target.select();
+          } catch {
+            /* ignore */
+          }
+        });
+      }}
+      onBlur={() => {
+        setFocused(false);
+        const final = commitNumeric(text);
+        setText(String(final));
+      }}
+      onChange={(e) => {
+        const raw = e.target.value.replace(/\D/g, "");
+        setText(raw);
+        if (raw !== "") {
+          const n = Number(raw);
+          if (Number.isFinite(n) && n >= 0) {
+            patchActivity(activity.id, { [field]: n });
+            scheduleSave(activity.id);
+          }
+        }
+      }}
+    />
+  );
+}
+
 export function ActivityUpdatePage({ activities, setActivities, user }) {
   const canEdit = canEditActivityPrices(user);
   const activitiesRef = useRef(activities);
@@ -113,16 +181,6 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
       delete saveTimersRef.current[activityId];
     }, 700);
   }, [canEdit]);
-
-  const handleNumberChange = useCallback(
-    (activity, field, raw) => {
-      const n = raw === "" || raw == null ? 0 : Number(raw);
-      const value = Number.isFinite(n) ? n : activity[field];
-      patchActivity(activity.id, { [field]: value });
-      scheduleSave(activity.id);
-    },
-    [patchActivity, scheduleSave]
-  );
 
   const handleNotesChange = useCallback(
     (activity, raw) => {
@@ -174,36 +232,30 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
                       )}
                     </td>
                     <td className="px-2 py-1.5 align-top">
-                      <input
-                        type="number"
-                        min={0}
-                        step={1}
+                      <ActivityPriceCell
+                        activity={a}
+                        field="priceAdult"
                         disabled={!canEdit}
-                        className="w-full min-w-[4.5rem] rounded-lg border border-slate-200 px-2 py-1.5 text-slate-900 disabled:opacity-60"
-                        value={a.priceAdult ?? 0}
-                        onChange={(e) => handleNumberChange(a, "priceAdult", e.target.value)}
+                        patchActivity={patchActivity}
+                        scheduleSave={scheduleSave}
                       />
                     </td>
                     <td className="px-2 py-1.5 align-top">
-                      <input
-                        type="number"
-                        min={0}
-                        step={1}
+                      <ActivityPriceCell
+                        activity={a}
+                        field="priceChild"
                         disabled={!canEdit}
-                        className="w-full min-w-[4.5rem] rounded-lg border border-slate-200 px-2 py-1.5 text-slate-900 disabled:opacity-60"
-                        value={a.priceChild ?? 0}
-                        onChange={(e) => handleNumberChange(a, "priceChild", e.target.value)}
+                        patchActivity={patchActivity}
+                        scheduleSave={scheduleSave}
                       />
                     </td>
                     <td className="px-2 py-1.5 align-top">
-                      <input
-                        type="number"
-                        min={0}
-                        step={1}
+                      <ActivityPriceCell
+                        activity={a}
+                        field="priceBaby"
                         disabled={!canEdit}
-                        className="w-full min-w-[4.5rem] rounded-lg border border-slate-200 px-2 py-1.5 text-slate-900 disabled:opacity-60"
-                        value={a.priceBaby ?? 0}
-                        onChange={(e) => handleNumberChange(a, "priceBaby", e.target.value)}
+                        patchActivity={patchActivity}
+                        scheduleSave={scheduleSave}
                       />
                     </td>
                     <td className="px-3 py-1.5 align-top">
