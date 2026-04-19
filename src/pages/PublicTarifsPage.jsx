@@ -4,46 +4,88 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY, CATEGORIES } from "../constants";
 import { logger } from "../utils/logger";
 
-const SELECT =
-  "id, name, category, price_adult, price_child, price_baby, notes, currency";
+/** Même jeu de colonnes que l’intranet (App.jsx) pour les prix / catégorie. */
+const SELECT_COLUMNS =
+  "id, name, category, price_adult, price_child, price_baby, notes, currency, site_key";
 
-function categoryLabel(key) {
-  const k = key || "desert";
-  return CATEGORIES.find((c) => c.key === k)?.label || k;
+/**
+ * Même logique que ActivitiesPage : une activité n’est rangée que dans une clé
+ * listée dans CATEGORIES ; sinon elle va dans « desert » (évite des sections fantômes / mélanges).
+ */
+function canonicalCategoryKey(raw) {
+  const c = (raw || "").trim();
+  if (c && CATEGORIES.some((x) => x.key === c)) return c;
+  return "desert";
 }
 
-function groupRowsByCategory(rows) {
-  const map = new Map();
-  for (const row of rows || []) {
+/**
+ * Regroupe en conservant l’ordre d’entrée (ici : id décroissant comme l’intranet),
+ * et n’affiche que les catégories qui ont au moins une ligne.
+ */
+function groupRowsByCategory(rowsInOrder) {
+  const base = {};
+  CATEGORIES.forEach((c) => {
+    base[c.key] = [];
+  });
+  for (const row of rowsInOrder || []) {
     if (!row) continue;
-    const cat = row.category || "desert";
-    if (!map.has(cat)) map.set(cat, []);
-    map.get(cat).push(row);
+    const key = canonicalCategoryKey(row.category);
+    base[key].push(row);
   }
-  for (const arr of map.values()) {
-    arr.sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "fr", { sensitivity: "base" }));
-  }
-  const orderedKeys = [];
-  for (const c of CATEGORIES) {
-    if (map.has(c.key) && map.get(c.key).length) orderedKeys.push(c.key);
-  }
-  const rest = [...map.keys()]
-    .filter((k) => !orderedKeys.includes(k))
-    .sort((a, b) => String(a).localeCompare(String(b)));
-  for (const k of rest) {
-    if (map.get(k).length) orderedKeys.push(k);
-  }
-  return orderedKeys.map((key) => ({ key, label: categoryLabel(key), items: map.get(key) }));
+  return CATEGORIES.filter((c) => base[c.key].length > 0).map((c) => ({
+    key: c.key,
+    label: c.label,
+    items: base[c.key],
+  }));
 }
 
 function formatMoney(n, currency) {
-  const v = Number(n) || 0;
+  const v = n != null && n !== "" ? Number(n) : 0;
+  const safe = Number.isFinite(v) ? v : 0;
   const cur = (currency || "EUR").toUpperCase();
   try {
-    return new Intl.NumberFormat("fr-FR", { style: "currency", currency: cur }).format(v);
+    return new Intl.NumberFormat("fr-FR", { style: "currency", currency: cur }).format(safe);
   } catch {
-    return `${v} ${cur}`;
+    return `${safe} ${cur}`;
   }
+}
+
+/**
+ * Choisit la liste la plus longue comme App.jsx (site_key puis requêtes de secours),
+ * pour que la page publique affiche autant d’activités que l’intranet après sync.
+ */
+async function fetchActivityRowsBestSource(client) {
+  const { data, error } = await client
+    .from("activities")
+    .select(SELECT_COLUMNS)
+    .eq("site_key", SITE_KEY)
+    .order("id", { ascending: false });
+
+  let finalRows = Array.isArray(data) ? data : [];
+  let primaryError = error;
+
+  const checks = [];
+  const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
+  if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
+    checks.push(
+      client
+        .from("activities")
+        .select(SELECT_COLUMNS)
+        .eq("site_key", fallbackSiteKey)
+        .order("id", { ascending: false })
+    );
+  }
+  checks.push(client.from("activities").select(SELECT_COLUMNS).order("id", { ascending: false }));
+
+  const checkedResults = await Promise.all(checks.map((q) => q));
+  checkedResults.forEach((result) => {
+    if (!result?.error && Array.isArray(result.data) && result.data.length > finalRows.length) {
+      finalRows = result.data;
+    }
+    if (result?.error) primaryError = primaryError || result.error;
+  });
+
+  return { rows: finalRows, error: finalRows.length === 0 ? primaryError : null };
 }
 
 export function PublicTarifsPage() {
@@ -64,18 +106,17 @@ export function PublicTarifsPage() {
       return;
     }
     try {
-      const { data, error: fetchError } = await supabase
-        .from("activities")
-        .select(SELECT)
-        .eq("site_key", SITE_KEY)
-        .order("name", { ascending: true });
-      if (fetchError) {
+      const { rows, error: fetchError } = await fetchActivityRowsBestSource(supabase);
+      if (fetchError && rows.length === 0) {
         logger.error("PublicTarifsPage: chargement", fetchError);
         setError(fetchError.message || "Impossible de charger les tarifs.");
         setRows([]);
       } else {
+        if (fetchError && rows.length > 0) {
+          logger.warn("PublicTarifsPage: une requête a échoué mais une liste partielle est affichée.", fetchError);
+        }
         setError(null);
-        setRows(Array.isArray(data) ? data : []);
+        setRows(rows);
         setLastSync(new Date());
       }
     } catch (e) {
@@ -98,7 +139,7 @@ export function PublicTarifsPage() {
       .channel("public-tarifs-activities")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "activities", filter: `site_key=eq.${SITE_KEY}` },
+        { event: "*", schema: "public", table: "activities" },
         () => {
           void fetchActivities();
         }
@@ -145,7 +186,8 @@ export function PublicTarifsPage() {
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Tarifs des activités</h1>
           <p className="mt-2 text-sm text-slate-600 max-w-2xl">
             Liste publique en <strong>lecture seule</strong>. Les montants sont mis à jour automatiquement lorsque
-            l’équipe modifie les prix dans l’intranet.
+            l’équipe modifie les prix dans l’intranet. Même source de données et même ordre (par id) que la page
+            Activités.
           </p>
           <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
             <p className="text-sm text-slate-700">
@@ -170,6 +212,9 @@ export function PublicTarifsPage() {
               <span className="text-slate-500">
                 Dernière mise à jour affichée : {lastSync.toLocaleString("fr-FR")}
               </span>
+            )}
+            {!loading && !error && rows.length > 0 && (
+              <span className="text-slate-500">{rows.length} activité{rows.length !== 1 ? "s" : ""} chargée{rows.length !== 1 ? "s" : ""}</span>
             )}
           </div>
         </div>
