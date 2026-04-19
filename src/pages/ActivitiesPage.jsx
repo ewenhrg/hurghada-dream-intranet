@@ -27,6 +27,74 @@ function parsePositiveIntId(v) {
   return Math.trunc(n);
 }
 
+function normalizeActivityCategory(c) {
+  if (c == null || String(c).trim() === "") return "desert";
+  return String(c).trim();
+}
+
+/**
+ * Détermine l'id de ligne `activities` en base pour une suppression RPC.
+ * Gère : supabase_id manquant, id local = id Postgres (sync Realtime), site_key / catégorie différents.
+ */
+async function resolveActivityRowIdForDelete(supabaseClient, activity, defaultSiteKey) {
+  const sid = parsePositiveIntId(activity?.supabase_id);
+  if (Number.isFinite(sid)) return { id: sid, reason: null };
+
+  const idAsRow = parsePositiveIntId(activity?.id);
+  if (Number.isFinite(idAsRow)) {
+    const { data: row, error } = await supabaseClient
+      .from("activities")
+      .select("id")
+      .eq("id", idAsRow)
+      .maybeSingle();
+    if (error) logger.warn("resolveActivityRowId: vérif id local", error);
+    if (row?.id != null) return { id: parsePositiveIntId(row.id), reason: null };
+  }
+
+  const site = String(activity?.site_key || defaultSiteKey || "").trim();
+  const name = String(activity?.name || "").trim();
+  if (!site || !name) return { id: NaN, reason: "none" };
+
+  const catLocal = normalizeActivityCategory(activity?.category);
+
+  const { data: rows, error } = await supabaseClient
+    .from("activities")
+    .select("id, category")
+    .eq("site_key", site)
+    .eq("name", name);
+
+  if (error) {
+    logger.warn("resolveActivityRowId: select nom/site", error);
+    return { id: NaN, reason: "none" };
+  }
+
+  const list = rows || [];
+  if (list.length === 1) return { id: parsePositiveIntId(list[0].id), reason: null };
+  if (list.length === 0) {
+    const { data: rows2, error: err2 } = await supabaseClient
+      .from("activities")
+      .select("id, category, site_key")
+      .eq("name", name)
+      .limit(20);
+    if (err2) return { id: NaN, reason: "none" };
+    const list2 = rows2 || [];
+    const sameSite = list2.filter((r) => String(r.site_key || "").trim() === site);
+    if (sameSite.length === 1) return { id: parsePositiveIntId(sameSite[0].id), reason: null };
+    if (sameSite.length > 1) {
+      const narrowed = sameSite.filter((r) => normalizeActivityCategory(r.category) === catLocal);
+      if (narrowed.length === 1) return { id: parsePositiveIntId(narrowed[0].id), reason: null };
+      if (narrowed.length > 1) return { id: NaN, reason: "ambiguous" };
+      return { id: NaN, reason: "ambiguous" };
+    }
+    return { id: NaN, reason: "none" };
+  }
+
+  const narrowed = list.filter((r) => normalizeActivityCategory(r.category) === catLocal);
+  if (narrowed.length === 1) return { id: parsePositiveIntId(narrowed[0].id), reason: null };
+  if (narrowed.length > 1) return { id: NaN, reason: "ambiguous" };
+  return { id: NaN, reason: "ambiguous" };
+}
+
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDay, setSelectedDay] = useState("");
@@ -1019,29 +1087,23 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       return;
     }
 
-    let activityDbId = parsePositiveIntId(activityToDelete.supabase_id);
-    if (!Number.isFinite(activityDbId)) {
-      const { data: rows, error: lookErr } = await supabase
-        .from("activities")
-        .select("id")
-        .eq("site_key", SITE_KEY)
-        .eq("name", activityToDelete.name?.trim() || "")
-        .eq("category", activityToDelete.category || "desert");
-      if (lookErr) {
-        logger.warn("Résolution id activité:", lookErr);
-      } else if (rows?.length === 1 && rows[0]?.id != null) {
-        activityDbId = parsePositiveIntId(rows[0].id);
-      } else if (rows && rows.length > 1) {
-        toast.error(
-          "Plusieurs activités identiques en base (même nom et catégorie). Renommez-en une ou utilisez « Vérifier » pour réparer les id."
-        );
-        return;
-      }
+    const { id: activityDbId, reason: resolveReason } = await resolveActivityRowIdForDelete(
+      supabase,
+      activityToDelete,
+      SITE_KEY
+    );
+
+    if (resolveReason === "ambiguous") {
+      toast.error(
+        "Plusieurs lignes correspondent en base (même nom / site / catégorie). Renommez ou différenciez-les, ou utilisez « Vérifier » pour réparer les id."
+      );
+      return;
     }
 
     if (!Number.isFinite(activityDbId) || activityDbId <= 0) {
       toast.error(
-        "Cette activité n’a pas d’identifiant Supabase valide (souvent après une création sans retour d’id). Utilisez « Vérifier » pour la lier à la base, ou supprimez-la du cache."
+        "Aucune ligne correspondante dans Supabase pour cette activité (nom / site / cache). " +
+          "Si elle n’existe qu’en local, retirez-la du cache ; sinon lancez « Vérifier » pour resynchroniser."
       );
       return;
     }
