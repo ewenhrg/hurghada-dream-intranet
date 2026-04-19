@@ -19,82 +19,6 @@ import {
   stripLocalOnlyActivityForStorage,
 } from "../utils/activitiesBackup";
 
-/** ID numérique Postgres (BIGINT) pour les RPC / comparaisons. */
-function parsePositiveIntId(v) {
-  if (v == null || v === "") return NaN;
-  const n = typeof v === "number" ? v : Number(String(v).trim());
-  if (!Number.isFinite(n) || n <= 0) return NaN;
-  return Math.trunc(n);
-}
-
-function normalizeActivityCategory(c) {
-  if (c == null || String(c).trim() === "") return "desert";
-  return String(c).trim();
-}
-
-/**
- * Détermine l'id de ligne `activities` en base pour une suppression RPC.
- * Gère : supabase_id manquant, id local = id Postgres (sync Realtime), site_key / catégorie différents.
- */
-async function resolveActivityRowIdForDelete(supabaseClient, activity, defaultSiteKey) {
-  const sid = parsePositiveIntId(activity?.supabase_id);
-  if (Number.isFinite(sid)) return { id: sid, reason: null };
-
-  const idAsRow = parsePositiveIntId(activity?.id);
-  if (Number.isFinite(idAsRow)) {
-    const { data: row, error } = await supabaseClient
-      .from("activities")
-      .select("id")
-      .eq("id", idAsRow)
-      .maybeSingle();
-    if (error) logger.warn("resolveActivityRowId: vérif id local", error);
-    if (row?.id != null) return { id: parsePositiveIntId(row.id), reason: null };
-  }
-
-  const site = String(activity?.site_key || defaultSiteKey || "").trim();
-  const name = String(activity?.name || "").trim();
-  if (!site || !name) return { id: NaN, reason: "none" };
-
-  const catLocal = normalizeActivityCategory(activity?.category);
-
-  const { data: rows, error } = await supabaseClient
-    .from("activities")
-    .select("id, category")
-    .eq("site_key", site)
-    .eq("name", name);
-
-  if (error) {
-    logger.warn("resolveActivityRowId: select nom/site", error);
-    return { id: NaN, reason: "none" };
-  }
-
-  const list = rows || [];
-  if (list.length === 1) return { id: parsePositiveIntId(list[0].id), reason: null };
-  if (list.length === 0) {
-    const { data: rows2, error: err2 } = await supabaseClient
-      .from("activities")
-      .select("id, category, site_key")
-      .eq("name", name)
-      .limit(20);
-    if (err2) return { id: NaN, reason: "none" };
-    const list2 = rows2 || [];
-    const sameSite = list2.filter((r) => String(r.site_key || "").trim() === site);
-    if (sameSite.length === 1) return { id: parsePositiveIntId(sameSite[0].id), reason: null };
-    if (sameSite.length > 1) {
-      const narrowed = sameSite.filter((r) => normalizeActivityCategory(r.category) === catLocal);
-      if (narrowed.length === 1) return { id: parsePositiveIntId(narrowed[0].id), reason: null };
-      if (narrowed.length > 1) return { id: NaN, reason: "ambiguous" };
-      return { id: NaN, reason: "ambiguous" };
-    }
-    return { id: NaN, reason: "none" };
-  }
-
-  const narrowed = list.filter((r) => normalizeActivityCategory(r.category) === catLocal);
-  if (narrowed.length === 1) return { id: parsePositiveIntId(narrowed[0].id), reason: null };
-  if (narrowed.length > 1) return { id: NaN, reason: "ambiguous" };
-  return { id: NaN, reason: "ambiguous" };
-}
-
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDay, setSelectedDay] = useState("");
@@ -1082,67 +1006,33 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       user: user?.name || "Utilisateur inconnu"
     });
     
-    if (!supabase) {
-      toast.error("Supabase non disponible.");
-      return;
-    }
-
-    const { id: activityDbId, reason: resolveReason } = await resolveActivityRowIdForDelete(
-      supabase,
-      activityToDelete,
-      SITE_KEY
-    );
-
-    if (resolveReason === "ambiguous") {
-      toast.error(
-        "Plusieurs lignes correspondent en base (même nom / site / catégorie). Renommez ou différenciez-les, ou utilisez « Vérifier » pour réparer les id."
-      );
-      return;
-    }
-
-    if (!Number.isFinite(activityDbId) || activityDbId <= 0) {
-      toast.error(
-        "Aucune ligne correspondante dans Supabase pour cette activité (nom / site / cache). " +
-          "Si elle n’existe qu’en local, retirez-la du cache ; sinon lancez « Vérifier » pour resynchroniser."
-      );
-      return;
-    }
-
-    const pin = window.prompt(
-      "Code PIN de suppression Supabase (défini dans le SQL, table hd_delete_secrets) :"
-    );
-    if (pin === null) return;
-    if (!String(pin).trim()) {
-      toast.error("PIN requis pour supprimer l’activité en base.");
+    if (!supabase || !activityToDelete?.supabase_id) {
+      logger.warn("⚠️ Suppression bloquée: pas de supabase_id ou Supabase non configuré", {
+        has_supabase: !!supabase,
+        has_supabase_id: !!activityToDelete?.supabase_id,
+        activity_name: activityName
+      });
+      toast.error("Suppression bloquée pour sécurité: activité non synchronisée Supabase.");
       return;
     }
 
     try {
-      logger.log(`🔄 Tentative de suppression dans Supabase (ID: ${activityDbId})...`);
-      const { error, data } = await supabase.rpc("hd_delete_activity_secure", {
-        p_activity_id: activityDbId,
-        p_pin: String(pin).trim(),
-      });
+      logger.log(`🔄 Tentative de suppression dans Supabase (ID: ${activityToDelete.supabase_id})...`);
+      const { error, data } = await supabase
+        .from("activities")
+        .delete()
+        .eq("id", activityToDelete.supabase_id)
+        .select();
 
       if (error) {
         logger.error("❌ Erreur lors de la suppression dans Supabase:", {
           error: error,
-          activity_id: activityDbId,
+          activity_id: activityToDelete.supabase_id,
           activity_name: activityName,
           error_code: error.code,
           error_message: error.message
         });
-        const raw = (error.message || "").trim();
-        const em = raw.toLowerCase();
-        let msg = raw || "Erreur inconnue";
-        if (em.includes("pin incorrect") || em.includes("code pin incorrect")) {
-          msg = "Code PIN incorrect.";
-        } else if (em.includes("aucune activité") || em.includes("introuvable")) {
-          msg = "Cette ligne n’existe plus dans Supabase (ID obsolète). Utilisez « Vérifier » ou supprimez-la du cache seulement.";
-        } else if (em.includes("permission denied") || em.includes("rls") || em.includes("row-level security")) {
-          msg = "Supabase bloque encore le DELETE (RLS). Réexécutez le script SQL à jour (row_security dans la RPC) ou contactez le support.";
-        }
-        toast.error(msg.length > 220 ? `${msg.slice(0, 217)}…` : msg);
+        toast.error("Suppression annulée: erreur Supabase.");
         return;
       }
 

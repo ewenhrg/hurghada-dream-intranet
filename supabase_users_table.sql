@@ -41,7 +41,12 @@ TO public
 USING (true)
 WITH CHECK (true);
 
--- Les suppressions passent par hd_delete_user_secure (PIN). Voir supabase_secure_delete_rpcs.sql.
+-- Politique pour permettre le DELETE (suppression)
+CREATE POLICY "Allow delete users"
+ON public.users
+FOR DELETE
+TO public
+USING (true);
 
 -- Insérer l'utilisateur Ewen avec tous les accès
 INSERT INTO public.users (name, code, can_delete_quote, can_add_activity, can_edit_activity, can_delete_activity, can_reset_data)

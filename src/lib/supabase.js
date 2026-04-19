@@ -85,7 +85,6 @@ function makeStubClient() {
   };
   return {
     from: () => chain,
-    rpc: () => Promise.resolve(res),
     auth: {
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
     },

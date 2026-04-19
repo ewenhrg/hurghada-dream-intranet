@@ -43,9 +43,6 @@ DROP POLICY IF EXISTS "Allow select activities" ON public.activities;
 DROP POLICY IF EXISTS "Allow update activities" ON public.activities;
 DROP POLICY IF EXISTS "Allow delete activities" ON public.activities;
 
--- Les suppressions en base passent par la RPC hd_delete_activity_secure (PIN).
--- Voir supabase_secure_delete_rpcs.sql — ne pas recréer de politique DELETE ouverte.
-
 -- Politique pour permettre l'INSERT (création)
 CREATE POLICY "Allow insert activities"
 ON public.activities
@@ -67,3 +64,10 @@ FOR UPDATE
 TO public
 USING (true)
 WITH CHECK (true);
+
+-- Politique pour permettre le DELETE (suppression)
+CREATE POLICY "Allow delete activities"
+ON public.activities
+FOR DELETE
+TO public
+USING (true);
