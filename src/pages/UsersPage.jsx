@@ -43,6 +43,43 @@ function omitActivityPricesColumn(payload) {
   return rest;
 }
 
+/** Colonnes `can_access_*` (pages + Maj prix) — `supabase_users_add_page_access_columns.sql` + script Maj prix. */
+const OPTIONAL_ACCESS_PAGE_DB_KEYS = [
+  DB_COL_ACTIVITY_PRICES,
+  "can_access_activities",
+  "can_access_history",
+  "can_access_tickets",
+  "can_access_modifications",
+  "can_access_situation",
+  "can_access_users",
+];
+
+/** Erreur PostgREST / Postgres : colonne absente (corps INSERT/UPDATE ou cache schéma). */
+function isPostgrestMissingColumnError(error) {
+  if (!error) return false;
+  const t = `${error.message || ""} ${error.details || ""} ${error.hint || ""}`.toLowerCase();
+  if (error.code === "42703" || error.code === "PGRST204") return true;
+  if (!t.includes("column")) return false;
+  return (
+    t.includes("does not exist") ||
+    t.includes("schema cache") ||
+    t.includes("could not find") ||
+    t.includes("unknown column")
+  );
+}
+
+function omitOptionalPageAccessColumns(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+  const out = { ...payload };
+  for (const k of OPTIONAL_ACCESS_PAGE_DB_KEYS) {
+    delete out[k];
+  }
+  return out;
+}
+
+const MIGRATION_USERS_ACCESS_HINT =
+  "Ouvrez Supabase → SQL Editor et exécutez : supabase_users_add_page_access_columns.sql puis supabase_users_add_can_access_activity_prices.sql. Ensuite rouvrez la fiche utilisateur pour recocher les accès aux pages.";
+
 function normalizeUserCode(code) {
   if (code == null || code === "") return "";
   return String(code).trim();
@@ -327,13 +364,21 @@ export function UsersPage({ user: sessionUser }) {
 
       if (editingUser) {
         if (editingUser[LOCAL_ONLY_KEY]) {
-          let { error } = await supabase.from("users").insert(userData).select().single();
+          let payload = { ...userData };
+          let { error } = await supabase.from("users").insert(payload).select().single();
           if (error && isMissingActivityPricesColumnError(error)) {
             logger.warn("Colonne Maj prix absente en base, nouvel essai sans cette colonne.", error);
             toast.warning(
-              "La base n’a pas encore la colonne « Maj prix ». Exécutez le script supabase_users_add_can_access_activity_prices.sql dans Supabase, puis réessayez. Enregistrement des autres champs…"
+              "La base n’a pas encore la colonne « Maj prix ». " + MIGRATION_USERS_ACCESS_HINT + " Enregistrement des autres champs…"
             );
-            ({ error } = await supabase.from("users").insert(omitActivityPricesColumn(userData)).select().single());
+            payload = omitActivityPricesColumn({ ...userData });
+            ({ error } = await supabase.from("users").insert(payload).select().single());
+          }
+          if (error && isPostgrestMissingColumnError(error)) {
+            logger.warn("Colonnes d’accès pages absentes, nouvel essai sans can_access_* .", error);
+            toast.warning("Schéma `users` incomplet. " + MIGRATION_USERS_ACCESS_HINT);
+            payload = omitOptionalPageAccessColumns({ ...userData });
+            ({ error } = await supabase.from("users").insert(payload).select().single());
           }
           if (error) {
             logger.error("Erreur lors de la réinsertion de l'utilisateur (cache):", error);
@@ -345,9 +390,10 @@ export function UsersPage({ user: sessionUser }) {
             toast.success("Utilisateur enregistré dans Supabase.");
           }
         } else {
+          let payload = { ...userData };
           let { error } = await supabase
             .from("users")
-            .update(userData)
+            .update(payload)
             .eq("id", editingUser.id)
             .select()
             .single();
@@ -355,11 +401,23 @@ export function UsersPage({ user: sessionUser }) {
           if (error && isMissingActivityPricesColumnError(error)) {
             logger.warn("Colonne Maj prix absente en base, nouvel essai sans cette colonne.", error);
             toast.warning(
-              "La base n’a pas encore la colonne « Maj prix ». Exécutez le script supabase_users_add_can_access_activity_prices.sql dans Supabase (SQL Editor), puis réessayez. Les autres modifications sont enregistrées."
+              "La base n’a pas encore la colonne « Maj prix ». " + MIGRATION_USERS_ACCESS_HINT + " Les autres modifications sont enregistrées."
             );
+            payload = omitActivityPricesColumn({ ...userData });
             ({ error } = await supabase
               .from("users")
-              .update(omitActivityPricesColumn(userData))
+              .update(payload)
+              .eq("id", editingUser.id)
+              .select()
+              .single());
+          }
+          if (error && isPostgrestMissingColumnError(error)) {
+            logger.warn("Colonnes d’accès pages absentes, nouvel essai sans can_access_* .", error);
+            toast.warning("Schéma `users` incomplet. " + MIGRATION_USERS_ACCESS_HINT);
+            payload = omitOptionalPageAccessColumns({ ...userData });
+            ({ error } = await supabase
+              .from("users")
+              .update(payload)
               .eq("id", editingUser.id)
               .select()
               .single());
@@ -378,18 +436,24 @@ export function UsersPage({ user: sessionUser }) {
           }
         }
       } else {
-        let { error } = await supabase
-          .from("users")
-          .insert(userData)
-          .select()
-          .single();
+        let payload = { ...userData };
+        let { error } = await supabase.from("users").insert(payload).select().single();
 
         if (error && isMissingActivityPricesColumnError(error)) {
           logger.warn("Colonne Maj prix absente en base, nouvel essai sans cette colonne.", error);
           toast.warning(
-            "La base n’a pas encore la colonne « Maj prix ». Exécutez supabase_users_add_can_access_activity_prices.sql sur Supabase. Création avec les autres permissions…"
+            "La base n’a pas encore la colonne « Maj prix ». " + MIGRATION_USERS_ACCESS_HINT + " Création avec les autres permissions…"
           );
-          ({ error } = await supabase.from("users").insert(omitActivityPricesColumn(userData)).select().single());
+          payload = omitActivityPricesColumn({ ...userData });
+          ({ error } = await supabase.from("users").insert(payload).select().single());
+        }
+        if (error && isPostgrestMissingColumnError(error)) {
+          logger.warn("Colonnes d’accès pages absentes ou schéma partiel, nouvel essai sans can_access_* .", error);
+          toast.warning(
+            "La table `users` n’a pas les colonnes d’accès aux pages (erreur 400). " + MIGRATION_USERS_ACCESS_HINT + " Création avec nom, code et droits « actions » uniquement."
+          );
+          payload = omitOptionalPageAccessColumns({ ...userData });
+          ({ error } = await supabase.from("users").insert(payload).select().single());
         }
 
         if (error) {
