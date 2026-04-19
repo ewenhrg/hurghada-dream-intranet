@@ -15,6 +15,34 @@ import {
 
 const LOCAL_ONLY_KEY = "_localOnly";
 
+/** Colonne ajoutée par `supabase_users_add_can_access_activity_prices.sql` — si absente en base, PATCH renvoie 400. */
+const DB_COL_ACTIVITY_PRICES = "can_access_activity_prices";
+
+function formatSupabaseUserError(error) {
+  if (!error) return "Erreur inconnue";
+  const parts = [error.message, error.details, error.hint].filter((s) => s && String(s).trim());
+  return [...new Set(parts)].join(" — ") || "Erreur inconnue";
+}
+
+/** PostgREST / Postgres : colonne absente du schéma (ex. script SQL pas encore exécuté). */
+function isMissingActivityPricesColumnError(error) {
+  const t = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`.toLowerCase();
+  if (!t.includes(DB_COL_ACTIVITY_PRICES)) return false;
+  return (
+    t.includes("does not exist") ||
+    t.includes("schema cache") ||
+    t.includes("could not find") ||
+    t.includes("unknown column") ||
+    error?.code === "42703"
+  );
+}
+
+function omitActivityPricesColumn(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+  const { [DB_COL_ACTIVITY_PRICES]: _removed, ...rest } = payload;
+  return rest;
+}
+
 function normalizeUserCode(code) {
   if (code == null || code === "") return "";
   return String(code).trim();
@@ -299,10 +327,17 @@ export function UsersPage({ user: sessionUser }) {
 
       if (editingUser) {
         if (editingUser[LOCAL_ONLY_KEY]) {
-          const { error } = await supabase.from("users").insert(userData).select().single();
+          let { error } = await supabase.from("users").insert(userData).select().single();
+          if (error && isMissingActivityPricesColumnError(error)) {
+            logger.warn("Colonne Maj prix absente en base, nouvel essai sans cette colonne.", error);
+            toast.warning(
+              "La base n’a pas encore la colonne « Maj prix ». Exécutez le script supabase_users_add_can_access_activity_prices.sql dans Supabase, puis réessayez. Enregistrement des autres champs…"
+            );
+            ({ error } = await supabase.from("users").insert(omitActivityPricesColumn(userData)).select().single());
+          }
           if (error) {
             logger.error("Erreur lors de la réinsertion de l'utilisateur (cache):", error);
-            toast.error("Erreur: " + (error.message || "Erreur inconnue"));
+            toast.error("Erreur: " + formatSupabaseUserError(error));
           } else {
             logger.log("✅ Utilisateur réinséré depuis le cache!", userData);
             await loadUsers();
@@ -310,16 +345,29 @@ export function UsersPage({ user: sessionUser }) {
             toast.success("Utilisateur enregistré dans Supabase.");
           }
         } else {
-          const { error } = await supabase
+          let { error } = await supabase
             .from("users")
             .update(userData)
             .eq("id", editingUser.id)
             .select()
             .single();
 
+          if (error && isMissingActivityPricesColumnError(error)) {
+            logger.warn("Colonne Maj prix absente en base, nouvel essai sans cette colonne.", error);
+            toast.warning(
+              "La base n’a pas encore la colonne « Maj prix ». Exécutez le script supabase_users_add_can_access_activity_prices.sql dans Supabase (SQL Editor), puis réessayez. Les autres modifications sont enregistrées."
+            );
+            ({ error } = await supabase
+              .from("users")
+              .update(omitActivityPricesColumn(userData))
+              .eq("id", editingUser.id)
+              .select()
+              .single());
+          }
+
           if (error) {
             logger.error("Erreur lors de la modification de l'utilisateur:", error);
-            toast.error("Erreur lors de la modification: " + (error.message || "Erreur inconnue"));
+            toast.error("Erreur lors de la modification: " + formatSupabaseUserError(error));
           } else {
             logger.log("✅ Utilisateur modifié avec succès!", userData);
             await loadUsers();
@@ -330,18 +378,26 @@ export function UsersPage({ user: sessionUser }) {
           }
         }
       } else {
-        const { error } = await supabase
+        let { error } = await supabase
           .from("users")
           .insert(userData)
           .select()
           .single();
+
+        if (error && isMissingActivityPricesColumnError(error)) {
+          logger.warn("Colonne Maj prix absente en base, nouvel essai sans cette colonne.", error);
+          toast.warning(
+            "La base n’a pas encore la colonne « Maj prix ». Exécutez supabase_users_add_can_access_activity_prices.sql sur Supabase. Création avec les autres permissions…"
+          );
+          ({ error } = await supabase.from("users").insert(omitActivityPricesColumn(userData)).select().single());
+        }
 
         if (error) {
           logger.error("Erreur lors de la création de l'utilisateur:", error);
           if (error.code === "23505") {
             toast.error("Ce code est déjà utilisé par un autre utilisateur.");
           } else {
-            toast.error("Erreur lors de la création: " + (error.message || "Erreur inconnue"));
+            toast.error("Erreur lors de la création: " + formatSupabaseUserError(error));
           }
         } else {
           logger.log("✅ Utilisateur créé avec succès!", userData);
