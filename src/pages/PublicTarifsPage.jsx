@@ -55,17 +55,17 @@ function formatMoney(n, currency) {
 function TarifsMobileDayChips({ row }) {
   const labels = getActivityDayLabelsList(row);
   if (labels === null) {
-    return <p className="text-sm text-slate-500">—</p>;
+    return <p className="text-sm text-slate-400">—</p>;
   }
   if (labels.length === 0) {
-    return <p className="text-sm text-slate-600">Aucun jour</p>;
+    return <p className="text-sm text-slate-500">Aucun jour</p>;
   }
   return (
     <div className="flex flex-wrap gap-1.5">
       {labels.map((d) => (
         <span
           key={d}
-          className="inline-flex rounded-md border border-indigo-200/90 bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-950"
+          className="inline-flex items-center rounded-lg border border-slate-200/90 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-sm tabular-nums"
         >
           {d}
         </span>
@@ -74,32 +74,44 @@ function TarifsMobileDayChips({ row }) {
   );
 }
 
+function TarifsSpecialLinesList({ lines, rowId }) {
+  return (
+    <div className="rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-slate-50/40 p-4 shadow-sm">
+      <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-indigo-700/90">
+        Grille tarifaire (plusieurs options)
+      </p>
+      <ul className="space-y-2.5">
+        {lines.map((line, idx) => (
+          <li key={`${rowId}-sl-${idx}`} className="flex gap-3 text-[15px] leading-snug text-slate-800">
+            <span
+              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500"
+              aria-hidden
+            />
+            <span className="min-w-0 flex-1 break-words font-medium">{line}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function TarifsActivityMobileCard({ row }) {
   const lines = getActivityTarifListLines(row);
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-      <h3 className="text-base font-bold text-slate-900 leading-snug pr-1">{row.name}</h3>
+    <article className="space-y-4 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-soft ring-1 ring-slate-900/[0.03]">
+      <h3 className="font-display text-lg font-semibold leading-snug tracking-tight text-slate-900 pr-1">
+        {row.name}
+      </h3>
 
-      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Jours disponibles</p>
+      <div className="rounded-xl border border-slate-100 bg-slate-50/90 px-4 py-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Jours disponibles</p>
         <TarifsMobileDayChips row={row} />
       </div>
 
       {lines ? (
-        <div className="rounded-xl border-2 border-indigo-600 bg-amber-50 px-3 py-3 shadow-md ring-2 ring-amber-200/80">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-indigo-900">
-            Grille tarifaire (plusieurs options)
-          </p>
-          <ul className="list-disc space-y-1.5 pl-5 text-[15px] font-semibold leading-relaxed text-neutral-950 marker:text-indigo-700">
-            {lines.map((line, idx) => (
-              <li key={`${row.id}-m-${idx}`} className="pl-0.5 break-words">
-                {line}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <TarifsSpecialLinesList lines={lines} rowId={row.id} />
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-2">
           {[
             { k: "Adulte", v: formatMoney(row.price_adult, row.currency) },
             { k: "Enfant", v: formatMoney(row.price_child, row.currency) },
@@ -107,18 +119,22 @@ function TarifsActivityMobileCard({ row }) {
           ].map(({ k, v }) => (
             <div
               key={k}
-              className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5"
+              className="flex min-w-0 items-baseline justify-between gap-4 rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm"
             >
-              <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-slate-500">{k}</span>
-              <span className="min-w-0 truncate text-right text-sm font-bold tabular-nums text-slate-900">{v}</span>
+              <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">{k}</span>
+              <span className="min-w-0 text-right text-base font-semibold tabular-nums tracking-tight text-slate-900">
+                {v}
+              </span>
             </div>
           ))}
         </div>
       )}
 
-      <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">Notes</p>
-        <p className="text-sm text-slate-800 whitespace-pre-wrap break-words">{row.notes ? String(row.notes) : "—"}</p>
+      <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Notes</p>
+        <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap break-words">
+          {row.notes ? String(row.notes) : "—"}
+        </p>
       </div>
     </article>
   );
@@ -253,148 +269,179 @@ export function PublicTarifsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
-      <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-sm">
-        <div className="mx-auto max-w-5xl px-3 sm:px-4 py-6 md:py-8">
-          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-1">Hurghada Dream</p>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Tarifs des activités</h1>
-          <p className="mt-2 text-sm text-slate-600 max-w-2xl">
-            Liste publique en <strong>lecture seule</strong>. Les montants sont mis à jour automatiquement lorsque
-            l’équipe modifie les prix dans l’intranet. Même source de données et même ordre (par id) que la page
+    <div className="relative min-h-screen bg-slate-100 text-slate-900 selection:bg-indigo-100 selection:text-indigo-950">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[min(28rem,55vh)] bg-gradient-to-b from-indigo-500/[0.09] via-slate-100/0 to-transparent"
+        aria-hidden
+      />
+      <header className="relative border-b border-slate-200/90 bg-white/80 shadow-sm backdrop-blur-md">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 md:py-10">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-600/90">Hurghada Dream</p>
+          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+            Tarifs des activités
+          </h1>
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">
+            Liste publique en <strong className="font-semibold text-slate-800">lecture seule</strong>. Les montants se
+            mettent à jour lorsque l’équipe modifie les prix dans l’intranet — même source et même ordre que la page
             Activités.
           </p>
-          <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
-            <p className="text-sm text-slate-700">
-              <span className="text-slate-500">Lien à partager :</span>{" "}
-              <span className="font-mono text-sm bg-slate-100 px-2 py-1 rounded border border-slate-200 break-all">
-                « {publicUrl} »
-              </span>
-            </p>
+
+          <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-slate-500">Lien à partager</p>
+              <p className="mt-1 break-all font-mono text-sm leading-snug text-slate-800">{publicUrl}</p>
+            </div>
             <button
               type="button"
               onClick={handleCopyLink}
-              className="shrink-0 inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+              className="inline-flex shrink-0 items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-900/15 transition hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             >
               {copyDone ? "Copié ✓" : "Copier le lien"}
             </button>
           </div>
-          <div className="mt-4 flex flex-wrap gap-4 text-sm">
-            <Link to="/" className="text-indigo-600 hover:text-indigo-800 font-medium">
-              Connexion intranet →
+
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-600">
+            <Link
+              to="/"
+              className="font-medium text-indigo-600 underline-offset-4 transition hover:text-indigo-800 hover:underline"
+            >
+              Connexion intranet
             </Link>
             {lastSync && (
               <span className="text-slate-500">
-                Dernière mise à jour affichée : {lastSync.toLocaleString("fr-FR")}
+                Affiché à jour : <time dateTime={lastSync.toISOString()}>{lastSync.toLocaleString("fr-FR")}</time>
               </span>
             )}
             {!loading && !error && rows.length > 0 && (
-              <span className="text-slate-500">{rows.length} activité{rows.length !== 1 ? "s" : ""} chargée{rows.length !== 1 ? "s" : ""}</span>
+              <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200/80">
+                {rows.length} activité{rows.length !== 1 ? "s" : ""}
+              </span>
             )}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-3 sm:px-4 py-6 md:py-8 space-y-6">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <label htmlFor="tarifs-search" className="block text-xs font-semibold text-slate-600 mb-2">
+      <main className="relative mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 md:py-10">
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-soft sm:p-5">
+          <label htmlFor="tarifs-search" className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
             Rechercher une activité
           </label>
-          <input
-            id="tarifs-search"
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tapez un nom ou un mot dans les notes…"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            autoComplete="off"
-          />
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden>
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2M11 18a7 7 0 100-14 7 7 0 000 14z" />
+              </svg>
+            </span>
+            <input
+              id="tarifs-search"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nom d’activité ou mot dans les notes…"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-4 text-slate-900 shadow-inner shadow-slate-900/[0.03] placeholder:text-slate-400 transition focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
+              autoComplete="off"
+            />
+          </div>
         </div>
 
         {loading && (
-          <p className="text-center text-slate-600 py-12">Chargement des tarifs…</p>
+          <div
+            className="rounded-2xl border border-slate-200/90 bg-white p-10 shadow-soft"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <div className="mx-auto max-w-md space-y-3">
+              <div className="h-3.5 animate-pulse rounded-full bg-slate-200" />
+              <div className="h-3.5 w-4/5 animate-pulse rounded-full bg-slate-200" />
+              <div className="h-3.5 w-3/5 animate-pulse rounded-full bg-slate-200" />
+            </div>
+            <p className="mt-6 text-center text-sm font-medium text-slate-500">Chargement des tarifs…</p>
+          </div>
         )}
 
         {!loading && error && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+          <div className="rounded-2xl border border-rose-200/90 bg-rose-50 px-5 py-4 text-sm leading-relaxed text-rose-900 shadow-sm">
             {error}
           </div>
         )}
 
         {!loading && !error && rows.length === 0 && (
-          <p className="text-center text-slate-600 py-12">Aucune activité publiée pour le moment.</p>
+          <p className="rounded-2xl border border-dashed border-slate-200 bg-white/80 py-14 text-center text-slate-600 shadow-sm">
+            Aucune activité publiée pour le moment.
+          </p>
         )}
 
         {!loading && !error && filtered.length === 0 && rows.length > 0 && (
-          <p className="text-center text-slate-600 py-8">Aucun résultat pour « {search.trim()} ».</p>
+          <p className="rounded-2xl border border-slate-200/90 bg-white py-10 text-center text-slate-600 shadow-sm">
+            Aucun résultat pour « <span className="font-medium text-slate-800">{search.trim()}</span> ».
+          </p>
         )}
 
         {grouped.map(({ key, label, items }) => (
           <section
             key={key}
-            className="rounded-2xl border border-slate-200/90 bg-white shadow-sm overflow-hidden"
+            className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-soft"
           >
-            <div className="px-4 py-3 bg-gradient-to-r from-indigo-50 to-slate-50 border-b border-slate-100">
-              <h2 className="text-lg font-semibold text-slate-900">{label}</h2>
-              <p className="text-xs text-slate-500">{items.length} activité{items.length !== 1 ? "s" : ""}</p>
+            <div className="relative border-b border-slate-100 bg-white px-5 py-4 sm:px-6">
+              <div
+                className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-indigo-500"
+                aria-hidden
+              />
+              <div className="pl-4">
+                <h2 className="font-display text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
+                  {label}
+                </h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {items.length} activité{items.length !== 1 ? "s" : ""}
+                </p>
+              </div>
             </div>
-            {/* Mobile : cartes pleine largeur, pas de tableau horizontal */}
-            <div className="md:hidden space-y-3 p-3 bg-slate-50/40">
+            <div className="md:hidden space-y-4 bg-slate-50/50 p-4 sm:p-5">
               {items.map((r) => (
                 <TarifsActivityMobileCard key={r.id} row={r} />
               ))}
             </div>
 
-            {/* Tablette / desktop : tableau */}
             <div className="hidden md:block overflow-x-auto">
               <table className="min-w-[760px] w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 border-b border-slate-100">
-                    <th className="px-3 py-2.5">Activité</th>
-                    <th className="px-2 py-2.5 w-[14%]">Jours dispo</th>
-                    <th className="px-2 py-2.5 w-[12%]">Adulte</th>
-                    <th className="px-2 py-2.5 w-[12%]">Enfant</th>
-                    <th className="px-2 py-2.5 w-[12%]">Bébé</th>
-                    <th className="px-3 py-2.5">Notes</th>
+                <thead className="border-b border-slate-100 bg-slate-50">
+                  <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <th className="px-4 py-3">Activité</th>
+                    <th className="px-3 py-3 w-[14%]">Jours dispo</th>
+                    <th className="px-3 py-3 w-[11%] text-right">Adulte</th>
+                    <th className="px-3 py-3 w-[11%] text-right">Enfant</th>
+                    <th className="px-3 py-3 w-[11%] text-right">Bébé</th>
+                    <th className="px-4 py-3">Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {items.map((r) => {
                     const lines = getActivityTarifListLines(r);
                     return (
-                    <tr key={r.id} className="hover:bg-slate-50/60">
-                      <td className="px-3 py-2.5 font-medium text-slate-900">{r.name}</td>
-                      <td className="px-2 py-2 text-xs text-slate-700 leading-snug max-w-[10rem]">
+                    <tr key={r.id} className="transition-colors hover:bg-slate-50/80">
+                      <td className="px-4 py-3 align-top font-medium leading-snug text-slate-900">{r.name}</td>
+                      <td className="max-w-[11rem] px-3 py-3 align-top text-xs leading-relaxed text-slate-600">
                         {formatActivityAvailableDaysSummary(r)}
                       </td>
                       {lines ? (
-                        <td colSpan={3} className="px-2 py-2.5 align-top min-w-[16rem]">
-                          <div className="rounded-xl border-2 border-indigo-600 bg-amber-50 px-3 py-3 shadow-md ring-2 ring-amber-200/80">
-                            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-indigo-900">
-                              Grille tarifaire (plusieurs options)
-                            </p>
-                            <ul className="list-disc space-y-1.5 pl-5 text-[15px] sm:text-base font-semibold leading-relaxed text-neutral-950 marker:text-indigo-700">
-                              {lines.map((line, idx) => (
-                                <li key={`${r.id}-${idx}`} className="pl-0.5">
-                                  {line}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
+                        <td colSpan={3} className="min-w-[16rem] px-3 py-3 align-top">
+                          <TarifsSpecialLinesList lines={lines} rowId={r.id} />
                         </td>
                       ) : (
                         <>
-                      <td className="px-2 py-2 text-slate-800 tabular-nums">
+                      <td className="px-3 py-3 text-right font-semibold tabular-nums text-slate-900">
                         {formatMoney(r.price_adult, r.currency)}
                       </td>
-                      <td className="px-2 py-2 text-slate-800 tabular-nums">
+                      <td className="px-3 py-3 text-right font-semibold tabular-nums text-slate-900">
                         {formatMoney(r.price_child, r.currency)}
                       </td>
-                      <td className="px-2 py-2 text-slate-800 tabular-nums">
+                      <td className="px-3 py-3 text-right font-semibold tabular-nums text-slate-900">
                         {formatMoney(r.price_baby, r.currency)}
                       </td>
                         </>
                       )}
-                      <td className="px-3 py-2 text-xs text-slate-600 max-w-xs whitespace-pre-wrap">
+                      <td className="max-w-xs px-4 py-3 align-top text-xs leading-relaxed text-slate-600 whitespace-pre-wrap">
                         {r.notes ? String(r.notes) : "—"}
                       </td>
                     </tr>
@@ -407,7 +454,7 @@ export function PublicTarifsPage() {
         ))}
       </main>
 
-      <footer className="border-t border-slate-200/80 mt-8 py-6 text-center text-xs text-slate-500">
+      <footer className="relative mt-12 border-t border-slate-200/90 bg-white/60 py-8 text-center text-xs leading-relaxed text-slate-500 backdrop-blur-sm">
         Hurghada Dream — tarifs indicatifs, non modifiables sur cette page.
       </footer>
     </div>

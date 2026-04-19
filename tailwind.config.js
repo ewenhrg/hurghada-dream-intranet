@@ -8,6 +8,9 @@ export default {
   // Tailwind v3+ purge automatiquement via `content`.
   theme: {
     extend: {
+      fontFamily: {
+        display: ['"Outfit"', "Inter", "system-ui", "sans-serif"],
+      },
       colors: {
         hd: {
           bg: "#f8f9fa",
