@@ -362,9 +362,6 @@ export function PublicTarifsPage() {
     }
   }
 
-  const categoryCount = grouped.length;
-  const visibleCount = filtered.length;
-
   return (
     <div className="relative min-h-screen bg-stone-100 text-slate-900 selection:bg-cyan-200 selection:text-slate-950">
       <div
@@ -464,28 +461,6 @@ export function PublicTarifsPage() {
         />
 
         <div className="relative mx-auto max-w-6xl space-y-8 px-4 sm:px-6">
-          {!loading && !error && rows.length > 0 && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-              {[
-                { k: "Activités (liste)", val: rows.length, sub: "total chargé", tone: "from-indigo-600 to-violet-700" },
-                { k: "Affichées", val: visibleCount, sub: search.trim() ? "après filtre" : "toutes", tone: "from-sky-600 to-cyan-600" },
-                { k: "Rubriques", val: categoryCount, sub: "catégories", tone: "from-amber-500 to-orange-600" },
-                { k: "Page", val: "Live", sub: "auto + 2 min", tone: "from-emerald-600 to-teal-700" },
-              ].map((s) => (
-                <div
-                  key={s.k}
-                  className="overflow-hidden rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-lg ring-1 ring-slate-900/5 sm:p-5"
-                >
-                  <div className={`mb-3 inline-flex rounded-lg bg-gradient-to-br ${s.tone} px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-md`}>
-                    {s.k}
-                  </div>
-                  <p className="font-display text-3xl font-black tabular-nums text-slate-900 sm:text-4xl">{s.val}</p>
-                  <p className="mt-1 text-xs font-semibold text-slate-700">{s.sub}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
           <div className="relative rounded-3xl bg-gradient-to-br from-indigo-500 via-violet-600 to-cyan-500 p-[2px] shadow-2xl shadow-indigo-900/20">
             <div className="rounded-[22px] bg-white p-4 sm:p-6">
               <label
