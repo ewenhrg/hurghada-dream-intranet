@@ -927,7 +927,7 @@ export default function App() {
   // Calculer le padding pour le main
   const mainPaddingClass = tab === "devis" ? "px-0" : "px-2 md:px-3 lg:px-6";
   // Construire les className complets
-  const headerNavClassName = `glass-nav mx-auto flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between gap-3 md:gap-4 ${maxWidthClass} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`;
+  const headerNavClassName = `glass-nav mx-auto flex flex-col items-stretch gap-3 md:gap-4 ${maxWidthClass} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`;
   const mainClassName = `flex-1 py-4 md:py-10 ${mainPaddingClass} scroll-container`;
   const footerClassName = `mx-auto px-4 py-8 border-t mt-10 font-medium tracking-wide ${maxWidthClass}`;
   const contentContainerClassName = `mx-auto space-y-6 md:space-y-10 ${maxWidthClass} rounded-2xl p-4 md:p-6 lg:p-8`;
@@ -944,7 +944,10 @@ export default function App() {
       {/* HEADER */}
       <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6" style={{ backgroundColor: 'rgba(7,13,31,0.98)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
         <div className={headerNavClassName}>
-          <div className="flex items-center gap-2 md:gap-3.5 w-full md:w-auto">
+          <div className="flex w-full min-w-0 flex-col gap-3">
+            {/* Ligne 1 : identité + langue + déconnexion (ne mange pas la largeur des onglets) */}
+            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 max-w-full flex-1 items-center gap-2 md:gap-3.5">
             <img 
               src="/logo.png" 
               alt="Hurghada Dream Logo" 
@@ -976,8 +979,8 @@ export default function App() {
                 </span>
               )}
             </div>
-          </div>
-          <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-between md:justify-end">
+              </div>
+              <div className="flex shrink-0 items-center gap-2 md:gap-3">
             {/* Sélecteur de langue */}
             <div 
               className="flex items-center gap-1.5 md:gap-2 rounded-xl border px-2 md:px-2.5 py-1.5"
@@ -1048,8 +1051,29 @@ export default function App() {
                 EN
               </button>
             </div>
-            <nav className="flex gap-2 md:gap-2.5 overflow-x-auto flex-1 md:flex-initial pb-1 md:pb-0 scrollbar-hide -mx-2 md:mx-0 px-2 md:px-0" style={{ WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}>
-              <div className="flex gap-2 md:gap-2.5 min-w-max" style={{ scrollSnapAlign: 'start' }}>
+            {user && (
+              <GhostBtn
+                type="button"
+                size="sm"
+                variant="danger"
+                onClick={handleLogout}
+                className="rounded-xl font-semibold !bg-red-500 !text-white !border-red-500 hover:!bg-red-600 flex-shrink-0"
+                style={{ boxShadow: '0 16px 32px -20px rgba(239,68,68,0.55)' }}
+              >
+                <span className="hidden md:inline">🚪 Déconnexion</span>
+                <span className="md:hidden">🚪</span>
+              </GhostBtn>
+            )}
+              </div>
+            </div>
+
+            {/* Ligne 2 : onglets sur toute la largeur, retour à la ligne automatique */}
+            <nav
+              className="w-full min-w-0 border-t border-white/10 pt-3"
+              style={{ borderTopColor: "rgba(255,255,255,0.12)" }}
+              aria-label="Navigation principale"
+            >
+              <div className="flex w-full min-w-0 flex-wrap gap-2 md:gap-2.5">
                 <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
                   {t("nav.devis")}
                 </Pill>
@@ -1104,19 +1128,6 @@ export default function App() {
                 </Pill>
               </div>
             </nav>
-            {user && (
-              <GhostBtn
-                type="button"
-                size="sm"
-                variant="danger"
-                onClick={handleLogout}
-                className="rounded-xl font-semibold !bg-red-500 !text-white !border-red-500 hover:!bg-red-600 flex-shrink-0"
-                style={{ boxShadow: '0 16px 32px -20px rgba(239,68,68,0.55)' }}
-              >
-                <span className="hidden md:inline">🚪 Déconnexion</span>
-                <span className="md:hidden">🚪</span>
-              </GhostBtn>
-            )}
           </div>
         </div>
       </header>
