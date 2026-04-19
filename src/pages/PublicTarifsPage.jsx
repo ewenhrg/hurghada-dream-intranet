@@ -287,12 +287,14 @@ export function PublicTarifsPage() {
                         {formatActivityAvailableDaysSummary(r)}
                       </td>
                       {lines ? (
-                        <td colSpan={3} className="px-2 py-2 text-xs text-slate-800 leading-snug">
-                          <ul className="list-disc pl-4 space-y-0.5">
-                            {lines.map((line, idx) => (
-                              <li key={`${r.id}-${idx}`}>{line}</li>
-                            ))}
-                          </ul>
+                        <td colSpan={3} className="px-2 py-2 align-top">
+                          <div className="rounded-lg border border-indigo-200/90 bg-indigo-50/90 px-3 py-2.5 shadow-sm">
+                            <ul className="list-disc pl-5 space-y-1 text-sm font-medium text-slate-900 leading-relaxed marker:text-indigo-700">
+                              {lines.map((line, idx) => (
+                                <li key={`${r.id}-${idx}`}>{line}</li>
+                              ))}
+                            </ul>
+                          </div>
                         </td>
                       ) : (
                         <>

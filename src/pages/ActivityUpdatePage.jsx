@@ -321,16 +321,18 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
                       {formatActivityAvailableDaysSummary(a)}
                     </td>
                     {tarifLines ? (
-                      <td colSpan={3} className="px-2 py-2 align-top text-xs text-slate-800 leading-snug">
-                        <ul className="list-disc pl-4 space-y-0.5">
-                          {tarifLines.map((line, idx) => (
-                            <li key={`${a.id}-${idx}`}>{line}</li>
-                          ))}
-                        </ul>
-                        <p className="mt-1.5 text-[10px] text-slate-500">
-                          Tarifs du moteur de devis (colonnes base à 0) — modifiez les montants dans le code ou
-                          renseignez des prix en base depuis Activités.
-                        </p>
+                      <td colSpan={3} className="px-2 py-2 align-top">
+                        <div className="rounded-lg border border-indigo-200/90 bg-indigo-50/90 px-3 py-2.5 shadow-sm">
+                          <ul className="list-disc pl-5 space-y-1 text-sm font-medium text-slate-900 leading-relaxed marker:text-indigo-700">
+                            {tarifLines.map((line, idx) => (
+                              <li key={`${a.id}-${idx}`}>{line}</li>
+                            ))}
+                          </ul>
+                          <p className="mt-2 text-xs text-slate-700 leading-snug border-t border-indigo-200/70 pt-2">
+                            Tarifs du moteur de devis (base à 0) — modifiez le code ou renseignez des prix en base
+                            depuis Activités.
+                          </p>
+                        </div>
                       </td>
                     ) : (
                       <>
