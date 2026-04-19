@@ -4,6 +4,8 @@ import { SITE_KEY, LS_KEYS, CATEGORIES } from "../constants";
 import { saveLS } from "../utils";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
+import { getActivityTarifListLines } from "../utils/activityHelpers";
+import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay";
 
 function canEditActivityPrices(user) {
   if (!user) return false;
@@ -73,8 +75,8 @@ async function persistActivityRow(activity) {
   toast.success(`Enregistré : ${activity.name}`, 2200);
 }
 
-/** Champ prix : pendant le focus, le texte peut être vide pour permettre de remplacer un 0 sans qu’il « revienne » tout de suite. */
-function ActivityPriceCell({ activity, field, disabled, patchActivity, scheduleSave }) {
+/** Champ prix : brouillon local pendant le focus ; confirmation au blur si la valeur a changé. */
+function ActivityPriceCell({ activity, field, fieldLabel, disabled, patchActivity, scheduleSave }) {
   const committed = activity[field];
   const numericCommitted = committed === undefined || committed === null ? 0 : Number(committed);
   const safeCommitted = Number.isFinite(numericCommitted) ? numericCommitted : 0;
@@ -89,18 +91,6 @@ function ActivityPriceCell({ activity, field, disabled, patchActivity, scheduleS
   }, [activity.id, field, safeCommitted, focused]);
 
   const displayValue = focused ? text : String(safeCommitted);
-
-  const commitNumeric = useCallback(
-    (rawString) => {
-      const trimmed = rawString.trim();
-      const n = trimmed === "" ? 0 : Number(trimmed);
-      const final = Number.isFinite(n) && n >= 0 ? n : 0;
-      patchActivity(activity.id, { [field]: final });
-      scheduleSave(activity.id);
-      return final;
-    },
-    [activity.id, field, patchActivity, scheduleSave]
-  );
 
   return (
     <input
@@ -123,20 +113,78 @@ function ActivityPriceCell({ activity, field, disabled, patchActivity, scheduleS
       }}
       onBlur={() => {
         setFocused(false);
-        const final = commitNumeric(text);
+        if (disabled) {
+          setText(String(safeCommitted));
+          return;
+        }
+        const trimmed = text.trim();
+        const n = trimmed === "" ? 0 : Number(trimmed);
+        const final = Number.isFinite(n) && n >= 0 ? n : 0;
+        if (final === safeCommitted) {
+          setText(String(final));
+          return;
+        }
+        const ok = window.confirm(
+          `Confirmer la modification du tarif pour « ${activity.name} » ?\n${fieldLabel} : ${final} €`
+        );
+        if (!ok) {
+          setText(String(safeCommitted));
+          return;
+        }
+        patchActivity(activity.id, { [field]: final });
+        scheduleSave(activity.id);
         setText(String(final));
       }}
       onChange={(e) => {
         const raw = e.target.value.replace(/\D/g, "");
         setText(raw);
-        if (raw !== "") {
-          const n = Number(raw);
-          if (Number.isFinite(n) && n >= 0) {
-            patchActivity(activity.id, { [field]: n });
-            scheduleSave(activity.id);
-          }
-        }
       }}
+    />
+  );
+}
+
+/** Notes : brouillon local + confirmation au blur si le texte a changé. */
+function ActivityNotesCell({ activity, disabled, patchActivity, scheduleSave }) {
+  const committed = activity.notes ?? "";
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState(committed);
+
+  useEffect(() => {
+    if (!focused) {
+      setDraft(committed);
+    }
+  }, [activity.id, committed, focused]);
+
+  const display = focused ? draft : committed;
+
+  return (
+    <textarea
+      rows={2}
+      disabled={disabled}
+      className="w-full min-w-[12rem] rounded-lg border border-slate-200 px-2 py-1.5 text-slate-800 text-xs leading-snug resize-y min-h-[2.75rem] disabled:opacity-60"
+      value={display}
+      onFocus={() => {
+        setFocused(true);
+        setDraft(committed);
+      }}
+      onBlur={() => {
+        setFocused(false);
+        if (disabled) {
+          setDraft(committed);
+          return;
+        }
+        if (draft === committed) return;
+        const ok = window.confirm(
+          `Confirmer la modification des notes pour « ${activity.name} » ?\n(Les changements seront enregistrés localement et sur Supabase.)`
+        );
+        if (!ok) {
+          setDraft(committed);
+          return;
+        }
+        patchActivity(activity.id, { notes: draft });
+        scheduleSave(activity.id);
+      }}
+      onChange={(e) => setDraft(e.target.value)}
     />
   );
 }
@@ -194,14 +242,6 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
     }, 700);
   }, [canEdit]);
 
-  const handleNotesChange = useCallback(
-    (activity, raw) => {
-      patchActivity(activity.id, { notes: raw });
-      scheduleSave(activity.id);
-    },
-    [patchActivity, scheduleSave]
-  );
-
   if (!activities?.length) {
     return (
       <p className="text-sm text-slate-600 py-8 text-center">Aucune activité à afficher. Synchronisez ou ajoutez des activités depuis l’onglet Activités.</p>
@@ -254,19 +294,22 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
             <p className="text-xs text-slate-500">{items.length} activité{items.length !== 1 ? "s" : ""}</p>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-[760px] w-full text-sm">
+            <table className="min-w-[880px] w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 border-b border-slate-100">
-                  <th className="px-3 py-2.5 w-[28%]">Activité</th>
-                  <th className="px-2 py-2.5 w-[11%]">Adulte</th>
-                  <th className="px-2 py-2.5 w-[11%]">Enfant</th>
-                  <th className="px-2 py-2.5 w-[11%]">Bébé</th>
+                  <th className="px-3 py-2.5 w-[22%]">Activité</th>
+                  <th className="px-2 py-2.5 w-[14%]">Jours dispo</th>
+                  <th className="px-2 py-2.5 w-[10%]">Adulte</th>
+                  <th className="px-2 py-2.5 w-[10%]">Enfant</th>
+                  <th className="px-2 py-2.5 w-[10%]">Bébé</th>
                   <th className="px-3 py-2.5">Notes</th>
-                  <th className="px-2 py-2.5 w-[10%] text-center">Sync</th>
+                  <th className="px-2 py-2.5 w-[8%] text-center">Sync</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {items.map((a) => (
+                {items.map((a) => {
+                  const tarifLines = getActivityTarifListLines(a);
+                  return (
                   <tr key={a.id} className="hover:bg-slate-50/60">
                     <td className="px-3 py-2 align-top">
                       <div className="font-medium text-slate-900">{a.name}</div>
@@ -274,10 +317,28 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
                         <span className="text-[10px] font-medium text-amber-700">Cache seulement</span>
                       )}
                     </td>
+                    <td className="px-2 py-2 align-top text-xs text-slate-700 leading-snug max-w-[10rem]">
+                      {formatActivityAvailableDaysSummary(a)}
+                    </td>
+                    {tarifLines ? (
+                      <td colSpan={3} className="px-2 py-2 align-top text-xs text-slate-800 leading-snug">
+                        <ul className="list-disc pl-4 space-y-0.5">
+                          {tarifLines.map((line, idx) => (
+                            <li key={`${a.id}-${idx}`}>{line}</li>
+                          ))}
+                        </ul>
+                        <p className="mt-1.5 text-[10px] text-slate-500">
+                          Tarifs du moteur de devis (colonnes base à 0) — modifiez les montants dans le code ou
+                          renseignez des prix en base depuis Activités.
+                        </p>
+                      </td>
+                    ) : (
+                      <>
                     <td className="px-2 py-1.5 align-top">
                       <ActivityPriceCell
                         activity={a}
                         field="priceAdult"
+                        fieldLabel="Prix adulte"
                         disabled={!canEdit}
                         patchActivity={patchActivity}
                         scheduleSave={scheduleSave}
@@ -287,6 +348,7 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
                       <ActivityPriceCell
                         activity={a}
                         field="priceChild"
+                        fieldLabel="Prix enfant"
                         disabled={!canEdit}
                         patchActivity={patchActivity}
                         scheduleSave={scheduleSave}
@@ -296,18 +358,20 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
                       <ActivityPriceCell
                         activity={a}
                         field="priceBaby"
+                        fieldLabel="Prix bébé"
                         disabled={!canEdit}
                         patchActivity={patchActivity}
                         scheduleSave={scheduleSave}
                       />
                     </td>
+                      </>
+                    )}
                     <td className="px-3 py-1.5 align-top">
-                      <textarea
-                        rows={2}
+                      <ActivityNotesCell
+                        activity={a}
                         disabled={!canEdit}
-                        className="w-full min-w-[12rem] rounded-lg border border-slate-200 px-2 py-1.5 text-slate-800 text-xs leading-snug resize-y min-h-[2.75rem] disabled:opacity-60"
-                        value={a.notes ?? ""}
-                        onChange={(e) => handleNotesChange(a, e.target.value)}
+                        patchActivity={patchActivity}
+                        scheduleSave={scheduleSave}
                       />
                     </td>
                     <td className="px-2 py-2 align-middle text-center">
@@ -318,7 +382,8 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -326,7 +391,7 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
       ))}
 
       <p className="text-xs text-slate-500">
-        Les prix et notes sont enregistrés dans le cache tout de suite ; la base Supabase est mise à jour automatiquement après une courte pause (debounce). La page Activités utilise les mêmes données.
+        Après modification d’un prix ou des notes, une <strong>fenêtre de confirmation</strong> s’affiche à la sortie du champ ; une fois validé, le cache est mis à jour puis Supabase après une courte pause. Les jours dispo reprennent la même grille que l’onglet Activités (Dim = premier).
       </p>
     </div>
   );

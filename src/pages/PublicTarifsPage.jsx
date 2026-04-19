@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY, CATEGORIES } from "../constants";
 import { logger } from "../utils/logger";
+import { getActivityTarifListLines } from "../utils/activityHelpers";
+import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay";
 
 /** Même jeu de colonnes que l’intranet (App.jsx) pour les prix / catégorie. */
 const SELECT_COLUMNS =
-  "id, name, category, price_adult, price_child, price_baby, notes, currency, site_key";
+  "id, name, category, price_adult, price_child, price_baby, notes, currency, site_key, available_days";
 
 /**
  * Même logique que ActivitiesPage : une activité n’est rangée que dans une clé
@@ -264,20 +266,36 @@ export function PublicTarifsPage() {
               <p className="text-xs text-slate-500">{items.length} activité{items.length !== 1 ? "s" : ""}</p>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-[640px] w-full text-sm">
+              <table className="min-w-[760px] w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 border-b border-slate-100">
                     <th className="px-3 py-2.5">Activité</th>
-                    <th className="px-2 py-2.5 w-[14%]">Adulte</th>
-                    <th className="px-2 py-2.5 w-[14%]">Enfant</th>
-                    <th className="px-2 py-2.5 w-[14%]">Bébé</th>
+                    <th className="px-2 py-2.5 w-[14%]">Jours dispo</th>
+                    <th className="px-2 py-2.5 w-[12%]">Adulte</th>
+                    <th className="px-2 py-2.5 w-[12%]">Enfant</th>
+                    <th className="px-2 py-2.5 w-[12%]">Bébé</th>
                     <th className="px-3 py-2.5">Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {items.map((r) => (
+                  {items.map((r) => {
+                    const lines = getActivityTarifListLines(r);
+                    return (
                     <tr key={r.id} className="hover:bg-slate-50/60">
                       <td className="px-3 py-2.5 font-medium text-slate-900">{r.name}</td>
+                      <td className="px-2 py-2 text-xs text-slate-700 leading-snug max-w-[10rem]">
+                        {formatActivityAvailableDaysSummary(r)}
+                      </td>
+                      {lines ? (
+                        <td colSpan={3} className="px-2 py-2 text-xs text-slate-800 leading-snug">
+                          <ul className="list-disc pl-4 space-y-0.5">
+                            {lines.map((line, idx) => (
+                              <li key={`${r.id}-${idx}`}>{line}</li>
+                            ))}
+                          </ul>
+                        </td>
+                      ) : (
+                        <>
                       <td className="px-2 py-2 text-slate-800 tabular-nums">
                         {formatMoney(r.price_adult, r.currency)}
                       </td>
@@ -287,11 +305,14 @@ export function PublicTarifsPage() {
                       <td className="px-2 py-2 text-slate-800 tabular-nums">
                         {formatMoney(r.price_baby, r.currency)}
                       </td>
+                        </>
+                      )}
                       <td className="px-3 py-2 text-xs text-slate-600 max-w-xs whitespace-pre-wrap">
                         {r.notes ? String(r.notes) : "—"}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

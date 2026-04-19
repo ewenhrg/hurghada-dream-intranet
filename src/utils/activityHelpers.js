@@ -1,3 +1,5 @@
+import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
+
 // Helper pour vérifier si une activité utilise les champs buggy
 export function isBuggyActivity(activityName) {
   if (!activityName) return false;
@@ -117,4 +119,117 @@ export function getLouxorPrivatifPrices() {
     pax5: 525,  // 5 personnes
     pax6: 560,  // 6 personnes
   };
+}
+
+function readStoredListPrices(activityLike) {
+  const adult = Number(activityLike?.priceAdult ?? activityLike?.price_adult ?? NaN);
+  const child = Number(activityLike?.priceChild ?? activityLike?.price_child ?? NaN);
+  const baby = Number(activityLike?.priceBaby ?? activityLike?.price_baby ?? NaN);
+  return {
+    adult: Number.isFinite(adult) ? adult : 0,
+    child: Number.isFinite(child) ? child : 0,
+    baby: Number.isFinite(baby) ? baby : 0,
+  };
+}
+
+/**
+ * Lignes d’aide tarifaire pour listes (Maj prix, /tarifs) quand les prix adulte/enfant/bébé en base sont à 0
+ * mais que le devis utilise une grille codée (buggy, speed boat, etc.) — aligné sur useActivityPriceCalculator.
+ * @returns {string[]|null} null = afficher les colonnes prix classiques
+ */
+export function getActivityTarifListLines(activityLike) {
+  const name = activityLike?.name || "";
+  const { adult, child, baby } = readStoredListPrices(activityLike);
+  if (adult > 0 || child > 0 || baby > 0) return null;
+
+  if (isSpeedBoatActivity(name)) {
+    const extraLines = SPEED_BOAT_EXTRAS.filter((e) => e.id).map(
+      (e) => `${e.label} : +${e.priceAdult} € / adulte · +${e.priceChild} € / enfant`
+    );
+    return [
+      "Base 1–2 adultes : 145 €",
+      "Au-delà de 2 adultes : +20 € / adulte supplémentaire",
+      "Enfant : +10 € / enfant",
+      "Option dauphin : +20 €",
+      "Extras (au devis) :",
+      ...extraLines,
+    ];
+  }
+
+  if (isBuggyActivity(name)) {
+    const p = getBuggyPrices(name);
+    if (p.simple <= 0 && p.family <= 0) return null;
+    return [`Buggy simple : ${p.simple} €`, `Buggy family : ${p.family} €`];
+  }
+
+  if (isMotoCrossActivity(name)) {
+    const p = getMotoCrossPrices();
+    return [
+      `Yamaha 250 : ${p.yamaha250} € / moto`,
+      `KTM 640 : ${p.ktm640} € / moto`,
+      `KTM 530 : ${p.ktm530} € / moto`,
+    ];
+  }
+
+  if (isCairePrivatifActivity(name)) {
+    const p = getCairePrivatifPrices();
+    return [`4 personnes : ${p.pax4} €`, `5 personnes : ${p.pax5} €`, `6 personnes : ${p.pax6} €`];
+  }
+
+  if (isLouxorPrivatifActivity(name)) {
+    const p = getLouxorPrivatifPrices();
+    return [`4 personnes : ${p.pax4} €`, `5 personnes : ${p.pax5} €`, `6 personnes : ${p.pax6} €`];
+  }
+
+  if (isZeroTracasHorsZoneActivity(name)) {
+    const p = getZeroTracasHorsZonePrices();
+    return [
+      "Grille Zero Tracas Hors zone (prix unitaire) :",
+      `Transfert + visa + SIM : ${p.transfertVisaSim} €`,
+      `Transfert + visa : ${p.transfertVisa} €`,
+      `Transfert 3 pers. : ${p.transfert3Personnes} €`,
+      `Transfert +3 pers. : ${p.transfertPlus3Personnes} €`,
+      `Visa + SIM : ${p.visaSim} €`,
+      `Visa seul : ${p.visaSeul} €`,
+    ];
+  }
+
+  if (isZeroTracasActivity(name)) {
+    const p = getZeroTracasPrices();
+    return [
+      "Grille Zero Tracas (prix unitaire) :",
+      `Transfert + visa + SIM : ${p.transfertVisaSim} €`,
+      `Transfert + visa : ${p.transfertVisa} €`,
+      `Transfert 3 pers. : ${p.transfert3Personnes} €`,
+      `Transfert +3 pers. : ${p.transfertPlus3Personnes} €`,
+      `Visa + SIM : ${p.visaSim} €`,
+      `Visa seul : ${p.visaSeul} €`,
+    ];
+  }
+
+  const n = name.toLowerCase();
+  if (n.includes("hurghada") && (n.includes("le caire") || n.includes("louxor"))) {
+    return ["Aller simple : 150 € / groupe", "Aller retour : 300 € / groupe"];
+  }
+
+  if (n.includes("soma bay") && (n.includes("aeroport") || n.includes("aerport")) && n.includes("7")) {
+    return ["Aller simple : 40 € / groupe", "Aller retour : 80 € / groupe"];
+  }
+  if (n.includes("soma bay") && (n.includes("aeroport") || n.includes("aerport")) && n.includes("4")) {
+    return ["Aller simple : 35 € / groupe", "Aller retour : 70 € / groupe"];
+  }
+  if (n.includes("hors zone") && (n.includes("aeroport") || n.includes("aerport")) && n.includes("7")) {
+    return ["Aller simple : 30 € / groupe", "Aller retour : 60 € / groupe"];
+  }
+  if (n.includes("hors zone") && (n.includes("aeroport") || n.includes("aerport")) && n.includes("4")) {
+    return ["Aller simple : 25 € / groupe", "Aller retour : 50 € / groupe"];
+  }
+  if (n.includes("aeroport") && n.includes("7")) {
+    return ["Aller simple : 25 € / groupe", "Aller retour : 50 € / groupe"];
+  }
+  if (n.includes("aeroport") && n.includes("4")) {
+    return ["Aller simple : 20 € / groupe", "Aller retour : 40 € / groupe"];
+  }
+
+  return null;
 }
