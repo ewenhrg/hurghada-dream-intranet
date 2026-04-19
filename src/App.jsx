@@ -104,6 +104,9 @@ const SituationPage = lazyWithRetry(() => import("./pages/SituationPage").then(m
 const StopSalePage = lazyWithRetry(() => import("./pages/StopSalePage").then(module => ({ default: module.StopSalePage })));
 const DocumentsPage = lazyWithRetry(() => import("./pages/DocumentsPage").then(module => ({ default: module.DocumentsPage })));
 const RequestPage = lazyWithRetry(() => import("./pages/RequestPage").then(module => ({ default: module.RequestPage })));
+const EwenDashboardPage = lazyWithRetry(() =>
+  import("./pages/EwenDashboardPage").then((module) => ({ default: module.EwenDashboardPage }))
+);
 
 export default function App() {
   const location = useLocation();
@@ -115,6 +118,9 @@ export default function App() {
   const [quoteDraft, setQuoteDraft] = useState(() => loadLS(LS_KEYS.quoteForm, null));
   const [remoteEnabled, setRemoteEnabled] = useState(false);
   const [user, setUser] = useState(null);
+  /** État brut Supabase Presence (canal partagé « qui est en ligne »). */
+  const [presenceState, setPresenceState] = useState({});
+  const intranetPresenceChannelRef = useRef(null);
   const [usedDates, setUsedDates] = useState([]);
   const [showDatesModal, setShowDatesModal] = useState(false);
   const { language, setLanguage } = useLanguage();
@@ -161,6 +167,60 @@ export default function App() {
     setTab("devis");
     setOk(false);
   }, []);
+
+  /** Présence en ligne : chaque utilisateur connecté rejoint le même canal Realtime (visible sur le tableau de bord Ewen). */
+  useEffect(() => {
+    const clearChannel = () => {
+      const ch = intranetPresenceChannelRef.current;
+      if (ch) {
+        supabase.removeChannel(ch).catch(() => {});
+        intranetPresenceChannelRef.current = null;
+      }
+    };
+
+    if (!ok || !user || !__SUPABASE_DEBUG__.isConfigured) {
+      setPresenceState({});
+      clearChannel();
+      return;
+    }
+
+    let tabId = sessionStorage.getItem("hd_presence_tab");
+    if (!tabId) {
+      tabId = uuid();
+      sessionStorage.setItem("hd_presence_tab", tabId);
+    }
+
+    const channel = supabase.channel("hd_intranet_presence", {
+      config: { presence: { key: tabId } },
+    });
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        setPresenceState(channel.presenceState());
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          const { error } = await channel.track({
+            name: user.name || "",
+            code: user.code != null ? String(user.code) : "",
+            id: user.id != null ? user.id : null,
+            online_at: Date.now(),
+          });
+          if (error) {
+            logger.warn("Présence intranet : échec du track", error);
+          }
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          logger.warn("Présence intranet : canal", status);
+        }
+      });
+
+    intranetPresenceChannelRef.current = channel;
+
+    return () => {
+      clearChannel();
+      setPresenceState({});
+    };
+  }, [ok, user?.code, user?.name, user?.id]);
 
   // fonction de synchronisation Supabase - mémoïsée avec useCallback et cache
   // Note: setActivities et setRemoteEnabled sont des setters stables de React, pas besoin de dépendances
@@ -817,6 +877,7 @@ export default function App() {
           import("./pages/ModificationsPage"),
           import("./pages/SituationPage"),
           import("./pages/UsersPage"),
+          import("./pages/EwenDashboardPage"),
         ]);
       } catch (error) {
         logger.warn("Préchargement des pages échoué", error);
@@ -1015,6 +1076,11 @@ export default function App() {
                     🏨 Hôtels
                   </Pill>
                 )}
+                {user?.name === "Ewen" && (
+                  <Pill active={tab === "ewen-dashboard"} onClick={() => setTab("ewen-dashboard")}>
+                    {t("nav.ewenDashboard")}
+                  </Pill>
+                )}
                 <Pill active={tab === "documents"} onClick={() => setTab("documents")}>
                   {t("nav.documents")}
                 </Pill>
@@ -1164,6 +1230,20 @@ export default function App() {
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <HotelsPage user={user} />
+                </Suspense>
+              </ErrorBoundary>
+            </Section>
+          )}
+
+          {tab === "ewen-dashboard" && user?.name === "Ewen" && (
+            <Section title={t("page.ewenDashboard.title")} subtitle={t("page.ewenDashboard.subtitle")}>
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>
+                  <EwenDashboardPage
+                    user={user}
+                    presenceState={presenceState}
+                    supabaseConfigured={__SUPABASE_DEBUG__.isConfigured}
+                  />
                 </Suspense>
               </ErrorBoundary>
             </Section>

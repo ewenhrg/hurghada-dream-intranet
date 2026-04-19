@@ -10,6 +10,7 @@ export const translations = {
     "nav.situation": "Situation",
     "nav.users": "Utilisateurs",
     "nav.documents": "Documents",
+    "nav.ewenDashboard": "Tableau de bord",
 
     // Header
     "header.title": "Hurghada Dream — Bureaux",
@@ -42,6 +43,8 @@ export const translations = {
     "page.users.subtitle": "Créez et gérez les utilisateurs avec leurs codes d'accès et permissions.",
     "page.documents.title": "Documents",
     "page.documents.subtitle": "Liens, fichiers et notes partagés.",
+    "page.ewenDashboard.title": "Tableau de bord (Ewen)",
+    "page.ewenDashboard.subtitle": "Indicateurs internes et présence en temps réel.",
 
     // QuotesPage
     "quotes.client": "Client",
@@ -85,6 +88,7 @@ export const translations = {
     "nav.situation": "Situation",
     "nav.users": "Users",
     "nav.documents": "Documents",
+    "nav.ewenDashboard": "Dashboard",
 
     // Header
     "header.title": "Hurghada Dream — Offices",
@@ -117,6 +121,8 @@ export const translations = {
     "page.users.subtitle": "Create and manage users with their access codes and permissions.",
     "page.documents.title": "Documents",
     "page.documents.subtitle": "Shared links, files and notes.",
+    "page.ewenDashboard.title": "Dashboard (Ewen)",
+    "page.ewenDashboard.subtitle": "Internal indicators and live presence.",
 
     // QuotesPage
     "quotes.client": "Client",
