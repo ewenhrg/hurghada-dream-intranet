@@ -19,6 +19,14 @@ import {
   stripLocalOnlyActivityForStorage,
 } from "../utils/activitiesBackup";
 
+/** ID numérique Postgres (BIGINT) pour les RPC / comparaisons. */
+function parsePositiveIntId(v) {
+  if (v == null || v === "") return NaN;
+  const n = typeof v === "number" ? v : Number(String(v).trim());
+  if (!Number.isFinite(n) || n <= 0) return NaN;
+  return Math.trunc(n);
+}
+
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDay, setSelectedDay] = useState("");
@@ -507,13 +515,13 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           } else {
             // Pas d'activité similaire, créer une nouvelle
             logger.log("🔄 Création dans Supabase:", supabaseData);
-            const result = await supabase.from("activities").insert(supabaseData);
+            const result = await supabase.from("activities").insert(supabaseData).select("id").single();
             data = result.data;
             error = result.error;
             
-            // Si création réussie, sauvegarder l'ID Supabase retourné
-            if (!error && data && data.length > 0 && data[0].id) {
-              const newSupabaseId = data[0].id;
+            // Si création réussie, sauvegarder l'ID Supabase retourné (.select requis sinon data est null)
+            if (!error && data && data.id != null) {
+              const newSupabaseId = data.id;
               activityData.supabase_id = newSupabaseId;
               // Mettre à jour l'activité dans le state avec le supabase_id
               next = next.map((a) => (a.id === activityData.id ? { ...a, supabase_id: newSupabaseId } : a));
@@ -1006,13 +1014,35 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       user: user?.name || "Utilisateur inconnu"
     });
     
-    if (!supabase || !activityToDelete?.supabase_id) {
-      logger.warn("⚠️ Suppression bloquée: pas de supabase_id ou Supabase non configuré", {
-        has_supabase: !!supabase,
-        has_supabase_id: !!activityToDelete?.supabase_id,
-        activity_name: activityName
-      });
-      toast.error("Suppression bloquée pour sécurité: activité non synchronisée Supabase.");
+    if (!supabase) {
+      toast.error("Supabase non disponible.");
+      return;
+    }
+
+    let activityDbId = parsePositiveIntId(activityToDelete.supabase_id);
+    if (!Number.isFinite(activityDbId)) {
+      const { data: rows, error: lookErr } = await supabase
+        .from("activities")
+        .select("id")
+        .eq("site_key", SITE_KEY)
+        .eq("name", activityToDelete.name?.trim() || "")
+        .eq("category", activityToDelete.category || "desert");
+      if (lookErr) {
+        logger.warn("Résolution id activité:", lookErr);
+      } else if (rows?.length === 1 && rows[0]?.id != null) {
+        activityDbId = parsePositiveIntId(rows[0].id);
+      } else if (rows && rows.length > 1) {
+        toast.error(
+          "Plusieurs activités identiques en base (même nom et catégorie). Renommez-en une ou utilisez « Vérifier » pour réparer les id."
+        );
+        return;
+      }
+    }
+
+    if (!Number.isFinite(activityDbId) || activityDbId <= 0) {
+      toast.error(
+        "Cette activité n’a pas d’identifiant Supabase valide (souvent après une création sans retour d’id). Utilisez « Vérifier » pour la lier à la base, ou supprimez-la du cache."
+      );
       return;
     }
 
@@ -1022,12 +1052,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     if (pin === null) return;
     if (!String(pin).trim()) {
       toast.error("PIN requis pour supprimer l’activité en base.");
-      return;
-    }
-
-    const activityDbId = Number(activityToDelete.supabase_id);
-    if (!Number.isFinite(activityDbId) || activityDbId <= 0) {
-      toast.error("ID Supabase invalide pour cette activité. Réessayez après « Vérifier » ou resynchronisation.");
       return;
     }
 
