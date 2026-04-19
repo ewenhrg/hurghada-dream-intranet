@@ -287,11 +287,16 @@ export function PublicTarifsPage() {
                         {formatActivityAvailableDaysSummary(r)}
                       </td>
                       {lines ? (
-                        <td colSpan={3} className="px-2 py-2 align-top">
-                          <div className="rounded-lg border border-indigo-200/90 bg-indigo-50/90 px-3 py-2.5 shadow-sm">
-                            <ul className="list-disc pl-5 space-y-1 text-sm font-medium text-slate-900 leading-relaxed marker:text-indigo-700">
+                        <td colSpan={3} className="px-2 py-2.5 align-top min-w-[16rem]">
+                          <div className="rounded-xl border-2 border-indigo-600 bg-amber-50 px-3 py-3 shadow-md ring-2 ring-amber-200/80">
+                            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-indigo-900">
+                              Grille tarifaire (plusieurs options)
+                            </p>
+                            <ul className="list-disc space-y-1.5 pl-5 text-[15px] sm:text-base font-semibold leading-relaxed text-neutral-950 marker:text-indigo-700">
                               {lines.map((line, idx) => (
-                                <li key={`${r.id}-${idx}`}>{line}</li>
+                                <li key={`${r.id}-${idx}`} className="pl-0.5">
+                                  {line}
+                                </li>
                               ))}
                             </ul>
                           </div>
