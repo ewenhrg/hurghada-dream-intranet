@@ -137,12 +137,38 @@ export function PublicClientDevisPage() {
         .eq("site_key", SITE_KEY)
         .order("name", { ascending: true });
 
-      if (fetchError) {
-        setError(fetchError.message || "Impossible de charger le catalogue.");
-        setActivities([]);
-      } else {
+      let finalRows = Array.isArray(data) ? data : [];
+      let finalError = fetchError || null;
+
+      const checks = [];
+      const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
+      if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
+        checks.push(
+          supabase
+            .from("activities")
+            .select(ACTIVITY_COLUMNS)
+            .eq("site_key", fallbackSiteKey)
+            .order("name", { ascending: true })
+        );
+      }
+      checks.push(supabase.from("activities").select(ACTIVITY_COLUMNS).order("name", { ascending: true }));
+
+      const checkedResults = await Promise.all(checks);
+      checkedResults.forEach((result) => {
+        if (!result?.error && Array.isArray(result?.data) && result.data.length > finalRows.length) {
+          finalRows = result.data;
+        }
+        if (result?.error && !finalError) {
+          finalError = result.error;
+        }
+      });
+
+      if (finalRows.length > 0) {
         setError("");
-        setActivities(Array.isArray(data) ? data : []);
+        setActivities(finalRows);
+      } else {
+        setError(finalError?.message || "Impossible de charger le catalogue.");
+        setActivities([]);
       }
     } catch (err) {
       logger.error("PublicClientDevisPage fetch activities:", err);
