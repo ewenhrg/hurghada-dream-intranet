@@ -7,8 +7,8 @@ import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publi
 import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "../utils/publicCatalogPricing";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 
-const ACTIVITY_COLUMNS =
-  "id, name, category, price_adult, price_child, price_baby, babies_forbidden, currency, notes, description, catalog_image_urls";
+/** `*` : toutes les colonnes présentes en base (évite erreur si `babies_forbidden` n’est pas encore migrée). */
+const ACTIVITY_COLUMNS = "*";
 
 function toNumber(value) {
   const parsed = Number(value);

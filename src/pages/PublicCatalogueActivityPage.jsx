@@ -20,11 +20,9 @@ import {
 import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "../utils/publicCatalogPricing";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 
-/** Repli sans `catalog_image_urls` : inclut `description` dès que la colonne existe (script SQL activités). */
-const ACTIVITY_COLUMNS_BASE =
-  "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, babies_forbidden, currency, available_days, notes, description";
-/** Inclut aussi la galerie photos catalogue (migration `catalog_image_urls`). */
-const ACTIVITY_COLUMNS_FULL = `${ACTIVITY_COLUMNS_BASE}, catalog_image_urls`;
+/** `*` : toutes les colonnes présentes en base (évite erreur si une migration manque encore). */
+const ACTIVITY_COLUMNS_BASE = "*";
+const ACTIVITY_COLUMNS_FULL = "*";
 
 
 function toNumber(value) {

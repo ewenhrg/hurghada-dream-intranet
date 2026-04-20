@@ -206,8 +206,8 @@ export default function App() {
       }
 
       // Récupérer toutes les activités - une ligne par activité (pas de déduplication pour ne rien perdre)
-      const selectColumns =
-        "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, babies_forbidden, currency, available_days, notes, description, catalog_image_urls, transfers";
+      /** `*` évite une erreur PostgREST si une colonne (ex. babies_forbidden) n’est pas encore migrée ; elle apparaît dès qu’elle existe en base. */
+      const selectColumns = "*";
       const mapActivitiesFromRows = (rows) =>
         rows.map((row) => {
           const supabaseId = row.id;
