@@ -9,8 +9,12 @@ import { buildSelectableDateOptions, normalizeAvailableDays } from "../utils/act
 import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 
-const ACTIVITY_COLUMNS =
-  "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes, description, catalog_image_urls";
+/** Colonnes toujours présentes sur `activities` (schéma de base). */
+const ACTIVITY_COLUMNS_BASE =
+  "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes";
+/** Inclut texte + galerie catalogue (après migration SQL). */
+const ACTIVITY_COLUMNS_FULL = `${ACTIVITY_COLUMNS_BASE}, description, catalog_image_urls`;
+
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -380,13 +384,36 @@ export function PublicCatalogueActivityPage({ activityId }) {
       setLoadError("");
 
       try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from("activities")
-          .select(ACTIVITY_COLUMNS)
+          .select(ACTIVITY_COLUMNS_FULL)
           .eq("id", activityId)
           .maybeSingle();
 
         if (cancelled) return;
+
+        if (error?.code === "PGRST116") {
+          setLoadError("Cette activité n'existe pas ou n'est plus disponible.");
+          setActivity(null);
+          return;
+        }
+
+        if (error || !data) {
+          logger.warn(
+            "PublicCatalogueActivityPage : select complet indisponible ou échoué, nouvel essai sans description/catalog_image_urls",
+            error
+          );
+          const retry = await supabase.from("activities").select(ACTIVITY_COLUMNS_BASE).eq("id", activityId).maybeSingle();
+          if (cancelled) return;
+          data = retry.data;
+          error = retry.error;
+        }
+
+        if (error?.code === "PGRST116") {
+          setLoadError("Cette activité n'existe pas ou n'est plus disponible.");
+          setActivity(null);
+          return;
+        }
 
         if (error || !data) {
           setLoadError(error?.message || "Cette activité n'existe pas ou n'est plus disponible.");
