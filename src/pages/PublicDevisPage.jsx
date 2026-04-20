@@ -2,6 +2,16 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, getQuotesRealtimeSiteKeyFilter } from "../constants";
 import { logger } from "../utils/logger";
+import { toast } from "../utils/toast.js";
+import { PrimaryBtn } from "../components/ui";
+import {
+  buildQuoteDraftFromPublicViewModel,
+  HD_PUBLIC_QUOTE_TO_DRAFT_EVENT,
+} from "../utils/publicQuoteToDraft";
+
+/** Les lignes plus anciennes sont supprimées en base (affichage côté « Devis public »). */
+const PUBLIC_QUOTE_TTL_MS = 24 * 60 * 60 * 1000;
+const PUBLIC_QUOTES_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 
 function parseItems(rawItems) {
   if (Array.isArray(rawItems)) return rawItems;
@@ -64,7 +74,7 @@ export function PublicDevisPage() {
     }
     setError("");
     try {
-      const { data, err } = await supabase
+      const { data, error: loadError } = await supabase
         .from("public_quotes")
         .select(
           "id, client_name, client_phone, client_email, client_hotel, notes, total, currency, items, created_at"
@@ -73,9 +83,9 @@ export function PublicDevisPage() {
         .order("created_at", { ascending: false })
         .limit(500);
 
-      if (err) {
-        logger.error("PublicDevisPage load:", err);
-        setError(err.message || "Impossible de charger les devis publics.");
+      if (loadError) {
+        logger.error("PublicDevisPage load:", loadError);
+        setError(loadError.message || "Impossible de charger les devis publics.");
         setRows([]);
         return;
       }
@@ -89,9 +99,47 @@ export function PublicDevisPage() {
     }
   }, []);
 
+  const deleteExpiredPublicQuotes = useCallback(async () => {
+    if (!supabase) return;
+    const cutoff = new Date(Date.now() - PUBLIC_QUOTE_TTL_MS).toISOString();
+    const { error } = await supabase.from("public_quotes").delete().eq("site_key", SITE_KEY).lt("created_at", cutoff);
+    if (error) {
+      logger.warn("PublicDevisPage — suppression des demandes > 24h :", error);
+    }
+  }, []);
+
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      await deleteExpiredPublicQuotes();
+      if (!cancelled) {
+        await load();
+      }
+    };
+
+    bootstrap();
+    const intervalId = setInterval(async () => {
+      await deleteExpiredPublicQuotes();
+      if (!cancelled) {
+        await load();
+      }
+    }, PUBLIC_QUOTES_CLEANUP_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [load, deleteExpiredPublicQuotes]);
+
+  const handleStartDevis = useCallback(
+    (quote) => {
+      const draft = buildQuoteDraftFromPublicViewModel(quote);
+      window.dispatchEvent(new CustomEvent(HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, { detail: draft }));
+      toast.success("Ouverture de l’onglet Devis — pensez à vérifier les infos avant validation.");
+    },
+    []
+  );
 
   useEffect(() => {
     if (!supabase) return;
@@ -147,13 +195,26 @@ export function PublicDevisPage() {
 
   return (
     <div className="space-y-4">
+      <p className="rounded-xl border border-slate-200 bg-slate-50/90 px-4 py-3 text-xs font-medium text-slate-700">
+        Les demandes de plus de <strong>24 h</strong> sont supprimées automatiquement. Le bouton « Commencer le
+        devis » ouvre l’onglet Devis avec le formulaire prérempli — la demande reste affichée ici.
+      </p>
       {rows.map((quote) => (
         <article key={quote.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-lg font-bold text-slate-900">{quote.client?.name || "Client sans nom"}</h3>
-            <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-teal-900">
-              Catalogue public
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-lg font-bold text-slate-900 min-w-0">{quote.client?.name || "Client sans nom"}</h3>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <PrimaryBtn
+                type="button"
+                className="!min-h-0 !min-w-0 !text-sm !px-4 !py-2 whitespace-nowrap bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 border-0 shadow-md shadow-indigo-500/20"
+                onClick={() => handleStartDevis(quote)}
+              >
+                Commencer le devis
+              </PrimaryBtn>
+              <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-teal-900">
+                Catalogue public
+              </span>
+            </div>
           </div>
 
           <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">

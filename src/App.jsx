@@ -44,6 +44,7 @@ import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
 import { mergeActivitiesWhenRemoteShrunk, stripLocalOnlyActivityForStorage } from "./utils/activitiesBackup";
 import { normalizeCatalogImageUrlsFromDb } from "./utils/catalogContent";
+import { HD_PUBLIC_QUOTE_TO_DRAFT_EVENT } from "./utils/publicQuoteToDraft";
 
 export default function App() {
   const location = useLocation();
@@ -119,6 +120,19 @@ export default function App() {
     setQuoteDraft(null);
     setTab("devis");
     setOk(false);
+  }, []);
+
+  /** Onglet Devis : préremplir le formulaire depuis une demande catalogue (événement émis par PublicDevisPage). */
+  useEffect(() => {
+    const handler = (e) => {
+      const draft = e?.detail;
+      if (!draft || typeof draft !== "object") return;
+      setQuoteDraft(draft);
+      saveLS(LS_KEYS.quoteForm, draft);
+      setTab("devis");
+    };
+    window.addEventListener(HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, handler);
+    return () => window.removeEventListener(HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, handler);
   }, []);
 
   /** Présence en ligne : chaque utilisateur connecté rejoint le même canal Realtime (visible sur le tableau de bord Ewen). */
