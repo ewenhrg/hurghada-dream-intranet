@@ -4,8 +4,11 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
+import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay";
+import { buildSelectableDateOptions, normalizeAvailableDays } from "../utils/activityAvailableDates";
 
-const ACTIVITY_COLUMNS = "id, name, category, price_adult, price_child, price_baby, currency, notes";
+const ACTIVITY_COLUMNS =
+  "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes";
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -64,6 +67,15 @@ function proseFromNotes(notes) {
   const lines = String(notes).split(/\r?\n/);
   const kept = lines.filter((line) => !/^\s*[-•*]\s+/.test(line.trim()));
   return kept.join("\n").trim();
+}
+
+function buildLineTotal(activity, pax) {
+  if (!activity) return 0;
+  return (
+    toNumber(pax.adults) * toNumber(activity.price_adult) +
+    toNumber(pax.children) * toNumber(activity.price_child) +
+    toNumber(pax.babies) * toNumber(activity.price_baby)
+  );
 }
 
 function IconHeart({ className }) {
@@ -133,60 +145,133 @@ function IconImages({ className }) {
   );
 }
 
+function ParticipantSelect({ Icon, label, value, onChange, min, max }) {
+  const options = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2">
+        <Icon className="h-5 w-5 text-gray-600" />
+      </span>
+      <IconChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+      <select
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label={label}
+        className="w-full appearance-none rounded-xl border border-gray-300 bg-white py-3 pl-12 pr-10 text-sm font-medium text-gray-900 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+      >
+        {options.map((n) => (
+          <option key={n} value={n}>
+            {n} {label}
+            {n > 1 ? "s" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function BookingCardShell({
   activity,
   adults,
   setAdults,
+  children: childrenCount,
+  setChildren,
+  babies,
+  setBabies,
   date,
   setDate,
+  dateOptions,
   lineTotal,
   canAdd,
   onAdd,
   dateError,
+  daysSummary,
+  noDatesConfigured,
 }) {
   const currency = activity.currency || "EUR";
+  const ageChild = String(activity.age_child || "").trim();
+  const ageBaby = String(activity.age_baby || "").trim();
+  const babyPriceZero = toNumber(activity.price_baby) === 0;
+
   return (
     <div className="space-y-3 md:space-y-4">
       <div className="border-b border-gray-200 pb-3 md:pb-4">
-        <p className="mb-1 text-xs text-gray-600">À partir de</p>
+        <p className="mb-1 text-xs text-gray-600">À partir de (adulte)</p>
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-bold text-gray-900 md:text-2xl">
             {formatMoney(activity.price_adult, currency)}
           </span>
         </div>
+        <div className="mt-2 space-y-0.5 text-xs text-gray-600">
+          <p>
+            Enfant{ageChild ? ` (${ageChild})` : ""} : {formatMoney(activity.price_child, currency)}
+          </p>
+          <p>
+            Bébé{ageBaby ? ` (${ageBaby})` : ""} :{" "}
+            {babyPriceZero ? "gratuit ou selon grille intranet" : formatMoney(activity.price_baby, currency)}
+          </p>
+        </div>
       </div>
 
-      <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2">
-          <IconUsers className="h-5 w-5 text-gray-600" />
-        </span>
-        <IconChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-        <select
-          value={adults}
-          onChange={(e) => setAdults(Number(e.target.value))}
-          className="w-full appearance-none rounded-xl border border-gray-300 bg-white py-3 pl-12 pr-10 text-sm font-medium text-gray-900 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-        >
-          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-            <option key={n} value={n}>
-              {n} adulte{n > 1 ? "s" : ""}
-            </option>
-          ))}
-        </select>
+      <ParticipantSelect
+        Icon={IconUsers}
+        label="adulte"
+        value={adults}
+        onChange={setAdults}
+        min={1}
+        max={10}
+      />
+      <div>
+        <ParticipantSelect
+          Icon={IconUsers}
+          label="enfant"
+          value={childrenCount}
+          onChange={setChildren}
+          min={0}
+          max={10}
+        />
+        {ageChild ? <p className="mt-1.5 text-xs text-gray-500">Tranche d&apos;âge (intranet) : {ageChild}</p> : null}
+      </div>
+      <div>
+        <ParticipantSelect
+          Icon={IconUsers}
+          label="bébé"
+          value={babies}
+          onChange={setBabies}
+          min={0}
+          max={10}
+        />
+        {ageBaby ? <p className="mt-1.5 text-xs text-gray-500">Tranche d&apos;âge (intranet) : {ageBaby}</p> : null}
       </div>
 
-      <p className="-mt-2 text-xs text-green-600">Gratuit pour les moins de 6 ans</p>
+      {babyPriceZero ? (
+        <p className="text-xs text-green-700">Tarif bébé à 0 € dans l&apos;intranet — les bébés ne sont pas facturés sur ce tarif.</p>
+      ) : null}
+
+      {daysSummary ? <p className="text-xs text-gray-500">Jours ouverts : {daysSummary}</p> : null}
 
       <div className="relative">
         <span className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2">
           <IconCalendar className="h-5 w-5 text-gray-600" />
         </span>
-        <input
-          type="date"
+        <IconChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+        <select
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-12 pr-4 text-sm font-medium text-gray-900 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 [color-scheme:light]"
-        />
+          className="w-full appearance-none rounded-xl border border-gray-300 bg-white py-3 pl-12 pr-10 text-sm font-medium text-gray-900 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:bg-gray-100"
+          disabled={noDatesConfigured}
+        >
+          <option value="">{noDatesConfigured ? "Aucune date en ligne" : "Sélectionner une date"}</option>
+          {dateOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
+      {noDatesConfigured ? (
+        <p className="text-sm text-amber-800">Aucun jour n&apos;est coché pour cette activité dans l&apos;intranet. Écrivez-nous sur WhatsApp pour réserver.</p>
+      ) : null}
 
       <div className="border-t border-gray-200 pt-4">
         <div className="mb-3 flex items-center justify-between">
@@ -220,6 +305,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const [loading, setLoading] = useState(true);
 
   const [adults, setAdults] = useState(1);
+  const [childCount, setChildCount] = useState(0);
+  const [babyCount, setBabyCount] = useState(0);
   const [date, setDate] = useState("");
   const [galleryIndex, setGalleryIndex] = useState(0);
   const carouselRef = useRef(null);
@@ -229,10 +316,24 @@ export function PublicCatalogueActivityPage({ activityId }) {
     [activity]
   );
 
-  const lineTotal = useMemo(() => {
-    if (!activity) return 0;
-    return toNumber(adults) * toNumber(activity.price_adult);
-  }, [activity, adults]);
+  const normalizedAvailableDays = useMemo(
+    () => (activity ? normalizeAvailableDays(activity.available_days) : [true, true, true, true, true, true, true]),
+    [activity]
+  );
+
+  const dateOptions = useMemo(
+    () => (activity ? buildSelectableDateOptions(normalizedAvailableDays) : []),
+    [activity, normalizedAvailableDays]
+  );
+
+  const daysSummary = useMemo(() => (activity ? formatActivityAvailableDaysSummary(activity) : ""), [activity]);
+
+  const noDatesConfigured = Boolean(activity) && dateOptions.length === 0;
+
+  const lineTotal = useMemo(
+    () => buildLineTotal(activity, { adults, children: childCount, babies: babyCount }),
+    [activity, adults, childCount, babyCount]
+  );
 
   const cover = getCategoryCover(categoryKey);
   const label = getCategoryLabel(categoryKey);
@@ -249,8 +350,27 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const prose = activity ? proseFromNotes(activity.notes) : "";
   const bulletPoints = activity ? extractBulletLines(activity.notes) : [];
 
-  const canAddToCart = Boolean(date);
-  const showDateHint = !date;
+  const canAddToCart = Boolean(date) && !noDatesConfigured;
+  const showDateHint = !date && !noDatesConfigured;
+
+  const prevActivityIdRef = useRef(null);
+  useEffect(() => {
+    if (prevActivityIdRef.current !== null && prevActivityIdRef.current !== activityId) {
+      setDate("");
+      setAdults(1);
+      setChildCount(0);
+      setBabyCount(0);
+    }
+    prevActivityIdRef.current = activityId;
+  }, [activityId]);
+
+  useEffect(() => {
+    if (dateOptions.length === 0) {
+      if (date) setDate("");
+      return;
+    }
+    if (date && !dateOptions.some((o) => o.value === date)) setDate("");
+  }, [date, dateOptions]);
 
   useEffect(() => {
     let cancelled = false;
@@ -357,8 +477,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
       activityId: String(activity.id),
       date,
       adults: Math.max(0, toNumber(adults)),
-      children: 0,
-      babies: 0,
+      children: Math.max(0, toNumber(childCount)),
+      babies: Math.max(0, toNumber(babyCount)),
     };
     savePublicCatalogueCart([...prev, line]);
     navigate("/catalogue");
@@ -560,12 +680,19 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   activity={activity}
                   adults={adults}
                   setAdults={setAdults}
+                  children={childCount}
+                  setChildren={setChildCount}
+                  babies={babyCount}
+                  setBabies={setBabyCount}
                   date={date}
                   setDate={setDate}
+                  dateOptions={dateOptions}
                   lineTotal={lineTotal}
                   canAdd={canAddToCart}
                   onAdd={appendToCartAndReturn}
                   dateError={showDateHint}
+                  daysSummary={daysSummary}
+                  noDatesConfigured={noDatesConfigured}
                 />
               </div>
             </div>
@@ -580,12 +707,19 @@ export function PublicCatalogueActivityPage({ activityId }) {
               activity={activity}
               adults={adults}
               setAdults={setAdults}
+              children={childCount}
+              setChildren={setChildCount}
+              babies={babyCount}
+              setBabies={setBabyCount}
               date={date}
               setDate={setDate}
+              dateOptions={dateOptions}
               lineTotal={lineTotal}
               canAdd={canAddToCart}
               onAdd={appendToCartAndReturn}
               dateError={showDateHint}
+              daysSummary={daysSummary}
+              noDatesConfigured={noDatesConfigured}
             />
           </div>
         </div>
