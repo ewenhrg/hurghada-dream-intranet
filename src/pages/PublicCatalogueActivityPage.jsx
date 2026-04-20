@@ -76,14 +76,6 @@ function extractBulletLines(notes) {
     .filter(Boolean);
 }
 
-function IconHeart({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M2 9.5a5.5 5.5 0 0110.591-3.676.56.56 0 00.818 0A5.49 5.49 0 0122 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 01-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5z" />
-    </svg>
-  );
-}
-
 function IconShare({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -929,13 +921,6 @@ export function PublicCatalogueActivityPage({ activityId }) {
             <div className="absolute right-3 top-1/2 flex -translate-y-1/2 flex-col gap-2">
               <button
                 type="button"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur-sm transition active:scale-95"
-                aria-label="Ajouter aux favoris"
-              >
-                <IconHeart className="h-5 w-5 text-gray-700" />
-              </button>
-              <button
-                type="button"
                 onClick={() => void sharePage()}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur-sm transition active:scale-95"
                 aria-label="Partager"
@@ -972,13 +957,6 @@ export function PublicCatalogueActivityPage({ activityId }) {
               <span>{activity.name}</span>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-teal-50 hover:text-teal-900"
-              >
-                <IconHeart className="h-5 w-5" />
-                Favori
-              </button>
               <button
                 type="button"
                 onClick={() => void sharePage()}

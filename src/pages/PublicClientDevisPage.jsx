@@ -645,27 +645,6 @@ export function PublicClientDevisPage() {
                             <div className="h-full w-full transition group-hover:brightness-105" style={{ background: getCategoryCover(categoryKey) }} />
                           )}
                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/78 via-slate-900/20 to-transparent" />
-                          <div className="absolute right-3 top-3">
-                            <button
-                              type="button"
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/40 bg-white/95 text-rose-500 shadow-lg backdrop-blur-md transition hover:scale-105 hover:bg-white hover:text-rose-600"
-                              aria-label="Favori"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="h-[18px] w-[18px]"
-                              >
-                                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                              </svg>
-                            </button>
-                          </div>
                         </div>
                         <div className="flex grow flex-col bg-gradient-to-b from-white to-slate-50/30 p-5">
                           <h3 className="mb-2 line-clamp-2 font-display text-[1.07rem] font-extrabold leading-snug text-slate-950 transition-colors group-hover:text-teal-900 sm:text-[17px]">
