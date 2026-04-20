@@ -55,11 +55,6 @@ function getCategoryCover(categoryKey) {
   return covers[categoryKey] || covers.desert;
 }
 
-function getCategoryLabel(categoryKey) {
-  const category = CATEGORIES.find((entry) => entry.key === categoryKey);
-  return category?.label || "Activité";
-}
-
 export function PublicClientDevisPage() {
   const [activities, setActivities] = useState([]);
   const [search, setSearch] = useState("");
@@ -426,49 +421,89 @@ export function PublicClientDevisPage() {
                   {group.items.map((activity) => {
                     const categoryKey = normalizeCategory(activity.category);
                     const rating = (4.5 + (String(activity.id).length % 5) * 0.1).toFixed(1);
+                    const reviewCount = String(activity.id).length + 3;
                     return (
                       <article
                         key={activity.id}
-                        className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_12px_30px_-20px_rgba(15,23,42,0.45)]"
+                        className="service-card group relative flex h-full w-full cursor-default flex-col overflow-hidden rounded-[16px] bg-white shadow-[0_4px_20px_rgb(0,0,0,0.08)] transition-all duration-300 ease-out active:scale-[0.98] hover:shadow-[0_12px_40px_rgb(0,0,0,0.15)] sm:rounded-[18px] dark:bg-gray-900/80"
                       >
-                        <div className="relative h-36" style={{ background: getCategoryCover(categoryKey) }}>
-                          <span className="absolute left-3 top-3 rounded-full bg-white/85 px-2.5 py-1 text-[11px] font-bold text-slate-800">
-                            Populaire
-                          </span>
-                          <button
-                            type="button"
-                            className="absolute right-3 top-3 h-9 w-9 rounded-full bg-white/85 text-base text-slate-700"
-                            aria-label="Favori"
-                          >
-                            ♡
-                          </button>
-                          <span className="absolute bottom-3 left-3 rounded-full bg-black/35 px-2.5 py-1 text-[11px] font-semibold text-white">
-                            ⏱ Journée complète (8h)
-                          </span>
-                          <span className="absolute bottom-3 right-3 rounded-full bg-white/85 px-2 py-1 text-[10px] font-bold text-slate-800">
-                            {getCategoryLabel(categoryKey)}
-                          </span>
+                        <div
+                          className="relative h-48 overflow-hidden rounded-t-[16px] bg-gray-100 sm:h-44 sm:rounded-t-[18px] dark:bg-gray-800"
+                          style={{ background: getCategoryCover(categoryKey) }}
+                        >
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                          <div className="absolute right-3 top-3">
+                            <button
+                              type="button"
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-lg backdrop-blur-xl transition-all duration-200 hover:bg-white active:scale-95"
+                              aria-label="Ajouter aux favoris"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="h-[18px] w-[18px] text-gray-600"
+                              >
+                                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                              </svg>
+                            </button>
+                          </div>
+                          <div className="absolute left-3 top-3">
+                            <span className="rounded-full bg-[#34b3f7]/90 px-3 py-1.5 text-xs font-semibold tracking-wide text-white shadow-lg backdrop-blur-sm">
+                              Populaire
+                            </span>
+                          </div>
+                          <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-xl">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="h-3.5 w-3.5 shrink-0"
+                              aria-hidden
+                            >
+                              <circle cx="12" cy="12" r="10" />
+                              <path d="M12 6v6l4 2" />
+                            </svg>
+                            <span>Journée complète (8h)</span>
+                          </div>
                         </div>
-                        <div className="space-y-3 p-4">
-                          <h3 className="line-clamp-1 text-lg font-bold text-slate-900">{activity.name}</h3>
-                          <p className="line-clamp-2 text-sm text-slate-600">
-                            {activity.notes || "Excursion premium avec accompagnement et organisation complète."}
+                        <div className="flex grow flex-col p-4">
+                          <h3 className="mb-2 line-clamp-2 text-lg font-semibold leading-snug text-gray-900 transition-colors group-hover:text-[#34b3f7] sm:text-[17px] dark:text-white">
+                            {activity.name}
+                          </h3>
+                          <p className="mb-3 min-h-[72px] line-clamp-3 text-[15px] leading-relaxed text-gray-500 sm:line-clamp-2 sm:min-h-10 sm:text-sm dark:text-gray-400">
+                            {activity.notes ||
+                              "Excursion premium avec accompagnement et organisation complète."}
                           </p>
-                          <div className="flex items-end justify-between">
-                            <p className="text-sm font-semibold text-slate-600">
-                              ⭐ {rating} <span className="text-xs text-slate-400">({String(activity.id).length + 3})</span>
-                            </p>
-                            <div className="text-right">
-                              <p className="text-[11px] text-slate-500">à partir de</p>
-                              <p className="text-2xl font-black text-slate-900">
-                                {formatMoney(activity.price_adult, activity.currency || "EUR")}
-                              </p>
+                          <div className="mt-auto flex items-center justify-between gap-3 border-t border-gray-100 pt-3 dark:border-gray-800">
+                            <div className="flex items-center gap-1">
+                              <svg className="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{rating}</span>
+                              <span className="text-xs text-gray-400">({reviewCount})</span>
+                            </div>
+                            <div className="ml-auto flex flex-col items-end">
+                              <span className="text-[11px] font-medium text-gray-400">à partir de</span>
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-lg font-bold text-gray-900 dark:text-white">
+                                  {formatMoney(activity.price_adult, activity.currency || "EUR")}
+                                </span>
+                              </div>
                             </div>
                           </div>
                           <button
                             type="button"
                             onClick={() => addToCart(activity.id)}
-                            className="w-full rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                            className="mt-3 w-full rounded-xl bg-[#34b3f7] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#34b3f7]/90 active:scale-[0.98]"
                           >
                             Ajouter au panier
                           </button>
