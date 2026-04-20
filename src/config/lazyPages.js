@@ -43,6 +43,12 @@ export const RequestPage = lazyWithRetry(() =>
 export const PublicTarifsPage = lazyWithRetry(() =>
   import("../pages/PublicTarifsPage").then((m) => ({ default: m.PublicTarifsPage }))
 );
+export const PublicClientDevisPage = lazyWithRetry(() =>
+  import("../pages/PublicClientDevisPage").then((m) => ({ default: m.PublicClientDevisPage }))
+);
 export const EwenDashboardPage = lazyWithRetry(() =>
   import("../pages/EwenDashboardPage").then((module) => ({ default: module.EwenDashboardPage }))
+);
+export const PublicDevisPage = lazyWithRetry(() =>
+  import("../pages/PublicDevisPage").then((m) => ({ default: m.PublicDevisPage }))
 );
