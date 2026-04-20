@@ -6,6 +6,7 @@ import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { getActivityTarifListLines } from "../utils/activityHelpers";
 import { formatActivityAvailableDaysSummary, getActivityDayLabelsList } from "../utils/activityDaysDisplay";
+import { activitiesTableHasBabiesForbiddenColumn } from "../config/supabaseActivitiesSchema";
 
 function canEditActivityPrices(user) {
   if (!user) return false;
@@ -64,9 +65,11 @@ async function persistActivityRow(activity) {
     price_adult: Number(activity.priceAdult) || 0,
     price_child: Number(activity.priceChild) || 0,
     price_baby: activity.babiesForbidden ? 0 : Number(activity.priceBaby) || 0,
-    babies_forbidden: activity.babiesForbidden === true,
     notes: activity.notes != null ? String(activity.notes) : "",
   };
+  if (activitiesTableHasBabiesForbiddenColumn()) {
+    payload.babies_forbidden = activity.babiesForbidden === true;
+  }
   const { error } = await supabase.from("activities").update(payload).eq("id", activity.supabase_id);
   if (error) {
     logger.error("ActivityUpdatePage : erreur Supabase", error);

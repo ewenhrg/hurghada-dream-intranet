@@ -18,6 +18,7 @@ import {
   LOCAL_ONLY_ACTIVITY_KEY,
   stripLocalOnlyActivityForStorage,
 } from "../utils/activitiesBackup";
+import { activitiesTableHasBabiesForbiddenColumn } from "../config/supabaseActivitiesSchema";
 
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -443,7 +444,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         if (activityData.transfers && typeof activityData.transfers === 'object') {
           supabaseData.transfers = activityData.transfers;
         }
-        supabaseData.babies_forbidden = Boolean(activityData.babiesForbidden);
+        if (activitiesTableHasBabiesForbiddenColumn()) {
+          supabaseData.babies_forbidden = Boolean(activityData.babiesForbidden);
+        }
 
         let data, error;
         
@@ -717,12 +720,14 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             price_baby: activity.babiesForbidden ? 0 : activity.priceBaby || 0,
             age_child: activity.ageChild || "",
             age_baby: activity.babiesForbidden ? "" : activity.ageBaby || "",
-            babies_forbidden: activity.babiesForbidden === true,
             currency: activity.currency || "EUR",
             available_days: activity.availableDays || [false, false, false, false, false, false, false],
             notes: activity.notes || "",
             transfers: activity.transfers || {},
           };
+          if (activitiesTableHasBabiesForbiddenColumn()) {
+            supabaseData.babies_forbidden = activity.babiesForbidden === true;
+          }
 
           // Vérifier si l'activité existe déjà dans Supabase
           const { data: existing } = await supabase
