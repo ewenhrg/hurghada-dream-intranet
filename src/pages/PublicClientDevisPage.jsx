@@ -501,23 +501,6 @@ export function PublicClientDevisPage() {
                               </svg>
                             </button>
                           </div>
-                          <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-xl">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="h-3.5 w-3.5 shrink-0"
-                              aria-hidden
-                            >
-                              <circle cx="12" cy="12" r="10" />
-                              <path d="M12 6v6l4 2" />
-                            </svg>
-                            <span>Journée complète (8h)</span>
-                          </div>
                         </div>
                         <div className="flex grow flex-col p-4">
                           <h3 className="mb-2 line-clamp-2 text-lg font-semibold leading-snug text-gray-900 transition-colors group-hover:text-[#34b3f7] sm:text-[17px] dark:text-white">
