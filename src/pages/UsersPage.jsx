@@ -15,7 +15,7 @@ import {
 
 const LOCAL_ONLY_KEY = "_localOnly";
 
-/** Colonne ajoutée par `supabase_users_add_can_access_activity_prices.sql` — si absente en base, PATCH renvoie 400. */
+/** Colonne ajoutée par `supabase/supabase_users_add_can_access_activity_prices.sql` — si absente en base, PATCH renvoie 400. */
 const DB_COL_ACTIVITY_PRICES = "can_access_activity_prices";
 
 function formatSupabaseUserError(error) {
@@ -43,7 +43,7 @@ function omitActivityPricesColumn(payload) {
   return rest;
 }
 
-/** Colonnes `can_access_*` (pages + Maj prix) — `supabase_users_add_page_access_columns.sql` + script Maj prix. */
+/** Colonnes `can_access_*` (pages + Maj prix) — `supabase/supabase_users_add_page_access_columns.sql` + script Maj prix. */
 const OPTIONAL_ACCESS_PAGE_DB_KEYS = [
   DB_COL_ACTIVITY_PRICES,
   "can_access_activities",
@@ -78,7 +78,7 @@ function omitOptionalPageAccessColumns(payload) {
 }
 
 const MIGRATION_USERS_ACCESS_HINT =
-  "Ouvrez Supabase → SQL Editor et exécutez : supabase_users_add_page_access_columns.sql puis supabase_users_add_can_access_activity_prices.sql. Ensuite rouvrez la fiche utilisateur pour recocher les accès aux pages.";
+  "Ouvrez Supabase → SQL Editor et exécutez (fichiers dans le dossier supabase/ du dépôt) : supabase_users_add_page_access_columns.sql puis supabase_users_add_can_access_activity_prices.sql. Ensuite rouvrez la fiche utilisateur pour recocher les accès aux pages.";
 
 function normalizeUserCode(code) {
   if (code == null || code === "") return "";

@@ -265,7 +265,8 @@ export function PublicDevisPage() {
       <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-900">
         {error}
         <p className="mt-2 text-xs font-normal text-red-800">
-          Vérifiez d&apos;avoir exécuté le script SQL <code className="rounded bg-red-100 px-1">supabase_public_quotes_table.sql</code>{" "}
+          Vérifiez d&apos;avoir exécuté le script SQL{" "}
+          <code className="rounded bg-red-100 px-1">supabase/supabase_public_quotes_table.sql</code>{" "}
           sur votre projet Supabase.
         </p>
       </div>

@@ -1,5 +1,7 @@
 # Migration Supabase - Ajout des colonnes client_arrival_date et client_departure_date
 
+> Les scripts SQL du projet se trouvent dans le dossier **`supabase/`** à la racine du dépôt.
+
 ## Problème
 L'erreur suivante apparaît lors de la création d'un devis :
 ```
@@ -20,7 +22,7 @@ Les colonnes `client_arrival_date` et `client_departure_date` n'existent pas dan
    - Cliquer sur "New query"
 
 3. **Exécuter le script de migration**
-   - Copier le contenu du fichier `supabase_migration_add_client_dates.sql`
+   - Copier le contenu du fichier `supabase/supabase_migration_add_client_dates.sql`
    - Coller dans l'éditeur SQL
    - Cliquer sur "Run" ou appuyer sur `Ctrl+Enter` (Windows) ou `Cmd+Enter` (Mac)
 

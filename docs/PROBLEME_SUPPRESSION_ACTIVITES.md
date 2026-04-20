@@ -1,5 +1,7 @@
 # 🔴 Problème : Activités qui disparaissent de la base de données
 
+> Les scripts SQL mentionnés sont dans le dossier **`supabase/`** à la racine du dépôt.
+
 ## Causes identifiées
 
 ### 1. ⚠️ **PROBLÈME CRITIQUE CORRIGÉ** : Vidage automatique si Supabase vide
@@ -10,12 +12,12 @@
 **Solution appliquée** : Le code vérifie maintenant s'il y a des activités locales avant de les vider. Si des activités locales existent et que Supabase est vide, elles sont conservées avec un avertissement dans les logs.
 
 ### 2. 🔓 Politique RLS trop permissive
-**Fichier** : `supabase_activities_table.sql` (lignes 68-73)
+**Fichier** : `supabase/supabase_activities_table.sql` (lignes 68-73)
 
 **Problème** : La politique DELETE permet à **n'importe qui** (`TO public`) de supprimer des activités. C'est un problème de sécurité majeur.
 
 **Solution proposée** : 
-- Script `supabase_fix_activities_security.sql` créé avec :
+- Script `supabase/supabase_fix_activities_security.sql` créé avec :
   - Table d'audit pour tracer toutes les suppressions
   - Trigger automatique pour sauvegarder les activités avant suppression
   - Fonction de restauration des activités supprimées
@@ -29,7 +31,7 @@
 **Solution appliquée** : Ajout de logs détaillés pour tracer toutes les suppressions via Realtime.
 
 ### 4. 🧹 Script de suppression des doublons
-**Fichier** : `supabase_remove_duplicates_activities.sql`
+**Fichier** : `supabase/supabase_remove_duplicates_activities.sql`
 
 **Problème** : Ce script supprime automatiquement les activités considérées comme des doublons (même `site_key`, `name`, et `category`). Si ce script est exécuté, il peut supprimer des activités légitimes.
 
@@ -47,14 +49,14 @@
 
 ### 📋 Scripts SQL créés
 
-#### `supabase_fix_activities_security.sql`
+#### `supabase/supabase_fix_activities_security.sql`
 **À exécuter immédiatement** dans l'éditeur SQL de Supabase pour :
 - Créer une table d'audit des suppressions
 - Créer un trigger pour sauvegarder automatiquement les activités avant suppression
 - Créer une fonction pour restaurer les activités supprimées
 - Créer une vue pour consulter les suppressions récentes
 
-#### `supabase_diagnose_activity_deletions.sql`
+#### `supabase/supabase_diagnose_activity_deletions.sql`
 **À exécuter** pour diagnostiquer les suppressions :
 - Compter les suppressions récentes
 - Lister les activités supprimées
@@ -67,13 +69,13 @@
 ### 1. Immédiatement
 ```sql
 -- Exécuter dans Supabase SQL Editor
--- Copier-coller le contenu de supabase_fix_activities_security.sql
+-- Copier-coller le contenu de supabase/supabase_fix_activities_security.sql
 ```
 
 ### 2. Diagnostic
 ```sql
 -- Exécuter dans Supabase SQL Editor
--- Copier-coller le contenu de supabase_diagnose_activity_deletions.sql
+-- Copier-coller le contenu de supabase/supabase_diagnose_activity_deletions.sql
 ```
 
 ### 3. Restauration (si nécessaire)

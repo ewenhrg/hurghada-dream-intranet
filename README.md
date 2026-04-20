@@ -52,6 +52,7 @@ Application web de gestion des devis et activités touristiques pour **Hurghada 
 - Sauvegarde automatique dans le cloud
 - Synchronisation temps réel entre utilisateurs
 - Mode dégradé (fonctionne sans Supabase pour tests)
+- Scripts SQL du schéma : dossier **`supabase/`** à la racine du dépôt
 
 ## 🛠️ Technologies
 
@@ -212,6 +213,8 @@ Cliquez sur le bouton **"🖨️ Imprimer"** sur n'importe quel devis. Une nouve
 
 ```
 hurghada-dream/
+├── docs/                 # Notes techniques, optimisations, procédures (Markdown)
+├── supabase/             # Scripts SQL à exécuter dans l’éditeur Supabase (migrations, tables)
 ├── src/
 │   ├── components/       # Composants réutilisables
 │   │   ├── ui.jsx       # Composants UI de base
@@ -240,6 +243,8 @@ hurghada-dream/
 ├── tailwind.config.js
 └── README.md
 ```
+
+Les migrations et schémas SQL ne sont plus à la racine : tout est regroupé sous **`supabase/`**. La documentation hors README principal est dans **`docs/`** (ex. `docs/README_SUPABASE_MIGRATION.md`).
 
 ## 🧑‍💻 Développement
 

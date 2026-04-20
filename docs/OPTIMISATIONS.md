@@ -82,7 +82,7 @@
 ## 🔧 Scripts SQL Requis
 
 Assurez-vous d'avoir exécuté :
-1. `supabase_add_dates_to_quotes.sql` - Ajoute les colonnes de dates
+1. `supabase/supabase_add_dates_to_quotes.sql` — ajoute les colonnes de dates
 2. Tables avec RLS activé et politiques appropriées
 
 ## 📝 Notes Importantes
