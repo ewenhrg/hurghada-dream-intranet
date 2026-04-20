@@ -778,6 +778,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
+    if (!client.neighborhood || !String(client.neighborhood).trim()) {
+      toast.warning("Veuillez sélectionner un quartier avant de créer le devis.");
+      setIsSubmitting(false);
+      return;
+    }
+
     // Vérifier que chaque activité a au moins 1 participant (adultes, enfants ou bébés)
     const activitiesWithoutParticipants = validComputed.filter((c) => {
       // Pour les activités de type "transfert" (Hurghada - Le Caire, Soma Bay - Aéroport, etc.),
@@ -1175,11 +1181,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '300ms' }}>
               <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-300 shadow-[0_0_10px_rgba(147,51,234,0.9)]"></span>
-                Quartier
+                Quartier <span className="text-rose-300">*</span>
               </label>
               <select
                 value={client.neighborhood}
                 onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
+                required
                 className="w-full rounded-xl border-2 border-slate-600 bg-slate-900/60 px-4 py-2.5 text-sm font-medium text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md"
               >
                 <option value="">— Sélectionner un quartier —</option>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -27,6 +27,20 @@ function formatMoney(value, currency = "EUR") {
   } catch {
     return `${safeValue} ${currency || "EUR"}`;
   }
+}
+
+/** Affichage lisible de la date d’excursion dans le panier (lecture seule). */
+function formatCartLineDate(iso) {
+  const s = String(iso ?? "").trim();
+  if (!s) return "—";
+  const d = new Date(`${s}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toLocaleDateString("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function normalizeCategory(rawCategory) {
@@ -249,10 +263,6 @@ export function PublicClientDevisPage() {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  function updateCartLine(lineId, field, value) {
-    setCart((prev) => prev.map((line) => (line.id === lineId ? { ...line, [field]: value } : line)));
-  }
 
   function removeCartLine(lineId) {
     setCart((prev) => prev.filter((line) => line.id !== lineId));
@@ -526,27 +536,6 @@ export function PublicClientDevisPage() {
             </label>
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              to="/tarifs"
-              className="inline-flex items-center gap-2 rounded-full border-2 border-slate-200 bg-white px-5 py-2.5 text-xs font-extrabold text-slate-950 shadow-md transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 hover:text-teal-950 hover:shadow-lg"
-            >
-              <span className="text-teal-700" aria-hidden>
-                €
-              </span>
-              Grille tarifaire
-            </Link>
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 rounded-full border-2 border-slate-200 bg-white px-5 py-2.5 text-xs font-extrabold text-slate-950 shadow-md transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 hover:text-teal-950 hover:shadow-lg"
-            >
-              <svg className="h-3.5 w-3.5 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
-              </svg>
-              Espace pro
-            </Link>
-          </div>
-
           <div className="mx-auto mt-11 flex max-w-5xl flex-wrap justify-center gap-2.5 sm:gap-3">
             <button
               type="button"
@@ -752,70 +741,82 @@ export function PublicClientDevisPage() {
                   <span className="font-bold text-teal-900">Ajoutez des activités depuis le catalogue.</span>
                 </p>
               )}
-              {cartLines.map((line) => (
-                <div
-                  key={line.id}
-                  className="rounded-2xl border border-slate-200/60 bg-white p-4 shadow-md shadow-slate-900/5 ring-1 ring-slate-900/[0.03]"
-                >
-                  <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900">{line.activity.name}</p>
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    <label className="space-y-1">
-                      <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-800">Adultes</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={line.adults}
-                        onChange={(e) => updateCartLine(line.id, "adults", e.target.value)}
-                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-800">Enfants</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={line.children}
-                        onChange={(e) => updateCartLine(line.id, "children", e.target.value)}
-                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-800">Bébés</span>
-                      {line.activity.babies_forbidden ? (
-                        <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-2 py-2 text-center text-[11px] font-semibold leading-tight text-amber-950">
-                          Interdit aux bébés
-                        </div>
-                      ) : (
-                        <input
-                          type="number"
-                          min="0"
-                          value={line.babies}
-                          onChange={(e) => updateCartLine(line.id, "babies", e.target.value)}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
-                        />
-                      )}
-                    </label>
-                  </div>
-                  <input
-                    type="date"
-                    value={line.date}
-                    onChange={(e) => updateCartLine(line.id, "date", e.target.value)}
-                    className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
-                  />
-                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-                    <p className="font-display text-sm font-bold tabular-nums text-teal-900">
-                      {formatMoney(line.lineTotal, line.activity.currency)}
+              {cartLines.map((line) => {
+                const ageChild = String(line.activity.age_child || "").trim();
+                const ageBaby = String(line.activity.age_baby || "").trim();
+                return (
+                  <div
+                    key={line.id}
+                    className="rounded-2xl border border-slate-200/60 bg-white p-4 shadow-md shadow-slate-900/5 ring-1 ring-slate-900/[0.03]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="min-w-0 flex-1 line-clamp-2 text-sm font-semibold leading-snug text-slate-900">
+                        {line.activity.name}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => removeCartLine(line.id)}
+                        className="shrink-0 rounded-xl border-2 border-rose-200 bg-rose-50 px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-rose-900 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+                      >
+                        Retirer
+                      </button>
+                    </div>
+                    <p className="mt-2 text-[11px] font-medium leading-snug text-slate-600">
+                      Date et participants ne sont pas modifiables ici. Pour les changer, retirez la ligne puis rouvrez la fiche de l&apos;activité.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => removeCartLine(line.id)}
-                      className="text-xs font-semibold text-rose-600 underline-offset-2 hover:text-rose-800 hover:underline"
-                    >
-                      Retirer
-                    </button>
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2.5">
+                      <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Date d&apos;excursion</span>
+                      <p className="mt-0.5 text-sm font-bold text-slate-900">{formatCartLineDate(line.date)}</p>
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <div className="space-y-1">
+                        <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-800">Adultes</span>
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-slate-900">
+                          {line.adults ?? 0}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-800">Enfants</span>
+                        {ageChild ? (
+                          <span className="mb-1 block text-[10px] font-semibold leading-tight text-slate-600">Âge : {ageChild}</span>
+                        ) : (
+                          <span className="mb-1 block text-[10px] font-medium leading-tight text-slate-500">Tarif enfant</span>
+                        )}
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-slate-900">
+                          {line.children ?? 0}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-800">Bébés</span>
+                        {line.activity.babies_forbidden ? (
+                          <>
+                            <span className="mb-1 block text-[10px] font-semibold leading-tight text-amber-900">Non autorisés</span>
+                            <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-amber-950">
+                              0
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            {ageBaby ? (
+                              <span className="mb-1 block text-[10px] font-semibold leading-tight text-slate-600">Âge : {ageBaby}</span>
+                            ) : (
+                              <span className="mb-1 block text-[10px] font-medium leading-tight text-slate-500">Tarif bébé</span>
+                            )}
+                            <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-slate-900">
+                              {line.babies ?? 0}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-3 border-t border-slate-100 pt-3">
+                      <p className="font-display text-sm font-bold tabular-nums text-teal-900">
+                        {formatMoney(line.lineTotal, line.activity.currency)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="border-t border-slate-200/80 bg-gradient-to-t from-slate-50 to-white p-6 shadow-[0_-8px_30px_-12px_rgba(15,118,110,0.12)]">
               <div className="mb-4 flex items-end justify-between gap-3">
