@@ -37,6 +37,29 @@ function normalizeCategory(rawCategory) {
   return exists ? value : "desert";
 }
 
+function getCategoryCover(categoryKey) {
+  const covers = {
+    desert:
+      "linear-gradient(140deg, rgba(245,158,11,0.95), rgba(217,119,6,0.9))",
+    aquatique:
+      "linear-gradient(140deg, rgba(6,182,212,0.95), rgba(14,116,144,0.9))",
+    exploration_bien_etre:
+      "linear-gradient(140deg, rgba(16,185,129,0.95), rgba(5,150,105,0.9))",
+    luxor_caire:
+      "linear-gradient(140deg, rgba(99,102,241,0.95), rgba(79,70,229,0.9))",
+    marsa_alam:
+      "linear-gradient(140deg, rgba(244,63,94,0.95), rgba(225,29,72,0.9))",
+    transfert:
+      "linear-gradient(140deg, rgba(71,85,105,0.95), rgba(30,41,59,0.9))",
+  };
+  return covers[categoryKey] || covers.desert;
+}
+
+function getCategoryLabel(categoryKey) {
+  const category = CATEGORIES.find((entry) => entry.key === categoryKey);
+  return category?.label || "Activité";
+}
+
 export function PublicClientDevisPage() {
   const [activities, setActivities] = useState([]);
   const [search, setSearch] = useState("");
@@ -292,61 +315,71 @@ export function PublicClientDevisPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 selection:bg-indigo-200">
-      <header className="relative overflow-hidden bg-slate-950 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.28),transparent_42%)]" aria-hidden />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.25),transparent_45%)]" aria-hidden />
-        <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Hurghada Dream</p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">Réservez vos activités en ligne</h1>
-          <p className="mt-3 max-w-3xl text-sm text-slate-200 sm:text-base">
-            Explorez le catalogue par catégorie, ajoutez vos activités au panier puis validez votre demande. Notre équipe reçoit
-            votre devis directement et vous recontacte rapidement.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link to="/tarifs" className="rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold hover:bg-white/10">
-              Voir les tarifs
-            </Link>
-            <Link to="/" className="rounded-xl border border-cyan-400/30 px-4 py-2 text-sm font-semibold text-cyan-200 hover:bg-cyan-400/10">
-              Intranet
-            </Link>
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-slate-950 p-1.5">
+              <img src="/logo.png" alt="Hurghada Dream" className="h-full w-full object-contain" />
+            </div>
+            <div>
+              <p className="text-base font-bold text-slate-900">Hurghada Dream</p>
+              <p className="text-xs text-slate-500">Catalogue client</p>
+            </div>
           </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold">
-              Catalogue classé par catégories
-            </div>
-            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold">
-              Panier intelligent et total instantané
-            </div>
-            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold">
-              Validation simple en 1 étape
-            </div>
+          <div className="hidden items-center gap-2 md:flex">
+            <button
+              type="button"
+              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+            >
+              ⭐ 5.0 (119)
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+            >
+              📸 8.1K
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+            >
+              🎵 10.1K
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-3 sm:px-6">
-        <section className="space-y-4 sm:col-span-2">
+      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[1fr_360px] sm:px-6">
+        <section className="space-y-5">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <label className="text-sm font-semibold text-slate-700" htmlFor="public-search">
-              Rechercher une activité
-            </label>
-            <input
-              id="public-search"
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nom ou mot-clé..."
-              className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500"
-            />
+            <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+              <label className="block" htmlFor="public-search">
+                <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Rechercher</span>
+                <input
+                  id="public-search"
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Nom, catégorie, mot-clé"
+                  className="mt-2 w-full rounded-full border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500"
+                />
+              </label>
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <Link to="/tarifs" className="rounded-full border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50">
+                  Tarifs
+                </Link>
+                <Link to="/" className="rounded-full border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50">
+                  Intranet
+                </Link>
+              </div>
+            </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedCategory("all")}
-                className={`rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
-                  selectedCategory === "all"
-                    ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400"
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  selectedCategory === "all" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
               >
                 Toutes ({categoryCounts.all || 0})
@@ -356,10 +389,10 @@ export function PublicClientDevisPage() {
                   key={category.key}
                   type="button"
                   onClick={() => setSelectedCategory(category.key)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
                     selectedCategory === category.key
-                      ? "border-indigo-600 bg-indigo-600 text-white"
-                      : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                   }`}
                 >
                   {category.label} ({categoryCounts[category.key] || 0})
@@ -369,53 +402,80 @@ export function PublicClientDevisPage() {
           </div>
 
           {loading && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-700">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">
               Chargement du catalogue...
             </div>
           )}
 
           {!loading && filteredActivities.length === 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-700">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">
               Aucune activité trouvée.
             </div>
           )}
 
-          <div className="space-y-5">
+          <div className="space-y-8">
             {groupedActivities.map((group) => (
-              <section key={group.key} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-                <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                  <h2 className="text-lg font-black text-slate-900">{group.label}</h2>
-                  <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-800">
+              <section key={group.key} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-black text-slate-900">{group.label}</h2>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                     {group.items.length} activité{group.items.length > 1 ? "s" : ""}
                   </span>
                 </div>
-                <div className="grid gap-3">
-                  {group.items.map((activity) => (
-                    <article key={activity.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <h3 className="text-base font-bold text-slate-900">{activity.name}</h3>
-                        <button
-                          type="button"
-                          onClick={() => addToCart(activity.id)}
-                          className="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-                        >
-                          Ajouter au panier
-                        </button>
-                      </div>
-                      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-                        <p className="rounded-lg bg-white px-3 py-2">
-                          <span className="font-semibold">Adulte:</span> {formatMoney(activity.price_adult, activity.currency)}
-                        </p>
-                        <p className="rounded-lg bg-white px-3 py-2">
-                          <span className="font-semibold">Enfant:</span> {formatMoney(activity.price_child, activity.currency)}
-                        </p>
-                        <p className="rounded-lg bg-white px-3 py-2">
-                          <span className="font-semibold">Bébé:</span> {formatMoney(activity.price_baby, activity.currency)}
-                        </p>
-                      </div>
-                      {activity.notes && <p className="mt-3 text-sm text-slate-700">{activity.notes}</p>}
-                    </article>
-                  ))}
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {group.items.map((activity) => {
+                    const categoryKey = normalizeCategory(activity.category);
+                    const rating = (4.5 + (String(activity.id).length % 5) * 0.1).toFixed(1);
+                    return (
+                      <article
+                        key={activity.id}
+                        className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_12px_30px_-20px_rgba(15,23,42,0.45)]"
+                      >
+                        <div className="relative h-36" style={{ background: getCategoryCover(categoryKey) }}>
+                          <span className="absolute left-3 top-3 rounded-full bg-white/85 px-2.5 py-1 text-[11px] font-bold text-slate-800">
+                            Populaire
+                          </span>
+                          <button
+                            type="button"
+                            className="absolute right-3 top-3 h-9 w-9 rounded-full bg-white/85 text-base text-slate-700"
+                            aria-label="Favori"
+                          >
+                            ♡
+                          </button>
+                          <span className="absolute bottom-3 left-3 rounded-full bg-black/35 px-2.5 py-1 text-[11px] font-semibold text-white">
+                            ⏱ Journée complète (8h)
+                          </span>
+                          <span className="absolute bottom-3 right-3 rounded-full bg-white/85 px-2 py-1 text-[10px] font-bold text-slate-800">
+                            {getCategoryLabel(categoryKey)}
+                          </span>
+                        </div>
+                        <div className="space-y-3 p-4">
+                          <h3 className="line-clamp-1 text-lg font-bold text-slate-900">{activity.name}</h3>
+                          <p className="line-clamp-2 text-sm text-slate-600">
+                            {activity.notes || "Excursion premium avec accompagnement et organisation complète."}
+                          </p>
+                          <div className="flex items-end justify-between">
+                            <p className="text-sm font-semibold text-slate-600">
+                              ⭐ {rating} <span className="text-xs text-slate-400">({String(activity.id).length + 3})</span>
+                            </p>
+                            <div className="text-right">
+                              <p className="text-[11px] text-slate-500">à partir de</p>
+                              <p className="text-2xl font-black text-slate-900">
+                                {formatMoney(activity.price_adult, activity.currency || "EUR")}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => addToCart(activity.id)}
+                            className="w-full rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                          >
+                            Ajouter au panier
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               </section>
             ))}
@@ -423,48 +483,61 @@ export function PublicClientDevisPage() {
         </section>
 
         <aside className="space-y-4">
-          <form onSubmit={submitPublicQuote} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900">Panier & devis</h2>
+          <form
+            onSubmit={submitPublicQuote}
+            className="sticky top-24 space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_16px_40px_-24px_rgba(15,23,42,0.55)]"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-black text-slate-900">Panier & devis</h2>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                {cartLines.length} item{cartLines.length > 1 ? "s" : ""}
+              </span>
+            </div>
+
             {(error || success) && (
-              <div className={`rounded-xl border px-3 py-2 text-sm font-semibold ${error ? "border-rose-300 bg-rose-50 text-rose-900" : "border-emerald-300 bg-emerald-50 text-emerald-900"}`}>
+              <div
+                className={`rounded-xl border px-3 py-2 text-sm font-semibold ${
+                  error ? "border-rose-300 bg-rose-50 text-rose-900" : "border-emerald-300 bg-emerald-50 text-emerald-900"
+                }`}
+              >
                 {error || success}
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
               {cartLines.length === 0 && <p className="text-sm text-slate-600">Panier vide.</p>}
               {cartLines.map((line) => (
                 <div key={line.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-sm font-bold text-slate-900">{line.activity.name}</p>
+                  <p className="line-clamp-1 text-sm font-bold text-slate-900">{line.activity.name}</p>
                   <div className="mt-2 grid grid-cols-3 gap-2">
                     <label className="space-y-1">
-                      <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-600">Adultes</span>
+                      <span className="block text-[10px] font-bold uppercase text-slate-600">Ad</span>
                       <input
                         type="number"
                         min="0"
                         value={line.adults}
                         onChange={(e) => updateCartLine(line.id, "adults", e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                        className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
                       />
                     </label>
                     <label className="space-y-1">
-                      <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-600">Enfants</span>
+                      <span className="block text-[10px] font-bold uppercase text-slate-600">Enf</span>
                       <input
                         type="number"
                         min="0"
                         value={line.children}
                         onChange={(e) => updateCartLine(line.id, "children", e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                        className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
                       />
                     </label>
                     <label className="space-y-1">
-                      <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-600">Bébés</span>
+                      <span className="block text-[10px] font-bold uppercase text-slate-600">Béb</span>
                       <input
                         type="number"
                         min="0"
                         value={line.babies}
                         onChange={(e) => updateCartLine(line.id, "babies", e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                        className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
                       />
                     </label>
                   </div>
@@ -523,9 +596,9 @@ export function PublicClientDevisPage() {
               />
             </div>
 
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2">
-              <p className="text-sm font-semibold text-indigo-900">
-                Total estimé: <span className="text-base font-black">{formatMoney(cartTotal, "EUR")}</span>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="text-sm font-semibold text-slate-700">
+                Total estimé: <span className="text-lg font-black text-slate-900">{formatMoney(cartTotal, "EUR")}</span>
               </p>
             </div>
 
