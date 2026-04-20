@@ -9,6 +9,9 @@ export const ActivitiesPage = lazyWithRetry(() =>
 export const ActivityUpdatePage = lazyWithRetry(() =>
   import("../pages/ActivityUpdatePage").then((module) => ({ default: module.ActivityUpdatePage }))
 );
+export const ActivityCatalogAdminPage = lazyWithRetry(() =>
+  import("../pages/ActivityCatalogAdminPage").then((module) => ({ default: module.ActivityCatalogAdminPage }))
+);
 export const QuotesPage = lazyWithRetry(() =>
   import("../pages/QuotesPage").then((module) => ({ default: module.QuotesPage }))
 );

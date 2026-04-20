@@ -7,6 +7,7 @@ import { loadUserFromSession } from "./utils/userPermissions";
 import {
   ActivitiesPage,
   ActivityUpdatePage,
+  ActivityCatalogAdminPage,
   QuotesPage,
   HistoryPage,
   UsersPage,
@@ -34,6 +35,7 @@ import { toast } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
 import { mergeActivitiesWhenRemoteShrunk, stripLocalOnlyActivityForStorage } from "./utils/activitiesBackup";
+import { normalizeCatalogImageUrlsFromDb } from "./utils/catalogContent";
 
 export default function App() {
   const location = useLocation();
@@ -64,6 +66,14 @@ export default function App() {
   useEffect(() => {
     if (!user || tab !== "activity-update") return;
     if (user.canAccessActivities === false || user.canAccessActivityPrices !== true) {
+      setTab(user.canAccessActivities !== false ? "activities" : "devis");
+    }
+  }, [user, tab]);
+
+  /** Contenu catalogue public : réservé aux comptes autorisés à modifier les activités. */
+  useEffect(() => {
+    if (!user || tab !== "catalog-admin") return;
+    if (user.canAccessActivities === false || user.canEditActivity !== true) {
       setTab(user.canAccessActivities !== false ? "activities" : "devis");
     }
   }, [user, tab]);
@@ -196,7 +206,8 @@ export default function App() {
       }
 
       // Récupérer toutes les activités - une ligne par activité (pas de déduplication pour ne rien perdre)
-      const selectColumns = "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes, description, transfers";
+      const selectColumns =
+        "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes, description, catalog_image_urls, transfers";
       const mapActivitiesFromRows = (rows) =>
         rows.map((row) => {
           const supabaseId = row.id;
@@ -215,6 +226,7 @@ export default function App() {
             availableDays: row.available_days || [false, false, false, false, false, false, false],
             notes: row.notes || "",
             description: row.description || "",
+            catalogImageUrls: normalizeCatalogImageUrlsFromDb(row.catalog_image_urls),
             transfers: mergeTransfers(row.transfers),
           };
         });
@@ -696,6 +708,7 @@ export default function App() {
           : [false, false, false, false, false, false, false],
         notes: row.notes || "",
         description: row.description || "",
+        catalogImageUrls: normalizeCatalogImageUrlsFromDb(row.catalog_image_urls),
         transfers: mergeTransfers(row.transfers),
       };
     };
@@ -826,6 +839,7 @@ export default function App() {
           import("./pages/QuotesPage"),
           import("./pages/ActivitiesPage"),
           import("./pages/ActivityUpdatePage"),
+          import("./pages/ActivityCatalogAdminPage"),
           import("./pages/HistoryPage"),
           import("./pages/TicketPage"),
           import("./pages/ModificationsPage"),
@@ -1058,6 +1072,11 @@ export default function App() {
                   {t("nav.activityUpdate")}
                 </Pill>
                 )}
+                {user?.canAccessActivities !== false && user?.canEditActivity === true && (
+                <Pill active={tab === "catalog-admin"} onClick={() => setTab("catalog-admin")}>
+                  {t("nav.catalogAdmin")}
+                </Pill>
+                )}
                 {user?.canAccessHistory !== false && (
                 <Pill active={tab === "history"} onClick={() => setTab("history")}>
                   {t("nav.history")}
@@ -1200,6 +1219,12 @@ export default function App() {
             subtitle={t("page.activityUpdate.subtitle")}
           >
             <ActivityUpdatePage activities={activities} setActivities={setActivities} user={user} />
+          </Section>
+        )}
+
+        {tab === "catalog-admin" && user?.canAccessActivities !== false && user?.canEditActivity === true && (
+          <Section title={t("page.catalogAdmin.title")} subtitle={t("page.catalogAdmin.subtitle")}>
+            <ActivityCatalogAdminPage activities={activities} setActivities={setActivities} user={user} />
           </Section>
         )}
 

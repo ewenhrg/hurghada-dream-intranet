@@ -7,9 +7,10 @@ import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publi
 import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay";
 import { buildSelectableDateOptions, normalizeAvailableDays } from "../utils/activityAvailableDates";
 import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
+import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 
 const ACTIVITY_COLUMNS =
-  "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes";
+  "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes, description, catalog_image_urls";
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -325,7 +326,21 @@ export function PublicCatalogueActivityPage({ activityId }) {
     [cover]
   );
 
-  const prose = activity ? proseFromNotes(activity.notes) : "";
+  const catalogUrls = useMemo(
+    () => (activity ? normalizeCatalogImageUrlsFromDb(activity.catalog_image_urls) : []),
+    [activity]
+  );
+
+  const gallerySlides = useMemo(() => {
+    if (catalogUrls.length > 0) {
+      return catalogUrls.map((url) => ({ kind: "image", url }));
+    }
+    return galleryBackgrounds.map((bg) => ({ kind: "gradient", bg }));
+  }, [catalogUrls, galleryBackgrounds]);
+
+  const catalogProse = activity
+    ? String(activity.description || "").trim() || proseFromNotes(activity.notes)
+    : "";
   const bulletPoints = activity ? extractBulletLines(activity.notes) : [];
 
   const canAddToCart = Boolean(date) && !noDatesConfigured;
@@ -406,8 +421,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
     const w = el.offsetWidth;
     if (w <= 0) return;
     const i = Math.round(el.scrollLeft / w);
-    setGalleryIndex(Math.min(Math.max(i, 0), galleryBackgrounds.length - 1));
-  }, [galleryBackgrounds.length]);
+    setGalleryIndex(Math.min(Math.max(i, 0), gallerySlides.length - 1));
+  }, [gallerySlides.length]);
 
   function appendToCartAndReturn() {
     if (!activity || !date) return;
@@ -480,14 +495,18 @@ export function PublicCatalogueActivityPage({ activityId }) {
         <div className="px-4 md:hidden">
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[22px]">
             <div ref={carouselRef} onScroll={onCarouselScroll} className="scrollbar-hide flex h-full snap-x snap-mandatory gap-0 overflow-x-auto">
-              {galleryBackgrounds.map((bg, i) => (
+              {gallerySlides.map((slide, i) => (
                 <div key={i} className="relative h-full min-w-full shrink-0 snap-start overflow-hidden">
-                  <div className="h-full w-full" style={{ background: bg }} />
+                  {slide.kind === "image" ? (
+                    <img src={slide.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="h-full w-full" style={{ background: slide.bg }} />
+                  )}
                 </div>
               ))}
             </div>
             <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1.5 backdrop-blur-sm">
-              {galleryBackgrounds.map((_, i) => (
+              {gallerySlides.map((_, i) => (
                 <div
                   key={i}
                   className={`h-1.5 rounded-full transition-all ${i === galleryIndex ? "w-4 bg-white" : "w-1.5 bg-white/50"}`}
@@ -566,27 +585,63 @@ export function PublicCatalogueActivityPage({ activityId }) {
               {/* Galerie desktop (grille WFY) */}
               <div className="hidden max-h-[400px] overflow-hidden rounded-none md:block lg:max-h-[450px]">
                 <div className="grid h-full min-h-[280px] grid-cols-3 gap-2 lg:min-h-[360px]">
-                  <button type="button" className="relative col-span-2 row-span-2 overflow-hidden rounded-l-3xl transition-opacity hover:opacity-95">
-                    <div className="h-full w-full" style={{ background: galleryBackgrounds[0] }} />
-                  </button>
-                  <button type="button" className="relative col-span-1 overflow-hidden rounded-tr-3xl transition-opacity hover:opacity-95">
-                    <div className="h-full min-h-[140px] w-full" style={{ background: galleryBackgrounds[1] }} />
-                  </button>
-                  <button type="button" className="relative col-span-1 overflow-hidden rounded-br-3xl transition-opacity hover:opacity-95">
-                    <div className="h-full min-h-[140px] w-full" style={{ background: galleryBackgrounds[2] }} />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                      <span className="flex items-center gap-2 text-base font-semibold text-white">
-                        <IconImages className="h-5 w-5" />
-                        Voir toutes les photos
-                      </span>
-                    </div>
-                  </button>
+                  <div className="relative col-span-2 row-span-2 overflow-hidden rounded-l-3xl">
+                    {catalogUrls[0] ? (
+                      <img
+                        src={catalogUrls[0]}
+                        alt=""
+                        className="h-full w-full object-cover transition-opacity hover:opacity-95"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-full w-full" style={{ background: galleryBackgrounds[0] }} />
+                    )}
+                  </div>
+                  <div className="relative col-span-1 overflow-hidden rounded-tr-3xl">
+                    {catalogUrls[1] ? (
+                      <img
+                        src={catalogUrls[1]}
+                        alt=""
+                        className="h-full min-h-[140px] w-full object-cover transition-opacity hover:opacity-95"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-full min-h-[140px] w-full" style={{ background: galleryBackgrounds[1] }} />
+                    )}
+                  </div>
+                  <div className="relative col-span-1 overflow-hidden rounded-br-3xl">
+                    {catalogUrls[2] ? (
+                      <img
+                        src={catalogUrls[2]}
+                        alt=""
+                        className="h-full min-h-[140px] w-full object-cover transition-opacity hover:opacity-95"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-full min-h-[140px] w-full" style={{ background: galleryBackgrounds[2] }} />
+                    )}
+                    {catalogUrls.length > 3 ? (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                        <span className="flex items-center gap-2 text-base font-semibold text-white">
+                          <IconImages className="h-5 w-5" />
+                          +{catalogUrls.length - 3} photo{catalogUrls.length - 3 > 1 ? "s" : ""}
+                        </span>
+                      </div>
+                    ) : catalogUrls.length === 0 ? (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                        <span className="flex items-center gap-2 text-base font-semibold text-white">
+                          <IconImages className="h-5 w-5" />
+                          Voir toutes les photos
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
-              {prose ? (
+              {catalogProse ? (
                 <section>
-                  <p className="whitespace-pre-line text-sm font-medium leading-relaxed text-gray-800 sm:text-base">{prose}</p>
+                  <p className="whitespace-pre-line text-sm font-medium leading-relaxed text-gray-800 sm:text-base">{catalogProse}</p>
                 </section>
               ) : null}
 
