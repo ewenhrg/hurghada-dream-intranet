@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
-import { SITE_KEY } from "../constants";
+import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 
 const ACTIVITY_COLUMNS = "id, name, category, price_adult, price_child, price_baby, currency, notes";
@@ -31,6 +31,12 @@ function buildLineTotal(line, activity) {
   );
 }
 
+function normalizeCategory(rawCategory) {
+  const value = String(rawCategory || "").trim();
+  const exists = CATEGORIES.some((category) => category.key === value);
+  return exists ? value : "desert";
+}
+
 export function PublicClientDevisPage() {
   const [activities, setActivities] = useState([]);
   const [search, setSearch] = useState("");
@@ -48,6 +54,7 @@ export function PublicClientDevisPage() {
   });
 
   const [cart, setCart] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
   const activityMap = useMemo(() => {
     const map = new Map();
@@ -59,13 +66,44 @@ export function PublicClientDevisPage() {
 
   const filteredActivities = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return activities;
-    return activities.filter((activity) => {
+    const byCategory = selectedCategory === "all"
+      ? activities
+      : activities.filter((activity) => normalizeCategory(activity.category) === selectedCategory);
+
+    if (!q) return byCategory;
+    return byCategory.filter((activity) => {
       const name = String(activity.name || "").toLowerCase();
       const notes = String(activity.notes || "").toLowerCase();
       return name.includes(q) || notes.includes(q);
     });
-  }, [activities, search]);
+  }, [activities, search, selectedCategory]);
+
+  const groupedActivities = useMemo(() => {
+    const grouped = {};
+    CATEGORIES.forEach((category) => {
+      grouped[category.key] = [];
+    });
+
+    filteredActivities.forEach((activity) => {
+      const key = normalizeCategory(activity.category);
+      grouped[key].push(activity);
+    });
+
+    return CATEGORIES
+      .map((category) => ({
+        ...category,
+        items: grouped[category.key],
+      }))
+      .filter((category) => category.items.length > 0);
+  }, [filteredActivities]);
+
+  const categoryCounts = useMemo(() => {
+    const counts = { all: activities.length };
+    CATEGORIES.forEach((category) => {
+      counts[category.key] = activities.filter((activity) => normalizeCategory(activity.category) === category.key).length;
+    });
+    return counts;
+  }, [activities]);
 
   const cartLines = useMemo(() => {
     return cart
@@ -228,21 +266,35 @@ export function PublicClientDevisPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
-      <header className="bg-slate-950 text-white">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className="min-h-screen bg-slate-100 text-slate-900 selection:bg-indigo-200">
+      <header className="relative overflow-hidden bg-slate-950 text-white">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.28),transparent_42%)]" aria-hidden />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.25),transparent_45%)]" aria-hidden />
+        <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Hurghada Dream</p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Catalogue des activités</h1>
+          <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">Réservez vos activités en ligne</h1>
           <p className="mt-3 max-w-3xl text-sm text-slate-200 sm:text-base">
-            Choisis tes activités, ajoute-les au panier, puis valide ton devis. On reçoit ta demande en direct sur notre intranet.
+            Explorez le catalogue par catégorie, ajoutez vos activités au panier puis validez votre demande. Notre équipe reçoit
+            votre devis directement et vous recontacte rapidement.
           </p>
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/tarifs" className="rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold hover:bg-white/10">
               Voir les tarifs
             </Link>
             <Link to="/" className="rounded-xl border border-cyan-400/30 px-4 py-2 text-sm font-semibold text-cyan-200 hover:bg-cyan-400/10">
               Intranet
             </Link>
+          </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold">
+              Catalogue classé par catégories
+            </div>
+            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold">
+              Panier intelligent et total instantané
+            </div>
+            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold">
+              Validation simple en 1 étape
+            </div>
           </div>
         </div>
       </header>
@@ -261,6 +313,33 @@ export function PublicClientDevisPage() {
               placeholder="Nom ou mot-clé..."
               className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500"
             />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedCategory("all")}
+                className={`rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
+                  selectedCategory === "all"
+                    ? "border-indigo-600 bg-indigo-600 text-white"
+                    : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400"
+                }`}
+              >
+                Toutes ({categoryCounts.all || 0})
+              </button>
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category.key}
+                  type="button"
+                  onClick={() => setSelectedCategory(category.key)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
+                    selectedCategory === category.key
+                      ? "border-indigo-600 bg-indigo-600 text-white"
+                      : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400"
+                  }`}
+                >
+                  {category.label} ({categoryCounts[category.key] || 0})
+                </button>
+              ))}
+            </div>
           </div>
 
           {loading && (
@@ -275,35 +354,44 @@ export function PublicClientDevisPage() {
             </div>
           )}
 
-          <div className="grid gap-4">
-            {filteredActivities.map((activity) => (
-              <article key={activity.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900">{activity.name}</h2>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">{activity.category || "Activité"}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => addToCart(activity.id)}
-                    className="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-                  >
-                    Ajouter au panier
-                  </button>
+          <div className="space-y-5">
+            {groupedActivities.map((group) => (
+              <section key={group.key} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <h2 className="text-lg font-black text-slate-900">{group.label}</h2>
+                  <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-800">
+                    {group.items.length} activité{group.items.length > 1 ? "s" : ""}
+                  </span>
                 </div>
-                <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">
-                    <span className="font-semibold">Adulte:</span> {formatMoney(activity.price_adult, activity.currency)}
-                  </p>
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">
-                    <span className="font-semibold">Enfant:</span> {formatMoney(activity.price_child, activity.currency)}
-                  </p>
-                  <p className="rounded-lg bg-slate-50 px-3 py-2">
-                    <span className="font-semibold">Bébé:</span> {formatMoney(activity.price_baby, activity.currency)}
-                  </p>
+                <div className="grid gap-3">
+                  {group.items.map((activity) => (
+                    <article key={activity.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <h3 className="text-base font-bold text-slate-900">{activity.name}</h3>
+                        <button
+                          type="button"
+                          onClick={() => addToCart(activity.id)}
+                          className="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                        >
+                          Ajouter au panier
+                        </button>
+                      </div>
+                      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+                        <p className="rounded-lg bg-white px-3 py-2">
+                          <span className="font-semibold">Adulte:</span> {formatMoney(activity.price_adult, activity.currency)}
+                        </p>
+                        <p className="rounded-lg bg-white px-3 py-2">
+                          <span className="font-semibold">Enfant:</span> {formatMoney(activity.price_child, activity.currency)}
+                        </p>
+                        <p className="rounded-lg bg-white px-3 py-2">
+                          <span className="font-semibold">Bébé:</span> {formatMoney(activity.price_baby, activity.currency)}
+                        </p>
+                      </div>
+                      {activity.notes && <p className="mt-3 text-sm text-slate-700">{activity.notes}</p>}
+                    </article>
+                  ))}
                 </div>
-                {activity.notes && <p className="mt-3 text-sm text-slate-700">{activity.notes}</p>}
-              </article>
+              </section>
             ))}
           </div>
         </section>
@@ -323,30 +411,36 @@ export function PublicClientDevisPage() {
                 <div key={line.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                   <p className="text-sm font-bold text-slate-900">{line.activity.name}</p>
                   <div className="mt-2 grid grid-cols-3 gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      value={line.adults}
-                      onChange={(e) => updateCartLine(line.id, "adults", e.target.value)}
-                      className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-                      title="Adultes"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      value={line.children}
-                      onChange={(e) => updateCartLine(line.id, "children", e.target.value)}
-                      className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-                      title="Enfants"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      value={line.babies}
-                      onChange={(e) => updateCartLine(line.id, "babies", e.target.value)}
-                      className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-                      title="Bébés"
-                    />
+                    <label className="space-y-1">
+                      <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-600">Adultes</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={line.adults}
+                        onChange={(e) => updateCartLine(line.id, "adults", e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-600">Enfants</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={line.children}
+                        onChange={(e) => updateCartLine(line.id, "children", e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-600">Bébés</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={line.babies}
+                        onChange={(e) => updateCartLine(line.id, "babies", e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                      />
+                    </label>
                   </div>
                   <input
                     type="date"
