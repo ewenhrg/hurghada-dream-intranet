@@ -8,7 +8,7 @@ import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay
 import { buildSelectableDateOptions, normalizeAvailableDays } from "../utils/activityAvailableDates";
 import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
-import { getActivityPublicProse } from "../utils/activityHelpers";
+import { getActivityPublicProse, proseFromActivityNotes } from "../utils/activityHelpers";
 
 /** Colonnes toujours présentes sur `activities` (schéma de base). */
 const ACTIVITY_COLUMNS_BASE =
@@ -335,8 +335,29 @@ export function PublicCatalogueActivityPage({ activityId }) {
     return galleryBackgrounds.map((bg) => ({ kind: "gradient", bg }));
   }, [catalogUrls, galleryBackgrounds]);
 
-  const catalogProse = activity ? getActivityPublicProse(activity) : "";
+  /** Texte saisi dans l’intranet (modal Description) — affiché dans la section « Informations ». */
+  const intranetDescriptionTrimmed = useMemo(
+    () => (activity ? String(activity.description || "").trim() : ""),
+    [activity]
+  );
+
+  /**
+   * Bloc descriptif sous la galerie : si une description intranet existe, elle est réservée à « Informations »
+   * pour éviter le doublon ; on affiche ici seulement l’extrait issu des notes.
+   */
+  const catalogProse = useMemo(() => {
+    if (!activity) return "";
+    if (intranetDescriptionTrimmed) {
+      return proseFromActivityNotes(activity.notes || "");
+    }
+    return getActivityPublicProse(activity);
+  }, [activity, intranetDescriptionTrimmed]);
+
   const bulletPoints = activity ? extractBulletLines(activity.notes) : [];
+
+  const informationsBody =
+    intranetDescriptionTrimmed ||
+    "Les détails pratiques (horaires, lieu de prise en charge, etc.) sont confirmés lors de votre demande de devis.";
 
   const canAddToCart = Boolean(date) && !noDatesConfigured;
   const showDateHint = !date && !noDatesConfigured;
@@ -680,8 +701,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
               <section className="grid gap-3 xl:grid-cols-[200px_1fr] xl:gap-0">
                 <h2 className="text-base font-bold text-gray-900 md:text-lg">Informations</h2>
-                <p className="text-sm text-gray-600">
-                  Les détails pratiques (horaires, lieu de prise en charge, etc.) sont confirmés lors de votre demande de devis.
+                <p className="whitespace-pre-line text-sm leading-relaxed text-gray-600">
+                  {informationsBody}
                 </p>
               </section>
             </div>

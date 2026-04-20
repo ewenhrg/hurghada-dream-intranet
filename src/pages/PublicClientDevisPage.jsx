@@ -4,7 +4,6 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
-import { getActivityPublicProse } from "../utils/activityHelpers";
 
 const ACTIVITY_COLUMNS = "id, name, category, price_adult, price_child, price_baby, currency, notes, description";
 
@@ -461,7 +460,6 @@ export function PublicClientDevisPage() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {group.items.map((activity) => {
                     const categoryKey = normalizeCategory(activity.category);
-                    const cardProse = getActivityPublicProse(activity);
                     return (
                       <article
                         key={activity.id}
@@ -509,11 +507,6 @@ export function PublicClientDevisPage() {
                           <h3 className="mb-2 line-clamp-2 text-lg font-semibold leading-snug text-gray-900 transition-colors group-hover:text-[#34b3f7] sm:text-[17px] dark:text-white">
                             {activity.name}
                           </h3>
-                          {cardProse ? (
-                            <p className="mb-3 line-clamp-4 whitespace-pre-line text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                              {cardProse}
-                            </p>
-                          ) : null}
                           <div className="mt-auto flex justify-end border-t border-gray-100 pt-3 dark:border-gray-800">
                             <div className="flex flex-col items-end">
                               <span className="text-[11px] font-medium text-gray-400">à partir de</span>
