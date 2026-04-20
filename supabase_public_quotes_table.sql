@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS public.public_quotes (
   client_phone TEXT DEFAULT '',
   client_email TEXT DEFAULT '',
   client_hotel TEXT DEFAULT '',
+  client_arrival_date TEXT DEFAULT '',
+  client_departure_date TEXT DEFAULT '',
   notes TEXT DEFAULT '',
   total NUMERIC DEFAULT 0,
   currency TEXT DEFAULT 'EUR',

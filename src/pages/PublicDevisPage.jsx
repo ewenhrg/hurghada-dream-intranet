@@ -50,6 +50,8 @@ function rowToViewModel(row) {
       phone: row.client_phone || "",
       email: row.client_email || "",
       hotel: row.client_hotel || "",
+      arrivalDate: row.client_arrival_date || "",
+      departureDate: row.client_departure_date || "",
     },
     notes: row.notes || "",
     total: row.total || 0,
@@ -77,7 +79,7 @@ export function PublicDevisPage() {
       const { data, error: loadError } = await supabase
         .from("public_quotes")
         .select(
-          "id, client_name, client_phone, client_email, client_hotel, notes, total, currency, items, created_at"
+          "id, client_name, client_phone, client_email, client_hotel, client_arrival_date, client_departure_date, notes, total, currency, items, created_at"
         )
         .eq("site_key", SITE_KEY)
         .order("created_at", { ascending: false })
@@ -226,6 +228,18 @@ export function PublicDevisPage() {
             </p>
             <p>
               <span className="font-semibold">Hôtel :</span> {quote.client?.hotel || "—"}
+            </p>
+            <p>
+              <span className="font-semibold">Arrivée :</span>{" "}
+              {quote.client?.arrivalDate
+                ? new Date(`${quote.client.arrivalDate}T12:00:00`).toLocaleDateString("fr-FR")
+                : "—"}
+            </p>
+            <p>
+              <span className="font-semibold">Départ :</span>{" "}
+              {quote.client?.departureDate
+                ? new Date(`${quote.client.departureDate}T12:00:00`).toLocaleDateString("fr-FR")
+                : "—"}
             </p>
             <p>
               <span className="font-semibold">Date de demande :</span>{" "}

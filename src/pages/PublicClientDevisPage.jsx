@@ -10,6 +10,8 @@ import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 /** `*` : toutes les colonnes présentes en base (évite erreur si `babies_forbidden` n’est pas encore migrée). */
 const ACTIVITY_COLUMNS = "*";
 
+const INSTAGRAM_CATALOG_URL = "https://www.instagram.com/hurghada_dream/";
+
 function toNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -65,6 +67,8 @@ export function PublicClientDevisPage() {
     phone: "",
     email: "",
     hotel: "",
+    arrivalDate: "",
+    departureDate: "",
     notes: "",
   });
 
@@ -246,35 +250,6 @@ export function PublicClientDevisPage() {
     };
   }, []);
 
-  function addToCart(activityId) {
-    setSuccess("");
-    setError("");
-    setCart((prev) => [
-      ...prev,
-                      {
-        id: `${activityId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        activityId: String(activityId),
-        date: "",
-        adults: 2,
-        children: 0,
-        babies: 0,
-        extraDolphin: false,
-        speedBoatExtra: [],
-        buggySimple: 0,
-        buggyFamily: 0,
-        yamaha250: 0,
-        ktm640: 0,
-        ktm530: 0,
-        cairePrivatif4pax: false,
-        cairePrivatif5pax: false,
-        cairePrivatif6pax: false,
-        louxorPrivatif4pax: false,
-        louxorPrivatif5pax: false,
-        louxorPrivatif6pax: false,
-      },
-    ]);
-  }
-
   function updateCartLine(lineId, field, value) {
     setCart((prev) => prev.map((line) => (line.id === lineId ? { ...line, [field]: value } : line)));
   }
@@ -292,10 +267,52 @@ export function PublicClientDevisPage() {
     setError("");
     setSuccess("");
 
-    if (!client.name.trim() || !client.phone.trim()) {
-      setError("Le nom et le téléphone sont obligatoires.");
+    const name = client.name.trim();
+    const phone = client.phone.trim();
+    const email = client.email.trim();
+    const hotel = client.hotel.trim();
+    const arrival = client.arrivalDate?.trim() || "";
+    const departure = client.departureDate?.trim() || "";
+    const notes = client.notes.trim();
+
+    if (!name) {
+      setError("Le nom complet est obligatoire.");
       return;
     }
+    if (!phone) {
+      setError("Le téléphone est obligatoire.");
+      return;
+    }
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (phoneDigits.length < 8) {
+      setError("Indique un numéro de téléphone valide (au moins 8 chiffres).");
+      return;
+    }
+    if (!email) {
+      setError("L’e-mail est obligatoire.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("L’adresse e-mail n’est pas valide.");
+      return;
+    }
+    if (!hotel) {
+      setError("L’hôtel ou le lieu de prise en charge est obligatoire.");
+      return;
+    }
+    if (!arrival) {
+      setError("La date d’arrivée est obligatoire.");
+      return;
+    }
+    if (!departure) {
+      setError("La date de fin de séjour (départ) est obligatoire.");
+      return;
+    }
+    if (arrival > departure) {
+      setError("La date de départ doit être le même jour ou après la date d’arrivée.");
+      return;
+    }
+
     if (cartLines.length === 0) {
       setError("Ajoute au moins une activité au panier.");
       return;
@@ -306,23 +323,55 @@ export function PublicClientDevisPage() {
     }
 
     const createdAt = new Date().toISOString();
-    const items = cartLines.map((line) => ({
-      activityId: String(line.activity.id),
-      activityName: line.activity.name || "",
-      date: line.date || "",
-      adults: toNumber(line.adults),
-      children: toNumber(line.children),
-      babies: line.activity.babies_forbidden ? 0 : toNumber(line.babies),
-      lineTotal: toNumber(line.lineTotal),
-    }));
+    const items = cartLines.map((line) => {
+      const act = line.activity;
+      const babiesVal = act.babies_forbidden ? 0 : toNumber(line.babies);
+      return {
+        activityId: String(act.id),
+        activityName: act.name || "",
+        date: line.date || "",
+        adults: toNumber(line.adults),
+        children: toNumber(line.children),
+        babies: babiesVal,
+        lineTotal: toNumber(line.lineTotal),
+        // Options catalogue (fiche activité / panier) — nécessaire pour « Commencer le devis » côté intranet
+        extraDolphin: Boolean(line.extraDolphin),
+        speedBoatExtra: Array.isArray(line.speedBoatExtra)
+          ? [...line.speedBoatExtra]
+          : line.speedBoatExtra
+            ? [line.speedBoatExtra]
+            : [],
+        buggySimple: toNumber(line.buggySimple),
+        buggyFamily: toNumber(line.buggyFamily),
+        yamaha250: toNumber(line.yamaha250),
+        ktm640: toNumber(line.ktm640),
+        ktm530: toNumber(line.ktm530),
+        cairePrivatif4pax: Boolean(line.cairePrivatif4pax),
+        cairePrivatif5pax: Boolean(line.cairePrivatif5pax),
+        cairePrivatif6pax: Boolean(line.cairePrivatif6pax),
+        louxorPrivatif4pax: Boolean(line.louxorPrivatif4pax),
+        louxorPrivatif5pax: Boolean(line.louxorPrivatif5pax),
+        louxorPrivatif6pax: Boolean(line.louxorPrivatif6pax),
+        allerSimple: Boolean(line.allerSimple),
+        allerRetour: Boolean(line.allerRetour),
+        zeroTracasTransfertVisaSim: line.zeroTracasTransfertVisaSim ?? "",
+        zeroTracasTransfertVisa: line.zeroTracasTransfertVisa ?? "",
+        zeroTracasTransfert3Personnes: line.zeroTracasTransfert3Personnes ?? "",
+        zeroTracasTransfertPlus3Personnes: line.zeroTracasTransfertPlus3Personnes ?? "",
+        zeroTracasVisaSim: line.zeroTracasVisaSim ?? "",
+        zeroTracasVisaSeul: line.zeroTracasVisaSeul ?? "",
+      };
+    });
 
     const payload = {
       site_key: SITE_KEY,
-      client_name: client.name.trim(),
-      client_phone: client.phone.trim(),
-      client_email: client.email.trim(),
-      client_hotel: client.hotel.trim(),
-      notes: client.notes.trim(),
+      client_name: name,
+      client_phone: phone,
+      client_email: email,
+      client_hotel: hotel,
+      client_arrival_date: arrival,
+      client_departure_date: departure,
+      notes: notes || "",
       total: toNumber(cartTotal),
       currency: "EUR",
       items,
@@ -339,7 +388,15 @@ export function PublicClientDevisPage() {
       }
       setSuccess("Demande envoyée avec succès. Nous te contactons rapidement.");
       setCart([]);
-      setClient({ name: "", phone: "", email: "", hotel: "", notes: "" });
+      setClient({
+        name: "",
+        phone: "",
+        email: "",
+        hotel: "",
+        arrivalDate: "",
+        departureDate: "",
+        notes: "",
+      });
       setCheckoutOpen(false);
       setCartDrawerOpen(false);
     } catch (err) {
@@ -378,13 +435,24 @@ export function PublicClientDevisPage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
-            <div className="hidden items-center gap-1.5 rounded-full border border-amber-300/60 bg-gradient-to-r from-amber-50 to-orange-50 px-3.5 py-1.5 text-xs font-bold text-amber-950 shadow-md shadow-amber-900/10 md:inline-flex">
-              <span aria-hidden className="text-amber-600">
-                ★
-              </span>
-              <span>5,0</span>
-              <span className="font-bold text-amber-950">· 119 avis</span>
-            </div>
+            <a
+              href={INSTAGRAM_CATALOG_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative inline-flex min-h-[44px] items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888] px-3.5 py-2.5 pl-3.5 text-sm font-extrabold tracking-tight text-white shadow-[0_4px_20px_-4px_rgba(225,48,108,0.45),0_2px_8px_-2px_rgba(15,23,42,0.2)] ring-2 ring-white/30 transition hover:brightness-105 hover:shadow-[0_8px_28px_-6px_rgba(225,48,108,0.5)] active:scale-[0.98] sm:gap-2 sm:px-4 sm:py-2.5"
+              aria-label="Instagram Hurghada Dream — 127K abonnés (nouvelle fenêtre)"
+            >
+              <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+              <svg
+                className="relative h-5 w-5 shrink-0 text-white drop-shadow-sm"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden
+              >
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.06-1.28.072-1.689.072-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
+              </svg>
+              <span className="relative text-[15px] font-black tabular-nums tracking-tight drop-shadow-sm">127K</span>
+            </a>
             <button
               type="button"
               onClick={() => {
@@ -564,6 +632,7 @@ export function PublicClientDevisPage() {
                         key={activity.id}
                         role="button"
                         tabIndex={0}
+                        aria-label={`${activity.name || "Activité"} — ouvrir la fiche pour configurer et ajouter au panier`}
                         onClick={() =>
                           navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`)
                         }
@@ -631,22 +700,9 @@ export function PublicClientDevisPage() {
                               </div>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              addToCart(activity.id);
-                            }}
-                            className="group/btn relative mt-4 flex w-full min-h-[48px] items-center justify-center gap-2 overflow-hidden rounded-xl border border-white/20 bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 px-4 py-3.5 text-sm font-extrabold tracking-tight text-white shadow-[0_6px_22px_-6px_rgba(15,118,110,0.55)] transition hover:from-teal-950 hover:via-teal-900 hover:to-emerald-900 hover:shadow-[0_12px_32px_-8px_rgba(15,118,110,0.5)] active:scale-[0.98]"
-                          >
-                            <span className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                            <svg className="relative h-5 w-5 shrink-0 text-white drop-shadow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden>
-                              <circle cx="9" cy="21" r="1" />
-                              <circle cx="20" cy="21" r="1" />
-                              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                            </svg>
-                            <span className="relative drop-shadow-sm">Ajouter au panier</span>
-                          </button>
+                          <p className="mt-3 text-center text-[11px] font-semibold leading-snug text-slate-500">
+                            Ouvrez la fiche pour choisir la date, les participants et ajouter au panier.
+                          </p>
                         </div>
                       </article>
                     );
@@ -827,11 +883,15 @@ export function PublicClientDevisPage() {
                 {error || success}
               </div>
             )}
+            <p className="mb-3 text-xs font-semibold leading-relaxed text-slate-700">
+              Tous les champs ci-dessous sont <strong>obligatoires</strong> pour envoyer ta demande.
+            </p>
             <div className="space-y-3.5">
               <input
                 value={client.name}
                 onChange={(e) => updateClientField("name", e.target.value)}
                 placeholder="Nom complet *"
+                required
                 className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-600 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
                 autoComplete="name"
               />
@@ -839,6 +899,8 @@ export function PublicClientDevisPage() {
                 value={client.phone}
                 onChange={(e) => updateClientField("phone", e.target.value)}
                 placeholder="Téléphone *"
+                required
+                inputMode="tel"
                 className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-600 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
                 autoComplete="tel"
               />
@@ -846,20 +908,45 @@ export function PublicClientDevisPage() {
                 type="email"
                 value={client.email}
                 onChange={(e) => updateClientField("email", e.target.value)}
-                placeholder="Email"
+                placeholder="E-mail *"
+                required
                 className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-600 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
                 autoComplete="email"
               />
               <input
                 value={client.hotel}
                 onChange={(e) => updateClientField("hotel", e.target.value)}
-                placeholder="Hôtel"
+                placeholder="Hôtel ou lieu de prise en charge *"
+                required
                 className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-600 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
               />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-700">Date d’arrivée *</span>
+                  <input
+                    type="date"
+                    value={client.arrivalDate}
+                    onChange={(e) => updateClientField("arrivalDate", e.target.value)}
+                    required
+                    className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-700">Date de fin (départ) *</span>
+                  <input
+                    type="date"
+                    value={client.departureDate}
+                    min={client.arrivalDate || undefined}
+                    onChange={(e) => updateClientField("departureDate", e.target.value)}
+                    required
+                    className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
+                  />
+                </label>
+              </div>
               <textarea
                 value={client.notes}
                 onChange={(e) => updateClientField("notes", e.target.value)}
-                placeholder="Précisions (horaires, enfants, etc.)"
+                placeholder="Précisions (horaires, langue du guide, enfants, etc.) — optionnel"
                 rows={3}
                 className="w-full resize-none rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-600 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
               />

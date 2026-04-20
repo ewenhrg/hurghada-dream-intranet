@@ -413,8 +413,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
     if (isSpeedBoatActivity(activity.name)) {
       return [
         "Grille Speed Boat : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant.",
-        "Option dauphin : +20 €.",
-        "Les extras (baie, lunch…) : une seule option au choix parmi la liste ci-dessous.",
+        "Une seule option payante au choix : dauphin (+20 €) ou une île / formule (baie, lunch…).",
       ].join("\n");
     }
     if (isBuggyActivity(activity.name)) {
@@ -429,58 +428,96 @@ export function PublicCatalogueActivityPage({ activityId }) {
     return "";
   }, [activity]);
 
+  /** Dauphin OU une île — jamais les deux (aligné sur la grille tarifaire). */
+  const speedBoatPackValue = useMemo(() => {
+    if (special.extraDolphin) return "dolphin";
+    const first = special.speedBoatExtra?.[0];
+    if (first) return first;
+    return "none";
+  }, [special.extraDolphin, special.speedBoatExtra]);
+
+  const applySpeedBoatPack = useCallback((value) => {
+    setSpecial((s) => {
+      if (value === "none") {
+        return { ...s, extraDolphin: false, speedBoatExtra: [] };
+      }
+      if (value === "dolphin") {
+        return { ...s, extraDolphin: true, speedBoatExtra: [] };
+      }
+      return { ...s, extraDolphin: false, speedBoatExtra: value ? [value] : [] };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!activity || !isSpeedBoatActivity(activity.name)) return;
+    if (special.extraDolphin && (special.speedBoatExtra?.length ?? 0) > 0) {
+      setSpecial((s) => ({ ...s, speedBoatExtra: [] }));
+    }
+  }, [activity, special.extraDolphin, special.speedBoatExtra]);
+
   const specialPricingBeforeParticipants = useMemo(() => {
     if (!activity) return null;
     const name = activity.name || "";
 
+    const speedBoatOptionClass = (active) =>
+      [
+        "flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3.5 transition",
+        active
+          ? "border-teal-600 bg-white shadow-md ring-2 ring-teal-400/50"
+          : "border-slate-200/90 bg-white/95 hover:border-teal-400/80 hover:shadow-sm",
+      ].join(" ");
+
     if (isSpeedBoatActivity(name)) {
+      const radioName = `hd-speedboat-pack-${activity.id}`;
       return (
         <div className="space-y-3 rounded-xl border border-teal-200/80 bg-teal-50/80 p-3">
           <p className="text-xs font-bold uppercase tracking-wide text-teal-900">Options Speed Boat</p>
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-800">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300"
-              checked={special.extraDolphin}
-              onChange={(e) => setSpecial((s) => ({ ...s, extraDolphin: e.target.checked }))}
-            />
-            Dauphin (+20 € pour la ligne)
-          </label>
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-gray-700">Extra (un seul au choix, par personne)</p>
-            <div className="max-h-48 space-y-1.5 overflow-y-auto pr-1" role="radiogroup" aria-label="Extra Speed Boat">
-              {SPEED_BOAT_EXTRAS.map((extra) => {
-                const selectedId = special.speedBoatExtra[0] ?? "";
-                const checked = extra.id ? selectedId === extra.id : !selectedId;
-                return (
-                  <label key={extra.id || "none"} className="flex cursor-pointer items-start gap-2 text-xs text-gray-800">
-                    <input
-                      type="radio"
-                      name={`hd-speedboat-extra-${activity.id}`}
-                      className="mt-0.5 h-4 w-4 shrink-0 border-slate-300 text-teal-600 focus:ring-teal-500"
-                      checked={checked}
-                      onChange={() => {
-                        setSpecial((s) => ({
-                          ...s,
-                          speedBoatExtra: extra.id ? [extra.id] : [],
-                        }));
-                      }}
-                    />
-                    <span>
-                      {extra.label}
-                      {extra.id ? (
-                        <>
-                          {" "}
-                          <span className="font-medium text-slate-700">
-                            (+{extra.priceAdult} € / adulte · +{extra.priceChild} € / enfant)
-                          </span>
-                        </>
-                      ) : null}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
+          <p className="text-[11px] font-medium leading-snug text-teal-950/90">
+            <strong>Un seul choix possible :</strong> soit l&apos;option dauphin, soit une île / formule — pas les deux.
+          </p>
+          <div className="max-h-[min(70vh,22rem)] space-y-2 overflow-y-auto pr-0.5" role="radiogroup" aria-label="Options Speed Boat">
+            <label className={speedBoatOptionClass(speedBoatPackValue === "none")}>
+              <input
+                type="radio"
+                name={radioName}
+                value="none"
+                checked={speedBoatPackValue === "none"}
+                onChange={() => applySpeedBoatPack("none")}
+                className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-slate-400 accent-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1"
+              />
+              <span className="text-sm font-semibold leading-snug text-slate-900">Aucune option (prix de base)</span>
+            </label>
+            <label className={speedBoatOptionClass(speedBoatPackValue === "dolphin")}>
+              <input
+                type="radio"
+                name={radioName}
+                value="dolphin"
+                checked={speedBoatPackValue === "dolphin"}
+                onChange={() => applySpeedBoatPack("dolphin")}
+                className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-slate-400 accent-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1"
+              />
+              <span className="text-sm font-semibold leading-snug text-slate-900">
+                Dauphin <span className="font-bold text-teal-800">(+20 € pour la ligne)</span>
+              </span>
+            </label>
+            {SPEED_BOAT_EXTRAS.filter((e) => e.id).map((extra) => (
+              <label key={extra.id} className={speedBoatOptionClass(speedBoatPackValue === extra.id)}>
+                <input
+                  type="radio"
+                  name={radioName}
+                  value={extra.id}
+                  checked={speedBoatPackValue === extra.id}
+                  onChange={() => applySpeedBoatPack(extra.id)}
+                  className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-slate-400 accent-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1"
+                />
+                <span className="text-sm leading-snug text-slate-900">
+                  <span className="font-semibold">{extra.label}</span>{" "}
+                  <span className="text-xs font-medium text-slate-700">
+                    (+{extra.priceAdult} € / adulte · +{extra.priceChild} € / enfant)
+                  </span>
+                </span>
+              </label>
+            ))}
           </div>
         </div>
       );
@@ -617,7 +654,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
 
     return null;
-  }, [activity, special]);
+  }, [activity, special, speedBoatPackValue, applySpeedBoatPack]);
 
   const codedTotalPending = useMemo(() => {
     if (!activity) return false;
