@@ -233,3 +233,23 @@ export function getActivityTarifListLines(activityLike) {
 
   return null;
 }
+
+/**
+ * Texte descriptif dérivé des notes : exclut les lignes type « - point fort » (même logique que la fiche activité).
+ */
+export function proseFromActivityNotes(notes) {
+  if (!notes) return "";
+  const lines = String(notes).split(/\r?\n/);
+  const kept = lines.filter((line) => !/^\s*[-•*]\s+/.test(line.trim()));
+  return kept.join("\n").trim();
+}
+
+/**
+ * Texte public pour catalogue / fiche : colonne `description` si remplie, sinon extrait des `notes`.
+ */
+export function getActivityPublicProse(activity) {
+  if (!activity) return "";
+  const desc = String(activity.description || "").trim();
+  if (desc) return desc;
+  return proseFromActivityNotes(activity.notes || "");
+}

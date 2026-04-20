@@ -8,6 +8,7 @@ import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay
 import { buildSelectableDateOptions, normalizeAvailableDays } from "../utils/activityAvailableDates";
 import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
+import { getActivityPublicProse } from "../utils/activityHelpers";
 
 /** Colonnes toujours présentes sur `activities` (schéma de base). */
 const ACTIVITY_COLUMNS_BASE =
@@ -65,14 +66,6 @@ function extractBulletLines(notes) {
     .filter((line) => /^[-•*]\s+/.test(line))
     .map((line) => line.replace(/^[-•*]\s+/, "").trim())
     .filter(Boolean);
-}
-
-/** Texte hors lignes « liste » pour le bloc descriptif */
-function proseFromNotes(notes) {
-  if (!notes) return "";
-  const lines = String(notes).split(/\r?\n/);
-  const kept = lines.filter((line) => !/^\s*[-•*]\s+/.test(line.trim()));
-  return kept.join("\n").trim();
 }
 
 function buildLineTotal(activity, pax) {
@@ -342,9 +335,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
     return galleryBackgrounds.map((bg) => ({ kind: "gradient", bg }));
   }, [catalogUrls, galleryBackgrounds]);
 
-  const catalogProse = activity
-    ? String(activity.description || "").trim() || proseFromNotes(activity.notes)
-    : "";
+  const catalogProse = activity ? getActivityPublicProse(activity) : "";
   const bulletPoints = activity ? extractBulletLines(activity.notes) : [];
 
   const canAddToCart = Boolean(date) && !noDatesConfigured;
