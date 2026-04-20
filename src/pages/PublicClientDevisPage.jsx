@@ -5,8 +5,10 @@ import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "../utils/publicCatalogPricing";
+import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 
-const ACTIVITY_COLUMNS = "id, name, category, price_adult, price_child, price_baby, currency, notes, description";
+const ACTIVITY_COLUMNS =
+  "id, name, category, price_adult, price_child, price_baby, currency, notes, description, catalog_image_urls";
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -508,6 +510,8 @@ export function PublicClientDevisPage() {
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {group.items.map((activity) => {
                     const categoryKey = normalizeCategory(activity.category);
+                    const catalogUrls = normalizeCatalogImageUrlsFromDb(activity.catalog_image_urls);
+                    const coverImageUrl = catalogUrls[0] || null;
                     const listFrom = getPublicCatalogListFromPrice(activity);
                     const cardFrom =
                       toNumber(activity.price_adult) > 0 ? toNumber(activity.price_adult) : listFrom?.amount ?? null;
@@ -527,10 +531,17 @@ export function PublicClientDevisPage() {
                         }}
                         className="service-card group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-soft transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-teal-200/90 hover:shadow-soft-lg active:scale-[0.99]"
                       >
-                        <div
-                          className="relative h-48 overflow-hidden bg-slate-100 sm:h-44"
-                          style={{ background: getCategoryCover(categoryKey) }}
-                        >
+                        <div className="relative h-48 overflow-hidden bg-slate-100 sm:h-44">
+                          {coverImageUrl ? (
+                            <img
+                              src={coverImageUrl}
+                              alt=""
+                              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="h-full w-full" style={{ background: getCategoryCover(categoryKey) }} />
+                          )}
                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/55 via-slate-900/10 to-transparent" />
                           <div className="absolute right-3 top-3">
                             <button

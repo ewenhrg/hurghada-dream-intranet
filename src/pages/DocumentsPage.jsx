@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
@@ -25,13 +25,29 @@ export function DocumentsPage({ user }) {
   const loadDocuments = useCallback(async () => {
     if (!supabase) return;
     try {
-      const { data, error } = await supabase
-        .from("documents")
-        .select("id, title, link, file_url, note, created_at, created_by_name")
-        .eq("site_key", SITE_KEY)
-        .order("created_at", { ascending: false });
+      const base = () =>
+        supabase
+          .from("documents")
+          .select("id, title, link, file_url, note, created_at, created_by_name")
+          .order("created_at", { ascending: false });
+
+      let { data, error } = await base().eq("site_key", SITE_KEY);
 
       if (error) throw error;
+
+      /** Ancienne config : VITE_SITE_KEY = URL du projet → lignes enregistrées avec cette valeur. */
+      const legacyKey = __SUPABASE_DEBUG__?.supabaseUrl;
+      if ((!data || data.length === 0) && legacyKey && legacyKey !== SITE_KEY) {
+        const retry = await base().eq("site_key", legacyKey);
+        if (!retry.error && retry.data?.length) {
+          data = retry.data;
+          toast.warning(
+            "Documents trouvés avec l’ancienne clé site. Exécutez le script SQL de migration (voir dépôt) pour corriger site_key en base.",
+            8000
+          );
+        }
+      }
+
       setList(data || []);
     } catch (err) {
       logger.error("Erreur chargement documents:", err);
