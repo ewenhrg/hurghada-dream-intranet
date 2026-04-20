@@ -551,7 +551,7 @@ export function LoginPage({ onSuccess }) {
 
               <div className="mt-8 pt-6 border-t border-white/10 text-center">
                 <p className="text-xs font-semibold text-slate-400">Réservé à l'équipe Hurghada Dream</p>
-                <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-widest">Intranet · Ewen</p>
+                <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-widest">Espace équipe · Ewen</p>
               </div>
             </div>
           </div>

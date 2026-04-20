@@ -6,7 +6,7 @@ import { logger } from "../utils/logger";
 import { getActivityTarifListLines } from "../utils/activityHelpers";
 import { formatActivityAvailableDaysSummary, getActivityDayLabelsList } from "../utils/activityDaysDisplay";
 
-/** Même jeu de colonnes que l’intranet (App.jsx) pour les prix / catégorie. */
+/** Même jeu de colonnes que la gestion interne (App.jsx) pour les prix / catégorie. */
 const SELECT_COLUMNS =
   "id, name, category, price_adult, price_child, price_baby, notes, currency, site_key, available_days";
 
@@ -21,7 +21,7 @@ function canonicalCategoryKey(raw) {
 }
 
 /**
- * Regroupe en conservant l’ordre d’entrée (ici : id décroissant comme l’intranet),
+ * Regroupe en conservant l’ordre d’entrée (ici : id décroissant comme en gestion),
  * et n’affiche que les catégories qui ont au moins une ligne.
  */
 function groupRowsByCategory(rowsInOrder) {
@@ -220,7 +220,7 @@ function TarifsActivityMobileCard({ row, categoryKey }) {
 
 /**
  * Choisit la liste la plus longue comme App.jsx (site_key puis requêtes de secours),
- * pour que la page publique affiche autant d’activités que l’intranet après sync.
+ * pour que la page publique affiche autant d’activités que la gestion interne après sync.
  */
 async function fetchActivityRowsBestSource(client) {
   const { data, error } = await client
@@ -407,7 +407,7 @@ export function PublicTarifsPage() {
 
           <p className="mt-5 max-w-2xl text-base font-medium leading-relaxed text-slate-200 sm:text-lg">
             Page publique ultra lisible : gros titres, couleurs par rubrique, montants bien contrastés. Les prix
-            suivent en direct les changements faits dans l’intranet (même base, même ordre).
+            sont mis à jour en direct lorsque nous les modifions (même base, même ordre).
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
@@ -431,7 +431,7 @@ export function PublicTarifsPage() {
               to="/"
               className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-cyan-200 transition hover:border-cyan-300/60 hover:bg-white/10 hover:text-white"
             >
-              <span aria-hidden>←</span> Intranet
+              <span aria-hidden>←</span> Connexion
             </Link>
             {lastSync && (
               <span className="text-slate-300">

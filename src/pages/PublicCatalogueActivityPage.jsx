@@ -199,7 +199,7 @@ function BookingCardShell({
           </p>
           <p>
             Bébé{ageBaby ? ` (${ageBaby})` : ""} :{" "}
-            {babyPriceZero ? "gratuit ou selon grille intranet" : formatMoney(activity.price_baby, currency)}
+            {babyPriceZero ? "gratuit ou selon grille applicable" : formatMoney(activity.price_baby, currency)}
           </p>
         </div>
       </div>
@@ -236,7 +236,7 @@ function BookingCardShell({
       </div>
 
       {babyPriceZero ? (
-        <p className="text-xs text-green-700">Tarif bébé à 0 € dans l&apos;intranet — les bébés ne sont pas facturés sur ce tarif.</p>
+        <p className="text-xs text-green-700">Tarif bébé à 0 € — les bébés ne sont pas facturés sur ce tarif.</p>
       ) : null}
 
       {daysSummary ? <p className="text-xs text-gray-500">Jours ouverts : {daysSummary}</p> : null}
@@ -249,7 +249,7 @@ function BookingCardShell({
         maxDaysAhead={120}
       />
       {noDatesConfigured ? (
-        <p className="text-sm text-amber-800">Aucun jour n&apos;est coché pour cette activité dans l&apos;intranet. Écrivez-nous sur WhatsApp pour réserver.</p>
+        <p className="text-sm text-amber-800">Aucun jour n&apos;est ouvert pour cette activité en ligne. Écrivez-nous sur WhatsApp pour réserver.</p>
       ) : null}
 
       <div className="border-t border-gray-200 pt-4">

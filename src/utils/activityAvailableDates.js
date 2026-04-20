@@ -1,5 +1,5 @@
 /**
- * Jours disponibles côté intranet : tableau de 7 booléens,
+ * Jours disponibles (gestion) : tableau de 7 booléens,
  * index 0 = dimanche (aligné sur Date.getDay()).
  * @param {unknown} raw
  * @returns {boolean[]}
