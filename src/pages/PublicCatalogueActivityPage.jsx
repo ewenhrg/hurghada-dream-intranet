@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
@@ -47,17 +47,198 @@ function getCategoryLabel(categoryKey) {
   return category?.label || "Activité";
 }
 
+/** Lignes commençant par - • ou * → points forts */
+function extractBulletLines(notes) {
+  if (!notes) return [];
+  return String(notes)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^[-•*]\s+/.test(line))
+    .map((line) => line.replace(/^[-•*]\s+/, "").trim())
+    .filter(Boolean);
+}
+
+/** Texte hors lignes « liste » pour le bloc descriptif */
+function proseFromNotes(notes) {
+  if (!notes) return "";
+  const lines = String(notes).split(/\r?\n/);
+  const kept = lines.filter((line) => !/^\s*[-•*]\s+/.test(line.trim()));
+  return kept.join("\n").trim();
+}
+
+function IconHeart({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M2 9.5a5.5 5.5 0 0110.591-3.676.56.56 0 00.818 0A5.49 5.49 0 0122 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 01-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5z" />
+    </svg>
+  );
+}
+
+function IconShare({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="M8.59 13.51l6.83 3.98m-.01-10.98l-6.82 3.98" />
+    </svg>
+  );
+}
+
+function IconMapPin({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 01-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 1116 0" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
+function IconUsers({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  );
+}
+
+function IconCalendar({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M8 2v4m8-4v4" />
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M3 10h18" />
+    </svg>
+  );
+}
+
+function IconChevronDown({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function IconImages({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="m22 11-1.296-1.296a2.4 2.4 0 00-3.408 0L11 16" />
+      <path d="M4 8a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2" />
+      <circle cx="13" cy="7" r="1" fill="currentColor" />
+      <rect x="8" y="2" width="14" height="14" rx="2" />
+    </svg>
+  );
+}
+
+function IconShieldCheck({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 01-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 011-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 011.52 0C14.51 3.81 17 5 19 5a1 1 0 011 1z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function BookingCardShell({
+  activity,
+  adults,
+  setAdults,
+  date,
+  setDate,
+  lineTotal,
+  canAdd,
+  onAdd,
+  dateError,
+}) {
+  const currency = activity.currency || "EUR";
+  return (
+    <div className="space-y-3 md:space-y-4">
+      <div className="border-b border-gray-200 pb-3 md:pb-4">
+        <p className="mb-1 text-xs text-gray-600">À partir de</p>
+        <div className="flex items-baseline gap-2">
+          <span className="text-xl font-bold text-gray-900 md:text-2xl">
+            {formatMoney(activity.price_adult, currency)}
+          </span>
+        </div>
+      </div>
+
+      <div className="relative">
+        <span className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2">
+          <IconUsers className="h-5 w-5 text-gray-600" />
+        </span>
+        <IconChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+        <select
+          value={adults}
+          onChange={(e) => setAdults(Number(e.target.value))}
+          className="w-full appearance-none rounded-xl border border-gray-300 bg-white py-3 pl-12 pr-10 text-sm font-medium text-gray-900 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+        >
+          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+            <option key={n} value={n}>
+              {n} adulte{n > 1 ? "s" : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <p className="-mt-2 text-xs text-green-600">Gratuit pour les moins de 6 ans</p>
+
+      <div className="relative">
+        <span className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2">
+          <IconCalendar className="h-5 w-5 text-gray-600" />
+        </span>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-12 pr-4 text-sm font-medium text-gray-900 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 [color-scheme:light]"
+        />
+      </div>
+
+      <div className="border-t border-gray-200 pt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-base font-medium text-gray-700">Total</span>
+          <span className="text-xl font-bold text-gray-900">{formatMoney(lineTotal, currency)}</span>
+        </div>
+        <button
+          type="button"
+          disabled={!canAdd}
+          onClick={onAdd}
+          className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600/90 disabled:cursor-not-allowed disabled:opacity-75 md:py-3 md:text-base"
+        >
+          Ajouter au panier
+        </button>
+        {dateError ? (
+          <p className="mt-2 text-center text-sm text-red-500">Veuillez sélectionner une date</p>
+        ) : null}
+        <div className="mt-4 flex items-start gap-3">
+          <IconShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+          <div>
+            <p className="text-sm font-medium text-gray-900">Annulation gratuite</p>
+            <p className="text-xs text-gray-600">Annulation jusqu&apos;à 24 heures à l&apos;avance pour un remboursement intégral</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * @param {{ activityId: string }} props
  */
 export function PublicCatalogueActivityPage({ activityId }) {
   const navigate = useNavigate();
   const [activity, setActivity] = useState(null);
+  const [related, setRelated] = useState([]);
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const [adults, setAdults] = useState(2);
+  const [adults, setAdults] = useState(1);
   const [date, setDate] = useState("");
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const carouselRef = useRef(null);
 
   const categoryKey = useMemo(
     () => (activity ? normalizeCategory(activity.category) : "desert"),
@@ -68,6 +249,24 @@ export function PublicCatalogueActivityPage({ activityId }) {
     if (!activity) return 0;
     return toNumber(adults) * toNumber(activity.price_adult);
   }, [activity, adults]);
+
+  const cover = getCategoryCover(categoryKey);
+  const label = getCategoryLabel(categoryKey);
+  const galleryBackgrounds = useMemo(
+    () => [
+      cover,
+      "linear-gradient(135deg, rgba(14,165,233,0.88), rgba(59,130,246,0.78))",
+      "linear-gradient(135deg, rgba(244,63,94,0.45), rgba(99,102,241,0.6))",
+      "linear-gradient(135deg, rgba(16,185,129,0.7), rgba(5,150,105,0.55))",
+    ],
+    [cover]
+  );
+
+  const prose = activity ? proseFromNotes(activity.notes) : "";
+  const bulletPoints = activity ? extractBulletLines(activity.notes) : [];
+
+  const canAddToCart = Boolean(date);
+  const showDateHint = !date;
 
   useEffect(() => {
     let cancelled = false;
@@ -115,13 +314,64 @@ export function PublicCatalogueActivityPage({ activityId }) {
     };
   }, [activityId]);
 
+  useEffect(() => {
+    if (!activity || !supabase || !__SUPABASE_DEBUG__.isConfigured) return;
+    let cancelled = false;
+
+    async function loadRelated() {
+      try {
+        const { data: bySite } = await supabase
+          .from("activities")
+          .select(ACTIVITY_COLUMNS)
+          .eq("site_key", SITE_KEY)
+          .neq("id", activity.id)
+          .order("name", { ascending: true })
+          .limit(12);
+
+        if (!cancelled && Array.isArray(bySite) && bySite.length > 0) {
+          setRelated(bySite);
+          return;
+        }
+
+        const { data: loose } = await supabase
+          .from("activities")
+          .select(ACTIVITY_COLUMNS)
+          .neq("id", activity.id)
+          .order("name", { ascending: true })
+          .limit(12);
+
+        if (!cancelled && Array.isArray(loose)) setRelated(loose);
+      } catch (e) {
+        logger.warn("PublicCatalogueActivityPage related:", e);
+      }
+    }
+
+    void loadRelated();
+    return () => {
+      cancelled = true;
+    };
+  }, [activity]);
+
+  const scrollToBooking = useCallback(() => {
+    document.getElementById("disponibilites")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  const onCarouselScroll = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const w = el.offsetWidth;
+    if (w <= 0) return;
+    const i = Math.round(el.scrollLeft / w);
+    setGalleryIndex(Math.min(Math.max(i, 0), galleryBackgrounds.length - 1));
+  }, [galleryBackgrounds.length]);
+
   function appendToCartAndReturn() {
-    if (!activity) return;
+    if (!activity || !date) return;
     const prev = loadPublicCatalogueCart();
     const line = {
       id: `${activity.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       activityId: String(activity.id),
-      date: date || "",
+      date,
       adults: Math.max(0, toNumber(adults)),
       children: 0,
       babies: 0,
@@ -134,32 +384,29 @@ export function PublicCatalogueActivityPage({ activityId }) {
     const url = window.location.href;
     try {
       if (navigator.share) {
-        await navigator.share({
-          title: activity?.name || "Hurghada Dream",
-          url,
-        });
+        await navigator.share({ title: activity?.name || "Hurghada Dream", url });
       } else {
         await navigator.clipboard.writeText(url);
       }
     } catch {
-      /* user cancelled or clipboard denied */
+      /* ignore */
     }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-100">
-        <div className="mx-auto max-w-[1200px] px-4 py-16 text-center text-slate-600">Chargement…</div>
+      <div className="min-h-screen bg-gray-50">
+        <div className="mx-auto max-w-7xl px-4 py-16 text-center text-gray-600">Chargement…</div>
       </div>
     );
   }
 
   if (loadError || !activity) {
     return (
-      <div className="min-h-screen bg-slate-100">
-        <div className="mx-auto max-w-[1200px] px-4 py-16 text-center">
-          <p className="text-slate-700">{loadError || "Activité introuvable."}</p>
-          <Link to="/catalogue" className="mt-4 inline-block font-semibold text-[#34b3f7] hover:underline">
+      <div className="min-h-screen bg-gray-50">
+        <div className="mx-auto max-w-7xl px-4 py-16 text-center">
+          <p className="text-gray-800">{loadError || "Activité introuvable."}</p>
+          <Link to="/catalogue" className="mt-4 inline-block font-semibold text-emerald-600 hover:underline">
             ← Retour au catalogue
           </Link>
         </div>
@@ -167,142 +414,271 @@ export function PublicCatalogueActivityPage({ activityId }) {
     );
   }
 
-  const cover = getCategoryCover(categoryKey);
-  const label = getCategoryLabel(categoryKey);
-
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
-      <header className="border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1200px] items-center gap-4 px-4 py-3 sm:px-6">
-          <Link to="/catalogue" className="text-sm font-semibold text-[#34b3f7] hover:underline">
+    <div className="relative isolate flex min-h-screen flex-col bg-gray-50 font-sans text-gray-900">
+      <header className="sticky top-0 z-[100] border-b border-gray-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
+          <Link to="/catalogue" className="text-sm font-semibold text-emerald-700 hover:underline">
             ← Catalogue
           </Link>
-          <div className="h-8 w-px bg-slate-200" aria-hidden />
+          <div className="h-8 w-px bg-gray-200" aria-hidden />
           <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-lg bg-slate-950 p-1">
+            <div className="h-9 w-9 rounded-xl bg-slate-950 p-1">
               <img src="/logo.png" alt="" className="h-full w-full object-contain" />
             </div>
-            <span className="text-sm font-semibold text-slate-700">Hurghada Dream</span>
+            <span className="text-sm font-semibold text-gray-800">Hurghada Dream</span>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6 lg:py-10">
-        <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-start">
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-[#1a2b49] sm:text-3xl">{activity.name}</h1>
-              <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-600">
-                <span className="text-base" aria-hidden>
-                  📍
-                </span>
-                <span>{label}</span>
-              </p>
+      <main className="relative flex-grow pt-6 md:pt-8">
+        {/* ——— Galerie mobile ——— */}
+        <div className="px-4 md:hidden">
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[22px]">
+            <div ref={carouselRef} onScroll={onCarouselScroll} className="scrollbar-hide flex h-full snap-x snap-mandatory gap-0 overflow-x-auto">
+              {galleryBackgrounds.map((bg, i) => (
+                <div key={i} className="relative h-full min-w-full shrink-0 snap-start overflow-hidden">
+                  <div className="h-full w-full" style={{ background: bg }} />
+                </div>
+              ))}
             </div>
-
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1.5 backdrop-blur-sm">
+              {galleryBackgrounds.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all ${i === galleryIndex ? "w-4 bg-white" : "w-1.5 bg-white/50"}`}
+                />
+              ))}
+            </div>
+            <div className="absolute right-3 top-1/2 flex -translate-y-1/2 flex-col gap-2">
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur-sm transition active:scale-95"
                 aria-label="Ajouter aux favoris"
               >
-                <span aria-hidden>♡</span>
+                <IconHeart className="h-5 w-5 text-gray-700" />
+              </button>
+              <button
+                type="button"
+                onClick={() => void sharePage()}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur-sm transition active:scale-95"
+                aria-label="Partager"
+              >
+                <IconShare className="h-5 w-5 text-gray-700" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 pt-4 md:hidden">
+          <h1 className="mb-2 text-2xl font-bold text-gray-900">{activity.name}</h1>
+        </div>
+
+        {/* ——— Fil + titre desktop ——— */}
+        <div className="mx-auto hidden max-w-7xl px-4 pt-3 sm:px-6 md:block lg:px-8">
+          <nav className="mb-3">
+            <ol className="flex items-center gap-1.5 text-xs text-gray-500">
+              <li>
+                <Link to="/catalogue" className="transition-colors hover:text-emerald-600">
+                  Catalogue
+                </Link>
+              </li>
+              <li aria-hidden>/</li>
+              <li>
+                <span className="text-gray-700">{label}</span>
+              </li>
+            </ol>
+          </nav>
+          <h1 className="mb-3 text-2xl font-bold text-gray-900 md:text-4xl">{activity.name}</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <div className="flex items-center gap-1.5 text-gray-600">
+              <IconMapPin className="h-4 w-4" />
+              <span>{activity.name}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-xl px-6 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-emerald-600"
+              >
+                <IconHeart className="h-5 w-5" />
                 Ajouter aux favoris
               </button>
               <button
                 type="button"
                 onClick={() => void sharePage()}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                className="flex items-center gap-2 rounded-xl px-6 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-emerald-600"
               >
+                <IconShare className="h-5 w-5" />
                 Partager
               </button>
             </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
-              <div
-                className="col-span-2 row-span-2 min-h-[220px] rounded-2xl sm:min-h-[320px]"
-                style={{ background: cover }}
-              />
-              <div
-                className="min-h-[104px] rounded-xl sm:min-h-[154px] sm:rounded-2xl"
-                style={{
-                  background: `linear-gradient(135deg, rgba(14,165,233,0.85), rgba(59,130,246,0.75))`,
-                }}
-              />
-              <div className="relative min-h-[104px] overflow-hidden rounded-xl sm:min-h-[154px] sm:rounded-2xl">
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background: `linear-gradient(135deg, rgba(244,63,94,0.5), rgba(99,102,241,0.6))`,
-                  }}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-0 flex items-center justify-center bg-black/25 px-2 text-center text-xs font-semibold text-white backdrop-blur-[2px] sm:text-sm"
-                >
-                  Voir toutes les photos
-                </button>
-              </div>
-            </div>
-
-            {activity.notes ? (
-              <p className="max-w-3xl text-[15px] leading-relaxed text-slate-600">{activity.notes}</p>
-            ) : null}
           </div>
+        </div>
 
-          <aside className="lg:sticky lg:top-6">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
-              <p className="text-xs font-medium text-slate-500">À partir de</p>
-              <p className="mt-1 text-3xl font-bold text-slate-900">
-                {formatMoney(activity.price_adult, activity.currency || "EUR")}
-              </p>
-
-              <label className="mt-6 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Participants
-                <div className="mt-2 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                  <span aria-hidden>👤</span>
-                  <select
-                    value={adults}
-                    onChange={(e) => setAdults(Number(e.target.value))}
-                    className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-900 outline-none"
-                  >
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                      <option key={n} value={n}>
-                        {n} adulte{n > 1 ? "s" : ""}
-                      </option>
-                    ))}
-                  </select>
+        <div className="mx-auto max-w-7xl px-4 py-4 pb-24 sm:px-6 md:pb-12 lg:px-8 lg:pb-16">
+          <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
+            {/* ——— Colonne contenu ——— */}
+            <div className="space-y-6 lg:col-span-2">
+              {/* Galerie desktop (grille WFY) */}
+              <div className="hidden max-h-[400px] overflow-hidden rounded-none md:block lg:max-h-[450px]">
+                <div className="grid h-full min-h-[280px] grid-cols-3 gap-2 lg:min-h-[360px]">
+                  <button type="button" className="relative col-span-2 row-span-2 overflow-hidden rounded-l-3xl transition-opacity hover:opacity-95">
+                    <div className="h-full w-full" style={{ background: galleryBackgrounds[0] }} />
+                  </button>
+                  <button type="button" className="relative col-span-1 overflow-hidden rounded-tr-3xl transition-opacity hover:opacity-95">
+                    <div className="h-full min-h-[140px] w-full" style={{ background: galleryBackgrounds[1] }} />
+                  </button>
+                  <button type="button" className="relative col-span-1 overflow-hidden rounded-br-3xl transition-opacity hover:opacity-95">
+                    <div className="h-full min-h-[140px] w-full" style={{ background: galleryBackgrounds[2] }} />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                      <span className="flex items-center gap-2 text-base font-semibold text-white">
+                        <IconImages className="h-5 w-5" />
+                        Voir toutes les photos
+                      </span>
+                    </div>
+                  </button>
                 </div>
-              </label>
-
-              <p className="mt-3 text-sm font-medium text-emerald-600">Gratuit pour les moins de 6 ans</p>
-
-              <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Date souhaitée
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#34b3f7]"
-                />
-              </label>
-
-              <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
-                <span className="text-sm font-semibold text-slate-700">Total</span>
-                <span className="text-xl font-bold text-slate-900">
-                  {formatMoney(lineTotal, activity.currency || "EUR")}
-                </span>
               </div>
 
-              <button
-                type="button"
-                onClick={appendToCartAndReturn}
-                className="mt-4 w-full rounded-xl bg-[#34b3f7] py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#34b3f7]/90 active:scale-[0.99]"
-              >
-                Ajouter au panier
-              </button>
+              {prose ? (
+                <section>
+                  <p className="whitespace-pre-line text-sm font-medium leading-relaxed text-gray-800 sm:text-base">{prose}</p>
+                </section>
+              ) : null}
+
+              <section>
+                <h2 className="mb-4 text-lg font-bold text-gray-900 md:text-xl">À propos</h2>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2.5">
+                    <span className="mt-0.5 text-gray-500" aria-hidden>
+                      ⊘
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 md:text-base">Annulation gratuite</p>
+                      <p className="mt-0.5 text-xs text-gray-600 md:text-sm">
+                        Jusqu&apos;à 24 heures à l&apos;avance pour un remboursement intégral
+                      </p>
+                    </div>
+                  </li>
+                </ul>
+              </section>
+
+              {bulletPoints.length > 0 ? (
+                <section className="grid gap-3 xl:grid-cols-[200px_1fr] xl:gap-0">
+                  <h2 className="text-base font-bold text-gray-900 md:text-lg">Points forts</h2>
+                  <ul className="list-inside list-disc space-y-2">
+                    {bulletPoints.map((item) => (
+                      <li key={item} className="text-sm font-semibold text-gray-700 md:text-base">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              <div className="border-t border-gray-200" role="separator" />
+
+              <section className="grid gap-3 xl:grid-cols-[200px_1fr] xl:gap-0">
+                <h2 className="text-base font-bold text-gray-900 md:text-lg">Informations</h2>
+                <p className="text-sm text-gray-600">
+                  Les détails pratiques (horaires, lieu de prise en charge, etc.) sont confirmés lors de votre demande de devis.
+                </p>
+              </section>
             </div>
-          </aside>
+
+            {/* ——— Sidebar réservation desktop ——— */}
+            <div className="hidden lg:col-span-1 lg:block">
+              <div className="lg:sticky lg:top-24 lg:rounded-[22px] lg:border lg:border-gray-200 lg:bg-white lg:p-6 lg:shadow-[0_4px_20px_rgb(0,0,0,0.08)] lg:transition-shadow lg:duration-300 lg:hover:shadow-[0_12px_40px_rgb(0,0,0,0.12)]">
+                <BookingCardShell
+                  activity={activity}
+                  adults={adults}
+                  setAdults={setAdults}
+                  date={date}
+                  setDate={setDate}
+                  lineTotal={lineTotal}
+                  canAdd={canAddToCart}
+                  onAdd={appendToCartAndReturn}
+                  dateError={showDateHint}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Encart mobile « disponibilités » */}
+        <div id="disponibilites" className="mx-auto w-full max-w-7xl px-4 pb-28 sm:px-6 lg:hidden lg:px-8">
+          <div className="rounded-[22px] border border-gray-200 bg-white p-4 shadow-[0_4px_20px_rgb(0,0,0,0.08)]">
+            <h2 className="mb-3 text-lg font-bold text-gray-900">Vérifier les disponibilités</h2>
+            <BookingCardShell
+              activity={activity}
+              adults={adults}
+              setAdults={setAdults}
+              date={date}
+              setDate={setDate}
+              lineTotal={lineTotal}
+              canAdd={canAddToCart}
+              onAdd={appendToCartAndReturn}
+              dateError={showDateHint}
+            />
+          </div>
+        </div>
+
+        {/* Suggestions */}
+        {related.length > 0 ? (
+          <section className="mt-2 border-t border-gray-100 pt-8 md:mt-8 md:pt-16">
+            <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <h2 className="mb-4 text-xl font-bold text-gray-900 md:text-2xl">Vous pourriez aussi aimer…</h2>
+              <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-8 pt-2 scrollbar-hide md:gap-6">
+                {related.map((rel) => {
+                  const key = normalizeCategory(rel.category);
+                  const relCover = getCategoryCover(key);
+                  return (
+                    <div key={rel.id} className="w-[280px] shrink-0 md:w-[290px]">
+                      <Link
+                        to={`/catalogue/activity/${encodeURIComponent(String(rel.id))}`}
+                        className="service-card group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[16px] bg-white shadow-[0_4px_20px_rgb(0,0,0,0.08)] transition-all duration-300 ease-out hover:shadow-[0_12px_40px_rgb(0,0,0,0.15)] active:scale-[0.98] sm:rounded-[18px]"
+                      >
+                        <div
+                          className="relative h-44 overflow-hidden rounded-t-[16px] bg-gray-100 sm:h-44 sm:rounded-t-[18px]"
+                          style={{ background: relCover }}
+                        >
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                        </div>
+                        <div className="flex grow flex-col p-4">
+                          <h3 className="mb-2 line-clamp-2 text-lg font-semibold leading-snug text-gray-900 transition-colors group-hover:text-emerald-600">
+                            {rel.name}
+                          </h3>
+                          <div className="mt-auto flex items-end justify-between border-t border-gray-100 pt-3">
+                            <span className="text-[11px] font-medium text-gray-400">à partir de</span>
+                            <span className="text-lg font-bold text-gray-900">
+                              {formatMoney(rel.price_adult, rel.currency || "EUR")}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {/* Barre bas mobile */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] lg:hidden">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-gray-500">À partir de</p>
+              <p className="text-lg font-bold text-gray-900">{formatMoney(activity.price_adult, activity.currency || "EUR")}</p>
+            </div>
+            <button
+              type="button"
+              onClick={scrollToBooking}
+              className="whitespace-nowrap rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600/90"
+            >
+              Vérifier les disponibilités
+            </button>
+          </div>
         </div>
       </main>
 
@@ -310,10 +686,12 @@ export function PublicCatalogueActivityPage({ activityId }) {
         href="https://wa.me/33619921449?text=Bonjour%20Hurghada%20Dream%2C%20"
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-2xl text-white shadow-lg transition hover:scale-105"
+        className="fixed bottom-24 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg transition hover:scale-105 active:scale-95 lg:bottom-6"
         aria-label="WhatsApp"
       >
-        <span aria-hidden>💬</span>
+        <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+        </svg>
       </a>
     </div>
   );
