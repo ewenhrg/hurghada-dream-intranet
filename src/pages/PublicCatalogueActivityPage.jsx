@@ -133,15 +133,6 @@ function IconImages({ className }) {
   );
 }
 
-function IconShieldCheck({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 01-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 011-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 011.52 0C14.51 3.81 17 5 19 5a1 1 0 011 1z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
 function BookingCardShell({
   activity,
   adults,
@@ -213,13 +204,6 @@ function BookingCardShell({
         {dateError ? (
           <p className="mt-2 text-center text-sm text-red-500">Veuillez sélectionner une date</p>
         ) : null}
-        <div className="mt-4 flex items-start gap-3">
-          <IconShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
-          <div>
-            <p className="text-sm font-medium text-gray-900">Annulation gratuite</p>
-            <p className="text-xs text-gray-600">Annulation jusqu&apos;à 24 heures à l&apos;avance pour un remboursement intégral</p>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -545,23 +529,6 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   <p className="whitespace-pre-line text-sm font-medium leading-relaxed text-gray-800 sm:text-base">{prose}</p>
                 </section>
               ) : null}
-
-              <section>
-                <h2 className="mb-4 text-lg font-bold text-gray-900 md:text-xl">À propos</h2>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2.5">
-                    <span className="mt-0.5 text-gray-500" aria-hidden>
-                      ⊘
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 md:text-base">Annulation gratuite</p>
-                      <p className="mt-0.5 text-xs text-gray-600 md:text-sm">
-                        Jusqu&apos;à 24 heures à l&apos;avance pour un remboursement intégral
-                      </p>
-                    </div>
-                  </li>
-                </ul>
-              </section>
 
               {bulletPoints.length > 0 ? (
                 <section className="grid gap-3 xl:grid-cols-[200px_1fr] xl:gap-0">
