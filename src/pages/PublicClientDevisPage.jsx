@@ -5,7 +5,7 @@ import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 
-const ACTIVITY_COLUMNS = "id, name, category, price_adult, price_child, price_baby, currency, notes";
+const ACTIVITY_COLUMNS = "id, name, category, price_adult, price_child, price_baby, currency, notes, description";
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -96,7 +96,8 @@ export function PublicClientDevisPage() {
     return byCategory.filter((activity) => {
       const name = String(activity.name || "").toLowerCase();
       const notes = String(activity.notes || "").toLowerCase();
-      return name.includes(q) || notes.includes(q);
+      const description = String(activity.description || "").toLowerCase();
+      return name.includes(q) || notes.includes(q) || description.includes(q);
     });
   }, [activities, search, selectedCategory]);
 
@@ -506,6 +507,11 @@ export function PublicClientDevisPage() {
                           <h3 className="mb-2 line-clamp-2 text-lg font-semibold leading-snug text-gray-900 transition-colors group-hover:text-[#34b3f7] sm:text-[17px] dark:text-white">
                             {activity.name}
                           </h3>
+                          {String(activity.description || "").trim() ? (
+                            <p className="mb-3 line-clamp-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                              {String(activity.description).trim()}
+                            </p>
+                          ) : null}
                           <div className="mt-auto flex justify-end border-t border-gray-100 pt-3 dark:border-gray-800">
                             <div className="flex flex-col items-end">
                               <span className="text-[11px] font-medium text-gray-400">à partir de</span>
