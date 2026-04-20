@@ -73,6 +73,8 @@ export function PublicClientDevisPage() {
 
   const [cart, setCart] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const activityMap = useMemo(() => {
     const map = new Map();
@@ -202,6 +204,29 @@ export function PublicClientDevisPage() {
   }, []);
 
   useEffect(() => {
+    if (cartDrawerOpen || checkoutOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [cartDrawerOpen, checkoutOpen]);
+
+  useEffect(() => {
+    if (!cartDrawerOpen && !checkoutOpen) return undefined;
+    function onKey(e) {
+      if (e.key === "Escape") {
+        setCheckoutOpen(false);
+        setCartDrawerOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [cartDrawerOpen, checkoutOpen]);
+
+  useEffect(() => {
     if (!supabase || !__SUPABASE_DEBUG__.isConfigured) return undefined;
     const channel = supabase
       .channel("public-client-devis-activities")
@@ -248,7 +273,7 @@ export function PublicClientDevisPage() {
   }
 
   async function submitPublicQuote(event) {
-    event.preventDefault();
+    event?.preventDefault();
     setError("");
     setSuccess("");
 
@@ -301,6 +326,8 @@ export function PublicClientDevisPage() {
       setSuccess("Demande envoyée avec succès. Nous te contactons rapidement.");
       setCart([]);
       setClient({ name: "", phone: "", email: "", hotel: "", notes: "" });
+      setCheckoutOpen(false);
+      setCartDrawerOpen(false);
     } catch (err) {
       logger.error("PublicClientDevisPage submit quote:", err);
       setError("Erreur inattendue pendant l'envoi.");
@@ -312,7 +339,7 @@ export function PublicClientDevisPage() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-slate-950 p-1.5">
               <img src="/logo.png" alt="Hurghada Dream" className="h-full w-full object-contain" />
@@ -322,30 +349,36 @@ export function PublicClientDevisPage() {
               <p className="text-xs text-slate-500">Catalogue client</p>
             </div>
           </div>
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+              onClick={() => {
+                setError("");
+                setSuccess("");
+                setCartDrawerOpen(true);
+              }}
+              className="relative flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 sm:px-4"
             >
-              ⭐ 5.0 (119)
+              Panier
+              {cartLines.length > 0 ? (
+                <span className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-[#34b3f7] px-1.5 text-xs font-bold text-white">
+                  {cartLines.length}
+                </span>
+              ) : null}
             </button>
-            <button
-              type="button"
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
-            >
-              📸 8.1K
-            </button>
-            <button
-              type="button"
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
-            >
-              🎵 10.1K
-            </button>
+            <div className="hidden items-center gap-2 md:flex">
+              <button
+                type="button"
+                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+              >
+                ⭐ 5.0 (119)
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[1fr_360px] sm:px-6">
+      <main className="mx-auto max-w-[1440px] space-y-5 px-4 py-6 sm:px-6">
         <section className="space-y-5">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
@@ -417,7 +450,7 @@ export function PublicClientDevisPage() {
                     {group.items.length} activité{group.items.length > 1 ? "s" : ""}
                   </span>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {group.items.map((activity) => {
                     const categoryKey = normalizeCategory(activity.category);
                     const rating = (4.5 + (String(activity.id).length % 5) * 0.1).toFixed(1);
@@ -516,34 +549,37 @@ export function PublicClientDevisPage() {
             ))}
           </div>
         </section>
+      </main>
 
-        <aside className="space-y-4">
-          <form
-            onSubmit={submitPublicQuote}
-            className="sticky top-24 space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_16px_40px_-24px_rgba(15,23,42,0.55)]"
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-black text-slate-900">Panier & devis</h2>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                {cartLines.length} item{cartLines.length > 1 ? "s" : ""}
-              </span>
-            </div>
-
-            {(error || success) && (
-              <div
-                className={`rounded-xl border px-3 py-2 text-sm font-semibold ${
-                  error ? "border-rose-300 bg-rose-50 text-rose-900" : "border-emerald-300 bg-emerald-50 text-emerald-900"
-                }`}
+      {cartDrawerOpen && (
+        <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="cart-drawer-title">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/40"
+            aria-label="Fermer le panier"
+            onClick={() => setCartDrawerOpen(false)}
+          />
+          <div className="relative z-10 flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
+              <h2 id="cart-drawer-title" className="text-lg font-bold text-slate-900">
+                Panier
+              </h2>
+              <button
+                type="button"
+                onClick={() => setCartDrawerOpen(false)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                aria-label="Fermer"
               >
-                {error || success}
-              </div>
-            )}
-
-            <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
-              {cartLines.length === 0 && <p className="text-sm text-slate-600">Panier vide.</p>}
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
+              {cartLines.length === 0 && <p className="text-sm text-slate-600">Ton panier est vide.</p>}
               {cartLines.map((line) => (
                 <div key={line.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="line-clamp-1 text-sm font-bold text-slate-900">{line.activity.name}</p>
+                  <p className="line-clamp-2 text-sm font-bold text-slate-900">{line.activity.name}</p>
                   <div className="mt-2 grid grid-cols-3 gap-2">
                     <label className="space-y-1">
                       <span className="block text-[10px] font-bold uppercase text-slate-600">Ad</span>
@@ -595,19 +631,80 @@ export function PublicClientDevisPage() {
                 </div>
               ))}
             </div>
+            <div className="border-t border-slate-200 bg-white p-4">
+              <p className="text-sm font-semibold text-slate-700">
+                Total estimé :{" "}
+                <span className="text-lg font-black text-slate-900">{formatMoney(cartTotal, "EUR")}</span>
+              </p>
+              <button
+                type="button"
+                disabled={cartLines.length === 0}
+                onClick={() => {
+                  setError("");
+                  setSuccess("");
+                  setCartDrawerOpen(false);
+                  setCheckoutOpen(true);
+                }}
+                className="mt-3 w-full rounded-xl bg-[#34b3f7] px-3 py-3 text-sm font-bold text-white hover:bg-[#34b3f7]/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Finaliser mon devis
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            <div className="space-y-2 border-t border-slate-200 pt-3">
+      {checkoutOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/50"
+            aria-label="Fermer"
+            onClick={() => setCheckoutOpen(false)}
+          />
+          <form
+            onSubmit={submitPublicQuote}
+            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 id="checkout-title" className="text-lg font-bold text-slate-900">
+                Tes coordonnées
+              </h2>
+              <button
+                type="button"
+                onClick={() => setCheckoutOpen(false)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                aria-label="Fermer"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {(error || success) && (
+              <div
+                className={`mb-4 rounded-xl border px-3 py-2 text-sm font-semibold ${
+                  error ? "border-rose-300 bg-rose-50 text-rose-900" : "border-emerald-300 bg-emerald-50 text-emerald-900"
+                }`}
+              >
+                {error || success}
+              </div>
+            )}
+            <div className="space-y-3">
               <input
                 value={client.name}
                 onChange={(e) => updateClientField("name", e.target.value)}
                 placeholder="Nom complet *"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                autoComplete="name"
               />
               <input
                 value={client.phone}
                 onChange={(e) => updateClientField("phone", e.target.value)}
                 placeholder="Téléphone *"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                autoComplete="tel"
               />
               <input
                 type="email"
@@ -615,6 +712,7 @@ export function PublicClientDevisPage() {
                 onChange={(e) => updateClientField("email", e.target.value)}
                 placeholder="Email"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                autoComplete="email"
               />
               <input
                 value={client.hotel}
@@ -630,23 +728,20 @@ export function PublicClientDevisPage() {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
             </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-              <p className="text-sm font-semibold text-slate-700">
-                Total estimé: <span className="text-lg font-black text-slate-900">{formatMoney(cartTotal, "EUR")}</span>
-              </p>
-            </div>
-
+            <p className="mt-4 text-xs text-slate-500">
+              Total : <span className="font-bold text-slate-900">{formatMoney(cartTotal, "EUR")}</span> —{" "}
+              {cartLines.length} ligne{cartLines.length > 1 ? "s" : ""}
+            </p>
             <button
               type="submit"
               disabled={submitLoading}
-              className="w-full rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+              className="mt-4 w-full rounded-xl bg-emerald-600 px-3 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {submitLoading ? "Envoi..." : "Valider mon devis"}
+              {submitLoading ? "Envoi..." : "Envoyer ma demande"}
             </button>
           </form>
-        </aside>
-      </main>
+        </div>
+      )}
     </div>
   );
 }
