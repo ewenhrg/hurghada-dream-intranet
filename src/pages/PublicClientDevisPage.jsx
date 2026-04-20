@@ -453,8 +453,6 @@ export function PublicClientDevisPage() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {group.items.map((activity) => {
                     const categoryKey = normalizeCategory(activity.category);
-                    const rating = (4.5 + (String(activity.id).length % 5) * 0.1).toFixed(1);
-                    const reviewCount = String(activity.id).length + 3;
                     return (
                       <article
                         key={activity.id}
@@ -507,19 +505,8 @@ export function PublicClientDevisPage() {
                           <h3 className="mb-2 line-clamp-2 text-lg font-semibold leading-snug text-gray-900 transition-colors group-hover:text-[#34b3f7] sm:text-[17px] dark:text-white">
                             {activity.name}
                           </h3>
-                          <p className="mb-3 min-h-[72px] line-clamp-3 text-[15px] leading-relaxed text-gray-500 sm:line-clamp-2 sm:min-h-10 sm:text-sm dark:text-gray-400">
-                            {activity.notes ||
-                              "Excursion premium avec accompagnement et organisation complète."}
-                          </p>
-                          <div className="mt-auto flex items-center justify-between gap-3 border-t border-gray-100 pt-3 dark:border-gray-800">
-                            <div className="flex items-center gap-1">
-                              <svg className="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                              </svg>
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{rating}</span>
-                              <span className="text-xs text-gray-400">({reviewCount})</span>
-                            </div>
-                            <div className="ml-auto flex flex-col items-end">
+                          <div className="mt-auto flex justify-end border-t border-gray-100 pt-3 dark:border-gray-800">
+                            <div className="flex flex-col items-end">
                               <span className="text-[11px] font-medium text-gray-400">à partir de</span>
                               <div className="flex items-baseline gap-1">
                                 <span className="text-lg font-bold text-gray-900 dark:text-white">
