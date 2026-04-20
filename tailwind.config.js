@@ -17,7 +17,8 @@ export default {
         catalog: {
           bg: '#f4f8f7',
           surface: '#ffffff',
-          muted: '#5c6d6a',
+          /** Lisibilité renforcée sur fonds clairs (éviter gris trop pâles) */
+          muted: '#334155',
           ink: '#0f172a',
           teal: '#0f766e',
           tealLight: '#14b8a6',

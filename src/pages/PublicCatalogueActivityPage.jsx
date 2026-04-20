@@ -140,9 +140,9 @@ function ParticipantSelect({ Icon, label, value, onChange, min, max }) {
   return (
     <div className="relative">
       <span className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2">
-        <Icon className="h-5 w-5 text-gray-600" />
+        <Icon className="h-5 w-5 text-gray-800" />
       </span>
-      <IconChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+      <IconChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-700" />
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
@@ -195,7 +195,7 @@ function BookingCardShell({
   return (
     <div className="space-y-3 md:space-y-4">
       <div className="border-b border-slate-200/90 pb-3 md:pb-4">
-        <p className="mb-1 text-xs font-medium text-catalog-muted">À partir de (adulte)</p>
+        <p className="mb-1 text-xs font-semibold text-slate-800">À partir de (adulte)</p>
         <div className="flex items-baseline gap-2">
           <span className="font-display text-xl font-bold text-slate-900 tabular-nums md:text-2xl">
             {showSurDevisHeader ? (
@@ -205,11 +205,11 @@ function BookingCardShell({
             )}
           </span>
         </div>
-        {priceCaption ? <p className="mt-1 text-xs text-gray-500">{priceCaption}</p> : null}
+        {priceCaption ? <p className="mt-1 text-xs font-medium text-slate-700">{priceCaption}</p> : null}
         {replaceParticipantPricingLines ? (
-          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-gray-600">{replaceParticipantPricingLines}</p>
+          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-slate-800">{replaceParticipantPricingLines}</p>
         ) : (
-        <div className="mt-2 space-y-0.5 text-xs text-gray-600">
+        <div className="mt-2 space-y-0.5 text-xs font-medium text-slate-800">
           <p>
             Enfant{ageChild ? ` (${ageChild})` : ""} : {formatMoney(activity.price_child, currency)}
           </p>
@@ -240,7 +240,7 @@ function BookingCardShell({
           min={0}
           max={10}
         />
-        {ageChild ? <p className="mt-1.5 text-xs text-gray-500">Tranche d&apos;âge : {ageChild}</p> : null}
+        {ageChild ? <p className="mt-1.5 text-xs font-medium text-slate-700">Tranche d&apos;âge : {ageChild}</p> : null}
       </div>
       <div>
         <ParticipantSelect
@@ -251,14 +251,14 @@ function BookingCardShell({
           min={0}
           max={10}
         />
-        {ageBaby ? <p className="mt-1.5 text-xs text-gray-500">Tranche d&apos;âge : {ageBaby}</p> : null}
+        {ageBaby ? <p className="mt-1.5 text-xs font-medium text-slate-700">Tranche d&apos;âge : {ageBaby}</p> : null}
       </div>
 
       {babyPriceZero ? (
         <p className="text-xs text-green-700">Tarif bébé à 0 € — les bébés ne sont pas facturés sur ce tarif.</p>
       ) : null}
 
-      {daysSummary ? <p className="text-xs text-gray-500">Jours ouverts : {daysSummary}</p> : null}
+      {daysSummary ? <p className="text-xs font-medium text-slate-700">Jours ouverts : {daysSummary}</p> : null}
 
       <ActivityDateCalendar
         value={date}
@@ -273,7 +273,7 @@ function BookingCardShell({
 
       <div className="border-t border-gray-200 pt-4">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-base font-medium text-gray-700">Total</span>
+          <span className="text-base font-semibold text-slate-900">Total</span>
           <span className="text-xl font-bold text-gray-900">
             {codedTotalPending && toNumber(lineTotal) <= 0 ? (
               <span className="text-base font-semibold text-amber-800">Sélectionnez les options</span>
@@ -452,7 +452,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                       {extra.id ? (
                         <>
                           {" "}
-                          <span className="text-gray-500">
+                          <span className="font-medium text-slate-700">
                             (+{extra.priceAdult} € / adulte · +{extra.priceChild} € / enfant)
                           </span>
                         </>
@@ -808,7 +808,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-catalog-bg via-white to-teal-50/50 font-sans">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-teal-200 border-t-teal-600" aria-hidden />
-        <p className="mt-4 text-sm font-medium text-catalog-muted">Chargement…</p>
+        <p className="mt-4 text-sm font-semibold text-slate-800">Chargement…</p>
       </div>
     );
   }
@@ -897,7 +897,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
         {/* ——— Fil + titre desktop ——— */}
         <div className="mx-auto hidden max-w-7xl px-4 pt-3 sm:px-6 md:block lg:px-8">
           <nav className="mb-3">
-            <ol className="flex items-center gap-1.5 text-xs text-slate-500">
+            <ol className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
               <li>
                 <Link to="/catalogue" className="font-medium transition-colors hover:text-teal-700">
                   Catalogue
@@ -911,7 +911,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
           </nav>
           <h1 className="mb-3 font-display text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">{activity.name}</h1>
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-            <div className="flex items-center gap-1.5 text-catalog-muted">
+            <div className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
               <IconMapPin className="h-4 w-4 text-teal-600/80" />
               <span>{activity.name}</span>
             </div>
@@ -1019,7 +1019,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
               <section className="grid gap-3 xl:grid-cols-[200px_1fr] xl:gap-0">
                 <h2 className="font-display text-base font-bold text-slate-900 md:text-lg">Informations</h2>
-                <p className="whitespace-pre-line text-sm leading-relaxed text-catalog-muted">
+                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-800">
                   {informationsBody}
                 </p>
               </section>
@@ -1088,7 +1088,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
         <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-teal-900/10 bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,118,110,0.12)] backdrop-blur-md lg:hidden">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">À partir de</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-800">À partir de</p>
               <p className="font-display text-lg font-bold text-slate-900 tabular-nums">
                 {headerPriceHint != null && headerPriceHint > 0 ? (
                   formatMoney(headerPriceHint, activity.currency || "EUR")
