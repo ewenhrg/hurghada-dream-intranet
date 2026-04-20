@@ -8,7 +8,17 @@ import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay
 import { buildSelectableDateOptions, normalizeAvailableDays } from "../utils/activityAvailableDates";
 import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
-import { getActivityPublicProse, proseFromActivityNotes } from "../utils/activityHelpers";
+import {
+  getActivityPublicProse,
+  isBuggyActivity,
+  isCairePrivatifActivity,
+  isLouxorPrivatifActivity,
+  isMotoCrossActivity,
+  isSpeedBoatActivity,
+  proseFromActivityNotes,
+} from "../utils/activityHelpers";
+import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "../utils/publicCatalogPricing";
+import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 
 /** Repli sans `catalog_image_urls` : inclut `description` dès que la colonne existe (script SQL activités). */
 const ACTIVITY_COLUMNS_BASE =
@@ -66,15 +76,6 @@ function extractBulletLines(notes) {
     .filter((line) => /^[-•*]\s+/.test(line))
     .map((line) => line.replace(/^[-•*]\s+/, "").trim())
     .filter(Boolean);
-}
-
-function buildLineTotal(activity, pax) {
-  if (!activity) return 0;
-  return (
-    toNumber(pax.adults) * toNumber(activity.price_adult) +
-    toNumber(pax.children) * toNumber(activity.price_child) +
-    toNumber(pax.babies) * toNumber(activity.price_baby)
-  );
 }
 
 function IconHeart({ className }) {
@@ -176,11 +177,20 @@ function BookingCardShell({
   dateError,
   daysSummary,
   noDatesConfigured,
+  headerPrice,
+  priceCaption,
+  replaceParticipantPricingLines,
+  childrenBeforeParticipants,
+  codedTotalPending = false,
 }) {
   const currency = activity.currency || "EUR";
   const ageChild = String(activity.age_child || "").trim();
   const ageBaby = String(activity.age_baby || "").trim();
   const babyPriceZero = toNumber(activity.price_baby) === 0;
+  const dbAdult = toNumber(activity.price_adult);
+  const resolvedHeader =
+    headerPrice != null ? headerPrice : dbAdult > 0 ? dbAdult : null;
+  const showSurDevisHeader = resolvedHeader == null || resolvedHeader <= 0;
 
   return (
     <div className="space-y-3 md:space-y-4">
@@ -188,9 +198,17 @@ function BookingCardShell({
         <p className="mb-1 text-xs text-gray-600">À partir de (adulte)</p>
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-bold text-gray-900 md:text-2xl">
-            {formatMoney(activity.price_adult, currency)}
+            {showSurDevisHeader ? (
+              <span className="text-base font-semibold text-amber-800">Tarif sur devis</span>
+            ) : (
+              formatMoney(resolvedHeader, currency)
+            )}
           </span>
         </div>
+        {priceCaption ? <p className="mt-1 text-xs text-gray-500">{priceCaption}</p> : null}
+        {replaceParticipantPricingLines ? (
+          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-gray-600">{replaceParticipantPricingLines}</p>
+        ) : (
         <div className="mt-2 space-y-0.5 text-xs text-gray-600">
           <p>
             Enfant{ageChild ? ` (${ageChild})` : ""} : {formatMoney(activity.price_child, currency)}
@@ -200,7 +218,10 @@ function BookingCardShell({
             {babyPriceZero ? "gratuit ou selon grille applicable" : formatMoney(activity.price_baby, currency)}
           </p>
         </div>
+        )}
       </div>
+
+      {childrenBeforeParticipants}
 
       <ParticipantSelect
         Icon={IconUsers}
@@ -253,7 +274,13 @@ function BookingCardShell({
       <div className="border-t border-gray-200 pt-4">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-base font-medium text-gray-700">Total</span>
-          <span className="text-xl font-bold text-gray-900">{formatMoney(lineTotal, currency)}</span>
+          <span className="text-xl font-bold text-gray-900">
+            {codedTotalPending && toNumber(lineTotal) <= 0 ? (
+              <span className="text-base font-semibold text-amber-800">Sélectionnez les options</span>
+            ) : (
+              formatMoney(lineTotal, currency)
+            )}
+          </span>
         </div>
         <button
           type="button"
@@ -286,6 +313,22 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const [date, setDate] = useState("");
   const [galleryIndex, setGalleryIndex] = useState(0);
   const carouselRef = useRef(null);
+  /** Options tarif codé (même logique que le devis interne) — Speed Boat, Buggy, Moto, privatifs. */
+  const [special, setSpecial] = useState({
+    extraDolphin: false,
+    speedBoatExtra: [],
+    buggySimple: 0,
+    buggyFamily: 0,
+    yamaha250: 0,
+    ktm640: 0,
+    ktm530: 0,
+    cairePrivatif4pax: false,
+    cairePrivatif5pax: false,
+    cairePrivatif6pax: false,
+    louxorPrivatif4pax: false,
+    louxorPrivatif5pax: false,
+    louxorPrivatif6pax: false,
+  });
 
   const categoryKey = useMemo(
     () => (activity ? normalizeCategory(activity.category) : "desert"),
@@ -306,10 +349,267 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   const noDatesConfigured = Boolean(activity) && dateOptions.length === 0;
 
-  const lineTotal = useMemo(
-    () => buildLineTotal(activity, { adults, children: childCount, babies: babyCount }),
-    [activity, adults, childCount, babyCount]
+  useEffect(() => {
+    setSpecial({
+      extraDolphin: false,
+      speedBoatExtra: [],
+      buggySimple: 0,
+      buggyFamily: 0,
+      yamaha250: 0,
+      ktm640: 0,
+      ktm530: 0,
+      cairePrivatif4pax: false,
+      cairePrivatif5pax: false,
+      cairePrivatif6pax: false,
+      louxorPrivatif4pax: false,
+      louxorPrivatif5pax: false,
+      louxorPrivatif6pax: false,
+    });
+  }, [activityId]);
+
+  const listFromPrice = useMemo(() => (activity ? getPublicCatalogListFromPrice(activity) : null), [activity]);
+
+  const headerPriceHint = useMemo(() => {
+    if (!activity) return null;
+    return listFromPrice?.amount ?? (toNumber(activity.price_adult) > 0 ? toNumber(activity.price_adult) : null);
+  }, [activity, listFromPrice]);
+
+  const pricingLine = useMemo(
+    () => ({
+      adults,
+      children: childCount,
+      babies: babyCount,
+      ...special,
+    }),
+    [adults, childCount, babyCount, special]
   );
+
+  const lineTotal = useMemo(
+    () => (activity ? computePublicCatalogLineTotal(activity, pricingLine) : 0),
+    [activity, pricingLine]
+  );
+
+  const bookingReplaceChildBaby = useMemo(() => {
+    if (!activity) return "";
+    if (isSpeedBoatActivity(activity.name)) {
+      return [
+        "Grille Speed Boat : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant.",
+        "Option dauphin : +20 €.",
+        "Les extras (baie, lunch…) s’ajoutent selon les cases cochées ci-dessous.",
+      ].join("\n");
+    }
+    if (isBuggyActivity(activity.name)) {
+      return "Indiquez le nombre de buggys simple / family ci-dessous (prix selon grille interne).";
+    }
+    if (isMotoCrossActivity(activity.name)) {
+      return "Sélectionnez le nombre de motos par modèle (prix affiché au total).";
+    }
+    if (isCairePrivatifActivity(activity.name) || isLouxorPrivatifActivity(activity.name)) {
+      return "Choisissez la taille du groupe (4, 5 ou 6 personnes) — prix forfaitaire.";
+    }
+    return "";
+  }, [activity]);
+
+  const specialPricingBeforeParticipants = useMemo(() => {
+    if (!activity) return null;
+    const name = activity.name || "";
+
+    if (isSpeedBoatActivity(name)) {
+      return (
+        <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/90 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-900">Options Speed Boat</p>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-800">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-gray-300"
+              checked={special.extraDolphin}
+              onChange={(e) => setSpecial((s) => ({ ...s, extraDolphin: e.target.checked }))}
+            />
+            Dauphin (+20 € pour la ligne)
+          </label>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-gray-700">Extras (par personne, selon grille interne)</p>
+            <div className="max-h-48 space-y-1.5 overflow-y-auto pr-1">
+              {SPEED_BOAT_EXTRAS.filter((e) => e.id).map((extra) => (
+                <label key={extra.id} className="flex cursor-pointer items-start gap-2 text-xs text-gray-800">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300"
+                    checked={special.speedBoatExtra.includes(extra.id)}
+                    onChange={() => {
+                      setSpecial((s) => {
+                        const set = new Set(s.speedBoatExtra);
+                        if (set.has(extra.id)) set.delete(extra.id);
+                        else set.add(extra.id);
+                        return { ...s, speedBoatExtra: [...set] };
+                      });
+                    }}
+                  />
+                  <span>
+                    {extra.label}{" "}
+                    <span className="text-gray-500">
+                      (+{extra.priceAdult} € / adulte · +{extra.priceChild} € / enfant)
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (isBuggyActivity(name)) {
+      return (
+        <div className="grid grid-cols-2 gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">Buggy simple</label>
+            <select
+              className="w-full rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm"
+              value={special.buggySimple}
+              onChange={(e) => setSpecial((s) => ({ ...s, buggySimple: Number(e.target.value) }))}
+            >
+              {[0, 1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">Buggy family</label>
+            <select
+              className="w-full rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm"
+              value={special.buggyFamily}
+              onChange={(e) => setSpecial((s) => ({ ...s, buggyFamily: Number(e.target.value) }))}
+            >
+              {[0, 1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      );
+    }
+
+    if (isMotoCrossActivity(name)) {
+      return (
+        <div className="grid grid-cols-3 gap-2 rounded-xl border border-violet-200 bg-violet-50/80 p-3">
+          {[
+            ["yamaha250", "Yamaha 250", special.yamaha250],
+            ["ktm640", "KTM 640", special.ktm640],
+            ["ktm530", "KTM 530", special.ktm530],
+          ].map(([key, label, val]) => (
+            <div key={key}>
+              <label className="mb-1 block text-[10px] font-semibold text-gray-700">{label}</label>
+              <select
+                className="w-full rounded-lg border border-gray-300 bg-white px-1 py-2 text-xs"
+                value={val}
+                onChange={(e) =>
+                  setSpecial((s) => ({ ...s, [key]: Number(e.target.value) }))
+                }
+              >
+                {[0, 1, 2, 3].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (isCairePrivatifActivity(name)) {
+      return (
+        <div className="space-y-2 rounded-xl border border-sky-200 bg-sky-50/80 p-3">
+          <p className="text-xs font-semibold text-gray-800">Nombre de personnes (forfait)</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              ["cairePrivatif4pax", "4 pers."],
+              ["cairePrivatif5pax", "5 pers."],
+              ["cairePrivatif6pax", "6 pers."],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() =>
+                  setSpecial((s) => ({
+                    ...s,
+                    cairePrivatif4pax: key === "cairePrivatif4pax",
+                    cairePrivatif5pax: key === "cairePrivatif5pax",
+                    cairePrivatif6pax: key === "cairePrivatif6pax",
+                  }))
+                }
+                className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                  special[key] ? "bg-sky-600 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (isLouxorPrivatifActivity(name)) {
+      return (
+        <div className="space-y-2 rounded-xl border border-indigo-200 bg-indigo-50/80 p-3">
+          <p className="text-xs font-semibold text-gray-800">Nombre de personnes (forfait)</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              ["louxorPrivatif4pax", "4 pers."],
+              ["louxorPrivatif5pax", "5 pers."],
+              ["louxorPrivatif6pax", "6 pers."],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() =>
+                  setSpecial((s) => ({
+                    ...s,
+                    louxorPrivatif4pax: key === "louxorPrivatif4pax",
+                    louxorPrivatif5pax: key === "louxorPrivatif5pax",
+                    louxorPrivatif6pax: key === "louxorPrivatif6pax",
+                  }))
+                }
+                className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                  special[key] ? "bg-indigo-600 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  }, [activity, special]);
+
+  const codedTotalPending = useMemo(() => {
+    if (!activity) return false;
+    const name = activity.name || "";
+    if (lineTotal > 0) return false;
+    if (isCairePrivatifActivity(name)) {
+      return !special.cairePrivatif4pax && !special.cairePrivatif5pax && !special.cairePrivatif6pax;
+    }
+    if (isLouxorPrivatifActivity(name)) {
+      return !special.louxorPrivatif4pax && !special.louxorPrivatif5pax && !special.louxorPrivatif6pax;
+    }
+    if (isBuggyActivity(name)) {
+      return special.buggySimple === 0 && special.buggyFamily === 0;
+    }
+    if (isMotoCrossActivity(name)) {
+      return special.yamaha250 + special.ktm640 + special.ktm530 === 0;
+    }
+    return false;
+  }, [activity, lineTotal, special]);
 
   const cover = getCategoryCover(categoryKey);
   const label = getCategoryLabel(categoryKey);
@@ -363,7 +663,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   const informationsBody = publicProseFull || DEFAULT_INFOS;
 
-  const canAddToCart = Boolean(date) && !noDatesConfigured;
+  const canAddToCart = Boolean(date) && !noDatesConfigured && !codedTotalPending;
   const showDateHint = !date && !noDatesConfigured;
 
   const prevActivityIdRef = useRef(null);
@@ -477,6 +777,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       adults: Math.max(0, toNumber(adults)),
       children: Math.max(0, toNumber(childCount)),
       babies: Math.max(0, toNumber(babyCount)),
+      ...special,
     };
     savePublicCatalogueCart([...prev, line]);
     navigate("/catalogue");
@@ -731,6 +1032,10 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   dateError={showDateHint}
                   daysSummary={daysSummary}
                   noDatesConfigured={noDatesConfigured}
+                  headerPrice={headerPriceHint}
+                  replaceParticipantPricingLines={bookingReplaceChildBaby}
+                  childrenBeforeParticipants={specialPricingBeforeParticipants}
+                  codedTotalPending={codedTotalPending}
                 />
               </div>
             </div>
@@ -758,6 +1063,10 @@ export function PublicCatalogueActivityPage({ activityId }) {
               dateError={showDateHint}
               daysSummary={daysSummary}
               noDatesConfigured={noDatesConfigured}
+              headerPrice={headerPriceHint}
+              replaceParticipantPricingLines={bookingReplaceChildBaby}
+              childrenBeforeParticipants={specialPricingBeforeParticipants}
+              codedTotalPending={codedTotalPending}
             />
           </div>
         </div>
@@ -767,7 +1076,13 @@ export function PublicCatalogueActivityPage({ activityId }) {
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div>
               <p className="text-xs text-gray-500">À partir de</p>
-              <p className="text-lg font-bold text-gray-900">{formatMoney(activity.price_adult, activity.currency || "EUR")}</p>
+              <p className="text-lg font-bold text-gray-900">
+                {headerPriceHint != null && headerPriceHint > 0 ? (
+                  formatMoney(headerPriceHint, activity.currency || "EUR")
+                ) : (
+                  <span className="text-base font-semibold text-amber-800">Sur devis</span>
+                )}
+              </p>
             </div>
             <button
               type="button"

@@ -4,6 +4,7 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
+import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "../utils/publicCatalogPricing";
 
 const ACTIVITY_COLUMNS = "id, name, category, price_adult, price_child, price_baby, currency, notes, description";
 
@@ -22,14 +23,6 @@ function formatMoney(value, currency = "EUR") {
   } catch {
     return `${safeValue} ${currency || "EUR"}`;
   }
-}
-
-function buildLineTotal(line, activity) {
-  return (
-    toNumber(line.adults) * toNumber(activity?.price_adult) +
-    toNumber(line.children) * toNumber(activity?.price_child) +
-    toNumber(line.babies) * toNumber(activity?.price_baby)
-  );
 }
 
 function normalizeCategory(rawCategory) {
@@ -133,7 +126,7 @@ export function PublicClientDevisPage() {
       .map((line) => {
         const activity = activityMap.get(String(line.activityId));
         if (!activity) return null;
-        const lineTotal = buildLineTotal(line, activity);
+        const lineTotal = computePublicCatalogLineTotal(activity, line);
         return {
           ...line,
           activity,
@@ -256,13 +249,26 @@ export function PublicClientDevisPage() {
     setError("");
     setCart((prev) => [
       ...prev,
-      {
+                      {
         id: `${activityId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         activityId: String(activityId),
         date: "",
         adults: 2,
         children: 0,
         babies: 0,
+        extraDolphin: false,
+        speedBoatExtra: [],
+        buggySimple: 0,
+        buggyFamily: 0,
+        yamaha250: 0,
+        ktm640: 0,
+        ktm530: 0,
+        cairePrivatif4pax: false,
+        cairePrivatif5pax: false,
+        cairePrivatif6pax: false,
+        louxorPrivatif4pax: false,
+        louxorPrivatif5pax: false,
+        louxorPrivatif6pax: false,
       },
     ]);
   }
@@ -460,6 +466,9 @@ export function PublicClientDevisPage() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {group.items.map((activity) => {
                     const categoryKey = normalizeCategory(activity.category);
+                    const listFrom = getPublicCatalogListFromPrice(activity);
+                    const cardFrom =
+                      toNumber(activity.price_adult) > 0 ? toNumber(activity.price_adult) : listFrom?.amount ?? null;
                     return (
                       <article
                         key={activity.id}
@@ -511,9 +520,15 @@ export function PublicClientDevisPage() {
                             <div className="flex flex-col items-end">
                               <span className="text-[11px] font-medium text-gray-400">à partir de</span>
                               <div className="flex items-baseline gap-1">
-                                <span className="text-lg font-bold text-gray-900 dark:text-white">
-                                  {formatMoney(activity.price_adult, activity.currency || "EUR")}
-                                </span>
+                                {cardFrom != null && cardFrom > 0 ? (
+                                  <span className="text-lg font-bold text-gray-900 dark:text-white">
+                                    {formatMoney(cardFrom, activity.currency || "EUR")}
+                                  </span>
+                                ) : (
+                                  <span className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                                    Tarif sur devis
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
