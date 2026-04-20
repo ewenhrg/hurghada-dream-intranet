@@ -1,7 +1,14 @@
 import { useEffect, useState, useRef, Suspense, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "./lib/supabase";
-import { SITE_KEY, PIN_CODE, LS_KEYS, getDefaultActivities } from "./constants";
+import {
+  SITE_KEY,
+  PIN_CODE,
+  LS_KEYS,
+  getDefaultActivities,
+  getQuoteSiteKeysForSync,
+  getQuotesRealtimeSiteKeyFilter,
+} from "./constants";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
 import { loadUserFromSession } from "./utils/userPermissions";
 import {
@@ -22,6 +29,7 @@ import {
   PublicClientDevisPage,
   PublicCatalogueActivityPage,
   EwenDashboardPage,
+  PublicDevisPage,
 } from "./config/lazyPages";
 import { ScrollOptimizer } from "./components/ScrollOptimizer";
 import { Pill, GhostBtn, Section } from "./components/ui";
@@ -379,10 +387,13 @@ export default function App() {
       
       try {
         // Sélection spécifique pour réduire la taille des données transférées
+        const quoteSiteKeys = getQuoteSiteKeysForSync();
         const { data: quotesData, error: quotesError } = await supabase
           .from("quotes")
-          .select("id, client_name, client_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, items, total, currency")
-          .eq("site_key", SITE_KEY)
+          .select(
+            "id, client_name, client_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, items, total, currency, paid_stripe, paid_cash"
+          )
+          .in("site_key", quoteSiteKeys)
           .order("created_at", { ascending: false })
           .limit(1000); // Limiter à 1000 devis pour éviter de surcharger
         
@@ -431,6 +442,8 @@ export default function App() {
                 totalCard: calculateCardPrice(row.total || 0),
                 currency: row.currency || "EUR",
                 isModified: hasQuoteModifications || false,
+                paidStripe: Number(row.paid_stripe) || 0,
+                paidCash: Number(row.paid_cash) || 0,
               };
             };
 
@@ -477,35 +490,45 @@ export default function App() {
               }
             });
 
-            // Ajouter UNIQUEMENT les devis locaux qui sont vraiment nouveaux et très récents
-            // (sans supabase_id ET créés il y a moins de 2 minutes - probablement en cours de création)
+            // Devis locaux sans ligne Supabase correspondante : à conserver (brouillon récent OU historique uniquement local).
             const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
             const supabaseKeysSet = new Set(supabaseKeys);
-            
+
             prevQuotes.forEach((localQuote) => {
-              // Ignorer TOUS les devis locaux qui ont un supabase_id (ils doivent être dans Supabase)
               if (localQuote.supabase_id) {
-                return; // Ignorer ce devis local s'il a un supabase_id (il doit être dans Supabase)
+                return;
               }
-              
-              // Pour les devis locaux sans supabase_id, vérifier s'ils existent dans Supabase
               const localKey = `${localQuote.client?.phone || ''}_${localQuote.createdAt}`;
-              
-              // Vérifier si c'est un devis très récent (créé il y a moins de 2 minutes)
-              const isVeryRecent = localQuote.createdAt && new Date(localQuote.createdAt) > new Date(twoMinutesAgo);
-              
-              // Si le devis local n'existe PAS dans Supabase ET est très récent, c'est un nouveau devis en cours de création
-              if (isVeryRecent && localKey !== '_' && !supabaseKeysSet.has(localKey)) {
-                // C'est un devis vraiment nouveau (créé localement il y a moins de 2 minutes, pas encore synchronisé)
-                // Calculer isModified pour ce devis local aussi
-                const hasItemModifications = localQuote.items?.some(item => 
-                  item.modifications && Array.isArray(item.modifications) && item.modifications.length > 0
-                );
-                localQuote.isModified = hasItemModifications || localQuote.isModified || false;
-                merged.push(localQuote);
+              if (localKey === "_" || supabaseKeysSet.has(localKey)) {
+                return;
               }
-              // Sinon, ignorer ce devis local (c'est probablement un doublon ou une version obsolète)
+              const isVeryRecent =
+                localQuote.createdAt && new Date(localQuote.createdAt) > new Date(twoMinutesAgo);
+              // Conserver si pas encore côté Supabase : soit création en cours (< 2 min), soit ancien cache local jamais synchronisé
+              if (!isVeryRecent) {
+                merged.push({
+                  ...localQuote,
+                  isModified:
+                    localQuote.items?.some(
+                      (item) =>
+                        item.modifications &&
+                        Array.isArray(item.modifications) &&
+                        item.modifications.length > 0
+                    ) || Boolean(localQuote.isModified),
+                });
+                return;
+              }
+              const hasItemModifications = localQuote.items?.some(
+                (item) =>
+                  item.modifications && Array.isArray(item.modifications) && item.modifications.length > 0
+              );
+              merged.push({
+                ...localQuote,
+                isModified: hasItemModifications || Boolean(localQuote.isModified),
+              });
             });
+
+            merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
             saveLS(LS_KEYS.quotes, merged);
             return merged;
@@ -531,10 +554,14 @@ export default function App() {
       } catch {
         items = [];
       }
-      
+
       const createdAt = row.created_at || row.createdAt || new Date().toISOString();
       const updatedAt = row.updated_at || row.updatedAt || createdAt;
-      
+
+      const hasQuoteModifications = items.some(
+        (item) => item.modifications && Array.isArray(item.modifications) && item.modifications.length > 0
+      );
+
       return {
         id: row.id?.toString() || uuid(),
         supabase_id: row.id,
@@ -559,8 +586,13 @@ export default function App() {
         totalCash: Math.round(row.total || 0),
         totalCard: calculateCardPrice(row.total || 0),
         currency: row.currency || "EUR",
+        isModified: hasQuoteModifications || false,
+        paidStripe: Number(row.paid_stripe) || 0,
+        paidCash: Number(row.paid_cash) || 0,
       };
     };
+
+    const quotesSiteKeyRealtimeFilter = getQuotesRealtimeSiteKeyFilter();
 
     logger.log("🔄 Abonnement Realtime aux devis...");
 
@@ -573,7 +605,7 @@ export default function App() {
           event: '*', // INSERT, UPDATE, DELETE
           schema: 'public',
           table: 'quotes',
-          filter: `site_key=eq.${SITE_KEY}`,
+          filter: quotesSiteKeyRealtimeFilter,
         },
         async (payload) => {
           logger.log('📨 Changement Realtime reçu:', payload.eventType, payload);
@@ -1084,6 +1116,11 @@ export default function App() {
                   {t("nav.history")}
                   </Pill>
                 )}
+                {user?.canAccessHistory !== false && (
+                <Pill active={tab === "public-devis"} onClick={() => setTab("public-devis")}>
+                  {t("nav.publicDevis")}
+                </Pill>
+                )}
                 {user?.canAccessTickets !== false && (
                   <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
                     {t("nav.tickets")}
@@ -1233,6 +1270,12 @@ export default function App() {
         {tab === "history" && user?.canAccessHistory !== false && (
           <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")}>
             <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
+          </Section>
+        )}
+
+        {tab === "public-devis" && user?.canAccessHistory !== false && (
+          <Section title={t("page.publicDevis.title")} subtitle={t("page.publicDevis.subtitle")}>
+            <PublicDevisPage />
           </Section>
         )}
 

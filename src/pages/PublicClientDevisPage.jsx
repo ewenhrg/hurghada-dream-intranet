@@ -325,15 +325,14 @@ export function PublicClientDevisPage() {
       notes: client.notes.trim(),
       total: toNumber(cartTotal),
       currency: "EUR",
-      items: JSON.stringify(items),
-      created_by_name: "Public Devis",
+      items,
       created_at: createdAt,
       updated_at: createdAt,
     };
 
     setSubmitLoading(true);
     try {
-      const { error: insertError } = await supabase.from("quotes").insert(payload);
+      const { error: insertError } = await supabase.from("public_quotes").insert(payload);
       if (insertError) {
         setError(insertError.message || "Impossible d'envoyer ton devis.");
         return;

@@ -50,6 +50,39 @@ const rawSiteKey = getEnv("VITE_SITE_KEY") || getEnv("REACT_APP_SITE_KEY");
 export const SITE_KEY = normalizeSiteKey(rawSiteKey != null && rawSiteKey !== "" ? rawSiteKey : DEFAULT_SITE_KEY);
 export const PIN_CODE = "0606";
 
+/**
+ * Valeur historique par défaut (colonne `site_key` en base). Exportée pour la synchro des devis
+ * lorsque des lignes anciennes n’ont pas la même clé que `VITE_SITE_KEY` actuel.
+ */
+export { DEFAULT_SITE_KEY };
+
+/**
+ * Toutes les valeurs `quotes.site_key` à charger : clé courante, défaut historique,
+ * et liste optionnelle `VITE_LEGACY_SITE_KEYS` / `REACT_APP_LEGACY_SITE_KEYS` (séparateur virgule).
+ * Permet de ne pas « perdre » l’historique si l’environnement ou la base diffère.
+ */
+export function getQuoteSiteKeysForSync() {
+  const keys = new Set();
+  keys.add(SITE_KEY);
+  keys.add(DEFAULT_SITE_KEY);
+  const legacy = getEnv("VITE_LEGACY_SITE_KEYS") || getEnv("REACT_APP_LEGACY_SITE_KEYS");
+  if (legacy != null && String(legacy).trim()) {
+    String(legacy)
+      .split(",")
+      .map((s) => String(s).trim())
+      .filter(Boolean)
+      .forEach((k) => keys.add(normalizeSiteKey(k)));
+  }
+  return Array.from(keys);
+}
+
+/** Filtre `postgres_changes` Realtime pour `quotes.site_key` (une clé ou opérateur `in.`). */
+export function getQuotesRealtimeSiteKeyFilter() {
+  const keys = getQuoteSiteKeysForSync();
+  if (keys.length === 1) return `site_key=eq.${keys[0]}`;
+  return `site_key=in.(${keys.join(",")})`;
+}
+
 export const LS_KEYS = {
   activities: "hd_activities",
   quotes: "hd_quotes",

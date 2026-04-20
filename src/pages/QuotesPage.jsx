@@ -18,6 +18,11 @@ import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import { useDebounce } from "../hooks/useDebounce";
 import { salesCache, appCache, createCacheKey } from "../utils/cache";
 
+/** Aligné sur l’onglet Activités (case « Interdit aux bébés »). */
+function isActivityBabiesForbidden(act) {
+  return act?.babiesForbidden === true;
+}
+
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
   const [stopSales, setStopSales] = useState([]);
   const [pushSales, setPushSales] = useState([]);
@@ -802,7 +807,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         return !(c.raw.louxorPrivatif4pax || c.raw.louxorPrivatif5pax || c.raw.louxorPrivatif6pax);
       }
 
-      const totalParticipants = Number(c.raw.adults || 0) + Number(c.raw.children || 0) + Number(c.raw.babies || 0);
+      const babiesCount =
+        c.act && isActivityBabiesForbidden(c.act) ? 0 : Number(c.raw.babies || 0);
+      const totalParticipants = Number(c.raw.adults || 0) + Number(c.raw.children || 0) + babiesCount;
       // Pour les activités buggy/moto, on vérifie les véhicules
       const isBuggyOrMoto = isBuggyActivity(c.act?.name) || isMotoCrossActivity(c.act?.name);
       if (isBuggyOrMoto) {
@@ -864,7 +871,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         date: c.raw.date,
         adults: toBoundedInt10(c.raw.adults, { min: 0, max: 999, fallback: 0 }),
         children: toBoundedInt10(c.raw.children, { min: 0, max: 999, fallback: 0 }),
-        babies: toBoundedInt10(c.raw.babies, { min: 0, max: 999, fallback: 0 }),
+        babies:
+          c.act && isActivityBabiesForbidden(c.act)
+            ? 0
+            : toBoundedInt10(c.raw.babies, { min: 0, max: 999, fallback: 0 }),
         extraLabel: c.raw.extraLabel || "",
         extraAmount: c.raw.extraAmount !== undefined && c.raw.extraAmount !== null && c.raw.extraAmount !== "" ? Number(c.raw.extraAmount) : 0,
         extraDolphin: c.raw.extraDolphin || false,
@@ -1332,7 +1342,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     <label className="block text-sm font-medium text-slate-700 mb-2">Activité *</label>
                     <select
                       value={c.raw.activityId}
-                      onChange={(e) => setItem(idx, { activityId: e.target.value })}
+                      onChange={(e) => {
+                        const newId = e.target.value;
+                        const act = activitiesMap.get(newId);
+                        const patch = { activityId: newId };
+                        if (act && isActivityBabiesForbidden(act)) {
+                          patch.babies = 0;
+                        }
+                        setItem(idx, patch);
+                      }}
                       className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-normal text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     >
                       <option value="">— Sélectionner une activité —</option>
@@ -1675,10 +1693,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <p className="text-xs text-gray-400 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput
-                        value={c.raw.babies}
-                        onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
-                      />
+                      {isActivityBabiesForbidden(c.act) ? (
+                        <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950">
+                          Interdit aux bébés
+                        </div>
+                      ) : (
+                        <NumberInput
+                          value={c.raw.babies}
+                          onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                        />
+                      )}
                     </div>
                   </div>
                 </>
@@ -1752,10 +1776,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <p className="text-xs text-gray-400 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput
-                        value={c.raw.babies}
-                        onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
-                      />
+                      {isActivityBabiesForbidden(c.act) ? (
+                        <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950">
+                          Interdit aux bébés
+                        </div>
+                      ) : (
+                        <NumberInput
+                          value={c.raw.babies}
+                          onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                        />
+                      )}
                     </div>
                   </div>
                 </>
@@ -1829,10 +1859,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <p className="text-xs text-gray-400 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput
-                        value={c.raw.babies}
-                        onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
-                      />
+                      {isActivityBabiesForbidden(c.act) ? (
+                        <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950">
+                          Interdit aux bébés
+                        </div>
+                      ) : (
+                        <NumberInput
+                          value={c.raw.babies}
+                          onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                        />
+                      )}
                     </div>
                   </div>
                 </>
@@ -1900,7 +1936,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <p className="text-xs text-gray-400 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      {isActivityBabiesForbidden(c.act) ? (
+                        <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950">
+                          Interdit aux bébés
+                        </div>
+                      ) : (
+                        <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      )}
                     </div>
                   </div>
                 </>
@@ -1968,7 +2010,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <p className="text-xs text-gray-400 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      {isActivityBabiesForbidden(c.act) ? (
+                        <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950">
+                          Interdit aux bébés
+                        </div>
+                      ) : (
+                        <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      )}
                     </div>
                   </div>
                 </>
@@ -2036,7 +2084,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <p className="text-xs text-gray-400 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      {isActivityBabiesForbidden(c.act) ? (
+                        <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950">
+                          Interdit aux bébés
+                        </div>
+                      ) : (
+                        <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      )}
                     </div>
                   </div>
                 </>
@@ -2104,7 +2158,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <p className="text-xs text-gray-400 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      {isActivityBabiesForbidden(c.act) ? (
+                        <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950">
+                          Interdit aux bébés
+                        </div>
+                      ) : (
+                        <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      )}
                     </div>
                   </div>
                 </>
@@ -2172,7 +2232,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <p className="text-xs text-gray-400 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-gray-400 ml-1">({c.act.ageBaby})</span> : ""} (informations uniquement)
                       </p>
-                      <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      {isActivityBabiesForbidden(c.act) ? (
+                        <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950">
+                          Interdit aux bébés
+                        </div>
+                      ) : (
+                        <NumberInput value={c.raw.babies} onChange={(e) => setItem(idx, { babies: e.target.value })} />
+                      )}
                     </div>
                   </div>
                 </>
@@ -2202,11 +2268,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <label className="block text-xs font-semibold text-slate-600 mb-2">
                         Bébés{c.act?.ageBaby ? <span className="text-slate-500 ml-1 font-normal">({c.act.ageBaby})</span> : ""}
                       </label>
-                      <NumberInput
-                        value={c.raw.babies}
-                        onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
-                        placeholder="0"
-                      />
+                      {isActivityBabiesForbidden(c.act) ? (
+                        <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950">
+                          Interdit aux bébés
+                        </div>
+                      ) : (
+                        <NumberInput
+                          value={c.raw.babies}
+                          onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                          placeholder="0"
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
