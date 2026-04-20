@@ -6,6 +6,7 @@ import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay";
 import { buildSelectableDateOptions, normalizeAvailableDays } from "../utils/activityAvailableDates";
+import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
 
 const ACTIVITY_COLUMNS =
   "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes";
@@ -116,16 +117,6 @@ function IconUsers({ className }) {
   );
 }
 
-function IconCalendar({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M8 2v4m8-4v4" />
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M3 10h18" />
-    </svg>
-  );
-}
-
 function IconChevronDown({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -180,7 +171,7 @@ function BookingCardShell({
   setBabies,
   date,
   setDate,
-  dateOptions,
+  normalizedDays,
   lineTotal,
   canAdd,
   onAdd,
@@ -250,25 +241,13 @@ function BookingCardShell({
 
       {daysSummary ? <p className="text-xs text-gray-500">Jours ouverts : {daysSummary}</p> : null}
 
-      <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2">
-          <IconCalendar className="h-5 w-5 text-gray-600" />
-        </span>
-        <IconChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-        <select
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full appearance-none rounded-xl border border-gray-300 bg-white py-3 pl-12 pr-10 text-sm font-medium text-gray-900 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:bg-gray-100"
-          disabled={noDatesConfigured}
-        >
-          <option value="">{noDatesConfigured ? "Aucune date en ligne" : "Sélectionner une date"}</option>
-          {dateOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <ActivityDateCalendar
+        value={date}
+        onChange={setDate}
+        normalizedDays={normalizedDays}
+        disabled={noDatesConfigured}
+        maxDaysAhead={120}
+      />
       {noDatesConfigured ? (
         <p className="text-sm text-amber-800">Aucun jour n&apos;est coché pour cette activité dans l&apos;intranet. Écrivez-nous sur WhatsApp pour réserver.</p>
       ) : null}
@@ -647,7 +626,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   setBabies={setBabyCount}
                   date={date}
                   setDate={setDate}
-                  dateOptions={dateOptions}
+                  normalizedDays={normalizedAvailableDays}
                   lineTotal={lineTotal}
                   canAdd={canAddToCart}
                   onAdd={appendToCartAndReturn}
@@ -674,7 +653,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
               setBabies={setBabyCount}
               date={date}
               setDate={setDate}
-              dateOptions={dateOptions}
+              normalizedDays={normalizedAvailableDays}
               lineTotal={lineTotal}
               canAdd={canAddToCart}
               onAdd={appendToCartAndReturn}
