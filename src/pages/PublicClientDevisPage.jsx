@@ -350,19 +350,25 @@ export function PublicClientDevisPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-slate-950 p-1.5">
+    <div className="selection:bg-teal-100 selection:text-teal-950 min-h-screen bg-gradient-to-b from-catalog-bg via-white to-teal-50/50 font-sans text-catalog-ink antialiased">
+      <header className="sticky top-0 z-30 border-b border-catalog-border bg-white/90 shadow-sm shadow-teal-950/5 backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-1.5 shadow-md shadow-slate-900/20 ring-1 ring-white/10">
               <img src="/logo.png" alt="Hurghada Dream" className="h-full w-full object-contain" />
             </div>
-            <div>
-              <p className="text-base font-bold text-slate-900">Hurghada Dream</p>
-              <p className="text-xs text-slate-500">Catalogue client</p>
+            <div className="min-w-0">
+              <p className="truncate font-display text-lg font-semibold tracking-tight text-slate-900">Hurghada Dream</p>
+              <p className="text-xs font-medium text-catalog-muted">Activités &amp; excursions</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <div className="hidden items-center rounded-full border border-teal-200/80 bg-teal-50/80 px-3 py-1 text-xs font-semibold text-teal-900 md:flex">
+              <span aria-hidden className="mr-1.5 text-amber-500">
+                ★
+              </span>
+              5.0 · 119 avis
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -370,100 +376,136 @@ export function PublicClientDevisPage() {
                 setSuccess("");
                 setCartDrawerOpen(true);
               }}
-              className="relative flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 sm:px-4"
+              className="relative flex items-center gap-2 rounded-full border border-teal-200/90 bg-white px-3.5 py-2 text-sm font-semibold text-teal-900 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/90 sm:px-5"
             >
               Panier
               {cartLines.length > 0 ? (
-                <span className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-[#34b3f7] px-1.5 text-xs font-bold text-white">
+                <span className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-gradient-to-r from-teal-600 to-teal-500 px-1.5 text-xs font-bold text-white shadow-sm">
                   {cartLines.length}
                 </span>
               ) : null}
             </button>
-            <div className="hidden items-center gap-2 md:flex">
-              <button
-                type="button"
-                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
-              >
-                ⭐ 5.0 (119)
-              </button>
-            </div>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1440px] space-y-5 px-4 py-6 sm:px-6">
-        <section className="space-y-5">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-              <label className="block" htmlFor="public-search">
-                <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Rechercher</span>
+      <section className="relative border-b border-teal-900/[0.06] bg-white/70">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_80%_at_50%_-30%,rgba(45,212,191,0.22),transparent_65%)]"
+        />
+        <div className="relative mx-auto max-w-4xl px-4 pb-10 pt-10 text-center sm:px-6 sm:pb-12 sm:pt-12">
+          <h1 className="font-display text-[1.65rem] font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl md:text-[2.35rem]">
+            Trouvez votre prochaine excursion
+          </h1>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-catalog-muted sm:text-base">
+            Mer Rouge, désert, Louxor… Parcourez nos activités et demandez un devis en quelques clics.
+          </p>
+
+          <div className="mx-auto mt-8 max-w-xl">
+            <label className="relative block text-left" htmlFor="public-search">
+              <span className="mb-2 block text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-teal-800/70">
+                Recherche
+              </span>
+              <span className="relative block shadow-lg shadow-teal-950/10">
+                <svg
+                  className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-teal-600/50"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  aria-hidden
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
+                </svg>
                 <input
                   id="public-search"
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Nom, catégorie, mot-clé"
-                  className="mt-2 w-full rounded-full border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500"
+                  placeholder="Nom d’activité, mot-clé, lieu…"
+                  autoComplete="off"
+                  className="w-full rounded-2xl border border-slate-200/90 bg-white py-3.5 pl-12 pr-4 text-[15px] text-slate-900 shadow-inner shadow-slate-900/5 outline-none ring-2 ring-transparent transition placeholder:text-slate-400 focus:border-teal-300 focus:ring-teal-500/25"
                 />
-              </label>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <Link to="/tarifs" className="rounded-full border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50">
-                  Tarifs
-                </Link>
-                <Link to="/" className="rounded-full border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50">
-                  Connexion
-                </Link>
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setSelectedCategory("all")}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                  selectedCategory === "all" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                }`}
-              >
-                Toutes ({categoryCounts.all || 0})
-              </button>
-              {CATEGORIES.map((category) => (
-                <button
-                  key={category.key}
-                  type="button"
-                  onClick={() => setSelectedCategory(category.key)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                    selectedCategory === category.key
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  {category.label} ({categoryCounts[category.key] || 0})
-                </button>
-              ))}
-            </div>
+              </span>
+            </label>
           </div>
 
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            <Link
+              to="/tarifs"
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50/80 hover:text-teal-900"
+            >
+              Grille tarifaire
+            </Link>
+            <Link
+              to="/"
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50/80 hover:text-teal-900"
+            >
+              Espace pro (connexion)
+            </Link>
+          </div>
+
+          <div className="mx-auto mt-8 flex max-w-4xl flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("all")}
+              className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                selectedCategory === "all"
+                  ? "bg-gradient-to-r from-teal-700 to-teal-600 text-white shadow-md shadow-teal-900/20"
+                  : "border border-slate-200/90 bg-white/90 text-slate-700 shadow-sm hover:border-teal-200 hover:text-teal-900"
+              }`}
+            >
+              Toutes · {categoryCounts.all || 0}
+            </button>
+            {CATEGORIES.map((category) => (
+              <button
+                key={category.key}
+                type="button"
+                onClick={() => setSelectedCategory(category.key)}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  selectedCategory === category.key
+                    ? "bg-gradient-to-r from-teal-700 to-teal-600 text-white shadow-md shadow-teal-900/20"
+                    : "border border-slate-200/90 bg-white/90 text-slate-700 shadow-sm hover:border-teal-200 hover:text-teal-900"
+                }`}
+              >
+                {category.label} · {categoryCounts[category.key] || 0}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <main className="mx-auto max-w-[1440px] space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <section className="space-y-8">
+          {error && !loading && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-900">{error}</div>
+          )}
+
           {loading && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">
-              Chargement du catalogue...
+            <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-teal-100 bg-white/90 py-14 shadow-sm">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-teal-200 border-t-teal-600" aria-hidden />
+              <p className="text-sm font-medium text-catalog-muted">Chargement du catalogue…</p>
             </div>
           )}
 
-          {!loading && filteredActivities.length === 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">
-              Aucune activité trouvée.
+          {!loading && !error && filteredActivities.length === 0 && (
+            <div className="rounded-2xl border border-slate-200/90 bg-white/95 px-6 py-12 text-center shadow-sm">
+              <p className="font-display text-lg font-semibold text-slate-900">Aucun résultat</p>
+              <p className="mt-2 text-sm text-catalog-muted">Essayez un autre mot-clé ou une autre catégorie.</p>
             </div>
           )}
 
-          <div className="space-y-8">
+          <div className="space-y-12 pb-8">
             {groupedActivities.map((group) => (
-              <section key={group.key} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-black text-slate-900">{group.label}</h2>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+              <section key={group.key} className="space-y-5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+                  <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900">{group.label}</h2>
+                  <span className="inline-flex w-fit items-center rounded-full border border-teal-100 bg-teal-50/90 px-3 py-1 text-xs font-semibold text-teal-900">
                     {group.items.length} activité{group.items.length > 1 ? "s" : ""}
                   </span>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {group.items.map((activity) => {
                     const categoryKey = normalizeCategory(activity.category);
                     const listFrom = getPublicCatalogListFromPrice(activity);
@@ -483,19 +525,19 @@ export function PublicClientDevisPage() {
                             navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`);
                           }
                         }}
-                        className="service-card group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[16px] bg-white shadow-[0_4px_20px_rgb(0,0,0,0.08)] transition-all duration-300 ease-out active:scale-[0.98] hover:shadow-[0_12px_40px_rgb(0,0,0,0.15)] sm:rounded-[18px] dark:bg-gray-900/80"
+                        className="service-card group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-soft transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-teal-200/90 hover:shadow-soft-lg active:scale-[0.99]"
                       >
                         <div
-                          className="relative h-48 overflow-hidden rounded-t-[16px] bg-gray-100 sm:h-44 sm:rounded-t-[18px] dark:bg-gray-800"
+                          className="relative h-48 overflow-hidden bg-slate-100 sm:h-44"
                           style={{ background: getCategoryCover(categoryKey) }}
                         >
-                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/55 via-slate-900/10 to-transparent" />
                           <div className="absolute right-3 top-3">
                             <button
                               type="button"
                               onClick={(e) => e.stopPropagation()}
-                              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-lg backdrop-blur-xl transition-all duration-200 hover:bg-white active:scale-95"
-                              aria-label="Ajouter aux favoris"
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-600 shadow-md backdrop-blur transition hover:bg-white"
+                              aria-label="Favori"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -505,7 +547,7 @@ export function PublicClientDevisPage() {
                                 strokeWidth="2"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
-                                className="h-[18px] w-[18px] text-gray-600"
+                                className="h-[18px] w-[18px]"
                               >
                                 <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
                               </svg>
@@ -513,21 +555,19 @@ export function PublicClientDevisPage() {
                           </div>
                         </div>
                         <div className="flex grow flex-col p-4">
-                          <h3 className="mb-2 line-clamp-2 text-lg font-semibold leading-snug text-gray-900 transition-colors group-hover:text-[#34b3f7] sm:text-[17px] dark:text-white">
+                          <h3 className="mb-2 line-clamp-2 font-display text-[1.05rem] font-semibold leading-snug text-slate-900 transition-colors group-hover:text-teal-800 sm:text-[17px]">
                             {activity.name}
                           </h3>
-                          <div className="mt-auto flex justify-end border-t border-gray-100 pt-3 dark:border-gray-800">
-                            <div className="flex flex-col items-end">
-                              <span className="text-[11px] font-medium text-gray-400">à partir de</span>
-                              <div className="flex items-baseline gap-1">
+                          <div className="mt-auto flex justify-end border-t border-slate-100 pt-3">
+                            <div className="flex flex-col items-end text-right">
+                              <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">à partir de</span>
+                              <div className="mt-0.5 flex items-baseline gap-1">
                                 {cardFrom != null && cardFrom > 0 ? (
-                                  <span className="text-lg font-bold text-gray-900 dark:text-white">
+                                  <span className="font-display text-lg font-bold text-slate-900 tabular-nums">
                                     {formatMoney(cardFrom, activity.currency || "EUR")}
                                   </span>
                                 ) : (
-                                  <span className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                                    Tarif sur devis
-                                  </span>
+                                  <span className="text-sm font-semibold text-amber-800">Tarif sur devis</span>
                                 )}
                               </div>
                             </div>
@@ -538,7 +578,7 @@ export function PublicClientDevisPage() {
                               e.stopPropagation();
                               addToCart(activity.id);
                             }}
-                            className="mt-3 w-full rounded-xl bg-[#34b3f7] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#34b3f7]/90 active:scale-[0.98]"
+                            className="mt-3 w-full rounded-xl bg-gradient-to-r from-teal-700 to-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-teal-900/15 transition hover:from-teal-800 hover:to-teal-700 active:scale-[0.98]"
                           >
                             Ajouter au panier
                           </button>
@@ -557,19 +597,19 @@ export function PublicClientDevisPage() {
         <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="cart-drawer-title">
           <button
             type="button"
-            className="absolute inset-0 bg-slate-900/40"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
             aria-label="Fermer le panier"
             onClick={() => setCartDrawerOpen(false)}
           />
-          <div className="relative z-10 flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
-              <h2 id="cart-drawer-title" className="text-lg font-bold text-slate-900">
+          <div className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-teal-100/80 bg-white shadow-2xl shadow-teal-950/10">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-teal-50/80 to-white px-5 py-4">
+              <h2 id="cart-drawer-title" className="font-display text-xl font-bold text-slate-900">
                 Panier
               </h2>
               <button
                 type="button"
                 onClick={() => setCartDrawerOpen(false)}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
                 aria-label="Fermer"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -578,39 +618,43 @@ export function PublicClientDevisPage() {
               </button>
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
-              {cartLines.length === 0 && <p className="text-sm text-slate-600">Ton panier est vide.</p>}
+              {cartLines.length === 0 && (
+                <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-catalog-muted">
+                  Votre panier est vide. Ajoutez des activités depuis le catalogue.
+                </p>
+              )}
               {cartLines.map((line) => (
-                <div key={line.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="line-clamp-2 text-sm font-bold text-slate-900">{line.activity.name}</p>
-                  <div className="mt-2 grid grid-cols-3 gap-2">
+                <div key={line.id} className="rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/80 p-4 shadow-sm">
+                  <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900">{line.activity.name}</p>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
                     <label className="space-y-1">
-                      <span className="block text-[10px] font-bold uppercase text-slate-600">Ad</span>
+                      <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Adultes</span>
                       <input
                         type="number"
                         min="0"
                         value={line.adults}
                         onChange={(e) => updateCartLine(line.id, "adults", e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
                       />
                     </label>
                     <label className="space-y-1">
-                      <span className="block text-[10px] font-bold uppercase text-slate-600">Enf</span>
+                      <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Enfants</span>
                       <input
                         type="number"
                         min="0"
                         value={line.children}
                         onChange={(e) => updateCartLine(line.id, "children", e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
                       />
                     </label>
                     <label className="space-y-1">
-                      <span className="block text-[10px] font-bold uppercase text-slate-600">Béb</span>
+                      <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Bébés</span>
                       <input
                         type="number"
                         min="0"
                         value={line.babies}
                         onChange={(e) => updateCartLine(line.id, "babies", e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
                       />
                     </label>
                   </div>
@@ -618,14 +662,16 @@ export function PublicClientDevisPage() {
                     type="date"
                     value={line.date}
                     onChange={(e) => updateCartLine(line.id, "date", e.target.value)}
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                    className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
                   />
-                  <div className="mt-2 flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-800">{formatMoney(line.lineTotal, line.activity.currency)}</p>
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                    <p className="font-display text-sm font-bold tabular-nums text-teal-900">
+                      {formatMoney(line.lineTotal, line.activity.currency)}
+                    </p>
                     <button
                       type="button"
                       onClick={() => removeCartLine(line.id)}
-                      className="text-xs font-bold text-rose-700 hover:text-rose-900"
+                      className="text-xs font-semibold text-rose-600 underline-offset-2 hover:text-rose-800 hover:underline"
                     >
                       Retirer
                     </button>
@@ -633,10 +679,10 @@ export function PublicClientDevisPage() {
                 </div>
               ))}
             </div>
-            <div className="border-t border-slate-200 bg-white p-4">
-              <p className="text-sm font-semibold text-slate-700">
-                Total estimé :{" "}
-                <span className="text-lg font-black text-slate-900">{formatMoney(cartTotal, "EUR")}</span>
+            <div className="border-t border-slate-100 bg-white p-5">
+              <p className="text-sm font-medium text-catalog-muted">
+                Total estimé{" "}
+                <span className="font-display text-xl font-bold text-slate-900 tabular-nums">{formatMoney(cartTotal, "EUR")}</span>
               </p>
               <button
                 type="button"
@@ -647,7 +693,7 @@ export function PublicClientDevisPage() {
                   setCartDrawerOpen(false);
                   setCheckoutOpen(true);
                 }}
-                className="mt-3 w-full rounded-xl bg-[#34b3f7] px-3 py-3 text-sm font-bold text-white hover:bg-[#34b3f7]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-4 w-full rounded-xl bg-gradient-to-r from-teal-700 to-teal-600 px-3 py-3.5 text-sm font-bold text-white shadow-md shadow-teal-900/20 transition hover:from-teal-800 hover:to-teal-700 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Finaliser mon devis
               </button>
@@ -660,23 +706,23 @@ export function PublicClientDevisPage() {
         <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
           <button
             type="button"
-            className="absolute inset-0 bg-slate-900/50"
+            className="absolute inset-0 bg-slate-900/55 backdrop-blur-[2px]"
             aria-label="Fermer"
             onClick={() => setCheckoutOpen(false)}
           />
           <form
             onSubmit={submitPublicQuote}
-            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl"
+            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-slate-200/80 bg-white p-6 shadow-2xl sm:rounded-3xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex items-center justify-between">
-              <h2 id="checkout-title" className="text-lg font-bold text-slate-900">
-                Tes coordonnées
+            <div className="mb-5 flex items-center justify-between">
+              <h2 id="checkout-title" className="font-display text-xl font-bold text-slate-900">
+                Vos coordonnées
               </h2>
               <button
                 type="button"
                 onClick={() => setCheckoutOpen(false)}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"
                 aria-label="Fermer"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -686,8 +732,8 @@ export function PublicClientDevisPage() {
             </div>
             {(error || success) && (
               <div
-                className={`mb-4 rounded-xl border px-3 py-2 text-sm font-semibold ${
-                  error ? "border-rose-300 bg-rose-50 text-rose-900" : "border-emerald-300 bg-emerald-50 text-emerald-900"
+                className={`mb-4 rounded-2xl border px-4 py-3 text-sm font-medium ${
+                  error ? "border-rose-200 bg-rose-50 text-rose-900" : "border-teal-200 bg-teal-50 text-teal-900"
                 }`}
               >
                 {error || success}
@@ -698,14 +744,14 @@ export function PublicClientDevisPage() {
                 value={client.name}
                 onChange={(e) => updateClientField("name", e.target.value)}
                 placeholder="Nom complet *"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/20"
                 autoComplete="name"
               />
               <input
                 value={client.phone}
                 onChange={(e) => updateClientField("phone", e.target.value)}
                 placeholder="Téléphone *"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/20"
                 autoComplete="tel"
               />
               <input
@@ -713,33 +759,33 @@ export function PublicClientDevisPage() {
                 value={client.email}
                 onChange={(e) => updateClientField("email", e.target.value)}
                 placeholder="Email"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/20"
                 autoComplete="email"
               />
               <input
                 value={client.hotel}
                 onChange={(e) => updateClientField("hotel", e.target.value)}
                 placeholder="Hôtel"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/20"
               />
               <textarea
                 value={client.notes}
                 onChange={(e) => updateClientField("notes", e.target.value)}
-                placeholder="Notes"
+                placeholder="Précisions (horaires, enfants, etc.)"
                 rows={3}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/20"
               />
             </div>
-            <p className="mt-4 text-xs text-slate-500">
-              Total : <span className="font-bold text-slate-900">{formatMoney(cartTotal, "EUR")}</span> —{" "}
+            <p className="mt-5 text-xs text-catalog-muted">
+              Total : <span className="font-display font-bold text-slate-900 tabular-nums">{formatMoney(cartTotal, "EUR")}</span> —{" "}
               {cartLines.length} ligne{cartLines.length > 1 ? "s" : ""}
             </p>
             <button
               type="submit"
               disabled={submitLoading}
-              className="mt-4 w-full rounded-xl bg-emerald-600 px-3 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+              className="mt-5 w-full rounded-xl bg-gradient-to-r from-teal-700 to-teal-600 px-3 py-3.5 text-sm font-bold text-white shadow-lg shadow-teal-900/20 transition hover:from-teal-800 hover:to-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitLoading ? "Envoi..." : "Envoyer ma demande"}
+              {submitLoading ? "Envoi en cours…" : "Envoyer ma demande"}
             </button>
           </form>
         </div>

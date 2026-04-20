@@ -9,9 +9,20 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['"Outfit"', "Inter", "system-ui", "sans-serif"],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+        display: ['Outfit', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
+        /** Palette pages catalogue public (lisible, cohérente) */
+        catalog: {
+          bg: '#f4f8f7',
+          surface: '#ffffff',
+          muted: '#5c6d6a',
+          ink: '#0f172a',
+          teal: '#0f766e',
+          tealLight: '#14b8a6',
+          border: 'rgba(15, 118, 110, 0.12)',
+        },
         hd: {
           bg: "#f8f9fa",
           bgSecondary: "#f1f3f5",

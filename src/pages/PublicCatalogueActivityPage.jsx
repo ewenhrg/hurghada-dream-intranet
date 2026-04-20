@@ -147,7 +147,7 @@ function ParticipantSelect({ Icon, label, value, onChange, min, max }) {
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         aria-label={label}
-        className="w-full appearance-none rounded-xl border border-gray-300 bg-white py-3 pl-12 pr-10 text-sm font-medium text-gray-900 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+        className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-3 pl-12 pr-10 text-sm font-medium text-slate-900 transition-colors hover:border-teal-200 focus:outline-none focus:ring-2 focus:ring-teal-500/25"
       >
         {options.map((n) => (
           <option key={n} value={n}>
@@ -194,10 +194,10 @@ function BookingCardShell({
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <div className="border-b border-gray-200 pb-3 md:pb-4">
-        <p className="mb-1 text-xs text-gray-600">À partir de (adulte)</p>
+      <div className="border-b border-slate-200/90 pb-3 md:pb-4">
+        <p className="mb-1 text-xs font-medium text-catalog-muted">À partir de (adulte)</p>
         <div className="flex items-baseline gap-2">
-          <span className="text-xl font-bold text-gray-900 md:text-2xl">
+          <span className="font-display text-xl font-bold text-slate-900 tabular-nums md:text-2xl">
             {showSurDevisHeader ? (
               <span className="text-base font-semibold text-amber-800">Tarif sur devis</span>
             ) : (
@@ -286,7 +286,7 @@ function BookingCardShell({
           type="button"
           disabled={!canAdd}
           onClick={onAdd}
-          className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600/90 disabled:cursor-not-allowed disabled:opacity-75 md:py-3 md:text-base"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-teal-700 to-teal-600 px-3 py-2.5 text-sm font-semibold text-white shadow-md shadow-teal-900/15 transition hover:from-teal-800 hover:to-teal-700 disabled:cursor-not-allowed disabled:opacity-75 md:py-3 md:text-base"
         >
           Ajouter au panier
         </button>
@@ -395,7 +395,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       return [
         "Grille Speed Boat : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant.",
         "Option dauphin : +20 €.",
-        "Les extras (baie, lunch…) s’ajoutent selon les cases cochées ci-dessous.",
+        "Les extras (baie, lunch…) : une seule option au choix parmi la liste ci-dessous.",
       ].join("\n");
     }
     if (isBuggyActivity(activity.name)) {
@@ -416,8 +416,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
     if (isSpeedBoatActivity(name)) {
       return (
-        <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/90 p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-emerald-900">Options Speed Boat</p>
+        <div className="space-y-3 rounded-xl border border-teal-200/80 bg-teal-50/80 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-teal-900">Options Speed Boat</p>
           <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-800">
             <input
               type="checkbox"
@@ -428,31 +428,39 @@ export function PublicCatalogueActivityPage({ activityId }) {
             Dauphin (+20 € pour la ligne)
           </label>
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-gray-700">Extras (par personne, selon grille interne)</p>
-            <div className="max-h-48 space-y-1.5 overflow-y-auto pr-1">
-              {SPEED_BOAT_EXTRAS.filter((e) => e.id).map((extra) => (
-                <label key={extra.id} className="flex cursor-pointer items-start gap-2 text-xs text-gray-800">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300"
-                    checked={special.speedBoatExtra.includes(extra.id)}
-                    onChange={() => {
-                      setSpecial((s) => {
-                        const set = new Set(s.speedBoatExtra);
-                        if (set.has(extra.id)) set.delete(extra.id);
-                        else set.add(extra.id);
-                        return { ...s, speedBoatExtra: [...set] };
-                      });
-                    }}
-                  />
-                  <span>
-                    {extra.label}{" "}
-                    <span className="text-gray-500">
-                      (+{extra.priceAdult} € / adulte · +{extra.priceChild} € / enfant)
+            <p className="text-xs font-semibold text-gray-700">Extra (un seul au choix, par personne)</p>
+            <div className="max-h-48 space-y-1.5 overflow-y-auto pr-1" role="radiogroup" aria-label="Extra Speed Boat">
+              {SPEED_BOAT_EXTRAS.map((extra) => {
+                const selectedId = special.speedBoatExtra[0] ?? "";
+                const checked = extra.id ? selectedId === extra.id : !selectedId;
+                return (
+                  <label key={extra.id || "none"} className="flex cursor-pointer items-start gap-2 text-xs text-gray-800">
+                    <input
+                      type="radio"
+                      name={`hd-speedboat-extra-${activity.id}`}
+                      className="mt-0.5 h-4 w-4 shrink-0 border-slate-300 text-teal-600 focus:ring-teal-500"
+                      checked={checked}
+                      onChange={() => {
+                        setSpecial((s) => ({
+                          ...s,
+                          speedBoatExtra: extra.id ? [extra.id] : [],
+                        }));
+                      }}
+                    />
+                    <span>
+                      {extra.label}
+                      {extra.id ? (
+                        <>
+                          {" "}
+                          <span className="text-gray-500">
+                            (+{extra.priceAdult} € / adulte · +{extra.priceChild} € / enfant)
+                          </span>
+                        </>
+                      ) : null}
                     </span>
-                  </span>
-                </label>
-              ))}
+                  </label>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -798,38 +806,43 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-7xl px-4 py-16 text-center text-gray-600">Chargement…</div>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-catalog-bg via-white to-teal-50/50 font-sans">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-teal-200 border-t-teal-600" aria-hidden />
+        <p className="mt-4 text-sm font-medium text-catalog-muted">Chargement…</p>
       </div>
     );
   }
 
   if (loadError || !activity) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-7xl px-4 py-16 text-center">
-          <p className="text-gray-800">{loadError || "Activité introuvable."}</p>
-          <Link to="/catalogue" className="mt-4 inline-block font-semibold text-emerald-600 hover:underline">
-            ← Retour au catalogue
-          </Link>
-        </div>
+      <div className="min-h-screen bg-gradient-to-b from-catalog-bg via-white to-teal-50/50 px-4 py-16 font-sans text-center">
+        <p className="font-display text-lg font-semibold text-slate-900">{loadError || "Activité introuvable."}</p>
+        <Link
+          to="/catalogue"
+          className="mt-6 inline-flex items-center rounded-full bg-gradient-to-r from-teal-700 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:from-teal-800 hover:to-teal-700"
+        >
+          ← Retour au catalogue
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="relative isolate flex min-h-screen flex-col bg-gray-50 font-sans text-gray-900">
-      <header className="sticky top-0 z-[100] border-b border-gray-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
-          <Link to="/catalogue" className="text-sm font-semibold text-emerald-700 hover:underline">
+    <div className="relative isolate flex min-h-screen flex-col bg-gradient-to-b from-catalog-bg via-white to-teal-50/40 font-sans text-slate-900 antialiased selection:bg-teal-100 selection:text-teal-950">
+      <header className="sticky top-0 z-[100] border-b border-teal-900/[0.06] bg-white/90 shadow-sm shadow-teal-950/5 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+          <Link
+            to="/catalogue"
+            className="text-sm font-semibold text-teal-800 transition hover:text-teal-950 hover:underline"
+          >
             ← Catalogue
           </Link>
-          <div className="h-8 w-px bg-gray-200" aria-hidden />
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-slate-950 p-1">
+          <div className="h-8 w-px bg-slate-200/90" aria-hidden />
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-1.5 shadow-md ring-1 ring-white/10">
               <img src="/logo.png" alt="" className="h-full w-full object-contain" />
             </div>
-            <span className="text-sm font-semibold text-gray-800">Hurghada Dream</span>
+            <span className="font-display text-sm font-semibold text-slate-900">Hurghada Dream</span>
           </div>
         </div>
       </header>
@@ -878,42 +891,42 @@ export function PublicCatalogueActivityPage({ activityId }) {
         </div>
 
         <div className="px-4 pt-4 md:hidden">
-          <h1 className="mb-2 text-2xl font-bold text-gray-900">{activity.name}</h1>
+          <h1 className="mb-2 font-display text-2xl font-bold tracking-tight text-slate-900">{activity.name}</h1>
         </div>
 
         {/* ——— Fil + titre desktop ——— */}
         <div className="mx-auto hidden max-w-7xl px-4 pt-3 sm:px-6 md:block lg:px-8">
           <nav className="mb-3">
-            <ol className="flex items-center gap-1.5 text-xs text-gray-500">
+            <ol className="flex items-center gap-1.5 text-xs text-slate-500">
               <li>
-                <Link to="/catalogue" className="transition-colors hover:text-emerald-600">
+                <Link to="/catalogue" className="font-medium transition-colors hover:text-teal-700">
                   Catalogue
                 </Link>
               </li>
               <li aria-hidden>/</li>
               <li>
-                <span className="text-gray-700">{label}</span>
+                <span className="text-slate-700">{label}</span>
               </li>
             </ol>
           </nav>
-          <h1 className="mb-3 text-2xl font-bold text-gray-900 md:text-4xl">{activity.name}</h1>
+          <h1 className="mb-3 font-display text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">{activity.name}</h1>
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-            <div className="flex items-center gap-1.5 text-gray-600">
-              <IconMapPin className="h-4 w-4" />
+            <div className="flex items-center gap-1.5 text-catalog-muted">
+              <IconMapPin className="h-4 w-4 text-teal-600/80" />
               <span>{activity.name}</span>
             </div>
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-xl px-6 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-emerald-600"
+                className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-teal-50 hover:text-teal-900"
               >
                 <IconHeart className="h-5 w-5" />
-                Ajouter aux favoris
+                Favori
               </button>
               <button
                 type="button"
                 onClick={() => void sharePage()}
-                className="flex items-center gap-2 rounded-xl px-6 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-emerald-600"
+                className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-teal-50 hover:text-teal-900"
               >
                 <IconShare className="h-5 w-5" />
                 Partager
@@ -991,7 +1004,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
               {bulletPoints.length > 0 ? (
                 <section className="grid gap-3 xl:grid-cols-[200px_1fr] xl:gap-0">
-                  <h2 className="text-base font-bold text-gray-900 md:text-lg">Points forts</h2>
+                  <h2 className="font-display text-base font-bold text-slate-900 md:text-lg">Points forts</h2>
                   <ul className="list-inside list-disc space-y-2">
                     {bulletPoints.map((item) => (
                       <li key={item} className="text-sm font-semibold text-gray-700 md:text-base">
@@ -1005,8 +1018,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
               <div className="border-t border-gray-200" role="separator" />
 
               <section className="grid gap-3 xl:grid-cols-[200px_1fr] xl:gap-0">
-                <h2 className="text-base font-bold text-gray-900 md:text-lg">Informations</h2>
-                <p className="whitespace-pre-line text-sm leading-relaxed text-gray-600">
+                <h2 className="font-display text-base font-bold text-slate-900 md:text-lg">Informations</h2>
+                <p className="whitespace-pre-line text-sm leading-relaxed text-catalog-muted">
                   {informationsBody}
                 </p>
               </section>
@@ -1014,7 +1027,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
             {/* ——— Sidebar réservation desktop ——— */}
             <div className="hidden lg:col-span-1 lg:block">
-              <div className="lg:sticky lg:top-24 lg:rounded-[22px] lg:border lg:border-gray-200 lg:bg-white lg:p-6 lg:shadow-[0_4px_20px_rgb(0,0,0,0.08)] lg:transition-shadow lg:duration-300 lg:hover:shadow-[0_12px_40px_rgb(0,0,0,0.12)]">
+              <div className="lg:sticky lg:top-24 lg:rounded-3xl lg:border lg:border-teal-900/10 lg:bg-white lg:p-7 lg:shadow-soft lg:shadow-teal-950/10 lg:transition-shadow lg:duration-300 lg:hover:shadow-soft-lg">
                 <BookingCardShell
                   activity={activity}
                   adults={adults}
@@ -1044,8 +1057,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
         {/* Encart mobile « disponibilités » */}
         <div id="disponibilites" className="mx-auto w-full max-w-7xl px-4 pb-28 sm:px-6 lg:hidden lg:px-8">
-          <div className="rounded-[22px] border border-gray-200 bg-white p-4 shadow-[0_4px_20px_rgb(0,0,0,0.08)]">
-            <h2 className="mb-3 text-lg font-bold text-gray-900">Vérifier les disponibilités</h2>
+          <div className="rounded-3xl border border-teal-900/10 bg-white p-5 shadow-soft shadow-teal-950/10">
+            <h2 className="mb-4 font-display text-lg font-bold text-slate-900">Réserver</h2>
             <BookingCardShell
               activity={activity}
               adults={adults}
@@ -1072,11 +1085,11 @@ export function PublicCatalogueActivityPage({ activityId }) {
         </div>
 
         {/* Barre bas mobile */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] lg:hidden">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-teal-900/10 bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,118,110,0.12)] backdrop-blur-md lg:hidden">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div>
-              <p className="text-xs text-gray-500">À partir de</p>
-              <p className="text-lg font-bold text-gray-900">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">À partir de</p>
+              <p className="font-display text-lg font-bold text-slate-900 tabular-nums">
                 {headerPriceHint != null && headerPriceHint > 0 ? (
                   formatMoney(headerPriceHint, activity.currency || "EUR")
                 ) : (
@@ -1087,9 +1100,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
             <button
               type="button"
               onClick={scrollToBooking}
-              className="whitespace-nowrap rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600/90"
+              className="whitespace-nowrap rounded-2xl bg-gradient-to-r from-teal-700 to-teal-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-teal-900/20 transition hover:from-teal-800 hover:to-teal-700"
             >
-              Vérifier les disponibilités
+              Réserver
             </button>
           </div>
         </div>
