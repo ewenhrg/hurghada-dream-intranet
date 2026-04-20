@@ -19,8 +19,8 @@ import {
   RequestPage,
   PublicTarifsPage,
   PublicClientDevisPage,
+  PublicCatalogueActivityPage,
   EwenDashboardPage,
-  PublicDevisPage,
 } from "./config/lazyPages";
 import { ScrollOptimizer } from "./components/ScrollOptimizer";
 import { Pill, GhostBtn, Section } from "./components/ui";
@@ -854,6 +854,19 @@ export default function App() {
     );
   }
 
+  // Fiche activité publique (clic depuis le catalogue) — avant la liste /catalogue
+  const catalogueActivityMatch = location.pathname.match(/^\/catalogue\/activity\/([^/]+)\/?$/);
+  if (catalogueActivityMatch) {
+    const catalogueActivityId = decodeURIComponent(catalogueActivityMatch[1]);
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <PublicCatalogueActivityPage activityId={catalogueActivityId} />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
   // Page publique catalogue + panier + demande de devis
   if (location.pathname === "/catalogue" || location.pathname === "/catalogue/") {
     return (
@@ -1035,9 +1048,6 @@ export default function App() {
                 <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
                   {t("nav.devis")}
                 </Pill>
-                <Pill active={tab === "public-devis"} onClick={() => setTab("public-devis")}>
-                  Public devis
-                </Pill>
                 {user?.canAccessActivities !== false && (
                 <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
                   {t("nav.activities")}
@@ -1196,19 +1206,6 @@ export default function App() {
         {tab === "history" && user?.canAccessHistory !== false && (
           <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")}>
             <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
-          </Section>
-        )}
-
-        {tab === "public-devis" && (
-          <Section
-            title="Public devis"
-            subtitle="Devis envoyés par les clients depuis la page publique /catalogue"
-          >
-            <ErrorBoundary>
-              <Suspense fallback={<PageLoader />}>
-                <PublicDevisPage quotes={quotes} />
-              </Suspense>
-            </ErrorBoundary>
           </Section>
         )}
 

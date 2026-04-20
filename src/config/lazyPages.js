@@ -46,6 +46,9 @@ export const PublicTarifsPage = lazyWithRetry(() =>
 export const PublicClientDevisPage = lazyWithRetry(() =>
   import("../pages/PublicClientDevisPage").then((m) => ({ default: m.PublicClientDevisPage }))
 );
+export const PublicCatalogueActivityPage = lazyWithRetry(() =>
+  import("../pages/PublicCatalogueActivityPage").then((m) => ({ default: m.PublicCatalogueActivityPage }))
+);
 export const EwenDashboardPage = lazyWithRetry(() =>
   import("../pages/EwenDashboardPage").then((module) => ({ default: module.EwenDashboardPage }))
 );

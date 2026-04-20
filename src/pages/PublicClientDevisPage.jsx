@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
+import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 
 const ACTIVITY_COLUMNS = "id, name, category, price_adult, price_child, price_baby, currency, notes";
 
@@ -56,6 +57,7 @@ function getCategoryCover(categoryKey) {
 }
 
 export function PublicClientDevisPage() {
+  const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -71,7 +73,7 @@ export function PublicClientDevisPage() {
     notes: "",
   });
 
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => loadPublicCatalogueCart());
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -202,6 +204,10 @@ export function PublicClientDevisPage() {
   useEffect(() => {
     void fetchActivities();
   }, []);
+
+  useEffect(() => {
+    savePublicCatalogueCart(cart);
+  }, [cart]);
 
   useEffect(() => {
     if (cartDrawerOpen || checkoutOpen) {
@@ -456,7 +462,18 @@ export function PublicClientDevisPage() {
                     return (
                       <article
                         key={activity.id}
-                        className="service-card group relative flex h-full w-full cursor-default flex-col overflow-hidden rounded-[16px] bg-white shadow-[0_4px_20px_rgb(0,0,0,0.08)] transition-all duration-300 ease-out active:scale-[0.98] hover:shadow-[0_12px_40px_rgb(0,0,0,0.15)] sm:rounded-[18px] dark:bg-gray-900/80"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() =>
+                          navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`);
+                          }
+                        }}
+                        className="service-card group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[16px] bg-white shadow-[0_4px_20px_rgb(0,0,0,0.08)] transition-all duration-300 ease-out active:scale-[0.98] hover:shadow-[0_12px_40px_rgb(0,0,0,0.15)] sm:rounded-[18px] dark:bg-gray-900/80"
                       >
                         <div
                           className="relative h-48 overflow-hidden rounded-t-[16px] bg-gray-100 sm:h-44 sm:rounded-t-[18px] dark:bg-gray-800"
@@ -466,6 +483,7 @@ export function PublicClientDevisPage() {
                           <div className="absolute right-3 top-3">
                             <button
                               type="button"
+                              onClick={(e) => e.stopPropagation()}
                               className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-lg backdrop-blur-xl transition-all duration-200 hover:bg-white active:scale-95"
                               aria-label="Ajouter aux favoris"
                             >
@@ -517,7 +535,10 @@ export function PublicClientDevisPage() {
                           </div>
                           <button
                             type="button"
-                            onClick={() => addToCart(activity.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(activity.id);
+                            }}
                             className="mt-3 w-full rounded-xl bg-[#34b3f7] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#34b3f7]/90 active:scale-[0.98]"
                           >
                             Ajouter au panier
