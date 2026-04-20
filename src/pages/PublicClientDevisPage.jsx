@@ -8,7 +8,7 @@ import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "..
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 
 const ACTIVITY_COLUMNS =
-  "id, name, category, price_adult, price_child, price_baby, currency, notes, description, catalog_image_urls";
+  "id, name, category, price_adult, price_child, price_baby, babies_forbidden, currency, notes, description, catalog_image_urls";
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -312,7 +312,7 @@ export function PublicClientDevisPage() {
       date: line.date || "",
       adults: toNumber(line.adults),
       children: toNumber(line.children),
-      babies: toNumber(line.babies),
+      babies: line.activity.babies_forbidden ? 0 : toNumber(line.babies),
       lineTotal: toNumber(line.lineTotal),
     }));
 
@@ -352,39 +352,39 @@ export function PublicClientDevisPage() {
   }
 
   return (
-    <div className="selection:bg-teal-200/50 selection:text-teal-950 relative min-h-screen overflow-x-hidden bg-gradient-to-b from-[#ecfdf8] via-white to-[#f0fdfa] font-sans text-catalog-ink antialiased">
+    <div className="selection:bg-teal-200/50 selection:text-teal-950 relative min-h-screen overflow-x-hidden bg-gradient-to-b from-[#e8f7f3] via-[#fafdfb] to-[#eefbf8] font-sans text-catalog-ink antialiased">
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[min(70vh,520px)] bg-catalog-mesh opacity-90"
+        className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[min(70vh,520px)] bg-catalog-mesh opacity-[0.95]"
       />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-0 h-40 bg-gradient-to-t from-teal-950/[0.03] to-transparent"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-0 h-48 bg-gradient-to-t from-teal-950/5 via-transparent to-transparent"
       />
 
-      <header className="sticky top-0 z-30 border-b border-teal-900/10 bg-white/75 shadow-[0_1px_0_0_rgba(255,255,255,0.8)_inset,0_8px_32px_-12px_rgba(15,118,110,0.12)] backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-teal-900/12 bg-white/85 shadow-[0_1px_0_0_rgba(255,255,255,0.95)_inset,0_10px_40px_-14px_rgba(15,118,110,0.18)] backdrop-blur-xl backdrop-saturate-150">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3.5">
-            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 p-1.5 shadow-lg shadow-teal-900/25 ring-2 ring-white/90">
-              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/15 to-transparent" />
+            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 p-1.5 shadow-xl shadow-teal-900/30 ring-2 ring-white">
+              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/20 to-transparent" />
               <img src="/logo.png" alt="Hurghada Dream" className="relative h-full w-full object-contain" />
             </div>
             <div className="min-w-0">
-              <p className="truncate bg-gradient-to-r from-slate-900 to-teal-900 bg-clip-text font-display text-lg font-bold tracking-tight text-transparent">
+              <p className="truncate bg-gradient-to-r from-slate-950 via-slate-900 to-teal-900 bg-clip-text font-display text-lg font-extrabold tracking-tight text-transparent">
                 Hurghada Dream
               </p>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-900">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-teal-950/95">
                 Activités &amp; excursions
               </p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
-            <div className="hidden items-center gap-1.5 rounded-full border border-amber-200/70 bg-gradient-to-r from-amber-50 to-orange-50/90 px-3.5 py-1.5 text-xs font-bold text-amber-950 shadow-sm shadow-amber-900/5 md:inline-flex">
-              <span aria-hidden className="text-amber-500">
+            <div className="hidden items-center gap-1.5 rounded-full border border-amber-300/60 bg-gradient-to-r from-amber-50 to-orange-50 px-3.5 py-1.5 text-xs font-bold text-amber-950 shadow-md shadow-amber-900/10 md:inline-flex">
+              <span aria-hidden className="text-amber-600">
                 ★
               </span>
               <span>5,0</span>
-              <span className="font-semibold text-amber-950">· 119 avis</span>
+              <span className="font-bold text-amber-950">· 119 avis</span>
             </div>
             <button
               type="button"
@@ -393,17 +393,20 @@ export function PublicClientDevisPage() {
                 setSuccess("");
                 setCartDrawerOpen(true);
               }}
-              className="group relative flex items-center gap-2.5 overflow-hidden rounded-full border border-teal-200/90 bg-white px-3 py-2 text-sm font-bold text-teal-900 shadow-md shadow-teal-900/10 transition-all hover:border-teal-300 hover:bg-teal-50 hover:shadow-glow-teal sm:px-5 sm:py-2.5"
+              className="group relative inline-flex min-h-[44px] items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-teal-800 via-teal-700 to-emerald-700 px-3.5 py-2.5 pl-3.5 text-sm font-extrabold tracking-tight text-white shadow-[0_4px_20px_-4px_rgba(15,118,110,0.55),0_2px_8px_-2px_rgba(15,23,42,0.25)] ring-2 ring-white/25 transition hover:from-teal-900 hover:via-teal-800 hover:to-emerald-800 hover:shadow-[0_8px_28px_-6px_rgba(15,118,110,0.55)] active:scale-[0.98] sm:gap-2.5 sm:px-5 sm:py-2.5"
             >
-              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition duration-700 group-hover:translate-x-full" />
-              <svg className="relative h-5 w-5 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 to-transparent" />
+              <span className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100">
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition duration-700 group-hover:translate-x-full" />
+              </span>
+              <svg className="relative h-5 w-5 shrink-0 text-white drop-shadow-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden>
                 <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
                 <path d="M3 6h18" />
                 <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
-              <span className="relative">Panier</span>
+              <span className="relative text-[15px] drop-shadow-sm">Panier</span>
               {cartLines.length > 0 ? (
-                <span className="relative flex h-7 min-w-[1.75rem] items-center justify-center rounded-full bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-500 px-2 text-xs font-black text-white shadow-btn-primary ring-2 ring-white/50">
+                <span className="relative flex h-7 min-w-[1.75rem] items-center justify-center rounded-full border border-white/40 bg-white px-2 text-xs font-black text-teal-900 shadow-inner">
                   {cartLines.length}
                 </span>
               ) : null}
@@ -412,27 +415,27 @@ export function PublicClientDevisPage() {
         </div>
       </header>
 
-      <section className="relative z-10 border-b border-teal-900/[0.07]">
-        <div className="relative mx-auto max-w-5xl px-4 pb-12 pt-11 text-center sm:px-6 sm:pb-14 sm:pt-14">
-          <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-teal-200/80 bg-white/60 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-teal-900 shadow-sm backdrop-blur-sm">
+      <section className="relative z-10 border-b border-teal-900/10 bg-gradient-to-b from-white/40 to-transparent">
+        <div className="relative mx-auto max-w-5xl px-4 pb-14 pt-12 text-center sm:px-6 sm:pb-16 sm:pt-16">
+          <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-teal-200/90 bg-white/90 px-5 py-2 text-[11px] font-extrabold uppercase tracking-[0.22em] text-teal-950 shadow-md shadow-teal-900/10 backdrop-blur-sm">
             Catalogue en ligne
           </span>
-          <h1 className="mx-auto max-w-3xl font-display text-3xl font-extrabold leading-[1.15] tracking-tight text-slate-900 sm:text-4xl md:text-[2.45rem]">
+          <h1 className="mx-auto max-w-3xl font-display text-3xl font-extrabold leading-[1.12] tracking-tight text-slate-950 sm:text-4xl md:text-[2.55rem]">
             Trouvez votre{" "}
-            <span className="bg-gradient-to-r from-teal-700 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-teal-800 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
               prochaine excursion
             </span>
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base font-medium leading-relaxed text-slate-800 sm:text-lg">
+          <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-relaxed text-slate-800 sm:text-lg sm:leading-relaxed">
             Mer Rouge, désert, Louxor — parcourez nos activités et recevez un devis personnalisé en quelques clics.
           </p>
 
           <div className="mx-auto mt-10 max-w-xl">
             <label className="relative block text-left" htmlFor="public-search">
-              <span className="mb-2.5 block text-center text-[10px] font-bold uppercase tracking-[0.28em] text-teal-900">
+              <span className="mb-2.5 block text-center text-[10px] font-extrabold uppercase tracking-[0.28em] text-teal-950">
                 Recherche
               </span>
-              <span className="relative block rounded-[1.35rem] border border-white/90 bg-white/65 p-1 shadow-[0_12px_40px_-12px_rgba(15,118,110,0.35)] ring-1 ring-teal-900/5 backdrop-blur-md transition focus-within:border-teal-300/90 focus-within:ring-2 focus-within:ring-teal-400/35">
+              <span className="relative block rounded-[1.35rem] border-2 border-teal-100/90 bg-white/90 p-1 shadow-[0_16px_48px_-14px_rgba(15,118,110,0.28)] ring-1 ring-teal-900/[0.06] backdrop-blur-md transition focus-within:border-teal-400 focus-within:shadow-[0_20px_50px_-12px_rgba(15,118,110,0.35)] focus-within:ring-2 focus-within:ring-teal-400/40">
                 <svg
                   className="pointer-events-none absolute left-6 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-teal-800"
                   fill="none"
@@ -450,41 +453,41 @@ export function PublicClientDevisPage() {
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Nom d’activité, mot-clé, lieu…"
                   autoComplete="off"
-                  className="w-full rounded-[1.15rem] border-0 bg-transparent py-4 pl-14 pr-5 text-[15px] font-medium text-slate-900 shadow-none outline-none ring-0 placeholder:font-medium placeholder:text-slate-600"
+                  className="w-full rounded-[1.15rem] border-0 bg-transparent py-4 pl-14 pr-5 text-[15px] font-semibold text-slate-900 shadow-none outline-none ring-0 placeholder:font-medium placeholder:text-slate-600"
                 />
               </span>
             </label>
           </div>
 
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/tarifs"
-              className="inline-flex items-center gap-2 rounded-full border-2 border-slate-200/90 bg-white/90 px-5 py-2.5 text-xs font-bold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/90 hover:text-teal-950 hover:shadow-md"
+              className="inline-flex items-center gap-2 rounded-full border-2 border-slate-200 bg-white px-5 py-2.5 text-xs font-extrabold text-slate-950 shadow-md transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 hover:text-teal-950 hover:shadow-lg"
             >
-              <span className="text-teal-600" aria-hidden>
+              <span className="text-teal-700" aria-hidden>
                 €
               </span>
               Grille tarifaire
             </Link>
             <Link
               to="/"
-              className="inline-flex items-center gap-2 rounded-full border-2 border-slate-200/90 bg-white/90 px-5 py-2.5 text-xs font-bold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/90 hover:text-teal-950 hover:shadow-md"
+              className="inline-flex items-center gap-2 rounded-full border-2 border-slate-200 bg-white px-5 py-2.5 text-xs font-extrabold text-slate-950 shadow-md transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 hover:text-teal-950 hover:shadow-lg"
             >
-              <svg className="h-3.5 w-3.5 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <svg className="h-3.5 w-3.5 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
               </svg>
               Espace pro
             </Link>
           </div>
 
-          <div className="mx-auto mt-10 flex max-w-5xl flex-wrap justify-center gap-2.5 sm:gap-3">
+          <div className="mx-auto mt-11 flex max-w-5xl flex-wrap justify-center gap-2.5 sm:gap-3">
             <button
               type="button"
               onClick={() => setSelectedCategory("all")}
-              className={`rounded-full px-5 py-2.5 text-xs font-bold transition-all sm:text-sm ${
+              className={`rounded-full px-5 py-2.5 text-xs font-extrabold transition-all sm:text-sm ${
                 selectedCategory === "all"
-                  ? "scale-[1.02] bg-gradient-to-r from-teal-800 via-teal-700 to-cyan-700 text-white shadow-lg shadow-teal-900/25 ring-2 ring-white/90 ring-offset-2 ring-offset-[#ecfdf8]"
-                  : "border border-slate-200/80 bg-white/80 text-slate-900 shadow-sm backdrop-blur-sm hover:-translate-y-0.5 hover:border-teal-200 hover:bg-white hover:shadow-md hover:text-teal-900"
+                  ? "scale-[1.02] bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 text-white shadow-xl shadow-teal-900/30 ring-2 ring-white/95 ring-offset-2 ring-offset-[#e8f7f3]"
+                  : "border-2 border-slate-200/90 bg-white text-slate-950 shadow-md hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/80 hover:shadow-lg"
               }`}
             >
               Toutes · {categoryCounts.all || 0}
@@ -494,10 +497,10 @@ export function PublicClientDevisPage() {
                 key={category.key}
                 type="button"
                 onClick={() => setSelectedCategory(category.key)}
-                className={`rounded-full px-5 py-2.5 text-xs font-bold transition-all sm:text-sm ${
+                className={`rounded-full px-5 py-2.5 text-xs font-extrabold transition-all sm:text-sm ${
                   selectedCategory === category.key
-                    ? "scale-[1.02] bg-gradient-to-r from-teal-800 via-teal-700 to-cyan-700 text-white shadow-lg shadow-teal-900/25 ring-2 ring-white/90 ring-offset-2 ring-offset-[#ecfdf8]"
-                    : "border border-slate-200/80 bg-white/80 text-slate-900 shadow-sm backdrop-blur-sm hover:-translate-y-0.5 hover:border-teal-200 hover:bg-white hover:shadow-md hover:text-teal-900"
+                    ? "scale-[1.02] bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 text-white shadow-xl shadow-teal-900/30 ring-2 ring-white/95 ring-offset-2 ring-offset-[#e8f7f3]"
+                    : "border-2 border-slate-200/90 bg-white text-slate-950 shadow-md hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/80 hover:shadow-lg"
                 }`}
               >
                 {category.label} · {categoryCounts[category.key] || 0}
@@ -507,10 +510,10 @@ export function PublicClientDevisPage() {
         </div>
       </section>
 
-      <main className="relative z-10 mx-auto max-w-[1440px] space-y-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
-        <section className="space-y-8">
+      <main className="relative z-10 mx-auto max-w-[1440px] space-y-8 px-4 py-11 sm:px-6 lg:px-8 lg:py-14">
+        <section className="space-y-9">
           {error && !loading && (
-            <div className="flex items-start gap-3 rounded-2xl border-2 border-rose-200 bg-gradient-to-r from-rose-50 to-white px-5 py-4 text-sm font-semibold text-rose-900 shadow-sm">
+            <div className="flex items-start gap-3 rounded-2xl border-2 border-rose-300/80 bg-gradient-to-r from-rose-50 to-white px-5 py-4 text-sm font-bold text-rose-950 shadow-md">
               <span className="text-xl" aria-hidden>
                 !
               </span>
@@ -519,37 +522,37 @@ export function PublicClientDevisPage() {
           )}
 
           {loading && (
-            <div className="flex flex-col items-center justify-center gap-5 rounded-3xl border border-teal-100/90 bg-white/85 py-16 shadow-catalog-card backdrop-blur-sm">
-              <div className="relative h-12 w-12" aria-hidden>
-                <div className="absolute inset-0 animate-ping rounded-full bg-teal-400/30" />
-                <div className="relative h-12 w-12 animate-spin rounded-full border-[3px] border-teal-100 border-t-teal-600" />
+            <div className="flex flex-col items-center justify-center gap-5 rounded-[1.75rem] border-2 border-teal-100/90 bg-white/95 py-20 shadow-[0_20px_60px_-24px_rgba(15,118,110,0.25)] backdrop-blur-sm">
+              <div className="relative h-14 w-14" aria-hidden>
+                <div className="absolute inset-0 animate-ping rounded-full bg-teal-400/35" />
+                <div className="relative h-14 w-14 animate-spin rounded-full border-[3px] border-teal-100 border-t-teal-700" />
               </div>
-              <p className="font-display text-sm font-semibold text-slate-800">Chargement du catalogue…</p>
+              <p className="font-display text-base font-bold text-slate-900">Chargement du catalogue…</p>
             </div>
           )}
 
           {!loading && !error && filteredActivities.length === 0 && (
-            <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/90 px-8 py-14 text-center shadow-catalog-card">
-              <p className="font-display text-xl font-bold text-slate-900">Aucun résultat</p>
-              <p className="mt-3 text-sm font-semibold text-slate-800">Essayez un autre mot-clé ou changez de catégorie.</p>
+            <div className="rounded-[1.75rem] border-2 border-slate-200/90 bg-gradient-to-b from-white to-slate-50 px-8 py-16 text-center shadow-[0_20px_50px_-28px_rgba(15,23,42,0.18)]">
+              <p className="font-display text-2xl font-extrabold text-slate-950">Aucun résultat</p>
+              <p className="mt-3 text-base font-semibold text-slate-800">Essayez un autre mot-clé ou changez de catégorie.</p>
             </div>
           )}
 
-          <div className="space-y-12 pb-8">
+          <div className="space-y-14 pb-12">
             {groupedActivities.map((group) => (
-              <section key={group.key} className="space-y-6">
+              <section key={group.key} className="space-y-7">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <div className="flex items-center gap-4">
-                    <span className="hidden h-10 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-teal-500 via-teal-600 to-cyan-600 shadow-sm sm:block" />
-                    <h2 className="font-display text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                    <span className="hidden h-12 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-teal-500 via-teal-600 to-cyan-500 shadow-md sm:block" />
+                    <h2 className="font-display text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">
                       {group.label}
                     </h2>
                   </div>
-                  <span className="inline-flex w-fit items-center rounded-full border border-teal-200/80 bg-gradient-to-r from-teal-50 to-cyan-50 px-4 py-1.5 text-xs font-bold text-teal-950 shadow-sm">
+                  <span className="inline-flex w-fit items-center rounded-full border border-teal-300/50 bg-gradient-to-r from-teal-100/90 to-cyan-50 px-4 py-2 text-xs font-extrabold text-teal-950 shadow-sm">
                     {group.items.length} activité{group.items.length > 1 ? "s" : ""}
                   </span>
                 </div>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {group.items.map((activity) => {
                     const categoryKey = normalizeCategory(activity.category);
                     const catalogUrls = normalizeCatalogImageUrlsFromDb(activity.catalog_image_urls);
@@ -571,9 +574,9 @@ export function PublicClientDevisPage() {
                             navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`);
                           }
                         }}
-                        className="service-card group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.35rem] border border-slate-200/50 bg-white shadow-catalog-card ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-teal-300/50 hover:shadow-catalog-card-hover hover:ring-teal-500/15 active:scale-[0.99]"
+                        className="service-card group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.5rem] border-2 border-slate-200/70 bg-white shadow-[0_12px_40px_-20px_rgba(15,23,42,0.15),0_4px_14px_-6px_rgba(15,118,110,0.12)] ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-teal-400/60 hover:shadow-[0_24px_50px_-20px_rgba(15,118,110,0.22),0_12px_32px_-12px_rgba(15,23,42,0.15)] hover:ring-teal-500/20 active:scale-[0.99]"
                       >
-                        <div className="relative h-48 overflow-hidden bg-slate-100 sm:h-[11.5rem]">
+                        <div className="relative h-48 overflow-hidden bg-slate-100 sm:h-[12rem]">
                           {coverImageUrl ? (
                             <img
                               src={coverImageUrl}
@@ -584,7 +587,7 @@ export function PublicClientDevisPage() {
                           ) : (
                             <div className="h-full w-full transition group-hover:brightness-105" style={{ background: getCategoryCover(categoryKey) }} />
                           )}
-                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-900/15 to-transparent" />
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/78 via-slate-900/20 to-transparent" />
                           <div className="absolute right-3 top-3">
                             <button
                               type="button"
@@ -607,22 +610,22 @@ export function PublicClientDevisPage() {
                             </button>
                           </div>
                         </div>
-                        <div className="flex grow flex-col p-5">
-                          <h3 className="mb-2 line-clamp-2 font-display text-[1.07rem] font-bold leading-snug text-slate-900 transition-colors group-hover:text-teal-800 sm:text-[17px]">
+                        <div className="flex grow flex-col bg-gradient-to-b from-white to-slate-50/30 p-5">
+                          <h3 className="mb-2 line-clamp-2 font-display text-[1.07rem] font-extrabold leading-snug text-slate-950 transition-colors group-hover:text-teal-900 sm:text-[17px]">
                             {activity.name}
                           </h3>
-                          <div className="mt-auto flex justify-end border-t border-slate-100/90 pt-4">
+                          <div className="mt-auto flex justify-end border-t border-slate-200/90 pt-4">
                             <div className="flex flex-col items-end text-right">
-                              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-700">
+                              <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-800">
                                 à partir de
                               </span>
                               <div className="mt-1 flex items-baseline gap-1">
                                 {cardFrom != null && cardFrom > 0 ? (
-                                  <span className="rounded-lg bg-slate-50 px-2 py-0.5 font-display text-xl font-black tabular-nums text-slate-900">
+                                  <span className="rounded-xl border border-slate-200/80 bg-white px-2.5 py-1 font-display text-xl font-black tabular-nums text-slate-950 shadow-sm">
                                     {formatMoney(cardFrom, activity.currency || "EUR")}
                                   </span>
                                 ) : (
-                                  <span className="rounded-lg bg-amber-50 px-2 py-1 text-sm font-bold text-amber-900">
+                                  <span className="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-sm font-extrabold text-amber-950">
                                     Sur devis
                                   </span>
                                 )}
@@ -635,15 +638,15 @@ export function PublicClientDevisPage() {
                               e.stopPropagation();
                               addToCart(activity.id);
                             }}
-                            className="group/btn relative mt-4 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-teal-800 via-teal-700 to-teal-600 px-4 py-3.5 text-sm font-bold text-white shadow-btn-primary transition hover:from-teal-900 hover:via-teal-800 hover:to-teal-700 hover:shadow-lg active:scale-[0.98]"
+                            className="group/btn relative mt-4 flex w-full min-h-[48px] items-center justify-center gap-2 overflow-hidden rounded-xl border border-white/20 bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 px-4 py-3.5 text-sm font-extrabold tracking-tight text-white shadow-[0_6px_22px_-6px_rgba(15,118,110,0.55)] transition hover:from-teal-950 hover:via-teal-900 hover:to-emerald-900 hover:shadow-[0_12px_32px_-8px_rgba(15,118,110,0.5)] active:scale-[0.98]"
                           >
-                            <span className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 transition group-hover/btn:opacity-100" />
-                            <svg className="relative h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                            <span className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                            <svg className="relative h-5 w-5 shrink-0 text-white drop-shadow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden>
                               <circle cx="9" cy="21" r="1" />
                               <circle cx="20" cy="21" r="1" />
                               <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
                             </svg>
-                            <span className="relative">Ajouter au panier</span>
+                            <span className="relative drop-shadow-sm">Ajouter au panier</span>
                           </button>
                         </div>
                       </article>
@@ -656,9 +659,9 @@ export function PublicClientDevisPage() {
         </section>
       </main>
 
-      <footer className="relative z-10 border-t border-teal-900/[0.08] bg-gradient-to-t from-teal-950/[0.02] to-transparent py-10 text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-700">Hurghada Dream</p>
-        <p className="mt-2 text-sm font-semibold text-slate-800">Excursions &amp; séjours — Mer Rouge &amp; désert</p>
+      <footer className="relative z-10 border-t border-teal-900/10 bg-gradient-to-b from-transparent via-teal-950/[0.02] to-teal-950/[0.04] py-14 text-center">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.28em] text-slate-900">Hurghada Dream</p>
+        <p className="mt-2.5 text-sm font-semibold text-slate-800">Excursions &amp; séjours — Mer Rouge &amp; désert</p>
       </footer>
 
       {cartDrawerOpen && (
@@ -670,15 +673,15 @@ export function PublicClientDevisPage() {
             onClick={() => setCartDrawerOpen(false)}
           />
           <div className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-teal-200/60 bg-white shadow-2xl shadow-teal-950/25">
-            <div className="relative flex items-center justify-between overflow-hidden border-b border-teal-100/80 bg-gradient-to-r from-teal-800 via-teal-700 to-cyan-800 px-5 py-5 text-white shadow-md">
-              <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-              <h2 id="cart-drawer-title" className="relative font-display text-xl font-extrabold tracking-tight">
+            <div className="relative flex items-center justify-between overflow-hidden border-b border-teal-950/20 bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-900 px-5 py-5 text-white shadow-lg">
+              <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
+              <h2 id="cart-drawer-title" className="relative font-display text-xl font-extrabold tracking-tight text-white drop-shadow-md">
                 Votre panier
               </h2>
               <button
                 type="button"
                 onClick={() => setCartDrawerOpen(false)}
-                className="relative rounded-xl p-2 text-white/90 transition hover:bg-white/15 hover:text-white"
+                className="relative rounded-xl p-2 text-white transition hover:bg-white/20"
                 aria-label="Fermer"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -723,13 +726,19 @@ export function PublicClientDevisPage() {
                     </label>
                     <label className="space-y-1">
                       <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-800">Bébés</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={line.babies}
-                        onChange={(e) => updateCartLine(line.id, "babies", e.target.value)}
-                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
-                      />
+                      {line.activity.babies_forbidden ? (
+                        <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-2 py-2 text-center text-[11px] font-semibold leading-tight text-amber-950">
+                          Interdit aux bébés
+                        </div>
+                      ) : (
+                        <input
+                          type="number"
+                          min="0"
+                          value={line.babies}
+                          onChange={(e) => updateCartLine(line.id, "babies", e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
+                        />
+                      )}
                     </label>
                   </div>
                   <input
@@ -769,7 +778,7 @@ export function PublicClientDevisPage() {
                   setCartDrawerOpen(false);
                   setCheckoutOpen(true);
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-teal-800 via-teal-700 to-teal-600 px-4 py-4 text-sm font-extrabold text-white shadow-btn-primary transition hover:from-teal-900 hover:via-teal-800 hover:to-teal-700 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex w-full min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/10 bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 px-4 py-4 text-sm font-extrabold tracking-tight text-white shadow-[0_6px_24px_-6px_rgba(15,118,110,0.55)] transition hover:from-teal-950 hover:via-teal-900 hover:to-emerald-900 disabled:cursor-not-allowed disabled:border-slate-300 disabled:from-slate-200 disabled:via-slate-200 disabled:to-slate-200 disabled:text-slate-700 disabled:shadow-none"
               >
                 <span>Finaliser mon devis</span>
                 <span aria-hidden>→</span>
@@ -789,13 +798,13 @@ export function PublicClientDevisPage() {
           />
           <form
             onSubmit={submitPublicQuote}
-            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-[1.75rem] border border-teal-100/80 bg-white p-6 shadow-[0_25px_80px_-15px_rgba(15,118,110,0.35)] sm:rounded-3xl sm:p-8"
+            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-[1.75rem] border-2 border-teal-100/90 bg-white p-6 shadow-[0_28px_90px_-18px_rgba(15,118,110,0.38)] sm:rounded-3xl sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-700">Devis</p>
-                <h2 id="checkout-title" className="font-display text-xl font-extrabold text-slate-900 sm:text-2xl">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-teal-800">Devis</p>
+                <h2 id="checkout-title" className="font-display text-xl font-extrabold text-slate-950 sm:text-2xl">
                   Vos coordonnées
                 </h2>
               </div>
@@ -863,7 +872,7 @@ export function PublicClientDevisPage() {
             <button
               type="submit"
               disabled={submitLoading}
-              className="mt-6 w-full rounded-2xl bg-gradient-to-r from-teal-800 via-teal-700 to-cyan-700 px-4 py-4 text-sm font-extrabold text-white shadow-btn-primary transition hover:from-teal-900 hover:via-teal-800 hover:to-cyan-800 disabled:cursor-not-allowed disabled:opacity-55"
+              className="mt-6 w-full min-h-[52px] rounded-2xl border border-white/15 bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 px-4 py-4 text-sm font-extrabold tracking-tight text-white shadow-[0_8px_28px_-8px_rgba(15,118,110,0.5)] transition hover:from-teal-950 hover:via-teal-900 hover:to-emerald-900 disabled:cursor-not-allowed disabled:from-slate-300 disabled:via-slate-300 disabled:to-slate-300 disabled:text-slate-700 disabled:shadow-none"
             >
               {submitLoading ? "Envoi en cours…" : "Envoyer ma demande"}
             </button>

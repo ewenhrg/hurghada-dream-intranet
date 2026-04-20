@@ -63,7 +63,8 @@ async function persistActivityRow(activity) {
     name: activity.name,
     price_adult: Number(activity.priceAdult) || 0,
     price_child: Number(activity.priceChild) || 0,
-    price_baby: Number(activity.priceBaby) || 0,
+    price_baby: activity.babiesForbidden ? 0 : Number(activity.priceBaby) || 0,
+    babies_forbidden: activity.babiesForbidden === true,
     notes: activity.notes != null ? String(activity.notes) : "",
   };
   const { error } = await supabase.from("activities").update(payload).eq("id", activity.supabase_id);
@@ -241,20 +242,27 @@ function MajPrixActivityMobileCard({ activity, tarifLines, canEdit, patchActivit
           {[
             { field: "priceAdult", label: "Prix adulte" },
             { field: "priceChild", label: "Prix enfant" },
-            { field: "priceBaby", label: "Prix bébé" },
-          ].map(({ field, label }) => (
-            <div key={field} className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
-              <ActivityPriceCell
-                activity={a}
-                field={field}
-                fieldLabel={label}
-                disabled={!canEdit}
-                patchActivity={patchActivity}
-                scheduleSave={scheduleSave}
-              />
-            </div>
-          ))}
+            { field: "priceBaby", label: "Prix bébé", skip: a.babiesForbidden },
+          ].map(({ field, label, skip }) =>
+            skip ? (
+              <div key={field} className="rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2.5">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-amber-900">{label}</p>
+                <p className="text-sm font-semibold text-amber-950">Interdit aux bébés — modifiez l’option dans l’onglet Activités.</p>
+              </div>
+            ) : (
+              <div key={field} className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
+                <ActivityPriceCell
+                  activity={a}
+                  field={field}
+                  fieldLabel={label}
+                  disabled={!canEdit}
+                  patchActivity={patchActivity}
+                  scheduleSave={scheduleSave}
+                />
+              </div>
+            )
+          )}
         </div>
       )}
 
@@ -467,14 +475,20 @@ export function ActivityUpdatePage({ activities, setActivities, user }) {
                       />
                     </td>
                     <td className="px-2 py-1.5 align-top">
-                      <ActivityPriceCell
-                        activity={a}
-                        field="priceBaby"
-                        fieldLabel="Prix bébé"
-                        disabled={!canEdit}
-                        patchActivity={patchActivity}
-                        scheduleSave={scheduleSave}
-                      />
+                      {a.babiesForbidden ? (
+                        <div className="rounded-md border border-amber-200/80 bg-amber-50 px-2 py-3 text-center text-xs font-semibold leading-snug text-amber-950">
+                          Interdit aux bébés
+                        </div>
+                      ) : (
+                        <ActivityPriceCell
+                          activity={a}
+                          field="priceBaby"
+                          fieldLabel="Prix bébé"
+                          disabled={!canEdit}
+                          patchActivity={patchActivity}
+                          scheduleSave={scheduleSave}
+                        />
+                      )}
                     </td>
                       </>
                     )}

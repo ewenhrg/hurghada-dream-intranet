@@ -22,7 +22,7 @@ import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 
 /** Repli sans `catalog_image_urls` : inclut `description` dès que la colonne existe (script SQL activités). */
 const ACTIVITY_COLUMNS_BASE =
-  "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes, description";
+  "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, babies_forbidden, currency, available_days, notes, description";
 /** Inclut aussi la galerie photos catalogue (migration `catalog_image_urls`). */
 const ACTIVITY_COLUMNS_FULL = `${ACTIVITY_COLUMNS_BASE}, catalog_image_urls`;
 
@@ -182,6 +182,7 @@ function BookingCardShell({
   replaceParticipantPricingLines,
   childrenBeforeParticipants,
   codedTotalPending = false,
+  babiesForbidden = false,
 }) {
   const currency = activity.currency || "EUR";
   const ageChild = String(activity.age_child || "").trim();
@@ -208,6 +209,13 @@ function BookingCardShell({
         {priceCaption ? <p className="mt-1 text-xs font-medium text-slate-700">{priceCaption}</p> : null}
         {replaceParticipantPricingLines ? (
           <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-slate-800">{replaceParticipantPricingLines}</p>
+        ) : babiesForbidden ? (
+          <div className="mt-2 space-y-0.5 text-xs font-medium text-slate-800">
+            <p>
+              Enfant{ageChild ? ` (${ageChild})` : ""} : {formatMoney(activity.price_child, currency)}
+            </p>
+            <p className="font-semibold text-amber-900">Bébé : interdit sur cette activité</p>
+          </div>
         ) : (
         <div className="mt-2 space-y-0.5 text-xs font-medium text-slate-800">
           <p>
@@ -242,19 +250,26 @@ function BookingCardShell({
         />
         {ageChild ? <p className="mt-1.5 text-xs font-medium text-slate-700">Tranche d&apos;âge : {ageChild}</p> : null}
       </div>
-      <div>
-        <ParticipantSelect
-          Icon={IconUsers}
-          label="bébé"
-          value={babies}
-          onChange={setBabies}
-          min={0}
-          max={10}
-        />
-        {ageBaby ? <p className="mt-1.5 text-xs font-medium text-slate-700">Tranche d&apos;âge : {ageBaby}</p> : null}
-      </div>
+      {babiesForbidden ? (
+        <div className="rounded-xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-center">
+          <p className="text-sm font-semibold text-amber-950">Interdit aux bébés</p>
+          <p className="mt-1 text-xs font-medium text-amber-900/90">Cette excursion n&apos;accepte pas les tout-petits.</p>
+        </div>
+      ) : (
+        <div>
+          <ParticipantSelect
+            Icon={IconUsers}
+            label="bébé"
+            value={babies}
+            onChange={setBabies}
+            min={0}
+            max={10}
+          />
+          {ageBaby ? <p className="mt-1.5 text-xs font-medium text-slate-700">Tranche d&apos;âge : {ageBaby}</p> : null}
+        </div>
+      )}
 
-      {babyPriceZero ? (
+      {!babiesForbidden && babyPriceZero ? (
         <p className="text-xs text-green-700">Tarif bébé à 0 € — les bébés ne sont pas facturés sur ce tarif.</p>
       ) : null}
 
@@ -348,6 +363,12 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const daysSummary = useMemo(() => (activity ? formatActivityAvailableDaysSummary(activity) : ""), [activity]);
 
   const noDatesConfigured = Boolean(activity) && dateOptions.length === 0;
+
+  const babiesForbidden = Boolean(activity?.babies_forbidden);
+
+  useEffect(() => {
+    if (babiesForbidden) setBabyCount(0);
+  }, [babiesForbidden, activity?.id]);
 
   useEffect(() => {
     setSpecial({
@@ -1049,6 +1070,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   replaceParticipantPricingLines={bookingReplaceChildBaby}
                   childrenBeforeParticipants={specialPricingBeforeParticipants}
                   codedTotalPending={codedTotalPending}
+                  babiesForbidden={babiesForbidden}
                 />
               </div>
             </div>
@@ -1080,6 +1102,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
               replaceParticipantPricingLines={bookingReplaceChildBaby}
               childrenBeforeParticipants={specialPricingBeforeParticipants}
               codedTotalPending={codedTotalPending}
+              babiesForbidden={babiesForbidden}
             />
           </div>
         </div>

@@ -1455,7 +1455,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
-        lineTotal += Number(it.babies || 0) * Number(act.priceBaby || 0);
+        lineTotal += (act.babiesForbidden ? 0 : Number(it.babies || 0) * Number(act.priceBaby || 0));
       }
 
       // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits)

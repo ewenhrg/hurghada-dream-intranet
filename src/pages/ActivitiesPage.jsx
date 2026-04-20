@@ -73,6 +73,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     priceBaby: savedForm.priceBaby || "",
     ageChild: savedForm.ageChild || "",
     ageBaby: savedForm.ageBaby || "",
+    babiesForbidden: Boolean(savedForm.babiesForbidden),
     currency: savedForm.currency || "EUR",
     availableDays: savedForm.availableDays || [false, false, false, false, false, false, false],
     notes: savedForm.notes || "",
@@ -85,6 +86,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     priceBaby: "",
     ageChild: "",
     ageBaby: "",
+    babiesForbidden: false,
     currency: "EUR",
     availableDays: [false, false, false, false, false, false, false],
     notes: "",
@@ -271,6 +273,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       priceBaby: activity.priceBaby || "",
       ageChild: activity.ageChild || "",
       ageBaby: activity.ageBaby || "",
+      babiesForbidden: activity.babiesForbidden === true,
       currency: activity.currency || "EUR",
       availableDays: activity.availableDays || [false, false, false, false, false, false, false],
       notes: activity.notes || "",
@@ -367,15 +370,17 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     const existingActivity = isEditing ? activitiesMap.get(editingId) : null;
     const supabaseId = existingActivity?.supabase_id;
     
+    const forbidden = Boolean(form.babiesForbidden);
     const activityData = {
       id: isEditing ? editingId : uuid(),
       name: form.name.trim(),
       category: form.category,
       priceAdult: Number(form.priceAdult || 0),
       priceChild: Number(form.priceChild || 0),
-      priceBaby: Number(form.priceBaby || 0),
+      priceBaby: forbidden ? 0 : Number(form.priceBaby || 0),
       ageChild: form.ageChild || "",
-      ageBaby: form.ageBaby || "",
+      ageBaby: forbidden ? "" : form.ageBaby || "",
+      babiesForbidden: forbidden,
       currency: form.currency || "EUR",
       availableDays: form.availableDays,
       notes: form.notes,
@@ -438,6 +443,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         if (activityData.transfers && typeof activityData.transfers === 'object') {
           supabaseData.transfers = activityData.transfers;
         }
+        supabaseData.babies_forbidden = Boolean(activityData.babiesForbidden);
 
         let data, error;
         
@@ -588,6 +594,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       priceAdult: "",
       priceChild: "",
       priceBaby: "",
+      ageChild: "",
+      ageBaby: "",
+      babiesForbidden: false,
       currency: "EUR",
       availableDays: [false, false, false, false, false, false, false],
       notes: "",
@@ -705,9 +714,10 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             category: activity.category || "desert",
             price_adult: activity.priceAdult || 0,
             price_child: activity.priceChild || 0,
-            price_baby: activity.priceBaby || 0,
+            price_baby: activity.babiesForbidden ? 0 : activity.priceBaby || 0,
             age_child: activity.ageChild || "",
-            age_baby: activity.ageBaby || "",
+            age_baby: activity.babiesForbidden ? "" : activity.ageBaby || "",
+            babies_forbidden: activity.babiesForbidden === true,
             currency: activity.currency || "EUR",
             available_days: activity.availableDays || [false, false, false, false, false, false, false],
             notes: activity.notes || "",
@@ -1132,6 +1142,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         priceAdult: "",
         priceChild: "",
         priceBaby: "",
+        ageChild: "",
+        ageBaby: "",
+        babiesForbidden: false,
         currency: "EUR",
         availableDays: [false, false, false, false, false, false, false],
         notes: "",
@@ -1176,7 +1189,13 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         </td>
         <td className="px-4 py-3 text-emerald-700 text-sm tabular-nums font-medium">{currency(activity.priceAdult, activity.currency)}</td>
         <td className="px-4 py-3 text-emerald-600 text-sm tabular-nums font-medium">{currency(activity.priceChild, activity.currency)}</td>
-        <td className="px-4 py-3 text-emerald-600 text-sm tabular-nums font-medium">{currency(activity.priceBaby, activity.currency)}</td>
+        <td className="px-4 py-3 text-emerald-600 text-sm tabular-nums font-medium">
+          {activity.babiesForbidden ? (
+            <span className="text-xs font-semibold uppercase tracking-wide text-amber-800">Interdit bébés</span>
+          ) : (
+            currency(activity.priceBaby, activity.currency)
+          )}
+        </td>
         <td className="px-4 py-3">
           <div className="flex gap-1.5 flex-wrap">
             {availableDaysList.map((d) => (
@@ -1238,6 +1257,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     if (prevProps.activity.priceAdult !== nextProps.activity.priceAdult) return false;
     if (prevProps.activity.priceChild !== nextProps.activity.priceChild) return false;
     if (prevProps.activity.priceBaby !== nextProps.activity.priceBaby) return false;
+    if (Boolean(prevProps.activity.babiesForbidden) !== Boolean(nextProps.activity.babiesForbidden))
+      return false;
     if (prevProps.activity.notes !== nextProps.activity.notes) return false;
     if (prevProps.activity.description !== nextProps.activity.description) return false;
     if (prevProps.canModify !== nextProps.canModify) return false;
@@ -1559,6 +1580,22 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-3 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" /> Tarification
               </h3>
+              <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-lg border border-amber-200/90 bg-amber-50/80 px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-amber-400 text-amber-700 focus:ring-amber-500"
+                  checked={form.babiesForbidden}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, babiesForbidden: e.target.checked }))
+                  }
+                />
+                <span className="text-sm font-medium leading-snug text-amber-950">
+                  <span className="font-bold">Interdit aux bébés</span>
+                  <span className="mt-0.5 block text-xs font-normal text-amber-900/90">
+                    Désactive le tarif / tranche d&apos;âge bébé et masque le choix bébé sur le catalogue public et les demandes.
+                  </span>
+                </span>
+              </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Adulte</label>
@@ -1584,20 +1621,30 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                     className="mt-1.5 text-xs rounded-lg"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Bébé</label>
-                  <NumberInput
-                    placeholder="0"
-                    value={form.priceBaby}
-                    onChange={(e) => setForm((f) => ({ ...f, priceBaby: e.target.value }))}
-                    className="text-sm rounded-lg"
-                  />
-                  <TextInput
-                    placeholder="Âge (ex: 0-4 ans)"
-                    value={form.ageBaby}
-                    onChange={(e) => setForm((f) => ({ ...f, ageBaby: e.target.value }))}
-                    className="mt-1.5 text-xs rounded-lg"
-                  />
+                <div className={form.babiesForbidden ? "opacity-60" : ""}>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                    Bébé {form.babiesForbidden ? <span className="text-amber-800">(désactivé)</span> : null}
+                  </label>
+                  {form.babiesForbidden ? (
+                    <p className="rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2.5 text-sm font-semibold text-amber-950">
+                      Interdit aux bébés
+                    </p>
+                  ) : (
+                    <>
+                      <NumberInput
+                        placeholder="0"
+                        value={form.priceBaby}
+                        onChange={(e) => setForm((f) => ({ ...f, priceBaby: e.target.value }))}
+                        className="text-sm rounded-lg"
+                      />
+                      <TextInput
+                        placeholder="Âge (ex: 0-4 ans)"
+                        value={form.ageBaby}
+                        onChange={(e) => setForm((f) => ({ ...f, ageBaby: e.target.value }))}
+                        className="mt-1.5 text-xs rounded-lg"
+                      />
+                    </>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Devise</label>

@@ -112,7 +112,7 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
       if (newActivity.priceAdult !== undefined) {
         newLineTotal += adults * Number(newActivity.priceAdult || 0);
         newLineTotal += children * Number(newActivity.priceChild || 0);
-        newLineTotal += babies * Number(newActivity.priceBaby || 0);
+        newLineTotal += (newActivity.babiesForbidden ? 0 : babies * Number(newActivity.priceBaby || 0));
       }
       
       // Ajouter le supplément transfert si nécessaire (par adulte et enfant, bébés gratuits)

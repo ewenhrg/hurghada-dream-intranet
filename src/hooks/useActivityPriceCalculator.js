@@ -238,7 +238,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
-        lineTotal += Number(it.babies || 0) * Number(act.priceBaby || 0);
+        lineTotal += (act.babiesForbidden ? 0 : Number(it.babies || 0) * Number(act.priceBaby || 0));
         
       }
 

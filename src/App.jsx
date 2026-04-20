@@ -207,7 +207,7 @@ export default function App() {
 
       // Récupérer toutes les activités - une ligne par activité (pas de déduplication pour ne rien perdre)
       const selectColumns =
-        "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes, description, catalog_image_urls, transfers";
+        "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, babies_forbidden, currency, available_days, notes, description, catalog_image_urls, transfers";
       const mapActivitiesFromRows = (rows) =>
         rows.map((row) => {
           const supabaseId = row.id;
@@ -222,6 +222,7 @@ export default function App() {
             priceBaby: row.price_baby || 0,
             ageChild: row.age_child || "",
             ageBaby: row.age_baby || "",
+            babiesForbidden: row.babies_forbidden === true,
             currency: row.currency || "EUR",
             availableDays: row.available_days || [false, false, false, false, false, false, false],
             notes: row.notes || "",
@@ -702,6 +703,7 @@ export default function App() {
         priceBaby: row.price_baby || 0,
         ageChild: row.age_child || "",
         ageBaby: row.age_baby || "",
+        babiesForbidden: row.babies_forbidden === true,
         currency: row.currency || "EUR",
         availableDays: Array.isArray(row.available_days) && row.available_days.length === 7
           ? row.available_days

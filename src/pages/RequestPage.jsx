@@ -851,31 +851,41 @@ export function RequestPage() {
                                             <div>
                                               <label className="block text-xs font-bold text-slate-700 mb-2">
                                                 🍼 Bébés
-                                                {activity.age_baby && (
+                                                {activity.babiesForbidden ? (
+                                                  <span className="mt-1 block text-xs font-semibold text-amber-800">
+                                                    Interdit aux bébés
+                                                  </span>
+                                                ) : activity.age_baby ? (
                                                   <span className="block text-xs font-normal text-slate-500 mt-1">
                                                     ({activity.age_baby})
                                                   </span>
-                                                )}
+                                                ) : null}
                                               </label>
-                                              <input
-                                                type="number"
-                                                id={`babies-${activityId}`}
-                                                name={`babies-${activityId}`}
-                                                min="0"
-                                                inputMode="numeric"
-                                                disabled={requestSubmitted}
-                                                value={selectedActivity?.babies || 0}
-                                                onChange={(e) =>
-                                                  updateActivityQuantity(
-                                                    activityId,
-                                                    "babies",
-                                                    e.target.value
-                                                  )
-                                                }
-                                                aria-label={`Nombre de bébés pour ${activity.name}`}
-                                                className="w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-white px-4 py-3 text-sm focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                                                placeholder="0"
-                                              />
+                                              {activity.babiesForbidden ? (
+                                                <div className="rounded-xl border border-amber-200/90 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-950">
+                                                  Non autorisé sur cette activité
+                                                </div>
+                                              ) : (
+                                                <input
+                                                  type="number"
+                                                  id={`babies-${activityId}`}
+                                                  name={`babies-${activityId}`}
+                                                  min="0"
+                                                  inputMode="numeric"
+                                                  disabled={requestSubmitted}
+                                                  value={selectedActivity?.babies || 0}
+                                                  onChange={(e) =>
+                                                    updateActivityQuantity(
+                                                      activityId,
+                                                      "babies",
+                                                      e.target.value
+                                                    )
+                                                  }
+                                                  aria-label={`Nombre de bébés pour ${activity.name}`}
+                                                  className="w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-white px-4 py-3 text-sm focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                                  placeholder="0"
+                                                />
+                                              )}
                                             </div>
                                           </div>
                                         </div>

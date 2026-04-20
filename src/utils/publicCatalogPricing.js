@@ -40,7 +40,8 @@ export function computePublicCatalogLineTotal(activity, line) {
   const name = activity.name || "";
   const ad = num(line?.adults, 0);
   const ch = num(line?.children, 0);
-  const bab = num(line?.babies, 0);
+  let bab = num(line?.babies, 0);
+  if (activity.babies_forbidden === true || activity.babiesForbidden === true) bab = 0;
 
   if (isSpeedBoatActivity(name)) {
     let t = 145;
