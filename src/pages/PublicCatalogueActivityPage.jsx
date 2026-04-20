@@ -10,11 +10,11 @@ import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import { getActivityPublicProse, proseFromActivityNotes } from "../utils/activityHelpers";
 
-/** Colonnes toujours présentes sur `activities` (schéma de base). */
+/** Repli sans `catalog_image_urls` : inclut `description` dès que la colonne existe (script SQL activités). */
 const ACTIVITY_COLUMNS_BASE =
-  "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes";
-/** Inclut texte + galerie catalogue (après migration SQL). */
-const ACTIVITY_COLUMNS_FULL = `${ACTIVITY_COLUMNS_BASE}, description, catalog_image_urls`;
+  "id, name, category, price_adult, price_child, price_baby, age_child, age_baby, currency, available_days, notes, description";
+/** Inclut aussi la galerie photos catalogue (migration `catalog_image_urls`). */
+const ACTIVITY_COLUMNS_FULL = `${ACTIVITY_COLUMNS_BASE}, catalog_image_urls`;
 
 
 function toNumber(value) {
@@ -335,29 +335,33 @@ export function PublicCatalogueActivityPage({ activityId }) {
     return galleryBackgrounds.map((bg) => ({ kind: "gradient", bg }));
   }, [catalogUrls, galleryBackgrounds]);
 
-  /** Texte saisi dans l’intranet (modal Description) — affiché dans la section « Informations ». */
-  const intranetDescriptionTrimmed = useMemo(
-    () => (activity ? String(activity.description || "").trim() : ""),
+  /**
+   * Texte public : champ `description` (modal intranet) ou, sinon, extrait des `notes` (formulaire Activités).
+   */
+  const publicProseFull = useMemo(
+    () => (activity ? getActivityPublicProse(activity) : ""),
     [activity]
   );
 
   /**
-   * Bloc descriptif sous la galerie : si une description intranet existe, elle est réservée à « Informations »
-   * pour éviter le doublon ; on affiche ici seulement l’extrait issu des notes.
+   * Sous la galerie : si la modal « Description » remplit `description`, on n’affiche ici que le complément issu des notes
+   * pour éviter le doublon avec « Informations » ; sinon ce bloc reste vide (tout est dans Informations).
    */
   const catalogProse = useMemo(() => {
     if (!activity) return "";
-    if (intranetDescriptionTrimmed) {
+    const desc = String(activity.description || "").trim();
+    if (desc) {
       return proseFromActivityNotes(activity.notes || "");
     }
-    return getActivityPublicProse(activity);
-  }, [activity, intranetDescriptionTrimmed]);
+    return "";
+  }, [activity]);
 
   const bulletPoints = activity ? extractBulletLines(activity.notes) : [];
 
-  const informationsBody =
-    intranetDescriptionTrimmed ||
+  const DEFAULT_INFOS =
     "Les détails pratiques (horaires, lieu de prise en charge, etc.) sont confirmés lors de votre demande de devis.";
+
+  const informationsBody = publicProseFull || DEFAULT_INFOS;
 
   const canAddToCart = Boolean(date) && !noDatesConfigured;
   const showDateHint = !date && !noDatesConfigured;
