@@ -485,11 +485,6 @@ export function PublicClientDevisPage() {
                               </svg>
                             </button>
                           </div>
-                          <div className="absolute left-3 top-3">
-                            <span className="rounded-full bg-[#34b3f7]/90 px-3 py-1.5 text-xs font-semibold tracking-wide text-white shadow-lg backdrop-blur-sm">
-                              Populaire
-                            </span>
-                          </div>
                           <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-xl">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
