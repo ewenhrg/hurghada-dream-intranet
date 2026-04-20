@@ -24,8 +24,30 @@ function getEnv(key) {
   return undefined;
 }
 
-export const SITE_KEY =
-  getEnv("VITE_SITE_KEY") || getEnv("REACT_APP_SITE_KEY") || "hurghada_dream_0606";
+/** Clé métier des lignes `activities.site_key` — jamais l’URL Supabase. */
+const DEFAULT_SITE_KEY = "hurghada_dream_0606";
+
+/**
+ * Évite l’erreur fréquente : coller `VITE_SUPABASE_URL` dans `VITE_SITE_KEY`.
+ * @param {unknown} raw
+ */
+function normalizeSiteKey(raw) {
+  if (raw == null) return DEFAULT_SITE_KEY;
+  const s = String(raw).trim();
+  if (!s) return DEFAULT_SITE_KEY;
+  if (/^https?:\/\//i.test(s)) {
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn(
+        "[Hurghada Dream] VITE_SITE_KEY ne doit pas être l’URL du projet Supabase. Utilisez la même valeur que la colonne site_key en base (ex. hurghada_dream_0606). Repli sur la clé par défaut."
+      );
+    }
+    return DEFAULT_SITE_KEY;
+  }
+  return s;
+}
+
+const rawSiteKey = getEnv("VITE_SITE_KEY") || getEnv("REACT_APP_SITE_KEY");
+export const SITE_KEY = normalizeSiteKey(rawSiteKey != null && rawSiteKey !== "" ? rawSiteKey : DEFAULT_SITE_KEY);
 export const PIN_CODE = "0606";
 
 export const LS_KEYS = {

@@ -1,5 +1,6 @@
 // src/lib/supabase.js
 import { createClient } from "@supabase/supabase-js";
+import { SITE_KEY } from "../constants.js";
 import { logger } from "../utils/logger";
 
 // lire les variables env (vite ou CRA)
@@ -34,8 +35,6 @@ const SUPABASE_URL =
   getEnv("VITE_SUPABASE_URL") || getEnv("REACT_APP_SUPABASE_URL") || FALLBACK_SUPABASE_URL;
 const SUPABASE_ANON_KEY =
   getEnv("VITE_SUPABASE_ANON_KEY") || getEnv("REACT_APP_SUPABASE_ANON_KEY") || FALLBACK_SUPABASE_ANON_KEY;
-export const SITE_KEY =
-  getEnv("VITE_SITE_KEY") || getEnv("REACT_APP_SITE_KEY") || "hurghada_dream_0606";
 
 const isConfigured = !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
 
