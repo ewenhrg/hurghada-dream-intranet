@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
-import { CATEGORIES, SITE_KEY } from "../constants";
+import { CATEGORIES } from "../constants";
 import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay";
@@ -230,7 +230,7 @@ function BookingCardShell({
           min={0}
           max={10}
         />
-        {ageChild ? <p className="mt-1.5 text-xs text-gray-500">Tranche d&apos;âge (intranet) : {ageChild}</p> : null}
+        {ageChild ? <p className="mt-1.5 text-xs text-gray-500">Tranche d&apos;âge : {ageChild}</p> : null}
       </div>
       <div>
         <ParticipantSelect
@@ -241,7 +241,7 @@ function BookingCardShell({
           min={0}
           max={10}
         />
-        {ageBaby ? <p className="mt-1.5 text-xs text-gray-500">Tranche d&apos;âge (intranet) : {ageBaby}</p> : null}
+        {ageBaby ? <p className="mt-1.5 text-xs text-gray-500">Tranche d&apos;âge : {ageBaby}</p> : null}
       </div>
 
       {babyPriceZero ? (
@@ -300,7 +300,6 @@ function BookingCardShell({
 export function PublicCatalogueActivityPage({ activityId }) {
   const navigate = useNavigate();
   const [activity, setActivity] = useState(null);
-  const [related, setRelated] = useState([]);
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -417,44 +416,6 @@ export function PublicCatalogueActivityPage({ activityId }) {
       cancelled = true;
     };
   }, [activityId]);
-
-  useEffect(() => {
-    if (!activity || !supabase || !__SUPABASE_DEBUG__.isConfigured) return;
-    let cancelled = false;
-
-    async function loadRelated() {
-      try {
-        const { data: bySite } = await supabase
-          .from("activities")
-          .select(ACTIVITY_COLUMNS)
-          .eq("site_key", SITE_KEY)
-          .neq("id", activity.id)
-          .order("name", { ascending: true })
-          .limit(12);
-
-        if (!cancelled && Array.isArray(bySite) && bySite.length > 0) {
-          setRelated(bySite);
-          return;
-        }
-
-        const { data: loose } = await supabase
-          .from("activities")
-          .select(ACTIVITY_COLUMNS)
-          .neq("id", activity.id)
-          .order("name", { ascending: true })
-          .limit(12);
-
-        if (!cancelled && Array.isArray(loose)) setRelated(loose);
-      } catch (e) {
-        logger.warn("PublicCatalogueActivityPage related:", e);
-      }
-    }
-
-    void loadRelated();
-    return () => {
-      cancelled = true;
-    };
-  }, [activity]);
 
   const scrollToBooking = useCallback(() => {
     document.getElementById("disponibilites")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -723,47 +684,6 @@ export function PublicCatalogueActivityPage({ activityId }) {
             />
           </div>
         </div>
-
-        {/* Suggestions */}
-        {related.length > 0 ? (
-          <section className="mt-2 border-t border-gray-100 pt-8 md:mt-8 md:pt-16">
-            <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <h2 className="mb-4 text-xl font-bold text-gray-900 md:text-2xl">Vous pourriez aussi aimer…</h2>
-              <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-8 pt-2 scrollbar-hide md:gap-6">
-                {related.map((rel) => {
-                  const key = normalizeCategory(rel.category);
-                  const relCover = getCategoryCover(key);
-                  return (
-                    <div key={rel.id} className="w-[280px] shrink-0 md:w-[290px]">
-                      <Link
-                        to={`/catalogue/activity/${encodeURIComponent(String(rel.id))}`}
-                        className="service-card group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[16px] bg-white shadow-[0_4px_20px_rgb(0,0,0,0.08)] transition-all duration-300 ease-out hover:shadow-[0_12px_40px_rgb(0,0,0,0.15)] active:scale-[0.98] sm:rounded-[18px]"
-                      >
-                        <div
-                          className="relative h-44 overflow-hidden rounded-t-[16px] bg-gray-100 sm:h-44 sm:rounded-t-[18px]"
-                          style={{ background: relCover }}
-                        >
-                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                        </div>
-                        <div className="flex grow flex-col p-4">
-                          <h3 className="mb-2 line-clamp-2 text-lg font-semibold leading-snug text-gray-900 transition-colors group-hover:text-emerald-600">
-                            {rel.name}
-                          </h3>
-                          <div className="mt-auto flex items-end justify-between border-t border-gray-100 pt-3">
-                            <span className="text-[11px] font-medium text-gray-400">à partir de</span>
-                            <span className="text-lg font-bold text-gray-900">
-                              {formatMoney(rel.price_adult, rel.currency || "EUR")}
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        ) : null}
 
         {/* Barre bas mobile */}
         <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] lg:hidden">
