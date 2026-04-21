@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
-import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES } from "../constants";
+import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
 import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
@@ -17,6 +17,7 @@ import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator"
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import { useDebounce } from "../hooks/useDebounce";
 import { salesCache, appCache, createCacheKey } from "../utils/cache";
+import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
 
 /** Aligné sur l’onglet Activités (case « Interdit aux bébés »). */
 function isActivityBabiesForbidden(act) {
@@ -303,10 +304,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     async function loadHotels() {
       if (!supabase) return;
       try {
-        // Vérifier le cache d'abord
-        const cacheKey = createCacheKey("hotels", SITE_KEY);
+        const siteKeys = getQuoteSiteKeysForSync();
+        const cacheKey = createCacheKey("hotels", ...siteKeys);
         const cached = appCache.get(cacheKey);
-        if (cached) {
+        if (Array.isArray(cached) && cached.length > 0) {
           setHotels(cached);
           return;
         }
@@ -315,7 +316,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         const { data, error } = await supabase
           .from("hotels")
           .select("id, name, neighborhood_key")
-          .eq("site_key", SITE_KEY)
+          .in("site_key", siteKeys)
           .order("name", { ascending: true });
 
         if (error) {
@@ -323,8 +324,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         } else {
           const hotelsData = data || [];
           setHotels(hotelsData);
-          // Mettre en cache (TTL de 10 minutes car les hôtels changent rarement)
-          appCache.set(cacheKey, hotelsData, 10 * 60 * 1000);
+          if (hotelsData.length > 0) {
+            appCache.set(cacheKey, hotelsData, 10 * 60 * 1000);
+          }
         }
       } catch (err) {
         logger.error("Erreur lors du chargement des hôtels:", err);
@@ -368,7 +370,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     async function loadStopSalesAndPushSales() {
       if (!supabase) return;
       try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getLocalDateKey();
         const cacheKey = createCacheKey("sales", SITE_KEY, today);
         
         // Vérifier le cache d'abord pour améliorer les performances
@@ -381,7 +383,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           // Vérifier les expirés en arrière-plan sans bloquer l'UI
           setTimeout(async () => {
             const expiredStopSales = cached.stopSales.filter(s => s.date <= today);
-            const expiredPushSales = cached.pushSales.filter(p => p.date <= today);
+            const expiredPushSales = cached.pushSales.filter((p) => isPushSaleExpired(p.date));
             
             if (expiredStopSales.length > 0 || expiredPushSales.length > 0) {
               // Recharger pour avoir les données à jour
@@ -395,7 +397,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         // On récupère depuis hier pour être sûr de ne rien manquer
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const yesterdayStr = getLocalDateKey(yesterday);
         
         // Sélection spécifique pour réduire la taille des données
         const [stopSalesResult, pushSalesResult] = await Promise.all([
@@ -407,10 +409,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         let stopSalesData = (!stopSalesResult.error && stopSalesResult.data) ? stopSalesResult.data : [];
         let pushSalesData = (!pushSalesResult.error && pushSalesResult.data) ? pushSalesResult.data : [];
         
-        // Supprimer automatiquement les stop/push sales dont la date est passée ou égale à aujourd'hui (date <= aujourd'hui)
-        // Si on arrive le 13/12, le stop sale du 13/12 doit être supprimé car c'est déjà trop tard
+        // Stop sale : jour atteint ou passé. Push sale : veille à 20h (voir isPushSaleExpired).
         const expiredStopSales = stopSalesData.filter(s => s.date <= today);
-        const expiredPushSales = pushSalesData.filter(p => p.date <= today);
+        const expiredPushSales = pushSalesData.filter((p) => isPushSaleExpired(p.date));
         
         if (expiredStopSales.length > 0) {
           const expiredIds = expiredStopSales.map(s => s.id);
@@ -421,7 +422,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         if (expiredPushSales.length > 0) {
           const expiredIds = expiredPushSales.map(p => p.id);
           await supabase.from("push_sales").delete().in("id", expiredIds);
-          pushSalesData = pushSalesData.filter(p => p.date > today);
+          pushSalesData = pushSalesData.filter((p) => !isPushSaleExpired(p.date));
         }
         
         setStopSales(stopSalesData);

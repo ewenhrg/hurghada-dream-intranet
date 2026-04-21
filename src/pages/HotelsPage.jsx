@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
-import { SITE_KEY, NEIGHBORHOODS } from "../constants";
+import { SITE_KEY, NEIGHBORHOODS, getQuoteSiteKeysForSync } from "../constants";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { appCache, createCacheKey } from "../utils/cache";
+
+function hotelsListCacheKey() {
+  return createCacheKey("hotels", ...getQuoteSiteKeysForSync());
+}
 
 export function HotelsPage({ user }) {
   const [hotels, setHotels] = useState([]);
@@ -24,10 +28,11 @@ export function HotelsPage({ user }) {
     if (!supabase) return;
     setLoading(true);
     try {
-      // Vérifier le cache d'abord
-      const cacheKey = createCacheKey("hotels", SITE_KEY);
+      const siteKeys = getQuoteSiteKeysForSync();
+      const cacheKey = hotelsListCacheKey();
       const cached = appCache.get(cacheKey);
-      if (cached) {
+      // Ne pas réutiliser un cache vide : [] est truthy en JS et masquerait un décalage de site_key corrigé en base.
+      if (Array.isArray(cached) && cached.length > 0) {
         setHotels(cached);
         setLoading(false);
         return;
@@ -36,7 +41,7 @@ export function HotelsPage({ user }) {
       const { data, error } = await supabase
         .from("hotels")
         .select("*")
-        .eq("site_key", SITE_KEY)
+        .in("site_key", siteKeys)
         .order("name", { ascending: true });
       
       if (error) {
@@ -45,9 +50,9 @@ export function HotelsPage({ user }) {
       } else {
         const hotelsData = data || [];
         setHotels(hotelsData);
-        // Mettre en cache (TTL de 10 minutes car les hôtels changent rarement)
-        const cacheKey = createCacheKey("hotels", SITE_KEY);
-        appCache.set(cacheKey, hotelsData, 10 * 60 * 1000);
+        if (hotelsData.length > 0) {
+          appCache.set(cacheKey, hotelsData, 10 * 60 * 1000);
+        }
       }
     } catch (err) {
       logger.error("Exception lors du chargement des hôtels:", err);
@@ -135,8 +140,7 @@ export function HotelsPage({ user }) {
         } else {
           logger.log("✅ Hôtel modifié avec succès!");
           // Invalider le cache pour forcer le rechargement
-          const cacheKey = createCacheKey("hotels", SITE_KEY);
-          appCache.delete(cacheKey);
+          appCache.delete(hotelsListCacheKey());
           await loadHotels();
           resetForm();
           toast.success("Hôtel modifié avec succès !");
@@ -159,8 +163,7 @@ export function HotelsPage({ user }) {
         } else {
           logger.log("✅ Hôtel créé avec succès!");
           // Invalider le cache pour forcer le rechargement
-          const cacheKey = createCacheKey("hotels", SITE_KEY);
-          appCache.delete(cacheKey);
+          appCache.delete(hotelsListCacheKey());
           await loadHotels();
           resetForm();
           toast.success("Hôtel créé avec succès !");
@@ -195,8 +198,7 @@ export function HotelsPage({ user }) {
       } else {
         logger.log("✅ Hôtel supprimé avec succès!");
         // Invalider le cache pour forcer le rechargement
-        const cacheKey = createCacheKey("hotels", SITE_KEY);
-        appCache.delete(cacheKey);
+        appCache.delete(hotelsListCacheKey());
         await loadHotels();
         toast.success("Hôtel supprimé avec succès !");
       }

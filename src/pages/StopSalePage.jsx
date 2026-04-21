@@ -4,6 +4,7 @@ import { SITE_KEY } from "../constants";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
+import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
 
 export function StopSalePage({ activities, user }) {
   const [stopSales, setStopSales] = useState([]);
@@ -38,7 +39,8 @@ export function StopSalePage({ activities, user }) {
   async function loadStopSales() {
     if (!supabase) return;
     try {
-      const today = new Date().toISOString().split('T')[0]; // Date d'aujourd'hui au format YYYY-MM-DD
+      // Utiliser la date locale (pas UTC) pour éviter une suppression anticipée.
+      const today = getLocalDateKey();
 
       const { data, error } = await supabase
         .from("stop_sales")
@@ -54,8 +56,7 @@ export function StopSalePage({ activities, user }) {
         const expiredStopSales = [];
 
         (data || []).forEach((stopSale) => {
-          // Supprimer les stop sales dont la date est passée ou égale à aujourd'hui (date <= aujourd'hui)
-          // Si on arrive le 13/12, le stop sale du 13/12 doit être supprimé car c'est déjà trop tard
+          // Supprimer uniquement à partir du jour atteint (jamais avant).
           if (stopSale.date <= today) {
             expiredStopSales.push(stopSale.id);
           } else {
@@ -81,8 +82,6 @@ export function StopSalePage({ activities, user }) {
   async function loadPushSales() {
     if (!supabase) return;
     try {
-      const today = new Date().toISOString().split('T')[0]; // Date d'aujourd'hui au format YYYY-MM-DD
-
       const { data, error } = await supabase
         .from("push_sales")
         .select("*")
@@ -92,14 +91,12 @@ export function StopSalePage({ activities, user }) {
       if (error) {
         logger.error("Erreur lors du chargement des push sales:", error);
       } else {
-        // Filtrer et supprimer les push sales dont la date est passée
+        // Filtrer et supprimer les push sales : veille à 20h (voir isPushSaleExpired)
         const validPushSales = [];
         const expiredPushSales = [];
 
         (data || []).forEach((pushSale) => {
-          // Supprimer les push sales dont la date est passée ou égale à aujourd'hui (date <= aujourd'hui)
-          // Si on arrive le 13/12, le push sale du 13/12 doit être supprimé car c'est déjà trop tard
-          if (pushSale.date <= today) {
+          if (isPushSaleExpired(pushSale.date)) {
             expiredPushSales.push(pushSale.id);
           } else {
             validPushSales.push(pushSale);

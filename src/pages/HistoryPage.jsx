@@ -11,6 +11,7 @@ import { logger } from "../utils/logger";
 import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
+import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
 
 /** Délai avant suppression auto des devis « non payés » (au moins une ligne sans n° de ticket), à l’ouverture de l’historique. */
 const UNPAID_QUOTE_AUTO_DELETE_DAYS = 20;
@@ -413,7 +414,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     async function loadStopSalesAndPushSales() {
       if (!supabase) return;
       try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getLocalDateKey();
         const cacheKey = createCacheKey("sales", SITE_KEY, today);
         
         // Vérifier le cache d'abord pour améliorer les performances
@@ -426,7 +427,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           // Vérifier les expirés en arrière-plan sans bloquer l'UI
           setTimeout(async () => {
             const expiredStopSales = cached.stopSales.filter(s => s.date <= today);
-            const expiredPushSales = cached.pushSales.filter(p => p.date <= today);
+            const expiredPushSales = cached.pushSales.filter((p) => isPushSaleExpired(p.date));
             
             if (expiredStopSales.length > 0 || expiredPushSales.length > 0) {
               // Recharger pour avoir les données à jour
@@ -440,7 +441,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         // On récupère depuis hier pour être sûr de ne rien manquer
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const yesterdayStr = getLocalDateKey(yesterday);
         
         // Sélection spécifique pour réduire la taille des données
         const [stopSalesResult, pushSalesResult] = await Promise.all([
@@ -451,10 +452,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         let stopSalesData = (!stopSalesResult.error && stopSalesResult.data) ? stopSalesResult.data : [];
         let pushSalesData = (!pushSalesResult.error && pushSalesResult.data) ? pushSalesResult.data : [];
         
-        // Supprimer automatiquement les stop/push sales dont la date est passée ou égale à aujourd'hui (date <= aujourd'hui)
-        // Si on arrive le 13/12, le stop sale du 13/12 doit être supprimé car c'est déjà trop tard
+        // Stop sale : jour atteint ou passé. Push sale : veille à 20h (voir isPushSaleExpired).
         const expiredStopSales = stopSalesData.filter(s => s.date <= today);
-        const expiredPushSales = pushSalesData.filter(p => p.date <= today);
+        const expiredPushSales = pushSalesData.filter((p) => isPushSaleExpired(p.date));
         
         if (expiredStopSales.length > 0) {
           const expiredIds = expiredStopSales.map(s => s.id);
@@ -465,7 +465,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         if (expiredPushSales.length > 0) {
           const expiredIds = expiredPushSales.map(p => p.id);
           await supabase.from("push_sales").delete().in("id", expiredIds);
-          pushSalesData = pushSalesData.filter(p => p.date > today);
+          pushSalesData = pushSalesData.filter((p) => !isPushSaleExpired(p.date));
         }
         
         setStopSales(stopSalesData);
