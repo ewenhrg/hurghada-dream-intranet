@@ -48,13 +48,18 @@ function normalizeActivityName(activityName) {
     .trim();
 }
 
+function hasAllTokens(name, tokens) {
+  if (!name) return false;
+  return tokens.every((token) => name.includes(token));
+}
+
 // Helper pour vérifier si une activité est ZERO TRACAS
 // Important : doit retourner false pour "ZERO TRACAS HORS ZONE"
 export function isZeroTracasActivity(activityName) {
   const name = normalizeActivityName(activityName);
   if (!name) return false;
-  // Vérifier d'abord si c'est HORS ZONE (plus spécifique)
-  if (name.includes("zero tracas hors zone") || name.includes("zero tracas horszone")) return false;
+  // Vérifier d'abord si c'est HORS ZONE (plus spécifique), peu importe l'ordre des mots
+  if (hasAllTokens(name, ["zero", "tracas", "hors", "zone"])) return false;
   return name.includes("zero tracas");
 }
 
@@ -74,7 +79,8 @@ export function getZeroTracasPrices() {
 export function isZeroTracasHorsZoneActivity(activityName) {
   const name = normalizeActivityName(activityName);
   if (!name) return false;
-  return name.includes("zero tracas hors zone") || name.includes("zero tracas horszone");
+  // Accepte les variantes de nom: "ZERO TRACAS HORS ZONE", "HORS ZONE ZERO TRACAS", etc.
+  return hasAllTokens(name, ["zero", "tracas", "hors", "zone"]);
 }
 
 // Helper pour obtenir les prix ZERO TRACAS HORS ZONE (+5€ sur chaque option visa)
