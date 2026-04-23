@@ -234,8 +234,10 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
   );
 }
 
-export function ActivityCatalogAdminPage({ activities, setActivities, user }) {
-  const canEdit = canEditCatalog(user);
+export function ActivityCatalogAdminPage({ activities, setActivities, user, readOnly = false }) {
+  const hasEditPermission = canEditCatalog(user);
+  /** Édition réelle : permission + pas de mode lecture seule (ex. compte Léa sur ce catalogue). */
+  const canMutate = hasEditPermission && !readOnly;
   const [search, setSearch] = useState("");
 
   const filteredActivities = useMemo(() => {
@@ -274,17 +276,35 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user }) {
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
         <p className="font-semibold text-slate-900">Sécurité</p>
         <ul className="mt-2 list-inside list-disc space-y-1 text-slate-700">
-          <li>Cet onglet n’est visible que si votre compte a la permission « Modifier des activités » (défini dans Utilisateurs).</li>
-          <li>Les modifications sont enregistrées dans Supabase ; gardez votre code à 6 chiffres confidentiel.</li>
-          <li>Seules les URLs en <strong>https://</strong> sont acceptées pour les images (pas de fichier piégé en data:).</li>
-          <li>
-            Pour une protection maximale côté base, limitez les politiques RLS sur <code className="rounded bg-white px-1">activities</code> (ex.
-            lecture publique, écriture réservée via Edge Function ou clé serveur) — contactez votre admin Supabase si besoin.
-          </li>
+          {readOnly ? (
+            <li>
+              Affichage réservé à la consultation : aucune saisie, aucun bouton d’action ni enregistrement n’est disponible sur cette page pour
+              votre compte.
+            </li>
+          ) : (
+            <li>Cet onglet n’est visible que si votre compte a la permission « Modifier des activités » (défini dans Utilisateurs).</li>
+          )}
+          {!readOnly && (
+            <>
+              <li>Les modifications sont enregistrées dans Supabase ; gardez votre code à 6 chiffres confidentiel.</li>
+              <li>Seules les URLs en <strong>https://</strong> sont acceptées pour les images (pas de fichier piégé en data:).</li>
+              <li>
+                Pour une protection maximale côté base, limitez les politiques RLS sur <code className="rounded bg-white px-1">activities</code> (ex.
+                lecture publique, écriture réservée via Edge Function ou clé serveur) — contactez votre admin Supabase si besoin.
+              </li>
+            </>
+          )}
         </ul>
       </div>
 
-      {!canEdit && (
+      {readOnly && (
+        <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+          <strong>Lecture seule.</strong> Vous pouvez parcourir le contenu du catalogue public tel qu’il sera affiché aux clients ; les modifications
+          passent par un compte autorisé (ex. Ewen).
+        </div>
+      )}
+
+      {!readOnly && !hasEditPermission && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Lecture seule : vous n’avez pas la permission de modifier le contenu catalogue.
         </div>
@@ -300,15 +320,17 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user }) {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            disabled={readOnly}
+            readOnly={readOnly}
             placeholder="Nom ou texte dans la description…"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/30"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-90"
             autoComplete="off"
           />
         </div>
         <button
           type="button"
           onClick={() => setSearch("")}
-          disabled={!search.trim()}
+          disabled={readOnly || !search.trim()}
           className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:pointer-events-none disabled:opacity-40"
         >
           Effacer
@@ -331,7 +353,7 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user }) {
           </div>
           <div className="space-y-4 p-4">
             {items.map((a) => (
-              <CatalogActivityEditor key={a.id} activity={a} canEdit={canEdit} patchActivity={patchActivity} />
+              <CatalogActivityEditor key={a.id} activity={a} canEdit={canMutate} patchActivity={patchActivity} />
             ))}
           </div>
         </section>

@@ -396,7 +396,7 @@ const QuoteCard = QuoteCardComponent;
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
-  const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending", "modified"
+  const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
@@ -610,16 +610,15 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const filtered = useMemo(() => {
     let result = quotes;
     
-    // Filtre par statut (payé/en attente/modifié) - calcul rapide sans formatage
+    // Filtre par statut (payé / en attente) — calcul rapide sans formatage
     if (statusFilter !== "all") {
       result = result.filter((d) => {
         const allTicketsFilled = d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false;
         if (statusFilter === "paid") {
           return allTicketsFilled;
-        } else if (statusFilter === "pending") {
+        }
+        if (statusFilter === "pending") {
           return !allTicketsFilled;
-        } else if (statusFilter === "modified") {
-          return d.isModified === true;
         }
         return true;
       });
@@ -850,13 +849,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                 className="transition-opacity duration-150 hover:opacity-80"
             >
               ⏳ En attente
-            </Pill>
-            <Pill
-              active={statusFilter === "modified"}
-              onClick={() => setStatusFilter("modified")}
-                className="transition-opacity duration-150 hover:opacity-80"
-            >
-              🔄 Modifié
             </Pill>
             </div>
           </div>

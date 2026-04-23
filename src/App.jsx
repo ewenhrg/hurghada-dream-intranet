@@ -80,10 +80,11 @@ export default function App() {
     }
   }, [user, tab]);
 
-  /** Contenu catalogue public : réservé aux comptes autorisés à modifier les activités. */
+  /** Contenu catalogue public : éditeurs avec permission, ou Léa en consultation uniquement. */
   useEffect(() => {
     if (!user || tab !== "catalog-admin") return;
-    if (user.canAccessActivities === false || user.canEditActivity !== true) {
+    const leaViewOnly = user.name === "Léa";
+    if (user.canAccessActivities === false || (user.canEditActivity !== true && !leaViewOnly)) {
       setTab(user.canAccessActivities !== false ? "activities" : "devis");
     }
   }, [user, tab]);
@@ -1172,11 +1173,12 @@ export default function App() {
                   {t("nav.activityUpdate")}
                 </Pill>
                 )}
-                {user?.canAccessActivities !== false && user?.canEditActivity === true && (
-                <Pill active={tab === "catalog-admin"} onClick={() => setTab("catalog-admin")}>
-                  {t("nav.catalogAdmin")}
-                </Pill>
-                )}
+                {user?.canAccessActivities !== false &&
+                  (user?.canEditActivity === true || user?.name === "Léa") && (
+                    <Pill active={tab === "catalog-admin"} onClick={() => setTab("catalog-admin")}>
+                      {t("nav.catalogAdmin")}
+                    </Pill>
+                  )}
                 {user?.canAccessHistory !== false && (
                 <Pill active={tab === "history"} onClick={() => setTab("history")}>
                   {t("nav.history")}
@@ -1327,11 +1329,25 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "catalog-admin" && user?.canAccessActivities !== false && user?.canEditActivity === true && (
-          <Section title={t("page.catalogAdmin.title")} subtitle={t("page.catalogAdmin.subtitle")}>
-            <ActivityCatalogAdminPage activities={activities} setActivities={setActivities} user={user} />
-          </Section>
-        )}
+        {tab === "catalog-admin" &&
+          user?.canAccessActivities !== false &&
+          (user?.canEditActivity === true || user?.name === "Léa") && (
+            <Section
+              title={t("page.catalogAdmin.title")}
+              subtitle={
+                user?.name === "Léa"
+                  ? "Consultation du contenu affiché sur le catalogue public. Aucune modification n’est possible depuis ce compte."
+                  : t("page.catalogAdmin.subtitle")
+              }
+            >
+              <ActivityCatalogAdminPage
+                activities={activities}
+                setActivities={setActivities}
+                user={user}
+                readOnly={user?.name === "Léa"}
+              />
+            </Section>
+          )}
 
         {tab === "history" && user?.canAccessHistory !== false && (
           <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")}>
