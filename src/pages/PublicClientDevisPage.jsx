@@ -560,45 +560,54 @@ export function PublicClientDevisPage() {
           </div>
 
           <div className="mx-auto mt-12 max-w-5xl sm:max-w-none">
-            <p className="mb-3 text-center text-[10px] font-extrabold uppercase tracking-[0.28em] text-catalog-label">
+            <p className="mb-3 text-center text-xs font-bold uppercase tracking-[0.12em] text-slate-900 sm:text-sm sm:tracking-[0.14em]">
               Filtrer par univers
             </p>
             <div className="-mx-1 flex snap-x snap-mandatory flex-nowrap justify-start gap-2 overflow-x-auto px-1 pb-2 pt-1 scrollbar-hide sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:pb-0">
               <button
                 type="button"
                 onClick={() => setSelectedCategory("all")}
-                className={`snap-center shrink-0 rounded-2xl px-4 py-2.5 text-left text-xs font-bold transition-all sm:rounded-full sm:px-5 sm:text-center sm:text-sm ${
+                className={`snap-center shrink-0 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:rounded-full sm:px-5 sm:text-center ${
                   selectedCategory === "all"
                     ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-white"
-                    : "border-2 border-slate-300 bg-white text-catalog-body shadow-sm hover:-translate-y-0.5 hover:border-teal-500/70 hover:bg-teal-50 hover:shadow-md"
+                    : "border-2 border-slate-400 bg-white text-slate-900 shadow-sm hover:-translate-y-0.5 hover:border-teal-600 hover:bg-teal-50/90 hover:shadow-md"
                 }`}
               >
                 <span className="mr-1.5" aria-hidden>
                   ✦
                 </span>
                 Toutes
-                <span className="ml-1.5 tabular-nums opacity-90">· {categoryCounts.all || 0}</span>
+                <span
+                  className={`ml-1.5 tabular-nums ${selectedCategory === "all" ? "text-white/90" : "text-slate-600"}`}
+                >
+                  · {categoryCounts.all || 0}
+                </span>
               </button>
-              {CATEGORIES.map((category) => (
+              {CATEGORIES.map((category) => {
+                const active = selectedCategory === category.key;
+                return (
                 <button
                   key={category.key}
                   type="button"
                   onClick={() => setSelectedCategory(category.key)}
-                  className={`snap-center flex min-w-[9.5rem] shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-left text-xs font-bold transition-all sm:min-w-0 sm:rounded-full sm:px-5 sm:text-center sm:text-sm ${
-                    selectedCategory === category.key
+                  className={`snap-center flex min-w-[9.5rem] shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:min-w-0 sm:rounded-full sm:px-5 sm:text-center ${
+                    active
                       ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-white"
-                      : "border-2 border-slate-300 bg-white text-catalog-body shadow-sm hover:-translate-y-0.5 hover:border-teal-500/70 hover:bg-teal-50 hover:shadow-md"
+                      : "border-2 border-slate-400 bg-white text-slate-900 shadow-sm hover:-translate-y-0.5 hover:border-teal-600 hover:bg-teal-50/90 hover:shadow-md"
                   }`}
                 >
-                  <span className="text-base leading-none" aria-hidden>
+                  <span className="text-lg leading-none sm:text-xl" aria-hidden>
                     {getCategoryEmoji(category.key)}
                   </span>
-                  <span className="leading-tight">
+                  <span className="min-w-0 text-balance leading-snug">
                     {category.label}
-                    <span className="ml-1 tabular-nums opacity-90">· {categoryCounts[category.key] || 0}</span>
+                    <span className={`ml-1 tabular-nums ${active ? "text-white/90" : "text-slate-600"}`}>
+                      · {categoryCounts[category.key] || 0}
+                    </span>
                   </span>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
