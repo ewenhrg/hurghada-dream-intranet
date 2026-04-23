@@ -1604,11 +1604,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">🏍️ Configuration Buggy</label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 mb-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-2">Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</label>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">Buggy 2 personnes ({getBuggyPrices(c.act.name).simple}€)</label>
                       <NumberInput value={c.raw.buggySimple ?? ""} onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-2">Buggy Family ({getBuggyPrices(c.act.name).family}€)</label>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">Buggy 4 personnes ({getBuggyPrices(c.act.name).family}€)</label>
                       <NumberInput value={c.raw.buggyFamily ?? ""} onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })} />
                     </div>
                   </div>

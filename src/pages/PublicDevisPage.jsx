@@ -72,8 +72,8 @@ function getCatalogLineOptionLines(item) {
 
   const bs = Number(item.buggySimple) || 0;
   const bf = Number(item.buggyFamily) || 0;
-  if (bs > 0) lines.push(`Buggy simple × ${bs}`);
-  if (bf > 0) lines.push(`Buggy family × ${bf}`);
+  if (bs > 0) lines.push(`Buggy 2 personnes × ${bs}`);
+  if (bf > 0) lines.push(`Buggy 4 personnes × ${bf}`);
 
   const y250 = Number(item.yamaha250) || 0;
   const k640 = Number(item.ktm640) || 0;

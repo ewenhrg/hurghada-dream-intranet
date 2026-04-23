@@ -236,7 +236,7 @@ export function calculateTransferSurcharge(item) {
   
   const surchargePerAdult = Number(item.transferSurchargePerAdult || 0);
   
-  // Pour Buggy : multiplier par le nombre total de buggys (simple + family)
+  // Pour Buggy : multiplier par le nombre total de buggys (2 pers. + 4 pers.)
   if (isBuggyActivity(item.activityName)) {
     const buggySimple = Number(item.buggySimple || 0);
     const buggyFamily = Number(item.buggyFamily || 0);

@@ -1386,7 +1386,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           });
         }
       } else if (act && isBuggyActivity(act.name)) {
-        // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy simple et family
+        // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy 2 pers. et 4 pers.
         const buggySimple = Number(it.buggySimple || 0);
         const buggyFamily = Number(it.buggyFamily || 0);
         const prices = getBuggyPrices(act.name);
@@ -1817,7 +1817,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 {c.act && isBuggyActivity(c.act.name) && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 mt-4 bg-purple-50/60 p-5 md:p-6 rounded-xl border-2 border-purple-300/70">
                     <div>
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🛵 Buggy Simple ({getBuggyPrices(c.act.name).simple}€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🛵 Buggy 2 personnes ({getBuggyPrices(c.act.name).simple}€)</p>
                       <NumberInput 
                         value={c.raw.buggySimple ?? ""} 
                         onChange={(e) => setItem(idx, { buggySimple: e.target.value === "" ? "" : e.target.value })}
@@ -1825,7 +1825,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       />
                     </div>
                     <div>
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🛵 Buggy Family ({getBuggyPrices(c.act.name).family}€)</p>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🛵 Buggy 4 personnes ({getBuggyPrices(c.act.name).family}€)</p>
                       <NumberInput 
                         value={c.raw.buggyFamily ?? ""} 
                         onChange={(e) => setItem(idx, { buggyFamily: e.target.value === "" ? "" : e.target.value })}

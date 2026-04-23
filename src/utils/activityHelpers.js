@@ -165,7 +165,7 @@ export function getActivityTarifListLines(activityLike) {
   if (isBuggyActivity(name)) {
     const p = getBuggyPrices(name);
     if (p.simple <= 0 && p.family <= 0) return null;
-    return [`Buggy simple : ${p.simple} €`, `Buggy family : ${p.family} €`];
+    return [`Buggy 2 personnes : ${p.simple} €`, `Buggy 4 personnes : ${p.family} €`];
   }
 
   if (isMotoCrossActivity(name)) {

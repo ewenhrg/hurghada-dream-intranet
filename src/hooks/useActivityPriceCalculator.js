@@ -84,7 +84,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         }
 
       } else if (act && isBuggyActivity(act.name)) {
-        // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy simple et family
+        // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy 2 pers. et 4 pers.
         const buggySimple = Number(it.buggySimple || 0);
         const buggyFamily = Number(it.buggyFamily || 0);
         const prices = getBuggyPrices(act.name);
