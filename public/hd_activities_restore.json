@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "exportedAt": "2026-04-20T21:24:47.203Z",
+  "exportedAt": "2026-04-21T20:50:57.614Z",
   "site_key": "hurghada_dream_0606",
-  "count": 76,
+  "count": 79,
   "activities": [
     {
       "id": "fd334670-ac24-414f-9c22-17bdf541f588",
@@ -4457,6 +4457,112 @@
       }
     },
     {
+      "id": "5e037e60-382b-429d-819a-28e1c51731f3",
+      "supabase_id": "5e037e60-382b-429d-819a-28e1c51731f3",
+      "name": "ZERO TRACAS HORS ZONE",
+      "category": "transfert",
+      "priceAdult": 0,
+      "priceChild": 0,
+      "priceBaby": 0,
+      "ageChild": "",
+      "ageBaby": "",
+      "currency": "EUR",
+      "availableDays": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "notes": "",
+      "description": "",
+      "transfers": {
+        "soma_bay": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "makadi": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "salh_hasheesh": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "el_gouna": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_cora": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_kawther": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_sheraton": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_arabia": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_ahyaa": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        }
+      }
+    },
+    {
       "id": "5372418f-653c-4a08-8aca-be8a1856fdbf",
       "supabase_id": "5372418f-653c-4a08-8aca-be8a1856fdbf",
       "name": "MAHMYA BEACH + SPA",
@@ -6278,7 +6384,7 @@
         true,
         true
       ],
-      "notes": "",
+      "notes": "Sans transfert / direct au \"Mamma Mia Restaurant & Lounge\"",
       "description": "",
       "transfers": {
         "soma_bay": {
@@ -7531,6 +7637,112 @@
       }
     },
     {
+      "id": "0d062e09-1870-42b2-b257-71e58925496d",
+      "supabase_id": "0d062e09-1870-42b2-b257-71e58925496d",
+      "name": "JEUX AQUATIQUE",
+      "category": "aquatique",
+      "priceAdult": 20,
+      "priceChild": 20,
+      "priceBaby": 20,
+      "ageChild": "",
+      "ageBaby": "",
+      "currency": "EUR",
+      "availableDays": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "notes": "Sans transfert / direct au \"Mamma Mia Restaurant & Lounge\"",
+      "description": "",
+      "transfers": {
+        "soma_bay": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "makadi": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "salh_hasheesh": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "el_gouna": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_cora": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_kawther": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_sheraton": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_arabia": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_ahyaa": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": true,
+          "afternoonTime": "12:00",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        }
+      }
+    },
+    {
       "id": "0ceeec1d-1bee-4323-bbcc-bacf20e342dc",
       "supabase_id": "0ceeec1d-1bee-4323-bbcc-bacf20e342dc",
       "name": "HORS ZONE - AERPORT 7 pax",
@@ -7761,6 +7973,112 @@
         true,
         true,
         true
+      ],
+      "notes": "",
+      "description": "",
+      "transfers": {
+        "soma_bay": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "makadi": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "salh_hasheesh": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "el_gouna": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_cora": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_kawther": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_sheraton": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_arabia": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        },
+        "hurghada_ahyaa": {
+          "morningEnabled": false,
+          "morningTime": "",
+          "afternoonEnabled": false,
+          "afternoonTime": "",
+          "eveningEnabled": false,
+          "eveningTime": "",
+          "surcharge": 0
+        }
+      }
+    },
+    {
+      "id": "062661cf-6385-42a1-9b47-b4240bb93796",
+      "supabase_id": "062661cf-6385-42a1-9b47-b4240bb93796",
+      "name": "ERO TRACAS HORS ZONE",
+      "category": "transfert",
+      "priceAdult": 0,
+      "priceChild": 0,
+      "priceBaby": 0,
+      "ageChild": "",
+      "ageBaby": "",
+      "currency": "EUR",
+      "availableDays": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
       ],
       "notes": "",
       "description": "",

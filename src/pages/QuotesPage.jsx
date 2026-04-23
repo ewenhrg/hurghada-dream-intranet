@@ -28,6 +28,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const [stopSales, setStopSales] = useState([]);
   const [pushSales, setPushSales] = useState([]);
   const [hotels, setHotels] = useState([]);
+  const neighborhoodsOptions = useMemo(() => {
+    const base = Array.isArray(NEIGHBORHOODS) ? NEIGHBORHOODS : [];
+    return base.some((n) => n?.key === "autre")
+      ? base
+      : [...base, { key: "autre", label: "Autre" }];
+  }, []);
 
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
@@ -322,7 +328,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         if (error) {
           logger.error("Erreur lors du chargement des hôtels:", error);
         } else {
-          const hotelsData = data || [];
+          let hotelsData = data || [];
+          if (hotelsData.length === 0) {
+            const { data: allRows, error: errAll } = await supabase
+              .from("hotels")
+              .select("id, name, neighborhood_key")
+              .order("name", { ascending: true });
+            if (!errAll && Array.isArray(allRows) && allRows.length > 0) {
+              logger.warn("[Quotes/hôtels] 0 ligne pour site_key filtré — utilisation de la liste complète.");
+              hotelsData = allRows;
+            }
+          }
           setHotels(hotelsData);
           if (hotelsData.length > 0) {
             appCache.set(cacheKey, hotelsData, 10 * 60 * 1000);
@@ -353,7 +369,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         ...c, 
         neighborhood: foundHotel.neighborhood_key 
       }));
-      const neighborhoodLabel = NEIGHBORHOODS.find((n) => n.key === foundHotel.neighborhood_key)?.label || foundHotel.neighborhood_key;
+      const neighborhoodLabel =
+        neighborhoodsOptions.find((n) => n.key === foundHotel.neighborhood_key)?.label ||
+        foundHotel.neighborhood_key;
       toast.success(`Quartier détecté automatiquement : ${neighborhoodLabel}`, { duration: 3000 });
     }
   }, [hotels, client.neighborhood]);
@@ -1191,7 +1209,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 className="w-full rounded-xl border-2 border-slate-600 bg-slate-900/60 px-4 py-2.5 text-sm font-medium text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md"
               >
                 <option value="">— Sélectionner un quartier —</option>
-                {NEIGHBORHOODS.map((n) => (
+                {neighborhoodsOptions.map((n) => (
                   <option key={n.key} value={n.key}>
                     {n.label}
                   </option>
@@ -1441,7 +1459,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     <label className="block text-sm font-medium text-slate-700 mb-2">Quartier</label>
                     <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-normal text-slate-700">
                       {client.neighborhood
-                        ? NEIGHBORHOODS.find((n) => n.key === client.neighborhood)?.label
+                        ? neighborhoodsOptions.find((n) => n.key === client.neighborhood)?.label
                         : "— Choisir avec le client"}
                     </div>
                   </div>

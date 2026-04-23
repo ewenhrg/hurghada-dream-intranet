@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
+import { useState, useEffect, useCallback } from "react";
+import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY, NEIGHBORHOODS, getQuoteSiteKeysForSync } from "../constants";
+import { canAccessHotelsPage } from "../constants/permissions";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
@@ -12,6 +13,7 @@ function hotelsListCacheKey() {
 
 export function HotelsPage({ user }) {
   const [hotels, setHotels] = useState([]);
+  const [siteKeyScopeWarning, setSiteKeyScopeWarning] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingHotel, setEditingHotel] = useState(null);
@@ -20,39 +22,98 @@ export function HotelsPage({ user }) {
     neighborhood_key: "",
   });
 
-  // Vérifier si l'utilisateur est Ewen ou Léa
-  const canAccess = user?.name === "Ewen" || user?.name === "Léa";
+  const canAccess = canAccessHotelsPage(user);
 
-  // Charger les hôtels depuis Supabase
-  async function loadHotels() {
+  const supabaseHost =
+    typeof __SUPABASE_DEBUG__?.supabaseUrl === "string"
+      ? (() => {
+          try {
+            return new URL(__SUPABASE_DEBUG__.supabaseUrl).host;
+          } catch {
+            return "—";
+          }
+        })()
+      : "—";
+
+  // Charger les hôtels depuis Supabase (pas de lecture cache : évite une liste vide obsolète après correction env / base)
+  const loadHotels = useCallback(async () => {
     if (!supabase) return;
     setLoading(true);
     try {
       const siteKeys = getQuoteSiteKeysForSync();
       const cacheKey = hotelsListCacheKey();
-      const cached = appCache.get(cacheKey);
-      // Ne pas réutiliser un cache vide : [] est truthy en JS et masquerait un décalage de site_key corrigé en base.
-      if (Array.isArray(cached) && cached.length > 0) {
-        setHotels(cached);
-        setLoading(false);
+      appCache.delete(cacheKey);
+
+      const normalizeHotelRow = (row) => ({
+        ...row,
+        name: row?.name || "",
+        neighborhood_key: row?.neighborhood_key || row?.neighborhood || "",
+        site_key: row?.site_key || row?.site || "",
+      });
+
+      const loadRowsFromTable = async (tableName) => {
+        const attempts = [
+          { mode: "site_key", query: (q) => q.in("site_key", siteKeys) },
+          { mode: "site", query: (q) => q.in("site", siteKeys) },
+          { mode: "all", query: (q) => q },
+        ];
+
+        for (const attempt of attempts) {
+          const { data, error } = await attempt
+            .query(supabase.from(tableName).select("*"))
+            .order("name", { ascending: true });
+          if (!error && Array.isArray(data)) {
+            return {
+              rows: data.map(normalizeHotelRow),
+              tableName,
+              mode: attempt.mode,
+            };
+          }
+        }
+        return null;
+      };
+
+      let loaded = await loadRowsFromTable("hotels");
+      if (!loaded || loaded.rows.length === 0) {
+        const fallbackLoaded = await loadRowsFromTable("hotel");
+        if (fallbackLoaded && fallbackLoaded.rows.length > 0) {
+          loaded = fallbackLoaded;
+          logger.warn(
+            "[Hotels] Fallback activé: la liste provient de la table",
+            fallbackLoaded.tableName,
+            "(mode:",
+            fallbackLoaded.mode + ")."
+          );
+        }
+      }
+
+      if (!loaded) {
+        setSiteKeyScopeWarning(false);
+        setHotels([]);
+        toast.error("Erreur lors du chargement des hôtels: table inaccessible ou structure non reconnue.");
         return;
       }
 
-      const { data, error } = await supabase
-        .from("hotels")
-        .select("*")
-        .in("site_key", siteKeys)
-        .order("name", { ascending: true });
-      
-      if (error) {
-        logger.error("Erreur lors du chargement des hôtels:", error);
-        toast.error("Erreur lors du chargement des hôtels: " + (error.message || "Erreur inconnue"));
-      } else {
-        const hotelsData = data || [];
-        setHotels(hotelsData);
-        if (hotelsData.length > 0) {
-          appCache.set(cacheKey, hotelsData, 10 * 60 * 1000);
-        }
+      let hotelsData = loaded.rows;
+      const usedScopedFilter = loaded.mode === "site_key" || loaded.mode === "site";
+      const hasRowsOutsideScope =
+        hotelsData.length > 0 &&
+        hotelsData.some((r) => r.site_key && !siteKeys.includes(r.site_key));
+      setSiteKeyScopeWarning(usedScopedFilter ? false : hasRowsOutsideScope);
+
+      if (!usedScopedFilter && hotelsData.length > 0) {
+        const keys = [...new Set(hotelsData.map((r) => r.site_key).filter(Boolean))];
+        logger.warn(
+          "[Hotels] Chargement sans filtre site_key/site,",
+          hotelsData.length,
+          "ligne(s), site_key distincts:",
+          keys
+        );
+      }
+
+      setHotels(hotelsData);
+      if (hotelsData.length > 0) {
+        appCache.set(cacheKey, hotelsData, 10 * 60 * 1000);
       }
     } catch (err) {
       logger.error("Exception lors du chargement des hôtels:", err);
@@ -60,12 +121,12 @@ export function HotelsPage({ user }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   // Charger les hôtels au montage
   useEffect(() => {
     loadHotels();
-  }, []);
+  }, [loadHotels]);
 
   // Réinitialiser le formulaire
   function resetForm() {
@@ -216,7 +277,9 @@ export function HotelsPage({ user }) {
       <div className="p-4 md:p-6">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
           <p className="text-red-800 font-semibold">Accès refusé</p>
-          <p className="text-red-600 text-sm mt-2">Seuls Ewen et Léa peuvent accéder à cette page pour gérer les hôtels.</p>
+          <p className="text-red-600 text-sm mt-2">
+            Seuls les comptes Ewen / Léa (y compris « Lea » sans accent) peuvent accéder à cette page pour gérer les hôtels.
+          </p>
         </div>
       </div>
     );
@@ -224,12 +287,28 @@ export function HotelsPage({ user }) {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      {siteKeyScopeWarning && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-semibold">Filtrage site_key</p>
+          <p className="mt-1 text-amber-900/90">
+            Aucun hôtel ne correspond à la clé d’environnement actuelle, mais des lignes existent en base. Liste complète
+            affichée. Alignez la colonne <code className="rounded bg-amber-100/80 px-1">site_key</code> sur{" "}
+            <code className="rounded bg-amber-100/80 px-1">{getQuoteSiteKeysForSync().join(", ")}</code> ou définissez{" "}
+            <code className="rounded bg-amber-100/80 px-1">VITE_LEGACY_SITE_KEYS</code> dans <code className="rounded bg-amber-100/80 px-1">.env</code>.
+          </p>
+        </div>
+      )}
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold text-gray-800">Gestion des hôtels</h3>
           <p className="text-sm text-gray-600">Associez les hôtels à leurs quartiers pour une détection automatique</p>
         </div>
-        <PrimaryBtn onClick={() => setShowForm(!showForm)}>{showForm ? "Annuler" : "Nouvel hôtel"}</PrimaryBtn>
+        <div className="flex flex-wrap items-center gap-2">
+          <GhostBtn type="button" variant="neutral" disabled={loading} onClick={() => loadHotels()}>
+            {loading ? "Chargement…" : "Rafraîchir la liste"}
+          </GhostBtn>
+          <PrimaryBtn onClick={() => setShowForm(!showForm)}>{showForm ? "Annuler" : "Nouvel hôtel"}</PrimaryBtn>
+        </div>
       </div>
 
       {/* Formulaire de création/modification */}
@@ -279,13 +358,44 @@ export function HotelsPage({ user }) {
 
       {/* Liste des hôtels */}
       <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-blue-100/60 shadow-lg overflow-hidden">
-        <div className="p-4 border-b bg-blue-50/70">
+        <div className="p-4 border-b bg-blue-50/70 flex flex-wrap items-center justify-between gap-2">
           <h4 className="text-sm font-semibold text-gray-800">Liste des hôtels ({hotels.length})</h4>
+          <GhostBtn type="button" size="sm" variant="neutral" disabled={loading} onClick={() => loadHotels()}>
+            Rafraîchir
+          </GhostBtn>
         </div>
         {loading && hotels.length === 0 ? (
           <div className="p-8 text-center text-gray-500">Chargement...</div>
         ) : hotels.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">Aucun hôtel trouvé. Créez votre premier hôtel !</div>
+          <div className="p-8 space-y-4 text-center text-gray-600">
+            <p>Aucun hôtel renvoyé par l’API pour ce navigateur.</p>
+            <div className="mx-auto max-w-lg rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-xs text-slate-800">
+              <p className="font-semibold text-slate-900">Vérifications courantes</p>
+              <ul className="mt-2 list-disc space-y-1.5 pl-4">
+                <li>
+                  La table doit s’appeler <code className="rounded bg-white px-1">public.hotels</code> (avec un « s »), pas
+                  <code className="rounded bg-white px-1"> hotel</code>.
+                </li>
+                <li>
+                  Le site déployé doit utiliser le <strong>même projet Supabase</strong> que celui où vous voyez les lignes
+                  (hôte API : <code className="rounded bg-white px-1">{supabaseHost}</code>).
+                </li>
+                <li>
+                  Colonne <code className="rounded bg-white px-1">site_key</code> : l’app filtre sur{" "}
+                  <code className="rounded bg-white px-1">{getQuoteSiteKeysForSync().join(", ")}</code> ; si besoin ajoutez{" "}
+                  <code className="rounded bg-white px-1">VITE_LEGACY_SITE_KEYS</code> puis redéployez.
+                </li>
+                <li>
+                  Row Level Security : une politique <code className="rounded bg-white px-1">SELECT</code> doit autoriser la
+                  clé <code className="rounded bg-white px-1">anon</code> sur <code className="rounded bg-white px-1">hotels</code> (voir{" "}
+                  <code className="rounded bg-white px-1">supabase/supabase_hotels_table.sql</code> dans le dépôt).
+                </li>
+              </ul>
+            </div>
+            <GhostBtn type="button" variant="neutral" disabled={loading} onClick={() => loadHotels()}>
+              Réessayer le chargement
+            </GhostBtn>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -299,10 +409,13 @@ export function HotelsPage({ user }) {
                 </tr>
               </thead>
               <tbody>
-                {hotels.map((h) => {
+                {hotels.map((h, idx) => {
                   const neighborhood = NEIGHBORHOODS.find((n) => n.key === h.neighborhood_key);
+                  const rowKey = h.id != null && h.id !== "" ? String(h.id) : `row-${idx}-${h.name || ""}`;
+                  const created = h.created_at ? new Date(h.created_at) : null;
+                  const createdOk = created && !Number.isNaN(created.getTime());
                   return (
-                    <tr key={h.id} className="border-t hover:bg-blue-50/30 transition-colors">
+                    <tr key={rowKey} className="border-t hover:bg-blue-50/30 transition-colors">
                       <td className="px-4 py-3 font-medium text-gray-800">{h.name}</td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
@@ -310,7 +423,7 @@ export function HotelsPage({ user }) {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">
-                        {new Date(h.created_at).toLocaleDateString("fr-FR")}
+                        {createdOk ? created.toLocaleDateString("fr-FR") : "—"}
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">
                         {h.updated_at ? new Date(h.updated_at).toLocaleDateString("fr-FR") : "-"}

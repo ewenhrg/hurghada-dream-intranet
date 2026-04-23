@@ -123,6 +123,16 @@ export function formToDbUser(form) {
  * Construit l’objet utilisateur pour la session (camelCase) à partir des données Supabase
  * Utilisé après login pour stocker en sessionStorage
  */
+/** Accès page Hôtels (menu + contenu) — accepte variantes de casse / accent (ex. « Lea » en base). */
+export function canAccessHotelsPage(user) {
+  const n = String(user?.name ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  return n === "ewen" || n === "lea";
+}
+
 export function dbUserToSessionUser(dbUser) {
   if (!dbUser) return null;
   const session = {

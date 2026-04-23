@@ -27,18 +27,35 @@ function getEnv(key) {
 /** Clé métier des lignes `activities.site_key` — jamais l’URL Supabase. */
 const DEFAULT_SITE_KEY = "hurghada_dream_0606";
 
+/** Une seule alerte console par chargement de page (évite le spam si plusieurs imports). */
+let warnedInvalidSiteKeyEnv = false;
+
 /**
- * Évite l’erreur fréquente : coller `VITE_SUPABASE_URL` dans `VITE_SITE_KEY`.
+ * URL complète ou hôte `*.supabase.co` — valeur typique d’une confusion avec VITE_SUPABASE_URL.
+ */
+function siteKeyLooksLikeSupabaseInfrastructure(raw) {
+  const s = String(raw).trim().toLowerCase();
+  if (!s) return false;
+  if (/^https?:\/\//i.test(s)) return true;
+  if (s.includes(".supabase.co")) return true;
+  return false;
+}
+
+/**
+ * Évite l’erreur fréquente : coller l’URL ou l’hôte Supabase dans `VITE_SITE_KEY`.
  * @param {unknown} raw
  */
 function normalizeSiteKey(raw) {
   if (raw == null) return DEFAULT_SITE_KEY;
   const s = String(raw).trim();
   if (!s) return DEFAULT_SITE_KEY;
-  if (/^https?:\/\//i.test(s)) {
-    if (typeof console !== "undefined" && console.warn) {
+  if (siteKeyLooksLikeSupabaseInfrastructure(s)) {
+    if (!warnedInvalidSiteKeyEnv && typeof console !== "undefined" && console.warn) {
+      warnedInvalidSiteKeyEnv = true;
       console.warn(
-        "[Hurghada Dream] VITE_SITE_KEY ne doit pas être l’URL du projet Supabase. Utilisez la même valeur que la colonne site_key en base (ex. hurghada_dream_0606). Repli sur la clé par défaut."
+        "[Hurghada Dream] VITE_SITE_KEY (ou REACT_APP_SITE_KEY) pointe vers Supabase au lieu de la clé métier. " +
+          "Mettez la même valeur que la colonne site_key en base (ex. hurghada_dream_0606), jamais l’URL du projet. " +
+          "Repli sur la clé par défaut pour cette session. Vérifiez .env local et les variables d’environnement du déploiement (ex. Vercel)."
       );
     }
     return DEFAULT_SITE_KEY;
@@ -122,6 +139,7 @@ export const NEIGHBORHOODS = [
   { key: "hurghada_sheraton", label: "Hurghada Sheraton" },
   { key: "hurghada_arabia", label: "Hurghada Arabia" },
   { key: "hurghada_ahyaa", label: "Hurghada Ahyaa" },
+  { key: "autre", label: "Autre" },
 ];
 
 export function getDefaultActivities() {

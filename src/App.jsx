@@ -9,6 +9,7 @@ import {
   getQuoteSiteKeysForSync,
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
+import { canAccessHotelsPage } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
 import { loadUserFromSession } from "./utils/userPermissions";
 import {
@@ -1161,7 +1162,7 @@ export default function App() {
                     {t("nav.users")}
                   </Pill>
                 )}
-                {(user?.name === "Ewen" || user?.name === "Léa") && (
+                {canAccessHotelsPage(user) && (
                   <Pill active={tab === "hotels"} onClick={() => setTab("hotels")}>
                     🏨 Hôtels
                   </Pill>
@@ -1325,7 +1326,7 @@ export default function App() {
             </Section>
           )}
 
-          {tab === "hotels" && (user?.name === "Ewen" || user?.name === "Léa") && (
+          {tab === "hotels" && canAccessHotelsPage(user) && (
             <Section title="Gestion des hôtels" subtitle="Associez les hôtels à leurs quartiers">
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
