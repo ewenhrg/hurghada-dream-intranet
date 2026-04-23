@@ -1156,7 +1156,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       </main>
 
       <a
-        href="https://wa.me/33619921449?text=Bonjour%20Hurghada%20Dream%2C%20"
+        href="https://wa.me/201062002850?text=Bonjour%20Hurghada%20Dream%2C%20"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-24 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg transition hover:scale-105 active:scale-95 lg:bottom-6"
