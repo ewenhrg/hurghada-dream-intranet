@@ -1284,7 +1284,7 @@ export default function App() {
 
         {tab === "history" && user?.canAccessHistory !== false && (
           <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")}>
-            <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
+            <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} />
           </Section>
         )}
 
