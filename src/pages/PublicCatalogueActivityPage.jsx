@@ -916,6 +916,15 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 </div>
               ))}
             </div>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-44 bg-gradient-to-b from-black/78 via-black/4 to-transparent"
+            />
+            <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(100%-4.5rem)] pr-1 sm:left-4 sm:top-4">
+              <h1 className="font-catalog-display text-lg font-bold leading-snug tracking-tight text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_2px_20px_rgba(0,0,0,0.8)] line-clamp-3 sm:text-xl">
+                {activity.name}
+              </h1>
+            </div>
             <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1.5 backdrop-blur-sm">
               {gallerySlides.map((_, i) => (
                 <div
@@ -935,10 +944,6 @@ export function PublicCatalogueActivityPage({ activityId }) {
               </button>
             </div>
           </div>
-        </div>
-
-        <div className="px-4 pt-4 md:hidden">
-          <h1 className="mb-2 font-catalog-display text-2xl font-semibold tracking-tight text-catalog-ink">{activity.name}</h1>
         </div>
 
         {/* ——— Fil + titre desktop ——— */}

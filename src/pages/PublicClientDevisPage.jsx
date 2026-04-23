@@ -701,18 +701,18 @@ export function PublicClientDevisPage() {
                             <div className="h-full w-full transition duration-500 group-hover:brightness-105" style={{ background: getCategoryCover(categoryKey) }} />
                           )}
                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#022c22]/88 via-slate-900/25 to-transparent" />
-                          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/20 to-transparent" />
-                          <div className="absolute left-3 top-3 flex flex-wrap items-center gap-2 sm:left-4 sm:top-4">
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-black/55 px-3 py-1 text-[11px] font-extrabold text-white shadow-lg backdrop-blur-md">
+                          <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/75 via-black/35 to-transparent sm:h-44" />
+                          <div className="absolute left-3 top-3 z-10 flex max-w-[min(100%,calc(100%-1.25rem))] flex-col items-start gap-2 sm:left-4 sm:top-4">
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-slate-950/88 px-3 py-1.5 text-xs font-bold text-white shadow-[0_2px_12px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:text-sm">
                               <span aria-hidden>{getCategoryEmoji(categoryKey)}</span>
                               {CATEGORIES.find((c) => c.key === categoryKey)?.label || "Activité"}
                             </span>
+                            <h3 className="line-clamp-2 text-left font-catalog-display text-[0.95rem] font-bold leading-snug tracking-tight text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_2px_16px_rgba(0,0,0,0.75)] sm:text-[1.05rem]">
+                              {activity.name}
+                            </h3>
                           </div>
                         </div>
                         <div className="flex grow flex-col bg-white p-5 sm:p-6">
-                          <h3 className="mb-3 line-clamp-2 font-catalog-display text-[1.05rem] font-semibold leading-snug text-catalog-ink transition-colors group-hover:text-teal-800 sm:text-lg">
-                            {activity.name}
-                          </h3>
                           <div className="mt-auto flex items-end justify-between gap-3 border-t-2 border-slate-100 pt-4">
                             <p className="max-w-[58%] text-left text-[11px] font-semibold leading-snug text-catalog-muted sm:text-xs">
                               Dates &amp; participants sur la fiche — ajout panier en un clic.
