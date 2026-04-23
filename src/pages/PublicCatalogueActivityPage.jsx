@@ -50,12 +50,12 @@ function normalizeCategory(rawCategory) {
 
 function getCategoryCover(categoryKey) {
   const covers = {
-    desert: "linear-gradient(140deg, rgba(245,158,11,0.95), rgba(217,119,6,0.9))",
-    aquatique: "linear-gradient(140deg, rgba(6,182,212,0.95), rgba(14,116,144,0.9))",
-    exploration_bien_etre: "linear-gradient(140deg, rgba(16,185,129,0.95), rgba(5,150,105,0.9))",
-    luxor_caire: "linear-gradient(140deg, rgba(99,102,241,0.95), rgba(79,70,229,0.9))",
-    marsa_alam: "linear-gradient(140deg, rgba(244,63,94,0.95), rgba(225,29,72,0.9))",
-    transfert: "linear-gradient(140deg, rgba(71,85,105,0.95), rgba(30,41,59,0.9))",
+    desert: "linear-gradient(145deg, rgba(251,191,36,0.98) 0%, rgba(217,119,6,0.92) 45%, rgba(180,83,9,0.88) 100%)",
+    aquatique: "linear-gradient(145deg, rgba(34,211,238,0.95) 0%, rgba(6,182,212,0.92) 50%, rgba(8,145,178,0.9) 100%)",
+    exploration_bien_etre: "linear-gradient(145deg, rgba(52,211,153,0.96) 0%, rgba(16,185,129,0.92) 50%, rgba(5,150,105,0.9) 100%)",
+    luxor_caire: "linear-gradient(145deg, rgba(165,180,252,0.98) 0%, rgba(99,102,241,0.94) 45%, rgba(67,56,202,0.9) 100%)",
+    marsa_alam: "linear-gradient(145deg, rgba(251,113,133,0.96) 0%, rgba(244,63,94,0.92) 50%, rgba(190,18,60,0.88) 100%)",
+    transfert: "linear-gradient(145deg, rgba(100,116,139,0.96) 0%, rgba(51,65,85,0.94) 50%, rgba(15,23,42,0.92) 100%)",
   };
   return covers[categoryKey] || covers.desert;
 }
@@ -854,20 +854,20 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-catalog-bg via-white to-teal-50/50 font-sans">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-teal-200 border-t-teal-600" aria-hidden />
-        <p className="mt-4 text-sm font-semibold text-slate-800">Chargement…</p>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#eef6f4] via-[#f8fafc] to-[#ecfdf5] font-catalog-sans">
+        <div className="h-12 w-12 animate-spin rounded-full border-[3px] border-teal-100 border-t-teal-700" aria-hidden />
+        <p className="mt-5 font-catalog-display text-base font-semibold text-[#022c22]">Chargement de l’activité…</p>
       </div>
     );
   }
 
   if (loadError || !activity) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-catalog-bg via-white to-teal-50/50 px-4 py-16 font-sans text-center">
-        <p className="font-display text-lg font-semibold text-slate-900">{loadError || "Activité introuvable."}</p>
+      <div className="min-h-screen bg-gradient-to-b from-[#eef6f4] via-white to-teal-50/40 px-4 py-20 text-center font-catalog-sans">
+        <p className="font-catalog-display text-lg font-semibold text-[#022c22]">{loadError || "Activité introuvable."}</p>
         <Link
           to="/catalogue"
-          className="mt-6 inline-flex items-center rounded-full bg-gradient-to-r from-teal-700 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:from-teal-800 hover:to-teal-700"
+          className="mt-8 inline-flex items-center rounded-2xl bg-gradient-to-r from-[#022c22] via-teal-900 to-emerald-900 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-teal-950/25 transition hover:brightness-110"
         >
           ← Retour au catalogue
         </Link>
@@ -876,26 +876,27 @@ export function PublicCatalogueActivityPage({ activityId }) {
   }
 
   return (
-    <div className="relative isolate flex min-h-screen flex-col bg-gradient-to-b from-catalog-bg via-white to-teal-50/40 font-sans text-slate-900 antialiased selection:bg-teal-100 selection:text-teal-950">
-      <header className="sticky top-0 z-[100] border-b border-teal-900/[0.06] bg-white/90 shadow-sm shadow-teal-950/5 backdrop-blur-md">
+    <div className="hd-public-catalog relative isolate flex min-h-screen flex-col bg-gradient-to-b from-[#eef6f4] via-[#f8fafc] to-[#ecfdf5] font-catalog-sans text-slate-900 antialiased selection:bg-amber-200/45 selection:text-teal-950">
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.96]" />
+      <header className="sticky top-0 z-[100] border-b border-white/60 bg-white/75 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_12px_40px_-18px_rgba(4,47,46,0.1)] backdrop-blur-2xl">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <Link
             to="/catalogue"
-            className="text-sm font-semibold text-teal-800 transition hover:text-teal-950 hover:underline"
+            className="rounded-xl px-3 py-2 text-sm font-bold text-teal-900 transition hover:bg-teal-50 hover:text-[#022c22]"
           >
             ← Catalogue
           </Link>
           <div className="h-8 w-px bg-slate-200/90" aria-hidden />
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-1.5 shadow-md ring-1 ring-white/10">
-              <img src="/logo.png" alt="" className="h-full w-full object-contain" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 p-1.5 shadow-lg ring-2 ring-amber-200/35 ring-offset-2 ring-offset-white/90">
+              <img src="/logo.png" alt="" className="h-full w-full object-contain drop-shadow" />
             </div>
-            <span className="font-display text-sm font-semibold text-slate-900">Hurghada Dream</span>
+            <span className="font-catalog-display text-sm font-semibold text-[#022c22]">Hurghada Dream</span>
           </div>
         </div>
       </header>
 
-      <main className="relative flex-grow pt-6 md:pt-8">
+      <main className="relative z-10 flex-grow pt-6 md:pt-8">
         {/* ——— Galerie mobile ——— */}
         <div className="px-4 md:hidden">
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[22px]">
@@ -932,7 +933,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
         </div>
 
         <div className="px-4 pt-4 md:hidden">
-          <h1 className="mb-2 font-display text-2xl font-bold tracking-tight text-slate-900">{activity.name}</h1>
+          <h1 className="mb-2 font-catalog-display text-2xl font-semibold tracking-tight text-[#022c22]">{activity.name}</h1>
         </div>
 
         {/* ——— Fil + titre desktop ——— */}
@@ -950,7 +951,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
               </li>
             </ol>
           </nav>
-          <h1 className="mb-3 font-display text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">{activity.name}</h1>
+          <h1 className="mb-3 font-catalog-display text-3xl font-semibold tracking-tight text-[#022c22] md:text-4xl">{activity.name}</h1>
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
             <div className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
               <IconMapPin className="h-4 w-4 text-teal-600/80" />

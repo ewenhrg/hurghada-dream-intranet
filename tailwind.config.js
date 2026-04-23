@@ -11,22 +11,26 @@ export default {
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
         display: ['Outfit', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        /** Pages catalogue public uniquement (Sora + Fraunces) */
+        'catalog-sans': ['Sora', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        'catalog-display': ['Fraunces', 'Georgia', 'ui-serif', 'serif'],
       },
       colors: {
         /** Palette pages catalogue public (lisible, cohérente) */
         catalog: {
-          bg: '#f4f8f7',
+          bg: '#eef6f4',
           surface: '#ffffff',
           /** Lisibilité renforcée sur fonds clairs (éviter gris trop pâles) */
           muted: '#334155',
-          ink: '#0f172a',
+          ink: '#042f2e',
           teal: '#0f766e',
           tealLight: '#14b8a6',
           deep: '#0c4c46',
           ocean: '#115e59',
-          sand: '#d4a574',
+          sand: '#c4a35a',
           sandLight: '#fef3c7',
           border: 'rgba(15, 118, 110, 0.12)',
+          night: '#022c22',
         },
         hd: {
           bg: "#f8f9fa",
@@ -48,12 +52,16 @@ export default {
           "0 2px 8px -2px rgba(15, 23, 42, 0.06), 0 16px 32px -12px rgba(15, 118, 110, 0.14)",
         "catalog-card-hover":
           "0 8px 24px -6px rgba(15, 23, 42, 0.08), 0 20px 40px -14px rgba(15, 118, 110, 0.22)",
+        "catalog-premium":
+          "0 2px 4px -1px rgba(2, 44, 34, 0.04), 0 20px 48px -12px rgba(4, 47, 46, 0.12), 0 0 0 1px rgba(255,255,255,0.65) inset",
+        "catalog-premium-hover":
+          "0 12px 40px -8px rgba(4, 47, 46, 0.18), 0 4px 16px -4px rgba(196, 163, 90, 0.15), 0 0 0 1px rgba(255,255,255,0.8) inset",
         "btn-primary": "0 4px 14px -2px rgba(15, 118, 110, 0.45), 0 2px 6px -1px rgba(15, 23, 42, 0.08)",
         "glow-teal": "0 0 48px -12px rgba(45, 212, 191, 0.35)",
       },
       backgroundImage: {
         "catalog-mesh":
-          "radial-gradient(ellipse 100% 80% at 50% -30%, rgba(45, 212, 191, 0.28) 0%, transparent 55%), radial-gradient(ellipse 70% 50% at 100% 10%, rgba(251, 191, 36, 0.14) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 0% 80%, rgba(13, 148, 136, 0.12) 0%, transparent 45%)",
+          "radial-gradient(ellipse 110% 90% at 50% -35%, rgba(45, 212, 191, 0.32) 0%, transparent 52%), radial-gradient(ellipse 80% 55% at 100% 0%, rgba(196, 163, 90, 0.18) 0%, transparent 48%), radial-gradient(ellipse 70% 50% at 0% 100%, rgba(13, 148, 136, 0.14) 0%, transparent 42%), radial-gradient(ellipse 60% 40% at 80% 85%, rgba(15, 23, 42, 0.04) 0%, transparent 50%)",
         "catalog-footer-fade": "linear-gradient(180deg, rgba(248, 250, 249, 0) 0%, rgba(236, 253, 245, 0.9) 100%)",
       },
     },

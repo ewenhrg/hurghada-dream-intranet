@@ -52,19 +52,31 @@ function normalizeCategory(rawCategory) {
 function getCategoryCover(categoryKey) {
   const covers = {
     desert:
-      "linear-gradient(140deg, rgba(245,158,11,0.95), rgba(217,119,6,0.9))",
+      "linear-gradient(145deg, rgba(251,191,36,0.98) 0%, rgba(217,119,6,0.92) 45%, rgba(180,83,9,0.88) 100%)",
     aquatique:
-      "linear-gradient(140deg, rgba(6,182,212,0.95), rgba(14,116,144,0.9))",
+      "linear-gradient(145deg, rgba(34,211,238,0.95) 0%, rgba(6,182,212,0.92) 50%, rgba(8,145,178,0.9) 100%)",
     exploration_bien_etre:
-      "linear-gradient(140deg, rgba(16,185,129,0.95), rgba(5,150,105,0.9))",
+      "linear-gradient(145deg, rgba(52,211,153,0.96) 0%, rgba(16,185,129,0.92) 50%, rgba(5,150,105,0.9) 100%)",
     luxor_caire:
-      "linear-gradient(140deg, rgba(99,102,241,0.95), rgba(79,70,229,0.9))",
+      "linear-gradient(145deg, rgba(165,180,252,0.98) 0%, rgba(99,102,241,0.94) 45%, rgba(67,56,202,0.9) 100%)",
     marsa_alam:
-      "linear-gradient(140deg, rgba(244,63,94,0.95), rgba(225,29,72,0.9))",
+      "linear-gradient(145deg, rgba(251,113,133,0.96) 0%, rgba(244,63,94,0.92) 50%, rgba(190,18,60,0.88) 100%)",
     transfert:
-      "linear-gradient(140deg, rgba(71,85,105,0.95), rgba(30,41,59,0.9))",
+      "linear-gradient(145deg, rgba(100,116,139,0.96) 0%, rgba(51,65,85,0.94) 50%, rgba(15,23,42,0.92) 100%)",
   };
   return covers[categoryKey] || covers.desert;
+}
+
+function getCategoryEmoji(categoryKey) {
+  const map = {
+    desert: "🏜",
+    aquatique: "🌊",
+    exploration_bien_etre: "✨",
+    luxor_caire: "🏛",
+    marsa_alam: "🐠",
+    transfert: "🚐",
+  };
+  return map[categoryKey] || "⭐";
 }
 
 export function PublicClientDevisPage() {
@@ -418,29 +430,30 @@ export function PublicClientDevisPage() {
   }
 
   return (
-    <div className="selection:bg-teal-200/50 selection:text-teal-950 relative min-h-screen overflow-x-hidden bg-gradient-to-b from-[#e8f7f3] via-[#fafdfb] to-[#eefbf8] font-sans text-catalog-ink antialiased">
+    <div className="hd-public-catalog selection:bg-amber-200/45 selection:text-teal-950 relative min-h-screen overflow-x-hidden bg-gradient-to-b from-[#eef6f4] via-[#f8fafc] to-[#ecfdf5] font-catalog-sans text-catalog-ink antialiased">
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.97]" />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[min(70vh,520px)] bg-catalog-mesh opacity-[0.95]"
+        className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[min(85vh,640px)] bg-[radial-gradient(ellipse_90%_70%_at_50%_-20%,rgba(196,163,90,0.12),transparent_55%)]"
       />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-0 h-48 bg-gradient-to-t from-teal-950/5 via-transparent to-transparent"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-0 h-56 bg-gradient-to-t from-teal-950/[0.06] via-transparent to-transparent"
       />
 
-      <header className="sticky top-0 z-30 border-b border-teal-900/12 bg-white/85 shadow-[0_1px_0_0_rgba(255,255,255,0.95)_inset,0_10px_40px_-14px_rgba(15,118,110,0.18)] backdrop-blur-xl backdrop-saturate-150">
+      <header className="sticky top-0 z-30 border-b border-white/60 bg-white/75 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_12px_40px_-18px_rgba(4,47,46,0.12)] backdrop-blur-2xl backdrop-saturate-150">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3.5">
-            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 p-1.5 shadow-xl shadow-teal-900/30 ring-2 ring-white">
-              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/20 to-transparent" />
-              <img src="/logo.png" alt="Hurghada Dream" className="relative h-full w-full object-contain" />
+            <div className="relative flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 p-1.5 shadow-xl shadow-teal-950/35 ring-2 ring-amber-200/40 ring-offset-2 ring-offset-white/80">
+              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/25 to-transparent" />
+              <img src="/logo.png" alt="Hurghada Dream" className="relative h-full w-full object-contain drop-shadow-md" />
             </div>
             <div className="min-w-0">
-              <p className="truncate bg-gradient-to-r from-slate-950 via-slate-900 to-teal-900 bg-clip-text font-display text-lg font-extrabold tracking-tight text-transparent">
+              <p className="truncate font-catalog-display text-lg font-semibold tracking-tight text-[#022c22] sm:text-xl">
                 Hurghada Dream
               </p>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-teal-950/95">
-                Activités &amp; excursions
+              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-teal-800/90 sm:text-[11px]">
+                Excursions · Mer Rouge
               </p>
             </div>
           </div>
@@ -492,27 +505,35 @@ export function PublicClientDevisPage() {
         </div>
       </header>
 
-      <section className="relative z-10 border-b border-teal-900/10 bg-gradient-to-b from-white/40 to-transparent">
-        <div className="relative mx-auto max-w-5xl px-4 pb-14 pt-12 text-center sm:px-6 sm:pb-16 sm:pt-16">
-          <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-teal-200/90 bg-white/90 px-5 py-2 text-[11px] font-extrabold uppercase tracking-[0.22em] text-teal-950 shadow-md shadow-teal-900/10 backdrop-blur-sm">
-            Catalogue en ligne
+      <section className="relative z-10 border-b border-teal-900/[0.07] bg-gradient-to-b from-white/55 via-white/25 to-transparent">
+        <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-12 text-center sm:px-6 sm:pb-20 sm:pt-16 lg:max-w-7xl">
+          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-white via-amber-50/90 to-white px-5 py-2 text-[10px] font-bold uppercase tracking-[0.26em] text-[#422006] shadow-md shadow-amber-900/10 backdrop-blur-sm sm:text-[11px]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" aria-hidden />
+            Catalogue en direct
           </span>
-          <h1 className="mx-auto max-w-3xl font-display text-3xl font-extrabold leading-[1.12] tracking-tight text-slate-950 sm:text-4xl md:text-[2.55rem]">
-            Trouvez votre{" "}
-            <span className="bg-gradient-to-r from-teal-800 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
-              prochaine excursion
-            </span>
+          <h1 className="mx-auto max-w-4xl font-catalog-display text-[2rem] font-semibold leading-[1.08] tracking-tight text-[#022c22] sm:text-[2.35rem] md:text-5xl md:leading-[1.06]">
+            Votre prochaine{" "}
+            <span className="relative inline-block">
+              <span className="relative z-10 bg-gradient-to-r from-teal-800 via-emerald-600 to-cyan-600 bg-clip-text font-semibold text-transparent">
+                aventure
+              </span>
+              <span
+                aria-hidden
+                className="absolute -inset-x-1 -bottom-1 h-3 rounded-md bg-gradient-to-r from-amber-200/90 via-amber-100/70 to-transparent opacity-90"
+              />
+            </span>{" "}
+            à Hurghada
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-relaxed text-slate-800 sm:text-lg sm:leading-relaxed">
-            Mer Rouge, désert, Louxor — parcourez nos activités et recevez un devis personnalisé en quelques clics.
+          <p className="mx-auto mt-6 max-w-2xl text-[15px] font-medium leading-relaxed text-slate-700 sm:text-lg sm:leading-relaxed">
+            Désert, mer, Louxor &amp; Caires — parcourez le catalogue, composez votre panier et recevez une proposition claire, sans engagement.
           </p>
 
-          <div className="mx-auto mt-10 max-w-xl">
+          <div className="mx-auto mt-12 max-w-xl">
             <label className="relative block text-left" htmlFor="public-search">
-              <span className="mb-2.5 block text-center text-[10px] font-extrabold uppercase tracking-[0.28em] text-teal-950">
-                Recherche
+              <span className="mb-2.5 block text-center text-[10px] font-bold uppercase tracking-[0.3em] text-teal-900/90">
+                Recherche instantanée
               </span>
-              <span className="relative block rounded-[1.35rem] border-2 border-teal-100/90 bg-white/90 p-1 shadow-[0_16px_48px_-14px_rgba(15,118,110,0.28)] ring-1 ring-teal-900/[0.06] backdrop-blur-md transition focus-within:border-teal-400 focus-within:shadow-[0_20px_50px_-12px_rgba(15,118,110,0.35)] focus-within:ring-2 focus-within:ring-teal-400/40">
+              <span className="relative block rounded-[1.4rem] border border-white/80 bg-white/95 p-1 shadow-catalog-premium ring-1 ring-teal-900/[0.05] backdrop-blur-md transition focus-within:border-teal-400/80 focus-within:shadow-catalog-premium-hover focus-within:ring-2 focus-within:ring-teal-400/35">
                 <svg
                   className="pointer-events-none absolute left-6 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-teal-800"
                   fill="none"
@@ -536,79 +557,103 @@ export function PublicClientDevisPage() {
             </label>
           </div>
 
-          <div className="mx-auto mt-11 flex max-w-5xl flex-wrap justify-center gap-2.5 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("all")}
-              className={`rounded-full px-5 py-2.5 text-xs font-extrabold transition-all sm:text-sm ${
-                selectedCategory === "all"
-                  ? "scale-[1.02] bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 text-white shadow-xl shadow-teal-900/30 ring-2 ring-white/95 ring-offset-2 ring-offset-[#e8f7f3]"
-                  : "border-2 border-slate-200/90 bg-white text-slate-950 shadow-md hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/80 hover:shadow-lg"
-              }`}
-            >
-              Toutes · {categoryCounts.all || 0}
-            </button>
-            {CATEGORIES.map((category) => (
+          <div className="mx-auto mt-12 max-w-5xl sm:max-w-none">
+            <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.28em] text-teal-900/75">
+              Filtrer par univers
+            </p>
+            <div className="-mx-1 flex snap-x snap-mandatory flex-nowrap justify-start gap-2 overflow-x-auto px-1 pb-2 pt-1 scrollbar-hide sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:pb-0">
               <button
-                key={category.key}
                 type="button"
-                onClick={() => setSelectedCategory(category.key)}
-                className={`rounded-full px-5 py-2.5 text-xs font-extrabold transition-all sm:text-sm ${
-                  selectedCategory === category.key
-                    ? "scale-[1.02] bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 text-white shadow-xl shadow-teal-900/30 ring-2 ring-white/95 ring-offset-2 ring-offset-[#e8f7f3]"
-                    : "border-2 border-slate-200/90 bg-white text-slate-950 shadow-md hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/80 hover:shadow-lg"
+                onClick={() => setSelectedCategory("all")}
+                className={`snap-center shrink-0 rounded-2xl px-4 py-2.5 text-left text-xs font-bold transition-all sm:rounded-full sm:px-5 sm:text-center sm:text-sm ${
+                  selectedCategory === "all"
+                    ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-[#eef6f4]"
+                    : "border border-slate-200/90 bg-white/95 text-slate-900 shadow-sm hover:-translate-y-0.5 hover:border-teal-300/80 hover:bg-teal-50/90 hover:shadow-md"
                 }`}
               >
-                {category.label} · {categoryCounts[category.key] || 0}
+                <span className="mr-1.5" aria-hidden>
+                  ✦
+                </span>
+                Toutes
+                <span className="ml-1.5 tabular-nums opacity-90">· {categoryCounts.all || 0}</span>
               </button>
-            ))}
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category.key}
+                  type="button"
+                  onClick={() => setSelectedCategory(category.key)}
+                  className={`snap-center flex min-w-[9.5rem] shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-left text-xs font-bold transition-all sm:min-w-0 sm:rounded-full sm:px-5 sm:text-center sm:text-sm ${
+                    selectedCategory === category.key
+                      ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-[#eef6f4]"
+                      : "border border-slate-200/90 bg-white/95 text-slate-900 shadow-sm hover:-translate-y-0.5 hover:border-teal-300/80 hover:bg-teal-50/90 hover:shadow-md"
+                  }`}
+                >
+                  <span className="text-base leading-none" aria-hidden>
+                    {getCategoryEmoji(category.key)}
+                  </span>
+                  <span className="leading-tight">
+                    {category.label}
+                    <span className="ml-1 tabular-nums opacity-90">· {categoryCounts[category.key] || 0}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <main className="relative z-10 mx-auto max-w-[1440px] space-y-8 px-4 py-11 sm:px-6 lg:px-8 lg:py-14">
-        <section className="space-y-9">
+      <main className="relative z-10 mx-auto max-w-[1440px] space-y-10 px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+        <section className="space-y-10">
           {error && !loading && (
-            <div className="flex items-start gap-3 rounded-2xl border-2 border-rose-300/80 bg-gradient-to-r from-rose-50 to-white px-5 py-4 text-sm font-bold text-rose-950 shadow-md">
-              <span className="text-xl" aria-hidden>
+            <div className="flex items-start gap-4 rounded-3xl border border-rose-200/90 bg-gradient-to-br from-rose-50 via-white to-rose-50/50 px-6 py-5 text-sm font-semibold text-rose-950 shadow-catalog-premium">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-500/15 text-lg font-black text-rose-700" aria-hidden>
                 !
               </span>
-              <span>{error}</span>
+              <span className="pt-0.5 leading-relaxed">{error}</span>
             </div>
           )}
 
           {loading && (
-            <div className="flex flex-col items-center justify-center gap-5 rounded-[1.75rem] border-2 border-teal-100/90 bg-white/95 py-20 shadow-[0_20px_60px_-24px_rgba(15,118,110,0.25)] backdrop-blur-sm">
-              <div className="relative h-14 w-14" aria-hidden>
-                <div className="absolute inset-0 animate-ping rounded-full bg-teal-400/35" />
-                <div className="relative h-14 w-14 animate-spin rounded-full border-[3px] border-teal-100 border-t-teal-700" />
+            <div className="flex flex-col items-center justify-center gap-6 rounded-[2rem] border border-white/80 bg-white/90 py-24 shadow-catalog-premium backdrop-blur-md">
+              <div className="relative h-16 w-16" aria-hidden>
+                <div className="absolute inset-0 animate-ping rounded-full bg-emerald-400/30" />
+                <div className="relative h-16 w-16 animate-spin rounded-full border-[3px] border-teal-100 border-t-teal-700" />
               </div>
-              <p className="font-display text-base font-bold text-slate-900">Chargement du catalogue…</p>
+              <p className="font-catalog-display text-lg font-semibold text-[#022c22]">Chargement du catalogue…</p>
+              <p className="max-w-sm text-center text-sm font-medium text-slate-600">Préparation des meilleures expériences pour vous.</p>
             </div>
           )}
 
           {!loading && !error && filteredActivities.length === 0 && (
-            <div className="rounded-[1.75rem] border-2 border-slate-200/90 bg-gradient-to-b from-white to-slate-50 px-8 py-16 text-center shadow-[0_20px_50px_-28px_rgba(15,23,42,0.18)]">
-              <p className="font-display text-2xl font-extrabold text-slate-950">Aucun résultat</p>
-              <p className="mt-3 text-base font-semibold text-slate-800">Essayez un autre mot-clé ou changez de catégorie.</p>
+            <div className="rounded-[2rem] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-teal-50/30 px-8 py-20 text-center shadow-catalog-premium">
+              <p className="font-catalog-display text-2xl font-semibold text-[#022c22]">Aucun résultat</p>
+              <p className="mx-auto mt-4 max-w-md text-base font-medium leading-relaxed text-slate-600">
+                Essayez un autre mot-clé ou changez de catégorie — notre catalogue évolue souvent.
+              </p>
             </div>
           )}
 
-          <div className="space-y-14 pb-12">
+          <div className="space-y-16 pb-16">
             {groupedActivities.map((group) => (
-              <section key={group.key} className="space-y-7">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                  <div className="flex items-center gap-4">
-                    <span className="hidden h-12 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-teal-500 via-teal-600 to-cyan-500 shadow-md sm:block" />
-                    <h2 className="font-display text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">
-                      {group.label}
-                    </h2>
+              <section key={group.key} className="space-y-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+                  <div className="flex items-start gap-4">
+                    <span className="mt-1 hidden h-14 w-1 shrink-0 rounded-full bg-gradient-to-b from-amber-400 via-teal-500 to-emerald-600 shadow-md sm:block" />
+                    <div>
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-teal-800/80">Collection</p>
+                      <h2 className="font-catalog-display text-[1.65rem] font-semibold tracking-tight text-[#022c22] sm:text-3xl md:text-[2rem]">
+                        {group.label}
+                      </h2>
+                    </div>
                   </div>
-                  <span className="inline-flex w-fit items-center rounded-full border border-teal-300/50 bg-gradient-to-r from-teal-100/90 to-cyan-50 px-4 py-2 text-xs font-extrabold text-teal-950 shadow-sm">
-                    {group.items.length} activité{group.items.length > 1 ? "s" : ""}
+                  <span className="inline-flex w-fit items-center gap-2 rounded-2xl border border-teal-200/60 bg-white/90 px-4 py-2.5 text-xs font-bold text-teal-950 shadow-sm backdrop-blur-sm">
+                    <span className="text-base leading-none" aria-hidden>
+                      {getCategoryEmoji(group.key)}
+                    </span>
+                    {group.items.length} expérience{group.items.length > 1 ? "s" : ""}
                   </span>
                 </div>
-                <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid auto-rows-fr gap-8 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {group.items.map((activity) => {
                     const categoryKey = normalizeCategory(activity.category);
                     const catalogUrls = normalizeCatalogImageUrlsFromDb(activity.catalog_image_urls);
@@ -631,46 +676,56 @@ export function PublicClientDevisPage() {
                             navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`);
                           }
                         }}
-                        className="service-card group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.5rem] border-2 border-slate-200/70 bg-white shadow-[0_12px_40px_-20px_rgba(15,23,42,0.15),0_4px_14px_-6px_rgba(15,118,110,0.12)] ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-teal-400/60 hover:shadow-[0_24px_50px_-20px_rgba(15,118,110,0.22),0_12px_32px_-12px_rgba(15,23,42,0.15)] hover:ring-teal-500/20 active:scale-[0.99]"
+                        className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.75rem] border border-white/90 bg-white/95 shadow-catalog-premium ring-1 ring-teal-900/[0.04] transition-all duration-300 ease-out hover:-translate-y-2 hover:border-teal-200/90 hover:shadow-catalog-premium-hover hover:ring-teal-500/15 active:scale-[0.99]"
                       >
-                        <div className="relative h-48 overflow-hidden bg-slate-100 sm:h-[12rem]">
+                        <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 sm:aspect-[5/4]">
                           {coverImageUrl ? (
                             <img
                               src={coverImageUrl}
                               alt=""
-                              className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.06]"
+                              className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.08]"
                               loading="lazy"
                             />
                           ) : (
-                            <div className="h-full w-full transition group-hover:brightness-105" style={{ background: getCategoryCover(categoryKey) }} />
+                            <div className="h-full w-full transition duration-500 group-hover:brightness-105" style={{ background: getCategoryCover(categoryKey) }} />
                           )}
-                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/78 via-slate-900/20 to-transparent" />
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#022c22]/88 via-slate-900/25 to-transparent" />
+                          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/20 to-transparent" />
+                          <div className="absolute left-3 top-3 flex flex-wrap items-center gap-2 sm:left-4 sm:top-4">
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/35 px-3 py-1 text-[11px] font-bold text-white shadow-md backdrop-blur-md">
+                              <span aria-hidden>{getCategoryEmoji(categoryKey)}</span>
+                              {CATEGORIES.find((c) => c.key === categoryKey)?.label || "Activité"}
+                            </span>
+                          </div>
+                          <div className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/20 text-white shadow-lg backdrop-blur-md transition group-hover:bg-white/35 sm:bottom-4 sm:right-4">
+                            <span className="text-lg font-light leading-none" aria-hidden>
+                              →
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex grow flex-col bg-gradient-to-b from-white to-slate-50/30 p-5">
-                          <h3 className="mb-2 line-clamp-2 font-display text-[1.07rem] font-extrabold leading-snug text-slate-950 transition-colors group-hover:text-teal-900 sm:text-[17px]">
+                        <div className="flex grow flex-col bg-gradient-to-b from-white via-white to-teal-50/[0.35] p-5 sm:p-6">
+                          <h3 className="mb-3 line-clamp-2 font-catalog-display text-[1.05rem] font-semibold leading-snug text-[#022c22] transition-colors group-hover:text-teal-900 sm:text-lg">
                             {activity.name}
                           </h3>
-                          <div className="mt-auto flex justify-end border-t border-slate-200/90 pt-4">
-                            <div className="flex flex-col items-end text-right">
-                              <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-800">
-                                à partir de
-                              </span>
-                              <div className="mt-1 flex items-baseline gap-1">
+                          <div className="mt-auto flex items-end justify-between gap-3 border-t border-slate-200/80 pt-4">
+                            <p className="max-w-[55%] text-left text-[11px] font-medium leading-snug text-slate-500 sm:text-xs">
+                              Dates &amp; participants sur la fiche — ajout panier en un clic.
+                            </p>
+                            <div className="flex shrink-0 flex-col items-end text-right">
+                              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">à partir de</span>
+                              <div className="mt-1">
                                 {cardFrom != null && cardFrom > 0 ? (
-                                  <span className="rounded-xl border border-slate-200/80 bg-white px-2.5 py-1 font-display text-xl font-black tabular-nums text-slate-950 shadow-sm">
+                                  <span className="inline-block rounded-xl border border-teal-200/80 bg-gradient-to-br from-white to-teal-50/80 px-3 py-1.5 font-catalog-display text-xl font-bold tabular-nums text-[#022c22] shadow-sm">
                                     {formatMoney(cardFrom, activity.currency || "EUR")}
                                   </span>
                                 ) : (
-                                  <span className="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-sm font-extrabold text-amber-950">
+                                  <span className="inline-block rounded-xl border border-amber-200/90 bg-gradient-to-br from-amber-50 to-amber-100/80 px-3 py-1.5 text-xs font-bold text-amber-950">
                                     Sur devis
                                   </span>
                                 )}
                               </div>
                             </div>
                           </div>
-                          <p className="mt-3 text-center text-[11px] font-semibold leading-snug text-slate-500">
-                            Ouvrez la fiche pour choisir la date, les participants et ajouter au panier.
-                          </p>
                         </div>
                       </article>
                     );
@@ -682,9 +737,14 @@ export function PublicClientDevisPage() {
         </section>
       </main>
 
-      <footer className="relative z-10 border-t border-teal-900/10 bg-gradient-to-b from-transparent via-teal-950/[0.02] to-teal-950/[0.04] py-14 text-center">
-        <p className="text-[11px] font-extrabold uppercase tracking-[0.28em] text-slate-900">Hurghada Dream</p>
-        <p className="mt-2.5 text-sm font-semibold text-slate-800">Excursions &amp; séjours — Mer Rouge &amp; désert</p>
+      <footer className="relative z-10 border-t border-teal-900/[0.08] bg-gradient-to-b from-white/40 via-teal-950/[0.03] to-[#022c22]/[0.06] py-16 text-center">
+        <div className="mx-auto max-w-lg px-4">
+          <p className="font-catalog-display text-sm font-semibold tracking-wide text-[#022c22]">Hurghada Dream</p>
+          <p className="mt-3 text-sm font-medium leading-relaxed text-slate-600">
+            Excursions sur-mesure · Mer Rouge, désert &amp; temples — une équipe locale à ton écoute.
+          </p>
+          <div className="mx-auto mt-6 h-px max-w-xs bg-gradient-to-r from-transparent via-amber-300/60 to-transparent" aria-hidden />
+        </div>
       </footer>
 
       {cartDrawerOpen && (
