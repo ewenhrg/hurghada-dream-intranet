@@ -430,8 +430,12 @@ export function PublicClientDevisPage() {
   }
 
   return (
-    <div className="hd-public-catalog selection:bg-amber-200/45 selection:text-teal-950 relative min-h-screen overflow-x-hidden bg-gradient-to-b from-[#eef6f4] via-[#f8fafc] to-[#ecfdf5] font-catalog-sans text-catalog-ink antialiased">
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.97]" />
+    <div className="hd-public-catalog selection:bg-amber-200/50 selection:text-catalog-ink relative min-h-screen overflow-x-hidden bg-gradient-to-b from-[#e8f4f1] via-[#f8fafc] to-[#eef8f6] font-catalog-sans text-catalog-body antialiased">
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.92]" />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0 bg-catalog-grid opacity-[0.45] [background-size:44px_44px]"
+      />
       <div
         aria-hidden
         className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[min(85vh,640px)] bg-[radial-gradient(ellipse_90%_70%_at_50%_-20%,rgba(196,163,90,0.12),transparent_55%)]"
@@ -441,7 +445,7 @@ export function PublicClientDevisPage() {
         className="pointer-events-none fixed inset-x-0 bottom-0 z-0 h-56 bg-gradient-to-t from-teal-950/[0.06] via-transparent to-transparent"
       />
 
-      <header className="sticky top-0 z-30 border-b border-white/60 bg-white/75 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_12px_40px_-18px_rgba(4,47,46,0.12)] backdrop-blur-2xl backdrop-saturate-150">
+      <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white/90 shadow-[0_1px_0_0_rgba(255,255,255,1)_inset,0_14px_40px_-16px_rgba(15,23,42,0.08)] backdrop-blur-2xl backdrop-saturate-150">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3.5">
             <div className="relative flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 p-1.5 shadow-xl shadow-teal-950/35 ring-2 ring-amber-200/40 ring-offset-2 ring-offset-white/80">
@@ -449,10 +453,10 @@ export function PublicClientDevisPage() {
               <img src="/logo.png" alt="Hurghada Dream" className="relative h-full w-full object-contain drop-shadow-md" />
             </div>
             <div className="min-w-0">
-              <p className="truncate font-catalog-display text-lg font-semibold tracking-tight text-[#022c22] sm:text-xl">
+              <p className="truncate font-catalog-display text-lg font-semibold tracking-tight text-catalog-ink sm:text-xl">
                 Hurghada Dream
               </p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-teal-800/90 sm:text-[11px]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-catalog-label sm:text-[11px]">
                 Excursions · Mer Rouge
               </p>
             </div>
@@ -511,31 +515,31 @@ export function PublicClientDevisPage() {
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" aria-hidden />
             Catalogue en direct
           </span>
-          <h1 className="mx-auto max-w-4xl font-catalog-display text-[2rem] font-semibold leading-[1.08] tracking-tight text-[#022c22] sm:text-[2.35rem] md:text-5xl md:leading-[1.06]">
+          <h1 className="mx-auto max-w-4xl font-catalog-display text-[2rem] font-semibold leading-[1.08] tracking-tight text-catalog-ink sm:text-[2.35rem] md:text-5xl md:leading-[1.06]">
             Votre prochaine{" "}
             <span className="relative inline-block">
-              <span className="relative z-10 bg-gradient-to-r from-teal-800 via-emerald-600 to-cyan-600 bg-clip-text font-semibold text-transparent">
+              <span className="relative z-10 font-semibold text-teal-700 [text-shadow:0_1px_0_rgba(255,255,255,0.95),0_2px_12px_rgba(15,118,110,0.25)]">
                 aventure
               </span>
               <span
                 aria-hidden
-                className="absolute -inset-x-1 -bottom-1 h-3 rounded-md bg-gradient-to-r from-amber-200/90 via-amber-100/70 to-transparent opacity-90"
+                className="absolute -inset-x-1 -bottom-1 z-0 h-3 rounded-md bg-gradient-to-r from-amber-300/95 via-amber-200/80 to-amber-100/40"
               />
             </span>{" "}
             à Hurghada
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-[15px] font-medium leading-relaxed text-slate-700 sm:text-lg sm:leading-relaxed">
+          <p className="mx-auto mt-6 max-w-2xl text-[15px] font-semibold leading-relaxed text-catalog-body sm:text-lg sm:leading-relaxed">
             Désert, mer, Louxor &amp; Caires — parcourez le catalogue, composez votre panier et recevez une proposition claire, sans engagement.
           </p>
 
           <div className="mx-auto mt-12 max-w-xl">
             <label className="relative block text-left" htmlFor="public-search">
-              <span className="mb-2.5 block text-center text-[10px] font-bold uppercase tracking-[0.3em] text-teal-900/90">
+              <span className="mb-2.5 block text-center text-[10px] font-extrabold uppercase tracking-[0.28em] text-catalog-label">
                 Recherche instantanée
               </span>
-              <span className="relative block rounded-[1.4rem] border border-white/80 bg-white/95 p-1 shadow-catalog-premium ring-1 ring-teal-900/[0.05] backdrop-blur-md transition focus-within:border-teal-400/80 focus-within:shadow-catalog-premium-hover focus-within:ring-2 focus-within:ring-teal-400/35">
+              <span className="relative block rounded-[1.4rem] border-2 border-slate-200/95 bg-white p-1 shadow-catalog-premium ring-1 ring-slate-900/[0.04] backdrop-blur-md transition focus-within:border-teal-500 focus-within:shadow-catalog-premium-hover focus-within:ring-2 focus-within:ring-teal-400/40">
                 <svg
-                  className="pointer-events-none absolute left-6 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-teal-800"
+                  className="pointer-events-none absolute left-6 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-teal-700"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -551,14 +555,14 @@ export function PublicClientDevisPage() {
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Nom d’activité, mot-clé, lieu…"
                   autoComplete="off"
-                  className="w-full rounded-[1.15rem] border-0 bg-transparent py-4 pl-14 pr-5 text-[15px] font-semibold text-slate-900 shadow-none outline-none ring-0 placeholder:font-medium placeholder:text-slate-600"
+                  className="w-full rounded-[1.15rem] border-0 bg-transparent py-4 pl-14 pr-5 text-[15px] font-semibold text-catalog-body shadow-none outline-none ring-0 placeholder:font-medium placeholder:text-catalog-subtle"
                 />
               </span>
             </label>
           </div>
 
           <div className="mx-auto mt-12 max-w-5xl sm:max-w-none">
-            <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.28em] text-teal-900/75">
+            <p className="mb-3 text-center text-[10px] font-extrabold uppercase tracking-[0.28em] text-catalog-label">
               Filtrer par univers
             </p>
             <div className="-mx-1 flex snap-x snap-mandatory flex-nowrap justify-start gap-2 overflow-x-auto px-1 pb-2 pt-1 scrollbar-hide sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:pb-0">
@@ -568,7 +572,7 @@ export function PublicClientDevisPage() {
                 className={`snap-center shrink-0 rounded-2xl px-4 py-2.5 text-left text-xs font-bold transition-all sm:rounded-full sm:px-5 sm:text-center sm:text-sm ${
                   selectedCategory === "all"
                     ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-[#eef6f4]"
-                    : "border border-slate-200/90 bg-white/95 text-slate-900 shadow-sm hover:-translate-y-0.5 hover:border-teal-300/80 hover:bg-teal-50/90 hover:shadow-md"
+                    : "border-2 border-slate-300 bg-white text-catalog-body shadow-sm hover:-translate-y-0.5 hover:border-teal-500/70 hover:bg-teal-50 hover:shadow-md"
                 }`}
               >
                 <span className="mr-1.5" aria-hidden>
@@ -585,7 +589,7 @@ export function PublicClientDevisPage() {
                   className={`snap-center flex min-w-[9.5rem] shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-left text-xs font-bold transition-all sm:min-w-0 sm:rounded-full sm:px-5 sm:text-center sm:text-sm ${
                     selectedCategory === category.key
                       ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-[#eef6f4]"
-                      : "border border-slate-200/90 bg-white/95 text-slate-900 shadow-sm hover:-translate-y-0.5 hover:border-teal-300/80 hover:bg-teal-50/90 hover:shadow-md"
+                      : "border-2 border-slate-300 bg-white text-catalog-body shadow-sm hover:-translate-y-0.5 hover:border-teal-500/70 hover:bg-teal-50 hover:shadow-md"
                   }`}
                 >
                   <span className="text-base leading-none" aria-hidden>
@@ -619,15 +623,15 @@ export function PublicClientDevisPage() {
                 <div className="absolute inset-0 animate-ping rounded-full bg-emerald-400/30" />
                 <div className="relative h-16 w-16 animate-spin rounded-full border-[3px] border-teal-100 border-t-teal-700" />
               </div>
-              <p className="font-catalog-display text-lg font-semibold text-[#022c22]">Chargement du catalogue…</p>
-              <p className="max-w-sm text-center text-sm font-medium text-slate-600">Préparation des meilleures expériences pour vous.</p>
+              <p className="font-catalog-display text-lg font-semibold text-catalog-ink">Chargement du catalogue…</p>
+              <p className="max-w-sm text-center text-sm font-semibold text-catalog-muted">Préparation des meilleures expériences pour vous.</p>
             </div>
           )}
 
           {!loading && !error && filteredActivities.length === 0 && (
             <div className="rounded-[2rem] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-teal-50/30 px-8 py-20 text-center shadow-catalog-premium">
-              <p className="font-catalog-display text-2xl font-semibold text-[#022c22]">Aucun résultat</p>
-              <p className="mx-auto mt-4 max-w-md text-base font-medium leading-relaxed text-slate-600">
+              <p className="font-catalog-display text-2xl font-semibold text-catalog-ink">Aucun résultat</p>
+              <p className="mx-auto mt-4 max-w-md text-base font-semibold leading-relaxed text-catalog-muted">
                 Essayez un autre mot-clé ou changez de catégorie — notre catalogue évolue souvent.
               </p>
             </div>
@@ -640,13 +644,13 @@ export function PublicClientDevisPage() {
                   <div className="flex items-start gap-4">
                     <span className="mt-1 hidden h-14 w-1 shrink-0 rounded-full bg-gradient-to-b from-amber-400 via-teal-500 to-emerald-600 shadow-md sm:block" />
                     <div>
-                      <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-teal-800/80">Collection</p>
-                      <h2 className="font-catalog-display text-[1.65rem] font-semibold tracking-tight text-[#022c22] sm:text-3xl md:text-[2rem]">
+                      <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.22em] text-catalog-label">Collection</p>
+                      <h2 className="font-catalog-display text-[1.65rem] font-semibold tracking-tight text-catalog-ink sm:text-3xl md:text-[2rem]">
                         {group.label}
                       </h2>
                     </div>
                   </div>
-                  <span className="inline-flex w-fit items-center gap-2 rounded-2xl border border-teal-200/60 bg-white/90 px-4 py-2.5 text-xs font-bold text-teal-950 shadow-sm backdrop-blur-sm">
+                  <span className="inline-flex w-fit items-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-4 py-2.5 text-xs font-extrabold text-catalog-body shadow-sm">
                     <span className="text-base leading-none" aria-hidden>
                       {getCategoryEmoji(group.key)}
                     </span>
@@ -676,7 +680,7 @@ export function PublicClientDevisPage() {
                             navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`);
                           }
                         }}
-                        className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.75rem] border border-white/90 bg-white/95 shadow-catalog-premium ring-1 ring-teal-900/[0.04] transition-all duration-300 ease-out hover:-translate-y-2 hover:border-teal-200/90 hover:shadow-catalog-premium-hover hover:ring-teal-500/15 active:scale-[0.99]"
+                        className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-slate-200/95 bg-white shadow-catalog-premium ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out hover:-translate-y-2 hover:border-teal-500/50 hover:shadow-catalog-premium-hover hover:ring-teal-500/20 active:scale-[0.99]"
                       >
                         <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 sm:aspect-[5/4]">
                           {coverImageUrl ? (
@@ -692,7 +696,7 @@ export function PublicClientDevisPage() {
                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#022c22]/88 via-slate-900/25 to-transparent" />
                           <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/20 to-transparent" />
                           <div className="absolute left-3 top-3 flex flex-wrap items-center gap-2 sm:left-4 sm:top-4">
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/35 px-3 py-1 text-[11px] font-bold text-white shadow-md backdrop-blur-md">
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-black/55 px-3 py-1 text-[11px] font-extrabold text-white shadow-lg backdrop-blur-md">
                               <span aria-hidden>{getCategoryEmoji(categoryKey)}</span>
                               {CATEGORIES.find((c) => c.key === categoryKey)?.label || "Activité"}
                             </span>
@@ -703,23 +707,25 @@ export function PublicClientDevisPage() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex grow flex-col bg-gradient-to-b from-white via-white to-teal-50/[0.35] p-5 sm:p-6">
-                          <h3 className="mb-3 line-clamp-2 font-catalog-display text-[1.05rem] font-semibold leading-snug text-[#022c22] transition-colors group-hover:text-teal-900 sm:text-lg">
+                        <div className="flex grow flex-col bg-white p-5 sm:p-6">
+                          <h3 className="mb-3 line-clamp-2 font-catalog-display text-[1.05rem] font-semibold leading-snug text-catalog-ink transition-colors group-hover:text-teal-800 sm:text-lg">
                             {activity.name}
                           </h3>
-                          <div className="mt-auto flex items-end justify-between gap-3 border-t border-slate-200/80 pt-4">
-                            <p className="max-w-[55%] text-left text-[11px] font-medium leading-snug text-slate-500 sm:text-xs">
+                          <div className="mt-auto flex items-end justify-between gap-3 border-t-2 border-slate-100 pt-4">
+                            <p className="max-w-[58%] text-left text-[11px] font-semibold leading-snug text-catalog-muted sm:text-xs">
                               Dates &amp; participants sur la fiche — ajout panier en un clic.
                             </p>
                             <div className="flex shrink-0 flex-col items-end text-right">
-                              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">à partir de</span>
+                              <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-catalog-subtle">
+                                à partir de
+                              </span>
                               <div className="mt-1">
                                 {cardFrom != null && cardFrom > 0 ? (
-                                  <span className="inline-block rounded-xl border border-teal-200/80 bg-gradient-to-br from-white to-teal-50/80 px-3 py-1.5 font-catalog-display text-xl font-bold tabular-nums text-[#022c22] shadow-sm">
+                                  <span className="inline-block rounded-xl border-2 border-teal-200 bg-teal-50/90 px-3 py-1.5 font-catalog-display text-xl font-bold tabular-nums text-catalog-ink shadow-sm">
                                     {formatMoney(cardFrom, activity.currency || "EUR")}
                                   </span>
                                 ) : (
-                                  <span className="inline-block rounded-xl border border-amber-200/90 bg-gradient-to-br from-amber-50 to-amber-100/80 px-3 py-1.5 text-xs font-bold text-amber-950">
+                                  <span className="inline-block rounded-xl border-2 border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-extrabold text-amber-950">
                                     Sur devis
                                   </span>
                                 )}
@@ -737,10 +743,10 @@ export function PublicClientDevisPage() {
         </section>
       </main>
 
-      <footer className="relative z-10 border-t border-teal-900/[0.08] bg-gradient-to-b from-white/40 via-teal-950/[0.03] to-[#022c22]/[0.06] py-16 text-center">
+      <footer className="relative z-10 border-t-2 border-slate-200/90 bg-gradient-to-b from-white via-slate-50/80 to-[#e8f4f1] py-16 text-center">
         <div className="mx-auto max-w-lg px-4">
-          <p className="font-catalog-display text-sm font-semibold tracking-wide text-[#022c22]">Hurghada Dream</p>
-          <p className="mt-3 text-sm font-medium leading-relaxed text-slate-600">
+          <p className="font-catalog-display text-sm font-semibold tracking-wide text-catalog-ink">Hurghada Dream</p>
+          <p className="mt-3 text-sm font-semibold leading-relaxed text-catalog-muted">
             Excursions sur-mesure · Mer Rouge, désert &amp; temples — une équipe locale à ton écoute.
           </p>
           <div className="mx-auto mt-6 h-px max-w-xs bg-gradient-to-r from-transparent via-amber-300/60 to-transparent" aria-hidden />
@@ -758,7 +764,7 @@ export function PublicClientDevisPage() {
           <div className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-teal-200/60 bg-white shadow-2xl shadow-teal-950/25">
             <div className="relative flex items-center justify-between overflow-hidden border-b border-teal-950/20 bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-900 px-5 py-5 text-white shadow-lg">
               <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
-              <h2 id="cart-drawer-title" className="relative font-display text-xl font-extrabold tracking-tight text-white drop-shadow-md">
+              <h2 id="cart-drawer-title" className="relative font-catalog-display text-xl font-semibold tracking-tight text-white drop-shadow-md">
                 Votre panier
               </h2>
               <button
@@ -774,10 +780,10 @@ export function PublicClientDevisPage() {
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-slate-50/40 to-white px-4 py-5">
               {cartLines.length === 0 && (
-                <p className="rounded-2xl border-2 border-dashed border-teal-200/60 bg-teal-50/40 px-5 py-10 text-center text-sm font-semibold leading-relaxed text-slate-800">
+                <p className="rounded-2xl border-2 border-dashed border-teal-300/80 bg-teal-50/70 px-5 py-10 text-center text-sm font-semibold leading-relaxed text-catalog-body">
                   Votre panier est vide.
                   <br />
-                  <span className="font-bold text-teal-900">Ajoutez des activités depuis le catalogue.</span>
+                  <span className="font-extrabold text-teal-800">Ajoutez des activités depuis le catalogue.</span>
                 </p>
               )}
               {cartLines.map((line) => {
@@ -786,10 +792,10 @@ export function PublicClientDevisPage() {
                 return (
                   <div
                     key={line.id}
-                    className="rounded-2xl border border-slate-200/60 bg-white p-4 shadow-md shadow-slate-900/5 ring-1 ring-slate-900/[0.03]"
+                    className="rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-md shadow-slate-900/8 ring-1 ring-slate-900/[0.04]"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <p className="min-w-0 flex-1 line-clamp-2 text-sm font-semibold leading-snug text-slate-900">
+                      <p className="min-w-0 flex-1 line-clamp-2 text-sm font-bold leading-snug text-catalog-body">
                         {line.activity.name}
                       </p>
                       <button
@@ -800,33 +806,35 @@ export function PublicClientDevisPage() {
                         Retirer
                       </button>
                     </div>
-                    <p className="mt-2 text-[11px] font-medium leading-snug text-slate-600">
+                    <p className="mt-2 text-[11px] font-semibold leading-snug text-catalog-muted">
                       Date et participants ne sont pas modifiables ici. Pour les changer, retirez la ligne puis rouvrez la fiche de l&apos;activité.
                     </p>
-                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2.5">
-                      <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Date d&apos;excursion</span>
-                      <p className="mt-0.5 text-sm font-bold text-slate-900">{formatCartLineDate(line.date)}</p>
+                    <div className="mt-3 rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2.5">
+                      <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-subtle">
+                        Date d&apos;excursion
+                      </span>
+                      <p className="mt-0.5 text-sm font-bold text-catalog-body">{formatCartLineDate(line.date)}</p>
                     </div>
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       <div className="space-y-1">
-                        <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-800">Adultes</span>
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-slate-900">
+                        <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-body">Adultes</span>
+                        <div className="rounded-lg border-2 border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-catalog-body">
                           {line.adults ?? 0}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-800">Enfants</span>
+                        <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-body">Enfants</span>
                         {ageChild ? (
-                          <span className="mb-1 block text-[10px] font-semibold leading-tight text-slate-600">Âge : {ageChild}</span>
+                          <span className="mb-1 block text-[10px] font-semibold leading-tight text-catalog-muted">Âge : {ageChild}</span>
                         ) : (
-                          <span className="mb-1 block text-[10px] font-medium leading-tight text-slate-500">Tarif enfant</span>
+                          <span className="mb-1 block text-[10px] font-semibold leading-tight text-catalog-subtle">Tarif enfant</span>
                         )}
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-slate-900">
+                        <div className="rounded-lg border-2 border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-catalog-body">
                           {line.children ?? 0}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-800">Bébés</span>
+                        <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-body">Bébés</span>
                         {line.activity.babies_forbidden ? (
                           <>
                             <span className="mb-1 block text-[10px] font-semibold leading-tight text-amber-900">Non autorisés</span>
@@ -837,11 +845,11 @@ export function PublicClientDevisPage() {
                         ) : (
                           <>
                             {ageBaby ? (
-                              <span className="mb-1 block text-[10px] font-semibold leading-tight text-slate-600">Âge : {ageBaby}</span>
+                              <span className="mb-1 block text-[10px] font-semibold leading-tight text-catalog-muted">Âge : {ageBaby}</span>
                             ) : (
-                              <span className="mb-1 block text-[10px] font-medium leading-tight text-slate-500">Tarif bébé</span>
+                              <span className="mb-1 block text-[10px] font-semibold leading-tight text-catalog-subtle">Tarif bébé</span>
                             )}
-                            <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-slate-900">
+                            <div className="rounded-lg border-2 border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-catalog-body">
                               {line.babies ?? 0}
                             </div>
                           </>
@@ -849,7 +857,7 @@ export function PublicClientDevisPage() {
                       </div>
                     </div>
                     <div className="mt-3 border-t border-slate-100 pt-3">
-                      <p className="font-display text-sm font-bold tabular-nums text-teal-900">
+                      <p className="font-catalog-display text-sm font-bold tabular-nums text-teal-800">
                         {formatMoney(line.lineTotal, line.activity.currency)}
                       </p>
                     </div>
@@ -859,8 +867,8 @@ export function PublicClientDevisPage() {
             </div>
             <div className="border-t border-slate-200/80 bg-gradient-to-t from-slate-50 to-white p-6 shadow-[0_-8px_30px_-12px_rgba(15,118,110,0.12)]">
               <div className="mb-4 flex items-end justify-between gap-3">
-                <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-800">Total estimé</span>
-                <span className="font-display text-2xl font-black tabular-nums text-teal-900">
+                <span className="text-xs font-extrabold uppercase tracking-[0.12em] text-catalog-body">Total estimé</span>
+                <span className="font-catalog-display text-2xl font-bold tabular-nums text-teal-800">
                   {formatMoney(cartTotal, "EUR")}
                 </span>
               </div>
@@ -893,20 +901,20 @@ export function PublicClientDevisPage() {
           />
           <form
             onSubmit={submitPublicQuote}
-            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-[1.75rem] border-2 border-teal-100/90 bg-white p-6 shadow-[0_28px_90px_-18px_rgba(15,118,110,0.38)] sm:rounded-3xl sm:p-8"
+            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-[1.75rem] border-2 border-slate-200 bg-white p-6 shadow-[0_28px_90px_-18px_rgba(15,23,42,0.18)] sm:rounded-3xl sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-teal-800">Devis</p>
-                <h2 id="checkout-title" className="font-display text-xl font-extrabold text-slate-950 sm:text-2xl">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-catalog-label">Devis</p>
+                <h2 id="checkout-title" className="font-catalog-display text-xl font-semibold text-catalog-ink sm:text-2xl">
                   Vos coordonnées
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={() => setCheckoutOpen(false)}
-                className="rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-xl p-2 text-catalog-muted transition hover:bg-slate-100 hover:text-catalog-ink"
                 aria-label="Fermer"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -923,8 +931,8 @@ export function PublicClientDevisPage() {
                 {error || success}
               </div>
             )}
-            <p className="mb-3 text-xs font-semibold leading-relaxed text-slate-700">
-              Tous les champs ci-dessous sont <strong>obligatoires</strong> pour envoyer ta demande.
+            <p className="mb-3 text-xs font-semibold leading-relaxed text-catalog-body">
+              Tous les champs ci-dessous sont <strong className="text-catalog-ink">obligatoires</strong> pour envoyer ta demande.
             </p>
             <div className="space-y-3.5">
               <input
@@ -932,7 +940,7 @@ export function PublicClientDevisPage() {
                 onChange={(e) => updateClientField("name", e.target.value)}
                 placeholder="Nom complet *"
                 required
-                className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-600 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
+                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
                 autoComplete="name"
               />
               <input
@@ -941,7 +949,7 @@ export function PublicClientDevisPage() {
                 placeholder="Téléphone *"
                 required
                 inputMode="tel"
-                className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-600 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
+                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
                 autoComplete="tel"
               />
               <input
@@ -950,7 +958,7 @@ export function PublicClientDevisPage() {
                 onChange={(e) => updateClientField("email", e.target.value)}
                 placeholder="E-mail *"
                 required
-                className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-600 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
+                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
                 autoComplete="email"
               />
               <input
@@ -958,28 +966,28 @@ export function PublicClientDevisPage() {
                 onChange={(e) => updateClientField("hotel", e.target.value)}
                 placeholder="Hôtel ou lieu de prise en charge *"
                 required
-                className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-600 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
+                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
               />
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="block space-y-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-700">Date d’arrivée *</span>
+                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-catalog-body">Date d’arrivée *</span>
                   <input
                     type="date"
                     value={client.arrivalDate}
                     onChange={(e) => updateClientField("arrivalDate", e.target.value)}
                     required
-                    className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
+                    className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
                   />
                 </label>
                 <label className="block space-y-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-700">Date de fin (départ) *</span>
+                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-catalog-body">Date de fin (départ) *</span>
                   <input
                     type="date"
                     value={client.departureDate}
                     min={client.arrivalDate || undefined}
                     onChange={(e) => updateClientField("departureDate", e.target.value)}
                     required
-                    className="w-full rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
+                    className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
                   />
                 </label>
               </div>
@@ -988,11 +996,11 @@ export function PublicClientDevisPage() {
                 onChange={(e) => updateClientField("notes", e.target.value)}
                 placeholder="Précisions (horaires, langue du guide, enfants, etc.) — optionnel"
                 rows={3}
-                className="w-full resize-none rounded-2xl border-2 border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-600 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-500/15"
+                className="w-full resize-none rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
               />
             </div>
-            <p className="mt-6 rounded-xl bg-slate-100 px-4 py-3 text-xs font-semibold text-slate-900">
-              Total : <span className="font-display font-bold text-slate-900 tabular-nums">{formatMoney(cartTotal, "EUR")}</span> —{" "}
+            <p className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-catalog-body">
+              Total : <span className="font-catalog-display font-bold text-catalog-ink tabular-nums">{formatMoney(cartTotal, "EUR")}</span> —{" "}
               {cartLines.length} ligne{cartLines.length > 1 ? "s" : ""}
             </p>
             <button

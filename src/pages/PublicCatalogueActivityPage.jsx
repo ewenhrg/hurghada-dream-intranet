@@ -130,14 +130,14 @@ function ParticipantSelect({ Icon, label, value, onChange, min, max }) {
   return (
     <div className="relative">
       <span className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2">
-        <Icon className="h-5 w-5 text-gray-800" />
+        <Icon className="h-5 w-5 text-teal-800" />
       </span>
-      <IconChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-700" />
+      <IconChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-catalog-muted" />
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         aria-label={label}
-        className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-3 pl-12 pr-10 text-sm font-medium text-slate-900 transition-colors hover:border-teal-200 focus:outline-none focus:ring-2 focus:ring-teal-500/25"
+        className="w-full appearance-none rounded-xl border-2 border-slate-300 bg-white py-3 pl-12 pr-10 text-sm font-semibold text-catalog-body transition-colors hover:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
       >
         {options.map((n) => (
           <option key={n} value={n}>
@@ -186,9 +186,9 @@ function BookingCardShell({
   return (
     <div className="space-y-3 md:space-y-4">
       <div className="border-b border-slate-200/90 pb-3 md:pb-4">
-        <p className="mb-1 text-xs font-semibold text-slate-800">À partir de (adulte)</p>
+        <p className="mb-1 text-xs font-bold text-catalog-muted">À partir de (adulte)</p>
         <div className="flex items-baseline gap-2">
-          <span className="font-display text-xl font-bold text-slate-900 tabular-nums md:text-2xl">
+          <span className="font-catalog-display text-xl font-semibold text-catalog-ink tabular-nums md:text-2xl">
             {showSurDevisHeader ? (
               <span className="text-base font-semibold text-amber-800">Tarif sur devis</span>
             ) : (
@@ -196,7 +196,7 @@ function BookingCardShell({
             )}
           </span>
         </div>
-        {priceCaption ? <p className="mt-1 text-xs font-medium text-slate-700">{priceCaption}</p> : null}
+        {priceCaption ? <p className="mt-1 text-xs font-semibold text-catalog-muted">{priceCaption}</p> : null}
         {replaceParticipantPricingLines ? (
           <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-slate-800">{replaceParticipantPricingLines}</p>
         ) : babiesForbidden ? (
@@ -856,7 +856,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#eef6f4] via-[#f8fafc] to-[#ecfdf5] font-catalog-sans">
         <div className="h-12 w-12 animate-spin rounded-full border-[3px] border-teal-100 border-t-teal-700" aria-hidden />
-        <p className="mt-5 font-catalog-display text-base font-semibold text-[#022c22]">Chargement de l’activité…</p>
+        <p className="mt-5 font-catalog-display text-base font-semibold text-catalog-ink">Chargement de l’activité…</p>
       </div>
     );
   }
@@ -864,7 +864,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
   if (loadError || !activity) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#eef6f4] via-white to-teal-50/40 px-4 py-20 text-center font-catalog-sans">
-        <p className="font-catalog-display text-lg font-semibold text-[#022c22]">{loadError || "Activité introuvable."}</p>
+        <p className="font-catalog-display text-lg font-semibold text-catalog-ink">{loadError || "Activité introuvable."}</p>
         <Link
           to="/catalogue"
           className="mt-8 inline-flex items-center rounded-2xl bg-gradient-to-r from-[#022c22] via-teal-900 to-emerald-900 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-teal-950/25 transition hover:brightness-110"
@@ -876,9 +876,13 @@ export function PublicCatalogueActivityPage({ activityId }) {
   }
 
   return (
-    <div className="hd-public-catalog relative isolate flex min-h-screen flex-col bg-gradient-to-b from-[#eef6f4] via-[#f8fafc] to-[#ecfdf5] font-catalog-sans text-slate-900 antialiased selection:bg-amber-200/45 selection:text-teal-950">
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.96]" />
-      <header className="sticky top-0 z-[100] border-b border-white/60 bg-white/75 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_12px_40px_-18px_rgba(4,47,46,0.1)] backdrop-blur-2xl">
+    <div className="hd-public-catalog relative isolate flex min-h-screen flex-col bg-gradient-to-b from-[#e8f4f1] via-[#f8fafc] to-[#eef8f6] font-catalog-sans text-catalog-body antialiased selection:bg-amber-200/50 selection:text-catalog-ink">
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.9]" />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0 bg-catalog-grid opacity-[0.4] [background-size:44px_44px]"
+      />
+      <header className="sticky top-0 z-[100] border-b border-slate-200/90 bg-white/90 shadow-[0_1px_0_0_rgba(255,255,255,1)_inset,0_14px_40px_-16px_rgba(15,23,42,0.08)] backdrop-blur-2xl">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <Link
             to="/catalogue"
@@ -891,7 +895,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 p-1.5 shadow-lg ring-2 ring-amber-200/35 ring-offset-2 ring-offset-white/90">
               <img src="/logo.png" alt="" className="h-full w-full object-contain drop-shadow" />
             </div>
-            <span className="font-catalog-display text-sm font-semibold text-[#022c22]">Hurghada Dream</span>
+            <span className="font-catalog-display text-sm font-semibold text-catalog-ink">Hurghada Dream</span>
           </div>
         </div>
       </header>
@@ -933,27 +937,27 @@ export function PublicCatalogueActivityPage({ activityId }) {
         </div>
 
         <div className="px-4 pt-4 md:hidden">
-          <h1 className="mb-2 font-catalog-display text-2xl font-semibold tracking-tight text-[#022c22]">{activity.name}</h1>
+          <h1 className="mb-2 font-catalog-display text-2xl font-semibold tracking-tight text-catalog-ink">{activity.name}</h1>
         </div>
 
         {/* ——— Fil + titre desktop ——— */}
         <div className="mx-auto hidden max-w-7xl px-4 pt-3 sm:px-6 md:block lg:px-8">
           <nav className="mb-3">
-            <ol className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+            <ol className="flex items-center gap-1.5 text-xs font-semibold text-catalog-muted">
               <li>
-                <Link to="/catalogue" className="font-medium transition-colors hover:text-teal-700">
+                <Link to="/catalogue" className="font-semibold text-catalog-label transition-colors hover:text-teal-800">
                   Catalogue
                 </Link>
               </li>
               <li aria-hidden>/</li>
               <li>
-                <span className="text-slate-700">{label}</span>
+                <span className="font-semibold text-catalog-body">{label}</span>
               </li>
             </ol>
           </nav>
-          <h1 className="mb-3 font-catalog-display text-3xl font-semibold tracking-tight text-[#022c22] md:text-4xl">{activity.name}</h1>
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-            <div className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
+          <h1 className="mb-3 font-catalog-display text-3xl font-semibold tracking-tight text-catalog-ink md:text-4xl">{activity.name}</h1>
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-catalog-body">
               <IconMapPin className="h-4 w-4 text-teal-600/80" />
               <span>{activity.name}</span>
             </div>
@@ -961,7 +965,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
               <button
                 type="button"
                 onClick={() => void sharePage()}
-                className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-teal-50 hover:text-teal-900"
+                className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-catalog-muted transition-colors hover:bg-teal-50 hover:text-teal-900"
               >
                 <IconShare className="h-5 w-5" />
                 Partager
@@ -1033,16 +1037,16 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
               {catalogProse ? (
                 <section>
-                  <p className="whitespace-pre-line text-sm font-medium leading-relaxed text-gray-800 sm:text-base">{catalogProse}</p>
+                  <p className="whitespace-pre-line text-sm font-semibold leading-relaxed text-catalog-body sm:text-base">{catalogProse}</p>
                 </section>
               ) : null}
 
               {bulletPoints.length > 0 ? (
                 <section className="grid gap-3 xl:grid-cols-[200px_1fr] xl:gap-0">
-                  <h2 className="font-display text-base font-bold text-slate-900 md:text-lg">Points forts</h2>
+                  <h2 className="font-catalog-display text-base font-semibold text-catalog-ink md:text-lg">Points forts</h2>
                   <ul className="list-inside list-disc space-y-2">
                     {bulletPoints.map((item) => (
-                      <li key={item} className="text-sm font-semibold text-gray-700 md:text-base">
+                      <li key={item} className="text-sm font-semibold text-catalog-body md:text-base">
                         {item}
                       </li>
                     ))}
@@ -1053,8 +1057,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
               <div className="border-t border-gray-200" role="separator" />
 
               <section className="grid gap-3 xl:grid-cols-[200px_1fr] xl:gap-0">
-                <h2 className="font-display text-base font-bold text-slate-900 md:text-lg">Informations</h2>
-                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-800">
+                <h2 className="font-catalog-display text-base font-semibold text-catalog-ink md:text-lg">Informations</h2>
+                <p className="whitespace-pre-line text-sm font-medium leading-relaxed text-catalog-body">
                   {informationsBody}
                 </p>
               </section>
@@ -1094,7 +1098,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
         {/* Encart mobile « disponibilités » */}
         <div id="disponibilites" className="mx-auto w-full max-w-7xl px-4 pb-28 sm:px-6 lg:hidden lg:px-8">
           <div className="rounded-3xl border border-teal-900/10 bg-white p-5 shadow-soft shadow-teal-950/10">
-            <h2 className="mb-4 font-display text-lg font-bold text-slate-900">Réserver</h2>
+            <h2 className="mb-4 font-catalog-display text-lg font-semibold text-catalog-ink">Réserver</h2>
             <BookingCardShell
               activity={activity}
               adults={adults}

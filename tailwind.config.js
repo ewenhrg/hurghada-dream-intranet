@@ -20,16 +20,20 @@ export default {
         catalog: {
           bg: '#eef6f4',
           surface: '#ffffff',
-          /** Lisibilité renforcée sur fonds clairs (éviter gris trop pâles) */
+          /** Lisibilité : encre / corps / secondaire bien séparés (WCAG-friendly sur fond clair) */
+          ink: '#011816',
+          body: '#0f172a',
           muted: '#334155',
-          ink: '#042f2e',
+          subtle: '#475569',
+          label: '#0f766e',
+          onDark: '#f8fafc',
           teal: '#0f766e',
           tealLight: '#14b8a6',
           deep: '#0c4c46',
           ocean: '#115e59',
           sand: '#c4a35a',
           sandLight: '#fef3c7',
-          border: 'rgba(15, 118, 110, 0.12)',
+          border: 'rgba(15, 23, 42, 0.12)',
           night: '#022c22',
         },
         hd: {
@@ -61,7 +65,10 @@ export default {
       },
       backgroundImage: {
         "catalog-mesh":
-          "radial-gradient(ellipse 110% 90% at 50% -35%, rgba(45, 212, 191, 0.32) 0%, transparent 52%), radial-gradient(ellipse 80% 55% at 100% 0%, rgba(196, 163, 90, 0.18) 0%, transparent 48%), radial-gradient(ellipse 70% 50% at 0% 100%, rgba(13, 148, 136, 0.14) 0%, transparent 42%), radial-gradient(ellipse 60% 40% at 80% 85%, rgba(15, 23, 42, 0.04) 0%, transparent 50%)",
+          "radial-gradient(ellipse 110% 90% at 50% -35%, rgba(45, 212, 191, 0.22) 0%, transparent 52%), radial-gradient(ellipse 80% 55% at 100% 0%, rgba(196, 163, 90, 0.12) 0%, transparent 48%), radial-gradient(ellipse 70% 50% at 0% 100%, rgba(13, 148, 136, 0.1) 0%, transparent 42%), radial-gradient(ellipse 60% 40% at 80% 85%, rgba(15, 23, 42, 0.06) 0%, transparent 50%)",
+        /** Grille très légère pour texture « éditoriale » */
+        "catalog-grid":
+          "linear-gradient(to right, rgba(15,23,42,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.04) 1px, transparent 1px)",
         "catalog-footer-fade": "linear-gradient(180deg, rgba(248, 250, 249, 0) 0%, rgba(236, 253, 245, 0.9) 100%)",
       },
     },
