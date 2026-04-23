@@ -701,11 +701,6 @@ export function PublicClientDevisPage() {
                               {CATEGORIES.find((c) => c.key === categoryKey)?.label || "Activité"}
                             </span>
                           </div>
-                          <div className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/20 text-white shadow-lg backdrop-blur-md transition group-hover:bg-white/35 sm:bottom-4 sm:right-4">
-                            <span className="text-lg font-light leading-none" aria-hidden>
-                              →
-                            </span>
-                          </div>
                         </div>
                         <div className="flex grow flex-col bg-white p-5 sm:p-6">
                           <h3 className="mb-3 line-clamp-2 font-catalog-display text-[1.05rem] font-semibold leading-snug text-catalog-ink transition-colors group-hover:text-teal-800 sm:text-lg">
