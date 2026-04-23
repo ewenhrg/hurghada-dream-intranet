@@ -123,6 +123,36 @@ export default function App() {
     setOk(false);
   }, []);
 
+  /** Déconnexion à distance (tableau de bord Ewen) : broadcast sur le même canal que la présence. */
+  const sendForceLogoutRequest = useCallback(async (target) => {
+    const ch = intranetPresenceChannelRef.current;
+    if (!ch || !__SUPABASE_DEBUG__.isConfigured) {
+      toast.error("Le canal temps réel n’est pas prêt. Réessayez dans quelques secondes.");
+      return;
+    }
+    const codeTrim =
+      target?.code != null && String(target.code).trim() !== "" ? String(target.code).trim() : "";
+    const nameTrim =
+      target?.name != null && String(target.name).trim() !== "" ? String(target.name).trim() : "";
+    if (!codeTrim && !nameTrim) {
+      toast.error("Impossible d’identifier l’utilisateur à déconnecter.");
+      return;
+    }
+    const payload = codeTrim ? { code: codeTrim } : { name: nameTrim };
+    const { error } = await ch.send({
+      type: "broadcast",
+      event: "hd_force_logout",
+      payload,
+    });
+    if (error) {
+      logger.warn("Déconnexion forcée : erreur d’envoi", error);
+      toast.error("Impossible d’envoyer la demande de déconnexion.");
+      return;
+    }
+    const label = codeTrim ? `le code ${codeTrim}` : nameTrim;
+    toast.success(`Demande de déconnexion envoyée pour ${label}.`);
+  }, []);
+
   /** Onglet Devis : préremplir le formulaire depuis une demande catalogue (événement émis par PublicDevisPage). */
   useEffect(() => {
     const handler = (e) => {
@@ -179,10 +209,31 @@ export default function App() {
       }
     };
 
+    const shouldForceLogoutFromPayload = (payload) => {
+      const pCode = payload?.code != null ? String(payload.code).trim() : "";
+      if (pCode) {
+        const myCode = user?.code != null ? String(user.code).trim() : "";
+        return myCode !== "" && pCode === myCode;
+      }
+      const pName = payload?.name != null ? String(payload.name).trim() : "";
+      if (!pName) return false;
+      const myName = (user?.name && String(user.name).trim()) || "";
+      return (
+        myName !== "" &&
+        pName.localeCompare(myName, "fr", { sensitivity: "accent" }) === 0
+      );
+    };
+
     channel
       .on("presence", { event: "sync" }, pushPresenceSnapshot)
       .on("presence", { event: "join" }, pushPresenceSnapshot)
       .on("presence", { event: "leave" }, pushPresenceSnapshot)
+      .on("broadcast", { event: "hd_force_logout" }, (msg) => {
+        const payload = msg?.payload != null ? msg.payload : msg;
+        if (shouldForceLogoutFromPayload(payload)) {
+          handleLogout();
+        }
+      })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           const { error } = await channel.track({
@@ -206,7 +257,7 @@ export default function App() {
       clearChannel();
       setPresenceState({});
     };
-  }, [ok, user?.code, user?.name, user?.id]);
+  }, [ok, user?.code, user?.name, user?.id, handleLogout]);
 
   // fonction de synchronisation Supabase - mémoïsée avec useCallback et cache
   // Note: setActivities et setRemoteEnabled sont des setters stables de React, pas besoin de dépendances
@@ -1284,7 +1335,7 @@ export default function App() {
 
         {tab === "history" && user?.canAccessHistory !== false && (
           <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")}>
-            <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} />
+            <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
           </Section>
         )}
 
@@ -1344,6 +1395,7 @@ export default function App() {
                     user={user}
                     presenceState={presenceState}
                     supabaseConfigured={__SUPABASE_DEBUG__.isConfigured}
+                    onForceLogoutRequest={sendForceLogoutRequest}
                   />
                 </Suspense>
               </ErrorBoundary>

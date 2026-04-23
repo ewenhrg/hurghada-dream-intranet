@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
+import { GhostBtn } from "../components/ui";
 
 /**
  * Regroupe les entrées Realtime Presence (une par onglet / connexion) par code utilisateur.
@@ -13,7 +14,7 @@ function presenceStateToRows(presenceState) {
       const prev = byKey.get(mapKey);
       const sessions = prev ? prev.sessions + 1 : 1;
       const onlineAt = Math.max(prev?.onlineAt || 0, Number(row.online_at) || 0);
-      byKey.set(mapKey, { name, code: code || null, sessions, onlineAt });
+      byKey.set(mapKey, { mapKey, name, code: code || null, sessions, onlineAt });
     }
   }
   return [...byKey.values()].sort((a, b) =>
@@ -21,8 +22,24 @@ function presenceStateToRows(presenceState) {
   );
 }
 
-export function EwenDashboardPage({ user, presenceState, supabaseConfigured }) {
+export function EwenDashboardPage({ user, presenceState, supabaseConfigured, onForceLogoutRequest }) {
   const onlineRows = useMemo(() => presenceStateToRows(presenceState), [presenceState]);
+
+  const handleForceLogoutRow = useCallback(
+    (row) => {
+      if (!onForceLogoutRequest) return;
+      const label = row.code ? `le code ${row.code}` : row.name;
+      if (
+        !window.confirm(
+          `Déconnecter cet utilisateur (${label}) sur tous ses onglets ouverts ? La session locale sera effacée sur chaque navigateur qui reçoit le message temps réel.`
+        )
+      ) {
+        return;
+      }
+      onForceLogoutRequest({ code: row.code, name: row.name });
+    },
+    [onForceLogoutRequest]
+  );
 
   return (
     <div className="space-y-8">
@@ -47,7 +64,7 @@ export function EwenDashboardPage({ user, presenceState, supabaseConfigured }) {
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Qui est en ligne</h2>
             <p className="text-sm text-slate-600">
-              Connexions actives à l’intranet (temps réel Supabase). Un même compte sur plusieurs onglets compte plusieurs sessions.
+              Connexions actives à l’intranet (temps réel Supabase). Un même compte sur plusieurs onglets compte plusieurs sessions. Vous pouvez forcer la déconnexion si quelqu’un a laissé une session ouverte.
             </p>
           </div>
           <span className="text-sm font-medium tabular-nums px-3 py-1 rounded-full bg-white/90 border border-emerald-200 text-emerald-900">
@@ -67,7 +84,7 @@ export function EwenDashboardPage({ user, presenceState, supabaseConfigured }) {
           <ul className="divide-y divide-slate-100">
             {onlineRows.map((row) => (
               <li
-                key={row.code || row.name}
+                key={row.mapKey}
                 className="px-5 py-4 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -86,7 +103,7 @@ export function EwenDashboardPage({ user, presenceState, supabaseConfigured }) {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                   {row.sessions > 1 && (
                     <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800">
                       {row.sessions} onglets
@@ -96,6 +113,17 @@ export function EwenDashboardPage({ user, presenceState, supabaseConfigured }) {
                     <span className="h-2 w-2 rounded-full bg-emerald-500" />
                     En ligne
                   </span>
+                  {onForceLogoutRequest && (row.code || (row.name && row.name !== "—")) && (
+                    <GhostBtn
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      className="min-h-0 min-w-0 py-2"
+                      onClick={() => handleForceLogoutRow(row)}
+                    >
+                      Déconnecter
+                    </GhostBtn>
+                  )}
                 </div>
               </li>
             ))}
