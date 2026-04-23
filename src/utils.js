@@ -259,8 +259,23 @@ export function calculateTransferSurcharge(item) {
   return surchargePerAdult * (adults + children);
 }
 
-// Générer un template HTML professionnel pour le devis
-export function generateQuoteHTML(quote) {
+/**
+ * @param {object} quote
+ * @param {{ variant?: "devis" | "facture" }} [options] — `facture` : titre FACTURE, libellés Total HT / Total TTC (mêmes montants que devis espèces / carte).
+ */
+export function generateQuoteHTML(quote, options = {}) {
+  const variant = options.variant === "facture" ? "facture" : "devis";
+  const docTitleUpper = variant === "facture" ? "FACTURE" : "DEVIS";
+  const windowTitlePrefix = variant === "facture" ? "Facture" : "Devis";
+  const detailsHeading = variant === "facture" ? "Détails de la facture" : "Détails du Devis";
+  const totalCashLabel = variant === "facture" ? "Total HT :" : "Total Espèces:";
+  const totalCardLabel =
+    variant === "facture" ? "Total TTC :" : "Total Carte (avec frais 3%):";
+  const finePrint =
+    variant === "facture"
+      ? "Cette facture est fournie à titre informatif. Les horaires sont approximatifs et seront confirmés la veille de votre départ."
+      : "Ce devis est fourni à titre informatif. Les horaires sont approximatifs et seront confirmés la veille de votre départ.";
+
   const date = new Date(quote.createdAt).toLocaleDateString("fr-FR", {
     day: "2-digit",
     month: "long",
@@ -347,7 +362,7 @@ export function generateQuoteHTML(quote) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Devis - ${quote.client?.name || quote.client?.phone || "Client"}</title>
+  <title>${windowTitlePrefix} - ${quote.client?.name || quote.client?.phone || "Client"}</title>
   <style>
     * {
       margin: 0;
@@ -422,11 +437,13 @@ export function generateQuoteHTML(quote) {
       font-size: 14px;
     }
     .quote-title {
-      text-align: center;
+      text-align: right;
+      align-self: flex-start;
       color: #1e40af;
       font-size: 28px;
       font-weight: bold;
-      margin-top: 20px;
+      margin-top: 0;
+      white-space: nowrap;
     }
     .quote-info {
       display: grid;
@@ -589,7 +606,7 @@ export function generateQuoteHTML(quote) {
           <h1>HURGHADA DREAM</h1>
           <p>Votre partenaire pour des excursions inoubliables</p>
         </div>
-        <div class="quote-title">DEVIS</div>
+        <div class="quote-title">${docTitleUpper}</div>
       </div>
       
       <div class="quote-info">
@@ -606,7 +623,7 @@ export function generateQuoteHTML(quote) {
         </div>
         
         <div class="info-box">
-          <h3>Détails du Devis</h3>
+          <h3>${detailsHeading}</h3>
           <p><strong>Date:</strong> ${date}</p>
           ${quote.createdByName ? `<p><strong>Créé par:</strong> ${quote.createdByName}</p>` : ""}
         </div>
@@ -637,11 +654,11 @@ export function generateQuoteHTML(quote) {
 
     <div class="totals-section">
       <div class="total-row cash">
-        <span>Total Espèces:</span>
+        <span>${totalCashLabel}</span>
         <span><strong>${currencyNoCents(quote.totalCash || Math.round(quote.total), quote.currency)}</strong></span>
       </div>
       <div class="total-row card">
-        <span>Total Carte (avec frais 3%):</span>
+        <span>${totalCardLabel}</span>
         <span><strong>${currencyNoCents(quote.totalCard || calculateCardPrice(quote.total), quote.currency)}</strong></span>
       </div>
     </div>
@@ -660,7 +677,7 @@ export function generateQuoteHTML(quote) {
 
     <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
       <p style="font-size: 13px; color: #6b7280; font-style: italic;">
-        Ce devis est fourni à titre informatif. Les horaires sont approximatifs et seront confirmés la veille de votre départ.
+        ${finePrint}
       </p>
     </div>
     </div>

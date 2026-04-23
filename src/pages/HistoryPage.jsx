@@ -75,6 +75,21 @@ function QuoteCardComponent({
     }
   }, [d]);
 
+  const handleInvoiceClick = useCallback(() => {
+    const htmlContent = generateQuoteHTML(d, { variant: "facture" });
+    const clientPhone = d.client?.phone || "";
+    const fileName = `Facture - ${clientPhone}`;
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.write(htmlContent);
+      newWindow.document.title = fileName;
+      newWindow.document.close();
+      setTimeout(() => {
+        newWindow.print();
+      }, 500);
+    }
+  }, [d]);
+
   // Optimisation : Utiliser useCallback avec une fonction optimisée qui évite les transformations lourdes
   const handleEditClick = useCallback(() => {
     // Préparer les données de manière optimisée avec valeurs par défaut
@@ -342,6 +357,13 @@ function QuoteCardComponent({
                 onClick={handlePrintClick}
               >
                 🖨️ Imprimer
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-slate-600 bg-gradient-to-r from-slate-600 to-slate-800 hover:from-slate-700 hover:to-slate-900 shadow-lg transition-opacity duration-150 min-h-[44px] hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                onClick={handleInvoiceClick}
+              >
+                📄 Facture
               </button>
               {!allTicketsFilled && (
                 <button
