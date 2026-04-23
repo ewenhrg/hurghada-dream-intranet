@@ -279,38 +279,42 @@ function QuoteCardComponent({
           </div>
         </div>
         
-        {/* Section activités et total */}
-        <div className="flex flex-col gap-5 md:gap-6 pt-4 md:pt-5 border-t border-slate-200/60 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex-1 space-y-3 min-w-0">
+        {/* Section activités + colonne totaux & actions (largeur max pour ne pas écraser le texte) */}
+        <div className="flex flex-col gap-5 md:gap-6 pt-4 md:pt-5 border-t border-slate-200/60 lg:flex-row lg:items-stretch lg:gap-6 lg:justify-between">
+          <div className="min-w-0 w-full flex-1 space-y-3">
             <div className="space-y-2.5 md:space-y-3">
               {d.itemsWithFormattedDates.map((li, i) => (
                 <div
                   key={i}
-                  className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 md:gap-4 rounded-xl border border-slate-200/70 bg-white/90 backdrop-blur-sm px-4 md:px-5 py-3 md:py-4 shadow-md transition-all duration-200 hover:shadow-lg hover:border-blue-300/70 hover:bg-white animate-fade-in"
+                  className="flex flex-col gap-3 md:flex-row md:items-stretch md:gap-4 rounded-xl border border-slate-200/70 bg-white/90 backdrop-blur-sm px-4 md:px-5 py-3 md:py-4 shadow-md transition-all duration-200 hover:shadow-lg hover:border-blue-300/70 hover:bg-white animate-fade-in"
                   style={{ animationDelay: `${i * 50}ms` }}
                 >
-                  <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-                    <span className="text-sm md:text-base font-bold text-slate-900 break-words flex items-center gap-2">
-                      <span className="text-lg">🎯</span>
-                      {li.activityName || "Activité ?"}
-                    </span>
-                    <span className="text-xs md:text-sm text-slate-600 font-medium break-words flex items-center gap-3 flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <span>📅</span>
-                        {li.formattedDate}
+                  <div className="min-w-0 w-full flex-1 flex flex-col gap-2">
+                    <span className="text-sm md:text-base font-bold text-slate-900 break-words [overflow-wrap:anywhere] flex items-start gap-2">
+                      <span className="text-lg shrink-0" aria-hidden>
+                        🎯
                       </span>
-                      <span className="flex items-center gap-1">
-                        <span>👥</span>
-                        {li.adults ?? 0} adt / {li.children ?? 0} enf / {li.babies ?? 0} bébé(s)
-                      </span>
+                      <span className="min-w-0 leading-snug">{li.activityName || "Activité ?"}</span>
                     </span>
+                    <div className="flex flex-col gap-1.5 pl-0 sm:pl-8 text-xs md:text-sm text-slate-600 font-medium">
+                      <span className="break-words flex items-center gap-1.5">
+                        <span className="shrink-0">📅</span>
+                        <span className="min-w-0">{li.formattedDate}</span>
+                      </span>
+                      <span className="break-words [overflow-wrap:anywhere] flex items-center gap-1.5">
+                        <span className="shrink-0">👥</span>
+                        <span>
+                          {li.adults ?? 0} adt / {li.children ?? 0} enf / {li.babies ?? 0} bébé(s)
+                        </span>
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
-                    <span className="text-base md:text-lg lg:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-slate-200/50 pt-3 md:border-t-0 md:pt-0 md:flex-col md:items-end md:justify-center md:min-w-[7.5rem]">
+                    <span className="text-base md:text-lg font-bold tabular-nums bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent whitespace-nowrap">
                       💵 {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
                     </span>
                     {li.ticketNumber && li.ticketNumber.trim() !== "" && (
-                      <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-2 border-emerald-600 shadow-md">
+                      <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-2 border-emerald-600 shadow-md whitespace-nowrap max-w-full truncate">
                         🎫 {li.ticketNumber}
                       </span>
                     )}
@@ -328,46 +332,49 @@ function QuoteCardComponent({
             )}
           </div>
           
-          {/* Zone total améliorée */}
-          <div className="flex flex-col items-end gap-4 min-w-[240px] bg-gradient-to-br from-white/90 to-blue-50/50 backdrop-blur-sm rounded-xl p-5 md:p-6 border-2 border-blue-200/60 shadow-lg">
-            <div className="text-right w-full">
+          {/* Colonne totaux : largeur bornée pour laisser toute la place au texte des activités à gauche */}
+          <div className="w-full max-w-full shrink-0 lg:w-[min(100%,20.5rem)] lg:max-w-[20.5rem] self-stretch flex flex-col items-stretch gap-4 bg-gradient-to-br from-white/90 to-blue-50/50 backdrop-blur-sm rounded-xl p-4 md:p-5 border-2 border-blue-200/60 shadow-lg">
+            <div className="text-left lg:text-right w-full">
               <p className="text-xs md:text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wider">Total du devis</p>
               <div className="space-y-1.5">
-                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                <p className="text-2xl md:text-3xl font-bold tabular-nums bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent [overflow-wrap:anywhere]">
                   💵 {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
                 </p>
-                <p className="text-lg md:text-xl font-semibold text-slate-700">
+                <p className="text-lg md:text-xl font-semibold text-slate-700 tabular-nums [overflow-wrap:anywhere]">
                   💳 {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap justify-end gap-2 md:gap-3 w-full pt-2 border-t border-slate-200/60">
+            <div className="grid w-full grid-cols-1 min-[400px]:grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 auto-rows-min">
               <button
-                className={`flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 shadow-lg transition-opacity duration-150 min-h-[44px] hover:opacity-90 active:opacity-75 hover:shadow-xl ${
+                className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl ${
                   allTicketsFilled 
                     ? "bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-500 hover:from-emerald-700 hover:to-teal-700" 
                     : "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-400 hover:from-emerald-600 hover:to-teal-600"
                 }`}
                 onClick={handlePaymentClick}
+                type="button"
               >
                 {allTicketsFilled ? "✅ Tickets" : "💰 Payer"}
               </button>
               <button
-                className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg transition-opacity duration-150 min-h-[44px] hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
                 onClick={handlePrintClick}
+                type="button"
               >
                 🖨️ Imprimer
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-slate-600 bg-gradient-to-r from-slate-600 to-slate-800 hover:from-slate-700 hover:to-slate-900 shadow-lg transition-opacity duration-150 min-h-[44px] hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-slate-600 bg-gradient-to-r from-slate-600 to-slate-800 hover:from-slate-700 hover:to-slate-900 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
                 onClick={handleInvoiceClick}
               >
                 📄 Facture
               </button>
               {!allTicketsFilled && (
                 <button
-                  className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-amber-500 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg transition-opacity duration-150 min-h-[44px] hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                  type="button"
+                  className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-amber-500 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
                   onClick={handleEditClick}
                 >
                   ✏️ Modifier
@@ -375,7 +382,8 @@ function QuoteCardComponent({
               )}
               {user?.canDeleteQuote && (
                 <button
-                  className="flex items-center gap-2 rounded-xl px-4 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-bold text-white border-2 border-red-500 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg transition-opacity duration-150 min-h-[44px] hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                  type="button"
+                  className="min-[400px]:col-span-2 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-red-500 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
                   onClick={handleDeleteClick}
                 >
                   🗑️ Supprimer
