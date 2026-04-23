@@ -417,10 +417,10 @@ export function PublicClientDevisPage() {
     try {
       const { error: insertError } = await supabase.from("public_quotes").insert(payload);
       if (insertError) {
-        setError(insertError.message || "Impossible d'envoyer ton devis.");
+        setError(insertError.message || "Impossible d'envoyer votre devis.");
         return;
       }
-      setSuccess("Demande envoyée avec succès. Nous te contactons rapidement.");
+      setSuccess("Demande envoyée avec succès. Nous vous contactons rapidement.");
       setCart([]);
       setClient({
         name: "",
@@ -766,7 +766,7 @@ export function PublicClientDevisPage() {
         <div className="mx-auto max-w-lg animate-catalog-in-fade px-4 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "320ms" }}>
           <p className="font-catalog-display text-sm font-semibold tracking-wide text-catalog-ink">Hurghada Dream</p>
           <p className="mt-3 text-sm font-semibold leading-relaxed text-catalog-muted">
-            Excursions sur-mesure · Mer Rouge, désert &amp; temples — une équipe locale à ton écoute.
+            Excursions sur-mesure · Mer Rouge, désert &amp; temples — une équipe locale à votre écoute.
           </p>
           <div className="mx-auto mt-6 h-px max-w-xs bg-gradient-to-r from-transparent via-amber-300/60 to-transparent" aria-hidden />
         </div>
@@ -951,7 +951,7 @@ export function PublicClientDevisPage() {
               </div>
             )}
             <p className="mb-3 text-xs font-semibold leading-relaxed text-catalog-body">
-              Tous les champs ci-dessous sont <strong className="text-catalog-ink">obligatoires</strong> pour envoyer ta demande.
+              Tous les champs ci-dessous sont <strong className="text-catalog-ink">obligatoires</strong> pour envoyer votre demande.
             </p>
             <div className="space-y-3.5">
               <input
