@@ -854,7 +854,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   if (loading) {
     return (
-      <div className="hd-public-catalog flex min-h-screen flex-col items-center justify-center bg-[#f3efe4] font-catalog-sans text-catalog-body">
+      <div className="hd-public-catalog flex min-h-screen flex-col items-center justify-center bg-[#f3efe4] font-catalog-sans text-catalog-body animate-catalog-in-fade opacity-0 motion-reduce:animate-none motion-reduce:opacity-100">
         <div className="h-12 w-12 animate-spin rounded-full border-[3px] border-teal-200 border-t-teal-800" aria-hidden />
         <p className="mt-5 font-catalog-display text-base font-semibold text-catalog-ink">Chargement de l’activité…</p>
       </div>
@@ -863,7 +863,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   if (loadError || !activity) {
     return (
-      <div className="hd-public-catalog min-h-screen bg-[#f3efe4] px-4 py-20 text-center font-catalog-sans text-catalog-body">
+      <div className="hd-public-catalog min-h-screen bg-[#f3efe4] px-4 py-20 text-center font-catalog-sans text-catalog-body animate-catalog-in-fade opacity-0 motion-reduce:animate-none motion-reduce:opacity-100">
         <p className="font-catalog-display text-lg font-semibold text-catalog-ink">{loadError || "Activité introuvable."}</p>
         <Link
           to="/catalogue"
@@ -884,7 +884,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
         className="pointer-events-none fixed inset-0 z-0 bg-catalog-grid opacity-[0.12] [background-size:44px_44px]"
       />
       <header className="sticky top-0 z-[100] border-b border-amber-400/35 bg-slate-950 text-white shadow-[0_12px_40px_-12px_rgba(0,0,0,0.55)]">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl animate-catalog-in-fade items-center gap-4 px-4 py-3.5 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:px-6 lg:px-8">
           <Link
             to="/catalogue"
             className="rounded-xl px-3 py-2 text-sm font-bold text-amber-200/95 transition hover:bg-white/10 hover:text-white"
@@ -904,7 +904,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       <main className="relative z-10 flex-grow pt-6 md:pt-8">
         {/* ——— Galerie mobile ——— */}
         <div className="px-4 md:hidden">
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[22px]">
+          <div className="relative aspect-[4/3] w-full animate-catalog-in-soft overflow-hidden rounded-[22px] opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "60ms" }}>
             <div ref={carouselRef} onScroll={onCarouselScroll} className="scrollbar-hide flex h-full snap-x snap-mandatory gap-0 overflow-x-auto">
               {gallerySlides.map((slide, i) => (
                 <div key={i} className="relative h-full min-w-full shrink-0 snap-start overflow-hidden">
@@ -947,7 +947,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
         </div>
 
         {/* ——— Fil + titre desktop ——— */}
-        <div className="mx-auto hidden max-w-7xl px-4 pt-3 sm:px-6 md:block lg:px-8">
+        <div className="mx-auto hidden max-w-7xl animate-catalog-in-up px-4 pt-3 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:px-6 md:block lg:px-8" style={{ animationDelay: "40ms" }}>
           <nav className="mb-3">
             <ol className="flex items-center gap-1.5 text-xs font-semibold text-catalog-muted">
               <li>
@@ -980,7 +980,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
           </div>
         </div>
 
-        <div className="mx-auto max-w-7xl px-4 py-4 pb-24 sm:px-6 md:pb-12 lg:px-8 lg:pb-16">
+        <div className="mx-auto max-w-7xl animate-catalog-in-fade px-4 py-4 pb-24 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:px-6 md:pb-12 lg:px-8 lg:pb-16" style={{ animationDelay: "120ms" }}>
           <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
             {/* ——— Colonne contenu ——— */}
             <div className="space-y-6 lg:col-span-2">

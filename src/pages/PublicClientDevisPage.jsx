@@ -145,6 +145,18 @@ export function PublicClientDevisPage() {
       .filter((category) => category.items.length > 0);
   }, [filteredActivities]);
 
+  /** Délais d’entrée échelonnés pour les cartes (effet « vivant », plafonné pour perf). */
+  const catalogCardEnterDelayMsById = useMemo(() => {
+    const map = new Map();
+    let idx = 0;
+    groupedActivities.forEach((g) => {
+      g.items.forEach((a) => {
+        map.set(a.id, Math.min(idx++, 20) * 42);
+      });
+    });
+    return map;
+  }, [groupedActivities]);
+
   const categoryCounts = useMemo(() => {
     const counts = { all: activities.length };
     CATEGORIES.forEach((category) => {
@@ -444,7 +456,7 @@ export function PublicClientDevisPage() {
       />
 
       <header className="sticky top-0 z-30 border-b border-amber-400/35 bg-slate-950 text-white shadow-[0_12px_40px_-12px_rgba(0,0,0,0.55)]">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1440px] animate-catalog-in-fade items-center justify-between gap-4 px-4 py-3.5 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3.5">
             <div className="relative flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 p-1.5 shadow-xl shadow-black/40 ring-2 ring-amber-300/50 ring-offset-2 ring-offset-slate-950">
               <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/25 to-transparent" />
@@ -509,11 +521,11 @@ export function PublicClientDevisPage() {
 
       <section className="relative z-10 border-b border-slate-200/90 bg-white">
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-12 text-center sm:px-6 sm:pb-20 sm:pt-16 lg:max-w-7xl">
-          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-white via-amber-50/90 to-white px-5 py-2 text-[10px] font-bold uppercase tracking-[0.26em] text-[#422006] shadow-md shadow-amber-900/10 backdrop-blur-sm sm:text-[11px]">
+          <span className="mb-6 inline-flex animate-catalog-in-up items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-white via-amber-50/90 to-white px-5 py-2 text-[10px] font-bold uppercase tracking-[0.26em] text-[#422006] opacity-0 shadow-md shadow-amber-900/10 backdrop-blur-sm motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[11px]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" aria-hidden />
             Catalogue en direct
           </span>
-          <h1 className="mx-auto max-w-4xl font-catalog-display text-[2rem] font-semibold leading-[1.08] tracking-tight text-catalog-ink sm:text-[2.35rem] md:text-5xl md:leading-[1.06]">
+          <h1 className="mx-auto max-w-4xl animate-catalog-in-up font-catalog-display text-[2rem] font-semibold leading-[1.08] tracking-tight text-catalog-ink opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[2.35rem] md:text-5xl md:leading-[1.06]" style={{ animationDelay: "70ms" }}>
             Votre prochaine{" "}
             <span className="relative inline-block">
               <span className="relative z-10 font-semibold text-teal-700 [text-shadow:0_1px_0_rgba(255,255,255,0.95),0_2px_12px_rgba(15,118,110,0.25)]">
@@ -526,11 +538,11 @@ export function PublicClientDevisPage() {
             </span>{" "}
             à Hurghada
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-[15px] font-semibold leading-relaxed text-catalog-body sm:text-lg sm:leading-relaxed">
+          <p className="mx-auto mt-6 max-w-2xl animate-catalog-in-up text-[15px] font-semibold leading-relaxed text-catalog-body opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:text-lg sm:leading-relaxed" style={{ animationDelay: "130ms" }}>
             Désert, mer, Louxor &amp; Caires — parcourez le catalogue, composez votre panier et recevez une proposition claire, sans engagement.
           </p>
 
-          <div className="mx-auto mt-12 max-w-xl">
+          <div className="mx-auto mt-12 max-w-xl animate-catalog-in-up opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "190ms" }}>
             <label className="relative block text-left" htmlFor="public-search">
               <span className="mb-2.5 block text-center text-[10px] font-extrabold uppercase tracking-[0.28em] text-catalog-label">
                 Recherche instantanée
@@ -559,7 +571,7 @@ export function PublicClientDevisPage() {
             </label>
           </div>
 
-          <div className="mx-auto mt-12 max-w-5xl sm:max-w-none">
+          <div className="mx-auto mt-12 max-w-5xl animate-catalog-in-up opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:max-w-none" style={{ animationDelay: "240ms" }}>
             <p className="mb-3 text-center text-xs font-bold uppercase tracking-[0.12em] text-slate-900 sm:text-sm sm:tracking-[0.14em]">
               Filtrer par univers
             </p>
@@ -645,8 +657,12 @@ export function PublicClientDevisPage() {
           )}
 
           <div className="space-y-16 pb-16">
-            {groupedActivities.map((group) => (
-              <section key={group.key} className="space-y-8">
+            {groupedActivities.map((group, groupIndex) => (
+              <section
+                key={group.key}
+                className="animate-catalog-in-fade space-y-8 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100"
+                style={{ animationDelay: `${Math.min(groupIndex, 12) * 50}ms` }}
+              >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
                   <div className="flex items-start gap-4">
                     <span className="mt-1 hidden h-14 w-1 shrink-0 rounded-full bg-gradient-to-b from-amber-400 via-teal-500 to-emerald-600 shadow-md sm:block" />
@@ -687,7 +703,8 @@ export function PublicClientDevisPage() {
                             navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`);
                           }
                         }}
-                        className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-slate-200/95 bg-white shadow-catalog-premium ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out hover:-translate-y-2 hover:border-teal-500/50 hover:shadow-catalog-premium-hover hover:ring-teal-500/20 active:scale-[0.99]"
+                        className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-slate-200/95 bg-white opacity-0 shadow-catalog-premium ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out animate-catalog-in-fade motion-reduce:animate-none motion-reduce:opacity-100 hover:-translate-y-2 hover:border-teal-500/50 hover:shadow-catalog-premium-hover hover:ring-teal-500/20 active:scale-[0.99]"
+                        style={{ animationDelay: `${catalogCardEnterDelayMsById.get(activity.id) ?? 0}ms` }}
                       >
                         <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 sm:aspect-[5/4]">
                           {coverImageUrl ? (
@@ -746,7 +763,7 @@ export function PublicClientDevisPage() {
       </main>
 
       <footer className="relative z-10 border-t-2 border-slate-200/90 bg-gradient-to-b from-white via-slate-50/90 to-[#f3efe4] py-16 text-center">
-        <div className="mx-auto max-w-lg px-4">
+        <div className="mx-auto max-w-lg animate-catalog-in-fade px-4 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "320ms" }}>
           <p className="font-catalog-display text-sm font-semibold tracking-wide text-catalog-ink">Hurghada Dream</p>
           <p className="mt-3 text-sm font-semibold leading-relaxed text-catalog-muted">
             Excursions sur-mesure · Mer Rouge, désert &amp; temples — une équipe locale à ton écoute.

@@ -72,6 +72,26 @@ export default {
           "linear-gradient(to right, rgba(15,23,42,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.04) 1px, transparent 1px)",
         "catalog-footer-fade": "linear-gradient(180deg, rgba(248, 250, 249, 0) 0%, rgba(236, 253, 245, 0.9) 100%)",
       },
+      keyframes: {
+        /** Entrées pages catalogue public (légères, GPU-friendly) */
+        catalogInUp: {
+          "0%": { opacity: "0", transform: "translateY(14px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        catalogInFade: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        catalogInSoft: {
+          "0%": { opacity: "0", transform: "scale(0.98)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+      },
+      animation: {
+        "catalog-in-up": "catalogInUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "catalog-in-fade": "catalogInFade 0.45s ease-out both",
+        "catalog-in-soft": "catalogInSoft 0.5s cubic-bezier(0.22, 1, 0.36, 1) both",
+      },
     },
   },
   plugins: [],

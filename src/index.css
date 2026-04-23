@@ -137,6 +137,15 @@ body {
   letter-spacing: -0.03em;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .hd-public-catalog .animate-catalog-in-up,
+  .hd-public-catalog .animate-catalog-in-fade,
+  .hd-public-catalog .animate-catalog-in-soft {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
+
 main {
   position: relative;
   /* Le scroll se fait sur body, pas sur main */
