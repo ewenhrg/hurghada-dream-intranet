@@ -430,33 +430,31 @@ export function PublicClientDevisPage() {
   }
 
   return (
-    <div className="hd-public-catalog selection:bg-amber-200/50 selection:text-catalog-ink relative min-h-screen overflow-x-hidden bg-gradient-to-b from-[#e8f4f1] via-[#f8fafc] to-[#eef8f6] font-catalog-sans text-catalog-body antialiased">
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.92]" />
+    <div className="hd-public-catalog relative isolate flex min-h-screen flex-col overflow-x-hidden bg-[#f3efe4] font-catalog-sans text-catalog-body antialiased selection:bg-amber-200/50 selection:text-catalog-ink">
+      {/* Fond opaque : coupe le dégradé sombre global du body intranet */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-[#f3efe4]" />
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.28]" />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-0 bg-catalog-grid opacity-[0.45] [background-size:44px_44px]"
+        className="pointer-events-none fixed inset-0 z-0 bg-catalog-grid opacity-[0.12] [background-size:44px_44px]"
       />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[min(85vh,640px)] bg-[radial-gradient(ellipse_90%_70%_at_50%_-20%,rgba(196,163,90,0.12),transparent_55%)]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-0 h-56 bg-gradient-to-t from-teal-950/[0.06] via-transparent to-transparent"
+        className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[min(72vh,520px)] bg-[radial-gradient(ellipse_90%_70%_at_50%_-18%,rgba(251,191,36,0.16),transparent_58%)]"
       />
 
-      <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white/90 shadow-[0_1px_0_0_rgba(255,255,255,1)_inset,0_14px_40px_-16px_rgba(15,23,42,0.08)] backdrop-blur-2xl backdrop-saturate-150">
+      <header className="sticky top-0 z-30 border-b border-amber-400/35 bg-slate-950 text-white shadow-[0_12px_40px_-12px_rgba(0,0,0,0.55)]">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3.5">
-            <div className="relative flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 p-1.5 shadow-xl shadow-teal-950/35 ring-2 ring-amber-200/40 ring-offset-2 ring-offset-white/80">
+            <div className="relative flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 p-1.5 shadow-xl shadow-black/40 ring-2 ring-amber-300/50 ring-offset-2 ring-offset-slate-950">
               <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/25 to-transparent" />
               <img src="/logo.png" alt="Hurghada Dream" className="relative h-full w-full object-contain drop-shadow-md" />
             </div>
             <div className="min-w-0">
-              <p className="truncate font-catalog-display text-lg font-semibold tracking-tight text-catalog-ink sm:text-xl">
+              <p className="truncate font-catalog-display text-lg font-semibold tracking-tight text-white sm:text-xl">
                 Hurghada Dream
               </p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-catalog-label sm:text-[11px]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-amber-200/95 sm:text-[11px]">
                 Excursions · Mer Rouge
               </p>
             </div>
@@ -487,20 +485,20 @@ export function PublicClientDevisPage() {
                 setSuccess("");
                 setCartDrawerOpen(true);
               }}
-              className="group relative inline-flex min-h-[44px] items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-teal-800 via-teal-700 to-emerald-700 px-3.5 py-2.5 pl-3.5 text-sm font-extrabold tracking-tight text-white shadow-[0_4px_20px_-4px_rgba(15,118,110,0.55),0_2px_8px_-2px_rgba(15,23,42,0.25)] ring-2 ring-white/25 transition hover:from-teal-900 hover:via-teal-800 hover:to-emerald-800 hover:shadow-[0_8px_28px_-6px_rgba(15,118,110,0.55)] active:scale-[0.98] sm:gap-2.5 sm:px-5 sm:py-2.5"
+              className="group relative inline-flex min-h-[44px] items-center gap-2 overflow-hidden rounded-full bg-amber-400 px-3.5 py-2.5 pl-3.5 text-sm font-extrabold tracking-tight text-slate-950 shadow-[0_4px_20px_-4px_rgba(251,191,36,0.65),0_2px_8px_-2px_rgba(0,0,0,0.35)] ring-2 ring-amber-200/80 transition hover:bg-amber-300 hover:shadow-[0_8px_28px_-6px_rgba(251,191,36,0.55)] active:scale-[0.98] sm:gap-2.5 sm:px-5 sm:py-2.5"
             >
-              <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 to-transparent" />
+              <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
               <span className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100">
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition duration-700 group-hover:translate-x-full" />
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition duration-700 group-hover:translate-x-full" />
               </span>
-              <svg className="relative h-5 w-5 shrink-0 text-white drop-shadow-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden>
+              <svg className="relative h-5 w-5 shrink-0 text-slate-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden>
                 <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
                 <path d="M3 6h18" />
                 <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
-              <span className="relative text-[15px] drop-shadow-sm">Panier</span>
+              <span className="relative text-[15px]">Panier</span>
               {cartLines.length > 0 ? (
-                <span className="relative flex h-7 min-w-[1.75rem] items-center justify-center rounded-full border border-white/40 bg-white px-2 text-xs font-black text-teal-900 shadow-inner">
+                <span className="relative flex h-7 min-w-[1.75rem] items-center justify-center rounded-full border border-slate-900/20 bg-slate-900 px-2 text-xs font-black text-amber-300 shadow-inner">
                   {cartLines.length}
                 </span>
               ) : null}
@@ -509,7 +507,7 @@ export function PublicClientDevisPage() {
         </div>
       </header>
 
-      <section className="relative z-10 border-b border-teal-900/[0.07] bg-gradient-to-b from-white/55 via-white/25 to-transparent">
+      <section className="relative z-10 border-b border-slate-200/90 bg-white">
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-12 text-center sm:px-6 sm:pb-20 sm:pt-16 lg:max-w-7xl">
           <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-white via-amber-50/90 to-white px-5 py-2 text-[10px] font-bold uppercase tracking-[0.26em] text-[#422006] shadow-md shadow-amber-900/10 backdrop-blur-sm sm:text-[11px]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" aria-hidden />
@@ -571,7 +569,7 @@ export function PublicClientDevisPage() {
                 onClick={() => setSelectedCategory("all")}
                 className={`snap-center shrink-0 rounded-2xl px-4 py-2.5 text-left text-xs font-bold transition-all sm:rounded-full sm:px-5 sm:text-center sm:text-sm ${
                   selectedCategory === "all"
-                    ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-[#eef6f4]"
+                    ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-white"
                     : "border-2 border-slate-300 bg-white text-catalog-body shadow-sm hover:-translate-y-0.5 hover:border-teal-500/70 hover:bg-teal-50 hover:shadow-md"
                 }`}
               >
@@ -588,7 +586,7 @@ export function PublicClientDevisPage() {
                   onClick={() => setSelectedCategory(category.key)}
                   className={`snap-center flex min-w-[9.5rem] shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-left text-xs font-bold transition-all sm:min-w-0 sm:rounded-full sm:px-5 sm:text-center sm:text-sm ${
                     selectedCategory === category.key
-                      ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-[#eef6f4]"
+                      ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-white"
                       : "border-2 border-slate-300 bg-white text-catalog-body shadow-sm hover:-translate-y-0.5 hover:border-teal-500/70 hover:bg-teal-50 hover:shadow-md"
                   }`}
                 >
@@ -738,7 +736,7 @@ export function PublicClientDevisPage() {
         </section>
       </main>
 
-      <footer className="relative z-10 border-t-2 border-slate-200/90 bg-gradient-to-b from-white via-slate-50/80 to-[#e8f4f1] py-16 text-center">
+      <footer className="relative z-10 border-t-2 border-slate-200/90 bg-gradient-to-b from-white via-slate-50/90 to-[#f3efe4] py-16 text-center">
         <div className="mx-auto max-w-lg px-4">
           <p className="font-catalog-display text-sm font-semibold tracking-wide text-catalog-ink">Hurghada Dream</p>
           <p className="mt-3 text-sm font-semibold leading-relaxed text-catalog-muted">

@@ -115,6 +115,28 @@ body {
   /* Pas de transform sur html/body pour éviter les problèmes de scroll */
 }
 
+/**
+ * Catalogue public (/catalogue) : le body intranet impose texte clair + fond sombre.
+ * Sans ce bloc, le « bleed » du thème global rend polices / couleurs peu lisibles.
+ */
+.hd-public-catalog {
+  color: #0f172a;
+  font-family: "Sora", "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.hd-public-catalog h1,
+.hd-public-catalog h2,
+.hd-public-catalog h3 {
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  color: #020617;
+  letter-spacing: -0.03em;
+}
+
 main {
   position: relative;
   /* Le scroll se fait sur body, pas sur main */

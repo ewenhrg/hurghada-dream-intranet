@@ -23,9 +23,10 @@ export default {
           /** Lisibilité : encre / corps / secondaire bien séparés (WCAG-friendly sur fond clair) */
           ink: '#011816',
           body: '#0f172a',
-          muted: '#334155',
-          subtle: '#475569',
-          label: '#0f766e',
+          muted: '#1e293b',
+          subtle: '#334155',
+          /** Libellés petits caps : plus foncé pour WCAG sur fond crème */
+          label: '#065f46',
           onDark: '#f8fafc',
           teal: '#0f766e',
           tealLight: '#14b8a6',
