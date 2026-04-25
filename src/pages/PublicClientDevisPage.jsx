@@ -608,12 +608,12 @@ export function PublicClientDevisPage() {
                       : "border-2 border-slate-500 bg-white text-slate-950 shadow-sm hover:-translate-y-0.5 hover:border-teal-700 hover:bg-teal-50/95 hover:shadow-md"
                   }`}
                 >
-                  <span className="text-lg leading-none sm:text-xl" aria-hidden>
+                  <span className={`text-lg leading-none sm:text-xl ${active ? "text-white" : "text-slate-900"}`} aria-hidden>
                     {getCategoryEmoji(category.key)}
                   </span>
-                  <span className="min-w-0 text-balance leading-snug">
+                  <span className={`min-w-0 text-balance leading-snug ${active ? "text-white" : "text-slate-950"}`}>
                     {category.label}
-                    <span className={`ml-1 tabular-nums ${active ? "text-white/90" : "text-slate-600"}`}>
+                    <span className={`ml-1 tabular-nums ${active ? "text-white/90" : "text-slate-800"}`}>
                       · {categoryCounts[category.key] || 0}
                     </span>
                   </span>
