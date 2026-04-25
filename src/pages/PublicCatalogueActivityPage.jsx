@@ -980,7 +980,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
           </div>
         </div>
 
-        <div className="mx-auto max-w-7xl animate-catalog-in-fade px-4 py-4 pb-24 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:px-6 md:pb-12 lg:px-8 lg:pb-16" style={{ animationDelay: "120ms" }}>
+        <div className="catalog-shell mx-auto max-w-7xl animate-catalog-in-fade px-4 py-4 pb-24 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:px-6 md:pb-12 lg:px-8 lg:pb-16" style={{ animationDelay: "120ms" }}>
           <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
             {/* ——— Colonne contenu ——— */}
             <div className="space-y-6 lg:col-span-2">
@@ -1062,7 +1062,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
               <div className="border-t border-gray-200" role="separator" />
 
-              <section className="grid gap-3 xl:grid-cols-[200px_1fr] xl:gap-0">
+              <section className="catalog-elevated grid gap-3 rounded-2xl p-4 xl:grid-cols-[200px_1fr] xl:gap-0 xl:p-5">
                 <h2 className="font-catalog-display text-base font-semibold text-catalog-ink md:text-lg">Informations</h2>
                 <p className="whitespace-pre-line text-sm font-medium leading-relaxed text-catalog-body">
                   {informationsBody}
@@ -1072,7 +1072,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
             {/* ——— Sidebar réservation desktop ——— */}
             <div className="hidden lg:col-span-1 lg:block">
-              <div className="lg:sticky lg:top-24 lg:rounded-3xl lg:border lg:border-teal-900/10 lg:bg-white lg:p-7 lg:shadow-soft lg:shadow-teal-950/10 lg:transition-shadow lg:duration-300 lg:hover:shadow-soft-lg">
+              <div className="catalog-elevated lg:sticky lg:top-24 lg:rounded-3xl lg:border lg:border-teal-900/10 lg:bg-white lg:p-7 lg:shadow-soft lg:shadow-teal-950/10 lg:transition-shadow lg:duration-300 lg:hover:shadow-soft-lg">
                 <BookingCardShell
                   activity={activity}
                   adults={adults}
@@ -1103,7 +1103,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
         {/* Encart mobile « disponibilités » */}
         <div id="disponibilites" className="mx-auto w-full max-w-7xl px-4 pb-28 sm:px-6 lg:hidden lg:px-8">
-          <div className="rounded-3xl border border-teal-900/10 bg-white p-5 shadow-soft shadow-teal-950/10">
+          <div className="catalog-elevated rounded-3xl border border-teal-900/10 bg-white p-5 shadow-soft shadow-teal-950/10">
             <h2 className="mb-4 font-catalog-display text-lg font-semibold text-catalog-ink">Réserver</h2>
             <BookingCardShell
               activity={activity}

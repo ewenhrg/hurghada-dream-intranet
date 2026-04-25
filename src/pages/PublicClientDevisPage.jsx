@@ -519,13 +519,13 @@ export function PublicClientDevisPage() {
         </div>
       </header>
 
-      <section className="relative z-10 border-b border-slate-200/90 bg-white">
+      <section className="catalog-shell relative z-10 border-b border-slate-200/90 bg-white">
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-12 text-center sm:px-6 sm:pb-20 sm:pt-16 lg:max-w-7xl">
           <span className="mb-6 inline-flex animate-catalog-in-up items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-white via-amber-50/90 to-white px-5 py-2 text-[10px] font-bold uppercase tracking-[0.26em] text-[#422006] opacity-0 shadow-md shadow-amber-900/10 backdrop-blur-sm motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[11px]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" aria-hidden />
             Catalogue en direct
           </span>
-          <h1 className="mx-auto max-w-4xl animate-catalog-in-up font-catalog-display text-[2rem] font-semibold leading-[1.08] tracking-tight text-catalog-ink opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[2.35rem] md:text-5xl md:leading-[1.06]" style={{ animationDelay: "70ms" }}>
+          <h1 className="catalog-title-glow mx-auto max-w-4xl animate-catalog-in-up font-catalog-display text-[2rem] font-semibold leading-[1.08] tracking-tight text-catalog-ink opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[2.35rem] md:text-5xl md:leading-[1.06]" style={{ animationDelay: "70ms" }}>
             Votre prochaine{" "}
             <span className="relative inline-block">
               <span className="relative z-10 font-semibold text-teal-700 [text-shadow:0_1px_0_rgba(255,255,255,0.95),0_2px_12px_rgba(15,118,110,0.25)]">
@@ -547,7 +547,7 @@ export function PublicClientDevisPage() {
               <span className="mb-2.5 block text-center text-[10px] font-extrabold uppercase tracking-[0.28em] text-catalog-label">
                 Recherche instantanée
               </span>
-              <span className="relative block rounded-[1.4rem] border-2 border-slate-200/95 bg-white p-1 shadow-catalog-premium ring-1 ring-slate-900/[0.04] backdrop-blur-md transition focus-within:border-teal-500 focus-within:shadow-catalog-premium-hover focus-within:ring-2 focus-within:ring-teal-400/40">
+              <span className="catalog-elevated relative block rounded-[1.4rem] border-2 border-slate-200/95 bg-white p-1 shadow-catalog-premium ring-1 ring-slate-900/[0.04] backdrop-blur-md transition focus-within:border-teal-500 focus-within:shadow-catalog-premium-hover focus-within:ring-2 focus-within:ring-teal-400/40">
                 <svg
                   className="pointer-events-none absolute left-6 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-teal-700"
                   fill="none"
@@ -579,10 +579,10 @@ export function PublicClientDevisPage() {
               <button
                 type="button"
                 onClick={() => setSelectedCategory("all")}
-                className={`snap-center shrink-0 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:rounded-full sm:px-5 sm:text-center ${
+                className={`catalog-ring-focus snap-center shrink-0 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:rounded-full sm:px-5 sm:text-center ${
                   selectedCategory === "all"
-                    ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/55 ring-offset-2 ring-offset-white"
-                    : "border-2 border-slate-500 bg-white text-slate-950 shadow-sm hover:-translate-y-0.5 hover:border-teal-700 hover:bg-teal-50/95 hover:shadow-md"
+                    ? "catalog-chip-active scale-[1.02] ring-2 ring-amber-200/55 ring-offset-2 ring-offset-white"
+                    : "catalog-chip border-2 border-slate-500 text-slate-950 hover:-translate-y-0.5 hover:border-teal-700 hover:bg-teal-50/95 hover:shadow-md"
                 }`}
               >
                 <span className="mr-1.5" aria-hidden>
@@ -602,10 +602,10 @@ export function PublicClientDevisPage() {
                   key={category.key}
                   type="button"
                   onClick={() => setSelectedCategory(category.key)}
-                  className={`snap-center flex min-w-[9.5rem] shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:min-w-0 sm:rounded-full sm:px-5 sm:text-center ${
+                  className={`catalog-ring-focus snap-center flex min-w-[9.5rem] shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:min-w-0 sm:rounded-full sm:px-5 sm:text-center ${
                     active
-                      ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/55 ring-offset-2 ring-offset-white"
-                      : "border-2 border-slate-500 bg-white text-slate-950 shadow-sm hover:-translate-y-0.5 hover:border-teal-700 hover:bg-teal-50/95 hover:shadow-md"
+                      ? "catalog-chip-active scale-[1.02] ring-2 ring-amber-200/55 ring-offset-2 ring-offset-white"
+                      : "catalog-chip border-2 border-slate-500 text-slate-950 hover:-translate-y-0.5 hover:border-teal-700 hover:bg-teal-50/95 hover:shadow-md"
                   }`}
                 >
                   <span className={`text-lg leading-none sm:text-xl ${active ? "text-white" : "text-slate-900"}`} aria-hidden>
@@ -703,7 +703,7 @@ export function PublicClientDevisPage() {
                             navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`);
                           }
                         }}
-                        className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-slate-200/95 bg-white opacity-0 shadow-catalog-premium ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out animate-catalog-in-fade motion-reduce:animate-none motion-reduce:opacity-100 hover:-translate-y-2 hover:border-teal-500/50 hover:shadow-catalog-premium-hover hover:ring-teal-500/20 active:scale-[0.99]"
+                        className="catalog-float-soft group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-slate-200/95 bg-white opacity-0 shadow-catalog-premium ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out animate-catalog-in-fade motion-reduce:animate-none motion-reduce:opacity-100 hover:-translate-y-2 hover:border-teal-500/50 hover:shadow-catalog-premium-hover hover:ring-teal-500/20 active:scale-[0.99]"
                         style={{ animationDelay: `${catalogCardEnterDelayMsById.get(activity.id) ?? 0}ms` }}
                       >
                         <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 sm:aspect-[5/4]">
@@ -729,7 +729,7 @@ export function PublicClientDevisPage() {
                             </h3>
                           </div>
                         </div>
-                        <div className="flex grow flex-col bg-white p-5 sm:p-6">
+                        <div className="catalog-elevated flex grow flex-col bg-white p-5 sm:p-6">
                           <div className="mt-auto flex items-end justify-between gap-3 border-t-2 border-slate-100 pt-4">
                             <p className="max-w-[58%] text-left text-[11px] font-semibold leading-snug text-catalog-muted sm:text-xs">
                               Dates &amp; participants sur la fiche — ajout panier en un clic.

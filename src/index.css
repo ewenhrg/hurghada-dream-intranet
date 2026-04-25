@@ -137,6 +137,71 @@ body {
   letter-spacing: -0.03em;
 }
 
+.hd-public-catalog .catalog-shell {
+  position: relative;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.78)),
+    radial-gradient(120% 130% at 90% -10%, rgba(20, 184, 166, 0.12), transparent 55%);
+  box-shadow:
+    0 24px 55px -28px rgba(15, 23, 42, 0.25),
+    0 2px 10px rgba(15, 23, 42, 0.06);
+}
+
+.hd-public-catalog .catalog-elevated {
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9));
+  box-shadow:
+    0 18px 36px -20px rgba(15, 23, 42, 0.2),
+    0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.hd-public-catalog .catalog-chip {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.84));
+  box-shadow: 0 10px 18px -14px rgba(15, 23, 42, 0.3);
+}
+
+.hd-public-catalog .catalog-chip-active {
+  background: linear-gradient(135deg, #052e2b 0%, #0f766e 45%, #0f766e 100%);
+  color: #ffffff;
+  border-color: rgba(252, 211, 77, 0.55);
+  box-shadow:
+    0 16px 28px -16px rgba(15, 118, 110, 0.58),
+    0 0 0 1px rgba(15, 23, 42, 0.14) inset;
+}
+
+.hd-public-catalog .catalog-title-glow {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 26px rgba(13, 148, 136, 0.15);
+}
+
+.hd-public-catalog .catalog-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(30, 41, 59, 0.18), transparent);
+}
+
+.hd-public-catalog .catalog-ring-focus:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(20, 184, 166, 0.3),
+    0 0 0 1px rgba(15, 23, 42, 0.25) inset;
+}
+
+@keyframes catalogFloatSoft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.hd-public-catalog .catalog-float-soft:hover {
+  animation: catalogFloatSoft 1.8s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hd-public-catalog .animate-catalog-in-up,
   .hd-public-catalog .animate-catalog-in-fade,
