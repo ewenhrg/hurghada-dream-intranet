@@ -581,8 +581,8 @@ export function PublicClientDevisPage() {
                 onClick={() => setSelectedCategory("all")}
                 className={`snap-center shrink-0 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:rounded-full sm:px-5 sm:text-center ${
                   selectedCategory === "all"
-                    ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-white"
-                    : "border-2 border-slate-400 bg-white text-slate-900 shadow-sm hover:-translate-y-0.5 hover:border-teal-600 hover:bg-teal-50/90 hover:shadow-md"
+                    ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/55 ring-offset-2 ring-offset-white"
+                    : "border-2 border-slate-500 bg-white text-slate-950 shadow-sm hover:-translate-y-0.5 hover:border-teal-700 hover:bg-teal-50/95 hover:shadow-md"
                 }`}
               >
                 <span className="mr-1.5" aria-hidden>
@@ -604,8 +604,8 @@ export function PublicClientDevisPage() {
                   onClick={() => setSelectedCategory(category.key)}
                   className={`snap-center flex min-w-[9.5rem] shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:min-w-0 sm:rounded-full sm:px-5 sm:text-center ${
                     active
-                      ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/50 ring-offset-2 ring-offset-white"
-                      : "border-2 border-slate-400 bg-white text-slate-900 shadow-sm hover:-translate-y-0.5 hover:border-teal-600 hover:bg-teal-50/90 hover:shadow-md"
+                      ? "scale-[1.02] bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 text-white shadow-lg shadow-teal-950/30 ring-2 ring-amber-200/55 ring-offset-2 ring-offset-white"
+                      : "border-2 border-slate-500 bg-white text-slate-950 shadow-sm hover:-translate-y-0.5 hover:border-teal-700 hover:bg-teal-50/95 hover:shadow-md"
                   }`}
                 >
                   <span className="text-lg leading-none sm:text-xl" aria-hidden>
@@ -720,11 +720,11 @@ export function PublicClientDevisPage() {
                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#022c22]/88 via-slate-900/25 to-transparent" />
                           <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/75 via-black/35 to-transparent sm:h-44" />
                           <div className="absolute left-3 top-3 z-10 flex max-w-[min(100%,calc(100%-1.25rem))] flex-col items-start gap-2 sm:left-4 sm:top-4">
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-slate-950/88 px-3 py-1.5 text-xs font-bold text-white shadow-[0_2px_12px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:text-sm">
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-slate-950/95 px-3 py-1.5 text-xs font-extrabold text-white shadow-[0_3px_16px_rgba(0,0,0,0.55)] ring-1 ring-black/25 backdrop-blur-md sm:text-sm">
                               <span aria-hidden>{getCategoryEmoji(categoryKey)}</span>
                               {CATEGORIES.find((c) => c.key === categoryKey)?.label || "Activité"}
                             </span>
-                            <h3 className="line-clamp-2 text-left font-catalog-display text-[0.95rem] font-bold leading-snug tracking-tight text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_2px_16px_rgba(0,0,0,0.75)] sm:text-[1.05rem]">
+                            <h3 className="line-clamp-2 text-left font-catalog-display text-[0.95rem] font-bold leading-snug tracking-tight text-white [text-shadow:0_2px_3px_rgba(0,0,0,0.98),0_6px_22px_rgba(0,0,0,0.9)] sm:text-[1.05rem]">
                               {activity.name}
                             </h3>
                           </div>
