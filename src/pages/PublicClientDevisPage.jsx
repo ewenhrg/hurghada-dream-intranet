@@ -703,7 +703,7 @@ export function PublicClientDevisPage() {
                             navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`);
                           }
                         }}
-                        className="catalog-float-soft group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-slate-200/95 bg-white opacity-0 shadow-catalog-premium ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out animate-catalog-in-fade motion-reduce:animate-none motion-reduce:opacity-100 hover:-translate-y-2 hover:border-teal-500/50 hover:shadow-catalog-premium-hover hover:ring-teal-500/20 active:scale-[0.99]"
+                        className="public-catalog-grid-card catalog-float-soft group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-slate-200/95 bg-white opacity-0 shadow-catalog-premium ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out animate-catalog-in-fade motion-reduce:animate-none motion-reduce:opacity-100 hover:-translate-y-2 hover:border-teal-500/50 hover:shadow-catalog-premium-hover hover:ring-teal-500/20 active:scale-[0.99]"
                         style={{ animationDelay: `${catalogCardEnterDelayMsById.get(activity.id) ?? 0}ms` }}
                       >
                         <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 sm:aspect-[5/4]">
@@ -711,7 +711,8 @@ export function PublicClientDevisPage() {
                             <img
                               src={coverImageUrl}
                               alt=""
-                              className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.08]"
+                              draggable={false}
+                              className="hd-catalog-card-cover pointer-events-none h-full w-full select-none object-contain transition duration-700 ease-out sm:group-hover:scale-[1.08]"
                               loading="lazy"
                             />
                           ) : (

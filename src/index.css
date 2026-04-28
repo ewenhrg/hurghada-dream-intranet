@@ -202,6 +202,43 @@ body {
   animation: catalogFloatSoft 1.8s ease-in-out infinite;
 }
 
+/**
+ * Cartes du catalogue public : les règles globales tactiles ([role="button"], img @768px)
+ * peuvent casser le flex, zoomer l’image ou capter le tap sur l’img (iOS). On rétablit
+ * un bloc carte plein largeur + image entièrement visible (object-fit contain).
+ */
+.hd-public-catalog article.public-catalog-grid-card[role="button"] {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(20, 184, 166, 0.22);
+}
+
+.hd-public-catalog img.hd-catalog-card-cover {
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+@media (max-width: 768px) {
+  .hd-public-catalog img.hd-catalog-card-cover {
+    height: 100% !important;
+    width: 100% !important;
+    object-fit: contain !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hd-public-catalog .animate-catalog-in-up,
   .hd-public-catalog .animate-catalog-in-fade,
