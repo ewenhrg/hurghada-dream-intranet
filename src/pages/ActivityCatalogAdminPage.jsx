@@ -11,6 +11,7 @@ import {
 } from "../utils/catalogContent";
 
 const CATALOG_IMAGES_BUCKET = "catalog-images";
+const CATALOG_IMAGES_FALLBACK_BUCKET = "documents";
 const MAX_CATALOG_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_CATALOG_IMAGE_SIZE_MB = 10;
 
@@ -175,20 +176,35 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
           .replace(/[^\w.\-]+/g, "_")
           .replace(/_+/g, "_");
         const objectPath = `activities/${activity.supabase_id}/${Date.now()}_${safeName}`;
-        const { error: uploadError } = await supabase.storage
-          .from(CATALOG_IMAGES_BUCKET)
+        let usedBucket = CATALOG_IMAGES_BUCKET;
+        let { error: uploadError } = await supabase.storage
+          .from(usedBucket)
           .upload(objectPath, file, { upsert: false, contentType: file.type });
+
+        if (uploadError && String(uploadError.message || "").toLowerCase().includes("bucket not found")) {
+          usedBucket = CATALOG_IMAGES_FALLBACK_BUCKET;
+          const fallbackTry = await supabase.storage
+            .from(usedBucket)
+            .upload(objectPath, file, { upsert: false, contentType: file.type });
+          uploadError = fallbackTry.error || null;
+          if (!uploadError) {
+            toast.warning(
+              `Bucket "${CATALOG_IMAGES_BUCKET}" absent, upload effectué dans "${CATALOG_IMAGES_FALLBACK_BUCKET}".`,
+              5000
+            );
+          }
+        }
 
         if (uploadError) {
           logger.error("ActivityCatalogAdminPage : erreur upload image", uploadError);
           const msg = uploadError.message?.includes("Bucket not found")
-            ? `Bucket Storage introuvable : ${CATALOG_IMAGES_BUCKET}.`
+            ? `Buckets Storage introuvables : ${CATALOG_IMAGES_BUCKET} et ${CATALOG_IMAGES_FALLBACK_BUCKET}.`
             : uploadError.message || "Erreur lors de l'upload d'image.";
           toast.error(msg);
           continue;
         }
 
-        const { data: urlData } = supabase.storage.from(CATALOG_IMAGES_BUCKET).getPublicUrl(objectPath);
+        const { data: urlData } = supabase.storage.from(usedBucket).getPublicUrl(objectPath);
         const publicUrl = String(urlData?.publicUrl || "").trim();
         if (isAllowedCatalogImageUrl(publicUrl)) {
           uploadedUrls.push(publicUrl);
