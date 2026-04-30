@@ -10,6 +10,10 @@ import {
   normalizeCatalogImageUrlsFromDb,
 } from "../utils/catalogContent";
 
+const CATALOG_IMAGES_BUCKET = "catalog-images";
+const MAX_CATALOG_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_CATALOG_IMAGE_SIZE_MB = 10;
+
 function canEditCatalog(user) {
   if (!user) return false;
   return user.canEditActivity === true;
@@ -75,6 +79,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
     return u.length ? u : [""];
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     setDesc(String(activity.description ?? ""));
@@ -133,6 +138,75 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
     });
   }
 
+  async function handleUploadFiles(event) {
+    const fileList = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (!fileList.length) return;
+    if (!canEdit || !activity.supabase_id) return;
+    if (!__SUPABASE_DEBUG__.isConfigured || !supabase) {
+      toast.error("Supabase Storage non disponible.");
+      return;
+    }
+    const remainingSlots = Math.max(0, MAX_CATALOG_IMAGES - normalizedUrls.length);
+    if (remainingSlots <= 0) {
+      toast.warning(`Maximum atteint (${MAX_CATALOG_IMAGES} images).`);
+      return;
+    }
+    const filesToUpload = fileList.slice(0, remainingSlots);
+    const skipped = fileList.length - filesToUpload.length;
+    if (skipped > 0) {
+      toast.warning(`${skipped} fichier(s) ignoré(s) : limite de ${MAX_CATALOG_IMAGES} images.`);
+    }
+
+    setUploading(true);
+    try {
+      const uploadedUrls = [];
+      for (const file of filesToUpload) {
+        if (!file.type || !file.type.startsWith("image/")) {
+          toast.warning(`${file.name} ignoré : ce n’est pas une image.`);
+          continue;
+        }
+        if (file.size > MAX_CATALOG_IMAGE_SIZE_BYTES) {
+          toast.warning(`${file.name} ignoré : max ${MAX_CATALOG_IMAGE_SIZE_MB} Mo.`);
+          continue;
+        }
+
+        const safeName = String(file.name || "image")
+          .replace(/[^\w.\-]+/g, "_")
+          .replace(/_+/g, "_");
+        const objectPath = `activities/${activity.supabase_id}/${Date.now()}_${safeName}`;
+        const { error: uploadError } = await supabase.storage
+          .from(CATALOG_IMAGES_BUCKET)
+          .upload(objectPath, file, { upsert: false, contentType: file.type });
+
+        if (uploadError) {
+          logger.error("ActivityCatalogAdminPage : erreur upload image", uploadError);
+          const msg = uploadError.message?.includes("Bucket not found")
+            ? `Bucket Storage introuvable : ${CATALOG_IMAGES_BUCKET}.`
+            : uploadError.message || "Erreur lors de l'upload d'image.";
+          toast.error(msg);
+          continue;
+        }
+
+        const { data: urlData } = supabase.storage.from(CATALOG_IMAGES_BUCKET).getPublicUrl(objectPath);
+        const publicUrl = String(urlData?.publicUrl || "").trim();
+        if (isAllowedCatalogImageUrl(publicUrl)) {
+          uploadedUrls.push(publicUrl);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        setUrlRows((prev) => {
+          const base = prev.map((v) => String(v || ""));
+          return [...base, ...uploadedUrls].slice(0, MAX_CATALOG_IMAGES);
+        });
+        toast.success(`${uploadedUrls.length} image(s) ajoutée(s). Cliquez sur « Enregistrer » pour publier.`);
+      }
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
@@ -175,9 +249,21 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
             Photos (URLs HTTPS)
           </label>
           <p className="mb-2 text-xs text-slate-600">
-            Collez des liens directs vers des images (HTTPS uniquement, max {MAX_CATALOG_IMAGES}). Ex. hébergement Supabase
-            Storage, Cloudinary, etc. Pas d’upload de fichier depuis cette page.
+            Collez des liens directs (HTTPS) ou importez des fichiers image (max {MAX_CATALOG_IMAGES}, {MAX_CATALOG_IMAGE_SIZE_MB} Mo/image).
           </p>
+          <div className="mb-3">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => void handleUploadFiles(e)}
+                disabled={!canEdit || !activity.supabase_id || uploading || normalizedUrls.length >= MAX_CATALOG_IMAGES}
+                className="hidden"
+              />
+              <span>{uploading ? "Upload en cours…" : "Ajouter des images depuis l’ordinateur"}</span>
+            </label>
+          </div>
           <ul className="space-y-2">
             {urlRows.map((row, index) => (
               <li key={`url-${activity.id}-${index}`} className="flex flex-wrap items-center gap-2">
