@@ -907,9 +907,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
           <div className="relative aspect-[4/3] w-full animate-catalog-in-soft overflow-hidden rounded-[22px] opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "60ms" }}>
             <div ref={carouselRef} onScroll={onCarouselScroll} className="scrollbar-hide flex h-full snap-x snap-mandatory gap-0 overflow-x-auto">
               {gallerySlides.map((slide, i) => (
-                <div key={i} className="relative h-full min-w-full shrink-0 snap-start overflow-hidden">
+                <div key={i} className="relative h-full min-w-full shrink-0 snap-start overflow-hidden bg-slate-950/85">
                   {slide.kind === "image" ? (
-                    <img src={slide.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    <img src={slide.url} alt="" className="h-full w-full object-contain" loading="lazy" />
                   ) : (
                     <div className="h-full w-full" style={{ background: slide.bg }} />
                   )}
@@ -987,36 +987,36 @@ export function PublicCatalogueActivityPage({ activityId }) {
               {/* Galerie desktop (grille WFY) */}
               <div className="hidden max-h-[400px] overflow-hidden rounded-none md:block lg:max-h-[450px]">
                 <div className="grid h-full min-h-[280px] grid-cols-3 gap-2 lg:min-h-[360px]">
-                  <div className="relative col-span-2 row-span-2 overflow-hidden rounded-l-3xl">
+                  <div className="relative col-span-2 row-span-2 overflow-hidden rounded-l-3xl bg-slate-950/85">
                     {catalogUrls[0] ? (
                       <img
                         src={catalogUrls[0]}
                         alt=""
-                        className="h-full w-full object-cover transition-opacity hover:opacity-95"
+                        className="h-full w-full object-contain transition-opacity hover:opacity-95"
                         loading="lazy"
                       />
                     ) : (
                       <div className="h-full w-full" style={{ background: galleryBackgrounds[0] }} />
                     )}
                   </div>
-                  <div className="relative col-span-1 overflow-hidden rounded-tr-3xl">
+                  <div className="relative col-span-1 overflow-hidden rounded-tr-3xl bg-slate-950/85">
                     {catalogUrls[1] ? (
                       <img
                         src={catalogUrls[1]}
                         alt=""
-                        className="h-full min-h-[140px] w-full object-cover transition-opacity hover:opacity-95"
+                        className="h-full min-h-[140px] w-full object-contain transition-opacity hover:opacity-95"
                         loading="lazy"
                       />
                     ) : (
                       <div className="h-full min-h-[140px] w-full" style={{ background: galleryBackgrounds[1] }} />
                     )}
                   </div>
-                  <div className="relative col-span-1 overflow-hidden rounded-br-3xl">
+                  <div className="relative col-span-1 overflow-hidden rounded-br-3xl bg-slate-950/85">
                     {catalogUrls[2] ? (
                       <img
                         src={catalogUrls[2]}
                         alt=""
-                        className="h-full min-h-[140px] w-full object-cover transition-opacity hover:opacity-95"
+                        className="h-full min-h-[140px] w-full object-contain transition-opacity hover:opacity-95"
                         loading="lazy"
                       />
                     ) : (
