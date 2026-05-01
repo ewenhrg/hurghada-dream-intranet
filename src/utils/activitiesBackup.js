@@ -5,6 +5,7 @@
 
 export const BACKUP_VERSION = 1;
 export const BACKUP_FILENAME_PREFIX = "hd_activities_backup";
+export const CATALOG_BACKUP_FILENAME_PREFIX = "hd_catalog_backup";
 
 const DEFAULT_CATEGORY = "desert";
 
@@ -142,6 +143,13 @@ export function getBackupFilename() {
   return `${BACKUP_FILENAME_PREFIX}_${date}_${time}.json`;
 }
 
+export function getCatalogBackupFilename() {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10);
+  const time = now.toTimeString().slice(0, 5).replace(":", "h");
+  return `${CATALOG_BACKUP_FILENAME_PREFIX}_${date}_${time}.json`;
+}
+
 /**
  * Crée une sauvegarde complète des activités (pour téléchargement)
  * @param {Array} activities - Liste des activités
@@ -187,6 +195,50 @@ export function downloadBackup(activities, siteKey) {
   const a = document.createElement("a");
   a.href = url;
   a.download = getBackupFilename();
+  a.click();
+  URL.revokeObjectURL(url);
+  return backup;
+}
+
+/**
+ * Sauvegarde dédiée au catalogue public (description + photos).
+ * @param {Array} activities
+ * @param {string} siteKey
+ */
+export function createCatalogBackup(activities, siteKey) {
+  const exportedAt = new Date().toISOString();
+  const normalized = Array.isArray(activities) ? activities : [];
+  return {
+    version: BACKUP_VERSION,
+    kind: "catalog_public_content",
+    exportedAt,
+    site_key: siteKey,
+    count: normalized.length,
+    activities: normalized.map((a) => ({
+      id: a.id,
+      supabase_id: a.supabase_id,
+      name: a.name,
+      category: a.category,
+      description: a.description != null ? String(a.description) : "",
+      catalogImageUrls: Array.isArray(a.catalogImageUrls) ? a.catalogImageUrls : [],
+    })),
+  };
+}
+
+/**
+ * Télécharge un export dédié au catalogue public.
+ * @param {Array} activities
+ * @param {string} siteKey
+ */
+export function downloadCatalogBackup(activities, siteKey) {
+  const backup = createCatalogBackup(activities, siteKey);
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = getCatalogBackupFilename();
   a.click();
   URL.revokeObjectURL(url);
   return backup;

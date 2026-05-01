@@ -4,7 +4,7 @@ import { LS_KEYS, CATEGORIES } from "../constants";
 import { saveLS, loadLS } from "../utils";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { downloadBackup, parseBackupFile, getBackupFilename } from "../utils/activitiesBackup";
+import { downloadCatalogBackup, parseBackupFile, getCatalogBackupFilename } from "../utils/activitiesBackup";
 import {
   MAX_CATALOG_IMAGES,
   isAllowedCatalogImageUrl,
@@ -444,8 +444,8 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user, read
       return;
     }
     try {
-      const backup = downloadBackup(list, "catalog-content");
-      toast.success(`✅ Sauvegarde catalogue créée (${backup.count} activité(s)) : ${getBackupFilename()}`);
+      const backup = downloadCatalogBackup(list, "catalog-content");
+      toast.success(`✅ Sauvegarde catalogue public créée (${backup.count} activité(s)) : ${getCatalogBackupFilename()}`);
     } catch (error) {
       logger.error("ActivityCatalogAdminPage backup:", error);
       toast.error("Erreur lors de la sauvegarde du catalogue.");
