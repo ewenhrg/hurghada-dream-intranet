@@ -132,11 +132,7 @@ TO public
 USING (true)
 WITH CHECK (true);
 
-CREATE POLICY "Allow delete activities"
-ON public.activities
-FOR DELETE
-TO public
-USING (true);
+-- Pas de politique DELETE (voir supabase_block_api_delete_users_activities.sql).
 
 -- 7. Vérifier la structure finale de la table
 SELECT 

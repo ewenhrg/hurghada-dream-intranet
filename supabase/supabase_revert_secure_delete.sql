@@ -1,12 +1,8 @@
 -- =============================================================================
--- Retrait complet du système PIN / RPC pour les suppressions
--- Exécuter UNE FOIS dans Supabase : Dashboard → SQL → New query → Run
---
--- Effet :
---   - supprime les fonctions hd_delete_activity_secure / hd_delete_user_secure
---   - supprime la table hd_delete_secrets (codes PIN)
---   - rétablit les politiques RLS DELETE « ouvertes » sur activities et users
---     (suppression directe via l’API PostgREST + clé anon, comme avant)
+-- DANGER — À éviter en production
+-- Retrait du système PIN / RPC et réouverture des DELETE via la clé anon.
+-- Cela permet à quiconque a la clé publique de supprimer users / activities.
+-- Préférez supabase_block_api_delete_users_activities.sql pour sécuriser la base.
 -- =============================================================================
 
 -- 1) Fonctions (avant la table, car elles lisent hd_delete_secrets)

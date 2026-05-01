@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
 import { uuid, currency, emptyTransfers, mergeTransfers, saveLS, loadLS } from "../utils";
+import { API_DELETE_BLOCKED_TOAST, isApiDeleteBlockedByRls } from "../utils/supabaseDeleteGuard.js";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
@@ -1047,7 +1048,11 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           error_code: error.code,
           error_message: error.message
         });
-        toast.error("Suppression annulée: erreur Supabase.");
+        if (isApiDeleteBlockedByRls(error)) {
+          toast.error(API_DELETE_BLOCKED_TOAST);
+        } else {
+          toast.error("Suppression annulée: erreur Supabase.");
+        }
         return;
       }
 

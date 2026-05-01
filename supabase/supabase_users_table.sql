@@ -41,12 +41,8 @@ TO public
 USING (true)
 WITH CHECK (true);
 
--- Politique pour permettre le DELETE (suppression)
-CREATE POLICY "Allow delete users"
-ON public.users
-FOR DELETE
-TO public
-USING (true);
+-- Pas de politique DELETE : les suppressions via la clé anon sont bloquées (RLS).
+-- Pour appliquer sur une base existante : supabase_block_api_delete_users_activities.sql
 
 -- Insérer l'utilisateur Ewen avec tous les accès
 INSERT INTO public.users (name, code, can_delete_quote, can_add_activity, can_edit_activity, can_delete_activity, can_reset_data)
