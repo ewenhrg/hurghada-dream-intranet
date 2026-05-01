@@ -1402,12 +1402,22 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                           toast.warning("Les activités ne peuvent pas être programmées avant demain.");
                           return;
                         }
+                        const arr = String(client.arrivalDate || "").trim();
+                        const dep = String(client.departureDate || "").trim();
+                        if (arr && dep && arr <= dep) {
+                          if (date < arr || date > dep) {
+                            toast.warning("La date de l'activité doit être entre la date d'arrivée et la date de départ.");
+                            return;
+                          }
+                        }
                       }
                       setItem(idx, { date });
                     }}
                     activity={c.act}
                     stopSales={stopSales || []}
                     pushSales={pushSales || []}
+                    stayStartDate={client.arrivalDate || ""}
+                    stayEndDate={client.departureDate || ""}
                   />
                   {c.act && c.isStopSale && (
                     <div className="mt-3 p-3 rounded-lg border-2 border-red-500 bg-red-500/20 shadow-lg shadow-red-500/30 animate-pulse">

@@ -2,8 +2,24 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { TextInput } from "./ui";
 import { toast } from "../utils/toast.js";
 
+function dateToYmdLocal(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 // Composant calendrier personnalisé avec jours colorés
-export function ColoredDatePicker({ value, onChange, activity, stopSales = [], pushSales = [] }) {
+export function ColoredDatePicker({
+  value,
+  onChange,
+  activity,
+  stopSales = [],
+  pushSales = [],
+  /** YYYY-MM-DD : bornes du séjour (inclus). Si les deux sont renseignées et cohérentes, seuls ces jours sont sélectionnables. */
+  stayStartDate = "",
+  stayEndDate = "",
+}) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(() => {
     const date = value ? new Date(value + "T12:00:00") : new Date();
@@ -43,6 +59,23 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
     }
     return dateStr; // Retourner tel quel si le format n'est pas valide
   };
+
+  const stayBounds = useMemo(() => {
+    const start = String(stayStartDate || "").trim();
+    const end = String(stayEndDate || "").trim();
+    if (!start || !end) return null;
+    if (start > end) return null;
+    return { start, end };
+  }, [stayStartDate, stayEndDate]);
+
+  const isOutsideStayWindow = useCallback(
+    (date) => {
+      if (!stayBounds) return false;
+      const ds = dateToYmdLocal(date);
+      return ds < stayBounds.start || ds > stayBounds.end;
+    },
+    [stayBounds]
+  );
 
   const getDayStatus = useCallback((date) => {
     if (!activity) return null; // Pas d'activité sélectionnée
@@ -154,6 +187,11 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
       toast.warning("Les activités ne peuvent pas être programmées avant demain.");
       return;
     }
+
+    if (isOutsideStayWindow(date)) {
+      toast.warning("Choisissez une date entre la date d'arrivée et la date de départ du séjour.");
+      return;
+    }
     
     // Utiliser une méthode qui ne dépend pas du fuseau horaire
     const year = date.getFullYear();
@@ -183,7 +221,8 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
     const dayDateStr = `${year}-${month}-${dayNum}`;
     const isSelected = value && dayDateStr === value;
     const isPastOrToday = isDateInPastOrToday(day.date);
-    
+    const outsideStay = stayBounds && isOutsideStayWindow(day.date);
+
     if (!day.isCurrentMonth) {
       return baseClasses + "text-gray-300 cursor-not-allowed";
     }
@@ -191,6 +230,10 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
     // Si la date est dans le passé ou aujourd'hui, la désactiver
     if (isPastOrToday) {
       return baseClasses + "bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed opacity-50";
+    }
+
+    if (outsideStay) {
+      return baseClasses + "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed opacity-50";
     }
     
     // Ajouter les classes de hover et cursor seulement si la date n'est pas passée
@@ -240,6 +283,12 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
                 if (isDateInPastOrToday(dateObj)) {
                   toast.warning("Les activités ne peuvent pas être programmées avant demain.");
                   return;
+                }
+                if (stayBounds) {
+                  if (parsed < stayBounds.start || parsed > stayBounds.end) {
+                    toast.warning("La date doit être entre la date d'arrivée et la date de départ du séjour.");
+                    return;
+                  }
                 }
               }
               onChange(parsed);
@@ -319,15 +368,16 @@ export function ColoredDatePicker({ value, onChange, activity, stopSales = [], p
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (day.isCurrentMonth && !isDateInPastOrToday(day.date)) {
+                      if (day.isCurrentMonth && !isDateInPastOrToday(day.date) && !isOutsideStayWindow(day.date)) {
                         handleDateClick(day.date, e);
                       }
                     }}
                     className={getDayClassName(day, status) + " touch-manipulation"}
-                    disabled={!day.isCurrentMonth || isDateInPastOrToday(day.date)}
+                    disabled={!day.isCurrentMonth || isDateInPastOrToday(day.date) || isOutsideStayWindow(day.date)}
                     style={{ minHeight: '44px', minWidth: '44px' }}
                     title={
                       !day.isCurrentMonth ? "" :
+                      stayBounds && isOutsideStayWindow(day.date) ? "Hors séjour (arrivée → départ)" :
                       status === 'available' ? "Disponible" :
                       status === 'unavailable' ? "Non disponible" :
                       status === 'stop-sale' ? "STOP SALE" :
