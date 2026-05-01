@@ -510,15 +510,24 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user, read
   const handleRestoreBuiltinBackup = useCallback(async () => {
     setRestoringBuiltin(true);
     try {
-      const response = await fetch("/hd_activities_restore.json");
-      if (!response.ok) {
+      const candidatePaths = ["/hd_catalog_restore.json", "/hd_activities_restore.json"];
+      let raw = null;
+      let loadedFrom = "";
+      for (const path of candidatePaths) {
+        const response = await fetch(path);
+        if (!response.ok) continue;
+        raw = await response.text();
+        loadedFrom = path;
+        break;
+      }
+      if (!raw) {
         throw new Error("Fichier de sauvegarde inclus introuvable.");
       }
-      const raw = await response.text();
       await applyCatalogBackupRaw(raw, "incluse");
+      toast.success(`Sauvegarde incluse chargée depuis ${loadedFrom}`);
     } catch (error) {
       logger.error("ActivityCatalogAdminPage restore builtin:", error);
-      toast.error("Impossible de restaurer la sauvegarde incluse.");
+      toast.error("Impossible de restaurer la sauvegarde incluse. Placez le fichier dans public/hd_catalog_restore.json.");
     } finally {
       setRestoringBuiltin(false);
     }
