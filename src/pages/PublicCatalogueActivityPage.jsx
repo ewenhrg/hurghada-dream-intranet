@@ -137,7 +137,7 @@ function ParticipantSelect({ Icon, label, value, onChange, min, max }) {
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         aria-label={label}
-        className="w-full appearance-none rounded-xl border-2 border-slate-300 bg-white py-3 pl-12 pr-10 text-sm font-semibold text-catalog-body transition-colors hover:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+        className="w-full appearance-none rounded-xl border-2 border-slate-300 bg-white py-3 pl-12 pr-10 text-sm font-semibold !text-slate-950 transition-colors hover:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
       >
         {options.map((n) => (
           <option key={n} value={n}>
@@ -185,37 +185,41 @@ function BookingCardShell({
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <div className="border-b border-slate-200/90 pb-3 md:pb-4">
-        <p className="mb-1 text-xs font-bold text-catalog-muted">À partir de (adulte)</p>
+      <div className="hd-booking-pricing-summary rounded-xl border border-slate-200/90 bg-slate-50 px-3 py-3 shadow-sm ring-1 ring-slate-900/[0.06] md:px-4 md:py-4">
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-800">À partir de (adulte)</p>
         <div className="flex items-baseline gap-2">
-          <span className="font-catalog-display text-xl font-semibold text-catalog-ink tabular-nums md:text-2xl">
+          <span className="font-catalog-display text-xl font-semibold text-slate-950 tabular-nums md:text-2xl">
             {showSurDevisHeader ? (
-              <span className="text-base font-semibold text-amber-800">Tarif sur devis</span>
+              <span className="text-base font-semibold text-amber-900">Tarif sur devis</span>
             ) : (
               formatMoney(resolvedHeader, currency)
             )}
           </span>
         </div>
-        {priceCaption ? <p className="mt-1 text-xs font-semibold text-catalog-muted">{priceCaption}</p> : null}
+        {priceCaption ? (
+          <p className="mt-1 text-xs font-semibold text-slate-800">{priceCaption}</p>
+        ) : null}
         {replaceParticipantPricingLines ? (
-          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-slate-950">{replaceParticipantPricingLines}</p>
+          <p className="mt-3 whitespace-pre-line text-sm font-semibold leading-relaxed text-slate-950">
+            {replaceParticipantPricingLines}
+          </p>
         ) : babiesForbidden ? (
-          <div className="mt-2 space-y-0.5 text-xs font-semibold text-slate-950">
-            <p>
+          <div className="mt-3 space-y-1 border-t border-slate-200/80 pt-3 text-sm font-semibold">
+            <p className="text-slate-950">
               Enfant{ageChild ? ` (${ageChild})` : ""} : {formatMoney(activity.price_child, currency)}
             </p>
-            <p className="font-semibold text-amber-900">Bébé : interdit sur cette activité</p>
+            <p className="text-amber-950">Bébé : interdit sur cette activité</p>
           </div>
         ) : (
-        <div className="mt-2 space-y-0.5 text-xs font-semibold text-slate-950">
-          <p>
-            Enfant{ageChild ? ` (${ageChild})` : ""} : {formatMoney(activity.price_child, currency)}
-          </p>
-          <p>
-            Bébé{ageBaby ? ` (${ageBaby})` : ""} :{" "}
-            {babyPriceZero ? "gratuit ou selon grille applicable" : formatMoney(activity.price_baby, currency)}
-          </p>
-        </div>
+          <div className="mt-3 space-y-1 border-t border-slate-200/80 pt-3 text-sm font-semibold">
+            <p className="text-slate-950">
+              Enfant{ageChild ? ` (${ageChild})` : ""} : {formatMoney(activity.price_child, currency)}
+            </p>
+            <p className="text-slate-950">
+              Bébé{ageBaby ? ` (${ageBaby})` : ""} :{" "}
+              {babyPriceZero ? "gratuit ou selon grille applicable" : formatMoney(activity.price_baby, currency)}
+            </p>
+          </div>
         )}
       </div>
 

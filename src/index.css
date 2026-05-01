@@ -137,6 +137,14 @@ body {
   letter-spacing: -0.03em;
 }
 
+/* Résumé tarifaire fiche activité : forcer une encre lisible (le body intranet peut « baver » sur les contrastes). */
+.hd-public-catalog .hd-booking-pricing-summary {
+  color: #020617;
+}
+.hd-public-catalog .hd-booking-pricing-summary p {
+  color: #020617;
+}
+
 .hd-public-catalog .catalog-shell {
   position: relative;
   border: 1px solid rgba(15, 23, 42, 0.08);
