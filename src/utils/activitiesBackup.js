@@ -169,6 +169,7 @@ export function createBackup(activities, siteKey) {
       availableDays: a.availableDays,
       notes: a.notes,
       description: a.description,
+      catalogImageUrls: Array.isArray(a.catalogImageUrls) ? a.catalogImageUrls : [],
       transfers: a.transfers,
     })),
   };

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { LS_KEYS, CATEGORIES } from "../constants";
-import { saveLS } from "../utils";
+import { saveLS, loadLS } from "../utils";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
+import { downloadBackup, parseBackupFile, getBackupFilename } from "../utils/activitiesBackup";
 import {
   MAX_CATALOG_IMAGES,
   isAllowedCatalogImageUrl,
@@ -49,6 +50,56 @@ function groupActivitiesByCategory(list) {
     if (map.get(k).length) orderedKeys.push(k);
   }
   return orderedKeys.map((key) => ({ key, label: categoryLabel(key), items: map.get(key) }));
+}
+
+function normalizeNameForMatch(name) {
+  const s = String(name || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+  try {
+    return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  } catch {
+    return s;
+  }
+}
+
+function catalogItemKey(activity) {
+  return `${normalizeNameForMatch(activity?.name)}|${activity?.category || "desert"}`;
+}
+
+function createCatalogPatchMapFromBackup(backupActivities) {
+  const bySupabaseId = new Map();
+  const byNameCategory = new Map();
+  for (const row of backupActivities || []) {
+    if (!row) continue;
+    const description = row.description != null ? String(row.description) : "";
+    const catalogImageUrls = normalizeCatalogImageUrlsFromDb(row.catalogImageUrls ?? row.catalog_image_urls);
+    const patch = { description, catalogImageUrls };
+    if (row.supabase_id != null && String(row.supabase_id).trim() !== "") {
+      bySupabaseId.set(String(row.supabase_id), patch);
+    }
+    byNameCategory.set(catalogItemKey(row), patch);
+  }
+  return { bySupabaseId, byNameCategory };
+}
+
+function applyCatalogBackupToActivities(currentActivities, backupActivities) {
+  const { bySupabaseId, byNameCategory } = createCatalogPatchMapFromBackup(backupActivities);
+  let patchedCount = 0;
+  const next = (currentActivities || []).map((activity) => {
+    let patch = null;
+    if (activity?.supabase_id != null && String(activity.supabase_id).trim() !== "") {
+      patch = bySupabaseId.get(String(activity.supabase_id)) || null;
+    }
+    if (!patch) {
+      patch = byNameCategory.get(catalogItemKey(activity)) || null;
+    }
+    if (!patch) return activity;
+    patchedCount += 1;
+    return { ...activity, ...patch };
+  });
+  return { next, patchedCount };
 }
 
 async function persistCatalogRow(activity) {
@@ -349,6 +400,7 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user, read
   /** Édition réelle : permission + pas de mode lecture seule (ex. compte Léa sur ce catalogue). */
   const canMutate = hasEditPermission && !readOnly;
   const [search, setSearch] = useState("");
+  const [restoringBuiltin, setRestoringBuiltin] = useState(false);
 
   const filteredActivities = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -372,6 +424,105 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user, read
     },
     [setActivities]
   );
+
+  const persistCatalogRows = useCallback(async (rows) => {
+    if (!rows?.length) return { saved: 0, failed: 0 };
+    let saved = 0;
+    let failed = 0;
+    for (const row of rows) {
+      const ok = await persistCatalogRow(row);
+      if (ok) saved += 1;
+      else failed += 1;
+    }
+    return { saved, failed };
+  }, []);
+
+  const handleBackupAllCatalog = useCallback(() => {
+    const list = loadLS(LS_KEYS.activities, activities || []);
+    if (!list.length) {
+      toast.warning("Aucune activité à sauvegarder.");
+      return;
+    }
+    try {
+      const backup = downloadBackup(list, "catalog-content");
+      toast.success(`✅ Sauvegarde catalogue créée (${backup.count} activité(s)) : ${getBackupFilename()}`);
+    } catch (error) {
+      logger.error("ActivityCatalogAdminPage backup:", error);
+      toast.error("Erreur lors de la sauvegarde du catalogue.");
+    }
+  }, [activities]);
+
+  const applyCatalogBackupRaw = useCallback(
+    async (rawText, sourceLabel) => {
+      const parsed = parseBackupFile(rawText);
+      if (!parsed.ok || !parsed.backup) {
+        toast.error(`Sauvegarde invalide: ${parsed.error || "format non reconnu"}`);
+        return;
+      }
+      const backupActivities = Array.isArray(parsed.backup.activities) ? parsed.backup.activities : [];
+      if (!backupActivities.length) {
+        toast.warning("La sauvegarde ne contient aucune activité.");
+        return;
+      }
+      const { next, patchedCount } = applyCatalogBackupToActivities(activities || [], backupActivities);
+      if (patchedCount === 0) {
+        toast.warning("Aucune activité correspondante trouvée (id Supabase ou nom + catégorie).");
+        return;
+      }
+      setActivities(next);
+      saveLS(LS_KEYS.activities, next);
+
+      if (canMutate) {
+        const touched = next.filter((a, i) => {
+          const prev = activities?.[i];
+          if (!prev) return false;
+          return prev.description !== a.description || JSON.stringify(prev.catalogImageUrls || []) !== JSON.stringify(a.catalogImageUrls || []);
+        });
+        const syncables = touched.filter((a) => a.supabase_id);
+        if (syncables.length > 0) {
+          const { saved, failed } = await persistCatalogRows(syncables);
+          if (failed > 0) {
+            toast.warning(`Restauration ${sourceLabel}: ${patchedCount} locale(s), ${saved} synchronisée(s), ${failed} en échec Supabase.`);
+            return;
+          }
+        }
+      }
+      toast.success(`✅ Restauration ${sourceLabel} terminée : ${patchedCount} activité(s) mises à jour.`);
+    },
+    [activities, canMutate, persistCatalogRows, setActivities]
+  );
+
+  const handleRestoreFromFile = useCallback(
+    (event) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        void applyCatalogBackupRaw(String(reader.result || ""), "depuis fichier");
+      };
+      reader.onerror = () => toast.error("Impossible de lire le fichier.");
+      reader.readAsText(file, "UTF-8");
+    },
+    [applyCatalogBackupRaw]
+  );
+
+  const handleRestoreBuiltinBackup = useCallback(async () => {
+    setRestoringBuiltin(true);
+    try {
+      const response = await fetch("/hd_activities_restore.json");
+      if (!response.ok) {
+        throw new Error("Fichier de sauvegarde inclus introuvable.");
+      }
+      const raw = await response.text();
+      await applyCatalogBackupRaw(raw, "incluse");
+    } catch (error) {
+      logger.error("ActivityCatalogAdminPage restore builtin:", error);
+      toast.error("Impossible de restaurer la sauvegarde incluse.");
+    } finally {
+      setRestoringBuiltin(false);
+    }
+  }, [applyCatalogBackupRaw]);
 
   if (!activities?.length) {
     return (
@@ -445,6 +596,30 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user, read
         >
           Effacer
         </button>
+        {!readOnly && (
+          <>
+            <button
+              type="button"
+              disabled={!canMutate}
+              onClick={handleBackupAllCatalog}
+              className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Sauvegarder tout le catalogue
+            </button>
+            <label className="inline-flex shrink-0 cursor-pointer items-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">
+              Restaurer un fichier
+              <input type="file" accept=".json,application/json" className="hidden" onChange={handleRestoreFromFile} />
+            </label>
+            <button
+              type="button"
+              disabled={!canMutate || restoringBuiltin}
+              onClick={() => void handleRestoreBuiltinBackup()}
+              className="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {restoringBuiltin ? "Restauration..." : "Restaurer la sauvegarde incluse"}
+            </button>
+          </>
+        )}
       </div>
 
       {search.trim() && filteredActivities.length === 0 ? (
