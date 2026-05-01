@@ -725,12 +725,12 @@ export function PublicClientDevisPage() {
                               <span aria-hidden>{getCategoryEmoji(categoryKey)}</span>
                               {CATEGORIES.find((c) => c.key === categoryKey)?.label || "Activité"}
                             </span>
-                            <h3 className="line-clamp-2 text-left font-catalog-display text-[0.95rem] font-bold leading-snug tracking-tight text-white [text-shadow:0_2px_3px_rgba(0,0,0,0.98),0_6px_22px_rgba(0,0,0,0.9)] sm:text-[1.05rem]">
-                              {activity.name}
-                            </h3>
                           </div>
                         </div>
                         <div className="catalog-elevated flex grow flex-col bg-white p-5 sm:p-6">
+                          <h3 className="line-clamp-2 text-left font-catalog-display text-xl font-bold leading-tight tracking-tight text-catalog-ink sm:text-[1.35rem]">
+                            {activity.name || "Activité"}
+                          </h3>
                           <div className="mt-auto flex items-end justify-between gap-3 border-t-2 border-slate-100 pt-4">
                             <p className="max-w-[58%] text-left text-[11px] font-semibold leading-snug text-catalog-muted sm:text-xs">
                               Dates &amp; participants sur la fiche — ajout panier en un clic.
