@@ -1,5 +1,5 @@
-import { useMemo, useCallback } from "react";
-import { GhostBtn } from "../components/ui";
+import { useMemo, useCallback, useState } from "react";
+import { GhostBtn, PrimaryBtn } from "../components/ui";
 
 /**
  * Regroupe les entrées Realtime Presence (une par onglet / connexion) par code utilisateur.
@@ -22,8 +22,19 @@ function presenceStateToRows(presenceState) {
   );
 }
 
-export function EwenDashboardPage({ user, presenceState, supabaseConfigured, onForceLogoutRequest }) {
+const MAX_SCREEN_MESSAGE_LEN = 500;
+
+export function EwenDashboardPage({
+  user,
+  presenceState,
+  supabaseConfigured,
+  onForceLogoutRequest,
+  onSendUserScreenMessage,
+}) {
   const onlineRows = useMemo(() => presenceStateToRows(presenceState), [presenceState]);
+  const [messageTargetRow, setMessageTargetRow] = useState(null);
+  const [messageDraft, setMessageDraft] = useState("");
+  const [messageSending, setMessageSending] = useState(false);
 
   const handleForceLogoutRow = useCallback(
     (row) => {
@@ -40,6 +51,31 @@ export function EwenDashboardPage({ user, presenceState, supabaseConfigured, onF
     },
     [onForceLogoutRequest]
   );
+
+  const openMessageModal = useCallback((row) => {
+    setMessageDraft("");
+    setMessageTargetRow(row);
+  }, []);
+
+  const closeMessageModal = useCallback(() => {
+    if (messageSending) return;
+    setMessageTargetRow(null);
+    setMessageDraft("");
+  }, [messageSending]);
+
+  const handleSendScreenMessage = useCallback(async () => {
+    if (!onSendUserScreenMessage || !messageTargetRow) return;
+    setMessageSending(true);
+    try {
+      const ok = await onSendUserScreenMessage(messageTargetRow, messageDraft);
+      if (ok) {
+        setMessageTargetRow(null);
+        setMessageDraft("");
+      }
+    } finally {
+      setMessageSending(false);
+    }
+  }, [onSendUserScreenMessage, messageTargetRow, messageDraft]);
 
   return (
     <div className="space-y-8">
@@ -64,7 +100,7 @@ export function EwenDashboardPage({ user, presenceState, supabaseConfigured, onF
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Qui est en ligne</h2>
             <p className="text-sm text-slate-600">
-              Connexions actives à l’intranet (temps réel Supabase). Un même compte sur plusieurs onglets compte plusieurs sessions. Vous pouvez forcer la déconnexion si quelqu’un a laissé une session ouverte.
+              Connexions actives à l’intranet (temps réel Supabase). Un même compte sur plusieurs onglets compte plusieurs sessions. « Message » affiche une notification ~3 s sur l’écran de la personne ; « Déconnecter » ferme sa session sur tous les onglets.
             </p>
           </div>
           <span className="text-sm font-medium tabular-nums px-3 py-1 rounded-full bg-white/90 border border-emerald-200 text-emerald-900">
@@ -113,6 +149,17 @@ export function EwenDashboardPage({ user, presenceState, supabaseConfigured, onF
                     <span className="h-2 w-2 rounded-full bg-emerald-500" />
                     En ligne
                   </span>
+                  {onSendUserScreenMessage && (row.code || (row.name && row.name !== "—")) && (
+                    <GhostBtn
+                      type="button"
+                      variant="neutral"
+                      size="sm"
+                      className="min-h-0 min-w-0 py-2"
+                      onClick={() => openMessageModal(row)}
+                    >
+                      Message
+                    </GhostBtn>
+                  )}
                   {onForceLogoutRequest && (row.code || (row.name && row.name !== "—")) && (
                     <GhostBtn
                       type="button"
@@ -130,6 +177,60 @@ export function EwenDashboardPage({ user, presenceState, supabaseConfigured, onF
           </ul>
         )}
       </section>
+
+      {messageTargetRow && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="hd-screen-msg-title"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeMessageModal();
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl border-2 border-indigo-200 bg-white shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-600 to-violet-600 text-white">
+              <h2 id="hd-screen-msg-title" className="text-lg font-bold">
+                Message à l’écran
+              </h2>
+              <p className="text-sm text-white/85 mt-0.5">
+                {messageTargetRow.name}
+                {messageTargetRow.code ? ` · code ${messageTargetRow.code}` : ""} — affichage ~3 secondes sur son intranet.
+              </p>
+            </div>
+            <div className="p-5 space-y-3">
+              <label className="block text-sm font-semibold text-slate-700" htmlFor="hd-screen-msg-body">
+                Texte
+              </label>
+              <textarea
+                id="hd-screen-msg-body"
+                value={messageDraft}
+                onChange={(e) => setMessageDraft(e.target.value.slice(0, MAX_SCREEN_MESSAGE_LEN))}
+                rows={4}
+                className="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 resize-none"
+                placeholder="Ex. : Peux-tu venir au bureau ?"
+                disabled={messageSending}
+              />
+              <p className="text-xs text-slate-500 tabular-nums">
+                {messageDraft.length}/{MAX_SCREEN_MESSAGE_LEN}
+              </p>
+            </div>
+            <div className="px-5 py-4 border-t border-slate-100 flex flex-wrap gap-2 justify-end bg-slate-50">
+              <GhostBtn type="button" variant="neutral" size="sm" onClick={closeMessageModal} disabled={messageSending}>
+                Annuler
+              </GhostBtn>
+              <PrimaryBtn
+                type="button"
+                className="min-h-0 py-2.5 px-4 text-sm"
+                onClick={handleSendScreenMessage}
+                disabled={messageSending || !messageDraft.trim()}
+              >
+                {messageSending ? "Envoi…" : "Envoyer"}
+              </PrimaryBtn>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-8 text-center text-slate-500 text-sm">
         Espace réservé pour de futurs indicateurs (stats devis, alertes, etc.).

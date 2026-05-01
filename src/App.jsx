@@ -154,6 +154,45 @@ export default function App() {
     toast.success(`Demande de déconnexion envoyée pour ${label}.`);
   }, []);
 
+  /** Tableau de bord Ewen : notification éphémère (toast 3 s) sur l’écran de l’utilisateur ciblé. */
+  const sendUserScreenMessage = useCallback(async (target, messageText) => {
+    const ch = intranetPresenceChannelRef.current;
+    if (!ch || !__SUPABASE_DEBUG__.isConfigured) {
+      toast.error("Le canal temps réel n’est pas prêt. Réessayez dans quelques secondes.");
+      return false;
+    }
+    const trimmed = String(messageText || "").trim();
+    if (!trimmed) {
+      toast.error("Le message est vide.");
+      return false;
+    }
+    if (trimmed.length > 500) {
+      toast.error("Message trop long (500 caractères max).");
+      return false;
+    }
+    const codeTrim =
+      target?.code != null && String(target.code).trim() !== "" ? String(target.code).trim() : "";
+    const nameTrim =
+      target?.name != null && String(target.name).trim() !== "" ? String(target.name).trim() : "";
+    if (!codeTrim && !nameTrim) {
+      toast.error("Impossible d’identifier l’utilisateur.");
+      return false;
+    }
+    const payload = codeTrim ? { code: codeTrim, message: trimmed } : { name: nameTrim, message: trimmed };
+    const { error } = await ch.send({
+      type: "broadcast",
+      event: "hd_user_screen_message",
+      payload,
+    });
+    if (error) {
+      logger.warn("Message écran : erreur d’envoi", error);
+      toast.error("Impossible d’envoyer le message.");
+      return false;
+    }
+    toast.success("Message envoyé.");
+    return true;
+  }, []);
+
   /** Onglet Devis : préremplir le formulaire depuis une demande catalogue (événement émis par PublicDevisPage). */
   useEffect(() => {
     const handler = (e) => {
@@ -233,6 +272,18 @@ export default function App() {
         const payload = msg?.payload != null ? msg.payload : msg;
         if (shouldForceLogoutFromPayload(payload)) {
           handleLogout();
+        }
+      })
+      .on("broadcast", { event: "hd_user_screen_message" }, (msg) => {
+        const payload = msg?.payload != null ? msg.payload : msg;
+        const text = payload?.message != null ? String(payload.message).trim() : "";
+        if (!text || !shouldForceLogoutFromPayload(payload)) return;
+        const esc = typeof document !== "undefined" ? document.createElement("div") : null;
+        if (esc) {
+          esc.textContent = text;
+          toast.info(esc.innerHTML, 3000);
+        } else {
+          toast.info(text, 3000);
         }
       })
       .subscribe(async (status) => {
@@ -1412,6 +1463,7 @@ export default function App() {
                     presenceState={presenceState}
                     supabaseConfigured={__SUPABASE_DEBUG__.isConfigured}
                     onForceLogoutRequest={sendForceLogoutRequest}
+                    onSendUserScreenMessage={sendUserScreenMessage}
                   />
                 </Suspense>
               </ErrorBoundary>
