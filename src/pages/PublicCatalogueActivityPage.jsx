@@ -198,16 +198,16 @@ function BookingCardShell({
         </div>
         {priceCaption ? <p className="mt-1 text-xs font-semibold text-catalog-muted">{priceCaption}</p> : null}
         {replaceParticipantPricingLines ? (
-          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-slate-800">{replaceParticipantPricingLines}</p>
+          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-slate-950">{replaceParticipantPricingLines}</p>
         ) : babiesForbidden ? (
-          <div className="mt-2 space-y-0.5 text-xs font-medium text-slate-800">
+          <div className="mt-2 space-y-0.5 text-xs font-semibold text-slate-950">
             <p>
               Enfant{ageChild ? ` (${ageChild})` : ""} : {formatMoney(activity.price_child, currency)}
             </p>
             <p className="font-semibold text-amber-900">Bébé : interdit sur cette activité</p>
           </div>
         ) : (
-        <div className="mt-2 space-y-0.5 text-xs font-medium text-slate-800">
+        <div className="mt-2 space-y-0.5 text-xs font-semibold text-slate-950">
           <p>
             Enfant{ageChild ? ` (${ageChild})` : ""} : {formatMoney(activity.price_child, currency)}
           </p>
