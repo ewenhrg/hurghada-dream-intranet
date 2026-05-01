@@ -10,8 +10,10 @@ import {
   normalizeCatalogImageUrlsFromDb,
 } from "../utils/catalogContent";
 
-const CATALOG_IMAGES_BUCKET = "catalog-images";
-const CATALOG_IMAGES_FALLBACK_BUCKET = "documents";
+// Bucket principal aligné avec la config Supabase actuelle du projet.
+const CATALOG_IMAGES_BUCKET = "documents";
+// Fallback historique éventuel (certains projets utilisent un bucket "Catalogue").
+const CATALOG_IMAGES_FALLBACK_BUCKET = "Catalogue";
 const MAX_CATALOG_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_CATALOG_IMAGE_SIZE_MB = 10;
 
@@ -181,7 +183,13 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
           .from(usedBucket)
           .upload(objectPath, file, { upsert: false, contentType: file.type });
 
-        if (uploadError && String(uploadError.message || "").toLowerCase().includes("bucket not found")) {
+        if (
+          uploadError &&
+          (() => {
+            const msg = String(uploadError.message || "").toLowerCase();
+            return msg.includes("bucket not found") || msg.includes("not found") || msg.includes("does not exist");
+          })()
+        ) {
           usedBucket = CATALOG_IMAGES_FALLBACK_BUCKET;
           const fallbackTry = await supabase.storage
             .from(usedBucket)
