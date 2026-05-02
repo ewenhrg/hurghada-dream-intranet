@@ -168,6 +168,15 @@ export function UsersPage({ user: sessionUser }) {
 
   const remoteUsersCount = useMemo(() => (users || []).filter((u) => !u?.[LOCAL_ONLY_KEY]).length, [users]);
 
+  /** Affichage : ordre alphabétique sur le nom (insensible à la casse / accents, locale fr). */
+  const usersSortedByName = useMemo(() => {
+    const list = [...(users || [])];
+    list.sort((a, b) =>
+      String(a?.name || "").localeCompare(String(b?.name || ""), "fr", { sensitivity: "base" })
+    );
+    return list;
+  }, [users]);
+
   const loadUsers = useCallback(async () => {
     if (!supabase) return;
     setLoading(true);
@@ -778,7 +787,7 @@ export function UsersPage({ user: sessionUser }) {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u, idx) => {
+                {usersSortedByName.map((u, idx) => {
                   const activeLabels = getActivePermissionLabels(u);
                   return (
                     <tr
