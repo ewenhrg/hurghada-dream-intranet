@@ -192,6 +192,16 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
     });
   }
 
+  function moveUrlAt(index, delta) {
+    setUrlRows((prev) => {
+      const j = index + delta;
+      if (j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[j]] = [next[j], next[index]];
+      return next;
+    });
+  }
+
   async function handleUploadFiles(event) {
     const fileList = Array.from(event.target.files || []);
     event.target.value = "";
@@ -324,7 +334,8 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
             Photos (URLs HTTPS)
           </label>
           <p className="mb-2 text-xs text-slate-600">
-            Collez des liens directs (HTTPS) ou importez des fichiers image (max {MAX_CATALOG_IMAGES}, {MAX_CATALOG_IMAGE_SIZE_MB} Mo/image).
+            Collez des liens directs (HTTPS) ou importez des fichiers image (max {MAX_CATALOG_IMAGES}, {MAX_CATALOG_IMAGE_SIZE_MB} Mo/image). L’ordre
+            des lignes est celui affiché sur la fiche catalogue (aperçu, carrousel, lightbox).
           </p>
           <div className="mb-3">
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
@@ -342,6 +353,26 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
           <ul className="space-y-2">
             {urlRows.map((row, index) => (
               <li key={`url-${activity.id}-${index}`} className="flex flex-wrap items-center gap-2">
+                <div className="flex shrink-0 flex-col gap-0.5" title="Ordre sur le catalogue public">
+                  <button
+                    type="button"
+                    disabled={!canEdit || !activity.supabase_id || index === 0}
+                    onClick={() => moveUrlAt(index, -1)}
+                    className="rounded border border-slate-200 px-1.5 py-0.5 text-xs font-semibold leading-none text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
+                    aria-label={`Monter la photo ${index + 1}`}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canEdit || !activity.supabase_id || index >= urlRows.length - 1}
+                    onClick={() => moveUrlAt(index, 1)}
+                    className="rounded border border-slate-200 px-1.5 py-0.5 text-xs font-semibold leading-none text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
+                    aria-label={`Descendre la photo ${index + 1}`}
+                  >
+                    ↓
+                  </button>
+                </div>
                 <input
                   type="url"
                   value={row}
