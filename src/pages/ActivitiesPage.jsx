@@ -2,7 +2,12 @@ import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
 import { uuid, currency, emptyTransfers, mergeTransfers, saveLS, loadLS } from "../utils";
-import { API_DELETE_BLOCKED_TOAST, isApiDeleteBlockedByRls } from "../utils/supabaseDeleteGuard.js";
+import {
+  API_DELETE_BLOCKED_TOAST,
+  isApiDeleteBlockedByRls,
+  isDeleteReturningNoRows,
+  DELETE_ZERO_ROWS_TOAST,
+} from "../utils/supabaseDeleteGuard.js";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
@@ -1053,6 +1058,15 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         } else {
           toast.error("Suppression annulée: erreur Supabase.");
         }
+        return;
+      }
+
+      if (isDeleteReturningNoRows(data)) {
+        logger.warn("Suppression activité : 0 ligne en base.", {
+          supabase_id: activityToDelete.supabase_id,
+          activity_name: activityName,
+        });
+        toast.error(DELETE_ZERO_ROWS_TOAST);
         return;
       }
 

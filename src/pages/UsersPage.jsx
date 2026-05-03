@@ -5,7 +5,12 @@ import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { LS_KEYS } from "../constants";
 import { loadLS, saveLS } from "../utils";
-import { API_DELETE_BLOCKED_TOAST, isApiDeleteBlockedByRls } from "../utils/supabaseDeleteGuard.js";
+import {
+  API_DELETE_BLOCKED_TOAST,
+  isApiDeleteBlockedByRls,
+  isDeleteReturningNoRows,
+  DELETE_ZERO_ROWS_TOAST,
+} from "../utils/supabaseDeleteGuard.js";
 import {
   PERMISSION_GROUPS,
   PERMISSION_FORM_TO_DB,
@@ -551,7 +556,7 @@ export function UsersPage({ user: sessionUser }) {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from("users").delete().eq("id", u.id);
+      const { data, error } = await supabase.from("users").delete().eq("id", u.id).select();
 
       if (error) {
         logger.error("Erreur lors de la suppression de l'utilisateur:", error);
@@ -560,6 +565,10 @@ export function UsersPage({ user: sessionUser }) {
         } else {
           toast.error("Erreur lors de la suppression: " + (error.message || "Erreur inconnue"));
         }
+        if (deletingSelf) suppressMergeWarningRef.current = false;
+      } else if (isDeleteReturningNoRows(data)) {
+        logger.warn("Suppression utilisateur : 0 ligne en base (RLS ou id).", { id: u.id });
+        toast.error(DELETE_ZERO_ROWS_TOAST);
         if (deletingSelf) suppressMergeWarningRef.current = false;
       } else {
         logger.log("✅ Utilisateur supprimé avec succès!");
