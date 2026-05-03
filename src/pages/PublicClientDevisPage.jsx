@@ -706,17 +706,20 @@ export function PublicClientDevisPage() {
                         className="public-catalog-grid-card catalog-float-soft group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-slate-200/95 bg-white opacity-0 shadow-catalog-premium ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out animate-catalog-in-fade motion-reduce:animate-none motion-reduce:opacity-100 hover:-translate-y-2 hover:border-teal-500/50 hover:shadow-catalog-premium-hover hover:ring-teal-500/20 active:scale-[0.99]"
                         style={{ animationDelay: `${catalogCardEnterDelayMsById.get(activity.id) ?? 0}ms` }}
                       >
-                        <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 sm:aspect-[5/4]">
+                        <div className="relative aspect-[5/4] w-full overflow-hidden bg-slate-100 sm:aspect-[5/4]">
                           {coverImageUrl ? (
                             <img
                               src={coverImageUrl}
                               alt=""
                               draggable={false}
-                              className="hd-catalog-card-cover pointer-events-none h-full w-full select-none object-contain transition duration-700 ease-out sm:group-hover:scale-[1.08]"
+                              className="hd-catalog-card-cover pointer-events-none absolute inset-0 h-full w-full select-none object-cover transition duration-700 ease-out sm:group-hover:scale-[1.08]"
                               loading="lazy"
                             />
                           ) : (
-                            <div className="h-full w-full transition duration-500 group-hover:brightness-105" style={{ background: getCategoryCover(categoryKey) }} />
+                            <div
+                              className="absolute inset-0 h-full w-full transition duration-500 group-hover:brightness-105"
+                              style={{ background: getCategoryCover(categoryKey) }}
+                            />
                           )}
                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#022c22]/88 via-slate-900/25 to-transparent" />
                           <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/75 via-black/35 to-transparent sm:h-44" />

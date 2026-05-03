@@ -982,7 +982,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                       className="h-full w-full"
                       aria-label="Agrandir la photo"
                     >
-                      <img src={slide.url} alt="" className="h-full w-full object-contain" loading="lazy" />
+                      <img src={slide.url} alt="" className="h-full w-full object-cover" loading="lazy" />
                     </button>
                   ) : (
                     <div className="h-full w-full" style={{ background: slide.bg }} />
@@ -1067,7 +1067,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                         <img
                           src={catalogUrls[0]}
                           alt=""
-                          className="h-full w-full object-contain transition-opacity hover:opacity-95"
+                          className="h-full w-full object-cover transition-opacity hover:opacity-95"
                           loading="lazy"
                         />
                       </button>
@@ -1081,7 +1081,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                         <img
                           src={catalogUrls[1]}
                           alt=""
-                          className="h-full min-h-[140px] w-full object-contain transition-opacity hover:opacity-95"
+                          className="h-full min-h-[140px] w-full object-cover transition-opacity hover:opacity-95"
                           loading="lazy"
                         />
                       </button>
@@ -1095,7 +1095,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                         <img
                           src={catalogUrls[2]}
                           alt=""
-                          className="h-full min-h-[140px] w-full object-contain transition-opacity hover:opacity-95"
+                          className="h-full min-h-[140px] w-full object-cover transition-opacity hover:opacity-95"
                           loading="lazy"
                         />
                       </button>

@@ -213,7 +213,7 @@ body {
 /**
  * Cartes du catalogue public : les règles globales tactiles ([role="button"], img @768px)
  * peuvent casser le flex, zoomer l’image ou capter le tap sur l’img (iOS). On rétablit
- * un bloc carte plein largeur + image entièrement visible (object-fit contain).
+ * un bloc carte plein largeur + image qui remplit la zone (object-fit cover).
  */
 .hd-public-catalog article.public-catalog-grid-card[role="button"] {
   display: flex !important;
@@ -228,10 +228,12 @@ body {
 }
 
 .hd-public-catalog img.hd-catalog-card-cover {
+  display: block;
   height: 100%;
   width: 100%;
-  max-width: 100%;
-  object-fit: contain;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
   object-position: center;
   pointer-events: none;
   -webkit-user-drag: none;
@@ -243,7 +245,9 @@ body {
   .hd-public-catalog img.hd-catalog-card-cover {
     height: 100% !important;
     width: 100% !important;
-    object-fit: contain !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: cover !important;
   }
 }
 
@@ -1614,8 +1618,8 @@ button, a, [role="button"] {
     transform: none !important;
   }
 
-  /* Optimiser les images */
-  img {
+  /* Optimiser les images (pas les couvertures plein cadre du catalogue public) */
+  img:not(.hd-catalog-card-cover) {
     max-width: 100%;
     height: auto;
   }
