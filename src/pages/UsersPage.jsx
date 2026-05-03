@@ -17,6 +17,7 @@ import {
   getDefaultPermissionForm,
   dbUserToFormUser,
   formToDbUser,
+  canAccessHotelsPage,
 } from "../constants/permissions";
 
 const LOCAL_ONLY_KEY = "_localOnly";
@@ -182,6 +183,8 @@ export function UsersPage({ user: sessionUser }) {
     return list;
   }, [users]);
 
+  const canManageUsersInDatabase = useMemo(() => canAccessHotelsPage(sessionUser), [sessionUser]);
+
   const loadUsers = useCallback(async () => {
     if (!supabase) return;
     setLoading(true);
@@ -303,6 +306,10 @@ export function UsersPage({ user: sessionUser }) {
       toast.warning("Aucun compte « cache seul » à réinsérer.");
       return;
     }
+    if (!canAccessHotelsPage(sessionUser)) {
+      toast.warning("Seuls Ewen et Léa peuvent réinsérer des utilisateurs dans Supabase.");
+      return;
+    }
     if (
       !window.confirm(
         `Réinsérer ${localOnlyUsers.length} utilisateur(s) dans Supabase à partir du cache ? ` +
@@ -336,7 +343,7 @@ export function UsersPage({ user: sessionUser }) {
     } finally {
       setRestoring(false);
     }
-  }, [localOnlyUsers, loadUsers]);
+  }, [localOnlyUsers, loadUsers, sessionUser]);
 
   useEffect(() => {
     loadUsers();
@@ -375,6 +382,12 @@ export function UsersPage({ user: sessionUser }) {
     }
 
     try {
+      if (!canManageUsersInDatabase) {
+        toast.warning("Seuls Ewen et Léa peuvent créer ou modifier les utilisateurs en base.");
+        setLoading(false);
+        return;
+      }
+
       const userData = formToDbUser(form);
 
       if (editingUser) {
@@ -448,6 +461,18 @@ export function UsersPage({ user: sessionUser }) {
             toast.success(
               "Utilisateur modifié avec succès.\nL'utilisateur devra se reconnecter pour que les nouvelles permissions soient prises en compte."
             );
+            if (isSameUserRow(sessionUser, editingUser) && supabase?.auth) {
+              try {
+                const { data: authData } = await supabase.auth.getUser();
+                const em = String(sessionUser?.intranet_auth_email || "").trim();
+                if (authData?.user?.email && em && authData.user.email.toLowerCase() === em.toLowerCase()) {
+                  const { error: pwdErr } = await supabase.auth.updateUser({ password: form.code.trim() });
+                  if (pwdErr) logger.warn("Sync mot de passe Auth après changement de code", pwdErr);
+                }
+              } catch (syncErr) {
+                logger.warn("Sync mot de passe Auth", syncErr);
+              }
+            }
           }
         }
       } else {
@@ -511,6 +536,11 @@ export function UsersPage({ user: sessionUser }) {
       setUsers(next);
       saveLS(LS_KEYS.users, stripLocalOnlyFlagForStorage(next));
       toast.success("Entrée retirée du cache.");
+      return;
+    }
+
+    if (!canManageUsersInDatabase) {
+      toast.warning("Seuls Ewen et Léa peuvent supprimer des utilisateurs en base.");
       return;
     }
 
@@ -641,12 +671,19 @@ export function UsersPage({ user: sessionUser }) {
             <h3 className="text-xl font-bold text-gray-800">Gestion des utilisateurs</h3>
             <p className="text-sm text-gray-600 mt-0.5">
               Codes d'accès et permissions par catégorie.
+              {!canManageUsersInDatabase && (
+                <span className="block mt-1 text-amber-800 font-medium">
+                  Lecture seule : seuls Ewen et Léa peuvent créer, modifier ou supprimer des comptes en base.
+                </span>
+              )}
             </p>
           </div>
         </div>
         <PrimaryBtn
-          onClick={() => setShowForm(!showForm)}
-          className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 border-0 shadow-lg shadow-violet-500/25"
+          onClick={() => canManageUsersInDatabase && setShowForm(!showForm)}
+          disabled={!canManageUsersInDatabase}
+          title={!canManageUsersInDatabase ? "Réservé à Ewen et Léa" : undefined}
+          className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 border-0 shadow-lg shadow-violet-500/25 disabled:opacity-50 disabled:pointer-events-none"
         >
           {showForm ? "Annuler" : "➕ Nouvel utilisateur"}
         </PrimaryBtn>
@@ -665,9 +702,10 @@ export function UsersPage({ user: sessionUser }) {
           <div className="flex flex-wrap gap-2">
             <PrimaryBtn
               type="button"
-              disabled={restoring || loading}
+              disabled={restoring || loading || !canManageUsersInDatabase}
+              title={!canManageUsersInDatabase ? "Réservé à Ewen et Léa" : undefined}
               onClick={handleRestoreMissingToSupabase}
-              className="bg-amber-600 hover:bg-amber-700 border-0 text-white"
+              className="bg-amber-600 hover:bg-amber-700 border-0 text-white disabled:opacity-50"
             >
               {restoring ? "Réinsertion…" : "↻ Réinsérer dans Supabase"}
             </PrimaryBtn>
@@ -841,16 +879,28 @@ export function UsersPage({ user: sessionUser }) {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex gap-2 justify-end">
-                          <GhostBtn onClick={() => handleEdit(u)} size="sm" className="text-indigo-600 hover:bg-indigo-50">
-                            ✏️ Modifier
-                          </GhostBtn>
-                          <GhostBtn
-                            onClick={() => handleDelete(u)}
-                            variant="danger"
-                            size="sm"
-                          >
-                            {u[LOCAL_ONLY_KEY] ? "Retirer du cache" : "🗑️ Supprimer"}
-                          </GhostBtn>
+                          {u[LOCAL_ONLY_KEY] || canManageUsersInDatabase ? (
+                            <>
+                              <GhostBtn
+                                onClick={() => handleEdit(u)}
+                                size="sm"
+                                className="text-indigo-600 hover:bg-indigo-50"
+                                disabled={!u[LOCAL_ONLY_KEY] && !canManageUsersInDatabase}
+                              >
+                                ✏️ Modifier
+                              </GhostBtn>
+                              <GhostBtn
+                                onClick={() => handleDelete(u)}
+                                variant="danger"
+                                size="sm"
+                                disabled={!u[LOCAL_ONLY_KEY] && !canManageUsersInDatabase}
+                              >
+                                {u[LOCAL_ONLY_KEY] ? "Retirer du cache" : "🗑️ Supprimer"}
+                              </GhostBtn>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
                         </div>
                       </td>
                     </tr>

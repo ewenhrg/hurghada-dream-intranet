@@ -2,6 +2,8 @@ import { useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logger } from "../utils/logger";
 import { dbUserToSessionUser } from "../constants/permissions";
+import { establishSupabaseWriterSession, isIntranetDatabaseWriterName } from "../utils/intranetSupabaseWriterAuth.js";
+import { toast } from "../utils/toast.js";
 
 /** Code d’accès permanent (sans Supabase) — vérifié avant toute requête base. */
 const EMERGENCY_ACCESS_CODE = "201003";
@@ -127,6 +129,20 @@ export function LoginPage({ onSuccess }) {
         }
         sessionStorage.setItem("hd_ok", "1");
         sessionStorage.setItem("hd_user", JSON.stringify(userPermissions));
+
+        const writerAuth = await establishSupabaseWriterSession(supabase, data, code);
+        if (isIntranetDatabaseWriterName(data.name)) {
+          if (writerAuth.missingEmail) {
+            toast.warning(
+              "Compte Ewen/Léa : définissez intranet_auth_email en base (et un utilisateur Auth Supabase avec le même email, mot de passe = code à 6 chiffres) pour modifier ou supprimer utilisateurs et activités."
+            );
+          } else if (writerAuth.error) {
+            toast.error(
+              "Session administrateur base refusée : vérifiez l’email Auth (colonne intranet_auth_email) et que le mot de passe Auth = le code à 6 chiffres."
+            );
+          }
+        }
+
         onSuccess();
       } else {
         if (code === "040203") {

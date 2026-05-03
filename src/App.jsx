@@ -110,7 +110,12 @@ export default function App() {
     setOk(true);
   }, []);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      logger.warn("Déconnexion Supabase Auth:", error);
+    }
     try {
       sessionStorage.removeItem("hd_ok");
       sessionStorage.removeItem("hd_user");
@@ -1386,8 +1391,8 @@ export default function App() {
             <Section
               title={t("page.catalogAdmin.title")}
               subtitle={
-                user?.name === "Léa"
-                  ? "Consultation du contenu affiché sur le catalogue public. Aucune modification n’est possible depuis ce compte."
+                !canAccessHotelsPage(user)
+                  ? "Consultation du catalogue public. Seuls Ewen et Léa peuvent enregistrer des changements en base."
                   : t("page.catalogAdmin.subtitle")
               }
             >
@@ -1395,7 +1400,7 @@ export default function App() {
                 activities={activities}
                 setActivities={setActivities}
                 user={user}
-                readOnly={user?.name === "Léa"}
+                readOnly={!canAccessHotelsPage(user)}
               />
             </Section>
           )}

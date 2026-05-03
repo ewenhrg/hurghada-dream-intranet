@@ -25,6 +25,7 @@ import {
   stripLocalOnlyActivityForStorage,
 } from "../utils/activitiesBackup";
 import { activitiesTableHasBabiesForbiddenColumn } from "../config/supabaseActivitiesSchema";
+import { canAccessHotelsPage } from "../constants/permissions.js";
 
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,14 +34,8 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   // Debounce de la recherche pour améliorer les performances
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
-  // Vérifier si l'utilisateur peut modifier/supprimer les activités (noms fixes ou permissions en base)
-  const canModifyActivities =
-    user?.name === "Léa" ||
-    user?.name === "Ewen" ||
-    user?.canAccessSituation === true ||
-    user?.name === "situation" ||
-    user?.canEditActivity === true ||
-    user?.canDeleteActivity === true;
+  // Écritures activités (RLS Supabase) : Ewen / Léa — voir supabase_rls_ewen_lea_intranet_writers.sql
+  const canModifyActivities = canAccessHotelsPage(user);
 
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {

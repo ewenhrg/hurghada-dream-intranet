@@ -139,6 +139,10 @@ export function dbUserToSessionUser(dbUser) {
     id: dbUser.id,
     name: dbUser.name,
     code: dbUser.code,
+    intranet_auth_email:
+      dbUser.intranet_auth_email != null && String(dbUser.intranet_auth_email).trim() !== ""
+        ? String(dbUser.intranet_auth_email).trim()
+        : null,
     ...getDefaultPermissionForm(),
   };
   session.canAccessActivities = dbUser.can_access_activities !== false;

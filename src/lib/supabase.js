@@ -78,6 +78,10 @@ function makeStubClient() {
     from: () => chain,
     auth: {
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+      signInWithPassword: () => Promise.resolve({ data: { session: null }, error: { message: "Supabase non configuré" } }),
+      signOut: () => Promise.resolve({ error: null }),
+      updateUser: () => Promise.resolve({ data: null, error: { message: "Supabase non configuré" } }),
     },
   };
 }
@@ -108,7 +112,10 @@ function initializeSupabase() {
     }
     
     supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: false },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
     });
     return supabaseInstance;
   } catch (e) {

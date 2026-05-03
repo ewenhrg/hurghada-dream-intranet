@@ -7,17 +7,10 @@ import { logger } from "../utils/logger";
 import { getActivityTarifListLines } from "../utils/activityHelpers";
 import { formatActivityAvailableDaysSummary, getActivityDayLabelsList } from "../utils/activityDaysDisplay";
 import { activitiesTableHasBabiesForbiddenColumn } from "../config/supabaseActivitiesSchema";
+import { canAccessHotelsPage } from "../constants/permissions.js";
 
 function canEditActivityPrices(user) {
-  if (!user) return false;
-  return (
-    user.name === "Léa" ||
-    user.name === "Ewen" ||
-    user.canAccessSituation === true ||
-    user.name === "situation" ||
-    user.canEditActivity === true ||
-    user.canDeleteActivity === true
-  );
+  return canAccessHotelsPage(user);
 }
 
 function categoryLabel(key) {

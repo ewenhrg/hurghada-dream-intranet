@@ -416,7 +416,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20; // Nombre de devis par page
   
-  // Tous les utilisateurs peuvent maintenant modifier les activités
+  /** Lignes d’activités dans un devis (table quotes) — distinct des écritures sur la table activities. */
   const canModifyActivities = true;
   
   // Références pour le conteneur de la modale de paiement
