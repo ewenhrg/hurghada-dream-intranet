@@ -58,12 +58,12 @@ function normalizeCategory(rawCategory) {
 
 function getCategoryCover(categoryKey) {
   const covers = {
-    desert: "linear-gradient(145deg, rgba(251,191,36,0.98) 0%, rgba(217,119,6,0.92) 45%, rgba(180,83,9,0.88) 100%)",
-    aquatique: "linear-gradient(145deg, rgba(34,211,238,0.95) 0%, rgba(6,182,212,0.92) 50%, rgba(8,145,178,0.9) 100%)",
-    exploration_bien_etre: "linear-gradient(145deg, rgba(52,211,153,0.96) 0%, rgba(16,185,129,0.92) 50%, rgba(5,150,105,0.9) 100%)",
-    luxor_caire: "linear-gradient(145deg, rgba(165,180,252,0.98) 0%, rgba(99,102,241,0.94) 45%, rgba(67,56,202,0.9) 100%)",
-    marsa_alam: "linear-gradient(145deg, rgba(251,113,133,0.96) 0%, rgba(244,63,94,0.92) 50%, rgba(190,18,60,0.88) 100%)",
-    transfert: "linear-gradient(145deg, rgba(100,116,139,0.96) 0%, rgba(51,65,85,0.94) 50%, rgba(15,23,42,0.92) 100%)",
+    desert: "linear-gradient(145deg, rgba(234,88,12,0.95) 0%, rgba(124,58,237,0.88) 48%, rgba(76,29,149,0.92) 100%)",
+    aquatique: "linear-gradient(145deg, rgba(56,189,248,0.92) 0%, rgba(99,102,241,0.9) 45%, rgba(67,56,202,0.92) 100%)",
+    exploration_bien_etre: "linear-gradient(145deg, rgba(192,132,252,0.92) 0%, rgba(52,211,153,0.75) 55%, rgba(109,40,217,0.9) 100%)",
+    luxor_caire: "linear-gradient(145deg, rgba(167,139,250,0.98) 0%, rgba(91,33,182,0.94) 45%, rgba(49,46,129,0.92) 100%)",
+    marsa_alam: "linear-gradient(145deg, rgba(251,113,133,0.96) 0%, rgba(192,38,211,0.85) 50%, rgba(190,18,60,0.9) 100%)",
+    transfert: "linear-gradient(145deg, rgba(71,85,105,0.96) 0%, rgba(76,29,149,0.92) 50%, rgba(15,23,42,0.94) 100%)",
   };
   return covers[categoryKey] || covers.desert;
 }
@@ -138,14 +138,14 @@ function ParticipantSelect({ Icon, label, value, onChange, min, max }) {
   return (
     <div className="relative">
       <span className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2">
-        <Icon className="h-5 w-5 text-teal-800" />
+        <Icon className="h-5 w-5 text-violet-800" />
       </span>
       <IconChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-catalog-muted" />
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         aria-label={label}
-        className="w-full appearance-none rounded-xl border-2 border-slate-300 bg-white py-3 pl-12 pr-10 text-sm font-semibold !text-slate-950 transition-colors hover:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+        className="w-full appearance-none rounded-xl border-2 border-slate-300 bg-white py-3 pl-12 pr-10 text-sm font-semibold !text-slate-950 transition-colors hover:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
       >
         {options.map((n) => (
           <option key={n} value={n}>
@@ -303,7 +303,7 @@ function BookingCardShell({
           type="button"
           disabled={!canAdd}
           onClick={onAdd}
-          className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-teal-700 to-teal-600 px-3 py-2.5 text-sm font-semibold text-white shadow-md shadow-teal-900/15 transition hover:from-teal-800 hover:to-teal-700 disabled:cursor-not-allowed disabled:opacity-75 md:py-3 md:text-base"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-800 to-orange-600 px-3 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-900/25 transition hover:from-violet-900 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-75 md:py-3 md:text-base"
         >
           Ajouter au panier
         </button>
@@ -518,16 +518,16 @@ export function PublicCatalogueActivityPage({ activityId }) {
       [
         "flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3.5 transition",
         active
-          ? "border-teal-600 bg-white shadow-md ring-2 ring-teal-400/50"
-          : "border-slate-200/90 bg-white/95 hover:border-teal-400/80 hover:shadow-sm",
+          ? "border-violet-600 bg-white shadow-md ring-2 ring-violet-400/50"
+          : "border-slate-200/90 bg-white/95 hover:border-violet-400/80 hover:shadow-sm",
       ].join(" ");
 
     if (isSpeedBoatActivity(name)) {
       const radioName = `hd-speedboat-pack-${activity.id}`;
       return (
-        <div className="space-y-3 rounded-xl border border-teal-200/80 bg-teal-50/80 p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-teal-900">Options Speed Boat</p>
-          <p className="text-[11px] font-medium leading-snug text-teal-950/90">
+        <div className="space-y-3 rounded-xl border border-violet-200/80 bg-violet-50/80 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-violet-900">Options Speed Boat</p>
+          <p className="text-[11px] font-medium leading-snug text-violet-950/90">
             <strong>Un seul choix possible :</strong> soit l&apos;option dauphin, soit une île / formule — pas les deux.
           </p>
           <div className="max-h-[min(70vh,22rem)] space-y-2 overflow-y-auto pr-0.5" role="radiogroup" aria-label="Options Speed Boat">
@@ -538,7 +538,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 value="none"
                 checked={speedBoatPackValue === "none"}
                 onChange={() => applySpeedBoatPack("none")}
-                className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-slate-400 accent-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1"
+                className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-slate-400 accent-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1"
               />
               <span className="text-sm font-semibold leading-snug text-slate-900">Aucune option (prix de base)</span>
             </label>
@@ -549,10 +549,10 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 value="dolphin"
                 checked={speedBoatPackValue === "dolphin"}
                 onChange={() => applySpeedBoatPack("dolphin")}
-                className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-slate-400 accent-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1"
+                className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-slate-400 accent-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1"
               />
               <span className="text-sm font-semibold leading-snug text-slate-900">
-                Dauphin <span className="font-bold text-teal-800">(+20 € pour la ligne)</span>
+                Dauphin <span className="font-bold text-violet-800">(+20 € pour la ligne)</span>
               </span>
             </label>
             {SPEED_BOAT_EXTRAS.filter((e) => e.id).map((extra) => (
@@ -563,7 +563,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   value={extra.id}
                   checked={speedBoatPackValue === extra.id}
                   onChange={() => applySpeedBoatPack(extra.id)}
-                  className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-slate-400 accent-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1"
+                  className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-slate-400 accent-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1"
                 />
                 <span className="text-sm leading-snug text-slate-900">
                   <span className="font-semibold">{extra.label}</span>{" "}
@@ -768,14 +768,14 @@ export function PublicCatalogueActivityPage({ activityId }) {
       });
       const radioName = `hd-airport-transfer-${activity.id}`;
       return (
-        <div className="space-y-2 rounded-xl border border-teal-200/90 bg-teal-50/80 p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-teal-950">Type de trajet</p>
+        <div className="space-y-2 rounded-xl border border-violet-200/90 bg-violet-50/80 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-violet-950">Type de trajet</p>
           <div className="space-y-2" role="radiogroup" aria-label="Transfert aller simple ou aller-retour">
             <label
               className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition ${
                 special.allerSimple
-                  ? "border-teal-600 bg-white shadow-md ring-2 ring-teal-400/50"
-                  : "border-slate-200/90 bg-white/95 hover:border-teal-400/80"
+                  ? "border-violet-600 bg-white shadow-md ring-2 ring-violet-400/50"
+                  : "border-slate-200/90 bg-white/95 hover:border-violet-400/80"
               }`}
             >
               <input
@@ -783,17 +783,17 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 name={radioName}
                 checked={special.allerSimple}
                 onChange={() => setSpecial((s) => ({ ...s, allerSimple: true, allerRetour: false }))}
-                className="h-[18px] w-[18px] shrink-0 accent-teal-600"
+                className="h-[18px] w-[18px] shrink-0 accent-violet-600"
               />
               <span className="text-sm font-semibold text-slate-900">
-                Aller simple <span className="text-teal-800">({formatMoney(simpleP, activity.currency || "EUR")})</span>
+                Aller simple <span className="text-violet-800">({formatMoney(simpleP, activity.currency || "EUR")})</span>
               </span>
             </label>
             <label
               className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition ${
                 special.allerRetour
-                  ? "border-teal-600 bg-white shadow-md ring-2 ring-teal-400/50"
-                  : "border-slate-200/90 bg-white/95 hover:border-teal-400/80"
+                  ? "border-violet-600 bg-white shadow-md ring-2 ring-violet-400/50"
+                  : "border-slate-200/90 bg-white/95 hover:border-violet-400/80"
               }`}
             >
               <input
@@ -801,10 +801,10 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 name={radioName}
                 checked={special.allerRetour}
                 onChange={() => setSpecial((s) => ({ ...s, allerSimple: false, allerRetour: true }))}
-                className="h-[18px] w-[18px] shrink-0 accent-teal-600"
+                className="h-[18px] w-[18px] shrink-0 accent-violet-600"
               />
               <span className="text-sm font-semibold text-slate-900">
-                Aller-retour <span className="text-teal-800">({formatMoney(retourP, activity.currency || "EUR")})</span>
+                Aller-retour <span className="text-violet-800">({formatMoney(retourP, activity.currency || "EUR")})</span>
               </span>
             </label>
           </div>
@@ -852,9 +852,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const galleryBackgrounds = useMemo(
     () => [
       cover,
-      "linear-gradient(135deg, rgba(14,165,233,0.88), rgba(59,130,246,0.78))",
-      "linear-gradient(135deg, rgba(244,63,94,0.45), rgba(99,102,241,0.6))",
-      "linear-gradient(135deg, rgba(16,185,129,0.7), rgba(5,150,105,0.55))",
+      "linear-gradient(135deg, rgba(167,139,250,0.9), rgba(59,130,246,0.75))",
+      "linear-gradient(135deg, rgba(244,63,94,0.5), rgba(109,40,217,0.65))",
+      "linear-gradient(135deg, rgba(234,88,12,0.55), rgba(91,33,182,0.65))",
     ],
     [cover]
   );
@@ -1094,8 +1094,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   if (loading) {
     return (
-      <div className="hd-public-catalog flex min-h-screen flex-col items-center justify-center bg-[#f3efe4] font-catalog-sans text-catalog-body animate-catalog-in-fade opacity-0 motion-reduce:animate-none motion-reduce:opacity-100">
-        <div className="h-12 w-12 animate-spin rounded-full border-[3px] border-teal-200 border-t-teal-800" aria-hidden />
+      <div className="hd-public-catalog flex min-h-screen flex-col items-center justify-center bg-catalog-bg font-catalog-sans text-catalog-body animate-catalog-in-fade opacity-0 motion-reduce:animate-none motion-reduce:opacity-100">
+        <div className="h-12 w-12 animate-spin rounded-full border-[3px] border-violet-200 border-t-violet-800" aria-hidden />
         <p className="mt-5 font-catalog-display text-base font-semibold text-catalog-ink">Chargement de l’activité…</p>
       </div>
     );
@@ -1103,11 +1103,11 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   if (loadError || !activity) {
     return (
-      <div className="hd-public-catalog min-h-screen bg-[#f3efe4] px-4 py-20 text-center font-catalog-sans text-catalog-body animate-catalog-in-fade opacity-0 motion-reduce:animate-none motion-reduce:opacity-100">
+      <div className="hd-public-catalog min-h-screen bg-catalog-bg px-4 py-20 text-center font-catalog-sans text-catalog-body animate-catalog-in-fade opacity-0 motion-reduce:animate-none motion-reduce:opacity-100">
         <p className="font-catalog-display text-lg font-semibold text-catalog-ink">{loadError || "Activité introuvable."}</p>
         <Link
           to="/catalogue"
-          className="mt-8 inline-flex items-center rounded-2xl bg-gradient-to-r from-[#022c22] via-teal-900 to-emerald-900 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-teal-950/25 transition hover:brightness-110"
+          className="mt-8 inline-flex items-center rounded-2xl bg-gradient-to-r from-violet-950 via-violet-800 to-orange-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-950/35 transition hover:brightness-110"
         >
           ← Retour au catalogue
         </Link>
@@ -1116,24 +1116,24 @@ export function PublicCatalogueActivityPage({ activityId }) {
   }
 
   return (
-    <div className="hd-public-catalog relative isolate flex min-h-screen flex-col bg-[#f3efe4] font-catalog-sans text-catalog-body antialiased selection:bg-amber-200/50 selection:text-catalog-ink">
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-[#f3efe4]" />
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.28]" />
+    <div className="hd-public-catalog relative isolate flex min-h-screen flex-col bg-catalog-bg font-catalog-sans text-catalog-body antialiased selection:bg-violet-200/55 selection:text-catalog-ink">
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-bg" />
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.42]" />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-0 bg-catalog-grid opacity-[0.12] [background-size:44px_44px]"
+        className="pointer-events-none fixed inset-0 z-0 bg-catalog-grid opacity-[0.18] [background-size:48px_48px]"
       />
-      <header className="sticky top-0 z-[100] border-b border-amber-400/35 bg-slate-950 text-white shadow-[0_12px_40px_-12px_rgba(0,0,0,0.55)]">
+      <header className="sticky top-0 z-[100] border-b border-violet-500/25 bg-catalog-night/95 text-white shadow-[0_16px_48px_-12px_rgba(15,8,32,0.65)] backdrop-blur-md backdrop-saturate-150">
         <div className="mx-auto flex max-w-7xl animate-catalog-in-fade items-center gap-4 px-4 py-3.5 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:px-6 lg:px-8">
           <Link
             to="/catalogue"
-            className="rounded-xl px-3 py-2 text-sm font-bold text-amber-200/95 transition hover:bg-white/10 hover:text-white"
+            className="rounded-xl px-3 py-2 text-sm font-bold text-violet-200/95 transition hover:bg-white/10 hover:text-white"
           >
             ← Catalogue
           </Link>
           <div className="h-8 w-px bg-white/15" aria-hidden />
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 p-1.5 shadow-lg ring-2 ring-amber-300/45 ring-offset-2 ring-offset-slate-950">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-orange-600 p-1.5 shadow-lg ring-2 ring-orange-300/45 ring-offset-2 ring-offset-catalog-night">
               <img src="/logo.png" alt="" className="h-full w-full object-contain drop-shadow" />
             </div>
             <span className="font-catalog-display text-sm font-semibold text-white">Hurghada Dream</span>
@@ -1198,7 +1198,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
           <nav className="mb-3">
             <ol className="flex items-center gap-1.5 text-xs font-semibold text-catalog-muted">
               <li>
-                <Link to="/catalogue" className="font-semibold text-catalog-label transition-colors hover:text-teal-800">
+                <Link to="/catalogue" className="font-semibold text-catalog-label transition-colors hover:text-violet-900">
                   Catalogue
                 </Link>
               </li>
@@ -1211,14 +1211,14 @@ export function PublicCatalogueActivityPage({ activityId }) {
           <h1 className="mb-3 font-catalog-display text-3xl font-semibold tracking-tight text-catalog-ink md:text-4xl">{activity.name}</h1>
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
             <div className="flex items-center gap-1.5 text-sm font-semibold text-catalog-body">
-              <IconMapPin className="h-4 w-4 text-teal-600/80" />
+              <IconMapPin className="h-4 w-4 text-violet-600/80" />
               <span>{activity.name}</span>
             </div>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => void sharePage()}
-                className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-catalog-muted transition-colors hover:bg-teal-50 hover:text-teal-900"
+                className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-catalog-muted transition-colors hover:bg-violet-50 hover:text-violet-900"
               >
                 <IconShare className="h-5 w-5" />
                 Partager
@@ -1325,7 +1325,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
             {/* ——— Sidebar réservation desktop ——— */}
             <div className="hidden lg:col-span-1 lg:block">
-              <div className="catalog-elevated lg:sticky lg:top-24 lg:rounded-3xl lg:border lg:border-teal-900/10 lg:bg-white lg:p-7 lg:shadow-soft lg:shadow-teal-950/10 lg:transition-shadow lg:duration-300 lg:hover:shadow-soft-lg">
+              <div className="catalog-elevated lg:sticky lg:top-24 lg:rounded-3xl lg:border lg:border-violet-900/12 lg:bg-white lg:p-7 lg:shadow-soft lg:shadow-violet-950/12 lg:transition-shadow lg:duration-300 lg:hover:shadow-soft-lg">
                 <BookingCardShell
                   activity={activity}
                   adults={adults}
@@ -1357,7 +1357,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
         {/* Encart mobile « disponibilités » */}
         <div id="disponibilites" className="mx-auto w-full max-w-7xl px-4 pb-28 sm:px-6 lg:hidden lg:px-8">
-          <div className="catalog-elevated rounded-3xl border border-teal-900/10 bg-white p-5 shadow-soft shadow-teal-950/10">
+          <div className="catalog-elevated rounded-3xl border border-violet-900/12 bg-white p-5 shadow-soft shadow-violet-950/12">
             <h2 className="mb-4 font-catalog-display text-lg font-semibold text-catalog-ink">Réserver</h2>
             <BookingCardShell
               activity={activity}
@@ -1387,7 +1387,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
         </div>
 
         {/* Barre bas mobile */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-teal-900/10 bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,118,110,0.12)] backdrop-blur-md lg:hidden">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-violet-900/12 bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(76,29,149,0.14)] backdrop-blur-md lg:hidden">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-800">À partir de</p>
@@ -1395,14 +1395,14 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 {headerPriceHint != null && headerPriceHint > 0 ? (
                   formatMoney(headerPriceHint, activity.currency || "EUR")
                 ) : (
-                  <span className="text-base font-semibold text-amber-800">Sur devis</span>
+                  <span className="text-base font-semibold text-violet-900">Sur devis</span>
                 )}
               </p>
             </div>
             <button
               type="button"
               onClick={scrollToBooking}
-              className="whitespace-nowrap rounded-2xl bg-gradient-to-r from-teal-700 to-teal-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-teal-900/20 transition hover:from-teal-800 hover:to-teal-700"
+              className="whitespace-nowrap rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-violet-900/25 transition hover:from-violet-900 hover:to-orange-500"
             >
               Réserver
             </button>

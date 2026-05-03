@@ -442,23 +442,23 @@ export function PublicClientDevisPage() {
   }
 
   return (
-    <div className="hd-public-catalog relative isolate flex min-h-screen flex-col overflow-x-hidden bg-[#f3efe4] font-catalog-sans text-catalog-body antialiased selection:bg-amber-200/50 selection:text-catalog-ink">
+    <div className="hd-public-catalog relative isolate flex min-h-screen flex-col overflow-x-hidden bg-catalog-bg font-catalog-sans text-catalog-body antialiased selection:bg-violet-200/55 selection:text-catalog-ink">
       {/* Fond opaque : coupe le dégradé sombre global du body intranet */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-[#f3efe4]" />
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.28]" />
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-bg" />
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.42]" />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-0 bg-catalog-grid opacity-[0.12] [background-size:44px_44px]"
+        className="pointer-events-none fixed inset-0 z-0 bg-catalog-grid opacity-[0.18] [background-size:48px_48px]"
       />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[min(72vh,520px)] bg-[radial-gradient(ellipse_90%_70%_at_50%_-18%,rgba(251,191,36,0.16),transparent_58%)]"
+        className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[min(72vh,520px)] bg-[radial-gradient(ellipse_90%_70%_at_50%_-18%,rgba(167,139,250,0.22),transparent_58%)]"
       />
 
-      <header className="sticky top-0 z-30 border-b border-amber-400/35 bg-slate-950 text-white shadow-[0_12px_40px_-12px_rgba(0,0,0,0.55)]">
+      <header className="sticky top-0 z-30 border-b border-violet-500/25 bg-catalog-night/95 text-white shadow-[0_16px_48px_-12px_rgba(15,8,32,0.65)] backdrop-blur-md backdrop-saturate-150">
         <div className="mx-auto flex max-w-[1440px] animate-catalog-in-fade items-center justify-between gap-4 px-4 py-3.5 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3.5">
-            <div className="relative flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#022c22] via-teal-900 to-emerald-900 p-1.5 shadow-xl shadow-black/40 ring-2 ring-amber-300/50 ring-offset-2 ring-offset-slate-950">
+            <div className="relative flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-orange-600 p-1.5 shadow-xl shadow-violet-950/50 ring-2 ring-orange-300/50 ring-offset-2 ring-offset-catalog-night">
               <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/25 to-transparent" />
               <img src="/logo.png" alt="Hurghada Dream" className="relative h-full w-full object-contain drop-shadow-md" />
             </div>
@@ -466,7 +466,7 @@ export function PublicClientDevisPage() {
               <p className="truncate font-catalog-display text-lg font-semibold tracking-tight text-white sm:text-xl">
                 Hurghada Dream
               </p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-amber-200/95 sm:text-[11px]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-violet-200/95 sm:text-[11px]">
                 Excursions · Mer Rouge
               </p>
             </div>
@@ -497,7 +497,7 @@ export function PublicClientDevisPage() {
                 setSuccess("");
                 setCartDrawerOpen(true);
               }}
-              className="group relative inline-flex min-h-[44px] items-center gap-2 overflow-hidden rounded-full bg-amber-400 px-3.5 py-2.5 pl-3.5 text-sm font-extrabold tracking-tight text-slate-950 shadow-[0_4px_20px_-4px_rgba(251,191,36,0.65),0_2px_8px_-2px_rgba(0,0,0,0.35)] ring-2 ring-amber-200/80 transition hover:bg-amber-300 hover:shadow-[0_8px_28px_-6px_rgba(251,191,36,0.55)] active:scale-[0.98] sm:gap-2.5 sm:px-5 sm:py-2.5"
+              className="group relative inline-flex min-h-[44px] items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-orange-500 to-amber-400 px-3.5 py-2.5 pl-3.5 text-sm font-extrabold tracking-tight text-slate-950 shadow-[0_4px_22px_-4px_rgba(234,88,12,0.55),0_2px_8px_-2px_rgba(0,0,0,0.35)] ring-2 ring-orange-200/90 transition hover:from-orange-400 hover:to-amber-300 hover:shadow-[0_8px_30px_-6px_rgba(234,88,12,0.5)] active:scale-[0.98] sm:gap-2.5 sm:px-5 sm:py-2.5"
             >
               <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
               <span className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100">
@@ -519,21 +519,21 @@ export function PublicClientDevisPage() {
         </div>
       </header>
 
-      <section className="catalog-shell relative z-10 border-b border-slate-200/90 bg-white">
+      <section className="catalog-shell relative z-10 border-b border-violet-200/50 bg-white">
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-12 text-center sm:px-6 sm:pb-20 sm:pt-16 lg:max-w-7xl">
-          <span className="mb-6 inline-flex animate-catalog-in-up items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-white via-amber-50/90 to-white px-5 py-2 text-[10px] font-bold uppercase tracking-[0.26em] text-[#422006] opacity-0 shadow-md shadow-amber-900/10 backdrop-blur-sm motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[11px]">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" aria-hidden />
+          <span className="mb-6 inline-flex animate-catalog-in-up items-center gap-2 rounded-full border border-violet-300/70 bg-gradient-to-r from-white via-violet-50/95 to-orange-50/90 px-5 py-2 text-[10px] font-bold uppercase tracking-[0.26em] text-violet-950 opacity-0 shadow-md shadow-violet-900/15 backdrop-blur-sm motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[11px]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500 shadow-[0_0_12px_rgba(234,88,12,0.85)]" aria-hidden />
             Catalogue en direct
           </span>
           <h1 className="catalog-title-glow mx-auto max-w-4xl animate-catalog-in-up font-catalog-display text-[2rem] font-semibold leading-[1.08] tracking-tight text-catalog-ink opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[2.35rem] md:text-5xl md:leading-[1.06]" style={{ animationDelay: "70ms" }}>
             Votre prochaine{" "}
             <span className="relative inline-block">
-              <span className="relative z-10 font-semibold text-teal-700 [text-shadow:0_1px_0_rgba(255,255,255,0.95),0_2px_12px_rgba(15,118,110,0.25)]">
+              <span className="relative z-10 font-semibold text-violet-700 [text-shadow:0_1px_0_rgba(255,255,255,0.95),0_2px_14px_rgba(109,40,217,0.28)]">
                 aventure
               </span>
               <span
                 aria-hidden
-                className="absolute -inset-x-1 -bottom-1 z-0 h-3 rounded-md bg-gradient-to-r from-amber-300/95 via-amber-200/80 to-amber-100/40"
+                className="absolute -inset-x-1 -bottom-1 z-0 h-3 rounded-md bg-gradient-to-r from-orange-400/95 via-violet-300/85 to-fuchsia-200/50"
               />
             </span>{" "}
             à Hurghada
@@ -547,9 +547,9 @@ export function PublicClientDevisPage() {
               <span className="mb-2.5 block text-center text-[10px] font-extrabold uppercase tracking-[0.28em] text-catalog-label">
                 Recherche instantanée
               </span>
-              <span className="catalog-elevated relative block rounded-[1.4rem] border-2 border-slate-200/95 bg-white p-1 shadow-catalog-premium ring-1 ring-slate-900/[0.04] backdrop-blur-md transition focus-within:border-teal-500 focus-within:shadow-catalog-premium-hover focus-within:ring-2 focus-within:ring-teal-400/40">
+              <span className="catalog-elevated relative block rounded-[1.4rem] border-2 border-violet-200/90 bg-white p-1 shadow-catalog-premium ring-1 ring-violet-900/[0.06] backdrop-blur-md transition focus-within:border-violet-500 focus-within:shadow-catalog-premium-hover focus-within:ring-2 focus-within:ring-orange-400/35">
                 <svg
-                  className="pointer-events-none absolute left-6 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-teal-700"
+                  className="pointer-events-none absolute left-6 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-violet-600"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -581,8 +581,8 @@ export function PublicClientDevisPage() {
                 onClick={() => setSelectedCategory("all")}
                 className={`catalog-ring-focus snap-center shrink-0 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:rounded-full sm:px-5 sm:text-center ${
                   selectedCategory === "all"
-                    ? "catalog-chip-active scale-[1.02] ring-2 ring-amber-200/55 ring-offset-2 ring-offset-white"
-                    : "catalog-chip border-2 border-slate-500 text-slate-950 hover:-translate-y-0.5 hover:border-teal-700 hover:bg-teal-50/95 hover:shadow-md"
+                    ? "catalog-chip-active scale-[1.02] ring-2 ring-orange-300/50 ring-offset-2 ring-offset-white"
+                    : "catalog-chip border-2 border-violet-300/90 text-slate-950 hover:-translate-y-0.5 hover:border-violet-500 hover:bg-violet-50/95 hover:shadow-md"
                 }`}
               >
                 <span className="mr-1.5" aria-hidden>
@@ -604,8 +604,8 @@ export function PublicClientDevisPage() {
                   onClick={() => setSelectedCategory(category.key)}
                   className={`catalog-ring-focus snap-center flex min-w-[9.5rem] shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:min-w-0 sm:rounded-full sm:px-5 sm:text-center ${
                     active
-                      ? "catalog-chip-active scale-[1.02] ring-2 ring-amber-200/55 ring-offset-2 ring-offset-white"
-                      : "catalog-chip border-2 border-slate-500 text-slate-950 hover:-translate-y-0.5 hover:border-teal-700 hover:bg-teal-50/95 hover:shadow-md"
+                      ? "catalog-chip-active scale-[1.02] ring-2 ring-orange-300/50 ring-offset-2 ring-offset-white"
+                      : "catalog-chip border-2 border-violet-300/90 text-slate-950 hover:-translate-y-0.5 hover:border-violet-500 hover:bg-violet-50/95 hover:shadow-md"
                   }`}
                 >
                   <span className={`text-lg leading-none sm:text-xl ${active ? "text-white" : "text-slate-900"}`} aria-hidden>
@@ -640,7 +640,7 @@ export function PublicClientDevisPage() {
             <div className="flex flex-col items-center justify-center gap-6 rounded-[2rem] border border-white/80 bg-white/90 py-24 shadow-catalog-premium backdrop-blur-md">
               <div className="relative h-16 w-16" aria-hidden>
                 <div className="absolute inset-0 animate-ping rounded-full bg-emerald-400/30" />
-                <div className="relative h-16 w-16 animate-spin rounded-full border-[3px] border-teal-100 border-t-teal-700" />
+                <div className="relative h-16 w-16 animate-spin rounded-full border-[3px] border-violet-100 border-t-violet-700" />
               </div>
               <p className="font-catalog-display text-lg font-semibold text-catalog-ink">Chargement du catalogue…</p>
               <p className="max-w-sm text-center text-sm font-semibold text-catalog-muted">Préparation des meilleures expériences pour vous.</p>
@@ -648,7 +648,7 @@ export function PublicClientDevisPage() {
           )}
 
           {!loading && !error && filteredActivities.length === 0 && (
-            <div className="rounded-[2rem] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-teal-50/30 px-8 py-20 text-center shadow-catalog-premium">
+            <div className="rounded-[2rem] border border-violet-200/70 bg-gradient-to-br from-white via-violet-50/50 to-orange-50/40 px-8 py-20 text-center shadow-catalog-premium">
               <p className="font-catalog-display text-2xl font-semibold text-catalog-ink">Aucun résultat</p>
               <p className="mx-auto mt-4 max-w-md text-base font-semibold leading-relaxed text-catalog-muted">
                 Essayez un autre mot-clé ou changez de catégorie — notre catalogue évolue souvent.
@@ -665,7 +665,7 @@ export function PublicClientDevisPage() {
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
                   <div className="flex items-start gap-4">
-                    <span className="mt-1 hidden h-14 w-1 shrink-0 rounded-full bg-gradient-to-b from-amber-400 via-teal-500 to-emerald-600 shadow-md sm:block" />
+                    <span className="mt-1 hidden h-14 w-1 shrink-0 rounded-full bg-gradient-to-b from-orange-400 via-violet-500 to-fuchsia-700 shadow-md sm:block" />
                     <div>
                       <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.22em] text-catalog-label">Collection</p>
                       <h2 className="font-catalog-display text-[1.65rem] font-semibold tracking-tight text-catalog-ink sm:text-3xl md:text-[2rem]">
@@ -673,7 +673,7 @@ export function PublicClientDevisPage() {
                       </h2>
                     </div>
                   </div>
-                  <span className="inline-flex w-fit items-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-4 py-2.5 text-xs font-extrabold text-catalog-body shadow-sm">
+                  <span className="inline-flex w-fit items-center gap-2 rounded-2xl border-2 border-violet-200/80 bg-white px-4 py-2.5 text-xs font-extrabold text-catalog-body shadow-sm">
                     <span className="text-base leading-none" aria-hidden>
                       {getCategoryEmoji(group.key)}
                     </span>
@@ -703,7 +703,7 @@ export function PublicClientDevisPage() {
                             navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`);
                           }
                         }}
-                        className="public-catalog-grid-card catalog-float-soft group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-slate-200/95 bg-white opacity-0 shadow-catalog-premium ring-1 ring-slate-900/[0.04] transition-all duration-300 ease-out animate-catalog-in-fade motion-reduce:animate-none motion-reduce:opacity-100 hover:-translate-y-2 hover:border-teal-500/50 hover:shadow-catalog-premium-hover hover:ring-teal-500/20 active:scale-[0.99]"
+                        className="public-catalog-grid-card catalog-float-soft group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-violet-200/80 bg-white opacity-0 shadow-catalog-premium ring-1 ring-violet-900/[0.06] transition-all duration-300 ease-out animate-catalog-in-fade motion-reduce:animate-none motion-reduce:opacity-100 hover:-translate-y-2 hover:border-orange-400/70 hover:shadow-catalog-premium-hover hover:ring-orange-400/25 active:scale-[0.99]"
                         style={{ animationDelay: `${catalogCardEnterDelayMsById.get(activity.id) ?? 0}ms` }}
                       >
                         <div className="relative aspect-[5/4] w-full overflow-hidden bg-slate-100 sm:aspect-[5/4]">
@@ -744,7 +744,7 @@ export function PublicClientDevisPage() {
                               </span>
                               <div className="mt-1">
                                 {cardFrom != null && cardFrom > 0 ? (
-                                  <span className="inline-block rounded-xl border-2 border-teal-200 bg-teal-50/90 px-3 py-1.5 font-catalog-display text-xl font-bold tabular-nums text-catalog-ink shadow-sm">
+                                  <span className="inline-block rounded-xl border-2 border-violet-200 bg-violet-50/95 px-3 py-1.5 font-catalog-display text-xl font-bold tabular-nums text-catalog-ink shadow-sm">
                                     {formatMoney(cardFrom, activity.currency || "EUR")}
                                   </span>
                                 ) : (
@@ -766,13 +766,13 @@ export function PublicClientDevisPage() {
         </section>
       </main>
 
-      <footer className="relative z-10 border-t-2 border-slate-200/90 bg-gradient-to-b from-white via-slate-50/90 to-[#f3efe4] py-16 text-center">
+      <footer className="relative z-10 border-t-2 border-violet-200/60 bg-gradient-to-b from-white via-violet-50/40 to-catalog-bg py-16 text-center">
         <div className="mx-auto max-w-lg animate-catalog-in-fade px-4 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "320ms" }}>
           <p className="font-catalog-display text-sm font-semibold tracking-wide text-catalog-ink">Hurghada Dream</p>
           <p className="mt-3 text-sm font-semibold leading-relaxed text-catalog-muted">
             Excursions sur-mesure · Mer Rouge, désert &amp; temples — une équipe locale à votre écoute.
           </p>
-          <div className="mx-auto mt-6 h-px max-w-xs bg-gradient-to-r from-transparent via-amber-300/60 to-transparent" aria-hidden />
+          <div className="mx-auto mt-6 h-px max-w-xs bg-gradient-to-r from-transparent via-violet-300/70 to-transparent" aria-hidden />
         </div>
       </footer>
 
@@ -784,8 +784,8 @@ export function PublicClientDevisPage() {
             aria-label="Fermer le panier"
             onClick={() => setCartDrawerOpen(false)}
           />
-          <div className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-teal-200/60 bg-white shadow-2xl shadow-teal-950/25">
-            <div className="relative flex items-center justify-between overflow-hidden border-b border-teal-950/20 bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-900 px-5 py-5 text-white shadow-lg">
+          <div className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-violet-200/70 bg-white shadow-2xl shadow-violet-950/30">
+            <div className="relative flex items-center justify-between overflow-hidden border-b border-violet-950/30 bg-gradient-to-r from-violet-950 via-violet-800 to-indigo-950 px-5 py-5 text-white shadow-lg">
               <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
               <h2 id="cart-drawer-title" className="relative font-catalog-display text-xl font-semibold tracking-tight text-white drop-shadow-md">
                 Votre panier
@@ -803,10 +803,10 @@ export function PublicClientDevisPage() {
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-slate-50/40 to-white px-4 py-5">
               {cartLines.length === 0 && (
-                <p className="rounded-2xl border-2 border-dashed border-teal-300/80 bg-teal-50/70 px-5 py-10 text-center text-sm font-semibold leading-relaxed text-catalog-body">
+                <p className="rounded-2xl border-2 border-dashed border-violet-300/80 bg-violet-50/80 px-5 py-10 text-center text-sm font-semibold leading-relaxed text-catalog-body">
                   Votre panier est vide.
                   <br />
-                  <span className="font-extrabold text-teal-800">Ajoutez des activités depuis le catalogue.</span>
+                  <span className="font-extrabold text-violet-800">Ajoutez des activités depuis le catalogue.</span>
                 </p>
               )}
               {cartLines.map((line) => {
@@ -880,7 +880,7 @@ export function PublicClientDevisPage() {
                       </div>
                     </div>
                     <div className="mt-3 border-t border-slate-100 pt-3">
-                      <p className="font-catalog-display text-sm font-bold tabular-nums text-teal-800">
+                      <p className="font-catalog-display text-sm font-bold tabular-nums text-violet-800">
                         {formatMoney(line.lineTotal, line.activity.currency)}
                       </p>
                     </div>
@@ -891,7 +891,7 @@ export function PublicClientDevisPage() {
             <div className="border-t border-slate-200/80 bg-gradient-to-t from-slate-50 to-white p-6 shadow-[0_-8px_30px_-12px_rgba(15,118,110,0.12)]">
               <div className="mb-4 flex items-end justify-between gap-3">
                 <span className="text-xs font-extrabold uppercase tracking-[0.12em] text-catalog-body">Total estimé</span>
-                <span className="font-catalog-display text-2xl font-bold tabular-nums text-teal-800">
+                <span className="font-catalog-display text-2xl font-bold tabular-nums text-violet-800">
                   {formatMoney(cartTotal, "EUR")}
                 </span>
               </div>
@@ -904,7 +904,7 @@ export function PublicClientDevisPage() {
                   setCartDrawerOpen(false);
                   setCheckoutOpen(true);
                 }}
-                className="flex w-full min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/10 bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 px-4 py-4 text-sm font-extrabold tracking-tight text-white shadow-[0_6px_24px_-6px_rgba(15,118,110,0.55)] transition hover:from-teal-950 hover:via-teal-900 hover:to-emerald-900 disabled:cursor-not-allowed disabled:border-slate-300 disabled:from-slate-200 disabled:via-slate-200 disabled:to-slate-200 disabled:text-slate-700 disabled:shadow-none"
+                className="flex w-full min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/10 bg-gradient-to-r from-violet-900 via-violet-700 to-orange-600 px-4 py-4 text-sm font-extrabold tracking-tight text-white shadow-[0_8px_28px_-6px_rgba(76,29,149,0.5)] transition hover:from-violet-950 hover:via-violet-800 hover:to-orange-500 disabled:cursor-not-allowed disabled:border-slate-300 disabled:from-slate-200 disabled:via-slate-200 disabled:to-slate-200 disabled:text-slate-700 disabled:shadow-none"
               >
                 <span>Finaliser mon devis</span>
                 <span aria-hidden>→</span>
@@ -948,7 +948,7 @@ export function PublicClientDevisPage() {
             {(error || success) && (
               <div
                 className={`mb-4 rounded-2xl border px-4 py-3 text-sm font-medium ${
-                  error ? "border-rose-200 bg-rose-50 text-rose-900" : "border-teal-200 bg-teal-50 text-teal-900"
+                  error ? "border-rose-200 bg-rose-50 text-rose-900" : "border-violet-200 bg-violet-50 text-violet-900"
                 }`}
               >
                 {error || success}
@@ -963,7 +963,7 @@ export function PublicClientDevisPage() {
                 onChange={(e) => updateClientField("name", e.target.value)}
                 placeholder="Nom complet *"
                 required
-                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
+                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
                 autoComplete="name"
               />
               <input
@@ -972,7 +972,7 @@ export function PublicClientDevisPage() {
                 placeholder="Téléphone *"
                 required
                 inputMode="tel"
-                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
+                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
                 autoComplete="tel"
               />
               <input
@@ -981,7 +981,7 @@ export function PublicClientDevisPage() {
                 onChange={(e) => updateClientField("email", e.target.value)}
                 placeholder="E-mail *"
                 required
-                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
+                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
                 autoComplete="email"
               />
               <input
@@ -989,7 +989,7 @@ export function PublicClientDevisPage() {
                 onChange={(e) => updateClientField("hotel", e.target.value)}
                 placeholder="Hôtel ou lieu de prise en charge *"
                 required
-                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
+                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
               />
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="block space-y-1">
@@ -999,7 +999,7 @@ export function PublicClientDevisPage() {
                     value={client.arrivalDate}
                     onChange={(e) => updateClientField("arrivalDate", e.target.value)}
                     required
-                    className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
+                    className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
                   />
                 </label>
                 <label className="block space-y-1">
@@ -1010,7 +1010,7 @@ export function PublicClientDevisPage() {
                     min={client.arrivalDate || undefined}
                     onChange={(e) => updateClientField("departureDate", e.target.value)}
                     required
-                    className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
+                    className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
                   />
                 </label>
               </div>
@@ -1019,7 +1019,7 @@ export function PublicClientDevisPage() {
                 onChange={(e) => updateClientField("notes", e.target.value)}
                 placeholder="Précisions (horaires, langue du guide, enfants, etc.) — optionnel"
                 rows={3}
-                className="w-full resize-none rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
+                className="w-full resize-none rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
               />
             </div>
             <p className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-catalog-body">
@@ -1029,7 +1029,7 @@ export function PublicClientDevisPage() {
             <button
               type="submit"
               disabled={submitLoading}
-              className="mt-6 w-full min-h-[52px] rounded-2xl border border-white/15 bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 px-4 py-4 text-sm font-extrabold tracking-tight text-white shadow-[0_8px_28px_-8px_rgba(15,118,110,0.5)] transition hover:from-teal-950 hover:via-teal-900 hover:to-emerald-900 disabled:cursor-not-allowed disabled:from-slate-300 disabled:via-slate-300 disabled:to-slate-300 disabled:text-slate-700 disabled:shadow-none"
+              className="mt-6 w-full min-h-[52px] rounded-2xl border border-white/15 bg-gradient-to-r from-violet-900 via-violet-700 to-orange-600 px-4 py-4 text-sm font-extrabold tracking-tight text-white shadow-[0_10px_32px_-8px_rgba(76,29,149,0.45)] transition hover:from-violet-950 hover:via-violet-800 hover:to-orange-500 disabled:cursor-not-allowed disabled:from-slate-300 disabled:via-slate-300 disabled:to-slate-300 disabled:text-slate-700 disabled:shadow-none"
             >
               {submitLoading ? "Envoi en cours…" : "Envoyer ma demande"}
             </button>

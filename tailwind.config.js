@@ -11,31 +11,36 @@ export default {
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
         display: ['Outfit', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        /** Pages catalogue public uniquement (Sora + Fraunces) */
-        'catalog-sans': ['Sora', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        'catalog-display': ['Fraunces', 'Georgia', 'ui-serif', 'serif'],
+        /** Pages catalogue public : Plus Jakarta Sans + Literata (look voyage premium) */
+        'catalog-sans': ['"Plus Jakarta Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        'catalog-display': ['Literata', 'Georgia', 'ui-serif', 'serif'],
       },
       colors: {
-        /** Palette pages catalogue public (lisible, cohérente) */
+        /** Palette catalogue public — nuit violette, corail, brume claire */
         catalog: {
-          bg: '#eef6f4',
+          bg: '#e8e2f7',
+          bgDeep: '#dcd4f2',
           surface: '#ffffff',
-          /** Lisibilité : encre / corps / secondaire bien séparés (WCAG-friendly sur fond clair) */
-          ink: '#011816',
-          body: '#0f172a',
-          muted: '#1e293b',
-          subtle: '#334155',
-          /** Libellés petits caps : plus foncé pour WCAG sur fond crème */
-          label: '#065f46',
-          onDark: '#f8fafc',
-          teal: '#0f766e',
-          tealLight: '#14b8a6',
-          deep: '#0c4c46',
-          ocean: '#115e59',
-          sand: '#c4a35a',
-          sandLight: '#fef3c7',
-          border: 'rgba(15, 23, 42, 0.12)',
-          night: '#022c22',
+          ink: '#12051f',
+          body: '#1f1333',
+          muted: '#4a3d63',
+          subtle: '#6d5f82',
+          label: '#5b21b6',
+          onDark: '#f5f3ff',
+          /** Accent principal (CTA, liens actifs) */
+          coral: '#ea580c',
+          coralLight: '#ff8a4c',
+          violet: '#6d28d9',
+          violetLight: '#8b5cf6',
+          deep: '#4c1d95',
+          ocean: '#5b21b6',
+          sand: '#f59e0b',
+          sandLight: '#fff7ed',
+          border: 'rgba(76, 29, 149, 0.14)',
+          night: '#0f0820',
+          /** Rétro-compat alias « teal » utilisés dans le JSX → violet */
+          teal: '#5b21b6',
+          tealLight: '#a78bfa',
         },
         hd: {
           bg: "#f8f9fa",
@@ -54,23 +59,24 @@ export default {
         soft: "0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)",
         "soft-lg": "0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
         "catalog-card":
-          "0 2px 8px -2px rgba(15, 23, 42, 0.06), 0 16px 32px -12px rgba(15, 118, 110, 0.14)",
+          "0 2px 8px -2px rgba(15, 23, 42, 0.06), 0 18px 36px -14px rgba(91, 33, 182, 0.2)",
         "catalog-card-hover":
-          "0 8px 24px -6px rgba(15, 23, 42, 0.08), 0 20px 40px -14px rgba(15, 118, 110, 0.22)",
+          "0 10px 28px -8px rgba(15, 23, 42, 0.1), 0 24px 48px -16px rgba(234, 88, 12, 0.18)",
         "catalog-premium":
-          "0 2px 4px -1px rgba(2, 44, 34, 0.04), 0 20px 48px -12px rgba(4, 47, 46, 0.12), 0 0 0 1px rgba(255,255,255,0.65) inset",
+          "0 2px 4px -1px rgba(15, 23, 42, 0.06), 0 22px 50px -14px rgba(76, 29, 149, 0.18), 0 0 0 1px rgba(255,255,255,0.7) inset",
         "catalog-premium-hover":
-          "0 12px 40px -8px rgba(4, 47, 46, 0.18), 0 4px 16px -4px rgba(196, 163, 90, 0.15), 0 0 0 1px rgba(255,255,255,0.8) inset",
-        "btn-primary": "0 4px 14px -2px rgba(15, 118, 110, 0.45), 0 2px 6px -1px rgba(15, 23, 42, 0.08)",
-        "glow-teal": "0 0 48px -12px rgba(45, 212, 191, 0.35)",
+          "0 14px 44px -10px rgba(76, 29, 149, 0.22), 0 6px 20px -6px rgba(234, 88, 12, 0.2), 0 0 0 1px rgba(255,255,255,0.85) inset",
+        "btn-primary": "0 4px 18px -2px rgba(234, 88, 12, 0.45), 0 2px 8px -1px rgba(76, 29, 149, 0.25)",
+        "glow-teal": "0 0 56px -10px rgba(167, 139, 250, 0.45)",
       },
       backgroundImage: {
         "catalog-mesh":
-          "radial-gradient(ellipse 110% 90% at 50% -35%, rgba(45, 212, 191, 0.22) 0%, transparent 52%), radial-gradient(ellipse 80% 55% at 100% 0%, rgba(196, 163, 90, 0.12) 0%, transparent 48%), radial-gradient(ellipse 70% 50% at 0% 100%, rgba(13, 148, 136, 0.1) 0%, transparent 42%), radial-gradient(ellipse 60% 40% at 80% 85%, rgba(15, 23, 42, 0.06) 0%, transparent 50%)",
+          "radial-gradient(ellipse 100% 80% at 50% -20%, rgba(167, 139, 250, 0.35) 0%, transparent 50%), radial-gradient(ellipse 90% 60% at 100% 10%, rgba(234, 88, 12, 0.14) 0%, transparent 45%), radial-gradient(ellipse 70% 55% at 0% 100%, rgba(91, 33, 182, 0.12) 0%, transparent 48%), radial-gradient(ellipse 55% 40% at 85% 90%, rgba(15, 23, 42, 0.06) 0%, transparent 52%)",
         /** Grille très légère pour texture « éditoriale » */
         "catalog-grid":
-          "linear-gradient(to right, rgba(15,23,42,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.04) 1px, transparent 1px)",
-        "catalog-footer-fade": "linear-gradient(180deg, rgba(248, 250, 249, 0) 0%, rgba(236, 253, 245, 0.9) 100%)",
+          "linear-gradient(to right, rgba(91,33,182,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(91,33,182,0.06) 1px, transparent 1px)",
+        "catalog-footer-fade":
+          "linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(232, 226, 247, 0.95) 100%)",
       },
       keyframes: {
         /** Entrées pages catalogue public (légères, GPU-friendly) */
