@@ -406,7 +406,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
             </label>
           </div>
           <ul
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
             onDragLeave={(e) => {
               if (!e.currentTarget.contains(e.relatedTarget)) {
                 setDragOverIndex(null);
@@ -424,9 +424,9 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
                   key={`url-${activity.id}-${index}`}
                   onDragOver={(e) => handleUrlRowDragOver(e, index)}
                   onDrop={(e) => handleUrlRowDrop(e, index)}
-                  className={`flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-[box-shadow,transform,opacity] ${
+                  className={`flex flex-col overflow-hidden rounded-lg border bg-white shadow-sm transition-[box-shadow,transform,opacity] ${
                     isDragging ? "scale-[0.98] opacity-60 ring-2 ring-emerald-500/40" : ""
-                  } ${isOver ? "ring-2 ring-emerald-500 ring-offset-2" : "border-slate-200"}`}
+                  } ${isOver ? "ring-2 ring-emerald-500 ring-offset-1" : "border-slate-200"}`}
                 >
                   {thumbOk ? (
                     <div
@@ -435,29 +435,29 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
                       draggable={canDragThisTile}
                       onDragStart={(e) => handleUrlRowDragStart(e, index)}
                       onDragEnd={handleUrlRowDragEnd}
-                      className={`relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-slate-100 outline-none ${
+                      className={`relative h-20 w-full shrink-0 overflow-hidden bg-slate-100 outline-none sm:h-24 ${
                         canDragThisTile ? "cursor-grab active:cursor-grabbing" : "cursor-default"
                       }`}
                     >
                       <img src={trimmed} alt="" className="h-full w-full object-cover" draggable={false} />
                       {canDragThisTile ? (
-                        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-2 pb-2 pt-8">
-                          <span className="text-[11px] font-semibold text-white drop-shadow-sm">
-                            Glisser pour réordonner
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent px-1.5 pb-1 pt-5">
+                          <span className="text-[9px] font-semibold leading-tight text-white drop-shadow-sm sm:text-[10px]">
+                            Glisser
                           </span>
                         </div>
                       ) : null}
                     </div>
                   ) : (
                     <div
-                      className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-1 border-b border-dashed border-slate-200 bg-slate-50 px-3 text-center"
+                      className="flex h-20 w-full flex-col items-center justify-center gap-0.5 border-b border-dashed border-slate-200 bg-slate-50 px-2 text-center sm:h-24"
                       draggable={false}
                     >
-                      <span className="text-xs font-medium text-slate-500">Emplacement vide</span>
-                      <span className="text-[10px] text-slate-400">Collez une URL HTTPS ci-dessous ou importez une image</span>
+                      <span className="text-[10px] font-medium text-slate-500 sm:text-xs">Vide</span>
+                      <span className="hidden text-[9px] text-slate-400 sm:block">URL ou import</span>
                     </div>
                   )}
-                  <div className="flex flex-col gap-2 p-3">
+                  <div className="flex flex-col gap-1.5 p-2">
                     <input
                       type="url"
                       value={row}
