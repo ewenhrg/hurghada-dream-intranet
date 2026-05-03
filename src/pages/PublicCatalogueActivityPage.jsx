@@ -15,9 +15,17 @@ import {
   isLouxorPrivatifActivity,
   isMotoCrossActivity,
   isSpeedBoatActivity,
+  isZeroTracasActivity,
+  isZeroTracasHorsZoneActivity,
+  getZeroTracasPrices,
+  getZeroTracasHorsZonePrices,
   proseFromActivityNotes,
 } from "../utils/activityHelpers";
-import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "../utils/publicCatalogPricing";
+import {
+  computePublicCatalogLineTotal,
+  getPublicCatalogListFromPrice,
+  isPublicCatalogAirportStyleLine,
+} from "../utils/publicCatalogPricing";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 
 /** `*` : toutes les colonnes présentes en base (évite erreur si une migration manque encore). */
@@ -340,6 +348,14 @@ export function PublicCatalogueActivityPage({ activityId }) {
     louxorPrivatif4pax: false,
     louxorPrivatif5pax: false,
     louxorPrivatif6pax: false,
+    allerSimple: false,
+    allerRetour: false,
+    zeroTracasTransfertVisaSim: 0,
+    zeroTracasTransfertVisa: 0,
+    zeroTracasTransfert3Personnes: 0,
+    zeroTracasTransfertPlus3Personnes: 0,
+    zeroTracasVisaSim: 0,
+    zeroTracasVisaSeul: 0,
   });
 
   const categoryKey = useMemo(
@@ -382,8 +398,30 @@ export function PublicCatalogueActivityPage({ activityId }) {
       louxorPrivatif4pax: false,
       louxorPrivatif5pax: false,
       louxorPrivatif6pax: false,
+      allerSimple: false,
+      allerRetour: false,
+      zeroTracasTransfertVisaSim: 0,
+      zeroTracasTransfertVisa: 0,
+      zeroTracasTransfert3Personnes: 0,
+      zeroTracasTransfertPlus3Personnes: 0,
+      zeroTracasVisaSim: 0,
+      zeroTracasVisaSeul: 0,
     });
   }, [activityId]);
+
+  const airportDefaultAppliedRef = useRef(false);
+  useEffect(() => {
+    airportDefaultAppliedRef.current = false;
+  }, [activityId]);
+
+  /** Transferts aéroport : une fois par fiche, défaut aller simple (montant immédiat, aligné intranet). */
+  useEffect(() => {
+    if (!activity || String(activity.id) !== String(activityId)) return;
+    if (!isPublicCatalogAirportStyleLine(activity)) return;
+    if (airportDefaultAppliedRef.current) return;
+    airportDefaultAppliedRef.current = true;
+    setSpecial((s) => ({ ...s, allerSimple: true, allerRetour: false }));
+  }, [activityId, activity]);
 
   const listFromPrice = useMemo(() => (activity ? getPublicCatalogListFromPrice(activity) : null), [activity]);
 
@@ -423,6 +461,24 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
     if (isCairePrivatifActivity(activity.name) || isLouxorPrivatifActivity(activity.name)) {
       return "Choisissez la taille du groupe (4, 5 ou 6 personnes) — prix forfaitaire.";
+    }
+    if (isZeroTracasHorsZoneActivity(activity.name) || isZeroTracasActivity(activity.name)) {
+      return "Indiquez le nombre de chaque prestation (même grille que sur le devis intranet). Les tarifs adulte/enfant ci-dessus ne s’appliquent pas à cette fiche.";
+    }
+    if (isPublicCatalogAirportStyleLine(activity)) {
+      return "Forfait par trajet : choisissez aller simple ou aller-retour (comme sur le devis intranet). Les tarifs adulte/enfant en base ne s’appliquent pas.";
+    }
+    return "";
+  }, [activity]);
+
+  const bookingPriceCaption = useMemo(() => {
+    if (!activity) return "";
+    if (
+      isPublicCatalogAirportStyleLine(activity) ||
+      isZeroTracasHorsZoneActivity(activity.name) ||
+      isZeroTracasActivity(activity.name)
+    ) {
+      return "Montant « à partir de » = plus petite option de la grille ; le total se met à jour selon vos choix.";
     }
     return "";
   }, [activity]);
@@ -652,6 +708,110 @@ export function PublicCatalogueActivityPage({ activityId }) {
       );
     }
 
+    if (isZeroTracasHorsZoneActivity(name) || isZeroTracasActivity(name)) {
+      const prices = isZeroTracasHorsZoneActivity(name) ? getZeroTracasHorsZonePrices() : getZeroTracasPrices();
+      const rows = [
+        { key: "zeroTracasTransfertVisaSim", label: "Transfert + visa + SIM", unit: prices.transfertVisaSim },
+        { key: "zeroTracasTransfertVisa", label: "Transfert + visa", unit: prices.transfertVisa },
+        { key: "zeroTracasTransfert3Personnes", label: "Transfert 3 pers.", unit: prices.transfert3Personnes },
+        { key: "zeroTracasTransfertPlus3Personnes", label: "Transfert +3 pers.", unit: prices.transfertPlus3Personnes },
+        { key: "zeroTracasVisaSim", label: "Visa + SIM", unit: prices.visaSim },
+        { key: "zeroTracasVisaSeul", label: "Visa seul", unit: prices.visaSeul },
+      ];
+      return (
+        <div className="space-y-2 rounded-xl border border-slate-300 bg-slate-50/90 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-800">
+            {isZeroTracasHorsZoneActivity(name) ? "Zero Tracas Hors zone" : "Zero Tracas"} — quantités
+          </p>
+          <div className="space-y-2">
+            {rows.map(({ key, label, unit }) => (
+              <div
+                key={key}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2 sm:flex-nowrap"
+              >
+                <span className="min-w-0 flex-1 text-xs font-semibold leading-snug text-slate-800">{label}</span>
+                <span className="shrink-0 text-[10px] font-medium text-slate-600">{unit} € / u.</span>
+                <select
+                  className="w-16 shrink-0 rounded border border-slate-300 bg-white py-1.5 text-center text-sm font-semibold"
+                  value={special[key]}
+                  onChange={(e) =>
+                    setSpecial((s) => ({ ...s, [key]: Math.max(0, Math.min(20, toNumber(e.target.value))) }))
+                  }
+                  aria-label={`Quantité ${label}`}
+                >
+                  {Array.from({ length: 21 }, (_, n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (isPublicCatalogAirportStyleLine(activity)) {
+      const probe = { adults: 1, children: 0, babies: 0 };
+      const simpleP = computePublicCatalogLineTotal(activity, {
+        ...probe,
+        ...special,
+        allerSimple: true,
+        allerRetour: false,
+      });
+      const retourP = computePublicCatalogLineTotal(activity, {
+        ...probe,
+        ...special,
+        allerSimple: false,
+        allerRetour: true,
+      });
+      const radioName = `hd-airport-transfer-${activity.id}`;
+      return (
+        <div className="space-y-2 rounded-xl border border-teal-200/90 bg-teal-50/80 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-teal-950">Type de trajet</p>
+          <div className="space-y-2" role="radiogroup" aria-label="Transfert aller simple ou aller-retour">
+            <label
+              className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition ${
+                special.allerSimple
+                  ? "border-teal-600 bg-white shadow-md ring-2 ring-teal-400/50"
+                  : "border-slate-200/90 bg-white/95 hover:border-teal-400/80"
+              }`}
+            >
+              <input
+                type="radio"
+                name={radioName}
+                checked={special.allerSimple}
+                onChange={() => setSpecial((s) => ({ ...s, allerSimple: true, allerRetour: false }))}
+                className="h-[18px] w-[18px] shrink-0 accent-teal-600"
+              />
+              <span className="text-sm font-semibold text-slate-900">
+                Aller simple <span className="text-teal-800">({formatMoney(simpleP, activity.currency || "EUR")})</span>
+              </span>
+            </label>
+            <label
+              className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition ${
+                special.allerRetour
+                  ? "border-teal-600 bg-white shadow-md ring-2 ring-teal-400/50"
+                  : "border-slate-200/90 bg-white/95 hover:border-teal-400/80"
+              }`}
+            >
+              <input
+                type="radio"
+                name={radioName}
+                checked={special.allerRetour}
+                onChange={() => setSpecial((s) => ({ ...s, allerSimple: false, allerRetour: true }))}
+                className="h-[18px] w-[18px] shrink-0 accent-teal-600"
+              />
+              <span className="text-sm font-semibold text-slate-900">
+                Aller-retour <span className="text-teal-800">({formatMoney(retourP, activity.currency || "EUR")})</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      );
+    }
+
     return null;
   }, [activity, special, speedBoatPackValue, applySpeedBoatPack]);
 
@@ -659,6 +819,19 @@ export function PublicCatalogueActivityPage({ activityId }) {
     if (!activity) return false;
     const name = activity.name || "";
     if (lineTotal > 0) return false;
+    if (isPublicCatalogAirportStyleLine(activity)) {
+      return !special.allerSimple && !special.allerRetour;
+    }
+    if (isZeroTracasHorsZoneActivity(name) || isZeroTracasActivity(name)) {
+      const zt =
+        toNumber(special.zeroTracasTransfertVisaSim) +
+        toNumber(special.zeroTracasTransfertVisa) +
+        toNumber(special.zeroTracasTransfert3Personnes) +
+        toNumber(special.zeroTracasTransfertPlus3Personnes) +
+        toNumber(special.zeroTracasVisaSim) +
+        toNumber(special.zeroTracasVisaSeul);
+      return zt === 0;
+    }
     if (isCairePrivatifActivity(name)) {
       return !special.cairePrivatif4pax && !special.cairePrivatif5pax && !special.cairePrivatif6pax;
     }
@@ -1175,6 +1348,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   childrenBeforeParticipants={specialPricingBeforeParticipants}
                   codedTotalPending={codedTotalPending}
                   babiesForbidden={babiesForbidden}
+                  priceCaption={bookingPriceCaption}
                 />
               </div>
             </div>
@@ -1207,6 +1381,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
               childrenBeforeParticipants={specialPricingBeforeParticipants}
               codedTotalPending={codedTotalPending}
               babiesForbidden={babiesForbidden}
+              priceCaption={bookingPriceCaption}
             />
           </div>
         </div>

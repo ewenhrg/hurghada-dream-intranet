@@ -15,6 +15,10 @@ import {
   isLouxorPrivatifActivity,
   getLouxorPrivatifPrices,
   getActivityTarifListLines,
+  isZeroTracasActivity,
+  isZeroTracasHorsZoneActivity,
+  getZeroTracasPrices,
+  getZeroTracasHorsZonePrices,
 } from "./activityHelpers";
 
 function num(n, fallback = 0) {
@@ -28,6 +32,92 @@ function readDbPrices(activity) {
     child: num(activity?.price_child),
     baby: num(activity?.price_baby),
   };
+}
+
+/** Aligné sur `useActivityPriceCalculator` (branches transferts / longues distances). */
+function computeAirportStyleTransferLineTotal(activityName, line) {
+  const n = String(activityName || "").toLowerCase();
+  const simple = Boolean(line?.allerSimple);
+  const retour = Boolean(line?.allerRetour);
+  if (n.includes("hurghada") && (n.includes("le caire") || n.includes("louxor"))) {
+    if (simple) return 150;
+    if (retour) return 300;
+    return 0;
+  }
+  if (n.includes("soma bay") && n.includes("aeroport") && n.includes("7")) {
+    if (simple) return 40;
+    if (retour) return 80;
+    return 0;
+  }
+  if (n.includes("soma bay") && n.includes("aeroport") && n.includes("4")) {
+    if (simple) return 35;
+    if (retour) return 70;
+    return 0;
+  }
+  if (n.includes("hors zone") && (n.includes("aeroport") || n.includes("aerport")) && n.includes("7")) {
+    if (simple) return 30;
+    if (retour) return 60;
+    return 0;
+  }
+  if (n.includes("hors zone") && (n.includes("aeroport") || n.includes("aerport")) && n.includes("4")) {
+    if (simple) return 25;
+    if (retour) return 50;
+    return 0;
+  }
+  if (n.includes("aeroport") && n.includes("7")) {
+    if (simple) return 25;
+    if (retour) return 50;
+    return 0;
+  }
+  if (n.includes("aeroport") && n.includes("4")) {
+    if (simple) return 20;
+    if (retour) return 40;
+    return 0;
+  }
+  return null;
+}
+
+function getAirportStyleTransferListAmount(activityName) {
+  const n = String(activityName || "").toLowerCase();
+  const pairs = [
+    { match: () => n.includes("hurghada") && (n.includes("le caire") || n.includes("louxor")), min: 150 },
+    { match: () => n.includes("soma bay") && n.includes("aeroport") && n.includes("7"), min: 40 },
+    { match: () => n.includes("soma bay") && n.includes("aeroport") && n.includes("4"), min: 35 },
+    { match: () => n.includes("hors zone") && (n.includes("aeroport") || n.includes("aerport")) && n.includes("7"), min: 30 },
+    { match: () => n.includes("hors zone") && (n.includes("aeroport") || n.includes("aerport")) && n.includes("4"), min: 25 },
+    { match: () => n.includes("aeroport") && n.includes("7"), min: 25 },
+    { match: () => n.includes("aeroport") && n.includes("4"), min: 20 },
+  ];
+  for (const { match, min: m } of pairs) {
+    if (match()) return m;
+  }
+  return null;
+}
+
+function computeZeroTracasStyleLineTotal(activityName, line) {
+  if (isZeroTracasHorsZoneActivity(activityName)) {
+    const p = getZeroTracasHorsZonePrices();
+    return (
+      num(line?.zeroTracasTransfertVisaSim) * p.transfertVisaSim +
+      num(line?.zeroTracasTransfertVisa) * p.transfertVisa +
+      num(line?.zeroTracasTransfert3Personnes) * p.transfert3Personnes +
+      num(line?.zeroTracasTransfertPlus3Personnes) * p.transfertPlus3Personnes +
+      num(line?.zeroTracasVisaSim) * p.visaSim +
+      num(line?.zeroTracasVisaSeul) * p.visaSeul
+    );
+  }
+  if (isZeroTracasActivity(activityName)) {
+    const p = getZeroTracasPrices();
+    return (
+      num(line?.zeroTracasTransfertVisaSim) * p.transfertVisaSim +
+      num(line?.zeroTracasTransfertVisa) * p.transfertVisa +
+      num(line?.zeroTracasTransfert3Personnes) * p.transfert3Personnes +
+      num(line?.zeroTracasTransfertPlus3Personnes) * p.transfertPlus3Personnes +
+      num(line?.zeroTracasVisaSim) * p.visaSim +
+      num(line?.zeroTracasVisaSeul) * p.visaSeul
+    );
+  }
+  return null;
 }
 
 /**
@@ -88,6 +178,16 @@ export function computePublicCatalogLineTotal(activity, line) {
     return 0;
   }
 
+  const zeroTracasTotal = computeZeroTracasStyleLineTotal(name, line);
+  if (zeroTracasTotal !== null) {
+    return zeroTracasTotal;
+  }
+
+  const airportTotal = computeAirportStyleTransferLineTotal(name, line);
+  if (airportTotal !== null) {
+    return airportTotal;
+  }
+
   const db = readDbPrices(activity);
   if (db.adult > 0 || db.child > 0 || db.baby > 0) {
     return ad * db.adult + ch * db.child + bab * db.baby;
@@ -129,6 +229,22 @@ export function getPublicCatalogListFromPrice(activity) {
     return { amount: p.pax4, currency: activity.currency || "EUR" };
   }
 
+  if (isZeroTracasHorsZoneActivity(name)) {
+    const p = getZeroTracasHorsZonePrices();
+    const amount = Math.min(...Object.values(p).map((x) => num(x)));
+    return { amount, currency: activity.currency || "EUR" };
+  }
+  if (isZeroTracasActivity(name)) {
+    const p = getZeroTracasPrices();
+    const amount = Math.min(...Object.values(p).map((x) => num(x)));
+    return { amount, currency: activity.currency || "EUR" };
+  }
+
+  const airportList = getAirportStyleTransferListAmount(name);
+  if (airportList != null) {
+    return { amount: airportList, currency: activity.currency || "EUR" };
+  }
+
   const coded = getActivityTarifListLines(activity);
   if (coded?.length) {
     return null;
@@ -141,4 +257,9 @@ export function activityUsesCodedTariffWithoutDbPrices(activity) {
   const db = readDbPrices(activity);
   if (db.adult > 0 || db.child > 0 || db.baby > 0) return false;
   return getActivityTarifListLines(activity) != null;
+}
+
+/** Fiche catalogue : transfert type aéroport / longue distance (grille aller simple – retour). */
+export function isPublicCatalogAirportStyleLine(activity) {
+  return getAirportStyleTransferListAmount(activity?.name || "") != null;
 }
