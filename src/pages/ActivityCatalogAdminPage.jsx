@@ -126,6 +126,16 @@ async function persistCatalogRow(activity) {
   return true;
 }
 
+function reorderUrlRows(prev, fromIndex, toIndex) {
+  if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= prev.length || toIndex >= prev.length) {
+    return prev;
+  }
+  const next = [...prev];
+  const [item] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, item);
+  return next;
+}
+
 function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
   const [desc, setDesc] = useState(() => String(activity.description ?? ""));
   const [urlRows, setUrlRows] = useState(() => {
@@ -134,6 +144,8 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
   useEffect(() => {
     setDesc(String(activity.description ?? ""));
@@ -192,14 +204,54 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
     });
   }
 
-  function moveUrlAt(index, delta) {
-    setUrlRows((prev) => {
-      const j = index + delta;
-      if (j < 0 || j >= prev.length) return prev;
-      const next = [...prev];
-      [next[index], next[j]] = [next[j], next[index]];
-      return next;
-    });
+  const validImageSlotCount = urlRows.filter((r) => {
+    const t = String(r || "").trim();
+    return t && isAllowedCatalogImageUrl(t);
+  }).length;
+  const canReorderUrls = Boolean(canEdit && activity.supabase_id && validImageSlotCount > 1);
+
+  function handleUrlRowDragStart(e, index) {
+    if (!canReorderUrls) return;
+    setDragIndex(index);
+    setDragOverIndex(null);
+    try {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", String(index));
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (e.dataTransfer.setDragImage && e.currentTarget instanceof HTMLElement) {
+        const img = e.currentTarget.querySelector("img");
+        if (img && img.complete && img.naturalWidth > 0) {
+          e.dataTransfer.setDragImage(img, Math.min(48, img.naturalWidth / 2), Math.min(48, img.naturalHeight / 2));
+        }
+      }
+    } catch {
+      /* setDragImage peut échouer (CORS) — le glisser-déposer reste actif */
+    }
+  }
+
+  function handleUrlRowDragOver(e, index) {
+    if (!canReorderUrls || dragIndex === null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIndex !== index) setDragOverIndex(index);
+  }
+
+  function handleUrlRowDrop(e, index) {
+    if (!canReorderUrls || dragIndex === null) return;
+    e.preventDefault();
+    const from = dragIndex;
+    setDragIndex(null);
+    setDragOverIndex(null);
+    if (from === index) return;
+    setUrlRows((prev) => reorderUrlRows(prev, from, index));
+  }
+
+  function handleUrlRowDragEnd() {
+    setDragIndex(null);
+    setDragOverIndex(null);
   }
 
   async function handleUploadFiles(event) {
@@ -331,11 +383,14 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
 
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Photos (URLs HTTPS)
+            Photos du catalogue public
           </label>
           <p className="mb-2 text-xs text-slate-600">
-            Collez des liens directs (HTTPS) ou importez des fichiers image (max {MAX_CATALOG_IMAGES}, {MAX_CATALOG_IMAGE_SIZE_MB} Mo/image). L’ordre
-            des lignes est celui affiché sur la fiche catalogue (aperçu, carrousel, lightbox).
+            Importez des images ou collez des liens HTTPS (max {MAX_CATALOG_IMAGES}, {MAX_CATALOG_IMAGE_SIZE_MB} Mo/image).{" "}
+            <span className="font-medium text-slate-800">
+              Glissez-déposez une vignette sur une autre
+            </span>{" "}
+            pour changer l’ordre affiché sur le catalogue.
           </p>
           <div className="mb-3">
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
@@ -350,77 +405,95 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
               <span>{uploading ? "Upload en cours…" : "Ajouter des images depuis l’ordinateur"}</span>
             </label>
           </div>
-          <ul className="space-y-2">
-            {urlRows.map((row, index) => (
-              <li key={`url-${activity.id}-${index}`} className="flex flex-wrap items-center gap-2">
-                <div className="flex shrink-0 flex-col gap-0.5" title="Ordre sur le catalogue public">
-                  <button
-                    type="button"
-                    disabled={!canEdit || !activity.supabase_id || index === 0}
-                    onClick={() => moveUrlAt(index, -1)}
-                    className="rounded border border-slate-200 px-1.5 py-0.5 text-xs font-semibold leading-none text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
-                    aria-label={`Monter la photo ${index + 1}`}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canEdit || !activity.supabase_id || index >= urlRows.length - 1}
-                    onClick={() => moveUrlAt(index, 1)}
-                    className="rounded border border-slate-200 px-1.5 py-0.5 text-xs font-semibold leading-none text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
-                    aria-label={`Descendre la photo ${index + 1}`}
-                  >
-                    ↓
-                  </button>
-                </div>
-                <input
-                  type="url"
-                  value={row}
-                  onChange={(e) => setUrlAt(index, e.target.value)}
-                  disabled={!canEdit || !activity.supabase_id}
-                  placeholder="https://…"
-                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:opacity-60"
-                  autoComplete="off"
-                />
-                {row.trim() && !isAllowedCatalogImageUrl(row) ? (
-                  <span className="text-xs font-medium text-amber-700">HTTPS requis</span>
-                ) : null}
-                <button
-                  type="button"
-                  disabled={!canEdit || !activity.supabase_id}
-                  onClick={() => removeUrlAt(index)}
-                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+          <ul
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) {
+                setDragOverIndex(null);
+              }
+            }}
+          >
+            {urlRows.map((row, index) => {
+              const trimmed = String(row || "").trim();
+              const thumbOk = trimmed && isAllowedCatalogImageUrl(trimmed);
+              const isDragging = dragIndex === index;
+              const isOver = dragOverIndex === index && dragIndex !== null && dragIndex !== index;
+              const canDragThisTile = canReorderUrls && thumbOk;
+              return (
+                <li
+                  key={`url-${activity.id}-${index}`}
+                  onDragOver={(e) => handleUrlRowDragOver(e, index)}
+                  onDrop={(e) => handleUrlRowDrop(e, index)}
+                  className={`flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-[box-shadow,transform,opacity] ${
+                    isDragging ? "scale-[0.98] opacity-60 ring-2 ring-emerald-500/40" : ""
+                  } ${isOver ? "ring-2 ring-emerald-500 ring-offset-2" : "border-slate-200"}`}
                 >
-                  Retirer
-                </button>
-              </li>
-            ))}
+                  {thumbOk ? (
+                    <div
+                      aria-grabbed={canDragThisTile && isDragging ? "true" : undefined}
+                      aria-label={canDragThisTile ? "Photo — glisser pour réordonner" : "Photo catalogue"}
+                      draggable={canDragThisTile}
+                      onDragStart={(e) => handleUrlRowDragStart(e, index)}
+                      onDragEnd={handleUrlRowDragEnd}
+                      className={`relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-slate-100 outline-none ${
+                        canDragThisTile ? "cursor-grab active:cursor-grabbing" : "cursor-default"
+                      }`}
+                    >
+                      <img src={trimmed} alt="" className="h-full w-full object-cover" draggable={false} />
+                      {canDragThisTile ? (
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-2 pb-2 pt-8">
+                          <span className="text-[11px] font-semibold text-white drop-shadow-sm">
+                            Glisser pour réordonner
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div
+                      className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-1 border-b border-dashed border-slate-200 bg-slate-50 px-3 text-center"
+                      draggable={false}
+                    >
+                      <span className="text-xs font-medium text-slate-500">Emplacement vide</span>
+                      <span className="text-[10px] text-slate-400">Collez une URL HTTPS ci-dessous ou importez une image</span>
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-2 p-3">
+                    <input
+                      type="url"
+                      value={row}
+                      onChange={(e) => setUrlAt(index, e.target.value)}
+                      disabled={!canEdit || !activity.supabase_id}
+                      placeholder="https://…"
+                      draggable={false}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:opacity-60"
+                      autoComplete="off"
+                    />
+                    {row.trim() && !isAllowedCatalogImageUrl(row) ? (
+                      <span className="text-xs font-medium text-amber-700">HTTPS requis</span>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={!canEdit || !activity.supabase_id}
+                      onClick={() => removeUrlAt(index)}
+                      draggable={false}
+                      className="self-start rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                    >
+                      Retirer cette photo
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
           <button
             type="button"
             disabled={!canEdit || !activity.supabase_id || urlRows.length >= MAX_CATALOG_IMAGES}
             onClick={addUrlRow}
-            className="mt-2 text-sm font-medium text-emerald-700 hover:underline disabled:opacity-40"
+            className="mt-3 text-sm font-medium text-emerald-700 hover:underline disabled:opacity-40"
           >
-            + Ajouter une URL
+            + Ajouter un emplacement (URL)
           </button>
         </div>
-
-        {normalizedUrls.length > 0 ? (
-          <div>
-            <p className="mb-2 text-xs font-semibold text-slate-500">Aperçu</p>
-            <div className="flex flex-wrap gap-2">
-              {normalizedUrls.map((u) => (
-                <div
-                  key={u}
-                  className="h-20 w-28 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
-                >
-                  <img src={u} alt="" className="h-full w-full object-cover" loading="lazy" />
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
       </div>
     </article>
   );
