@@ -110,6 +110,7 @@ export function PublicClientDevisPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
 
   const publicDisplayCategories = useMemo(() => {
     const categories = [...CATEGORIES];
@@ -266,7 +267,7 @@ export function PublicClientDevisPage() {
   }, [cart]);
 
   useEffect(() => {
-    if (cartDrawerOpen || checkoutOpen) {
+    if (cartDrawerOpen || checkoutOpen || successModalOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -274,19 +275,20 @@ export function PublicClientDevisPage() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [cartDrawerOpen, checkoutOpen]);
+  }, [cartDrawerOpen, checkoutOpen, successModalOpen]);
 
   useEffect(() => {
-    if (!cartDrawerOpen && !checkoutOpen) return undefined;
+    if (!cartDrawerOpen && !checkoutOpen && !successModalOpen) return undefined;
     function onKey(e) {
       if (e.key === "Escape") {
         setCheckoutOpen(false);
         setCartDrawerOpen(false);
+        setSuccessModalOpen(false);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cartDrawerOpen, checkoutOpen]);
+  }, [cartDrawerOpen, checkoutOpen, successModalOpen]);
 
   useEffect(() => {
     if (!supabase || !__SUPABASE_DEBUG__.isConfigured) return undefined;
@@ -439,8 +441,9 @@ export function PublicClientDevisPage() {
         return;
       }
       setSuccess(
-        "Votre demande a bien été envoyée. Nous allons vous recontacter sur votre WhatsApp au plus vite au +201062002850."
+        "Votre demande a bien été envoyée. Nous allons vous recontacter sur votre WhatsApp au plus vite. Si vous avez besoin de nous contacter, vous pouvez nous écrire directement sur notre WhatsApp au +201062002850."
       );
+      setSuccessModalOpen(true);
       setCart([]);
       setClient({
         name: "",
@@ -665,15 +668,6 @@ export function PublicClientDevisPage() {
                 !
               </span>
               <span className="pt-0.5 leading-relaxed">{error}</span>
-            </div>
-          )}
-
-          {success && !loading && (
-            <div className="flex items-start gap-4 rounded-3xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/50 px-6 py-5 text-sm font-semibold text-emerald-950 shadow-catalog-premium">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/15 text-lg font-black text-emerald-700" aria-hidden>
-                ✓
-              </span>
-              <span className="pt-0.5 leading-relaxed">{success}</span>
             </div>
           )}
 
@@ -996,13 +990,9 @@ export function PublicClientDevisPage() {
                 </svg>
               </button>
             </div>
-            {(error || success) && (
-              <div
-                className={`mb-4 rounded-2xl border px-4 py-3 text-sm font-medium ${
-                  error ? "border-rose-200 bg-rose-50 text-rose-900" : "border-violet-200 bg-violet-50 text-violet-900"
-                }`}
-              >
-                {error || success}
+            {error && (
+              <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900">
+                {error}
               </div>
             )}
             <p className="mb-3 text-xs font-semibold leading-relaxed text-catalog-body">
@@ -1087,6 +1077,32 @@ export function PublicClientDevisPage() {
           </form>
         </div>
       )}
+      {successModalOpen && success ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="public-quote-success-title">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+            aria-label="Fermer la confirmation"
+            onClick={() => setSuccessModalOpen(false)}
+          />
+          <div className="relative z-10 w-full max-w-md rounded-3xl border-2 border-emerald-200 bg-white p-6 shadow-[0_28px_90px_-18px_rgba(15,23,42,0.22)] sm:p-7">
+            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-xl font-black text-emerald-700">
+              ✓
+            </div>
+            <h3 id="public-quote-success-title" className="font-catalog-display text-xl font-semibold text-catalog-ink">
+              Demande envoyee
+            </h3>
+            <p className="mt-3 text-sm font-semibold leading-relaxed text-catalog-body">{success}</p>
+            <button
+              type="button"
+              onClick={() => setSuccessModalOpen(false)}
+              className="mt-6 w-full min-h-[48px] rounded-2xl border border-white/15 bg-gradient-to-r from-emerald-700 to-emerald-500 px-4 py-3 text-sm font-extrabold tracking-tight text-white shadow-[0_10px_26px_-10px_rgba(22,163,74,0.5)] transition hover:from-emerald-800 hover:to-emerald-600"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

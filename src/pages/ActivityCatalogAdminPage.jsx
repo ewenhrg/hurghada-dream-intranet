@@ -75,7 +75,7 @@ function createCatalogPatchMapFromBackup(backupActivities) {
     if (!row) continue;
     const description = row.description != null ? String(row.description) : "";
     const catalogImageUrls = normalizeCatalogImageUrlsFromDb(row.catalogImageUrls ?? row.catalog_image_urls);
-    const patch = { description, catalogImageUrls };
+    const patch = { description, catalogImageUrls, popular: row.popular === true };
     if (row.supabase_id != null && String(row.supabase_id).trim() !== "") {
       bySupabaseId.set(String(row.supabase_id), patch);
     }
@@ -115,6 +115,7 @@ async function persistCatalogRow(activity) {
   const payload = {
     description: activity.description != null ? String(activity.description) : "",
     catalog_image_urls: urls,
+    popular: activity.popular === true,
   };
   const { error } = await supabase.from("activities").update(payload).eq("id", activity.supabase_id);
   if (error) {
@@ -138,6 +139,7 @@ function reorderUrlRows(prev, fromIndex, toIndex) {
 
 function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
   const [desc, setDesc] = useState(() => String(activity.description ?? ""));
+  const [popular, setPopular] = useState(() => activity.popular === true);
   const [urlRows, setUrlRows] = useState(() => {
     const u = normalizeCatalogImageUrlsFromDb(activity.catalogImageUrls);
     return u.length ? u : [""];
@@ -149,9 +151,10 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
 
   useEffect(() => {
     setDesc(String(activity.description ?? ""));
+    setPopular(activity.popular === true);
     const u = normalizeCatalogImageUrlsFromDb(activity.catalogImageUrls);
     setUrlRows(u.length ? u : [""]);
-  }, [activity.id, activity.description, activity.catalogImageUrls]);
+  }, [activity.id, activity.description, activity.catalogImageUrls, activity.popular]);
 
   const normalizedUrls = useMemo(
     () => urlRows.map((s) => String(s).trim()).filter(isAllowedCatalogImageUrl).slice(0, MAX_CATALOG_IMAGES),
@@ -162,8 +165,9 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
     patchActivity(activity.id, {
       description: desc,
       catalogImageUrls: normalizedUrls,
+      popular,
     });
-  }, [activity.id, desc, normalizedUrls, patchActivity]);
+  }, [activity.id, desc, normalizedUrls, popular, patchActivity]);
 
   async function handleSave() {
     if (!canEdit) return;
@@ -174,6 +178,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
         ...activity,
         description: desc,
         catalogImageUrls: urls,
+        popular,
       };
       const ok = await persistCatalogRow(next);
       if (ok) applyLocalPatch();
@@ -364,6 +369,22 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
       </div>
 
       <div className="space-y-3">
+        <label className="inline-flex cursor-pointer items-start gap-3 rounded-lg border border-amber-200/90 bg-amber-50/80 px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={popular}
+            onChange={(e) => setPopular(e.target.checked)}
+            disabled={!canEdit || !activity.supabase_id}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-amber-400 text-amber-700 focus:ring-amber-500"
+          />
+          <span className="text-sm font-medium leading-snug text-amber-950">
+            <span className="font-bold">Populaire</span>
+            <span className="mt-0.5 block text-xs font-normal text-amber-900/90">
+              Affiche un badge « Populaire » sur la carte de l’activité dans la page publique.
+            </span>
+          </span>
+        </label>
+
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
             Texte public (fiche catalogue)
