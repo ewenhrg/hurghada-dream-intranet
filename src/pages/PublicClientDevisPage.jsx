@@ -80,6 +80,13 @@ function getCategoryEmoji(categoryKey) {
   return map[categoryKey] || "⭐";
 }
 
+function getCategoryPublicNotice(categoryKey) {
+  if (categoryKey === "marsa_alam") {
+    return "Si vous ne logez pas à Marsa Alam, des frais de transfert d’environ 100 € peuvent s’ajouter.";
+  }
+  return "";
+}
+
 export function PublicClientDevisPage() {
   const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
@@ -608,6 +615,7 @@ export function PublicClientDevisPage() {
               </button>
               {publicDisplayCategories.map((category) => {
                 const active = selectedCategory === category.key;
+                const categoryNotice = getCategoryPublicNotice(category.key);
                 return (
                 <button
                   key={category.key}
@@ -628,6 +636,17 @@ export function PublicClientDevisPage() {
                       · {categoryCounts[category.key] || 0}
                     </span>
                   </span>
+                  {categoryNotice ? (
+                    <span
+                      className={`inline-flex items-center rounded-xl border px-2 py-1 text-[10px] font-extrabold leading-tight sm:text-[11px] ${
+                        active
+                          ? "border-white/60 bg-white/15 text-white"
+                          : "border-amber-300 bg-amber-50 text-amber-900"
+                      }`}
+                    >
+                      {categoryNotice}
+                    </span>
+                  ) : null}
                 </button>
                 );
               })}
