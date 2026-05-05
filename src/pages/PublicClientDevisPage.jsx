@@ -11,6 +11,7 @@ import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 const ACTIVITY_COLUMNS = "*";
 
 const INSTAGRAM_CATALOG_URL = "https://www.instagram.com/hurghada_dream/";
+const LAST_PUBLIC_CATEGORY_KEY = "marsa_alam";
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -103,6 +104,16 @@ export function PublicClientDevisPage() {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
+  const publicDisplayCategories = useMemo(() => {
+    const categories = [...CATEGORIES];
+    categories.sort((a, b) => {
+      if (a.key === LAST_PUBLIC_CATEGORY_KEY) return 1;
+      if (b.key === LAST_PUBLIC_CATEGORY_KEY) return -1;
+      return 0;
+    });
+    return categories;
+  }, []);
+
   const activityMap = useMemo(() => {
     const map = new Map();
     activities.forEach((activity) => {
@@ -128,7 +139,7 @@ export function PublicClientDevisPage() {
 
   const groupedActivities = useMemo(() => {
     const grouped = {};
-    CATEGORIES.forEach((category) => {
+    publicDisplayCategories.forEach((category) => {
       grouped[category.key] = [];
     });
 
@@ -137,13 +148,13 @@ export function PublicClientDevisPage() {
       grouped[key].push(activity);
     });
 
-    return CATEGORIES
+    return publicDisplayCategories
       .map((category) => ({
         ...category,
         items: grouped[category.key],
       }))
       .filter((category) => category.items.length > 0);
-  }, [filteredActivities]);
+  }, [filteredActivities, publicDisplayCategories]);
 
   /** Délais d’entrée échelonnés pour les cartes (effet « vivant », plafonné pour perf). */
   const catalogCardEnterDelayMsById = useMemo(() => {
@@ -159,11 +170,11 @@ export function PublicClientDevisPage() {
 
   const categoryCounts = useMemo(() => {
     const counts = { all: activities.length };
-    CATEGORIES.forEach((category) => {
+    publicDisplayCategories.forEach((category) => {
       counts[category.key] = activities.filter((activity) => normalizeCategory(activity.category) === category.key).length;
     });
     return counts;
-  }, [activities]);
+  }, [activities, publicDisplayCategories]);
 
   const cartLines = useMemo(() => {
     return cart
@@ -595,7 +606,7 @@ export function PublicClientDevisPage() {
                   · {categoryCounts.all || 0}
                 </span>
               </button>
-              {CATEGORIES.map((category) => {
+              {publicDisplayCategories.map((category) => {
                 const active = selectedCategory === category.key;
                 return (
                 <button
