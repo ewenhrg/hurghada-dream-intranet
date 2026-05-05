@@ -438,7 +438,9 @@ export function PublicClientDevisPage() {
         setError(insertError.message || "Impossible d'envoyer votre devis.");
         return;
       }
-      setSuccess("Demande envoyée avec succès. Nous vous contactons rapidement.");
+      setSuccess(
+        "Votre demande a bien été envoyée. Nous allons vous recontacter sur votre WhatsApp au plus vite au +201062002850."
+      );
       setCart([]);
       setClient({
         name: "",
@@ -666,6 +668,15 @@ export function PublicClientDevisPage() {
             </div>
           )}
 
+          {success && !loading && (
+            <div className="flex items-start gap-4 rounded-3xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/50 px-6 py-5 text-sm font-semibold text-emerald-950 shadow-catalog-premium">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/15 text-lg font-black text-emerald-700" aria-hidden>
+                ✓
+              </span>
+              <span className="pt-0.5 leading-relaxed">{success}</span>
+            </div>
+          )}
+
           {loading && (
             <div className="flex flex-col items-center justify-center gap-6 rounded-[2rem] border border-white/80 bg-white/90 py-24 shadow-catalog-premium backdrop-blur-md">
               <div className="relative h-16 w-16" aria-hidden>
@@ -763,6 +774,11 @@ export function PublicClientDevisPage() {
                               <span aria-hidden>{getCategoryEmoji(categoryKey)}</span>
                               {CATEGORIES.find((c) => c.key === categoryKey)?.label || "Activité"}
                             </span>
+                            {activity.popular === true ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-400/95 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-amber-950 shadow-md ring-1 ring-black/10">
+                                ★ Populaire
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                         <div className="catalog-elevated flex grow flex-col bg-white p-5 sm:p-6">

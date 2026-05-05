@@ -11,7 +11,7 @@ import {
 } from "../utils/publicQuoteToDraft";
 
 /** Les lignes plus anciennes sont supprimées en base (affichage côté « Devis public »). */
-const PUBLIC_QUOTE_TTL_MS = 24 * 60 * 60 * 1000;
+const PUBLIC_QUOTE_TTL_MS = 48 * 60 * 60 * 1000;
 const PUBLIC_QUOTES_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 
 function parseItems(rawItems) {
@@ -191,7 +191,7 @@ export function PublicDevisPage() {
     const cutoff = new Date(Date.now() - PUBLIC_QUOTE_TTL_MS).toISOString();
     const { error } = await supabase.from("public_quotes").delete().eq("site_key", SITE_KEY).lt("created_at", cutoff);
     if (error) {
-      logger.warn("PublicDevisPage — suppression des demandes > 24h :", error);
+      logger.warn("PublicDevisPage — suppression des demandes > 48h :", error);
     }
   }, []);
 
@@ -286,7 +286,7 @@ export function PublicDevisPage() {
   return (
     <div className="space-y-5">
       <p className="rounded-xl border border-slate-200 bg-slate-50/90 px-4 py-3 text-xs font-medium text-slate-700">
-        Les demandes de plus de <strong>24 h</strong> sont supprimées automatiquement. Le bouton « Commencer le
+        Les demandes de plus de <strong>48 h</strong> sont supprimées automatiquement. Le bouton « Commencer le
         devis » ouvre l’onglet Devis avec le formulaire prérempli — la demande reste affichée ici.
       </p>
 

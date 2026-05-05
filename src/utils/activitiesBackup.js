@@ -179,6 +179,7 @@ export function createBackup(activities, siteKey) {
       description: a.description,
       catalogImageUrls: Array.isArray(a.catalogImageUrls) ? a.catalogImageUrls : [],
       transfers: a.transfers,
+      popular: a.popular === true,
     })),
   };
 }
@@ -221,6 +222,7 @@ export function createCatalogBackup(activities, siteKey) {
       category: a.category,
       description: a.description != null ? String(a.description) : "",
       catalogImageUrls: Array.isArray(a.catalogImageUrls) ? a.catalogImageUrls : [],
+      popular: a.popular === true,
     })),
   };
 }

@@ -377,6 +377,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       id: isEditing ? editingId : uuid(),
       name: form.name.trim(),
       category: form.category,
+      popular: existingActivity?.popular === true,
       priceAdult: Number(form.priceAdult || 0),
       priceChild: Number(form.priceChild || 0),
       priceBaby: forbidden ? 0 : Number(form.priceBaby || 0),
@@ -430,6 +431,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         // Ajouter les colonnes optionnelles seulement si elles ont des valeurs
         // Cela évite d'envoyer des colonnes qui pourraient ne pas exister
         if (activityData.category) supabaseData.category = activityData.category;
+        supabaseData.popular = activityData.popular === true;
         if (activityData.priceAdult !== undefined && activityData.priceAdult !== null) supabaseData.price_adult = activityData.priceAdult;
         if (activityData.priceChild !== undefined && activityData.priceChild !== null) supabaseData.price_child = activityData.priceChild;
         if (activityData.priceBaby !== undefined && activityData.priceBaby !== null) supabaseData.price_baby = activityData.priceBaby;
@@ -716,6 +718,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             site_key: sourceSiteKey || SITE_KEY,
             name: activity.name,
             category: activity.category || "desert",
+            popular: activity.popular === true,
             price_adult: activity.priceAdult || 0,
             price_child: activity.priceChild || 0,
             price_baby: activity.babiesForbidden ? 0 : activity.priceBaby || 0,
