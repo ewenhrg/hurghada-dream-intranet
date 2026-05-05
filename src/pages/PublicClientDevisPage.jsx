@@ -999,7 +999,7 @@ export function PublicClientDevisPage() {
               <input
                 value={client.phone}
                 onChange={(e) => updateClientField("phone", e.target.value)}
-                placeholder="Téléphone *"
+                placeholder="Téléphone WhatsApp *"
                 required
                 inputMode="tel"
                 className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
