@@ -701,6 +701,11 @@ export function PublicClientDevisPage() {
                       <h2 className="font-catalog-display text-[1.65rem] font-semibold tracking-tight text-catalog-ink sm:text-3xl md:text-[2rem]">
                         {group.label}
                       </h2>
+                      {group.key === "marsa_alam" ? (
+                        <p className="mt-2 max-w-3xl rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold leading-relaxed text-amber-900 sm:text-sm">
+                          Si vous ne logez pas à Marsa Alam, des frais de transfert d’environ 100 € peuvent s’ajouter.
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                   <span className="inline-flex w-fit items-center gap-2 rounded-2xl border-2 border-violet-200/80 bg-white px-4 py-2.5 text-xs font-extrabold text-catalog-body shadow-sm">
