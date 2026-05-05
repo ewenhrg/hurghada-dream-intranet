@@ -251,6 +251,27 @@ body {
     max-height: none !important;
     object-fit: cover !important;
   }
+
+  /* Mobile perf: évite le clignotement/réapparition des cartes au scroll. */
+  .hd-public-catalog .animate-catalog-in-up,
+  .hd-public-catalog .animate-catalog-in-fade,
+  .hd-public-catalog .animate-catalog-in-soft {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .hd-public-catalog .public-catalog-grid-card,
+  .hd-public-catalog .catalog-float-soft {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+
+  .hd-public-catalog .catalog-title-glow {
+    text-shadow: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
