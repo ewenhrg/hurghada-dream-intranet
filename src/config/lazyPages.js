@@ -58,3 +58,6 @@ export const EwenDashboardPage = lazyWithRetry(() =>
 export const PublicDevisPage = lazyWithRetry(() =>
   import("../pages/PublicDevisPage").then((m) => ({ default: m.PublicDevisPage }))
 );
+export const AutoDevisPage = lazyWithRetry(() =>
+  import("../pages/AutoDevisPage").then((m) => ({ default: m.AutoDevisPage }))
+);

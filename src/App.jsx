@@ -31,6 +31,7 @@ import {
   PublicCatalogueActivityPage,
   EwenDashboardPage,
   PublicDevisPage,
+  AutoDevisPage,
 } from "./config/lazyPages";
 import { ScrollOptimizer } from "./components/ScrollOptimizer";
 import { Pill, GhostBtn, Section } from "./components/ui";
@@ -1221,6 +1222,9 @@ export default function App() {
                 <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
                   {t("nav.devis")}
                 </Pill>
+                <Pill active={tab === "devis-auto"} onClick={() => setTab("devis-auto")}>
+                  {t("nav.autoDevis")}
+                </Pill>
                 {user?.canAccessActivities !== false && (
                 <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
                   {t("nav.activities")}
@@ -1416,6 +1420,12 @@ export default function App() {
         {tab === "public-devis" && user?.canAccessHistory !== false && (
           <Section title={t("page.publicDevis.title")} subtitle={t("page.publicDevis.subtitle")}>
             <PublicDevisPage />
+          </Section>
+        )}
+
+        {tab === "devis-auto" && (
+          <Section title={t("page.autoDevis.title")} subtitle={t("page.autoDevis.subtitle")}>
+            <AutoDevisPage activities={activities} />
           </Section>
         )}
 

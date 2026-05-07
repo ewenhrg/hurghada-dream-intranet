@@ -6,7 +6,7 @@
 export const HD_PUBLIC_QUOTE_TO_DRAFT_EVENT = "hd-public-quote-to-draft";
 
 /** Même forme de ligne vide que `blankItemMemo` dans QuotesPage (champs requis pour le formulaire). */
-function createBlankQuoteLine() {
+export function createBlankQuoteLine() {
   return {
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
