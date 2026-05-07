@@ -693,6 +693,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           type="number"
                           value={row.adults || 0}
                           onChange={(e) => handleCellEdit(row, "adults", e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()}
                           onBlur={() => setEditingCell(null)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
@@ -717,6 +718,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           type="number"
                           value={row.children || 0}
                           onChange={(e) => handleCellEdit(row, "children", e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()}
                           onBlur={() => setEditingCell(null)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);
@@ -741,6 +743,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
                           type="number"
                           value={row.babies || 0}
                           onChange={(e) => handleCellEdit(row, "babies", e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()}
                           onBlur={() => setEditingCell(null)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") setEditingCell(null);

@@ -35,17 +35,25 @@ export const TextInput = memo(({ className = "", ...props }) => (
 
 TextInput.displayName = "TextInput";
 
-export const NumberInput = memo(({ className = "", ...props }) => (
-  <input
-    type="number"
-    {...props}
-    className={
-      "w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[var(--hd-surface-input)] px-4 py-3 text-base text-slate-800 placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.2)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.25)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.25)] min-h-[44px] touch-manipulation " +
-      className
-    }
-    style={{ fontSize: '16px' }} // Prévenir le zoom automatique sur iOS
-  />
-));
+export const NumberInput = memo(({ className = "", onWheel, ...props }) => {
+  return (
+    <input
+      type="number"
+      {...props}
+      onWheel={(e) => {
+        // Empêche l'incrémentation via molette / trackpad quand le champ est focus.
+        // On blur pour laisser le scroll page fonctionner normalement.
+        e.currentTarget.blur();
+        onWheel?.(e);
+      }}
+      className={
+        "w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[var(--hd-surface-input)] px-4 py-3 text-base text-slate-800 placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.2)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.25)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.25)] min-h-[44px] touch-manipulation " +
+        className
+      }
+      style={{ fontSize: '16px' }} // Prévenir le zoom automatique sur iOS
+    />
+  );
+});
 
 NumberInput.displayName = "NumberInput";
 

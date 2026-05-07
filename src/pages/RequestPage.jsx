@@ -806,6 +806,7 @@ export function RequestPage() {
                                                 inputMode="numeric"
                                                 disabled={requestSubmitted}
                                                 value={selectedActivity?.adults || ""}
+                                                onWheel={(e) => e.currentTarget.blur()}
                                                 onChange={(e) =>
                                                   updateActivityQuantity(
                                                     activityId,
@@ -836,6 +837,7 @@ export function RequestPage() {
                                                 inputMode="numeric"
                                                 disabled={requestSubmitted}
                                                 value={selectedActivity?.children || 0}
+                                                onWheel={(e) => e.currentTarget.blur()}
                                                 onChange={(e) =>
                                                   updateActivityQuantity(
                                                     activityId,
@@ -874,6 +876,7 @@ export function RequestPage() {
                                                   inputMode="numeric"
                                                   disabled={requestSubmitted}
                                                   value={selectedActivity?.babies || 0}
+                                                  onWheel={(e) => e.currentTarget.blur()}
                                                   onChange={(e) =>
                                                     updateActivityQuantity(
                                                       activityId,
