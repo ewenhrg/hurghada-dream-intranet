@@ -158,13 +158,18 @@ function parseNumericDateRange(text) {
 }
 
 function parseFrenchStayRangeAny(text) {
-  const single = parseFrenchStayRangeSingleMonth(text);
+  const cleaned = String(text || "")
+    .trim()
+    .replace(/^\s*du\s*[:\-–—]?\s*/i, "")
+    .trim();
+
+  const single = parseFrenchStayRangeSingleMonth(cleaned);
   if (single) return single;
-  const dual = parseFrenchStayRangeDualMonth(text);
+  const dual = parseFrenchStayRangeDualMonth(cleaned);
   if (dual) return dual;
-  const compact = parseCompactDayRangeInMonth(text);
+  const compact = parseCompactDayRangeInMonth(cleaned);
   if (compact) return compact;
-  return parseNumericDateRange(text);
+  return parseNumericDateRange(cleaned);
 }
 
 /** Ex. « 23-28 juin » ou « 23 – 28 juin » */
@@ -361,7 +366,7 @@ function lineLooksLikeRoomNote(line) {
 
 function lineLooksLikeAddressOrHotelBody(line) {
   return (
-    /governorate|égypte|egypt|airbnb|شارع|مصر|hurghada|sharm|\bresort\b|\bhotels?\b|\bh[oô]tels?\b|\bbeach\s+(park|resort|hotel)\b/i.test(
+    /governorate|égypte|egypt|airbnb|شارع|مصر|hurghada|sharm|\bresort\b|\bressort\b|\baqua\b|\bhotels?\b|\bh[oô]tels?\b|\bbeach\s+(park|resort|hotel)\b/i.test(
       line
     ) || (line.length > 40 && /[,&]/.test(line))
   );
@@ -556,9 +561,17 @@ export function buildDraftFromPastedText(rawText, activities) {
       continue;
     }
 
-    if (lineLooksLikeAddressOrHotelBody(trimmed) && !lineCouldBeActivityLine(trimmed)) {
-      if (!ctx.hotel || trimmed.length > ctx.hotel.length) ctx.hotel = trimmed;
-      continue;
+    // Ligne d’hôtel / adresse sans libellé : si ça ressemble fortement à un hébergement,
+    // on la traite comme hôtel (sinon elle partait parfois en « activité »).
+    if (lineLooksLikeAddressOrHotelBody(trimmed)) {
+      if (!ctx.hotel) {
+        ctx.hotel = trimmed;
+        continue;
+      }
+      if (!lineCouldBeActivityLine(trimmed) && trimmed.length > ctx.hotel.length) {
+        ctx.hotel = trimmed;
+        continue;
+      }
     }
 
     const rm = trimmed.match(RE_ROOM_LABEL);
