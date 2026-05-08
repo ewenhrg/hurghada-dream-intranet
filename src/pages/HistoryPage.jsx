@@ -8,7 +8,6 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import html2pdf from "html2pdf.js";
 import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
@@ -101,81 +100,19 @@ function QuoteCardComponent({
     }
   }, [d]);
 
-  const createQuotePdfDataUrl = useCallback(async () => {
-    const htmlContent = generateQuoteHTML(d);
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.left = "-9999px";
-    iframe.style.top = "0";
-    iframe.style.width = "900px";
-    iframe.style.height = "1200px";
-    iframe.style.opacity = "0";
-    iframe.setAttribute("aria-hidden", "true");
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentDocument;
-    if (!doc) {
-      document.body.removeChild(iframe);
-      throw new Error("Impossible de générer le PDF (document indisponible).");
+  const createQuotePdfBase64 = useCallback(async () => {
+    const html = generateQuoteHTML(d);
+    const res = await fetch("/api/render-quote-pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ html }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.ok || !json?.pdfBase64) {
+      const details = json?.error ? ` (${json.error})` : "";
+      throw new Error(`PDF serveur impossible${details}`);
     }
-    doc.open();
-    doc.write(htmlContent);
-    doc.close();
-
-    // Laisser le temps aux images/styles de se charger.
-    await new Promise((r) => setTimeout(r, 700));
-
-    try {
-      // Générer le PDF sur le même conteneur que l'impression (mise en page identique).
-      const target = doc.querySelector(".quote-container") || doc.body;
-      const opts = {
-        margin: [0, 0, 0, 0],
-        pagebreak: { mode: ["css", "legacy"] },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          windowWidth: 900,
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      };
-
-      // Certaines versions de html2pdf renvoient directement un dataURI, sinon on fallback via Blob.
-      const worker = html2pdf().set(opts).from(target).toPdf();
-      try {
-        const direct = await worker.output("datauristring");
-        const directStr = String(direct || "");
-        if (directStr.startsWith("data:")) {
-          return directStr;
-        }
-      } catch {
-        // ignore → fallback blob
-      }
-
-      const blobLike = await worker.output("blob");
-      const blob =
-        blobLike instanceof Blob
-          ? blobLike
-          : new Blob([blobLike], { type: "application/pdf" });
-
-      if (!blob || blob.size <= 0) {
-        throw new Error("PDF vide.");
-      }
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = () => reject(new Error("Lecture PDF impossible."));
-        reader.onload = () => resolve(String(reader.result || ""));
-        reader.readAsDataURL(blob);
-      });
-
-      return String(dataUrl || "");
-    } finally {
-      try {
-        document.body.removeChild(iframe);
-      } catch {
-        // ignore
-      }
-    }
+    return String(json.pdfBase64);
   }, [d]);
 
   const handleMailClick = useCallback(async () => {
@@ -191,14 +128,7 @@ function QuoteCardComponent({
 
     toast.info("Génération du PDF…", 2500);
     try {
-      const pdfDataUrl = await createQuotePdfDataUrl();
-      const pdfBase64 = extractBase64FromDataUrl(pdfDataUrl);
-      if (!pdfBase64) {
-        // console plutôt que logger : visible en prod.
-        console.warn("Mail PDF: dataURL inattendu:", String(pdfDataUrl).slice(0, 120));
-        toast.error("Impossible de générer le PDF.");
-        return;
-      }
+      const pdfBase64 = await createQuotePdfBase64();
       const clientLabel = d.client?.name || d.client?.phone || "client";
       const fileName = `Devis - ${clientLabel}.pdf`;
       const subject = `Votre devis Hurghada Dream`;
@@ -227,7 +157,7 @@ function QuoteCardComponent({
       console.error("send-quote-email exception:", err);
       toast.error("Impossible de générer le PDF.");
     }
-  }, [createQuotePdfDataUrl, d, extractBase64FromDataUrl]);
+  }, [createQuotePdfBase64, d, extractBase64FromDataUrl]);
 
   // Optimisation : Utiliser useCallback avec une fonction optimisée qui évite les transformations lourdes
   const handleEditClick = useCallback(() => {
