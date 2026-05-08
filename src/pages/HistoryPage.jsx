@@ -151,6 +151,11 @@ function QuoteCardComponent({
             return t.includes("fiche") && t.includes("information");
           });
           infoPdfUrl = String(match?.file_url || match?.link || "").trim();
+          // Important: certains "liens" peuvent être des data: URLs (base64) -> payload énorme -> 546
+          // On ne garde que des URLs http(s) "raisonnables".
+          if (infoPdfUrl && (!/^https?:\/\//i.test(infoPdfUrl) || infoPdfUrl.length > 2000)) {
+            infoPdfUrl = "";
+          }
         }
       } catch {
         // ignore
@@ -177,6 +182,7 @@ function QuoteCardComponent({
       }
 
       if (infoPdfUrl) {
+        toast.info("Envoi de la fiche d'information…", 2000);
         const second = await sendOne({
           filename: "Fiche d'information.pdf",
           mimeType: "application/pdf",
