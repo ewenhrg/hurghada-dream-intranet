@@ -33,28 +33,8 @@ function QuoteCardComponent({
   setEditNotes, 
   setShowEditModal 
 }) {
-  const arrayBufferToBase64 = useCallback((buf) => {
-    const bytes = new Uint8Array(buf);
-    let binary = "";
-    const chunk = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunk) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-    }
-    return btoa(binary);
-  }, []);
-
-  const fetchPdfBase64FromUrl = useCallback(
-    async (url) => {
-      const u = String(url || "").trim();
-      if (!u) return "";
-      const res = await fetch(u, { method: "GET" });
-      if (!res.ok) return "";
-      const buf = await res.arrayBuffer();
-      if (!buf || buf.byteLength <= 0) return "";
-      return arrayBufferToBase64(buf);
-    },
-    [arrayBufferToBase64]
-  );
+  // NOTE: ne pas télécharger la fiche info côté navigateur (payload trop gros pour Edge Functions).
+  // On enverra l'URL à l'Edge Function, qui téléchargera le fichier côté serveur.
 
   const extractBase64FromDataUrl = useCallback((raw) => {
     const s = String(raw || "");
@@ -157,7 +137,7 @@ function QuoteCardComponent({
       const subject = `Votre devis Hurghada Dream`;
 
       // Ajouter la « fiche d'information » (Documents) si disponible.
-      let infoPdfBase64 = "";
+      let infoPdfUrl = "";
       try {
         const { data: docs, error: docsError } = await supabase
           .from("documents")
@@ -170,8 +150,7 @@ function QuoteCardComponent({
             const t = String(x?.title || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
             return t.includes("fiche") && t.includes("information");
           });
-          const url = match?.file_url || match?.link || "";
-          infoPdfBase64 = await fetchPdfBase64FromUrl(url);
+          infoPdfUrl = String(match?.file_url || match?.link || "").trim();
         }
       } catch {
         // ignore
@@ -197,11 +176,11 @@ function QuoteCardComponent({
         return;
       }
 
-      if (infoPdfBase64) {
+      if (infoPdfUrl) {
         const second = await sendOne({
           filename: "Fiche d'information.pdf",
           mimeType: "application/pdf",
-          contentBase64: infoPdfBase64,
+          url: infoPdfUrl,
         });
         if (second.error || !second.data?.ok) {
           logger.error("send-quote-email (fiche info) error:", second.error || second.data);
@@ -217,7 +196,7 @@ function QuoteCardComponent({
       console.error("send-quote-email exception:", err);
       toast.error("Impossible de générer le PDF.");
     }
-  }, [createQuotePdfBase64, d, extractBase64FromDataUrl, fetchPdfBase64FromUrl]);
+  }, [createQuotePdfBase64, d, extractBase64FromDataUrl]);
 
   // Optimisation : Utiliser useCallback avec une fonction optimisée qui évite les transformations lourdes
   const handleEditClick = useCallback(() => {
