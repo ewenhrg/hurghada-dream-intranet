@@ -134,7 +134,7 @@ function QuoteCardComponent({
       const pdfBase64 = await createQuotePdfBase64();
       const clientLabel = d.client?.name || d.client?.phone || "client";
       const fileName = `Devis - ${clientLabel}.pdf`;
-      const subject = `Votre devis Hurghada Dream`;
+      const subject = `Devis + fiche d'information`;
 
       // Ajouter la « fiche d'information » (Documents) si disponible.
       let infoPdfUrl = "";
@@ -180,15 +180,13 @@ function QuoteCardComponent({
         // ignore
       }
 
-      // IMPORTANT: Les Edge Functions ont une limite de taille de requête.
-      // Envoyer en 2 emails si on a une 2e pièce jointe pour éviter un payload trop lourd.
-      const sendOne = async (att) => {
+      const sendOne = async (atts) => {
         return await supabase.functions.invoke("send-quote-email", {
           body: {
             to,
             subject,
             clientName: d.client?.name || "",
-            attachments: [att],
+            attachments: atts,
           },
         });
       };
@@ -226,7 +224,12 @@ function QuoteCardComponent({
         }
       };
 
-      const first = await sendOne({ filename: fileName, mimeType: "application/pdf", contentBase64: pdfBase64 });
+      const atts = [{ filename: fileName, mimeType: "application/pdf", contentBase64: pdfBase64 }];
+      if (infoPdfUrl) {
+        atts.push({ filename: "Fiche d'information.pdf", mimeType: "application/pdf", url: infoPdfUrl });
+      }
+
+      const first = await sendOne(atts);
       if (first.error || !first.data?.ok) {
         logger.error("send-quote-email error:", first.error || first.data);
         const details = first.error ? await getInvokeErrorDetails(first.error) : String(first.data?.error || "");
@@ -234,24 +237,7 @@ function QuoteCardComponent({
         return;
       }
 
-      if (infoPdfUrl) {
-        toast.info("Envoi de la fiche d'information…", 2000);
-        const second = await sendOne({
-          filename: "Fiche d'information.pdf",
-          mimeType: "application/pdf",
-          url: infoPdfUrl,
-        });
-        if (second.error || !second.data?.ok) {
-          logger.error("send-quote-email (fiche info) error:", second.error || second.data);
-          const details = second.error ? await getInvokeErrorDetails(second.error) : String(second.data?.error || "");
-          showCopyableError("Devis envoyé, mais erreur pour la fiche d'information", details);
-          return;
-        }
-        toast.success("Mail envoyé au client (devis + fiche d'information).");
-        return;
-      }
-
-      toast.success("Mail envoyé au client.");
+      toast.success("Mail envoyé au client (devis + fiche d'information).");
     } catch (err) {
       console.error("send-quote-email exception:", err);
       toast.error("Impossible de générer le PDF.");
