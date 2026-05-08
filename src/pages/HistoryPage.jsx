@@ -150,7 +150,26 @@ function QuoteCardComponent({
             const t = String(x?.title || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
             return t.includes("fiche") && t.includes("information");
           });
-          infoPdfUrl = String(match?.file_url || match?.link || "").trim();
+          const rawUrl = String(match?.file_url || match?.link || "").trim();
+
+          // Certains anciens enregistrements ont un file_url mal formé du type:
+          // .../object/public/documents/https://<project>.supabase.co/<timestamp>_FILE.pdf
+          // On reconstruit une URL publique valide dans ce cas.
+          const fixMalformedStoragePublicUrl = (u) => {
+            const s = String(u || "").trim();
+            const marker = "/storage/v1/object/public/documents/";
+            const idx = s.indexOf(marker);
+            if (idx === -1) return s;
+            const after = s.slice(idx + marker.length);
+            if (!/^https?:\/\//i.test(after)) return s;
+            // after contient une URL complète => garder uniquement le nom de fichier
+            const fileName = after.split("/").pop() || "";
+            if (!fileName) return s;
+            const base = s.slice(0, idx + marker.length);
+            return base + encodeURIComponent(decodeURIComponent(fileName));
+          };
+
+          infoPdfUrl = fixMalformedStoragePublicUrl(rawUrl);
           // Important: certains "liens" peuvent être des data: URLs (base64) -> payload énorme -> 546
           // On ne garde que des URLs http(s) "raisonnables".
           if (infoPdfUrl && (!/^https?:\/\//i.test(infoPdfUrl) || infoPdfUrl.length > 2000)) {
