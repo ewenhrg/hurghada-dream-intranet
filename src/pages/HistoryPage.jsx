@@ -209,11 +209,28 @@ function QuoteCardComponent({
         return "";
       };
 
+      const showCopyableError = (title, details) => {
+        const msg = details ? `${title}: ${details}` : title;
+        // Toast plus long pour laisser le temps de lire
+        try {
+          toast.error(msg, 20000);
+        } catch {
+          toast.error(msg);
+        }
+        // Et une fenêtre copiable si besoin (la notif peut être trop rapide)
+        try {
+          // eslint-disable-next-line no-alert
+          window.prompt("Copie/colle l’erreur ci-dessous :", msg);
+        } catch {
+          // ignore
+        }
+      };
+
       const first = await sendOne({ filename: fileName, mimeType: "application/pdf", contentBase64: pdfBase64 });
       if (first.error || !first.data?.ok) {
         logger.error("send-quote-email error:", first.error || first.data);
         const details = first.error ? await getInvokeErrorDetails(first.error) : String(first.data?.error || "");
-        toast.error(details ? `Erreur lors de l’envoi du mail: ${details}` : "Erreur lors de l’envoi du mail.");
+        showCopyableError("Erreur lors de l’envoi du mail", details);
         return;
       }
 
@@ -227,11 +244,7 @@ function QuoteCardComponent({
         if (second.error || !second.data?.ok) {
           logger.error("send-quote-email (fiche info) error:", second.error || second.data);
           const details = second.error ? await getInvokeErrorDetails(second.error) : String(second.data?.error || "");
-          toast.warning(
-            details
-              ? `Devis envoyé, mais erreur pour la fiche d'information: ${details}`
-              : "Devis envoyé, mais erreur pour la fiche d'information."
-          );
+          showCopyableError("Devis envoyé, mais erreur pour la fiche d'information", details);
           return;
         }
         toast.success("Mail envoyé au client (devis + fiche d'information).");
