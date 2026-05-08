@@ -34,6 +34,16 @@ function QuoteCardComponent({
   setEditNotes, 
   setShowEditModal 
 }) {
+  const extractBase64FromDataUrl = useCallback((raw) => {
+    const s = String(raw || "");
+    const marker = "base64,";
+    const idx = s.toLowerCase().indexOf(marker);
+    if (idx >= 0) return s.slice(idx + marker.length).trim();
+    const comma = s.indexOf(",");
+    if (comma >= 0) return s.slice(comma + 1).trim();
+    return "";
+  }, []);
+
   // Calculer allTicketsFilled si ce n'est pas déjà défini
   const allTicketsFilled = d.allTicketsFilled !== undefined 
     ? d.allTicketsFilled 
@@ -174,15 +184,13 @@ function QuoteCardComponent({
     toast.info("Génération du PDF…", 2500);
     try {
       const pdfDataUrl = await createQuotePdfDataUrl();
-      const m =
-        pdfDataUrl.match(/^data:application\/pdf(?:;charset=[^;]+)?;base64,(.+)$/i) ||
-        pdfDataUrl.match(/^data:application\/octet-stream(?:;charset=[^;]+)?;base64,(.+)$/i);
-      if (!m) {
-        logger.warn("Mail PDF: dataURL inattendu:", String(pdfDataUrl).slice(0, 80));
+      const pdfBase64 = extractBase64FromDataUrl(pdfDataUrl);
+      if (!pdfBase64) {
+        // console plutôt que logger : visible en prod.
+        console.warn("Mail PDF: dataURL inattendu:", String(pdfDataUrl).slice(0, 120));
         toast.error("Impossible de générer le PDF.");
         return;
       }
-      const pdfBase64 = m[1];
       const clientLabel = d.client?.name || d.client?.phone || "client";
       const fileName = `Devis - ${clientLabel}.pdf`;
       const subject = `Votre devis Hurghada Dream`;
@@ -208,10 +216,10 @@ function QuoteCardComponent({
         toast.warning("Mail : réponse inattendue.");
       }
     } catch (err) {
-      logger.error("send-quote-email exception:", err);
-      toast.error("Erreur lors de l’envoi du mail.");
+      console.error("send-quote-email exception:", err);
+      toast.error("Impossible de générer le PDF.");
     }
-  }, [createQuotePdfDataUrl, d]);
+  }, [createQuotePdfDataUrl, d, extractBase64FromDataUrl]);
 
   // Optimisation : Utiliser useCallback avec une fonction optimisée qui évite les transformations lourdes
   const handleEditClick = useCallback(() => {
