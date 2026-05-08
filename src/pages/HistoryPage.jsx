@@ -177,30 +177,42 @@ function QuoteCardComponent({
         // ignore
       }
 
-      const { data, error } = await supabase.functions.invoke("send-quote-email", {
-        body: {
-          to,
-          subject,
-          clientName: d.client?.name || "",
-          attachments: [
-            { filename: fileName, mimeType: "application/pdf", contentBase64: pdfBase64 },
-            ...(infoPdfBase64
-              ? [{ filename: "Fiche d'information.pdf", mimeType: "application/pdf", contentBase64: infoPdfBase64 }]
-              : []),
-          ],
-        },
-      });
+      // IMPORTANT: Les Edge Functions ont une limite de taille de requête.
+      // Envoyer en 2 emails si on a une 2e pièce jointe pour éviter un payload trop lourd.
+      const sendOne = async (att) => {
+        return await supabase.functions.invoke("send-quote-email", {
+          body: {
+            to,
+            subject,
+            clientName: d.client?.name || "",
+            attachments: [att],
+          },
+        });
+      };
 
-      if (error) {
-        logger.error("send-quote-email error:", error);
+      const first = await sendOne({ filename: fileName, mimeType: "application/pdf", contentBase64: pdfBase64 });
+      if (first.error || !first.data?.ok) {
+        logger.error("send-quote-email error:", first.error || first.data);
         toast.error("Erreur lors de l’envoi du mail.");
         return;
       }
-      if (data?.ok) {
-        toast.success("Mail envoyé au client.");
-      } else {
-        toast.warning("Mail : réponse inattendue.");
+
+      if (infoPdfBase64) {
+        const second = await sendOne({
+          filename: "Fiche d'information.pdf",
+          mimeType: "application/pdf",
+          contentBase64: infoPdfBase64,
+        });
+        if (second.error || !second.data?.ok) {
+          logger.error("send-quote-email (fiche info) error:", second.error || second.data);
+          toast.warning("Devis envoyé, mais erreur pour la fiche d'information.");
+          return;
+        }
+        toast.success("Mail envoyé au client (devis + fiche d'information).");
+        return;
       }
+
+      toast.success("Mail envoyé au client.");
     } catch (err) {
       console.error("send-quote-email exception:", err);
       toast.error("Impossible de générer le PDF.");
