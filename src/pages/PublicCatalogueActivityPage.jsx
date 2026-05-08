@@ -377,7 +377,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   const noDatesConfigured = Boolean(activity) && dateOptions.length === 0;
 
-  const babiesForbidden = Boolean(activity?.babies_forbidden);
+  // Tolérant : certaines sources peuvent exposer camelCase au lieu de snake_case.
+  const babiesForbidden = Boolean(activity?.babies_forbidden ?? activity?.babiesForbidden);
 
   useEffect(() => {
     if (babiesForbidden) setBabyCount(0);

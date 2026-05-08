@@ -379,7 +379,8 @@ export function PublicClientDevisPage() {
     const createdAt = new Date().toISOString();
     const items = cartLines.map((line) => {
       const act = line.activity;
-      const babiesVal = act.babies_forbidden ? 0 : toNumber(line.babies);
+      const babiesForbidden = Boolean(act?.babies_forbidden ?? act?.babiesForbidden);
+      const babiesVal = babiesForbidden ? 0 : toNumber(line.babies);
       return {
         activityId: String(act.id),
         activityName: act.name || "",
@@ -903,7 +904,7 @@ export function PublicClientDevisPage() {
                       </div>
                       <div className="space-y-1">
                         <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-body">Bébés</span>
-                        {line.activity.babies_forbidden ? (
+                        {Boolean(line.activity?.babies_forbidden ?? line.activity?.babiesForbidden) ? (
                           <>
                             <span className="mb-1 block text-[10px] font-semibold leading-tight text-amber-900">Non autorisés</span>
                             <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-amber-950">
