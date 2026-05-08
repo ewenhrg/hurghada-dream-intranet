@@ -333,6 +333,17 @@ export function generateQuoteHTML(quote, options = {}) {
     if (transferSurchargeAmount > 0) {
       extrasInfo.push(`🚗 Transfert: ${currencyNoCents(transferSurchargeAmount, quote.currency)}`);
     }
+
+    // Extra libre (onglet Devis) : intitulé + montant
+    const extraLabelText = item.extraLabel != null ? String(item.extraLabel).trim() : "";
+    const extraAmountRaw = item.extraAmount != null ? String(item.extraAmount).trim() : "";
+    const extraAmountValue = extraAmountRaw === "" ? 0 : Number(extraAmountRaw);
+    const hasExtraAmount = Number.isFinite(extraAmountValue) && extraAmountValue !== 0;
+    if (extraLabelText || hasExtraAmount) {
+      const label = extraLabelText || "Extra";
+      const amountPart = hasExtraAmount ? `: ${currencyNoCents(extraAmountValue, quote.currency)}` : "";
+      extrasInfo.push(`➕ ${label}${amountPart}`);
+    }
     
     const extrasHTML = extrasInfo.length > 0 
       ? `<div style="margin-top: 5px; font-size: 11px; color: #2563eb; font-weight: 500;">${extrasInfo.join("<br>")}</div>`
