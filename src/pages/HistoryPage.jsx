@@ -116,14 +116,24 @@ function QuoteCardComponent({
     await new Promise((r) => setTimeout(r, 700));
 
     try {
-      const dataUrl = await html2pdf()
-        .set({
-          margin: [10, 10, 10, 10],
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        })
-        .from(doc.body)
-        .outputPdf("datauristring");
+      const opts = {
+        margin: [10, 10, 10, 10],
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      };
+
+      // API html2pdf.js : générer un Blob, puis convertir en dataURL.
+      const worker = html2pdf().set(opts).from(doc.body).toPdf();
+      const blob = await worker.output("blob");
+      if (!(blob instanceof Blob) || blob.size <= 0) {
+        throw new Error("PDF vide.");
+      }
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("Lecture PDF impossible."));
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.readAsDataURL(blob);
+      });
 
       return String(dataUrl || "");
     } finally {
@@ -149,7 +159,7 @@ function QuoteCardComponent({
     toast.info("Génération du PDF…", 2500);
     try {
       const pdfDataUrl = await createQuotePdfDataUrl();
-      const m = pdfDataUrl.match(/^data:application\/pdf;base64,(.+)$/i);
+      const m = pdfDataUrl.match(/^data:application\/pdf(?:;charset=[^;]+)?;base64,(.+)$/i);
       if (!m) {
         toast.error("Impossible de générer le PDF.");
         return;
