@@ -1680,7 +1680,7 @@ function PublicCatalogCodeForm({ onSuccess }) {
         inputMode="numeric"
         autoComplete="one-time-code"
         className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3 text-base font-semibold tracking-wider text-slate-900 outline-none ring-indigo-400/30 focus:border-indigo-400 focus:ring-2"
-        placeholder="101112"
+        placeholder="••••••"
       />
       {error ? <p className="text-sm font-semibold text-rose-700">{error}</p> : null}
       <button
