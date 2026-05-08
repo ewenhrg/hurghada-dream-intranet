@@ -447,9 +447,15 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         if (activityData.transfers && typeof activityData.transfers === 'object') {
           supabaseData.transfers = activityData.transfers;
         }
-        if (activitiesTableHasBabiesForbiddenColumn()) {
-          supabaseData.babies_forbidden = Boolean(activityData.babiesForbidden);
-        }
+        // Persister systématiquement : la colonne existe en base sur ce projet.
+        // Si jamais une base n'a pas encore la colonne (ancien environnement), on retry sans ce champ.
+        supabaseData.babies_forbidden = Boolean(activityData.babiesForbidden);
+
+        const shouldRetryWithoutBabiesForbidden = (err) => {
+          if (!err) return false;
+          const msg = String(err.message || err.details || "").toLowerCase();
+          return err.code === "PGRST204" || msg.includes("babies_forbidden") || msg.includes("babies forbidden");
+        };
 
         let data, error;
         
@@ -466,12 +472,17 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             return;
           }
           
-          const result = await supabase
-            .from("activities")
-            .update(supabaseData)
-            .eq("id", supabaseId);
+          let result = await supabase.from("activities").update(supabaseData).eq("id", supabaseId);
           data = result.data;
           error = result.error;
+
+          if (shouldRetryWithoutBabiesForbidden(error)) {
+            const { babies_forbidden: _bf, ...fallbackData } = supabaseData;
+            logger.warn("⚠️ Colonne babies_forbidden non supportée, retry sans le champ.");
+            result = await supabase.from("activities").update(fallbackData).eq("id", supabaseId);
+            data = result.data;
+            error = result.error;
+          }
           
           // Après la mise à jour Supabase, s'assurer que la sauvegarde locale est toujours à jour
           if (!error) {
@@ -519,9 +530,17 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           } else {
             // Pas d'activité similaire, créer une nouvelle
             logger.log("🔄 Création dans Supabase:", supabaseData);
-            const result = await supabase.from("activities").insert(supabaseData).select("id").single();
+            let result = await supabase.from("activities").insert(supabaseData).select("id").single();
             data = result.data;
             error = result.error;
+
+            if (shouldRetryWithoutBabiesForbidden(error)) {
+              const { babies_forbidden: _bf, ...fallbackData } = supabaseData;
+              logger.warn("⚠️ Colonne babies_forbidden non supportée, retry sans le champ.");
+              result = await supabase.from("activities").insert(fallbackData).select("id").single();
+              data = result.data;
+              error = result.error;
+            }
             
             // Si création réussie, sauvegarder l'ID Supabase retourné (.select requis sinon data est null)
             if (!error && data && data.id != null) {
