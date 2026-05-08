@@ -1156,7 +1156,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
                       className="h-full w-full"
                       aria-label="Agrandir la photo"
                     >
-                      <img src={slide.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                      {/* Mobile: éviter l'effet \"zoom\" (crop) → object-contain */}
+                      <img src={slide.url} alt="" className="h-full w-full bg-slate-950 object-contain" loading="lazy" />
                     </button>
                   ) : (
                     <div className="h-full w-full" style={{ background: slide.bg }} />
