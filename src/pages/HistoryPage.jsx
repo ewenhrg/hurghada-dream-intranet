@@ -33,6 +33,29 @@ function QuoteCardComponent({
   setEditNotes, 
   setShowEditModal 
 }) {
+  const arrayBufferToBase64 = useCallback((buf) => {
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }, []);
+
+  const fetchPdfBase64FromUrl = useCallback(
+    async (url) => {
+      const u = String(url || "").trim();
+      if (!u) return "";
+      const res = await fetch(u, { method: "GET" });
+      if (!res.ok) return "";
+      const buf = await res.arrayBuffer();
+      if (!buf || buf.byteLength <= 0) return "";
+      return arrayBufferToBase64(buf);
+    },
+    [arrayBufferToBase64]
+  );
+
   const extractBase64FromDataUrl = useCallback((raw) => {
     const s = String(raw || "");
     const marker = "base64,";
@@ -133,13 +156,38 @@ function QuoteCardComponent({
       const fileName = `Devis - ${clientLabel}.pdf`;
       const subject = `Votre devis Hurghada Dream`;
 
+      // Ajouter la « fiche d'information » (Documents) si disponible.
+      let infoPdfBase64 = "";
+      try {
+        const { data: docs, error: docsError } = await supabase
+          .from("documents")
+          .select("title, file_url, link")
+          .eq("site_key", SITE_KEY)
+          .order("created_at", { ascending: false })
+          .limit(50);
+        if (!docsError && Array.isArray(docs)) {
+          const match = docs.find((x) => {
+            const t = String(x?.title || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+            return t.includes("fiche") && t.includes("information");
+          });
+          const url = match?.file_url || match?.link || "";
+          infoPdfBase64 = await fetchPdfBase64FromUrl(url);
+        }
+      } catch {
+        // ignore
+      }
+
       const { data, error } = await supabase.functions.invoke("send-quote-email", {
         body: {
           to,
           subject,
-          fileName,
-          pdfBase64,
           clientName: d.client?.name || "",
+          attachments: [
+            { filename: fileName, mimeType: "application/pdf", contentBase64: pdfBase64 },
+            ...(infoPdfBase64
+              ? [{ filename: "Fiche d'information.pdf", mimeType: "application/pdf", contentBase64: infoPdfBase64 }]
+              : []),
+          ],
         },
       });
 
@@ -157,7 +205,7 @@ function QuoteCardComponent({
       console.error("send-quote-email exception:", err);
       toast.error("Impossible de générer le PDF.");
     }
-  }, [createQuotePdfBase64, d, extractBase64FromDataUrl]);
+  }, [createQuotePdfBase64, d, extractBase64FromDataUrl, fetchPdfBase64FromUrl]);
 
   // Optimisation : Utiliser useCallback avec une fonction optimisée qui évite les transformations lourdes
   const handleEditClick = useCallback(() => {
