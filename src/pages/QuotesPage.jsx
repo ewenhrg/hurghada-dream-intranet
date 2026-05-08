@@ -21,7 +21,8 @@ import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
 
 /** Aligné sur l’onglet Activités (case « Interdit aux bébés »). */
 function isActivityBabiesForbidden(act) {
-  return act?.babiesForbidden === true;
+  // Tolérant : selon la source, la propriété peut être camelCase ou snake_case.
+  return Boolean(act?.babiesForbidden === true || act?.babies_forbidden === true);
 }
 
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
