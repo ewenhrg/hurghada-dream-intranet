@@ -8,6 +8,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
+import html2pdf from "html2pdf.js";
 import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
@@ -89,6 +90,100 @@ function QuoteCardComponent({
       }, 500);
     }
   }, [d]);
+
+  const createQuotePdfDataUrl = useCallback(async () => {
+    const htmlContent = generateQuoteHTML(d);
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.left = "-9999px";
+    iframe.style.top = "0";
+    iframe.style.width = "900px";
+    iframe.style.height = "1200px";
+    iframe.style.opacity = "0";
+    iframe.setAttribute("aria-hidden", "true");
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      throw new Error("Impossible de générer le PDF (document indisponible).");
+    }
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    // Laisser le temps aux images/styles de se charger.
+    await new Promise((r) => setTimeout(r, 700));
+
+    try {
+      const dataUrl = await html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        })
+        .from(doc.body)
+        .outputPdf("datauristring");
+
+      return String(dataUrl || "");
+    } finally {
+      try {
+        document.body.removeChild(iframe);
+      } catch {
+        // ignore
+      }
+    }
+  }, [d]);
+
+  const handleMailClick = useCallback(async () => {
+    const to = String(d.client?.email || "").trim();
+    if (!to) {
+      toast.error("Aucun e-mail client sur ce devis.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+      toast.error("L’e-mail client n’est pas valide.");
+      return;
+    }
+
+    toast.info("Génération du PDF…", 2500);
+    try {
+      const pdfDataUrl = await createQuotePdfDataUrl();
+      const m = pdfDataUrl.match(/^data:application\/pdf;base64,(.+)$/i);
+      if (!m) {
+        toast.error("Impossible de générer le PDF.");
+        return;
+      }
+      const pdfBase64 = m[1];
+      const clientLabel = d.client?.name || d.client?.phone || "client";
+      const fileName = `Devis - ${clientLabel}.pdf`;
+      const subject = `Votre devis Hurghada Dream`;
+
+      const { data, error } = await supabase.functions.invoke("send-quote-email", {
+        body: {
+          to,
+          subject,
+          fileName,
+          pdfBase64,
+          clientName: d.client?.name || "",
+        },
+      });
+
+      if (error) {
+        logger.error("send-quote-email error:", error);
+        toast.error("Erreur lors de l’envoi du mail.");
+        return;
+      }
+      if (data?.ok) {
+        toast.success("Mail envoyé au client.");
+      } else {
+        toast.warning("Mail : réponse inattendue.");
+      }
+    } catch (err) {
+      logger.error("send-quote-email exception:", err);
+      toast.error("Erreur lors de l’envoi du mail.");
+    }
+  }, [createQuotePdfDataUrl, d]);
 
   // Optimisation : Utiliser useCallback avec une fonction optimisée qui évite les transformations lourdes
   const handleEditClick = useCallback(() => {
@@ -363,6 +458,13 @@ function QuoteCardComponent({
                 type="button"
               >
                 🖨️ Imprimer
+              </button>
+              <button
+                type="button"
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-sky-500 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                onClick={() => void handleMailClick()}
+              >
+                📧 Mail
               </button>
               <button
                 type="button"
