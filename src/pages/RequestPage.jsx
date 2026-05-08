@@ -853,7 +853,7 @@ export function RequestPage() {
                                             <div>
                                               <label className="block text-xs font-bold text-slate-700 mb-2">
                                                 🍼 Bébés
-                                                {activity.babiesForbidden ? (
+                                                {activity.babiesForbidden || activity.babies_forbidden ? (
                                                   <span className="mt-1 block text-xs font-semibold text-amber-800">
                                                     Interdit aux bébés
                                                   </span>
@@ -863,7 +863,7 @@ export function RequestPage() {
                                                   </span>
                                                 ) : null}
                                               </label>
-                                              {activity.babiesForbidden ? (
+                                              {activity.babiesForbidden || activity.babies_forbidden ? (
                                                 <div className="rounded-xl border border-amber-200/90 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-950">
                                                   Non autorisé sur cette activité
                                                 </div>
