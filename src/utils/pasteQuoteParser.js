@@ -199,8 +199,8 @@ function extractLabeledValue(line, prefixRe) {
  */
 export function stripPastedLinePrefix(raw) {
   let s = String(raw ?? "").trim();
-  // NOTE: éviter `\]` avec le flag `u` (peut casser certains builds).
-  s = s.replace(/^\[[^]]*]\s*[^:]+:\s*/u, "").trim();
+  // En-tête WhatsApp / Messenger : le flag `u` n'est pas nécessaire ici et peut casser certains builds.
+  s = s.replace(/^\[[^\]]*]\s*[^:]+:\s*/, "").trim();
   s = s.replace(/^[\s*•·▪◦\-–—]+/u, "").trim();
   s = s.replace(/^\d{1,2}[\].)]\s+/, "").trim();
   return s;
