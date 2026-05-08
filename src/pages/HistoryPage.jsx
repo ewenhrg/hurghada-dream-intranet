@@ -193,10 +193,27 @@ function QuoteCardComponent({
         });
       };
 
+      const getInvokeErrorDetails = async (err) => {
+        try {
+          const anyErr = err;
+          if (anyErr?.context?.json) {
+            const body = await anyErr.context.json();
+            if (body?.details) return String(body.details);
+            if (body?.error) return String(body.error);
+            return JSON.stringify(body);
+          }
+          if (anyErr?.message) return String(anyErr.message);
+        } catch {
+          // ignore
+        }
+        return "";
+      };
+
       const first = await sendOne({ filename: fileName, mimeType: "application/pdf", contentBase64: pdfBase64 });
       if (first.error || !first.data?.ok) {
         logger.error("send-quote-email error:", first.error || first.data);
-        toast.error("Erreur lors de l’envoi du mail.");
+        const details = first.error ? await getInvokeErrorDetails(first.error) : String(first.data?.error || "");
+        toast.error(details ? `Erreur lors de l’envoi du mail: ${details}` : "Erreur lors de l’envoi du mail.");
         return;
       }
 
@@ -209,7 +226,12 @@ function QuoteCardComponent({
         });
         if (second.error || !second.data?.ok) {
           logger.error("send-quote-email (fiche info) error:", second.error || second.data);
-          toast.warning("Devis envoyé, mais erreur pour la fiche d'information.");
+          const details = second.error ? await getInvokeErrorDetails(second.error) : String(second.data?.error || "");
+          toast.warning(
+            details
+              ? `Devis envoyé, mais erreur pour la fiche d'information: ${details}`
+              : "Devis envoyé, mais erreur pour la fiche d'information."
+          );
           return;
         }
         toast.success("Mail envoyé au client (devis + fiche d'information).");
