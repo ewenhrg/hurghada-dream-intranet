@@ -122,10 +122,25 @@ function QuoteCardComponent({
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 
-      // API html2pdf.js : générer un Blob, puis convertir en dataURL.
+      // Certaines versions de html2pdf renvoient directement un dataURI, sinon on fallback via Blob.
       const worker = html2pdf().set(opts).from(doc.body).toPdf();
-      const blob = await worker.output("blob");
-      if (!(blob instanceof Blob) || blob.size <= 0) {
+      try {
+        const direct = await worker.output("datauristring");
+        const directStr = String(direct || "");
+        if (directStr.startsWith("data:")) {
+          return directStr;
+        }
+      } catch {
+        // ignore → fallback blob
+      }
+
+      const blobLike = await worker.output("blob");
+      const blob =
+        blobLike instanceof Blob
+          ? blobLike
+          : new Blob([blobLike], { type: "application/pdf" });
+
+      if (!blob || blob.size <= 0) {
         throw new Error("PDF vide.");
       }
       const dataUrl = await new Promise((resolve, reject) => {
@@ -159,8 +174,11 @@ function QuoteCardComponent({
     toast.info("Génération du PDF…", 2500);
     try {
       const pdfDataUrl = await createQuotePdfDataUrl();
-      const m = pdfDataUrl.match(/^data:application\/pdf(?:;charset=[^;]+)?;base64,(.+)$/i);
+      const m =
+        pdfDataUrl.match(/^data:application\/pdf(?:;charset=[^;]+)?;base64,(.+)$/i) ||
+        pdfDataUrl.match(/^data:application\/octet-stream(?:;charset=[^;]+)?;base64,(.+)$/i);
       if (!m) {
+        logger.warn("Mail PDF: dataURL inattendu:", String(pdfDataUrl).slice(0, 80));
         toast.error("Impossible de générer le PDF.");
         return;
       }
