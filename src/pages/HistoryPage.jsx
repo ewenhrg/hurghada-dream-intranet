@@ -126,14 +126,22 @@ function QuoteCardComponent({
     await new Promise((r) => setTimeout(r, 700));
 
     try {
+      // Générer le PDF sur le même conteneur que l'impression (mise en page identique).
+      const target = doc.querySelector(".quote-container") || doc.body;
       const opts = {
-        margin: [10, 10, 10, 10],
-        html2canvas: { scale: 2, useCORS: true },
+        margin: [0, 0, 0, 0],
+        pagebreak: { mode: ["css", "legacy"] },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          windowWidth: 900,
+        },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 
       // Certaines versions de html2pdf renvoient directement un dataURI, sinon on fallback via Blob.
-      const worker = html2pdf().set(opts).from(doc.body).toPdf();
+      const worker = html2pdf().set(opts).from(target).toPdf();
       try {
         const direct = await worker.output("datauristring");
         const directStr = String(direct || "");
