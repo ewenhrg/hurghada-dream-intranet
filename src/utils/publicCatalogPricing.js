@@ -100,6 +100,7 @@ function computeZeroTracasStyleLineTotal(activityName, line) {
     return (
       num(line?.zeroTracasTransfertVisaSim) * p.transfertVisaSim +
       num(line?.zeroTracasTransfertVisa) * p.transfertVisa +
+      num(line?.zeroTracasTransfertSim) * p.transfertSim +
       num(line?.zeroTracasTransfert3Personnes) * p.transfert3Personnes +
       num(line?.zeroTracasTransfertPlus3Personnes) * p.transfertPlus3Personnes +
       num(line?.zeroTracasVisaSim) * p.visaSim +
@@ -111,6 +112,7 @@ function computeZeroTracasStyleLineTotal(activityName, line) {
     return (
       num(line?.zeroTracasTransfertVisaSim) * p.transfertVisaSim +
       num(line?.zeroTracasTransfertVisa) * p.transfertVisa +
+      num(line?.zeroTracasTransfertSim) * p.transfertSim +
       num(line?.zeroTracasTransfert3Personnes) * p.transfert3Personnes +
       num(line?.zeroTracasTransfertPlus3Personnes) * p.transfertPlus3Personnes +
       num(line?.zeroTracasVisaSim) * p.visaSim +

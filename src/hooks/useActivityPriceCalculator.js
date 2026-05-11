@@ -123,6 +123,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
           const prices = getZeroTracasHorsZonePrices();
           const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
           const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
+          const transfertSim = Number(it.zeroTracasTransfertSim || 0);
           const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
           const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
           const visaSim = Number(it.zeroTracasVisaSim || 0);
@@ -131,6 +132,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
           lineTotal = 
             transfertVisaSim * prices.transfertVisaSim +
             transfertVisa * prices.transfertVisa +
+            transfertSim * prices.transfertSim +
             transfert3Personnes * prices.transfert3Personnes +
             transfertPlus3Personnes * prices.transfertPlus3Personnes +
             visaSim * prices.visaSim +
@@ -142,6 +144,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
           const prices = getZeroTracasPrices();
           const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
           const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
+          const transfertSim = Number(it.zeroTracasTransfertSim || 0);
           const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
           const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
           const visaSim = Number(it.zeroTracasVisaSim || 0);
@@ -150,6 +153,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
           lineTotal = 
             transfertVisaSim * prices.transfertVisaSim +
             transfertVisa * prices.transfertVisa +
+            transfertSim * prices.transfertSim +
             transfert3Personnes * prices.transfert3Personnes +
             transfertPlus3Personnes * prices.transfertPlus3Personnes +
             visaSim * prices.visaSim +

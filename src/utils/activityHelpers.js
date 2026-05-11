@@ -68,6 +68,7 @@ export function getZeroTracasPrices() {
   return {
     transfertVisaSim: 50,        // transfert + visa + sim (45+5)
     transfertVisa: 45,            // transfert + visa (40+5)
+    transfertSim: 25,             // transfert + SIM (sans visa)
     transfert3Personnes: 20,      // transfert 3 personnes
     transfertPlus3Personnes: 25,  // transfert plus de 3 personnes
     visaSim: 45,                  // visa + sim (40+5)
@@ -88,6 +89,7 @@ export function getZeroTracasHorsZonePrices() {
   return {
     transfertVisaSim: 55,        // transfert + visa + sim (50+5)
     transfertVisa: 50,            // transfert + visa (45+5)
+    transfertSim: 30,             // transfert + SIM (sans visa)
     transfert3Personnes: 25,      // transfert 3 personnes
     transfertPlus3Personnes: 30,  // transfert plus de 3 personnes
     visaSim: 45,                  // visa + sim (40+5)
@@ -193,6 +195,7 @@ export function getActivityTarifListLines(activityLike) {
       "Grille Zero Tracas Hors zone (prix unitaire) :",
       `Transfert + visa + SIM : ${p.transfertVisaSim} €`,
       `Transfert + visa : ${p.transfertVisa} €`,
+      `Transfert + SIM : ${p.transfertSim} €`,
       `Transfert 3 pers. : ${p.transfert3Personnes} €`,
       `Transfert +3 pers. : ${p.transfertPlus3Personnes} €`,
       `Visa + SIM : ${p.visaSim} €`,
@@ -206,6 +209,7 @@ export function getActivityTarifListLines(activityLike) {
       "Grille Zero Tracas (prix unitaire) :",
       `Transfert + visa + SIM : ${p.transfertVisaSim} €`,
       `Transfert + visa : ${p.transfertVisa} €`,
+      `Transfert + SIM : ${p.transfertSim} €`,
       `Transfert 3 pers. : ${p.transfert3Personnes} €`,
       `Transfert +3 pers. : ${p.transfertPlus3Personnes} €`,
       `Visa + SIM : ${p.visaSim} €`,

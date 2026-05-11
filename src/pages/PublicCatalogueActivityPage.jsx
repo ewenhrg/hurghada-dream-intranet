@@ -352,6 +352,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
     allerRetour: false,
     zeroTracasTransfertVisaSim: 0,
     zeroTracasTransfertVisa: 0,
+    zeroTracasTransfertSim: 0,
     zeroTracasTransfert3Personnes: 0,
     zeroTracasTransfertPlus3Personnes: 0,
     zeroTracasVisaSim: 0,
@@ -403,6 +404,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       allerRetour: false,
       zeroTracasTransfertVisaSim: 0,
       zeroTracasTransfertVisa: 0,
+      zeroTracasTransfertSim: 0,
       zeroTracasTransfert3Personnes: 0,
       zeroTracasTransfertPlus3Personnes: 0,
       zeroTracasVisaSim: 0,
@@ -714,6 +716,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       const rows = [
         { key: "zeroTracasTransfertVisaSim", label: "Transfert + visa + SIM", unit: prices.transfertVisaSim },
         { key: "zeroTracasTransfertVisa", label: "Transfert + visa", unit: prices.transfertVisa },
+        { key: "zeroTracasTransfertSim", label: "Transfert + SIM", unit: prices.transfertSim },
         { key: "zeroTracasTransfert3Personnes", label: "Transfert 3 pers.", unit: prices.transfert3Personnes },
         { key: "zeroTracasTransfertPlus3Personnes", label: "Transfert +3 pers.", unit: prices.transfertPlus3Personnes },
         { key: "zeroTracasVisaSim", label: "Visa + SIM", unit: prices.visaSim },
@@ -827,6 +830,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       const zt =
         toNumber(special.zeroTracasTransfertVisaSim) +
         toNumber(special.zeroTracasTransfertVisa) +
+        toNumber(special.zeroTracasTransfertSim) +
         toNumber(special.zeroTracasTransfert3Personnes) +
         toNumber(special.zeroTracasTransfertPlus3Personnes) +
         toNumber(special.zeroTracasVisaSim) +

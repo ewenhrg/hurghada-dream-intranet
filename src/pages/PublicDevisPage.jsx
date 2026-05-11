@@ -95,6 +95,7 @@ function getCatalogLineOptionLines(item) {
   const zt = [
     [item.zeroTracasTransfertVisaSim, "Zéro tracas — transfert + visa + SIM"],
     [item.zeroTracasTransfertVisa, "Zéro tracas — transfert + visa"],
+    [item.zeroTracasTransfertSim, "Zéro tracas — transfert + SIM"],
     [item.zeroTracasTransfert3Personnes, "Zéro tracas — transfert (≤ 3 pers.)"],
     [item.zeroTracasTransfertPlus3Personnes, "Zéro tracas — transfert (> 3 pers.)"],
     [item.zeroTracasVisaSim, "Zéro tracas — visa + SIM"],

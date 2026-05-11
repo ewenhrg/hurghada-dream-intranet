@@ -27,6 +27,7 @@ export function createBlankQuoteLine() {
     allerRetour: false,
     zeroTracasTransfertVisaSim: "",
     zeroTracasTransfertVisa: "",
+    zeroTracasTransfertSim: "",
     zeroTracasTransfert3Personnes: "",
     zeroTracasTransfertPlus3Personnes: "",
     zeroTracasVisaSim: "",
@@ -92,6 +93,7 @@ export function mergePublicSavedLineIntoQuoteItem(line) {
 
   base.zeroTracasTransfertVisaSim = line.zeroTracasTransfertVisaSim != null ? String(line.zeroTracasTransfertVisaSim) : "";
   base.zeroTracasTransfertVisa = line.zeroTracasTransfertVisa != null ? String(line.zeroTracasTransfertVisa) : "";
+  base.zeroTracasTransfertSim = line.zeroTracasTransfertSim != null ? String(line.zeroTracasTransfertSim) : "";
   base.zeroTracasTransfert3Personnes =
     line.zeroTracasTransfert3Personnes != null ? String(line.zeroTracasTransfert3Personnes) : "";
   base.zeroTracasTransfertPlus3Personnes =

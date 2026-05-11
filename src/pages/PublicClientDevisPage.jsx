@@ -411,6 +411,7 @@ export function PublicClientDevisPage() {
         allerRetour: Boolean(line.allerRetour),
         zeroTracasTransfertVisaSim: line.zeroTracasTransfertVisaSim ?? "",
         zeroTracasTransfertVisa: line.zeroTracasTransfertVisa ?? "",
+        zeroTracasTransfertSim: line.zeroTracasTransfertSim ?? "",
         zeroTracasTransfert3Personnes: line.zeroTracasTransfert3Personnes ?? "",
         zeroTracasTransfertPlus3Personnes: line.zeroTracasTransfertPlus3Personnes ?? "",
         zeroTracasVisaSim: line.zeroTracasVisaSim ?? "",

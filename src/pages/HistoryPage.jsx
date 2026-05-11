@@ -293,6 +293,7 @@ function QuoteCardComponent({
       // Valeurs string avec valeurs par défaut
       baseItem.zeroTracasTransfertVisaSim = item.zeroTracasTransfertVisaSim ?? "";
       baseItem.zeroTracasTransfertVisa = item.zeroTracasTransfertVisa ?? "";
+      baseItem.zeroTracasTransfertSim = item.zeroTracasTransfertSim ?? "";
       baseItem.zeroTracasTransfert3Personnes = item.zeroTracasTransfert3Personnes ?? "";
       baseItem.zeroTracasTransfertPlus3Personnes = item.zeroTracasTransfertPlus3Personnes ?? "";
       baseItem.zeroTracasVisaSim = item.zeroTracasVisaSim ?? "";
@@ -1468,6 +1469,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     ktm530: "",
     zeroTracasTransfertVisaSim: "",
     zeroTracasTransfertVisa: "",
+    zeroTracasTransfertSim: "",
     zeroTracasTransfert3Personnes: "",
     zeroTracasTransfertPlus3Personnes: "",
     zeroTracasVisaSim: "",
@@ -1606,6 +1608,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         const prices = getZeroTracasHorsZonePrices();
         const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
         const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
+        const transfertSim = Number(it.zeroTracasTransfertSim || 0);
         const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
         const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
         const visaSim = Number(it.zeroTracasVisaSim || 0);
@@ -1614,6 +1617,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         lineTotal = 
           transfertVisaSim * prices.transfertVisaSim +
           transfertVisa * prices.transfertVisa +
+          transfertSim * prices.transfertSim +
           transfert3Personnes * prices.transfert3Personnes +
           transfertPlus3Personnes * prices.transfertPlus3Personnes +
           visaSim * prices.visaSim +
@@ -1623,6 +1627,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         const prices = getZeroTracasPrices();
         const transfertVisaSim = Number(it.zeroTracasTransfertVisaSim || 0);
         const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
+        const transfertSim = Number(it.zeroTracasTransfertSim || 0);
         const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
         const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
         const visaSim = Number(it.zeroTracasVisaSim || 0);
@@ -1631,6 +1636,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         lineTotal = 
           transfertVisaSim * prices.transfertVisaSim +
           transfertVisa * prices.transfertVisa +
+          transfertSim * prices.transfertSim +
           transfert3Personnes * prices.transfert3Personnes +
           transfertPlus3Personnes * prices.transfertPlus3Personnes +
           visaSim * prices.visaSim +
@@ -1761,6 +1767,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           ktm530: Number(c.raw.ktm530 || 0),
           zeroTracasTransfertVisaSim: Number(c.raw.zeroTracasTransfertVisaSim || 0),
           zeroTracasTransfertVisa: Number(c.raw.zeroTracasTransfertVisa || 0),
+          zeroTracasTransfertSim: Number(c.raw.zeroTracasTransfertSim || 0),
           zeroTracasTransfert3Personnes: Number(c.raw.zeroTracasTransfert3Personnes || 0),
           zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
           zeroTracasVisaSim: Number(c.raw.zeroTracasVisaSim || 0),
@@ -2197,6 +2204,15 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertVisa ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasTransfertVisa: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "30€" : "25€"})</p>
+                      <NumberInput 
+                        value={c.raw.zeroTracasTransfertSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertSim: e.target.value === "" ? "" : e.target.value })}
                         className="text-base md:text-lg py-3"
                         placeholder="0"
                       />

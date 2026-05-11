@@ -122,6 +122,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     allerRetour: false, // Pour HURGHADA - LE CAIRE et HURGHADA - LOUXOR
     zeroTracasTransfertVisaSim: "", // Pour ZERO TRACAS
     zeroTracasTransfertVisa: "", // Pour ZERO TRACAS
+    zeroTracasTransfertSim: "", // Pour ZERO TRACAS — transfert + SIM
     zeroTracasTransfert3Personnes: "", // Pour ZERO TRACAS
     zeroTracasTransfertPlus3Personnes: "", // Pour ZERO TRACAS
     zeroTracasVisaSim: "", // Pour ZERO TRACAS
@@ -914,6 +915,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         allerRetour: c.raw.allerRetour || false,
         zeroTracasTransfertVisaSim: Number(c.raw.zeroTracasTransfertVisaSim || 0),
         zeroTracasTransfertVisa: Number(c.raw.zeroTracasTransfertVisa || 0),
+        zeroTracasTransfertSim: Number(c.raw.zeroTracasTransfertSim || 0),
         zeroTracasTransfert3Personnes: Number(c.raw.zeroTracasTransfert3Personnes || 0),
         zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
         zeroTracasVisaSim: Number(c.raw.zeroTracasVisaSim || 0),
@@ -2479,6 +2481,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <NumberInput 
                         value={c.raw.zeroTracasTransfertVisa ?? ""} 
                         onChange={(e) => setItem(idx, { zeroTracasTransfertVisa: e.target.value === "" ? "" : e.target.value })}
+                        placeholder="0"
+                        className="text-base md:text-lg py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
+                        🚗 Transfert + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "30€" : "25€"})
+                      </label>
+                      <NumberInput 
+                        value={c.raw.zeroTracasTransfertSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertSim: e.target.value === "" ? "" : e.target.value })}
                         placeholder="0"
                         className="text-base md:text-lg py-2"
                       />
