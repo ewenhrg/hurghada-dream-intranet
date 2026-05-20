@@ -869,23 +869,20 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     setCurrentPage(1);
   }, [debouncedQ, statusFilter]);
 
-  // Scroller en haut de la modale de paiement et de la page quand elle s'ouvre (optimisé avec useCallback)
-  const handlePaymentModalScroll = useCallback(() => {
+  // Scroller en haut de la modale de paiement et de la page quand elle s'ouvre
+  useEffect(() => {
     if (!showPaymentModal) return;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    const timerId = setTimeout(() => {
       if (paymentModalRef.current) {
         paymentModalRef.current.scrollTop = 0;
       }
       if (paymentModalContainerRef.current) {
-        paymentModalContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        paymentModalContainerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }, 100);
+    return () => clearTimeout(timerId);
   }, [showPaymentModal]);
-
-  useEffect(() => {
-    handlePaymentModalScroll();
-  }, [handlePaymentModalScroll]);
 
   // Réinitialiser le scroll interne de la modale quand elle s'ouvre (sans déplacer la page)
   useEffect(() => {
@@ -969,10 +966,14 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     }
   }, [quotes, setQuotes]);
 
-  // Exécuter le nettoyage au chargement de la page historique (une seule fois)
+  // Nettoyage une fois lorsque les devis sont disponibles (y compris après sync Supabase)
+  const cleanupRanRef = useRef(false);
   useEffect(() => {
-    cleanupOldUnpaidQuotes();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (cleanupRanRef.current) return;
+    if (!quotes || quotes.length === 0) return;
+    cleanupRanRef.current = true;
+    void cleanupOldUnpaidQuotes();
+  }, [quotes, cleanupOldUnpaidQuotes]);
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 bg-gradient-to-br from-slate-50/50 via-white to-blue-50/30 min-h-screen">

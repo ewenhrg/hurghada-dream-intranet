@@ -32,6 +32,31 @@ import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 const ACTIVITY_COLUMNS_BASE = "*";
 const ACTIVITY_COLUMNS_FULL = "*";
 
+const INITIAL_CATALOG_SPECIAL = {
+  extraDolphin: false,
+  speedBoatExtra: [],
+  buggySimple: 0,
+  buggyFamily: 0,
+  yamaha250: 0,
+  ktm640: 0,
+  ktm530: 0,
+  cairePrivatif4pax: false,
+  cairePrivatif5pax: false,
+  cairePrivatif6pax: false,
+  louxorPrivatif4pax: false,
+  louxorPrivatif5pax: false,
+  louxorPrivatif6pax: false,
+  allerSimple: false,
+  allerRetour: false,
+  zeroTracasTransfertVisaSim: 0,
+  zeroTracasTransfertVisa: 0,
+  zeroTracasTransfertSim: 0,
+  zeroTracasTransfert3Personnes: 0,
+  zeroTracasTransfertPlus3Personnes: 0,
+  zeroTracasVisaSim: 0,
+  zeroTracasVisaSeul: 0,
+};
+
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -334,30 +359,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const carouselRef = useRef(null);
   const touchStartXRef = useRef(null);
   /** Options tarif codé (même logique que le devis interne) — Speed Boat, Buggy, Moto, privatifs. */
-  const [special, setSpecial] = useState({
-    extraDolphin: false,
-    speedBoatExtra: [],
-    buggySimple: 0,
-    buggyFamily: 0,
-    yamaha250: 0,
-    ktm640: 0,
-    ktm530: 0,
-    cairePrivatif4pax: false,
-    cairePrivatif5pax: false,
-    cairePrivatif6pax: false,
-    louxorPrivatif4pax: false,
-    louxorPrivatif5pax: false,
-    louxorPrivatif6pax: false,
-    allerSimple: false,
-    allerRetour: false,
-    zeroTracasTransfertVisaSim: 0,
-    zeroTracasTransfertVisa: 0,
-    zeroTracasTransfertSim: 0,
-    zeroTracasTransfert3Personnes: 0,
-    zeroTracasTransfertPlus3Personnes: 0,
-    zeroTracasVisaSim: 0,
-    zeroTracasVisaSeul: 0,
-  });
+  const [special, setSpecial] = useState(() => ({ ...INITIAL_CATALOG_SPECIAL }));
+  const prevActivityIdRef = useRef(null);
+  const airportDefaultAppliedRef = useRef(false);
 
   const categoryKey = useMemo(
     () => (activity ? normalizeCategory(activity.category) : "desert"),
@@ -386,35 +390,16 @@ export function PublicCatalogueActivityPage({ activityId }) {
   }, [babiesForbidden, activity?.id]);
 
   useEffect(() => {
-    setSpecial({
-      extraDolphin: false,
-      speedBoatExtra: [],
-      buggySimple: 0,
-      buggyFamily: 0,
-      yamaha250: 0,
-      ktm640: 0,
-      ktm530: 0,
-      cairePrivatif4pax: false,
-      cairePrivatif5pax: false,
-      cairePrivatif6pax: false,
-      louxorPrivatif4pax: false,
-      louxorPrivatif5pax: false,
-      louxorPrivatif6pax: false,
-      allerSimple: false,
-      allerRetour: false,
-      zeroTracasTransfertVisaSim: 0,
-      zeroTracasTransfertVisa: 0,
-      zeroTracasTransfertSim: 0,
-      zeroTracasTransfert3Personnes: 0,
-      zeroTracasTransfertPlus3Personnes: 0,
-      zeroTracasVisaSim: 0,
-      zeroTracasVisaSeul: 0,
-    });
-  }, [activityId]);
-
-  const airportDefaultAppliedRef = useRef(false);
-  useEffect(() => {
+    setSpecial({ ...INITIAL_CATALOG_SPECIAL });
     airportDefaultAppliedRef.current = false;
+
+    if (prevActivityIdRef.current !== null && prevActivityIdRef.current !== activityId) {
+      setDate("");
+      setAdults(1);
+      setChildCount(0);
+      setBabyCount(0);
+    }
+    prevActivityIdRef.current = activityId;
   }, [activityId]);
 
   /** Transferts aéroport : une fois par fiche, défaut aller simple (montant immédiat, aligné intranet). */
@@ -906,17 +891,6 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   const canAddToCart = Boolean(date) && !noDatesConfigured && !codedTotalPending;
   const showDateHint = !date && !noDatesConfigured;
-
-  const prevActivityIdRef = useRef(null);
-  useEffect(() => {
-    if (prevActivityIdRef.current !== null && prevActivityIdRef.current !== activityId) {
-      setDate("");
-      setAdults(1);
-      setChildCount(0);
-      setBabyCount(0);
-    }
-    prevActivityIdRef.current = activityId;
-  }, [activityId]);
 
   useEffect(() => {
     if (dateOptions.length === 0) {

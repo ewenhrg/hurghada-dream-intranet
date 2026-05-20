@@ -1110,29 +1110,24 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }
   }, [canModifyActivities, activitiesMap, user, setActivities]);
 
-  // Index de recherche pour améliorer les performances (créé une seule fois)
-  const searchIndexRef = useRef(new Map());
-  
-  // Mettre à jour l'index de recherche quand les activités changent
-  useEffect(() => {
+  const searchIndex = useMemo(() => {
     const index = new Map();
     activities.forEach((a) => {
-      const searchableText = `${a.name || ''} ${a.notes || ''} ${a.description || ''}`.toLowerCase();
+      const searchableText = `${a.name || ""} ${a.notes || ""} ${a.description || ""}`.toLowerCase();
       index.set(a.id, searchableText);
     });
-    searchIndexRef.current = index;
+    return index;
   }, [activities]);
 
   // Filtrer les activités par recherche et par jour (optimisé avec index)
   const filteredActivities = useMemo(() => {
     let filtered = activities;
-    const searchIndex = searchIndexRef.current;
 
     // Filtrer par recherche (nom, notes ou description) avec debounce - optimisé avec index
     if (debouncedSearchQuery.trim()) {
       const query = debouncedSearchQuery.toLowerCase().trim();
       filtered = filtered.filter((a) => {
-        const searchableText = searchIndex.get(a.id) || '';
+        const searchableText = searchIndex.get(a.id) || "";
         return searchableText.includes(query);
       });
     }
@@ -1146,7 +1141,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }
 
     return filtered;
-  }, [activities, debouncedSearchQuery, selectedDay]);
+  }, [activities, debouncedSearchQuery, selectedDay, searchIndex]);
 
   const grouped = useMemo(() => {
     const base = {};

@@ -25,6 +25,30 @@ function isActivityBabiesForbidden(act) {
   return Boolean(act?.babiesForbidden === true || act?.babies_forbidden === true);
 }
 
+/** Corrige les dates passées ou du jour même vers demain (même logique qu’au chargement du formulaire). */
+function correctPastQuoteItemDates(items) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = getLocalDateKey(tomorrow);
+
+  let hasInvalidDates = false;
+  const correctedItems = items.map((item) => {
+    if (item.date) {
+      const itemDate = new Date(item.date + "T12:00:00");
+      itemDate.setHours(0, 0, 0, 0);
+      if (itemDate <= today) {
+        hasInvalidDates = true;
+        return { ...item, date: tomorrowStr };
+      }
+    }
+    return item;
+  });
+
+  return { correctedItems, hasInvalidDates };
+}
+
 export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraft, onUsedDatesChange }) {
   const [stopSales, setStopSales] = useState([]);
   const [pushSales, setPushSales] = useState([]);
@@ -227,7 +251,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         arrivalDate: selectedQuote.clientArrivalDate || selectedQuote.client?.arrivalDate || "",
         departureDate: selectedQuote.clientDepartureDate || selectedQuote.client?.departureDate || "",
       });
-      const quoteItems = selectedQuote.items?.length
+      const quoteItemsRaw = selectedQuote.items?.length
         ? selectedQuote.items.map((item) => ({
             ...item,
             speedBoatExtra: Array.isArray(item.speedBoatExtra)
@@ -237,6 +261,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 : [],
           }))
         : [blankItemMemo()];
+      const { correctedItems: quoteItems } = correctPastQuoteItemDates(quoteItemsRaw);
       setItems(quoteItems);
       setNotes(selectedQuote.notes || "");
       // Définir le nombre d'adultes global si toutes les activités ont le même nombre
@@ -729,32 +754,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     pushSalesMap
   );
 
-  // Corriger automatiquement les dates passées ou du jour même
+  // Corriger automatiquement les dates passées ou du jour même (brouillon au premier affichage)
   useEffect(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = getLocalDateKey(tomorrow);
-
-    let hasInvalidDates = false;
-    const correctedItems = items.map((item) => {
-      if (item.date) {
-        const itemDate = new Date(item.date + "T12:00:00");
-        itemDate.setHours(0, 0, 0, 0);
-        if (itemDate <= today) {
-          hasInvalidDates = true;
-          return { ...item, date: tomorrowStr };
-        }
-      }
-      return item;
-    });
-
+    const { correctedItems, hasInvalidDates } = correctPastQuoteItemDates(items);
     if (hasInvalidDates) {
       setItems(correctedItems);
-      // Correction silencieuse des dates passées
     }
-  }, []); // Exécuter une seule fois au chargement
+    // Une seule fois au montage — même comportement qu’avant ; les devis chargés passent par selectedQuote.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Récupérer toutes les dates utilisées dans le formulaire en cours avec leurs activités
   const usedDates = useMemo(() => {
