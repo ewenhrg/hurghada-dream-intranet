@@ -735,7 +735,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+    const tomorrowStr = getLocalDateKey(tomorrow);
 
     let hasInvalidDates = false;
     const correctedItems = items.map((item) => {
