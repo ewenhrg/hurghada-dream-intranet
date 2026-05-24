@@ -61,3 +61,9 @@ export const PublicDevisPage = lazyWithRetry(() =>
 export const AutoDevisPage = lazyWithRetry(() =>
   import("../pages/AutoDevisPage").then((m) => ({ default: m.AutoDevisPage }))
 );
+export const PublicHotelRequestPage = lazyWithRetry(() =>
+  import("../pages/PublicHotelRequestPage").then((m) => ({ default: m.PublicHotelRequestPage }))
+);
+export const HotelHistoryPage = lazyWithRetry(() =>
+  import("../pages/HotelHistoryPage").then((m) => ({ default: m.HotelHistoryPage }))
+);

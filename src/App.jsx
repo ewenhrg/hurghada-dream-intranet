@@ -32,6 +32,8 @@ import {
   EwenDashboardPage,
   PublicDevisPage,
   AutoDevisPage,
+  PublicHotelRequestPage,
+  HotelHistoryPage,
 } from "./config/lazyPages";
 import { ScrollOptimizer } from "./components/ScrollOptimizer";
 import { Pill, GhostBtn, Section } from "./components/ui";
@@ -1090,6 +1092,16 @@ export default function App() {
     );
   }
 
+  if (location.pathname === "/demande-hotel" || location.pathname === "/demande-hotel/") {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <PublicHotelRequestPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
   // Si on est sur la route publique /request (avec ou sans token), afficher RequestPage sans authentification
   if (location.pathname.startsWith("/request")) {
     return (
@@ -1289,6 +1301,11 @@ export default function App() {
                   {t("nav.publicDevis")}
                 </Pill>
                 )}
+                {user?.canAccessHistory !== false && (
+                <Pill active={tab === "historique-hotel"} onClick={() => setTab("historique-hotel")}>
+                  {t("nav.hotelHistory")}
+                </Pill>
+                )}
                 {user?.canAccessTickets !== false && (
                   <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
                     {t("nav.tickets")}
@@ -1458,6 +1475,12 @@ export default function App() {
         {tab === "public-devis" && user?.canAccessHistory !== false && (
           <Section title={t("page.publicDevis.title")} subtitle={t("page.publicDevis.subtitle")}>
             <PublicDevisPage />
+          </Section>
+        )}
+
+        {tab === "historique-hotel" && user?.canAccessHistory !== false && (
+          <Section title={t("page.hotelHistory.title")} subtitle={t("page.hotelHistory.subtitle")}>
+            <HotelHistoryPage />
           </Section>
         )}
 
