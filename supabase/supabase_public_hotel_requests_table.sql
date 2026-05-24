@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS public.public_hotel_requests (
   hotel_option_2 TEXT DEFAULT '',
   hotel_option_3 TEXT DEFAULT '',
   budget TEXT DEFAULT '',
+  wants_custom_offer BOOLEAN NOT NULL DEFAULT false,
+  board_all_inclusive BOOLEAN NOT NULL DEFAULT false,
+  board_full_board BOOLEAN NOT NULL DEFAULT false,
+  board_breakfast BOOLEAN NOT NULL DEFAULT false,
   notes TEXT DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

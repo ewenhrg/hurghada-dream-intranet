@@ -7,9 +7,17 @@ import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
 import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
 import { printHotelRequest } from "../utils/hotelRequestPrint";
+import {
+  HOTEL_BOARD_OPTIONS,
+  boardFieldsFromRow,
+  boardFieldsToPayload,
+  boardLabelsFromViewModel,
+} from "../constants/hotelRequestBoardOptions";
 
 const SELECT_COLUMNS =
-  "id, first_name, last_name, client_phone, client_email, hotel_option_1, hotel_option_2, hotel_option_3, budget, notes, created_at, updated_at";
+  "id, first_name, last_name, client_phone, client_email, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, created_at, updated_at";
+
+export const HOTEL_CUSTOM_OFFER_LABEL = "Je n'ai pas de choix d'hôtel — faites-moi une offre";
 
 function digitsOnly(s) {
   return String(s ?? "").replace(/\D/g, "");
@@ -27,6 +35,8 @@ export function rowToHotelRequestViewModel(row) {
     hotelOption2: row.hotel_option_2 || "",
     hotelOption3: row.hotel_option_3 || "",
     budget: row.budget || "",
+    wantsCustomOffer: row.wants_custom_offer === true,
+    ...boardFieldsFromRow(row),
     notes: row.notes || "",
     createdAt: row.created_at || "",
     updatedAt: row.updated_at || "",
@@ -39,10 +49,12 @@ function viewModelToPayload(vm) {
     last_name: vm.lastName.trim(),
     client_phone: vm.phone.trim(),
     client_email: vm.email.trim(),
-    hotel_option_1: vm.hotelOption1.trim(),
-    hotel_option_2: vm.hotelOption2.trim(),
-    hotel_option_3: vm.hotelOption3.trim(),
+    hotel_option_1: vm.wantsCustomOffer ? "" : vm.hotelOption1.trim(),
+    hotel_option_2: vm.wantsCustomOffer ? "" : vm.hotelOption2.trim(),
+    hotel_option_3: vm.wantsCustomOffer ? "" : vm.hotelOption3.trim(),
+    wants_custom_offer: vm.wantsCustomOffer === true,
     budget: vm.budget.trim(),
+    ...boardFieldsToPayload(vm),
     notes: vm.notes.trim(),
     updated_at: new Date().toISOString(),
   };
@@ -50,6 +62,7 @@ function viewModelToPayload(vm) {
 
 function HotelRequestCard({ request, onPrint, onEdit }) {
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
+  const boardLabels = boardLabelsFromViewModel(request);
   const hotels = [
     { label: "Choix 1", value: request.hotelOption1 },
     { label: "Choix 2", value: request.hotelOption2 },
@@ -65,6 +78,11 @@ function HotelRequestCard({ request, onPrint, onEdit }) {
               Demande hôtel
             </p>
             <h3 className="mt-1 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">{fullName}</h3>
+            {request.wantsCustomOffer ? (
+              <span className="mt-2 inline-block rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-950 ring-1 ring-amber-400/50">
+                Offre personnalisée demandée
+              </span>
+            ) : null}
             <p className="mt-1 text-xs font-medium text-slate-600">
               {request.createdAt
                 ? new Date(request.createdAt).toLocaleString("fr-FR")
@@ -100,9 +118,31 @@ function HotelRequestCard({ request, onPrint, onEdit }) {
         </div>
       </div>
 
+      <div className="border-b border-slate-200/90 px-4 py-4 sm:px-6">
+        <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">Formule</p>
+        {boardLabels.length === 0 ? (
+          <p className="text-sm text-slate-600">—</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {boardLabels.map((label) => (
+              <span
+                key={label}
+                className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-900 ring-1 ring-indigo-300/50"
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="px-4 py-4 sm:px-6">
         <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">Hôtels souhaités</p>
-        {hotels.length === 0 ? (
+        {request.wantsCustomOffer ? (
+          <p className="rounded-xl border border-amber-200/90 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-950">
+            {HOTEL_CUSTOM_OFFER_LABEL}
+          </p>
+        ) : hotels.length === 0 ? (
           <p className="text-sm text-slate-600">—</p>
         ) : (
           <ul className="space-y-2">
@@ -179,11 +219,33 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
               onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
             />
           </label>
+          <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2.5">
+            <input
+              type="checkbox"
+              checked={Boolean(draft.wantsCustomOffer)}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setDraft((d) => ({
+                  ...d,
+                  wantsCustomOffer: checked,
+                  ...(checked
+                    ? { hotelOption1: "", hotelOption2: "", hotelOption3: "" }
+                    : {}),
+                }));
+              }}
+              className="mt-0.5 h-4 w-4 rounded border-amber-400 text-indigo-600"
+            />
+            <span className="text-xs font-semibold text-amber-950">{HOTEL_CUSTOM_OFFER_LABEL}</span>
+          </label>
           {[1, 2, 3].map((n) => (
-            <label key={n} className="block text-xs font-bold text-slate-600">
+            <label
+              key={n}
+              className={`block text-xs font-bold text-slate-600 ${draft.wantsCustomOffer ? "opacity-50" : ""}`}
+            >
               Hôtel — choix {n}
               <input
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                disabled={draft.wantsCustomOffer}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100"
                 value={draft[`hotelOption${n}`]}
                 onChange={(e) =>
                   setDraft((d) => ({ ...d, [`hotelOption${n}`]: e.target.value }))
@@ -199,6 +261,27 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
               onChange={(e) => setDraft((d) => ({ ...d, budget: e.target.value }))}
             />
           </label>
+          <div>
+            <p className="text-xs font-bold text-slate-600">Formule</p>
+            <div className="mt-2 space-y-2">
+              {HOTEL_BOARD_OPTIONS.map((opt) => (
+                <label
+                  key={opt.formKey}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(draft[opt.formKey])}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, [opt.formKey]: e.target.checked }))
+                    }
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                  />
+                  <span className="text-xs font-semibold text-slate-800">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
           <label className="block text-xs font-bold text-slate-600">
             Notes
             <textarea

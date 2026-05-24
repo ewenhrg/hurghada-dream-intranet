@@ -3,16 +3,21 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
+import { HOTEL_BOARD_OPTIONS, boardFieldsToPayload } from "../constants/hotelRequestBoardOptions";
 
 const EMPTY_FORM = {
   firstName: "",
   lastName: "",
   phone: "",
   email: "",
+  wantsCustomOffer: false,
   hotelOption1: "",
   hotelOption2: "",
   hotelOption3: "",
   budget: "",
+  boardAllInclusive: false,
+  boardFullBoard: false,
+  boardBreakfast: false,
   notes: "",
 };
 
@@ -52,8 +57,10 @@ export function PublicHotelRequestPage() {
 
     const hasHotel =
       form.hotelOption1.trim() || form.hotelOption2.trim() || form.hotelOption3.trim();
-    if (!hasHotel) {
-      toast.error("Indiquez au moins un nom d'hôtel parmi les trois choix.");
+    if (!form.wantsCustomOffer && !hasHotel) {
+      toast.error(
+        "Indiquez au moins un hôtel, ou cochez la case pour demander une offre personnalisée."
+      );
       return;
     }
 
@@ -70,10 +77,12 @@ export function PublicHotelRequestPage() {
         last_name: form.lastName.trim(),
         client_phone: form.phone.trim(),
         client_email: form.email.trim(),
-        hotel_option_1: form.hotelOption1.trim(),
-        hotel_option_2: form.hotelOption2.trim(),
-        hotel_option_3: form.hotelOption3.trim(),
+        hotel_option_1: form.wantsCustomOffer ? "" : form.hotelOption1.trim(),
+        hotel_option_2: form.wantsCustomOffer ? "" : form.hotelOption2.trim(),
+        hotel_option_3: form.wantsCustomOffer ? "" : form.hotelOption3.trim(),
+        wants_custom_offer: form.wantsCustomOffer,
         budget: form.budget.trim(),
+        ...boardFieldsToPayload(form),
         notes: form.notes.trim(),
         updated_at: new Date().toISOString(),
       };
@@ -85,6 +94,13 @@ export function PublicHotelRequestPage() {
         if (error.code === "42P01" || error.message?.includes("public_hotel_requests")) {
           toast.error(
             "La base de données n'est pas encore configurée. Contactez Hurghada Dream."
+          );
+        } else if (
+          error.message?.includes("wants_custom_offer") ||
+          error.message?.includes("board_")
+        ) {
+          toast.error(
+            "Mise à jour base de données requise sur Supabase. Contactez Hurghada Dream."
           );
         } else {
           toast.error(error.message || "Impossible d'envoyer la demande.");
@@ -111,8 +127,7 @@ export function PublicHotelRequestPage() {
           </p>
           <h1 className="mt-4 text-2xl font-bold">Demande envoyée</h1>
           <p className="mt-3 text-sm font-medium text-violet-100/95">
-            Merci ! Notre équipe a bien reçu vos coordonnées et vos préférences d&apos;hôtel. Nous
-            vous recontacterons rapidement.
+            Merci ! Notre équipe a bien reçu votre demande. Nous vous recontacterons rapidement.
           </p>
           <button
             type="button"
@@ -137,7 +152,7 @@ export function PublicHotelRequestPage() {
             Demande d&apos;hébergement
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm font-medium text-violet-100/90">
-            Indiquez vos coordonnées, jusqu&apos;à trois hôtels qui vous intéressent et votre budget.
+            Indiquez vos coordonnées, vos hôtels préférés ou demandez une offre sur mesure.
           </p>
         </header>
 
@@ -202,18 +217,45 @@ export function PublicHotelRequestPage() {
               Hôtels souhaités
             </h2>
             <p className="mt-1 text-xs font-medium text-slate-500">
-              Saisissez le nom de l&apos;hôtel pour chaque choix (au moins un).
+              Saisissez jusqu&apos;à trois hôtels, ou cochez la case ci-dessous si vous souhaitez une
+              proposition de notre part.
             </p>
-            <div className="mt-4 space-y-3">
+
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border-2 border-amber-200/90 bg-amber-50/90 px-4 py-3.5 transition hover:border-amber-300">
+              <input
+                type="checkbox"
+                checked={form.wantsCustomOffer}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setForm((prev) => ({
+                    ...prev,
+                    wantsCustomOffer: checked,
+                    ...(checked
+                      ? { hotelOption1: "", hotelOption2: "", hotelOption3: "" }
+                      : {}),
+                  }));
+                }}
+                className="mt-1 h-4 w-4 shrink-0 rounded border-amber-400 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-sm font-semibold leading-snug text-amber-950">
+                Je n&apos;ai pas de choix d&apos;hôtel — faites-moi une offre
+              </span>
+            </label>
+
+            <div
+              className={`mt-4 space-y-3 transition-opacity ${form.wantsCustomOffer ? "pointer-events-none opacity-45" : ""}`}
+              aria-disabled={form.wantsCustomOffer}
+            >
               {[1, 2, 3].map((n) => (
                 <label key={n} className="block text-sm font-semibold text-slate-700">
                   Choix {n}
                   <input
                     type="text"
+                    disabled={form.wantsCustomOffer}
                     value={form[`hotelOption${n}`]}
                     onChange={(e) => updateField(`hotelOption${n}`, e.target.value)}
                     placeholder={`Nom de l'hôtel — choix ${n}`}
-                    className="mt-1 w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                    className="mt-1 w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:bg-slate-100"
                   />
                 </label>
               ))}
@@ -231,6 +273,31 @@ export function PublicHotelRequestPage() {
                 className="mt-1 w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
               />
             </label>
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-indigo-800">
+              Formule souhaitée
+            </h2>
+            <p className="mt-1 text-xs font-medium text-slate-500">
+              Cochez une ou plusieurs options (facultatif).
+            </p>
+            <div className="mt-3 space-y-2">
+              {HOTEL_BOARD_OPTIONS.map((opt) => (
+                <label
+                  key={opt.formKey}
+                  className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-slate-200/90 bg-slate-50/80 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50/40"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form[opt.formKey])}
+                    onChange={(e) => updateField(opt.formKey, e.target.checked)}
+                    className="h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm font-semibold text-slate-800">{opt.label}</span>
+                </label>
+              ))}
+            </div>
           </section>
 
           <section>
