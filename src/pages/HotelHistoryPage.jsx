@@ -7,6 +7,7 @@ import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
 import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
 import { printHotelRequest } from "../utils/hotelRequestPrint";
+import { formatHotelStayDate } from "../utils/hotelRequestDates";
 import {
   HOTEL_BOARD_OPTIONS,
   boardFieldsFromRow,
@@ -15,7 +16,7 @@ import {
 } from "../constants/hotelRequestBoardOptions";
 
 const SELECT_COLUMNS =
-  "id, first_name, last_name, client_phone, client_email, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, created_at, updated_at";
+  "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, created_at, updated_at";
 
 export const HOTEL_CUSTOM_OFFER_LABEL = "Je n'ai pas de choix d'hôtel — faites-moi une offre";
 
@@ -31,6 +32,8 @@ export function rowToHotelRequestViewModel(row) {
     lastName: row.last_name || "",
     phone: row.client_phone || "",
     email: row.client_email || "",
+    arrivalDate: row.arrival_date || "",
+    departureDate: row.departure_date || "",
     hotelOption1: row.hotel_option_1 || "",
     hotelOption2: row.hotel_option_2 || "",
     hotelOption3: row.hotel_option_3 || "",
@@ -49,6 +52,8 @@ function viewModelToPayload(vm) {
     last_name: vm.lastName.trim(),
     client_phone: vm.phone.trim(),
     client_email: vm.email.trim(),
+    arrival_date: vm.arrivalDate || "",
+    departure_date: vm.departureDate || "",
     hotel_option_1: vm.wantsCustomOffer ? "" : vm.hotelOption1.trim(),
     hotel_option_2: vm.wantsCustomOffer ? "" : vm.hotelOption2.trim(),
     hotel_option_3: vm.wantsCustomOffer ? "" : vm.hotelOption3.trim(),
@@ -110,6 +115,14 @@ function HotelRequestCard({ request, onPrint, onEdit }) {
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
             <span className="text-[11px] font-bold uppercase text-slate-500">E-mail</span>
             <p className="mt-0.5 break-all font-semibold text-slate-950">{request.email || "—"}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
+            <span className="text-[11px] font-bold uppercase text-slate-500">Arrivée</span>
+            <p className="mt-0.5 font-semibold text-slate-950">{formatHotelStayDate(request.arrivalDate)}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
+            <span className="text-[11px] font-bold uppercase text-slate-500">Départ</span>
+            <p className="mt-0.5 font-semibold text-slate-950">{formatHotelStayDate(request.departureDate)}</p>
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
             <span className="text-[11px] font-bold uppercase text-slate-500">Budget</span>
@@ -219,6 +232,27 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
               onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
             />
           </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-bold text-slate-600">
+              Date d&apos;arrivée
+              <input
+                type="date"
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                value={draft.arrivalDate || ""}
+                onChange={(e) => setDraft((d) => ({ ...d, arrivalDate: e.target.value }))}
+              />
+            </label>
+            <label className="block text-xs font-bold text-slate-600">
+              Date de départ
+              <input
+                type="date"
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                value={draft.departureDate || ""}
+                min={draft.arrivalDate || undefined}
+                onChange={(e) => setDraft((d) => ({ ...d, departureDate: e.target.value }))}
+              />
+            </label>
+          </div>
           <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2.5">
             <input
               type="checkbox"

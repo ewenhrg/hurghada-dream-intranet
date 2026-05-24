@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS public.public_hotel_requests (
   last_name TEXT DEFAULT '',
   client_phone TEXT DEFAULT '',
   client_email TEXT DEFAULT '',
+  arrival_date TEXT DEFAULT '',
+  departure_date TEXT DEFAULT '',
   hotel_option_1 TEXT DEFAULT '',
   hotel_option_2 TEXT DEFAULT '',
   hotel_option_3 TEXT DEFAULT '',

@@ -1,4 +1,5 @@
 import { boardLabelsFromViewModel } from "../constants/hotelRequestBoardOptions";
+import { formatHotelStayDate } from "./hotelRequestDates";
 
 /**
  * HTML imprimable pour une demande hôtel (formulaire public).
@@ -55,6 +56,8 @@ export function generateHotelRequestHTML(request) {
       <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Prénom</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.firstName || "—")}</td></tr>
       <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Téléphone</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.phone || "—")}</td></tr>
       <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">E-mail</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.email || "—")}</td></tr>
+      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Arrivée</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(formatHotelStayDate(request.arrivalDate))}</td></tr>
+      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Départ</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(formatHotelStayDate(request.departureDate))}</td></tr>
       <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Budget</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.budget?.trim() ? request.budget : "—")}</td></tr>
       <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Formule</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${boardHtml}</td></tr>
     </tbody>
