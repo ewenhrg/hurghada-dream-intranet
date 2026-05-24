@@ -24,22 +24,22 @@ const EMPTY_FORM = {
 };
 
 const inputClass =
-  "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[15px] text-slate-900 shadow-sm placeholder:text-slate-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500";
+  "mt-1.5 w-full rounded-xl border-2 border-indigo-200/80 bg-white px-3.5 py-2.5 text-[15px] text-indigo-950 shadow-sm placeholder:text-indigo-300 transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-400/40 disabled:cursor-not-allowed disabled:border-indigo-100 disabled:bg-indigo-50/50 disabled:text-indigo-400";
 
 function FormSection({ step, title, description, children }) {
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+    <section className="rounded-2xl border-2 border-white/40 bg-white/95 p-5 shadow-xl shadow-indigo-950/20 ring-1 ring-indigo-200/60 backdrop-blur-sm sm:p-6">
       <div className="mb-5 flex gap-4">
         <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white shadow-md shadow-indigo-600/30"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 via-violet-600 to-orange-500 text-sm font-bold text-white shadow-lg shadow-violet-600/40"
           aria-hidden
         >
           {step}
         </span>
         <div className="min-w-0 pt-0.5">
-          <h2 className="text-base font-bold tracking-tight text-slate-900">{title}</h2>
+          <h2 className="text-base font-bold tracking-tight text-indigo-950">{title}</h2>
           {description ? (
-            <p className="mt-1 text-sm leading-relaxed text-slate-500">{description}</p>
+            <p className="mt-1 text-sm leading-relaxed text-violet-800/85">{description}</p>
           ) : null}
         </div>
       </div>
@@ -50,9 +50,9 @@ function FormSection({ step, title, description, children }) {
 
 function FieldLabel({ children, required, htmlFor }) {
   return (
-    <label htmlFor={htmlFor} className="block text-sm font-semibold text-slate-700">
+    <label htmlFor={htmlFor} className="block text-sm font-semibold text-indigo-900">
       {children}
-      {required ? <span className="ml-0.5 text-red-500">*</span> : null}
+      {required ? <span className="ml-0.5 text-orange-500">*</span> : null}
     </label>
   );
 }
@@ -172,19 +172,19 @@ export function PublicHotelRequestPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-slate-50 px-4 py-16">
-        <div className="mx-auto max-w-md text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl text-emerald-700">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-violet-900 to-indigo-900 px-4 py-16">
+        <div className="mx-auto max-w-md rounded-3xl border border-white/20 bg-white/10 p-8 text-center shadow-2xl backdrop-blur-md">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-3xl text-white shadow-lg">
             ✓
           </div>
-          <h1 className="mt-6 text-2xl font-bold text-slate-900">Demande envoyée</h1>
-          <p className="mt-3 text-sm leading-relaxed text-slate-600">
+          <h1 className="mt-6 text-2xl font-bold text-white">Demande envoyée</h1>
+          <p className="mt-3 text-sm leading-relaxed text-violet-100">
             Merci ! L&apos;équipe Hurghada Dream a bien reçu votre demande d&apos;hébergement et vous
             recontactera rapidement.
           </p>
           <button
             type="button"
-            className="mt-8 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/25 transition hover:bg-indigo-700"
+            className="mt-8 rounded-xl bg-white px-6 py-3 text-sm font-bold text-indigo-900 shadow-lg transition hover:bg-violet-50"
             onClick={() => setSubmitted(false)}
           >
             Nouvelle demande
@@ -195,24 +195,23 @@ export function PublicHotelRequestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="border-b border-slate-200/80 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-center px-4 py-5">
-          <div className="text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-600">
-              Hurghada Dream
-            </p>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-              Demande d&apos;hébergement
-            </h1>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-violet-900 to-indigo-900">
+      <header className="border-b border-white/10 bg-gradient-to-r from-indigo-900/90 via-violet-800/90 to-indigo-900/90 px-4 py-8 text-center shadow-lg">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.28em] text-violet-200">
+          Hurghada Dream
+        </p>
+        <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          Demande d&apos;hébergement
+        </h1>
+        <p className="mx-auto mt-3 max-w-lg text-sm font-medium text-violet-100/95">
+          Trouvez l&apos;hôtel idéal pour votre séjour à Hurghada.
+        </p>
+      </header>
 
       <div className="mx-auto max-w-3xl px-4 py-8 sm:py-10">
-        <p className="mb-8 text-center text-sm leading-relaxed text-slate-600">
-          Complétez ce formulaire en quelques minutes. Tous les champs marqués d&apos;un{" "}
-          <span className="text-red-500">*</span> sont obligatoires.
+        <p className="mb-8 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm leading-relaxed text-violet-50 backdrop-blur-sm">
+          Complétez ce formulaire en quelques minutes. Les champs marqués d&apos;un{" "}
+          <span className="font-bold text-orange-300">*</span> sont obligatoires.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -322,7 +321,7 @@ export function PublicHotelRequestPage() {
             title="Hôtels & budget"
             description="Jusqu'à trois hôtels qui vous intéressent, ou demandez une proposition sur mesure."
           >
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3.5 transition hover:border-amber-300">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-amber-300/90 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3.5 shadow-sm transition hover:border-amber-400 hover:shadow-md">
               <input
                 type="checkbox"
                 checked={form.wantsCustomOffer}
@@ -363,7 +362,7 @@ export function PublicHotelRequestPage() {
               ))}
             </div>
 
-            <div className="mt-5 border-t border-slate-100 pt-5">
+            <div className="mt-5 border-t border-indigo-100 pt-5">
               <FieldLabel htmlFor="hd-budget">Budget estimé</FieldLabel>
               <input
                 id="hd-budget"
@@ -387,19 +386,19 @@ export function PublicHotelRequestPage() {
                 return (
                   <label
                     key={opt.formKey}
-                    className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 transition ${
                       checked
-                        ? "border-indigo-500 bg-indigo-50/80 ring-1 ring-indigo-500/30"
-                        : "border-slate-200 bg-slate-50/50 hover:border-slate-300 hover:bg-white"
+                        ? "border-violet-500 bg-gradient-to-r from-indigo-50 to-violet-100 ring-2 ring-violet-400/40 shadow-sm"
+                        : "border-indigo-200/70 bg-indigo-50/40 hover:border-violet-400 hover:bg-violet-50/60"
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={(e) => updateField(opt.formKey, e.target.checked)}
-                      className="h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="h-4 w-4 shrink-0 rounded border-violet-300 text-violet-600 focus:ring-violet-500"
                     />
-                    <span className="text-sm font-semibold text-slate-800">{opt.label}</span>
+                    <span className="text-sm font-semibold text-indigo-950">{opt.label}</span>
                   </label>
                 );
               })}
@@ -420,12 +419,12 @@ export function PublicHotelRequestPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-xl bg-indigo-600 py-4 text-base font-bold text-white shadow-lg shadow-indigo-600/25 transition hover:bg-indigo-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+            className="w-full rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-orange-500 py-4 text-base font-bold text-white shadow-xl shadow-violet-900/40 transition hover:from-indigo-700 hover:via-violet-700 hover:to-orange-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {submitting ? "Envoi en cours…" : "Envoyer ma demande"}
           </button>
 
-          <p className="pb-6 text-center text-xs text-slate-500">
+          <p className="pb-6 text-center text-xs font-medium text-violet-200/90">
             Vos informations sont transmises de façon sécurisée à Hurghada Dream.
           </p>
         </form>
