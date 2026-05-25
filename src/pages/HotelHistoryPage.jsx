@@ -16,7 +16,7 @@ import {
 } from "../constants/hotelRequestBoardOptions";
 
 const SELECT_COLUMNS =
-  "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, created_at, updated_at";
+  "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, adults_count, child_ages, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, created_at, updated_at";
 
 export const HOTEL_CUSTOM_OFFER_LABEL = "Je n'ai pas de choix d'hôtel — faites-moi une offre";
 
@@ -34,6 +34,9 @@ export function rowToHotelRequestViewModel(row) {
     email: row.client_email || "",
     arrivalDate: row.arrival_date || "",
     departureDate: row.departure_date || "",
+    adultsCount:
+      row.adults_count != null && row.adults_count !== "" ? Number(row.adults_count) : null,
+    childAges: row.child_ages || "",
     hotelOption1: row.hotel_option_1 || "",
     hotelOption2: row.hotel_option_2 || "",
     hotelOption3: row.hotel_option_3 || "",
@@ -54,6 +57,11 @@ function viewModelToPayload(vm) {
     client_email: vm.email.trim(),
     arrival_date: vm.arrivalDate || "",
     departure_date: vm.departureDate || "",
+    adults_count:
+      vm.adultsCount != null && Number.isFinite(Number(vm.adultsCount)) && Number(vm.adultsCount) >= 1
+        ? Number(vm.adultsCount)
+        : 1,
+    child_ages: vm.childAges?.trim() || "",
     hotel_option_1: vm.wantsCustomOffer ? "" : vm.hotelOption1.trim(),
     hotel_option_2: vm.wantsCustomOffer ? "" : vm.hotelOption2.trim(),
     hotel_option_3: vm.wantsCustomOffer ? "" : vm.hotelOption3.trim(),
@@ -123,6 +131,18 @@ function HotelRequestCard({ request, onPrint, onEdit }) {
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
             <span className="text-[11px] font-bold uppercase text-slate-500">Départ</span>
             <p className="mt-0.5 font-semibold text-slate-950">{formatHotelStayDate(request.departureDate)}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
+            <span className="text-[11px] font-bold uppercase text-slate-500">Adultes</span>
+            <p className="mt-0.5 font-semibold text-slate-950">
+              {request.adultsCount != null && request.adultsCount >= 1 ? request.adultsCount : "—"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
+            <span className="text-[11px] font-bold uppercase text-slate-500">Âge(s) enfants</span>
+            <p className="mt-0.5 font-semibold text-slate-950">
+              {request.childAges?.trim() ? request.childAges : "—"}
+            </p>
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
             <span className="text-[11px] font-bold uppercase text-slate-500">Budget</span>
@@ -250,6 +270,34 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
                 value={draft.departureDate || ""}
                 min={draft.arrivalDate || undefined}
                 onChange={(e) => setDraft((d) => ({ ...d, departureDate: e.target.value }))}
+              />
+            </label>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-bold text-slate-600">
+              Nombre d&apos;adultes
+              <input
+                type="number"
+                min={1}
+                max={99}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                value={draft.adultsCount ?? ""}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    adultsCount: e.target.value === "" ? "" : Number(e.target.value),
+                  }))
+                }
+              />
+            </label>
+            <label className="block text-xs font-bold text-slate-600">
+              Âge(s) des enfants
+              <input
+                type="text"
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                value={draft.childAges || ""}
+                onChange={(e) => setDraft((d) => ({ ...d, childAges: e.target.value }))}
+                placeholder="Ex. 5 ans, 8 ans"
               />
             </label>
           </div>

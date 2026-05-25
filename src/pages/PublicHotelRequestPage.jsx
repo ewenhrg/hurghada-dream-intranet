@@ -12,6 +12,8 @@ const EMPTY_FORM = {
   email: "",
   arrivalDate: "",
   departureDate: "",
+  adultsCount: "2",
+  childAges: "",
   wantsCustomOffer: false,
   hotelOption1: "",
   hotelOption2: "",
@@ -103,6 +105,12 @@ export function PublicHotelRequestPage() {
       return;
     }
 
+    const adults = parseInt(String(form.adultsCount).trim(), 10);
+    if (!Number.isFinite(adults) || adults < 1) {
+      toast.error("Indiquez le nombre d'adultes (au moins 1).");
+      return;
+    }
+
     const hasHotel =
       form.hotelOption1.trim() || form.hotelOption2.trim() || form.hotelOption3.trim();
     if (!form.wantsCustomOffer && !hasHotel) {
@@ -127,6 +135,8 @@ export function PublicHotelRequestPage() {
         client_email: form.email.trim(),
         arrival_date: form.arrivalDate,
         departure_date: form.departureDate,
+        adults_count: adults,
+        child_ages: form.childAges.trim(),
         hotel_option_1: form.wantsCustomOffer ? "" : form.hotelOption1.trim(),
         hotel_option_2: form.wantsCustomOffer ? "" : form.hotelOption2.trim(),
         hotel_option_3: form.wantsCustomOffer ? "" : form.hotelOption3.trim(),
@@ -149,7 +159,9 @@ export function PublicHotelRequestPage() {
           error.message?.includes("wants_custom_offer") ||
           error.message?.includes("board_") ||
           error.message?.includes("arrival_date") ||
-          error.message?.includes("departure_date")
+          error.message?.includes("departure_date") ||
+          error.message?.includes("adults_count") ||
+          error.message?.includes("child_ages")
         ) {
           toast.error(
             "Mise à jour base de données requise sur Supabase. Contactez Hurghada Dream."
@@ -282,8 +294,8 @@ export function PublicHotelRequestPage() {
 
           <FormSection
             step="2"
-            title="Dates de séjour"
-            description="Indiquez votre arrivée et votre départ prévus."
+            title="Dates & voyageurs"
+            description="Dates du séjour et composition du groupe."
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -311,6 +323,33 @@ export function PublicHotelRequestPage() {
                   onChange={(e) => updateField("departureDate", e.target.value)}
                   className={inputClass}
                   required
+                />
+              </div>
+              <div>
+                <FieldLabel htmlFor="hd-adults" required>
+                  Nombre d&apos;adultes
+                </FieldLabel>
+                <input
+                  id="hd-adults"
+                  type="number"
+                  min={1}
+                  max={99}
+                  inputMode="numeric"
+                  value={form.adultsCount}
+                  onChange={(e) => updateField("adultsCount", e.target.value)}
+                  className={inputClass}
+                  required
+                />
+              </div>
+              <div>
+                <FieldLabel htmlFor="hd-child-ages">Âge(s) des enfants</FieldLabel>
+                <input
+                  id="hd-child-ages"
+                  type="text"
+                  value={form.childAges}
+                  onChange={(e) => updateField("childAges", e.target.value)}
+                  placeholder="Ex. 5 ans et 8 ans (vide si aucun)"
+                  className={inputClass}
                 />
               </div>
             </div>

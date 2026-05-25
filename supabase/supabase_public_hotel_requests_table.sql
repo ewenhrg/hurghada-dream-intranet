@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS public.public_hotel_requests (
   client_email TEXT DEFAULT '',
   arrival_date TEXT DEFAULT '',
   departure_date TEXT DEFAULT '',
+  adults_count INTEGER DEFAULT 1,
+  child_ages TEXT DEFAULT '',
   hotel_option_1 TEXT DEFAULT '',
   hotel_option_2 TEXT DEFAULT '',
   hotel_option_3 TEXT DEFAULT '',

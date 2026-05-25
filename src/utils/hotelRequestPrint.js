@@ -58,6 +58,8 @@ export function generateHotelRequestHTML(request) {
       <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">E-mail</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.email || "—")}</td></tr>
       <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Arrivée</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(formatHotelStayDate(request.arrivalDate))}</td></tr>
       <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Départ</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(formatHotelStayDate(request.departureDate))}</td></tr>
+      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Adultes</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.adultsCount != null && request.adultsCount >= 1 ? String(request.adultsCount) : "—")}</td></tr>
+      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Âge(s) enfants</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.childAges?.trim() ? request.childAges : "—")}</td></tr>
       <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Budget</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.budget?.trim() ? request.budget : "—")}</td></tr>
       <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Formule</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${boardHtml}</td></tr>
     </tbody>
