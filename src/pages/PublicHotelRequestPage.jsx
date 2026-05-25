@@ -13,6 +13,7 @@ const EMPTY_FORM = {
   arrivalDate: "",
   departureDate: "",
   adultsCount: "2",
+  childrenCount: "0",
   childAges: "",
   wantsCustomOffer: false,
   hotelOption1: "",
@@ -111,6 +112,16 @@ export function PublicHotelRequestPage() {
       return;
     }
 
+    const children = parseInt(String(form.childrenCount).trim(), 10);
+    if (!Number.isFinite(children) || children < 0) {
+      toast.error("Indiquez le nombre d'enfants (0 si aucun).");
+      return;
+    }
+    if (children > 0 && !form.childAges.trim()) {
+      toast.error("Indiquez l'âge de chaque enfant.");
+      return;
+    }
+
     const hasHotel =
       form.hotelOption1.trim() || form.hotelOption2.trim() || form.hotelOption3.trim();
     if (!form.wantsCustomOffer && !hasHotel) {
@@ -136,6 +147,7 @@ export function PublicHotelRequestPage() {
         arrival_date: form.arrivalDate,
         departure_date: form.departureDate,
         adults_count: adults,
+        children_count: children,
         child_ages: form.childAges.trim(),
         hotel_option_1: form.wantsCustomOffer ? "" : form.hotelOption1.trim(),
         hotel_option_2: form.wantsCustomOffer ? "" : form.hotelOption2.trim(),
@@ -161,7 +173,8 @@ export function PublicHotelRequestPage() {
           error.message?.includes("arrival_date") ||
           error.message?.includes("departure_date") ||
           error.message?.includes("adults_count") ||
-          error.message?.includes("child_ages")
+          error.message?.includes("child_ages") ||
+          error.message?.includes("children_count")
         ) {
           toast.error(
             "Mise à jour base de données requise sur Supabase. Contactez Hurghada Dream."
@@ -342,14 +355,33 @@ export function PublicHotelRequestPage() {
                 />
               </div>
               <div>
-                <FieldLabel htmlFor="hd-child-ages">Âge(s) des enfants</FieldLabel>
+                <FieldLabel htmlFor="hd-children">Nombre d&apos;enfants</FieldLabel>
+                <input
+                  id="hd-children"
+                  type="number"
+                  min={0}
+                  max={20}
+                  inputMode="numeric"
+                  value={form.childrenCount}
+                  onChange={(e) => updateField("childrenCount", e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <FieldLabel
+                  htmlFor="hd-child-ages"
+                  required={parseInt(String(form.childrenCount).trim(), 10) > 0}
+                >
+                  Âge(s) des enfants
+                </FieldLabel>
                 <input
                   id="hd-child-ages"
                   type="text"
                   value={form.childAges}
                   onChange={(e) => updateField("childAges", e.target.value)}
-                  placeholder="Ex. 5 ans et 8 ans (vide si aucun)"
+                  placeholder="Ex. 5 ans et 8 ans (obligatoire si enfants > 0)"
                   className={inputClass}
+                  disabled={!parseInt(String(form.childrenCount).trim(), 10)}
                 />
               </div>
             </div>

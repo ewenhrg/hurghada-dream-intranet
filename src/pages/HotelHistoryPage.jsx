@@ -16,7 +16,7 @@ import {
 } from "../constants/hotelRequestBoardOptions";
 
 const SELECT_COLUMNS =
-  "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, adults_count, child_ages, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, created_at, updated_at";
+  "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, adults_count, children_count, child_ages, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, created_at, updated_at";
 
 export const HOTEL_CUSTOM_OFFER_LABEL = "Je n'ai pas de choix d'hôtel — faites-moi une offre";
 
@@ -36,6 +36,10 @@ export function rowToHotelRequestViewModel(row) {
     departureDate: row.departure_date || "",
     adultsCount:
       row.adults_count != null && row.adults_count !== "" ? Number(row.adults_count) : null,
+    childrenCount:
+      row.children_count != null && row.children_count !== ""
+        ? Number(row.children_count)
+        : null,
     childAges: row.child_ages || "",
     hotelOption1: row.hotel_option_1 || "",
     hotelOption2: row.hotel_option_2 || "",
@@ -61,6 +65,10 @@ function viewModelToPayload(vm) {
       vm.adultsCount != null && Number.isFinite(Number(vm.adultsCount)) && Number(vm.adultsCount) >= 1
         ? Number(vm.adultsCount)
         : 1,
+    children_count:
+      vm.childrenCount != null && Number.isFinite(Number(vm.childrenCount)) && Number(vm.childrenCount) >= 0
+        ? Number(vm.childrenCount)
+        : 0,
     child_ages: vm.childAges?.trim() || "",
     hotel_option_1: vm.wantsCustomOffer ? "" : vm.hotelOption1.trim(),
     hotel_option_2: vm.wantsCustomOffer ? "" : vm.hotelOption2.trim(),
@@ -136,6 +144,14 @@ function HotelRequestCard({ request, onPrint, onEdit }) {
             <span className="text-[11px] font-bold uppercase text-slate-500">Adultes</span>
             <p className="mt-0.5 font-semibold text-slate-950">
               {request.adultsCount != null && request.adultsCount >= 1 ? request.adultsCount : "—"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
+            <span className="text-[11px] font-bold uppercase text-slate-500">Enfants</span>
+            <p className="mt-0.5 font-semibold text-slate-950">
+              {request.childrenCount != null && request.childrenCount >= 0
+                ? request.childrenCount
+                : "—"}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
@@ -291,16 +307,39 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              Âge(s) des enfants
+              Nombre d&apos;enfants
               <input
-                type="text"
+                type="number"
+                min={0}
+                max={20}
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                value={draft.childAges || ""}
-                onChange={(e) => setDraft((d) => ({ ...d, childAges: e.target.value }))}
-                placeholder="Ex. 5 ans, 8 ans"
+                value={draft.childrenCount ?? ""}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    childrenCount: e.target.value === "" ? "" : Number(e.target.value),
+                  }))
+                }
               />
             </label>
           </div>
+          <label className="block text-xs font-bold text-slate-600">
+            Âge(s) des enfants
+            <input
+              type="text"
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              value={draft.childAges || ""}
+              onChange={(e) => setDraft((d) => ({ ...d, childAges: e.target.value }))}
+              placeholder="Ex. 5 ans, 8 ans"
+              disabled={
+                !(
+                  draft.childrenCount != null &&
+                  Number.isFinite(Number(draft.childrenCount)) &&
+                  Number(draft.childrenCount) > 0
+                )
+              }
+            />
+          </label>
           <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2.5">
             <input
               type="checkbox"
