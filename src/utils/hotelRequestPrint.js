@@ -43,7 +43,16 @@ export function generateHotelRequestHTML(request) {
     .meta { font-size: 13px; color: #64748b; margin-bottom: 20px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px; }
     .notes { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; white-space: pre-wrap; }
-    @media print { body { margin: 12mm; } }
+    .manual-section { margin-top: 28px; page-break-inside: avoid; }
+    .manual-section h2 { font-size: 15px; margin: 0 0 10px; color: #1e293b; font-family: "Times New Roman", Times, serif; }
+    table.manual-grid { width: 100%; border-collapse: collapse; font-family: "Times New Roman", Times, serif; font-size: 13px; }
+    table.manual-grid th,
+    table.manual-grid td { border: 1px solid #000; padding: 10px 8px; vertical-align: middle; }
+    table.manual-grid th { background: #d9e1f2; font-weight: 700; text-align: center; }
+    table.manual-grid td.empty-cell { height: 36px; }
+    tr.manual-banner td { background: #d9e1f2; font-weight: 700; text-align: left; }
+    tr.manual-gray td { background: #a6a6a6; font-weight: 700; text-align: center; }
+    tr.manual-gray td.manual-gray-empty { background: #a6a6a6; }
   </style>
 </head>
 <body>
@@ -73,8 +82,65 @@ export function generateHotelRequestHTML(request) {
 
   <h2 style="font-size:16px;margin:20px 0 8px;color:#4338ca;">Notes</h2>
   <div class="notes">${escapeHtml(request.notes?.trim() ? request.notes : "—")}</div>
+
+  ${buildManualHotelQuoteTablesHTML()}
 </body>
 </html>`;
+}
+
+/** Tableaux vides à remplir à la main (devis hôtel imprimable). */
+function buildManualHotelQuoteTablesHTML() {
+  const emptyRow6 = `<tr>${Array.from({ length: 6 })
+    .map(() => `<td class="empty-cell">&nbsp;</td>`)
+    .join("")}</tr>`;
+
+  const comparisonTable = `
+  <div class="manual-section">
+    <table class="manual-grid" aria-label="Grille devis hôtel">
+      <thead>
+        <tr>
+          <th>Hôtel</th>
+          <th>Types chambres</th>
+          <th>Formules repas</th>
+          <th>Check-In</th>
+          <th>Check-Out</th>
+          <th>Prix Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="manual-banner">
+          <td colspan="6">Souhait du client</td>
+        </tr>
+        ${emptyRow6}
+        ${emptyRow6}
+        ${emptyRow6}
+      </tbody>
+    </table>
+  </div>`;
+
+  const suggestionTable = `
+  <div class="manual-section">
+    <table class="manual-grid" aria-label="Suggestions et alternative hôtel">
+      <tbody>
+        <tr>
+          <td class="empty-cell" style="width:33%;">&nbsp;</td>
+          <td class="empty-cell" style="width:34%;">&nbsp;</td>
+          <td class="empty-cell" style="width:33%;">&nbsp;</td>
+        </tr>
+        <tr class="manual-banner">
+          <td colspan="3">Suggestion proposée selon votre budget</td>
+        </tr>
+        <tr><td colspan="3" class="empty-cell" style="height:44px;">&nbsp;</td></tr>
+        <tr><td colspan="3" class="empty-cell" style="height:44px;">&nbsp;</td></tr>
+        <tr class="manual-gray">
+          <td class="manual-gray-empty empty-cell" style="width:28%;">&nbsp;</td>
+          <td colspan="2">Hôtel indisponible à vos dates – une alternative équivalente vous est proposée</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+
+  return comparisonTable + suggestionTable;
 }
 
 function escapeHtml(value) {
