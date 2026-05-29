@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import { calculateCardPrice } from "../utils";
-import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { isSpeedBoatActivity } from "../utils/activityHelpers";
+import {
+  isSpeedBoatActivity,
+  computeSpeedBoatBaseLineTotal,
+  addSpeedBoatIslandExtrasToLineTotal,
+} from "../utils/activityHelpers";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 
 /**
@@ -42,47 +45,14 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
 
       // cas spécial Speed Boat
       if (act && isSpeedBoatActivity(act.name)) {
-        const ad = Number(it.adults || 0);
-        const ch = Number(it.children || 0);
-
-        // Prix de base : 145€ pour 1 ou 2 adultes
-        lineTotal = 145;
-
-        // Si plus de 2 adultes : +20€ par adulte supplémentaire (au-delà de 2)
-        if (ad > 2) {
-          const extraAdults = ad - 2;
-          lineTotal += extraAdults * 20;
-        }
-
-        // Tous les enfants : +10€ par enfant
-        lineTotal += ch * 10;
-
-        // Extra dauphin : +20€ si la case est cochée
-        if (it.extraDolphin) {
-          lineTotal += 20;
-        }
-
-        // Extra Speed Boat (plusieurs extras possibles) : calcul basé sur adultes et enfants
-        if (it.speedBoatExtra && Array.isArray(it.speedBoatExtra) && it.speedBoatExtra.length > 0) {
-          it.speedBoatExtra.forEach((extraId) => {
-            if (extraId) { // Ignorer les valeurs vides
-              const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === extraId);
-              if (selectedExtra) {
-                lineTotal += ad * selectedExtra.priceAdult;
-                lineTotal += ch * selectedExtra.priceChild;
-              }
-            }
-          });
-        }
-        // Compatibilité avec l'ancien format (string) si présent
-        else if (it.speedBoatExtra && typeof it.speedBoatExtra === "string" && it.speedBoatExtra !== "") {
-          const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === it.speedBoatExtra);
-          if (selectedExtra) {
-            lineTotal += ad * selectedExtra.priceAdult;
-            lineTotal += ch * selectedExtra.priceChild;
-          }
-        }
-
+        lineTotal = computeSpeedBoatBaseLineTotal(it.adults, it.children, it.extraDolphin);
+        lineTotal = addSpeedBoatIslandExtrasToLineTotal(
+          lineTotal,
+          act.name,
+          it.adults,
+          it.children,
+          it.speedBoatExtra
+        );
       } else if (act && isBuggyActivity(act.name)) {
         // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy 2 pers. et 4 pers.
         const buggySimple = Number(it.buggySimple || 0);

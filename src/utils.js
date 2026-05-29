@@ -1,5 +1,10 @@
 import { NEIGHBORHOODS } from "./constants";
-import { isBuggyActivity, isMotoCrossActivity, isSpeedBoatActivity } from "./utils/activityHelpers";
+import {
+  isBuggyActivity,
+  isMotoCrossActivity,
+  isSpeedBoatActivity,
+  allowsSpeedBoatIslandExtras,
+} from "./utils/activityHelpers";
 import { SPEED_BOAT_EXTRAS } from "./constants/activityExtras";
 import { logger } from "./utils/logger";
 
@@ -309,8 +314,8 @@ export function generateQuoteHTML(quote, options = {}) {
         extrasInfo.push("🐬 Extra dauphin (+20€)");
       }
       
-      // Extra Speed Boat (plusieurs extras possibles)
-      if (item.speedBoatExtra) {
+      // Extra Speed Boat îles (pas pour Speedboat Sunset)
+      if (allowsSpeedBoatIslandExtras(item.activityName) && item.speedBoatExtra) {
         // Gérer le nouveau format (array) et l'ancien format (string) pour compatibilité
         const extrasArray = Array.isArray(item.speedBoatExtra) 
           ? item.speedBoatExtra 

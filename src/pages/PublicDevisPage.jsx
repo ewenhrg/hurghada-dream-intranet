@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, getQuotesRealtimeSiteKeyFilter } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
+import { allowsSpeedBoatIslandExtras } from "../utils/activityHelpers";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
 import { PrimaryBtn } from "../components/ui";
@@ -61,12 +62,15 @@ function getCatalogLineOptionLines(item) {
   if (item.extraDolphin) {
     lines.push("Dauphin (+20 € sur la ligne)");
   }
-  for (const id of normalizeSpeedBoatExtras(item)) {
-    const ex = SPEED_BOAT_EXTRAS.find((e) => e.id === id);
-    if (ex?.id) {
-      lines.push(`${ex.label} (+${ex.priceAdult} € / adulte · +${ex.priceChild} € / enfant)`);
-    } else if (id) {
-      lines.push(`Formule / île : ${id}`);
+  const activityName = item.activityName || item.activity_name || "";
+  if (allowsSpeedBoatIslandExtras(activityName)) {
+    for (const id of normalizeSpeedBoatExtras(item)) {
+      const ex = SPEED_BOAT_EXTRAS.find((e) => e.id === id);
+      if (ex?.id) {
+        lines.push(`${ex.label} (+${ex.priceAdult} € / adulte · +${ex.priceChild} € / enfant)`);
+      } else if (id) {
+        lines.push(`Formule / île : ${id}`);
+      }
     }
   }
 

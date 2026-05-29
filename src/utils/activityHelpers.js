@@ -19,11 +19,55 @@ export function getBuggyPrices(activityName) {
   return { simple: 0, family: 0 };
 }
 
-// Helper pour vérifier si une activité est Speed Boat (ex: "SPEED BOAT", "SPEEDBOAT", "Speed Boat")
+// Helper pour vérifier si une activité est Speed Boat (ex: "SPEED BOAT", "SPEEDBOAT", "SPEEDBOAT SUNSET")
 export function isSpeedBoatActivity(activityName) {
   if (!activityName) return false;
   const name = activityName.toLowerCase().trim();
-  return name.includes("speed boat") || name === "speedboat";
+  return name.includes("speed boat") || name.includes("speedboat");
+}
+
+/** Variante sunset : même grille de base + dauphin, sans extras îles. */
+export function isSpeedBoatSunsetActivity(activityName) {
+  if (!activityName) return false;
+  const name = activityName.toLowerCase().trim();
+  return isSpeedBoatActivity(activityName) && name.includes("sunset");
+}
+
+/** Extras îles (Hula Hula, Orange Bay, etc.) — pas pour Speedboat Sunset. */
+export function allowsSpeedBoatIslandExtras(activityName) {
+  return isSpeedBoatActivity(activityName) && !isSpeedBoatSunsetActivity(activityName);
+}
+
+export function getSpeedBoatIslandExtras() {
+  return SPEED_BOAT_EXTRAS.filter((e) => e.id);
+}
+
+/** Grille Speed Boat : base 145 €, +20 €/adt >2, +10 €/enfant, option dauphin +20 €. */
+export function computeSpeedBoatBaseLineTotal(adults, children, extraDolphin) {
+  const ad = Number(adults || 0);
+  const ch = Number(children || 0);
+  let lineTotal = 145;
+  if (ad > 2) lineTotal += (ad - 2) * 20;
+  lineTotal += ch * 10;
+  if (extraDolphin) lineTotal += 20;
+  return lineTotal;
+}
+
+/** Ajoute les extras îles au total (ignorés pour Speedboat Sunset). */
+export function addSpeedBoatIslandExtrasToLineTotal(lineTotal, activityName, adults, children, extrasRaw) {
+  if (!allowsSpeedBoatIslandExtras(activityName)) return lineTotal;
+  const ad = Number(adults || 0);
+  const ch = Number(children || 0);
+  const extras = Array.isArray(extrasRaw) ? extrasRaw : extrasRaw ? [extrasRaw] : [];
+  let total = lineTotal;
+  extras.forEach((extraId) => {
+    if (!extraId) return;
+    const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === extraId);
+    if (selectedExtra) {
+      total += ad * selectedExtra.priceAdult + ch * selectedExtra.priceChild;
+    }
+  });
+  return total;
 }
 
 // Helper pour vérifier si une activité utilise les champs moto cross (ex: "MOTOCROSS", "Moto cross")
@@ -151,17 +195,19 @@ export function getActivityTarifListLines(activityLike) {
   if (adult > 0 || child > 0 || baby > 0) return null;
 
   if (isSpeedBoatActivity(name)) {
-    const extraLines = SPEED_BOAT_EXTRAS.filter((e) => e.id).map(
-      (e) => `${e.label} : +${e.priceAdult} € / adulte · +${e.priceChild} € / enfant`
-    );
-    return [
+    const lines = [
       "Base 1–2 adultes : 145 €",
       "Au-delà de 2 adultes : +20 € / adulte supplémentaire",
       "Enfant : +10 € / enfant",
       "Option dauphin : +20 €",
-      "Extras (au devis) :",
-      ...extraLines,
     ];
+    if (allowsSpeedBoatIslandExtras(name)) {
+      const extraLines = getSpeedBoatIslandExtras().map(
+        (e) => `${e.label} : +${e.priceAdult} € / adulte · +${e.priceChild} € / enfant`
+      );
+      lines.push("Extras îles (au devis) :", ...extraLines);
+    }
+    return lines;
   }
 
   if (isBuggyActivity(name)) {

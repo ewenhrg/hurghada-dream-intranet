@@ -3,9 +3,10 @@
  * mais que le devis interne utilise une grille codée (aligné sur useActivityPriceCalculator).
  */
 
-import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import {
   isSpeedBoatActivity,
+  computeSpeedBoatBaseLineTotal,
+  addSpeedBoatIslandExtrasToLineTotal,
   isBuggyActivity,
   getBuggyPrices,
   isMotoCrossActivity,
@@ -136,20 +137,8 @@ export function computePublicCatalogLineTotal(activity, line) {
   if (activity.babies_forbidden === true || activity.babiesForbidden === true) bab = 0;
 
   if (isSpeedBoatActivity(name)) {
-    let t = 145;
-    if (ad > 2) t += (ad - 2) * 20;
-    t += ch * 10;
-    if (line?.extraDolphin) t += 20;
-    const extrasRaw = line?.speedBoatExtra;
-    const extras = Array.isArray(extrasRaw) ? extrasRaw : extrasRaw ? [extrasRaw] : [];
-    extras.forEach((extraId) => {
-      if (!extraId) return;
-      const e = SPEED_BOAT_EXTRAS.find((x) => x.id === extraId);
-      if (e) {
-        t += ad * num(e.priceAdult) + ch * num(e.priceChild);
-      }
-    });
-    return t;
+    let t = computeSpeedBoatBaseLineTotal(ad, ch, line?.extraDolphin);
+    return addSpeedBoatIslandExtrasToLineTotal(t, name, ad, ch, line?.speedBoatExtra);
   }
 
   if (isBuggyActivity(name)) {

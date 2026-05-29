@@ -8,7 +8,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, getSpeedBoatIslandExtras, computeSpeedBoatBaseLineTotal, addSpeedBoatIslandExtrasToLineTotal, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -1531,46 +1531,14 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
 
       // cas spécial Speed Boat
       if (act && isSpeedBoatActivity(act.name)) {
-        const ad = Number(it.adults || 0);
-        const ch = Number(it.children || 0);
-
-        // Prix de base : 145€ pour 1 ou 2 adultes
-        lineTotal = 145;
-
-        // Si plus de 2 adultes : +20€ par adulte supplémentaire (au-delà de 2)
-        if (ad > 2) {
-          const extraAdults = ad - 2;
-          lineTotal += extraAdults * 20;
-        }
-
-        // Tous les enfants : +10€ par enfant
-        lineTotal += ch * 10;
-
-        // Extra dauphin : +20€ si la case est cochée
-        if (it.extraDolphin) {
-          lineTotal += 20;
-        }
-
-        // Extra Speed Boat (plusieurs extras possibles) : calcul basé sur adultes et enfants
-        if (it.speedBoatExtra) {
-          // Gérer le nouveau format (array) et l'ancien format (string) pour compatibilité
-          const extrasArray = Array.isArray(it.speedBoatExtra) 
-            ? it.speedBoatExtra 
-            : (typeof it.speedBoatExtra === "string" && it.speedBoatExtra !== "" 
-              ? [it.speedBoatExtra] 
-              : []);
-          
-          // Utiliser le Map au lieu de find() pour O(1) au lieu de O(n)
-          extrasArray.forEach((extraId) => {
-            if (extraId) { // Ignorer les valeurs vides
-              const selectedExtra = speedBoatExtrasMap.get(extraId);
-              if (selectedExtra) {
-                lineTotal += ad * selectedExtra.priceAdult;
-                lineTotal += ch * selectedExtra.priceChild;
-              }
-            }
-          });
-        }
+        lineTotal = computeSpeedBoatBaseLineTotal(it.adults, it.children, it.extraDolphin);
+        lineTotal = addSpeedBoatIslandExtrasToLineTotal(
+          lineTotal,
+          act.name,
+          it.adults,
+          it.children,
+          it.speedBoatExtra
+        );
       } else if (act && isBuggyActivity(act.name)) {
         // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy 2 pers. et 4 pers.
         const buggySimple = Number(it.buggySimple || 0);
@@ -2275,10 +2243,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   )}
                   {c.act && isSpeedBoatActivity(c.act.name) ? (
                     <div className="lg:col-span-2 space-y-4 md:space-y-5">
+                      {allowsSpeedBoatIslandExtras(c.act.name) ? (
                       <div>
                         <p className="text-sm md:text-base font-bold text-slate-800 mb-3">⚡ Extras Speed Boat (plusieurs sélections possibles)</p>
                         <div className="space-y-3 border-2 border-blue-300/70 rounded-xl p-4 md:p-5 bg-white/99 shadow-md">
-                          {SPEED_BOAT_EXTRAS.filter((extra) => extra.id !== "").map((extra) => {
+                          {getSpeedBoatIslandExtras().map((extra) => {
                             // Gérer la compatibilité avec l'ancien format (string) et le nouveau format (array)
                             const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
                               ? c.raw.speedBoatExtra 
@@ -2333,6 +2302,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           })}
                         </div>
                       </div>
+                      ) : null}
                       {/* Champ Extra pour ajuster le prix manuellement */}
                       <div>
                         <p className="text-sm md:text-base font-bold text-slate-800 mb-3">💰 Ajustement de prix (montant à ajouter ou soustraire)</p>

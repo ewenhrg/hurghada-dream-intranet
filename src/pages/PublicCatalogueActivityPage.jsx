@@ -15,6 +15,9 @@ import {
   isLouxorPrivatifActivity,
   isMotoCrossActivity,
   isSpeedBoatActivity,
+  isSpeedBoatSunsetActivity,
+  allowsSpeedBoatIslandExtras,
+  getSpeedBoatIslandExtras,
   isZeroTracasActivity,
   isZeroTracasHorsZoneActivity,
   getZeroTracasPrices,
@@ -26,7 +29,6 @@ import {
   getPublicCatalogListFromPrice,
   isPublicCatalogAirportStyleLine,
 } from "../utils/publicCatalogPricing";
-import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 
 /** `*` : toutes les colonnes présentes en base (évite erreur si une migration manque encore). */
 const ACTIVITY_COLUMNS_BASE = "*";
@@ -436,6 +438,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const bookingReplaceChildBaby = useMemo(() => {
     if (!activity) return "";
     if (isSpeedBoatActivity(activity.name)) {
+      if (isSpeedBoatSunsetActivity(activity.name)) {
+        return "Grille Speed Boat Sunset : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant. Option dauphin : +20 €.";
+      }
       return [
         "Grille Speed Boat : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant.",
         "Une seule option payante au choix : dauphin (+20 €) ou une île / formule (baie, lunch…).",
@@ -498,6 +503,13 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
   }, [activity, special.extraDolphin, special.speedBoatExtra]);
 
+  useEffect(() => {
+    if (!activity || !isSpeedBoatSunsetActivity(activity.name)) return;
+    if ((special.speedBoatExtra?.length ?? 0) > 0) {
+      setSpecial((s) => ({ ...s, speedBoatExtra: [] }));
+    }
+  }, [activity, special.speedBoatExtra]);
+
   const specialPricingBeforeParticipants = useMemo(() => {
     if (!activity) return null;
     const name = activity.name || "";
@@ -512,11 +524,20 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
     if (isSpeedBoatActivity(name)) {
       const radioName = `hd-speedboat-pack-${activity.id}`;
+      const isSunset = isSpeedBoatSunsetActivity(name);
       return (
         <div className="space-y-3 rounded-xl border border-violet-200/80 bg-violet-50/80 p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-violet-900">Options Speed Boat</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-violet-900">
+            {isSunset ? "Options Speed Boat Sunset" : "Options Speed Boat"}
+          </p>
           <p className="text-[11px] font-medium leading-snug text-violet-950/90">
-            <strong>Un seul choix possible :</strong> soit l&apos;option dauphin, soit une île / formule — pas les deux.
+            {isSunset ? (
+              <>Option dauphin (+20 €) en complément du prix de base.</>
+            ) : (
+              <>
+                <strong>Un seul choix possible :</strong> soit l&apos;option dauphin, soit une île / formule — pas les deux.
+              </>
+            )}
           </p>
           <div className="max-h-[min(70vh,22rem)] space-y-2 overflow-y-auto pr-0.5" role="radiogroup" aria-label="Options Speed Boat">
             <label className={speedBoatOptionClass(speedBoatPackValue === "none")}>
@@ -543,24 +564,25 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 Dauphin <span className="font-bold text-violet-800">(+20 € pour la ligne)</span>
               </span>
             </label>
-            {SPEED_BOAT_EXTRAS.filter((e) => e.id).map((extra) => (
-              <label key={extra.id} className={speedBoatOptionClass(speedBoatPackValue === extra.id)}>
-                <input
-                  type="radio"
-                  name={radioName}
-                  value={extra.id}
-                  checked={speedBoatPackValue === extra.id}
-                  onChange={() => applySpeedBoatPack(extra.id)}
-                  className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-slate-400 accent-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1"
-                />
-                <span className="text-sm leading-snug text-slate-900">
-                  <span className="font-semibold">{extra.label}</span>{" "}
-                  <span className="text-xs font-medium text-slate-700">
-                    (+{extra.priceAdult} € / adulte · +{extra.priceChild} € / enfant)
+            {allowsSpeedBoatIslandExtras(name) &&
+              getSpeedBoatIslandExtras().map((extra) => (
+                <label key={extra.id} className={speedBoatOptionClass(speedBoatPackValue === extra.id)}>
+                  <input
+                    type="radio"
+                    name={radioName}
+                    value={extra.id}
+                    checked={speedBoatPackValue === extra.id}
+                    onChange={() => applySpeedBoatPack(extra.id)}
+                    className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-slate-400 accent-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1"
+                  />
+                  <span className="text-sm leading-snug text-slate-900">
+                    <span className="font-semibold">{extra.label}</span>{" "}
+                    <span className="text-xs font-medium text-slate-700">
+                      (+{extra.priceAdult} € / adulte · +{extra.priceChild} € / enfant)
+                    </span>
                   </span>
-                </span>
-              </label>
-            ))}
+                </label>
+              ))}
           </div>
         </div>
       );

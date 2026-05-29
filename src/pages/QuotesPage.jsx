@@ -1,9 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
-import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, getSpeedBoatIslandExtras, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -1386,6 +1385,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         if (act && isActivityBabiesForbidden(act)) {
                           patch.babies = 0;
                         }
+                        if (act && isSpeedBoatSunsetActivity(act.name)) {
+                          patch.speedBoatExtra = [];
+                        }
                         setItem(idx, patch);
                       }}
                       className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-normal text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
@@ -1515,13 +1517,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                 </div>
 
-              {/* extra - Cases à cocher pour Speed Boat, champs classiques pour les autres */}
+              {/* extra - Speed Boat (îles + ajustement) ou champs classiques */}
               {c.act && isSpeedBoatActivity(c.act.name) ? (
                 <div className="space-y-5">
+                  {allowsSpeedBoatIslandExtras(c.act.name) ? (
                   <div>
                     <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">Extras Speed Boat (plusieurs sélections possibles)</label>
                     <div className="space-y-2.5 border-2 border-blue-200/60 rounded-xl p-4 bg-gradient-to-br from-blue-50/60 to-indigo-50/40 backdrop-blur-sm shadow-md">
-                      {SPEED_BOAT_EXTRAS.filter((extra) => extra.id !== "").map((extra) => {
+                      {getSpeedBoatIslandExtras().map((extra) => {
                         // Gérer la compatibilité avec l'ancien format (string) et le nouveau format (array)
                         const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
                           ? c.raw.speedBoatExtra 
@@ -1576,6 +1579,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       })}
                     </div>
                   </div>
+                  ) : null}
                   {/* Champ Extra pour ajuster le prix manuellement */}
                   <div className="bg-amber-50/60 border-2 border-amber-200/60 rounded-xl p-4">
                     <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2.5">💰 Ajustement manuel du prix</label>
