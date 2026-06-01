@@ -23,7 +23,7 @@ export function isLuxorMontgolfiereActivity(activityName) {
 export function getFirstSellableDateYmd(activityName, referenceDate = new Date()) {
   if (!isLuxorMontgolfiereActivity(activityName)) return null;
   const year = referenceDate.getFullYear();
-  return `${year}-08-01`;
+  return `${year}-09-01`;
 }
 
 export function isBeforeFirstSellableDate(activityName, dateStr) {
@@ -32,7 +32,7 @@ export function isBeforeFirstSellableDate(activityName, dateStr) {
   return String(dateStr).trim() < from;
 }
 
-/** Stop sale automatique (ex. Luxor montgolfière avant le 1er août). */
+/** Stop sale automatique (ex. Luxor montgolfière avant le 1er septembre). */
 export function isProgrammaticStopSale(activity, dateStr) {
   if (!activity || !dateStr) return false;
   return isBeforeFirstSellableDate(activity.name, dateStr);

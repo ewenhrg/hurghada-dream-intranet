@@ -36,7 +36,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       }
       
       const programmaticStop = act && it.date ? isProgrammaticStopSale(act, it.date) : false;
-      // Disponibilité : stop programmé (ex. avant 1er août) non annulable par push sale
+      // Disponibilité : stop programmé (ex. avant 1er septembre) non annulable par push sale
       const available = programmaticStop ? false : isPushSale || (baseAvailable && !isStopSale);
       
       const transferInfo = act && neighborhood ? act.transfers?.[neighborhood] || null : null;
