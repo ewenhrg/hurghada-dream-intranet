@@ -5,8 +5,7 @@
 
 import {
   isSpeedBoatActivity,
-  computeSpeedBoatBaseLineTotal,
-  addSpeedBoatIslandExtrasToLineTotal,
+  computeSpeedBoatLineTotal,
   isBuggyActivity,
   getBuggyPrices,
   isMotoCrossActivity,
@@ -137,8 +136,7 @@ export function computePublicCatalogLineTotal(activity, line) {
   if (activity.babies_forbidden === true || activity.babiesForbidden === true) bab = 0;
 
   if (isSpeedBoatActivity(name)) {
-    let t = computeSpeedBoatBaseLineTotal(ad, ch, line?.extraDolphin);
-    return addSpeedBoatIslandExtrasToLineTotal(t, name, ad, ch, line?.speedBoatExtra);
+    return computeSpeedBoatLineTotal(name, ad, ch, line?.extraDolphin, line?.speedBoatExtra);
   }
 
   if (isBuggyActivity(name)) {

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { TextInput } from "./ui";
 import { toast } from "../utils/toast.js";
+import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
 
 function dateToYmdLocal(date) {
   const y = date.getFullYear();
@@ -95,12 +96,16 @@ export function ColoredDatePicker({
     const activityIdStr = String(activity.id || '');
     const activitySupabaseIdStr = activity.supabase_id ? String(activity.supabase_id) : null;
     
-    const isStopSale = stopSales.some(s => {
-      const stopActivityIdStr = String(s.activity_id || '');
-      const matches = (stopActivityIdStr === activityIdStr || (activitySupabaseIdStr && stopActivityIdStr === activitySupabaseIdStr)) && 
-                      s.date === dateStr;
-      return matches;
-    });
+    const isStopSale =
+      isProgrammaticStopSale(activity, dateStr) ||
+      stopSales.some((s) => {
+        const stopActivityIdStr = String(s.activity_id || "");
+        return (
+          (stopActivityIdStr === activityIdStr ||
+            (activitySupabaseIdStr && stopActivityIdStr === activitySupabaseIdStr)) &&
+          s.date === dateStr
+        );
+      });
     
     const isPushSale = pushSales.some(p => {
       const pushActivityIdStr = String(p.activity_id || '');

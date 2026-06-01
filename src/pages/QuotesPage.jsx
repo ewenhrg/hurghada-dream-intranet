@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, getSpeedBoatIslandExtras, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtras, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -1387,6 +1387,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         }
                         if (act && isSpeedBoatSunsetActivity(act.name)) {
                           patch.speedBoatExtra = [];
+                          patch.extraDolphin = false;
                         }
                         setItem(idx, patch);
                       }}
@@ -2556,8 +2557,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 </div>
               ) : null}
 
-              {/* Extra dauphin (uniquement pour Speed Boat) */}
-              {c.act && isSpeedBoatActivity(c.act.name) && (
+              {/* Extra dauphin (Speed Boat classique uniquement) */}
+              {c.act && allowsSpeedBoatDolphinExtra(c.act.name) && (
                 <div className="flex items-center gap-2 mt-2">
                   <input
                     type="checkbox"

@@ -1,5 +1,6 @@
 import { getLocalDateKey } from "./pushSaleExpiry.js";
 import { normalizeAvailableDays } from "./activityAvailableDates.js";
+import { isProgrammaticStopSale } from "./activitySalesBlackouts.js";
 
 /** Parse AAAA-MM-JJ en Date locale (midi) — évite les décalages UTC. */
 export function parseYmdLocal(dateStr) {
@@ -30,7 +31,9 @@ export function isDateSafeForDiving(dateStr, departureStr) {
 }
 
 export function isStopSaleForActivity(activity, dateStr, stopSalesMap) {
-  if (!activity || !dateStr || !stopSalesMap) return false;
+  if (!activity || !dateStr) return false;
+  if (isProgrammaticStopSale(activity, dateStr)) return true;
+  if (!stopSalesMap) return false;
   const keyId = `${activity.id}_${dateStr}`;
   const keySupabaseId = activity.supabase_id ? `${activity.supabase_id}_${dateStr}` : null;
   return stopSalesMap.has(keyId) || (keySupabaseId && stopSalesMap.has(keySupabaseId));
@@ -84,6 +87,10 @@ export function buildStayActivityCandidateDates(arrivalStr, departureStr, now = 
  */
 export function isDateAvailableForActivity(activity, dateStr, dayOfWeek, stopSalesMap, pushSalesMap) {
   if (!activity || !dateStr) return false;
+
+  if (isProgrammaticStopSale(activity, dateStr)) {
+    return false;
+  }
 
   if (isPushSaleForActivity(activity, dateStr, pushSalesMap)) {
     return true;

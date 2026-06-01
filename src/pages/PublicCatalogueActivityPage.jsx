@@ -439,7 +439,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
     if (!activity) return "";
     if (isSpeedBoatActivity(activity.name)) {
       if (isSpeedBoatSunsetActivity(activity.name)) {
-        return "Grille Speed Boat Sunset : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant. Option dauphin : +20 €.";
+        return "Grille Speed Boat Sunset : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant (sans extra dauphin ni îles).";
       }
       return [
         "Grille Speed Boat : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant.",
@@ -505,10 +505,10 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   useEffect(() => {
     if (!activity || !isSpeedBoatSunsetActivity(activity.name)) return;
-    if ((special.speedBoatExtra?.length ?? 0) > 0) {
-      setSpecial((s) => ({ ...s, speedBoatExtra: [] }));
+    if ((special.speedBoatExtra?.length ?? 0) > 0 || special.extraDolphin) {
+      setSpecial((s) => ({ ...s, speedBoatExtra: [], extraDolphin: false }));
     }
-  }, [activity, special.speedBoatExtra]);
+  }, [activity, special.speedBoatExtra, special.extraDolphin]);
 
   const specialPricingBeforeParticipants = useMemo(() => {
     if (!activity) return null;
@@ -522,22 +522,13 @@ export function PublicCatalogueActivityPage({ activityId }) {
           : "border-slate-200/90 bg-white/95 hover:border-violet-400/80 hover:shadow-sm",
       ].join(" ");
 
-    if (isSpeedBoatActivity(name)) {
+    if (isSpeedBoatActivity(name) && !isSpeedBoatSunsetActivity(name)) {
       const radioName = `hd-speedboat-pack-${activity.id}`;
-      const isSunset = isSpeedBoatSunsetActivity(name);
       return (
         <div className="space-y-3 rounded-xl border border-violet-200/80 bg-violet-50/80 p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-violet-900">
-            {isSunset ? "Options Speed Boat Sunset" : "Options Speed Boat"}
-          </p>
+          <p className="text-xs font-bold uppercase tracking-wide text-violet-900">Options Speed Boat</p>
           <p className="text-[11px] font-medium leading-snug text-violet-950/90">
-            {isSunset ? (
-              <>Option dauphin (+20 €) en complément du prix de base.</>
-            ) : (
-              <>
-                <strong>Un seul choix possible :</strong> soit l&apos;option dauphin, soit une île / formule — pas les deux.
-              </>
-            )}
+            <strong>Un seul choix possible :</strong> soit l&apos;option dauphin, soit une île / formule — pas les deux.
           </p>
           <div className="max-h-[min(70vh,22rem)] space-y-2 overflow-y-auto pr-0.5" role="radiogroup" aria-label="Options Speed Boat">
             <label className={speedBoatOptionClass(speedBoatPackValue === "none")}>

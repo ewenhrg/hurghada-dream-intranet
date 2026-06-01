@@ -1,10 +1,7 @@
 import { useMemo } from "react";
 import { calculateCardPrice } from "../utils";
-import {
-  isSpeedBoatActivity,
-  computeSpeedBoatBaseLineTotal,
-  addSpeedBoatIslandExtrasToLineTotal,
-} from "../utils/activityHelpers";
+import { isSpeedBoatActivity, computeSpeedBoatLineTotal } from "../utils/activityHelpers";
+import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
 import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 
 /**
@@ -29,14 +26,18 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       let isStopSale = false;
       let isPushSale = false;
       if (act && it.date) {
+        isStopSale = isProgrammaticStopSale(act, it.date);
         const keyId = `${act.id}_${it.date}`;
         const keySupabaseId = act.supabase_id ? `${act.supabase_id}_${it.date}` : null;
-        isStopSale = stopSalesMap.has(keyId) || (keySupabaseId && stopSalesMap.has(keySupabaseId));
+        if (!isStopSale) {
+          isStopSale = stopSalesMap.has(keyId) || (keySupabaseId && stopSalesMap.has(keySupabaseId));
+        }
         isPushSale = pushSalesMap.has(keyId) || (keySupabaseId && pushSalesMap.has(keySupabaseId));
       }
       
-      // Disponibilité finale : disponible si push sale OU (baseAvailable ET pas de stop sale)
-      const available = isPushSale || (baseAvailable && !isStopSale);
+      const programmaticStop = act && it.date ? isProgrammaticStopSale(act, it.date) : false;
+      // Disponibilité : stop programmé (ex. avant 1er août) non annulable par push sale
+      const available = programmaticStop ? false : isPushSale || (baseAvailable && !isStopSale);
       
       const transferInfo = act && neighborhood ? act.transfers?.[neighborhood] || null : null;
 
@@ -45,12 +46,11 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
 
       // cas spécial Speed Boat
       if (act && isSpeedBoatActivity(act.name)) {
-        lineTotal = computeSpeedBoatBaseLineTotal(it.adults, it.children, it.extraDolphin);
-        lineTotal = addSpeedBoatIslandExtrasToLineTotal(
-          lineTotal,
+        lineTotal = computeSpeedBoatLineTotal(
           act.name,
           it.adults,
           it.children,
+          it.extraDolphin,
           it.speedBoatExtra
         );
       } else if (act && isBuggyActivity(act.name)) {

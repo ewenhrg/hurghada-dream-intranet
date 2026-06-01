@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, getQuotesRealtimeSiteKeyFilter } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { allowsSpeedBoatIslandExtras } from "../utils/activityHelpers";
+import { allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra } from "../utils/activityHelpers";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
 import { PrimaryBtn } from "../components/ui";
@@ -58,11 +58,11 @@ function normalizeSpeedBoatExtras(item) {
 function getCatalogLineOptionLines(item) {
   if (!item || typeof item !== "object") return [];
   const lines = [];
+  const activityName = item.activityName || item.activity_name || "";
 
-  if (item.extraDolphin) {
+  if (allowsSpeedBoatDolphinExtra(activityName) && item.extraDolphin) {
     lines.push("Dauphin (+20 € sur la ligne)");
   }
-  const activityName = item.activityName || item.activity_name || "";
   if (allowsSpeedBoatIslandExtras(activityName)) {
     for (const id of normalizeSpeedBoatExtras(item)) {
       const ex = SPEED_BOAT_EXTRAS.find((e) => e.id === id);

@@ -4,6 +4,7 @@ import {
   isMotoCrossActivity,
   isSpeedBoatActivity,
   allowsSpeedBoatIslandExtras,
+  allowsSpeedBoatDolphinExtra,
 } from "./utils/activityHelpers";
 import { SPEED_BOAT_EXTRAS } from "./constants/activityExtras";
 import { logger } from "./utils/logger";
@@ -310,7 +311,7 @@ export function generateQuoteHTML(quote, options = {}) {
     
     if (isSpeedBoat) {
       // Extra dauphin
-      if (item.extraDolphin) {
+      if (allowsSpeedBoatDolphinExtra(item.activityName) && item.extraDolphin) {
         extrasInfo.push("🐬 Extra dauphin (+20€)");
       }
       

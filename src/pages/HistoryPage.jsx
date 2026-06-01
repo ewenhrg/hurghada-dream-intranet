@@ -8,7 +8,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, getSpeedBoatIslandExtras, computeSpeedBoatBaseLineTotal, addSpeedBoatIslandExtrasToLineTotal, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtras, computeSpeedBoatLineTotal, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -1531,12 +1531,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
 
       // cas spécial Speed Boat
       if (act && isSpeedBoatActivity(act.name)) {
-        lineTotal = computeSpeedBoatBaseLineTotal(it.adults, it.children, it.extraDolphin);
-        lineTotal = addSpeedBoatIslandExtrasToLineTotal(
-          lineTotal,
+        lineTotal = computeSpeedBoatLineTotal(
           act.name,
           it.adults,
           it.children,
+          it.extraDolphin,
           it.speedBoatExtra
         );
       } else if (act && isBuggyActivity(act.name)) {
@@ -2344,7 +2343,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   )}
                 </div>
                 {/* Extra dauphin (uniquement pour Speed Boat) - Modifiable par tous */}
-                {c.act && isSpeedBoatActivity(c.act.name) && (
+                {c.act && allowsSpeedBoatDolphinExtra(c.act.name) && (
                   <div className="flex items-center gap-3 mt-4 p-4 bg-cyan-50/60 rounded-xl border-2 border-cyan-300/70">
                     <input
                       type="checkbox"

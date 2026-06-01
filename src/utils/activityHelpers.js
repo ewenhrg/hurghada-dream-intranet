@@ -26,7 +26,7 @@ export function isSpeedBoatActivity(activityName) {
   return name.includes("speed boat") || name.includes("speedboat");
 }
 
-/** Variante sunset : même grille de base + dauphin, sans extras îles. */
+/** Variante sunset : même grille de base, sans extras îles ni dauphin. */
 export function isSpeedBoatSunsetActivity(activityName) {
   if (!activityName) return false;
   const name = activityName.toLowerCase().trim();
@@ -35,6 +35,11 @@ export function isSpeedBoatSunsetActivity(activityName) {
 
 /** Extras îles (Hula Hula, Orange Bay, etc.) — pas pour Speedboat Sunset. */
 export function allowsSpeedBoatIslandExtras(activityName) {
+  return isSpeedBoatActivity(activityName) && !isSpeedBoatSunsetActivity(activityName);
+}
+
+/** Option dauphin (+20 €) — pas pour Speedboat Sunset. */
+export function allowsSpeedBoatDolphinExtra(activityName) {
   return isSpeedBoatActivity(activityName) && !isSpeedBoatSunsetActivity(activityName);
 }
 
@@ -68,6 +73,13 @@ export function addSpeedBoatIslandExtrasToLineTotal(lineTotal, activityName, adu
     }
   });
   return total;
+}
+
+/** Total ligne Speed Boat (base + dauphin + îles selon l’activité). */
+export function computeSpeedBoatLineTotal(activityName, adults, children, extraDolphin, speedBoatExtra) {
+  const dolphin = allowsSpeedBoatDolphinExtra(activityName) && extraDolphin;
+  let total = computeSpeedBoatBaseLineTotal(adults, children, dolphin);
+  return addSpeedBoatIslandExtrasToLineTotal(total, activityName, adults, children, speedBoatExtra);
 }
 
 // Helper pour vérifier si une activité utilise les champs moto cross (ex: "MOTOCROSS", "Moto cross")
@@ -199,8 +211,10 @@ export function getActivityTarifListLines(activityLike) {
       "Base 1–2 adultes : 145 €",
       "Au-delà de 2 adultes : +20 € / adulte supplémentaire",
       "Enfant : +10 € / enfant",
-      "Option dauphin : +20 €",
     ];
+    if (allowsSpeedBoatDolphinExtra(name)) {
+      lines.push("Option dauphin : +20 €");
+    }
     if (allowsSpeedBoatIslandExtras(name)) {
       const extraLines = getSpeedBoatIslandExtras().map(
         (e) => `${e.label} : +${e.priceAdult} € / adulte · +${e.priceChild} € / enfant`
