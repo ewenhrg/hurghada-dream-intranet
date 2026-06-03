@@ -82,6 +82,11 @@ function getCatalogLineOptionLines(item) {
   const y250 = Number(item.yamaha250) || 0;
   const k640 = Number(item.ktm640) || 0;
   const k530 = Number(item.ktm530) || 0;
+  const bpMen = Number(item.boatPartyMen) || 0;
+  const bpWomen = Number(item.boatPartyWomen) || 0;
+  if (bpMen > 0) lines.push(`Boat Party — garçons × ${bpMen}`);
+  if (bpWomen > 0) lines.push(`Boat Party — filles × ${bpWomen}`);
+
   if (y250 > 0) lines.push(`Moto Yamaha 250 × ${y250}`);
   if (k640 > 0) lines.push(`Moto KTM 640 × ${k640}`);
   if (k530 > 0) lines.push(`Moto KTM 530 × ${k530}`);

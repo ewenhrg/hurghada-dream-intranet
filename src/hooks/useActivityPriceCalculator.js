@@ -1,8 +1,24 @@
 import { useMemo } from "react";
 import { calculateCardPrice } from "../utils";
-import { isSpeedBoatActivity, computeSpeedBoatLineTotal } from "../utils/activityHelpers";
+import {
+  isSpeedBoatActivity,
+  computeSpeedBoatLineTotal,
+  isBuggyActivity,
+  getBuggyPrices,
+  isBoatPartyActivity,
+  computeBoatPartyLineTotal,
+  isMotoCrossActivity,
+  getMotoCrossPrices,
+  isZeroTracasActivity,
+  getZeroTracasPrices,
+  isZeroTracasHorsZoneActivity,
+  getZeroTracasHorsZonePrices,
+  isCairePrivatifActivity,
+  getCairePrivatifPrices,
+  isLouxorPrivatifActivity,
+  getLouxorPrivatifPrices,
+} from "../utils/activityHelpers";
 import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
-import { isBuggyActivity, getBuggyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 
 /**
  * Hook personnalisé pour calculer les prix des activités
@@ -66,6 +82,8 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         const ktm530 = Number(it.ktm530 || 0);
         const prices = getMotoCrossPrices();
         lineTotal = yamaha250 * prices.yamaha250 + ktm640 * prices.ktm640 + ktm530 * prices.ktm530;
+      } else if (act && isBoatPartyActivity(act.name)) {
+        lineTotal = computeBoatPartyLineTotal(it.boatPartyMen, it.boatPartyWomen);
       } else if (act && isCairePrivatifActivity(act.name)) {
         // cas spécial CAIRE PRIVATIF : calcul basé sur les cases à cocher (4pax, 5pax, 6pax)
         const prices = getCairePrivatifPrices();
@@ -223,6 +241,9 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
           // Pour MOTO CROSS, le supplément est calculé sur le nombre total de motos
           const totalMotos = Number(it.yamaha250 || 0) + Number(it.ktm640 || 0) + Number(it.ktm530 || 0);
           lineTotal += Number(transferInfo.surcharge || 0) * totalMotos;
+        } else if (act && isBoatPartyActivity(act.name)) {
+          const totalGuests = Number(it.boatPartyMen || 0) + Number(it.boatPartyWomen || 0);
+          lineTotal += Number(transferInfo.surcharge || 0) * totalGuests;
         } else {
           // Pour toutes les autres activités (y compris buggy), le supplément est calculé sur le nombre d'adultes + enfants (bébés gratuits)
           const adults = Number(it.adults || 0);

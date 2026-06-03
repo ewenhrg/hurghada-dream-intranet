@@ -1,6 +1,7 @@
 import { NEIGHBORHOODS } from "./constants";
 import {
   isBuggyActivity,
+  isBoatPartyActivity,
   isMotoCrossActivity,
   isSpeedBoatActivity,
   allowsSpeedBoatIslandExtras,
@@ -250,6 +251,12 @@ export function calculateTransferSurcharge(item) {
     return surchargePerAdult * totalBuggys;
   }
   
+  if (isBoatPartyActivity(item.activityName)) {
+    const men = Number(item.boatPartyMen || 0);
+    const women = Number(item.boatPartyWomen || 0);
+    return surchargePerAdult * (men + women);
+  }
+
   // Pour MotoCross : multiplier par le nombre total de motos (yamaha250 + ktm640 + ktm530)
   if (isMotoCrossActivity(item.activityName)) {
     const yamaha250 = Number(item.yamaha250 || 0);

@@ -94,6 +94,22 @@ export function getMotoCrossPrices() {
   return { yamaha250: 100, ktm640: 120, ktm530: 160 };
 }
 
+/** BOAT PARTY : tarif homme / femme (garçon / fille). */
+export function isBoatPartyActivity(activityName) {
+  if (!activityName) return false;
+  const name = activityName.toLowerCase().trim();
+  return name.includes("boat party");
+}
+
+export function getBoatPartyPrices() {
+  return { men: 60, women: 40 };
+}
+
+export function computeBoatPartyLineTotal(men, women) {
+  const p = getBoatPartyPrices();
+  return Number(men || 0) * p.men + Number(women || 0) * p.women;
+}
+
 function normalizeActivityName(activityName) {
   if (!activityName) return "";
   return String(activityName)
@@ -237,6 +253,11 @@ export function getActivityTarifListLines(activityLike) {
       `KTM 640 : ${p.ktm640} € / moto`,
       `KTM 530 : ${p.ktm530} € / moto`,
     ];
+  }
+
+  if (isBoatPartyActivity(name)) {
+    const p = getBoatPartyPrices();
+    return [`Garçon : ${p.men} €`, `Fille : ${p.women} €`];
   }
 
   if (isCairePrivatifActivity(name)) {

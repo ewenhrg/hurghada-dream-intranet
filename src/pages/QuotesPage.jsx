@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtras, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtras, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -141,6 +141,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     yamaha250: "",
     ktm640: "",
     ktm530: "",
+    boatPartyMen: "",
+    boatPartyWomen: "",
     allerSimple: false, // Pour HURGHADA - LE CAIRE et HURGHADA - LOUXOR
     allerRetour: false, // Pour HURGHADA - LE CAIRE et HURGHADA - LOUXOR
     zeroTracasTransfertVisaSim: "", // Pour ZERO TRACAS
@@ -845,6 +847,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         c.act && isActivityBabiesForbidden(c.act) ? 0 : Number(c.raw.babies || 0);
       const totalParticipants = Number(c.raw.adults || 0) + Number(c.raw.children || 0) + babiesCount;
       // Pour les activités buggy/moto, on vérifie les véhicules
+      if (isBoatPartyActivity(c.act?.name)) {
+        const totalGuests = Number(c.raw.boatPartyMen || 0) + Number(c.raw.boatPartyWomen || 0);
+        return totalGuests === 0;
+      }
       const isBuggyOrMoto = isBuggyActivity(c.act?.name) || isMotoCrossActivity(c.act?.name);
       if (isBuggyOrMoto) {
         const totalVehicles = Number(c.raw.buggySimple || 0) + Number(c.raw.buggyFamily || 0) +
@@ -918,6 +924,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         yamaha250: Number(c.raw.yamaha250 || 0),
         ktm640: Number(c.raw.ktm640 || 0),
         ktm530: Number(c.raw.ktm530 || 0),
+        boatPartyMen: Number(c.raw.boatPartyMen || 0),
+        boatPartyWomen: Number(c.raw.boatPartyWomen || 0),
         allerSimple: c.raw.allerSimple || false,
         allerRetour: c.raw.allerRetour || false,
         zeroTracasTransfertVisaSim: Number(c.raw.zeroTracasTransfertVisaSim || 0),
@@ -1653,6 +1661,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       <NumberInput
                         value={c.raw.children ?? ""}
                         onChange={(e) => setItem(idx, { children: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : c.act && isBoatPartyActivity(c.act.name) ? (
+                <div className="bg-gradient-to-br from-cyan-50/60 to-blue-50/40 border-2 border-cyan-200/60 rounded-xl p-4 md:p-5">
+                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">🎉 Boat Party — tarif homme / femme</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">Garçons ({getBoatPartyPrices().men}€)</label>
+                      <NumberInput
+                        value={c.raw.boatPartyMen ?? ""}
+                        onChange={(e) => setItem(idx, { boatPartyMen: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">Filles ({getBoatPartyPrices().women}€)</label>
+                      <NumberInput
+                        value={c.raw.boatPartyWomen ?? ""}
+                        onChange={(e) => setItem(idx, { boatPartyWomen: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
                       />
                     </div>
                   </div>

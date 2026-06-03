@@ -23,6 +23,8 @@ export function createBlankQuoteLine() {
     yamaha250: "",
     ktm640: "",
     ktm530: "",
+    boatPartyMen: "",
+    boatPartyWomen: "",
     allerSimple: false,
     allerRetour: false,
     zeroTracasTransfertVisaSim: "",
@@ -80,6 +82,8 @@ export function mergePublicSavedLineIntoQuoteItem(line) {
   base.yamaha250 = toVehicleCountField(line.yamaha250);
   base.ktm640 = toVehicleCountField(line.ktm640);
   base.ktm530 = toVehicleCountField(line.ktm530);
+  base.boatPartyMen = toVehicleCountField(line.boatPartyMen);
+  base.boatPartyWomen = toVehicleCountField(line.boatPartyWomen);
 
   base.cairePrivatif4pax = Boolean(line.cairePrivatif4pax);
   base.cairePrivatif5pax = Boolean(line.cairePrivatif5pax);

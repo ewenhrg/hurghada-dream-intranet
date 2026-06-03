@@ -399,6 +399,8 @@ export function PublicClientDevisPage() {
         buggySimple: toNumber(line.buggySimple),
         buggyFamily: toNumber(line.buggyFamily),
         yamaha250: toNumber(line.yamaha250),
+        boatPartyMen: toNumber(line.boatPartyMen),
+        boatPartyWomen: toNumber(line.boatPartyWomen),
         ktm640: toNumber(line.ktm640),
         ktm530: toNumber(line.ktm530),
         cairePrivatif4pax: Boolean(line.cairePrivatif4pax),

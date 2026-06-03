@@ -8,7 +8,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtras, computeSpeedBoatLineTotal, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtras, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -287,6 +287,8 @@ function QuoteCardComponent({
       baseItem.buggySimple = item.buggySimple ?? 0;
       baseItem.buggyFamily = item.buggyFamily ?? 0;
       baseItem.yamaha250 = item.yamaha250 ?? 0;
+      baseItem.boatPartyMen = item.boatPartyMen ?? 0;
+      baseItem.boatPartyWomen = item.boatPartyWomen ?? 0;
       baseItem.ktm640 = item.ktm640 ?? 0;
       baseItem.ktm530 = item.ktm530 ?? 0;
       
@@ -1468,6 +1470,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     yamaha250: "",
     ktm640: "",
     ktm530: "",
+    boatPartyMen: "",
+    boatPartyWomen: "",
     zeroTracasTransfertVisaSim: "",
     zeroTracasTransfertVisa: "",
     zeroTracasTransfertSim: "",
@@ -1551,6 +1555,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         const ktm530 = Number(it.ktm530 || 0);
         const prices = getMotoCrossPrices();
         lineTotal = yamaha250 * prices.yamaha250 + ktm640 * prices.ktm640 + ktm530 * prices.ktm530;
+      } else if (act && isBoatPartyActivity(act.name)) {
+        lineTotal = computeBoatPartyLineTotal(it.boatPartyMen, it.boatPartyWomen);
       } else if (act && isCairePrivatifActivity(act.name)) {
         // cas spécial CAIRE PRIVATIF : calcul basé sur les cases à cocher (4pax, 5pax, 6pax)
         const prices = getCairePrivatifPrices();
@@ -1623,6 +1629,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           // Pour MOTO CROSS, le supplément est calculé sur le nombre total de motos
           const totalMotos = Number(it.yamaha250 || 0) + Number(it.ktm640 || 0) + Number(it.ktm530 || 0);
           lineTotal += Number(transferInfo.surcharge || 0) * totalMotos;
+        } else if (act && isBoatPartyActivity(act.name)) {
+          const totalGuests = Number(it.boatPartyMen || 0) + Number(it.boatPartyWomen || 0);
+          lineTotal += Number(transferInfo.surcharge || 0) * totalGuests;
         } else {
           // Pour toutes les autres activités (y compris buggy), le supplément est calculé sur le nombre d'adultes + enfants (bébés gratuits)
           const adults = Number(it.adults || 0);
@@ -1733,6 +1742,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           yamaha250: Number(c.raw.yamaha250 || 0),
           ktm640: Number(c.raw.ktm640 || 0),
           ktm530: Number(c.raw.ktm530 || 0),
+          boatPartyMen: Number(c.raw.boatPartyMen || 0),
+          boatPartyWomen: Number(c.raw.boatPartyWomen || 0),
           zeroTracasTransfertVisaSim: Number(c.raw.zeroTracasTransfertVisaSim || 0),
           zeroTracasTransfertVisa: Number(c.raw.zeroTracasTransfertVisa || 0),
           zeroTracasTransfertSim: Number(c.raw.zeroTracasTransfertSim || 0),
@@ -1995,6 +2006,26 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   </div>
                 )}
                 {/* Champs spécifiques pour MotoCross - Modifiables par tous */}
+                {c.act && isBoatPartyActivity(c.act.name) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 mt-4 bg-cyan-50/60 p-5 md:p-6 rounded-xl border-2 border-cyan-300/70">
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🎉 Garçons ({getBoatPartyPrices().men}€)</p>
+                      <NumberInput
+                        value={c.raw.boatPartyMen ?? ""}
+                        onChange={(e) => setItem(idx, { boatPartyMen: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🎉 Filles ({getBoatPartyPrices().women}€)</p>
+                      <NumberInput
+                        value={c.raw.boatPartyWomen ?? ""}
+                        onChange={(e) => setItem(idx, { boatPartyWomen: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
+                      />
+                    </div>
+                  </div>
+                )}
                 {c.act && isMotoCrossActivity(c.act.name) && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 mt-4 bg-purple-50/60 p-5 md:p-6 rounded-xl border-2 border-purple-300/70">
                     <div>

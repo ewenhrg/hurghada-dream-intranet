@@ -10,6 +10,9 @@ import {
   getBuggyPrices,
   isMotoCrossActivity,
   getMotoCrossPrices,
+  isBoatPartyActivity,
+  computeBoatPartyLineTotal,
+  getBoatPartyPrices,
   isCairePrivatifActivity,
   getCairePrivatifPrices,
   isLouxorPrivatifActivity,
@@ -151,6 +154,10 @@ export function computePublicCatalogLineTotal(activity, line) {
     );
   }
 
+  if (isBoatPartyActivity(name)) {
+    return computeBoatPartyLineTotal(line?.boatPartyMen, line?.boatPartyWomen);
+  }
+
   if (isCairePrivatifActivity(name)) {
     const p = getCairePrivatifPrices();
     if (line?.cairePrivatif4pax) return p.pax4;
@@ -208,6 +215,10 @@ export function getPublicCatalogListFromPrice(activity) {
   if (isMotoCrossActivity(name)) {
     const p = getMotoCrossPrices();
     return { amount: Math.min(p.yamaha250, p.ktm640, p.ktm530), currency: activity.currency || "EUR" };
+  }
+  if (isBoatPartyActivity(name)) {
+    const p = getBoatPartyPrices();
+    return { amount: Math.min(p.men, p.women), currency: activity.currency || "EUR" };
   }
   if (isCairePrivatifActivity(name)) {
     const p = getCairePrivatifPrices();

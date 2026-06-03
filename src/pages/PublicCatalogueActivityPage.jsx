@@ -14,6 +14,8 @@ import {
   isCairePrivatifActivity,
   isLouxorPrivatifActivity,
   isMotoCrossActivity,
+  isBoatPartyActivity,
+  getBoatPartyPrices,
   isSpeedBoatActivity,
   isSpeedBoatSunsetActivity,
   allowsSpeedBoatIslandExtras,
@@ -42,6 +44,8 @@ const INITIAL_CATALOG_SPECIAL = {
   yamaha250: 0,
   ktm640: 0,
   ktm530: 0,
+  boatPartyMen: 0,
+  boatPartyWomen: 0,
   cairePrivatif4pax: false,
   cairePrivatif5pax: false,
   cairePrivatif6pax: false,
@@ -446,6 +450,10 @@ export function PublicCatalogueActivityPage({ activityId }) {
         "Une seule option payante au choix : dauphin (+20 €) ou une île / formule (baie, lunch…).",
       ].join("\n");
     }
+    if (isBoatPartyActivity(activity.name)) {
+      const p = getBoatPartyPrices();
+      return `Indiquez le nombre de garçons (${p.men} €) et de filles (${p.women} €) ci-dessous.`;
+    }
     if (isBuggyActivity(activity.name)) {
       return "Indiquez le nombre de buggys 2 personnes / 4 personnes ci-dessous (prix selon grille interne).";
     }
@@ -574,6 +582,42 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   </span>
                 </label>
               ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (isBoatPartyActivity(name)) {
+      const p = getBoatPartyPrices();
+      return (
+        <div className="grid grid-cols-2 gap-3 rounded-xl border border-cyan-200 bg-cyan-50/80 p-3">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">Garçons ({p.men} €)</label>
+            <select
+              className="w-full rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm"
+              value={special.boatPartyMen}
+              onChange={(e) => setSpecial((s) => ({ ...s, boatPartyMen: Number(e.target.value) }))}
+            >
+              {Array.from({ length: 21 }, (_, n) => n).map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">Filles ({p.women} €)</label>
+            <select
+              className="w-full rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm"
+              value={special.boatPartyWomen}
+              onChange={(e) => setSpecial((s) => ({ ...s, boatPartyWomen: Number(e.target.value) }))}
+            >
+              {Array.from({ length: 21 }, (_, n) => n).map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       );
@@ -846,6 +890,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
     if (isMotoCrossActivity(name)) {
       return special.yamaha250 + special.ktm640 + special.ktm530 === 0;
+    }
+    if (isBoatPartyActivity(name)) {
+      return special.boatPartyMen + special.boatPartyWomen === 0;
     }
     return false;
   }, [activity, lineTotal, special]);
