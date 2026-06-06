@@ -1,6 +1,5 @@
 import { NEIGHBORHOODS } from "./constants";
 import {
-  isBuggyActivity,
   isBoatPartyActivity,
   isMotoCrossActivity,
   isSpeedBoatActivity,
@@ -242,15 +241,7 @@ export function calculateTransferSurcharge(item) {
   }
   
   const surchargePerAdult = Number(item.transferSurchargePerAdult || 0);
-  
-  // Pour Buggy : multiplier par le nombre total de buggys (2 pers. + 4 pers.)
-  if (isBuggyActivity(item.activityName)) {
-    const buggySimple = Number(item.buggySimple || 0);
-    const buggyFamily = Number(item.buggyFamily || 0);
-    const totalBuggys = buggySimple + buggyFamily;
-    return surchargePerAdult * totalBuggys;
-  }
-  
+
   if (isBoatPartyActivity(item.activityName)) {
     const men = Number(item.boatPartyMen || 0);
     const women = Number(item.boatPartyWomen || 0);
@@ -266,7 +257,7 @@ export function calculateTransferSurcharge(item) {
     return surchargePerAdult * totalMotos;
   }
   
-  // Pour les autres activités : multiplier par le nombre d'adultes + enfants (bébés gratuits)
+  // Buggy, activités classiques, etc. : adultes + enfants (bébés gratuits)
   const adults = Number(item.adults || 0);
   const children = Number(item.children || 0);
   return surchargePerAdult * (adults + children);

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { cleanPhoneNumber, exportTicketsToCSV, saveLS } from "../utils";
+import { cleanPhoneNumber, exportTicketsToCSV, saveLS, calculateTransferSurcharge } from "../utils";
 import { PrimaryBtn, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
@@ -33,18 +33,7 @@ export function TicketPage({ quotes, setQuotes, user }) {
         quote.items.forEach((item) => {
           if (item.ticketNumber && item.ticketNumber.trim()) {
             // Calculer le prix du transfert
-            let transferTotal = 0;
-            if (item.transferSurchargePerAdult) {
-              if (item.activityName?.toLowerCase().includes("buggy")) {
-                const totalBuggys = (Number(item.buggySimple || 0) + Number(item.buggyFamily || 0));
-                transferTotal = item.transferSurchargePerAdult * totalBuggys;
-              } else {
-                // Supplément transfert pour adultes + enfants (bébés gratuits)
-                const adults = Number(item.adults || 0);
-                const children = Number(item.children || 0);
-                transferTotal = item.transferSurchargePerAdult * (adults + children);
-              }
-            }
+            const transferTotal = calculateTransferSurcharge(item);
             
             const activityPrice = Math.max(0, (item.lineTotal || 0) - transferTotal);
             const paymentMethodDisplay = (item.paymentMethod === "cash" || item.paymentMethod === "stripe") 
