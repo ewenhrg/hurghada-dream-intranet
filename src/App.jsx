@@ -46,7 +46,13 @@ import { PageTransition } from "./components/PageTransition";
 import { toast } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
-import { mergeActivitiesWhenRemoteShrunk, stripLocalOnlyActivityForStorage } from "./utils/activitiesBackup";
+import {
+  mergeActivitiesWhenRemoteShrunk,
+  mergeRemoteActivitiesWithLocal,
+  saveActivitiesAutoSnapshot,
+  stripLocalOnlyActivityForStorage,
+  LOCAL_ONLY_ACTIVITY_KEY,
+} from "./utils/activitiesBackup";
 import { normalizeCatalogImageUrlsFromDb } from "./utils/catalogContent";
 import { HD_PUBLIC_QUOTE_TO_DRAFT_EVENT } from "./utils/publicQuoteToDraft";
 
@@ -66,6 +72,8 @@ export default function App() {
   /** État brut Supabase Presence (canal partagé « qui est en ligne »). */
   const [presenceState, setPresenceState] = useState({});
   const intranetPresenceChannelRef = useRef(null);
+  /** Évite de spammer les toasts d'activités orphelines à chaque sync (60 s). */
+  const activityOrphanWarnRef = useRef({ key: "", at: 0 });
   const [usedDates, setUsedDates] = useState([]);
   const [showDatesModal, setShowDatesModal] = useState(false);
   const { language, setLanguage } = useLanguage();
@@ -409,83 +417,77 @@ export default function App() {
         .eq("site_key", SITE_KEY)
         .order("id", { ascending: false });
       if (!error && Array.isArray(data)) {
-        let finalRows = data;
-        let finalSource = `site_key=${SITE_KEY}`;
+        const finalRows = data;
 
-        // Comparer plusieurs sources et garder automatiquement la liste la plus complète.
-        const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
-        const checks = [];
-
-        if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
-          checks.push(
-            supabase
-              .from("activities")
-              .select(selectColumns)
-              .eq("site_key", fallbackSiteKey)
-              .order("id", { ascending: false })
-              .then((res) => ({ source: `site_key=${fallbackSiteKey}`, ...res }))
-          );
-        }
-
-        checks.push(
-          supabase
-            .from("activities")
-            .select(selectColumns)
-            .order("id", { ascending: false })
-            .then((res) => ({ source: "sans filtre site_key", ...res }))
-        );
-
-        const checkedResults = await Promise.all(checks);
-        checkedResults.forEach((result) => {
-          if (!result?.error && Array.isArray(result?.data) && result.data.length > finalRows.length) {
-            finalRows = result.data;
-            finalSource = result.source;
-          }
-        });
-
-        if (finalSource !== `site_key=${SITE_KEY}`) {
-          logger.warn(
-            `⚠️ Source activités basculée automatiquement: site_key=${SITE_KEY} (${data.length}) -> ${finalSource} (${finalRows.length}).`
-          );
-        }
-
-        // Source de vérité = Supabase (plusieurs PC travaillent dessus).
         const current = loadLS(LS_KEYS.activities, []);
+        saveActivitiesAutoSnapshot(current, SITE_KEY);
         if (finalRows.length > 0) {
           const supabaseActivities = mapActivitiesFromRows(finalRows);
           // Sécurité : ne jamais remplacer par une liste beaucoup plus courte (évite suppression en masse accidentelle).
           const minAcceptable = current.length > 0 ? Math.max(1, Math.floor(current.length * 0.8)) : 0;
           if (current.length > 0 && supabaseActivities.length < minAcceptable) {
-            const { merged, localOnlyAdded, usedMerge } = mergeActivitiesWhenRemoteShrunk(
+            const { merged: massMerged, localOnlyAdded, usedMerge } = mergeActivitiesWhenRemoteShrunk(
               finalRows,
               current,
               mapActivitiesFromRows
             );
+            const { merged, stats: massStats } = mergeRemoteActivitiesWithLocal(current, massMerged);
             logger.warn(
-              `🛡️ Sécurité: Supabase a ${supabaseActivities.length} activité(s), la session en avait ${current.length}. Fusion cache + base (comme pour les utilisateurs).`
+              `🛡️ Sécurité: Supabase a ${supabaseActivities.length} activité(s), la session en avait ${current.length}. Fusion cache + base (comme pour les utilisateurs). Orphelines: ${massStats.preservedOrphans}.`
             );
-            toast.warning(
-              `Supabase renvoie beaucoup moins d'activités (${supabaseActivities.length}) qu'attendu (${current.length}). ` +
-                (usedMerge && localOnlyAdded > 0
-                  ? `${localOnlyAdded} activité(s) récupérée(s) depuis le cache — ouvrez « Activités » puis « Réinsérer dans Supabase » pour les recréer en base. `
-                  : "Liste locale fusionnée avec la base. ") +
-                `Vérifiez la connexion ou restaurez une sauvegarde depuis la page Activités si besoin.`
-            );
+            const warnKey = `mass:${supabaseActivities.length}:${current.length}`;
+            const now = Date.now();
+            if (
+              activityOrphanWarnRef.current.key !== warnKey ||
+              now - activityOrphanWarnRef.current.at > 5 * 60 * 1000
+            ) {
+              activityOrphanWarnRef.current = { key: warnKey, at: now };
+              toast.warning(
+                `Supabase renvoie beaucoup moins d'activités (${supabaseActivities.length}) qu'attendu (${current.length}). ` +
+                  (usedMerge && localOnlyAdded > 0
+                    ? `${localOnlyAdded} activité(s) récupérée(s) depuis le cache — ouvrez « Activités » puis « Réinsérer dans Supabase » pour les recréer en base. `
+                    : "Liste locale fusionnée avec la base. ") +
+                  `Aucune activité n'a été supprimée automatiquement.`
+              );
+            }
             setActivities(merged);
             saveLS(LS_KEYS.activities, stripLocalOnlyActivityForStorage(merged));
             activitiesCache.set(cacheKey, merged);
           } else {
-            setActivities(supabaseActivities);
-            saveLS(LS_KEYS.activities, supabaseActivities);
-            activitiesCache.set(cacheKey, supabaseActivities);
+            const { merged: safeMerged, stats } = mergeRemoteActivitiesWithLocal(
+              current,
+              supabaseActivities
+            );
+            if (stats.preservedOrphans > 0) {
+              logger.warn(
+                `🛡️ ${stats.preservedOrphans} activité(s) absente(s) de Supabase — conservée(s) localement.`
+              );
+              const orphanNames = safeMerged
+                .filter((a) => a?.[LOCAL_ONLY_ACTIVITY_KEY] && a?.supabase_id)
+                .slice(0, 3)
+                .map((a) => a.name)
+                .join(", ");
+              const warnKey = `orphan:${stats.preservedOrphans}:${orphanNames}`;
+              const now = Date.now();
+              if (
+                activityOrphanWarnRef.current.key !== warnKey ||
+                now - activityOrphanWarnRef.current.at > 5 * 60 * 1000
+              ) {
+                activityOrphanWarnRef.current = { key: warnKey, at: now };
+                toast.warning(
+                  `${stats.preservedOrphans} activité(s) manquante(s) en base (${orphanNames}${stats.preservedOrphans > 3 ? "…" : ""}). ` +
+                    `Conservée(s) localement — page Activités → « Réinsérer dans Supabase ».`
+                );
+              }
+            }
+            setActivities(safeMerged);
+            saveLS(LS_KEYS.activities, stripLocalOnlyActivityForStorage(safeMerged));
+            activitiesCache.set(cacheKey, safeMerged);
           }
         } else {
-          logger.warn(`📦 Supabase: aucune activité pour ${finalSource}. Conservation des ${current.length} activité(s) actuelles.`);
-          if (current.length === 0) {
-            setActivities([]);
-            saveLS(LS_KEYS.activities, []);
-          }
-          // Sinon on ne touche pas à la liste (évite suppression automatique)
+          logger.warn(
+            `📦 Supabase: aucune activité pour site_key=${SITE_KEY}. Conservation des ${current.length} activité(s) actuelles.`
+          );
         }
       } else if (error) {
         logger.warn("⚠️ Erreur lors de la récupération des activités depuis Supabase:", error);

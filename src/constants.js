@@ -102,6 +102,8 @@ export function getQuotesRealtimeSiteKeyFilter() {
 
 export const LS_KEYS = {
   activities: "hd_activities",
+  /** Dernière sauvegarde automatique avant sync Supabase (récupération après perte). */
+  activitiesAutoSnapshot: "hd_activities_autosnapshot",
   quotes: "hd_quotes",
   quoteForm: "hd_quote_form", // Formulaire de devis en cours
   activityForm: "hd_activity_form", // Formulaire d'activité en cours

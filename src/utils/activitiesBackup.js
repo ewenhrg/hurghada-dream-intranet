@@ -3,6 +3,8 @@
  * Format JSON avec métadonnées pour éviter les pertes de données
  */
 
+import { LS_KEYS } from "../constants.js";
+
 export const BACKUP_VERSION = 1;
 export const BACKUP_FILENAME_PREFIX = "hd_activities_backup";
 export const CATALOG_BACKUP_FILENAME_PREFIX = "hd_catalog_backup";
@@ -39,6 +41,129 @@ export function stripLocalOnlyActivityForStorage(list) {
     const { [LOCAL_ONLY_ACTIVITY_KEY]: _, ...rest } = a;
     return rest;
   });
+}
+
+/**
+ * Sauvegarde automatique du cache activités avant une sync Supabase.
+ * @param {Array} activities
+ * @param {string} siteKey
+ */
+export function saveActivitiesAutoSnapshot(activities, siteKey) {
+  try {
+    const list = Array.isArray(activities) ? activities : [];
+    if (list.length === 0) return;
+    const payload = {
+      version: BACKUP_VERSION,
+      savedAt: new Date().toISOString(),
+      site_key: siteKey,
+      count: list.length,
+      activities: stripLocalOnlyActivityForStorage(list),
+    };
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(LS_KEYS.activitiesAutoSnapshot, JSON.stringify(payload));
+    }
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+/**
+ * Fusionne Supabase → cache local sans supprimer d'activités.
+ * Les lignes absentes de la réponse remote sont conservées (marquées _localOnly si elles avaient un supabase_id).
+ * @param {Array} cachedActivities
+ * @param {Array} remoteMapped — activités déjà mappées depuis Supabase
+ * @returns {{ merged: Array, stats: object }}
+ */
+export function mergeRemoteActivitiesWithLocal(cachedActivities, remoteMapped) {
+  const prev = Array.isArray(cachedActivities) ? cachedActivities : [];
+  const remote = Array.isArray(remoteMapped) ? remoteMapped : [];
+
+  const remoteById = new Map();
+  for (const a of remote) {
+    if (a?.supabase_id != null && a.supabase_id !== "") {
+      remoteById.set(String(a.supabase_id), a);
+    }
+  }
+
+  const seenRemoteIds = new Set();
+  const merged = [];
+  let updated = 0;
+  let preservedOrphans = 0;
+  let orphansMarkedLocalOnly = 0;
+
+  for (const local of prev) {
+    if (!local) continue;
+    const rid =
+      local.supabase_id != null && local.supabase_id !== "" ? String(local.supabase_id) : null;
+
+    if (rid && remoteById.has(rid)) {
+      const remoteAct = remoteById.get(rid);
+      seenRemoteIds.add(rid);
+      const { [LOCAL_ONLY_ACTIVITY_KEY]: _lo, ...restLocal } = local;
+      merged.push({
+        ...restLocal,
+        ...remoteAct,
+        id: local.id,
+        supabase_id: remoteAct.supabase_id ?? local.supabase_id,
+      });
+      updated++;
+    } else if (rid && !remoteById.has(rid)) {
+      preservedOrphans++;
+      const { [LOCAL_ONLY_ACTIVITY_KEY]: _lo, ...rest } = local;
+      merged.push({ ...rest, [LOCAL_ONLY_ACTIVITY_KEY]: true });
+      orphansMarkedLocalOnly++;
+    } else {
+      merged.push(local);
+    }
+  }
+
+  let addedFromRemote = 0;
+  const mergedRemoteIds = new Set(
+    merged
+      .map((a) => (a?.supabase_id != null && a.supabase_id !== "" ? String(a.supabase_id) : null))
+      .filter(Boolean)
+  );
+  const seenKeys = new Set(merged.map((a) => activityDedupeKey(a)));
+
+  for (const remoteAct of remote) {
+    const rid =
+      remoteAct?.supabase_id != null && remoteAct.supabase_id !== ""
+        ? String(remoteAct.supabase_id)
+        : null;
+    if (rid && (seenRemoteIds.has(rid) || mergedRemoteIds.has(rid))) continue;
+    const k = activityDedupeKey(remoteAct);
+    if (seenKeys.has(k)) continue;
+    merged.push(remoteAct);
+    seenKeys.add(k);
+    if (rid) mergedRemoteIds.add(rid);
+    addedFromRemote++;
+  }
+
+  return {
+    merged,
+    stats: {
+      remoteCount: remote.length,
+      localCount: prev.length,
+      mergedCount: merged.length,
+      updated,
+      addedFromRemote,
+      preservedOrphans,
+      orphansMarkedLocalOnly,
+    },
+  };
+}
+
+export function loadActivitiesAutoSnapshot() {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    const raw = localStorage.getItem(LS_KEYS.activitiesAutoSnapshot);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.activities) || data.activities.length === 0) return null;
+    return data;
+  } catch {
+    return null;
+  }
 }
 
 /**

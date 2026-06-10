@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
-import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, CATEGORIES, WEEKDAYS } from "../constants";
 import { uuid, currency, emptyTransfers, mergeTransfers, saveLS, loadLS } from "../utils";
 import {
@@ -23,6 +23,7 @@ import {
   dedupeActivities,
   LOCAL_ONLY_ACTIVITY_KEY,
   stripLocalOnlyActivityForStorage,
+  loadActivitiesAutoSnapshot,
 } from "../utils/activitiesBackup";
 import { activitiesTableHasBabiesForbiddenColumn } from "../config/supabaseActivitiesSchema";
 import { canAccessHotelsPage } from "../constants/permissions.js";
@@ -172,7 +173,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   const refreshRemoteActivityIds = useCallback(async () => {
     if (!supabase) return;
     try {
-      const selectColumns = "id, name, category, site_key";
+      const selectColumns = "id";
       const { data: primaryRows, error: fetchError } = await supabase
         .from("activities")
         .select(selectColumns)
@@ -183,28 +184,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         return;
       }
 
-      let supabaseActivities = primaryRows || [];
-      const checks = [];
-      const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
-      if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
-        checks.push(
-          supabase
-            .from("activities")
-            .select(selectColumns)
-            .eq("site_key", fallbackSiteKey)
-            .then((res) => res)
-        );
-      }
-      checks.push(supabase.from("activities").select(selectColumns).then((res) => res));
-
-      const results = await Promise.all(checks);
-      results.forEach((res) => {
-        if (!res?.error && Array.isArray(res?.data) && res.data.length > supabaseActivities.length) {
-          supabaseActivities = res.data;
-        }
-      });
-
-      setRemoteSupabaseIdSet(new Set((supabaseActivities || []).map((r) => String(r.id))));
+      setRemoteSupabaseIdSet(new Set((primaryRows || []).map((r) => String(r.id))));
     } catch (e) {
       logger.warn("refreshRemoteActivityIds:", e);
     }
@@ -662,46 +642,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         return;
       }
 
-      let supabaseActivities = primaryRows || [];
-      let sourceLabel = `site_key=${SITE_KEY}`;
-      let sourceSiteKey = SITE_KEY;
-
-      const checks = [];
-      const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
-      if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
-        checks.push(
-          supabase
-            .from("activities")
-            .select(selectColumns)
-            .eq("site_key", fallbackSiteKey)
-            .then((res) => ({ sourceLabel: `site_key=${fallbackSiteKey}`, sourceSiteKey: fallbackSiteKey, ...res }))
-        );
-      }
-      checks.push(
-        supabase
-          .from("activities")
-          .select(selectColumns)
-          .then((res) => ({ sourceLabel: "sans filtre site_key", sourceSiteKey: null, ...res }))
-      );
-
-      const results = await Promise.all(checks);
-      results.forEach((res) => {
-        if (!res?.error && Array.isArray(res?.data) && res.data.length > supabaseActivities.length) {
-          supabaseActivities = res.data;
-          sourceLabel = res.sourceLabel;
-          sourceSiteKey = res.sourceSiteKey;
-        }
-      });
-
-      // Si source "sans filtre", prendre le site_key majoritaire comme clé de sync.
-      if (!sourceSiteKey && supabaseActivities.length > 0) {
-        const counts = new Map();
-        supabaseActivities.forEach((a) => {
-          const key = a.site_key || "";
-          counts.set(key, (counts.get(key) || 0) + 1);
-        });
-        sourceSiteKey = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || SITE_KEY;
-      }
+      const supabaseActivities = primaryRows || [];
+      const sourceLabel = `site_key=${SITE_KEY}`;
+      const sourceSiteKey = SITE_KEY;
 
       logger.log(`☁️ Activités dans Supabase (${sourceLabel}): ${supabaseActivities?.length || 0}`);
 
@@ -888,6 +831,46 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       toast.error("Erreur lors de la création de la sauvegarde.");
     }
   }, []);
+
+  const handleRestoreAutoSnapshot = useCallback(() => {
+    const snapshot = loadActivitiesAutoSnapshot();
+    if (!snapshot) {
+      toast.warning("Aucune sauvegarde automatique trouvée (créée avant chaque sync Supabase).");
+      return;
+    }
+    const count = snapshot.activities.length;
+    let dateLabel = "date inconnue";
+    if (snapshot.savedAt) {
+      try {
+        dateLabel = new Date(snapshot.savedAt).toLocaleString("fr-FR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+    if (
+      !window.confirm(
+        `Restaurer ${count} activité(s) depuis la sauvegarde auto du ${dateLabel} ?\n\n` +
+          "Utile si des activités ont disparu. Ensuite utilisez « Réinsérer dans Supabase » si besoin."
+      )
+    ) {
+      return;
+    }
+    const { activities: deduped, removed } = dedupeActivities(snapshot.activities);
+    setActivities(deduped);
+    saveLS(LS_KEYS.activities, deduped);
+    logger.log(
+      `📂 Restauration auto-snapshot: ${deduped.length} activité(s)${removed > 0 ? ` (${removed} doublon(s) retiré(s))` : ""}`
+    );
+    toast.success(
+      `✅ ${deduped.length} activité(s) restaurée(s) depuis la sauvegarde auto (${dateLabel}).`
+    );
+  }, [setActivities]);
 
   // Restauration depuis un fichier de sauvegarde
   const handleRestoreClick = useCallback(() => {
@@ -1361,6 +1344,12 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 border-0 shadow-lg shadow-amber-500/25"
               >
                 💾 Sauvegarder tout
+              </PrimaryBtn>
+              <PrimaryBtn
+                onClick={handleRestoreAutoSnapshot}
+                className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 border-0 shadow-lg shadow-violet-500/25"
+              >
+                🛡️ Restaurer sauvegarde auto
               </PrimaryBtn>
               <>
                 <input
