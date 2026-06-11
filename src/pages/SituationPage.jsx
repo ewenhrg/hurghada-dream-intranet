@@ -518,7 +518,7 @@ export function SituationPage({ activities = [], user }) {
           });
           // Convertir les dates et heures pour chaque ligne et filtrer les colonnes à ignorer
           // Colonnes à ignorer : J "time", L "Lieux", M "Option", N (sans nom ou "Column_14")
-          const columnsToIgnoreNames = ["time", "lieux", "option"];
+          const columnsToIgnoreNames = ["lieux", "option"];
           jsonData = fallbackData.map(row => {
             const convertedRow = {};
             Object.keys(row).forEach(key => {

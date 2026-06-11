@@ -23,13 +23,85 @@ Hurghada Dream`;
 }
 
 /**
+ * Remplacer les variables et lignes à trous (Hôtel : ___) dans un template
+ * @param {string} template
+ * @param {Object} data
+ * @param {string} formLink
+ * @returns {string}
+ */
+function applyMessagePlaceholders(template, data, formLink) {
+  const name = data.name || "Client";
+  const trip = data.trip || "l'activité";
+  const date = data.date || "la date";
+  const time = String(data.time || "").trim();
+  const hotel = String(data.hotel || "").trim();
+  const roomNo = String(data.roomNo || "").trim();
+  const timeDisplay = time || "à confirmer";
+  const hotelDisplay = hotel || "à confirmer";
+
+  const variableMap = {
+    name,
+    nom: name,
+    trip,
+    activite: trip,
+    activité: trip,
+    date,
+    time: timeDisplay,
+    heure: timeDisplay,
+    heure_depart: timeDisplay,
+    "heure départ": timeDisplay,
+    pickup: timeDisplay,
+    pickup_time: timeDisplay,
+    hotel: hotelDisplay,
+    hôtel: hotelDisplay,
+    roomNo,
+    chambre: roomNo,
+    adults: String(data.adults || 0),
+    children: String(data.children || 0),
+    infants: String(data.infants || 0),
+    formLink,
+  };
+
+  let message = template;
+
+  for (const [key, value] of Object.entries(variableMap)) {
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    message = message.replace(new RegExp(`\\{${escaped}\\}`, "gi"), value);
+  }
+
+  // Modèles avec lignes à trous : "Hôtel : ___", "Heure de départ : _____"
+  message = message.replace(/H[ôo]tel\s*:\s*_{1,}/gi, `Hôtel : ${hotelDisplay}`);
+  message = message.replace(
+    /Heure de d[ée]part\s*:\s*_{1,}/gi,
+    `Heure de départ : ${timeDisplay}`
+  );
+  message = message.replace(
+    /Heure de prise en charge\s*:\s*_{1,}/gi,
+    `Heure de prise en charge : ${timeDisplay}`
+  );
+  message = message.replace(
+    /(?:Pick-up|Pickup|Prise en charge)\s*:\s*_{1,}/gi,
+    (match) => match.replace(/_{1,}/, timeDisplay)
+  );
+  message = message.replace(/Heure\s*:\s*_{1,}/gi, `Heure : ${timeDisplay}`);
+  message = message.replace(/Activit[ée]\s*:\s*_{1,}/gi, `Activité : ${trip}`);
+
+  // Lignes vides après les deux-points (sans underscore)
+  if (hotel) {
+    message = message.replace(/H[ôo]tel\s*:\s*(?=\n|$)/gim, `Hôtel : ${hotel}`);
+  }
+  if (time) {
+    message = message.replace(/Heure de d[ée]part\s*:\s*(?=\n|$)/gim, `Heure de départ : ${time}`);
+  }
+
+  return message;
+}
+
+/**
  * Générer un lien de formulaire unique pour un client (évite la détection de spam WhatsApp)
- * @param {Object} data - Les données du client
  * @returns {string} - Le lien unique avec token
  */
 function generateUniqueFormLink() {
-  // Générer un token unique basé sur les données du client pour avoir un lien différent pour chacun
-  // Cela évite que WhatsApp détecte des liens identiques comme du spam
   const token = generateRequestToken();
   return generateRequestLink(token);
 }
@@ -84,22 +156,9 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
     }
     
     // Générer un lien unique pour ce client (évite la détection de spam WhatsApp)
-    const uniqueFormLink = generateUniqueFormLink(data);
-    
-    // Remplacer les variables dans le template
-    let message = template
-      .replace(/\{name\}/g, data.name || "Client")
-      .replace(/\{trip\}/g, data.trip || "l'activité")
-      .replace(/\{date\}/g, data.date || "la date")
-      .replace(/\{time\}/g, data.time || "l'heure")
-      .replace(/\{hotel\}/g, data.hotel || "")
-      .replace(/\{roomNo\}/g, data.roomNo || "")
-      .replace(/\{adults\}/g, String(data.adults || 0))
-      .replace(/\{children\}/g, String(data.children || 0))
-      .replace(/\{infants\}/g, String(data.infants || 0))
-      .replace(/\{formLink\}/g, uniqueFormLink);
-    
-    // Ajouter le message RDV en haut du message
+    const uniqueFormLink = generateUniqueFormLink();
+    const message = applyMessagePlaceholders(template, data, uniqueFormLink);
+
     return rdvMessageTop + message;
   }
   

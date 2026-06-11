@@ -3,7 +3,7 @@ import { GhostBtn, PrimaryBtn, TextInput } from "../ui";
 import { getDefaultTemplate } from "../../utils/messageGenerator";
 
 const VARIABLES_HINT =
-  "{name}, {trip}, {date}, {time}, {hotel}, {roomNo}, {adults}, {children}, {infants}, {formLink}";
+  "{hotel} ou Hôtel : ___, {time} ou Heure de départ : ___, {trip} ou Activité : ___, {name}, {date}, {formLink}";
 
 export default function MessageTemplatesModal({
   activityNames = [],
@@ -80,7 +80,14 @@ export default function MessageTemplatesModal({
             className="w-full text-base text-gray-900"
           />
           <p className="mt-2 text-sm text-gray-600">
-            Variables : <code className="rounded bg-gray-200 px-1">{VARIABLES_HINT}</code>
+            Remplissage auto depuis l&apos;Excel :{" "}
+            <code className="rounded bg-gray-200 px-1">{VARIABLES_HINT}</code>
+          </p>
+          <p className="mt-1 text-sm text-gray-700">
+            Exemple : laissez{" "}
+            <code className="rounded bg-gray-200 px-1">Hôtel : ___</code> et{" "}
+            <code className="rounded bg-gray-200 px-1">Heure de départ : _____</code> — le logiciel
+            mettra l&apos;hôtel et l&apos;heure de prise en charge de chaque client.
           </p>
         </div>
 
