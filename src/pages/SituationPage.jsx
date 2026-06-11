@@ -1,6 +1,6 @@
-import { useState, useMemo, useRef, useEffect, useCallback, Suspense, lazy, memo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback, Suspense, lazy } from "react";
 import * as XLSX from "xlsx";
-import { PrimaryBtn, GhostBtn, TextInput } from "../components/ui";
+import { PrimaryBtn, GhostBtn, Section } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { LS_KEYS, SITE_KEY } from "../constants";
@@ -15,241 +15,13 @@ import {
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ExcelUploadSection } from "../components/situation/ExcelUploadSection";
+import { TransferClientCard, CARD_HEIGHT } from "../components/situation/TransferClientCard";
 import { AutoSendingIndicator } from "../components/situation/AutoSendingIndicator";
 import { MessagePreviewSection } from "../components/situation/MessagePreviewSection";
 import { SendLogSection } from "../components/situation/SendLogSection";
 
 const MessageTemplatesModal = lazy(() => import("../components/situation/MessageTemplatesModal"));
 const HotelsModal = lazy(() => import("../components/situation/HotelsModal"));
-
-const GRID_TEMPLATE =
-  "100px minmax(150px,1.2fr) minmax(170px,1fr) minmax(140px,1fr) 80px minmax(130px,1fr) 90px 56px 96px 108px";
-const ROW_HEIGHT = 52;
-const TABLE_HEADERS = [
-  "Date",
-  "Nom",
-  "Téléphone",
-  "Hôtel",
-  "Ch.",
-  "Activité",
-  "Heure",
-  "⛵",
-  "Statut",
-  "Envoi",
-];
-
-const EditableCell = memo(({ row, field, value, isEditing, setEditingCell, handleCellEdit, className = "" }) => {
-  if (isEditing) {
-    return (
-      <TextInput
-        value={value ?? ""}
-        onChange={(e) => handleCellEdit(row.id, field, e.target.value)}
-        onBlur={() => setEditingCell(null)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") setEditingCell(null);
-        }}
-        className="w-full px-2 py-1.5 text-sm"
-        autoFocus
-      />
-    );
-  }
-
-  return (
-    <span
-      className={`inline-flex min-h-[28px] cursor-pointer items-center rounded-lg px-2 py-1 transition-colors hover:bg-slate-100 ${className}`}
-      onClick={() => setEditingCell({ rowId: row.id, field })}
-    >
-      {value || "—"}
-    </span>
-  );
-});
-EditableCell.displayName = "EditableCell";
-
-const VirtualizedRow = memo(({ index, style, data }) => {
-  const {
-    excelData,
-    editingCell,
-    setEditingCell,
-    handleCellEdit,
-    handleToggleMarina,
-    rowsWithMarina,
-    handleSendSingleMessage,
-  } = data;
-
-  const row = excelData[index];
-  if (!row) return null;
-
-  const isEditing = (field) =>
-    editingCell?.rowId === row.id && editingCell?.field === field;
-
-  const rowClasses = [
-    "grid items-center border-b border-slate-100 transition-colors",
-    index % 2 === 0 ? "bg-white" : "bg-slate-50/70",
-    "hover:bg-[#25D366]/5",
-  ];
-
-  if (row.messageSent) {
-    rowClasses.push("bg-emerald-50/80");
-  } else if (!row.phoneValid) {
-    rowClasses.push("bg-rose-50/60");
-  }
-
-  const cellBase = "px-3 py-2 text-sm text-slate-700";
-
-  return (
-    <div
-      style={{
-        ...style,
-        width: "100%",
-        display: "grid",
-        gridTemplateColumns: GRID_TEMPLATE,
-      }}
-      className={rowClasses.join(" ")}
-    >
-      <div className={cellBase}>
-        <EditableCell
-          row={row}
-          field="date"
-          value={row.date}
-          isEditing={isEditing("date")}
-          setEditingCell={setEditingCell}
-          handleCellEdit={handleCellEdit}
-        />
-      </div>
-      <div className={`${cellBase} font-semibold text-slate-900`}>
-        <EditableCell
-          row={row}
-          field="name"
-          value={row.name}
-          isEditing={isEditing("name")}
-          setEditingCell={setEditingCell}
-          handleCellEdit={handleCellEdit}
-        />
-      </div>
-      <div className={cellBase}>
-        {isEditing("phone") ? (
-          <TextInput
-            value={row.phone}
-            onChange={(e) => handleCellEdit(row.id, "phone", e.target.value)}
-            onBlur={() => setEditingCell(null)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") setEditingCell(null);
-            }}
-            className="w-full px-2 py-1.5 text-sm"
-            autoFocus
-          />
-        ) : (
-          <span
-            className={`inline-flex min-h-[28px] cursor-pointer items-center rounded-lg px-2 py-1 font-mono text-sm tracking-wide transition-colors hover:bg-slate-100 ${
-              !row.phoneValid
-                ? "font-bold text-rose-600"
-                : row.phone
-                ? "font-bold text-[#128C7E]"
-                : "font-semibold text-amber-600"
-            }`}
-            onClick={() => setEditingCell({ rowId: row.id, field: "phone" })}
-          >
-            {row.phone ? (
-              <>
-                {row.phone}
-                {!row.phoneValid && row.phoneError && (
-                  <span className="ml-1 text-xs font-medium text-rose-500" title={row.phoneError}>
-                    ⚠
-                  </span>
-                )}
-              </>
-            ) : (
-              "Non trouvé"
-            )}
-          </span>
-        )}
-      </div>
-      <div className={cellBase}>
-        <EditableCell
-          row={row}
-          field="hotel"
-          value={row.hotel}
-          isEditing={isEditing("hotel")}
-          setEditingCell={setEditingCell}
-          handleCellEdit={handleCellEdit}
-        />
-      </div>
-      <div className={cellBase}>
-        <EditableCell
-          row={row}
-          field="roomNo"
-          value={row.roomNo}
-          isEditing={isEditing("roomNo")}
-          setEditingCell={setEditingCell}
-          handleCellEdit={handleCellEdit}
-          className="text-slate-500"
-        />
-      </div>
-      <div className={`${cellBase} font-medium text-indigo-700`}>
-        <EditableCell
-          row={row}
-          field="trip"
-          value={row.trip}
-          isEditing={isEditing("trip")}
-          setEditingCell={setEditingCell}
-          handleCellEdit={handleCellEdit}
-        />
-      </div>
-      <div className={`${cellBase} font-bold text-slate-900`}>
-        <EditableCell
-          row={row}
-          field="time"
-          value={row.time}
-          isEditing={isEditing("time")}
-          setEditingCell={setEditingCell}
-          handleCellEdit={handleCellEdit}
-        />
-      </div>
-      <div className="flex items-center justify-center px-2 py-2">
-        <label className="flex cursor-pointer items-center justify-center">
-          <input
-            type="checkbox"
-            checked={rowsWithMarina.has(row.id)}
-            onChange={() => handleToggleMarina(row.id)}
-            className="h-4 w-4 rounded border-slate-300 text-[#128C7E] focus:ring-[#25D366]/30"
-            title="Bateau garé à la marina de cet hôtel"
-          />
-        </label>
-      </div>
-      <div className="px-2 py-2 text-center">
-        {row.messageSent ? (
-          <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-            ✓ Envoyé
-          </span>
-        ) : !row.phoneValid ? (
-          <span className="inline-flex rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">
-            À corriger
-          </span>
-        ) : (
-          <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-            Prêt
-          </span>
-        )}
-      </div>
-      <div className="flex items-center justify-center px-2 py-2">
-        {row.phone && row.phoneValid && !row.messageSent ? (
-          <button
-            onClick={() => handleSendSingleMessage(row)}
-            className="rounded-full bg-[#25D366] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1da851] active:scale-95"
-            title="Envoyer le message WhatsApp"
-          >
-            WhatsApp
-          </button>
-        ) : row.messageSent ? (
-          <span className="text-xs font-semibold text-emerald-600">✓</span>
-        ) : (
-          <span className="text-xs text-slate-300">—</span>
-        )}
-      </div>
-    </div>
-  );
-});
-VirtualizedRow.displayName = "VirtualizedRow";
 
 export function SituationPage({ activities = [], user }) {
   const [excelData, setExcelData] = useState(() => loadLS(LS_KEYS.situationTransferRows, []));
@@ -1054,7 +826,7 @@ export function SituationPage({ activities = [], user }) {
   const rowVirtualizer = useVirtualizer({
     count: excelData.length,
     getScrollElement: () => tableBodyRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => CARD_HEIGHT,
     overscan: 8,
   });
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -1714,93 +1486,85 @@ export function SituationPage({ activities = [], user }) {
   const hasWorkData = excelData.length > 0;
 
   const headerButtons = (
-    <div className="flex gap-2 md:gap-3 flex-wrap">
+    <div className="flex flex-wrap gap-2">
       {hasWorkData && (
-        <GhostBtn
-          onClick={() => fileInputRef.current?.click()}
-          variant="info"
-          className="text-sm md:text-base px-4 md:px-5 py-2 md:py-2.5 font-semibold"
-        >
-          📂 Changer de fichier
+        <GhostBtn onClick={() => fileInputRef.current?.click()} variant="info">
+          Changer de fichier
         </GhostBtn>
       )}
-      <GhostBtn
-        onClick={() => setShowHotelsModal(true)}
-        variant="info"
-        className="text-sm md:text-base px-4 md:px-5 py-2 md:py-2.5 font-semibold"
-      >
-        🏨 Hôtels extérieur
+      <GhostBtn onClick={() => setShowHotelsModal(true)} variant="info">
+        Hôtels extérieur
       </GhostBtn>
-      <GhostBtn
-        onClick={() => setShowConfigModal(true)}
-        variant="primary"
-        className="text-sm md:text-base px-4 md:px-5 py-2 md:py-2.5 font-semibold"
-      >
-        ⚙️ Configurer les messages
+      <GhostBtn onClick={() => setShowConfigModal(true)} variant="primary">
+        Messages
       </GhostBtn>
     </div>
   );
 
-  const dataTable = hasWorkData ? (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_40px_-12px_rgba(0,0,0,0.25)]">
-      <div
-        className="grid shrink-0 border-b border-slate-200 bg-slate-900 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400"
-        style={{ gridTemplateColumns: GRID_TEMPLATE }}
-      >
-        {TABLE_HEADERS.map((header) => (
-          <div key={header} className="px-3 py-3">
-            {header}
-          </div>
-        ))}
+  const statsBar = hasWorkData ? (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
+        <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+        <p className="text-sm font-medium text-slate-600">Clients</p>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto" ref={tableBodyRef}>
-        <div
-          style={{
-            height: `${rowVirtualizer.getTotalSize()}px`,
-            position: "relative",
-          }}
-        >
-          {virtualRows.map((virtualRow) => (
-            <VirtualizedRow
-              key={virtualRow.key}
-              index={virtualRow.index}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${virtualRow.start}px)`,
-                height: `${virtualRow.size}px`,
-              }}
-              data={listItemData}
-            />
-          ))}
-        </div>
+      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center">
+        <p className="text-2xl font-bold text-blue-700">{stats.withPhone}</p>
+        <p className="text-sm font-medium text-slate-600">Prêts à envoyer</p>
+      </div>
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center">
+        <p className="text-2xl font-bold text-amber-700">{stats.withoutPhone}</p>
+        <p className="text-sm font-medium text-slate-600">À corriger</p>
+      </div>
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
+        <p className="text-2xl font-bold text-emerald-700">{stats.sent}</p>
+        <p className="text-sm font-medium text-slate-600">Envoyés</p>
+      </div>
+    </div>
+  ) : null;
+
+  const clientList = hasWorkData ? (
+    <div
+      className="min-h-[420px] flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-100 p-2 md:min-h-[500px]"
+      ref={tableBodyRef}
+    >
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          position: "relative",
+        }}
+      >
+        {virtualRows.map((virtualRow) => (
+          <TransferClientCard
+            key={virtualRow.key}
+            row={excelData[virtualRow.index]}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              transform: `translateY(${virtualRow.start}px)`,
+              height: `${virtualRow.size}px`,
+            }}
+            data={listItemData}
+          />
+        ))}
       </div>
     </div>
   ) : null;
 
   const actionButtons = hasWorkData ? (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-slate-400">
-        {stats.withPhone} client{stats.withPhone > 1 ? "s" : ""} prêt{stats.withPhone > 1 ? "s" : ""} · {stats.sent} envoyé{stats.sent > 1 ? "s" : ""}
-      </p>
-      <div className="flex flex-wrap justify-end gap-2 md:gap-3">
-        <GhostBtn
-          onClick={handlePreviewMessages}
-          disabled={sending || autoSending}
-          className="text-sm px-4 py-2"
-        >
-          Prévisualiser
-        </GhostBtn>
-        <PrimaryBtn
-          onClick={handleAutoSendMessages}
-          disabled={sending || autoSending || stats.withPhone === 0}
-          className="rounded-full border-0 bg-[#25D366] px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-[#1da851]"
-        >
-          {autoSending ? "Envoi en cours..." : "Envoyer tout via WhatsApp"}
-        </PrimaryBtn>
-      </div>
+    <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-4">
+      <GhostBtn onClick={handlePreviewMessages} disabled={sending || autoSending}>
+        Voir les messages
+      </GhostBtn>
+      <PrimaryBtn
+        onClick={handleAutoSendMessages}
+        disabled={sending || autoSending || stats.withPhone === 0}
+        variant="success"
+        className="px-6 py-3 text-base font-bold"
+      >
+        {autoSending ? "Envoi en cours..." : `Envoyer tout (${stats.withPhone})`}
+      </PrimaryBtn>
     </div>
   ) : null;
 
@@ -1876,85 +1640,37 @@ export function SituationPage({ activities = [], user }) {
     </>
   );
 
-  if (hasWorkData) {
-    return (
-      <div className="flex min-h-[calc(100vh-120px)] w-full flex-col gap-3">
-        <div className="rounded-2xl border border-white/10 bg-[#0b141a] px-4 py-4 shadow-xl md:px-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-lg">💬</span>
-                <h2 className="text-xl font-bold text-white md:text-2xl">Transferts WhatsApp</h2>
-              </div>
-              <p className="mt-1.5 text-sm text-slate-400">
-                {sharedMeta.fileName || "Fichier importé"}
-                {sharedMeta.importedBy ? ` · par ${sharedMeta.importedBy}` : ""}
-                {sharedMeta.updatedAt
-                  ? ` · ${new Date(sharedMeta.updatedAt).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`
-                  : ""}
-              </p>
-            </div>
-            {headerButtons}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
-              {stats.total} lignes
-            </span>
-            <span className="rounded-full bg-[#25D366]/20 px-3 py-1 text-xs font-semibold text-[#25D366]">
-              {stats.withPhone} avec tel.
-            </span>
-            {stats.withoutPhone > 0 && (
-              <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-400">
-                {stats.withoutPhone} sans tel.
-              </span>
-            )}
-            <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-400">
-              {stats.sent} envoyé{stats.sent > 1 ? "s" : ""}
-            </span>
-          </div>
-        </div>
-
-        {dataTable}
-
-        {autoSending && (
-          <AutoSendingIndicator
-            currentIndex={currentIndex}
-            remainingCount={remainingCount}
-            onStop={handleStopAutoSending}
-          />
-        )}
-
-        <div className="sticky bottom-0 z-10 rounded-2xl border border-white/10 bg-[#0b141a]/95 px-4 py-3 shadow-xl backdrop-blur-md">
-          {actionButtons}
-        </div>
-
-        <SendLogSection sendLog={sendLog} />
-        {modalsAndOverlays}
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto max-w-2xl space-y-8 py-4 md:py-8">
-      <div className="text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#25D366] text-3xl shadow-lg">
-          💬
-        </div>
-        <h2 className="text-2xl font-bold text-white md:text-3xl">Transferts WhatsApp</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-white/75">
-          Importez le fichier Excel du jour pour envoyer les messages de prise en charge à vos clients.
-        </p>
-      </div>
+    <>
+      <Section
+        title="Transferts WhatsApp"
+        subtitle={
+          hasWorkData
+            ? `${sharedMeta.fileName || "Fichier du jour"} — ${stats.total} client${stats.total > 1 ? "s" : ""}`
+            : "Importez le fichier Excel du jour pour envoyer les messages de prise en charge."
+        }
+        right={headerButtons}
+      >
+        {!hasWorkData && <ExcelUploadSection onFileUpload={handleFileUpload} />}
 
-      <ExcelUploadSection onFileUpload={handleFileUpload} />
-
-      <div className="flex flex-wrap justify-center gap-2">
-        {headerButtons}
-      </div>
-
+        {hasWorkData && (
+          <div className="space-y-4">
+            {statsBar}
+            {clientList}
+            {autoSending && (
+              <AutoSendingIndicator
+                currentIndex={currentIndex}
+                remainingCount={remainingCount}
+                onStop={handleStopAutoSending}
+              />
+            )}
+            {actionButtons}
+            <SendLogSection sendLog={sendLog} />
+          </div>
+        )}
+      </Section>
       {modalsAndOverlays}
-    </div>
+    </>
   );
 }
 

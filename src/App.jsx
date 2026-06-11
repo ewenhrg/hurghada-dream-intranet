@@ -1120,9 +1120,8 @@ export default function App() {
   }
 
   // Calculer la largeur maximale pour le header et le footer
-  const maxWidthClass = (tab === "devis" || tab === "situation") ? "max-w-[1800px]" : "max-w-6xl";
-  // Calculer le padding pour le main
-  const mainPaddingClass = (tab === "devis" || tab === "situation") ? "px-0" : "px-2 md:px-3 lg:px-6";
+  const maxWidthClass = (tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl";
+  const mainPaddingClass = tab === "devis" ? "px-0" : "px-2 md:px-3 lg:px-6";
   // Construire les className complets
   const headerNavClassName = `glass-nav mx-auto flex flex-col items-stretch gap-3 md:gap-4 ${maxWidthClass} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`;
   const mainClassName = `flex-1 py-4 md:py-10 ${mainPaddingClass} scroll-container`;
@@ -1398,14 +1397,6 @@ export default function App() {
                 </ErrorBoundary>
               </div>
           </div>
-        ) : tab === "situation" && !SITUATION_PAGE_STANDBY ? (
-          <div className="mx-auto w-full max-w-[1800px] px-1 md:px-3 lg:px-4">
-            <ErrorBoundary>
-              <Suspense fallback={<PageLoader />}>
-                <SituationPage activities={activities} user={user} />
-              </Suspense>
-            </ErrorBoundary>
-          </div>
         ) : (
           <div
             className={`${contentContainerClassName} animate-page-enter`}
@@ -1515,6 +1506,10 @@ export default function App() {
             <ModificationsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
           </Section>
         )} */}
+
+        {!SITUATION_PAGE_STANDBY && tab === "situation" && (
+          <SituationPage activities={activities} user={user} />
+        )}
 
         {tab === "stopsale" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
           <Section title="Stop Sale &amp; Push Sale" subtitle="Gérez les arrêts de vente et les ouvertures exceptionnelles">
