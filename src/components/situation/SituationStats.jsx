@@ -1,7 +1,29 @@
 import { memo } from "react";
 
-export const SituationStats = memo(({ stats }) => {
+export const SituationStats = memo(({ stats, compact = false }) => {
   if (stats.total === 0) return null;
+
+  if (compact) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-slate-200 bg-white/95 px-4 py-2.5 text-sm shadow-sm">
+        <span className="text-slate-700">
+          📊 <span className="font-bold text-slate-900">{stats.total}</span> lignes
+        </span>
+        <span className="text-blue-700">
+          📱 <span className="font-bold">{stats.withPhone}</span> avec téléphone
+        </span>
+        <span className="text-amber-700">
+          ⚠️ <span className="font-bold">{stats.withoutPhone}</span> sans téléphone
+          {stats.invalidPhones > 0 && (
+            <span className="ml-1 text-red-600">({stats.invalidPhones} invalide{stats.invalidPhones > 1 ? "s" : ""})</span>
+          )}
+        </span>
+        <span className="text-emerald-700">
+          ✅ <span className="font-bold">{stats.sent}</span> envoyé{stats.sent > 1 ? "s" : ""}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">

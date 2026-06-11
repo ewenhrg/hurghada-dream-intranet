@@ -24,8 +24,8 @@ import { SendLogSection } from "../components/situation/SendLogSection";
 const MessageTemplatesModal = lazy(() => import("../components/situation/MessageTemplatesModal"));
 const HotelsModal = lazy(() => import("../components/situation/HotelsModal"));
 
-const GRID_TEMPLATE = "110px 100px 150px 160px 130px 100px 140px 90px 70px 100px 120px";
-const ROW_HEIGHT = 48;
+const GRID_TEMPLATE = "120px 110px 180px 200px 150px 110px 160px 110px 80px 110px 130px";
+const ROW_HEIGHT = 56;
 const TABLE_HEADERS = [
   "Invoice N",
   "Date",
@@ -77,7 +77,7 @@ const VirtualizedRow = memo(({ index, style, data }) => {
     statusAccent = "from-rose-400/85 to-red-400/80";
   }
 
-  const cellBase = "px-3 py-2 text-xs md:text-sm text-[rgba(71,85,105,0.95)]";
+  const cellBase = "px-3 py-2.5 text-sm md:text-base text-[rgba(71,85,105,0.95)]";
 
   const handleCellClick = (field) => {
     setEditingCell({ rowId: row.id, field });
@@ -162,10 +162,10 @@ const VirtualizedRow = memo(({ index, style, data }) => {
       <div
         className={`${cellBase} ${
           !row.phoneValid
-            ? "text-[#dc2626] font-semibold"
+            ? "text-[#dc2626] font-bold text-base md:text-lg"
             : row.phone
-            ? "text-[#4338ca] font-medium"
-            : "text-[#b45309]"
+            ? "text-[#4338ca] font-bold text-base md:text-lg"
+            : "text-[#b45309] font-semibold"
         }`}
       >
         {isEditing("phone") ? (
@@ -1122,6 +1122,7 @@ export function SituationPage({ activities = [], user }) {
   }, [setExcelData]);
 
   const tableBodyRef = useRef(null);
+  const fileInputRef = useRef(null);
   const rowVirtualizer = useVirtualizer({
     count: excelData.length,
     getScrollElement: () => tableBodyRef.current,
@@ -1782,108 +1783,238 @@ export function SituationPage({ activities = [], user }) {
     return { total, withPhone, withoutPhone, invalidPhones, sent };
   }, [excelData]);
 
-  return (
-    <Section
-      title="📱 Transferts WhatsApp"
-      subtitle="Importez le fichier Excel du jour : téléphone, activité et heure de prise en charge. Visible par toute l'équipe. Envoyez les messages WhatsApp ligne par ligne ou en automatique."
-      right={
-        <div className="flex gap-2 md:gap-3 flex-wrap">
-          <GhostBtn 
-            onClick={() => setShowHotelsModal(true)} 
-            variant="info"
-            className="text-sm md:text-base px-4 md:px-5 py-2 md:py-2.5 font-semibold"
-          >
-            🏨 Hôtels extérieur
-          </GhostBtn>
-          <GhostBtn 
-            onClick={() => setShowConfigModal(true)} 
-            variant="primary"
-            className="text-sm md:text-base px-4 md:px-5 py-2 md:py-2.5 font-semibold"
-          >
-            ⚙️ Configurer les messages
-          </GhostBtn>
+  const hasWorkData = excelData.length > 0;
+
+  const headerButtons = (
+    <div className="flex gap-2 md:gap-3 flex-wrap">
+      {hasWorkData && (
+        <GhostBtn
+          onClick={() => fileInputRef.current?.click()}
+          variant="info"
+          className="text-sm md:text-base px-4 md:px-5 py-2 md:py-2.5 font-semibold"
+        >
+          📂 Changer de fichier
+        </GhostBtn>
+      )}
+      <GhostBtn
+        onClick={() => setShowHotelsModal(true)}
+        variant="info"
+        className="text-sm md:text-base px-4 md:px-5 py-2 md:py-2.5 font-semibold"
+      >
+        🏨 Hôtels extérieur
+      </GhostBtn>
+      <GhostBtn
+        onClick={() => setShowConfigModal(true)}
+        variant="primary"
+        className="text-sm md:text-base px-4 md:px-5 py-2 md:py-2.5 font-semibold"
+      >
+        ⚙️ Configurer les messages
+      </GhostBtn>
+    </div>
+  );
+
+  const sharedMetaBanner = (sharedMeta.fileName || sharedMeta.importedBy || sharedMeta.updatedAt) ? (
+    <p className="rounded-xl border border-violet-200/80 bg-violet-50/90 px-4 py-3 text-sm text-violet-950">
+      {sharedMeta.fileName ? (
+        <>
+          <span className="font-semibold">Fichier partagé :</span> {sharedMeta.fileName}
+          {" · "}
+        </>
+      ) : null}
+      {sharedMeta.importedBy ? (
+        <>
+          <span className="font-semibold">Importé par :</span> {sharedMeta.importedBy}
+          {" · "}
+        </>
+      ) : null}
+      {sharedMeta.updatedAt ? (
+        <>
+          <span className="font-semibold">Mis à jour :</span>{" "}
+          {new Date(sharedMeta.updatedAt).toLocaleString("fr-FR")}
+        </>
+      ) : null}
+    </p>
+  ) : null;
+
+  const dataTable = hasWorkData ? (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+      <div
+        className="grid shrink-0 text-left text-sm md:text-base font-bold uppercase text-white"
+        style={{
+          gridTemplateColumns: GRID_TEMPLATE,
+          backgroundImage: "linear-gradient(to right, #2563eb, #4338ca, #6d28d9)",
+        }}
+      >
+        {TABLE_HEADERS.map((header) => (
+          <div key={header} className="px-3 py-3 md:py-4">
+            {header}
+          </div>
+        ))}
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto" ref={tableBodyRef}>
+        <div
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            position: "relative",
+          }}
+        >
+          {virtualRows.map((virtualRow) => (
+            <VirtualizedRow
+              key={virtualRow.key}
+              index={virtualRow.index}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start}px)`,
+                height: `${virtualRow.size}px`,
+              }}
+              data={listItemData}
+            />
+          ))}
         </div>
-      }
-    >
-      <div className="space-y-6">
-        {(sharedMeta.fileName || sharedMeta.importedBy || sharedMeta.updatedAt) && (
-          <p className="rounded-xl border border-violet-200/80 bg-violet-50/90 px-4 py-3 text-sm text-violet-950">
-            {sharedMeta.fileName ? (
-              <>
-                <span className="font-semibold">Fichier partagé :</span> {sharedMeta.fileName}
-                {" · "}
-              </>
-            ) : null}
-            {sharedMeta.importedBy ? (
-              <>
-                <span className="font-semibold">Importé par :</span> {sharedMeta.importedBy}
-                {" · "}
-              </>
-            ) : null}
-            {sharedMeta.updatedAt ? (
-              <>
-                <span className="font-semibold">Mis à jour :</span>{" "}
-                {new Date(sharedMeta.updatedAt).toLocaleString("fr-FR")}
-              </>
-            ) : null}
-          </p>
-        )}
-        {/* Upload */}
-        <ExcelUploadSection onFileUpload={handleFileUpload} />
+      </div>
+    </div>
+  ) : null;
 
-        {/* Colonnes détectées */}
-        <DetectedColumnsInfo detectedColumns={detectedColumns} />
+  const actionButtons = hasWorkData ? (
+    <div className="flex flex-wrap justify-end gap-3 md:gap-4">
+      <GhostBtn
+        onClick={handlePreviewMessages}
+        disabled={sending || autoSending}
+        variant="info"
+        className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
+      >
+        📝 Prévisualiser les messages
+      </GhostBtn>
+      <PrimaryBtn
+        onClick={handleAutoSendMessages}
+        disabled={sending || autoSending || stats.withPhone === 0}
+        variant="success"
+        className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
+      >
+        {autoSending ? "🔄 Envoi automatique..." : "🚀 Envoyer automatiquement via WhatsApp"}
+      </PrimaryBtn>
+      <PrimaryBtn
+        onClick={handleSendMessages}
+        disabled={sending || autoSending || stats.withPhone === 0}
+        variant="info"
+        className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
+      >
+        {sending ? "📤 Envoi en cours..." : "📤 Envoyer (simulation)"}
+      </PrimaryBtn>
+    </div>
+  ) : null;
 
-        {/* Statistiques */}
-        <SituationStats stats={stats} />
+  const modalsAndOverlays = (
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
 
-        {/* Tableau des données */}
-        {excelData.length > 0 && (
-          <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <div className="min-w-[990px] border border-slate-200 rounded-lg shadow-sm bg-white">
-              <div
-                className="grid text-left text-xs md:text-sm font-bold uppercase text-white"
-                style={{
-                  gridTemplateColumns: GRID_TEMPLATE,
-                  backgroundImage:
-                    "linear-gradient(to right, #2563eb, #4338ca, #6d28d9)",
-                }}
-              >
-                {TABLE_HEADERS.map((header) => (
-                  <div key={header} className="px-3 py-3 md:py-4">
-                    {header}
-                  </div>
-                ))}
-              </div>
-              <div className="max-h-[calc(100vh-320px)] overflow-y-auto" ref={tableBodyRef}>
-                <div
-                  style={{
-                    height: `${rowVirtualizer.getTotalSize()}px`,
-                    position: "relative",
-                  }}
-                >
-                  {virtualRows.map((virtualRow) => (
-                    <VirtualizedRow
-                      key={virtualRow.key}
-                      index={virtualRow.index}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        transform: `translateY(${virtualRow.start}px)`,
-                        height: `${virtualRow.size}px`,
-                      }}
-                      data={listItemData}
-                    />
-                  ))}
-                </div>
+      {showPreview && (
+        <MessagePreviewSection
+          previewMessages={previewMessages}
+          onMessageChange={(index, value) => {
+            const updatedMessages = [...previewMessages];
+            updatedMessages[index] = { ...updatedMessages[index], message: value };
+            setPreviewMessages(updatedMessages);
+          }}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+
+      {showConfigModal && (
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 text-sm font-medium text-slate-700">
+                Chargement de la configuration...
               </div>
             </div>
+          }
+        >
+          <MessageTemplatesModal
+            activities={activities}
+            messageTemplates={messageTemplates}
+            selectedActivity={selectedActivity}
+            editingTemplate={editingTemplate}
+            onSelectActivity={handleOpenConfig}
+            onEditingTemplateChange={handleEditingTemplateChange}
+            onSaveTemplate={handleSaveTemplate}
+            onDeleteTemplate={handleDeleteTemplate}
+            onUseDefaultTemplate={handleUseDefaultTemplate}
+            onClose={() => setShowConfigModal(false)}
+            user={user}
+          />
+        </Suspense>
+      )}
+
+      {showHotelsModal && (
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 text-sm font-medium text-slate-700">
+                Chargement de la liste des hôtels...
+              </div>
+            </div>
+          }
+        >
+          <HotelsModal
+            exteriorHotels={exteriorHotels}
+            newHotel={newHotel}
+            onChangeNewHotel={handleNewHotelChange}
+            onAddHotel={handleAddHotel}
+            onDeleteHotel={handleDeleteHotel}
+            onToggleBeachBoats={handleToggleBeachBoats}
+            onClose={() => setShowHotelsModal(false)}
+          />
+        </Suspense>
+      )}
+    </>
+  );
+
+  if (hasWorkData) {
+    return (
+      <div className="flex min-h-[calc(100vh-120px)] w-full flex-col gap-2 md:gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-md">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900">📱 Transferts WhatsApp</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              {sharedMeta.fileName || "Fichier importé"} · {stats.total} ligne{stats.total > 1 ? "s" : ""} · visible par toute l&apos;équipe
+            </p>
           </div>
+          {headerButtons}
+        </div>
+
+        {sharedMetaBanner}
+        <SituationStats stats={stats} compact />
+
+        {detectedColumns.length > 0 && (
+          <details className="rounded-xl border border-blue-200 bg-blue-50/80 px-4 py-2 text-sm text-blue-900">
+            <summary className="cursor-pointer font-semibold py-1">
+              📊 Colonnes détectées ({detectedColumns.length})
+            </summary>
+            <div className="mt-2 flex flex-wrap gap-2 pb-2">
+              {detectedColumns.map((col, idx) => (
+                <span
+                  key={idx}
+                  className="rounded-lg border border-blue-200 bg-blue-100 px-3 py-1 font-medium text-blue-800"
+                >
+                  {col}
+                </span>
+              ))}
+            </div>
+          </details>
         )}
 
-        {/* Indicateur d'envoi automatique */}
+        {dataTable}
+
         {autoSending && (
           <AutoSendingIndicator
             currentIndex={currentIndex}
@@ -1892,101 +2023,28 @@ export function SituationPage({ activities = [], user }) {
           />
         )}
 
-        {/* Actions */}
-        {excelData.length > 0 && (
-          <div className="flex gap-3 md:gap-4 justify-end flex-wrap">
-            <GhostBtn 
-              onClick={handlePreviewMessages} 
-              disabled={sending || autoSending} 
-              variant="info"
-              className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
-            >
-              📝 Prévisualiser les messages
-            </GhostBtn>
-            <PrimaryBtn 
-               onClick={handleAutoSendMessages} 
-               disabled={sending || autoSending || stats.withPhone === 0}
-               variant="success"
-               className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
-             >
-               {autoSending ? "🔄 Envoi automatique..." : "🚀 Envoyer automatiquement via WhatsApp"}
-             </PrimaryBtn>
-             <PrimaryBtn 
-               onClick={handleSendMessages} 
-               disabled={sending || autoSending || stats.withPhone === 0}
-               variant="info"
-               className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
-             >
-               {sending ? "📤 Envoi en cours..." : "📤 Envoyer (simulation)"}
-             </PrimaryBtn>
-          </div>
-        )}
+        <div className="sticky bottom-0 z-10 rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm">
+          {actionButtons}
+        </div>
 
-        {/* Prévisualisation des messages */}
-        {showPreview && (
-          <MessagePreviewSection
-            previewMessages={previewMessages}
-            onMessageChange={(index, value) => {
-                      const updatedMessages = [...previewMessages];
-              updatedMessages[index] = { ...updatedMessages[index], message: value };
-                      setPreviewMessages(updatedMessages);
-                    }}
-            onClose={() => setShowPreview(false)}
-          />
-        )}
-
-        {/* Log d'envoi */}
         <SendLogSection sendLog={sendLog} />
+        {modalsAndOverlays}
+      </div>
+    );
+  }
 
-        {/* Modal de configuration des messages */}
-        {showConfigModal && (
-          <Suspense
-            fallback={
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-2xl p-6 text-sm font-medium text-slate-700">
-                  Chargement de la configuration...
-                </div>
-              </div>
-            }
-          >
-            <MessageTemplatesModal
-              activities={activities}
-              messageTemplates={messageTemplates}
-              selectedActivity={selectedActivity}
-              editingTemplate={editingTemplate}
-              onSelectActivity={handleOpenConfig}
-              onEditingTemplateChange={handleEditingTemplateChange}
-              onSaveTemplate={handleSaveTemplate}
-              onDeleteTemplate={handleDeleteTemplate}
-              onUseDefaultTemplate={handleUseDefaultTemplate}
-              onClose={() => setShowConfigModal(false)}
-              user={user}
-            />
-          </Suspense>
-        )}
-
-        {/* Modal de gestion des hôtels avec RDV à l'extérieur */}
-        {showHotelsModal && (
-          <Suspense
-            fallback={
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-2xl p-6 text-sm font-medium text-slate-700">
-                  Chargement de la liste des hôtels...
-                </div>
-              </div>
-            }
-          >
-            <HotelsModal
-              exteriorHotels={exteriorHotels}
-              newHotel={newHotel}
-              onChangeNewHotel={handleNewHotelChange}
-              onAddHotel={handleAddHotel}
-              onDeleteHotel={handleDeleteHotel}
-              onToggleBeachBoats={handleToggleBeachBoats}
-              onClose={() => setShowHotelsModal(false)}
-            />
-          </Suspense>
-        )}
+  return (
+    <Section
+      title="📱 Transferts WhatsApp"
+      subtitle="Importez le fichier Excel du jour : téléphone, activité et heure de prise en charge. Visible par toute l'équipe. Envoyez les messages WhatsApp ligne par ligne ou en automatique."
+      right={headerButtons}
+    >
+      <div className="space-y-6">
+        {sharedMetaBanner}
+        <ExcelUploadSection onFileUpload={handleFileUpload} />
+        <DetectedColumnsInfo detectedColumns={detectedColumns} />
+        <SituationStats stats={stats} />
+        {modalsAndOverlays}
       </div>
     </Section>
   );
