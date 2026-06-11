@@ -3,8 +3,8 @@ import { toast } from "../../utils/toast.js";
 
 export const ExcelUploadSection = memo(({ onFileUpload }) => {
   return (
-    <div 
-      className="border-2 border-dashed border-blue-300 rounded-2xl p-8 md:p-12 text-center bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/30 hover:border-blue-400 transition-all shadow-lg hover:shadow-xl"
+    <div
+      className="rounded-2xl border-2 border-dashed border-[#25D366]/40 bg-[#0b141a]/60 p-10 text-center backdrop-blur-sm transition-all hover:border-[#25D366]/70 hover:bg-[#0b141a]/80 md:p-14"
       onDrop={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -37,14 +37,16 @@ export const ExcelUploadSection = memo(({ onFileUpload }) => {
       />
       <label
         htmlFor="excel-upload"
-        className="cursor-pointer inline-flex flex-col items-center gap-4 md:gap-5"
+        className="inline-flex cursor-pointer flex-col items-center gap-5"
       >
-        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-3xl md:text-4xl shadow-xl hover:scale-110 transition-transform">
-          📤
+        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#25D366] text-4xl shadow-lg shadow-[#25D366]/30 transition-transform hover:scale-105 md:h-24 md:w-24">
+          📊
         </div>
         <div>
-          <p className="text-base md:text-lg font-bold text-slate-800">Cliquez ou glissez un fichier Excel ici</p>
-          <p className="text-sm md:text-base text-slate-600 mt-2 font-medium">Formats acceptés: .xlsx, .xls</p>
+          <p className="text-lg font-bold text-white md:text-xl">
+            Glissez votre fichier Excel ici
+          </p>
+          <p className="mt-2 text-sm text-slate-400">ou cliquez pour parcourir · .xlsx, .xls</p>
         </div>
       </label>
     </div>

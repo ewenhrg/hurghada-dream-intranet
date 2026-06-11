@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback, Suspense, lazy, memo } from "react";
 import * as XLSX from "xlsx";
-import { PrimaryBtn, GhostBtn, Section, TextInput } from "../components/ui";
+import { PrimaryBtn, GhostBtn, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { LS_KEYS, SITE_KEY } from "../constants";
@@ -15,8 +15,6 @@ import {
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ExcelUploadSection } from "../components/situation/ExcelUploadSection";
-import { SituationStats } from "../components/situation/SituationStats";
-import { DetectedColumnsInfo } from "../components/situation/DetectedColumnsInfo";
 import { AutoSendingIndicator } from "../components/situation/AutoSendingIndicator";
 import { MessagePreviewSection } from "../components/situation/MessagePreviewSection";
 import { SendLogSection } from "../components/situation/SendLogSection";
@@ -24,21 +22,48 @@ import { SendLogSection } from "../components/situation/SendLogSection";
 const MessageTemplatesModal = lazy(() => import("../components/situation/MessageTemplatesModal"));
 const HotelsModal = lazy(() => import("../components/situation/HotelsModal"));
 
-const GRID_TEMPLATE = "120px 110px 180px 200px 150px 110px 160px 110px 80px 110px 130px";
-const ROW_HEIGHT = 56;
+const GRID_TEMPLATE =
+  "100px minmax(150px,1.2fr) minmax(170px,1fr) minmax(140px,1fr) 80px minmax(130px,1fr) 90px 56px 96px 108px";
+const ROW_HEIGHT = 52;
 const TABLE_HEADERS = [
-  "Invoice N",
   "Date",
   "Nom",
   "Téléphone",
   "Hôtel",
-  "Chambre",
-  "Trip",
+  "Ch.",
+  "Activité",
   "Heure",
-  "Marina",
+  "⛵",
   "Statut",
-  "Action",
+  "Envoi",
 ];
+
+const EditableCell = memo(({ row, field, value, isEditing, setEditingCell, handleCellEdit, className = "" }) => {
+  if (isEditing) {
+    return (
+      <TextInput
+        value={value ?? ""}
+        onChange={(e) => handleCellEdit(row.id, field, e.target.value)}
+        onBlur={() => setEditingCell(null)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") setEditingCell(null);
+        }}
+        className="w-full px-2 py-1.5 text-sm"
+        autoFocus
+      />
+    );
+  }
+
+  return (
+    <span
+      className={`inline-flex min-h-[28px] cursor-pointer items-center rounded-lg px-2 py-1 transition-colors hover:bg-slate-100 ${className}`}
+      onClick={() => setEditingCell({ rowId: row.id, field })}
+    >
+      {value || "—"}
+    </span>
+  );
+});
+EditableCell.displayName = "EditableCell";
 
 const VirtualizedRow = memo(({ index, style, data }) => {
   const {
@@ -58,30 +83,18 @@ const VirtualizedRow = memo(({ index, style, data }) => {
     editingCell?.rowId === row.id && editingCell?.field === field;
 
   const rowClasses = [
-    "grid",
-    "items-center",
-    "border-b",
-    "border-[rgba(226,232,240,0.6)]",
-    "bg-[rgba(255,255,255,0.95)]",
-    "hover:bg-[rgba(79,70,229,0.08)]",
-    "transition-colors",
-    "relative",
+    "grid items-center border-b border-slate-100 transition-colors",
+    index % 2 === 0 ? "bg-white" : "bg-slate-50/70",
+    "hover:bg-[#25D366]/5",
   ];
- 
-  let statusAccent = "";
+
   if (row.messageSent) {
-    rowClasses.push("bg-[rgba(16,185,129,0.12)]", "border-l-4", "border-l-[rgba(16,185,129,0.55)]");
-    statusAccent = "from-emerald-400/80 to-teal-400/80";
+    rowClasses.push("bg-emerald-50/80");
   } else if (!row.phoneValid) {
-    rowClasses.push("bg-[rgba(239,68,68,0.12)]", "border-l-4", "border-l-[rgba(239,68,68,0.65)]");
-    statusAccent = "from-rose-400/85 to-red-400/80";
+    rowClasses.push("bg-rose-50/60");
   }
 
-  const cellBase = "px-3 py-2.5 text-sm md:text-base text-[rgba(71,85,105,0.95)]";
-
-  const handleCellClick = (field) => {
-    setEditingCell({ rowId: row.id, field });
-  };
+  const cellBase = "px-3 py-2 text-sm text-slate-700";
 
   return (
     <div
@@ -93,81 +106,27 @@ const VirtualizedRow = memo(({ index, style, data }) => {
       }}
       className={rowClasses.join(" ")}
     >
-      {statusAccent && (
-        <span className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${statusAccent}`} />
-      )}
-      <div className={`${cellBase} text-slate-700`}>
-        {isEditing("invoiceN") ? (
-          <TextInput
-            value={row.invoiceN}
-            onChange={(e) => handleCellEdit(row.id, "invoiceN", e.target.value)}
-            onBlur={() => setEditingCell(null)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") setEditingCell(null);
-            }}
-            className="w-full px-2 py-1.5 text-xs md:text-sm"
-            autoFocus
-          />
-        ) : (
-          <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
-            onClick={() => handleCellClick("invoiceN")}
-          >
-            {row.invoiceN}
-          </span>
-        )}
+      <div className={cellBase}>
+        <EditableCell
+          row={row}
+          field="date"
+          value={row.date}
+          isEditing={isEditing("date")}
+          setEditingCell={setEditingCell}
+          handleCellEdit={handleCellEdit}
+        />
       </div>
-      <div className={`${cellBase} text-slate-700`}>
-        {isEditing("date") ? (
-          <TextInput
-            value={row.date}
-            onChange={(e) => handleCellEdit(row.id, "date", e.target.value)}
-            onBlur={() => setEditingCell(null)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") setEditingCell(null);
-            }}
-            className="w-full px-2 py-1.5 text-xs md:text-sm"
-            autoFocus
-          />
-        ) : (
-          <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
-            onClick={() => handleCellClick("date")}
-          >
-            {row.date}
-          </span>
-        )}
+      <div className={`${cellBase} font-semibold text-slate-900`}>
+        <EditableCell
+          row={row}
+          field="name"
+          value={row.name}
+          isEditing={isEditing("name")}
+          setEditingCell={setEditingCell}
+          handleCellEdit={handleCellEdit}
+        />
       </div>
-      <div className={`${cellBase} font-medium text-slate-900`}>
-        {isEditing("name") ? (
-          <TextInput
-            value={row.name}
-            onChange={(e) => handleCellEdit(row.id, "name", e.target.value)}
-            onBlur={() => setEditingCell(null)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") setEditingCell(null);
-            }}
-            className="w-full px-2 py-1.5 text-xs md:text-sm"
-            autoFocus
-          />
-        ) : (
-          <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
-            onClick={() => handleCellClick("name")}
-          >
-            {row.name}
-          </span>
-        )}
-      </div>
-      <div
-        className={`${cellBase} ${
-          !row.phoneValid
-            ? "text-[#dc2626] font-bold text-base md:text-lg"
-            : row.phone
-            ? "text-[#4338ca] font-bold text-base md:text-lg"
-            : "text-[#b45309] font-semibold"
-        }`}
-      >
+      <div className={cellBase}>
         {isEditing("phone") ? (
           <TextInput
             value={row.phone}
@@ -176,146 +135,115 @@ const VirtualizedRow = memo(({ index, style, data }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingCell(null);
             }}
-            className="w-full px-2 py-1.5 text-xs md:text-sm"
+            className="w-full px-2 py-1.5 text-sm"
             autoFocus
           />
         ) : (
           <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
-            onClick={() => handleCellClick("phone")}
+            className={`inline-flex min-h-[28px] cursor-pointer items-center rounded-lg px-2 py-1 font-mono text-sm tracking-wide transition-colors hover:bg-slate-100 ${
+              !row.phoneValid
+                ? "font-bold text-rose-600"
+                : row.phone
+                ? "font-bold text-[#128C7E]"
+                : "font-semibold text-amber-600"
+            }`}
+            onClick={() => setEditingCell({ rowId: row.id, field: "phone" })}
           >
             {row.phone ? (
               <>
-                <span>{row.phone}</span>
+                {row.phone}
                 {!row.phoneValid && row.phoneError && (
-                  <span className="block text-xs text-red-500 mt-1 font-medium" title={row.phoneError}>
-                    ⚠️ {row.phoneError}
+                  <span className="ml-1 text-xs font-medium text-rose-500" title={row.phoneError}>
+                    ⚠
                   </span>
                 )}
               </>
             ) : (
-              <span>⚠️ Non trouvé</span>
+              "Non trouvé"
             )}
           </span>
         )}
       </div>
-      <div className={`${cellBase} text-slate-700`}>
-        {isEditing("hotel") ? (
-          <TextInput
-            value={row.hotel}
-            onChange={(e) => handleCellEdit(row.id, "hotel", e.target.value)}
-            onBlur={() => setEditingCell(null)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") setEditingCell(null);
-            }}
-            className="w-full px-2 py-1.5 text-xs md:text-sm"
-            autoFocus
-          />
-        ) : (
-          <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
-            onClick={() => handleCellClick("hotel")}
-          >
-            {row.hotel}
-          </span>
-        )}
+      <div className={cellBase}>
+        <EditableCell
+          row={row}
+          field="hotel"
+          value={row.hotel}
+          isEditing={isEditing("hotel")}
+          setEditingCell={setEditingCell}
+          handleCellEdit={handleCellEdit}
+        />
       </div>
-      <div className={`${cellBase} text-slate-700`}>
-        {isEditing("roomNo") ? (
-          <TextInput
-            value={row.roomNo}
-            onChange={(e) => handleCellEdit(row.id, "roomNo", e.target.value)}
-            onBlur={() => setEditingCell(null)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") setEditingCell(null);
-            }}
-            className="w-full px-2 py-1.5 text-xs md:text-sm"
-            autoFocus
-          />
-        ) : (
-          <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
-            onClick={() => handleCellClick("roomNo")}
-          >
-            {row.roomNo}
-          </span>
-        )}
+      <div className={cellBase}>
+        <EditableCell
+          row={row}
+          field="roomNo"
+          value={row.roomNo}
+          isEditing={isEditing("roomNo")}
+          setEditingCell={setEditingCell}
+          handleCellEdit={handleCellEdit}
+          className="text-slate-500"
+        />
       </div>
-      <div className={`${cellBase} text-slate-700`}>
-        {isEditing("trip") ? (
-          <TextInput
-            value={row.trip}
-            onChange={(e) => handleCellEdit(row.id, "trip", e.target.value)}
-            onBlur={() => setEditingCell(null)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") setEditingCell(null);
-            }}
-            className="w-full px-2 py-1.5 text-xs md:text-sm"
-            autoFocus
-          />
-        ) : (
-          <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
-            onClick={() => handleCellClick("trip")}
-          >
-            {row.trip}
-          </span>
-        )}
+      <div className={`${cellBase} font-medium text-indigo-700`}>
+        <EditableCell
+          row={row}
+          field="trip"
+          value={row.trip}
+          isEditing={isEditing("trip")}
+          setEditingCell={setEditingCell}
+          handleCellEdit={handleCellEdit}
+        />
       </div>
-      <div className={`${cellBase} font-semibold text-slate-900`}>
-        {isEditing("time") ? (
-          <TextInput
-            value={row.time}
-            onChange={(e) => handleCellEdit(row.id, "time", e.target.value)}
-            onBlur={() => setEditingCell(null)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") setEditingCell(null);
-            }}
-            className="w-full px-2 py-1.5 text-xs md:text-sm"
-            autoFocus
-          />
-        ) : (
-          <span
-            className="cursor-pointer hover:bg-slate-100 px-2 py-1 rounded-md inline-flex min-h-[24px] items-center transition-colors"
-            onClick={() => handleCellClick("time")}
-          >
-            {row.time}
-          </span>
-        )}
+      <div className={`${cellBase} font-bold text-slate-900`}>
+        <EditableCell
+          row={row}
+          field="time"
+          value={row.time}
+          isEditing={isEditing("time")}
+          setEditingCell={setEditingCell}
+          handleCellEdit={handleCellEdit}
+        />
       </div>
-      <div className="px-4 py-2 flex justify-center">
-        <label className="flex items-center justify-center cursor-pointer">
+      <div className="flex items-center justify-center px-2 py-2">
+        <label className="flex cursor-pointer items-center justify-center">
           <input
             type="checkbox"
             checked={rowsWithMarina.has(row.id)}
             onChange={() => handleToggleMarina(row.id)}
-            className="w-4 h-4 text-[#4338ca] border-[rgba(148,163,184,0.6)] rounded focus:ring-[#4f46e5]/40"
+            className="h-4 w-4 rounded border-slate-300 text-[#128C7E] focus:ring-[#25D366]/30"
             title="Bateau garé à la marina de cet hôtel"
           />
         </label>
       </div>
-      <div className="px-4 py-2 text-center">
+      <div className="px-2 py-2 text-center">
         {row.messageSent ? (
-          <span className="tag-success inline-flex items-center gap-1">✓ Envoyé</span>
-         ) : !row.phoneValid ? (
-          <span className="tag-danger inline-flex items-center gap-1">⚠️ À corriger</span>
-         ) : (
-          <span className="text-xs text-[rgba(148,163,184,0.9)]">—</span>
-         )}
+          <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+            ✓ Envoyé
+          </span>
+        ) : !row.phoneValid ? (
+          <span className="inline-flex rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">
+            À corriger
+          </span>
+        ) : (
+          <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+            Prêt
+          </span>
+        )}
       </div>
-      <div className="px-2 py-2 flex justify-center items-center">
+      <div className="flex items-center justify-center px-2 py-2">
         {row.phone && row.phoneValid && !row.messageSent ? (
           <button
             onClick={() => handleSendSingleMessage(row)}
-            className="px-4 py-2 text-xs md:text-sm font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Envoyer le message manuellement"
+            className="rounded-full bg-[#25D366] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1da851] active:scale-95"
+            title="Envoyer le message WhatsApp"
           >
-            📤 Envoyer
+            WhatsApp
           </button>
         ) : row.messageSent ? (
-          <span className="text-xs md:text-sm text-green-600 font-semibold">✓ Envoyé</span>
+          <span className="text-xs font-semibold text-emerald-600">✓</span>
         ) : (
-          <span className="text-xs md:text-sm text-gray-400">—</span>
+          <span className="text-xs text-slate-300">—</span>
         )}
       </div>
     </div>
@@ -1813,40 +1741,14 @@ export function SituationPage({ activities = [], user }) {
     </div>
   );
 
-  const sharedMetaBanner = (sharedMeta.fileName || sharedMeta.importedBy || sharedMeta.updatedAt) ? (
-    <p className="rounded-xl border border-violet-200/80 bg-violet-50/90 px-4 py-3 text-sm text-violet-950">
-      {sharedMeta.fileName ? (
-        <>
-          <span className="font-semibold">Fichier partagé :</span> {sharedMeta.fileName}
-          {" · "}
-        </>
-      ) : null}
-      {sharedMeta.importedBy ? (
-        <>
-          <span className="font-semibold">Importé par :</span> {sharedMeta.importedBy}
-          {" · "}
-        </>
-      ) : null}
-      {sharedMeta.updatedAt ? (
-        <>
-          <span className="font-semibold">Mis à jour :</span>{" "}
-          {new Date(sharedMeta.updatedAt).toLocaleString("fr-FR")}
-        </>
-      ) : null}
-    </p>
-  ) : null;
-
   const dataTable = hasWorkData ? (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_40px_-12px_rgba(0,0,0,0.25)]">
       <div
-        className="grid shrink-0 text-left text-sm md:text-base font-bold uppercase text-white"
-        style={{
-          gridTemplateColumns: GRID_TEMPLATE,
-          backgroundImage: "linear-gradient(to right, #2563eb, #4338ca, #6d28d9)",
-        }}
+        className="grid shrink-0 border-b border-slate-200 bg-slate-900 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+        style={{ gridTemplateColumns: GRID_TEMPLATE }}
       >
         {TABLE_HEADERS.map((header) => (
-          <div key={header} className="px-3 py-3 md:py-4">
+          <div key={header} className="px-3 py-3">
             {header}
           </div>
         ))}
@@ -1879,31 +1781,26 @@ export function SituationPage({ activities = [], user }) {
   ) : null;
 
   const actionButtons = hasWorkData ? (
-    <div className="flex flex-wrap justify-end gap-3 md:gap-4">
-      <GhostBtn
-        onClick={handlePreviewMessages}
-        disabled={sending || autoSending}
-        variant="info"
-        className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
-      >
-        📝 Prévisualiser les messages
-      </GhostBtn>
-      <PrimaryBtn
-        onClick={handleAutoSendMessages}
-        disabled={sending || autoSending || stats.withPhone === 0}
-        variant="success"
-        className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
-      >
-        {autoSending ? "🔄 Envoi automatique..." : "🚀 Envoyer automatiquement via WhatsApp"}
-      </PrimaryBtn>
-      <PrimaryBtn
-        onClick={handleSendMessages}
-        disabled={sending || autoSending || stats.withPhone === 0}
-        variant="info"
-        className="text-base md:text-lg px-5 md:px-6 py-3 md:py-3.5 font-semibold"
-      >
-        {sending ? "📤 Envoi en cours..." : "📤 Envoyer (simulation)"}
-      </PrimaryBtn>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-slate-400">
+        {stats.withPhone} client{stats.withPhone > 1 ? "s" : ""} prêt{stats.withPhone > 1 ? "s" : ""} · {stats.sent} envoyé{stats.sent > 1 ? "s" : ""}
+      </p>
+      <div className="flex flex-wrap justify-end gap-2 md:gap-3">
+        <GhostBtn
+          onClick={handlePreviewMessages}
+          disabled={sending || autoSending}
+          className="text-sm px-4 py-2"
+        >
+          Prévisualiser
+        </GhostBtn>
+        <PrimaryBtn
+          onClick={handleAutoSendMessages}
+          disabled={sending || autoSending || stats.withPhone === 0}
+          className="rounded-full border-0 bg-[#25D366] px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-[#1da851]"
+        >
+          {autoSending ? "Envoi en cours..." : "Envoyer tout via WhatsApp"}
+        </PrimaryBtn>
+      </div>
     </div>
   ) : null;
 
@@ -1981,37 +1878,42 @@ export function SituationPage({ activities = [], user }) {
 
   if (hasWorkData) {
     return (
-      <div className="flex min-h-[calc(100vh-120px)] w-full flex-col gap-2 md:gap-3">
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-md">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-xl md:text-2xl font-bold text-slate-900">📱 Transferts WhatsApp</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              {sharedMeta.fileName || "Fichier importé"} · {stats.total} ligne{stats.total > 1 ? "s" : ""} · visible par toute l&apos;équipe
-            </p>
-          </div>
-          {headerButtons}
-        </div>
-
-        {sharedMetaBanner}
-        <SituationStats stats={stats} compact />
-
-        {detectedColumns.length > 0 && (
-          <details className="rounded-xl border border-blue-200 bg-blue-50/80 px-4 py-2 text-sm text-blue-900">
-            <summary className="cursor-pointer font-semibold py-1">
-              📊 Colonnes détectées ({detectedColumns.length})
-            </summary>
-            <div className="mt-2 flex flex-wrap gap-2 pb-2">
-              {detectedColumns.map((col, idx) => (
-                <span
-                  key={idx}
-                  className="rounded-lg border border-blue-200 bg-blue-100 px-3 py-1 font-medium text-blue-800"
-                >
-                  {col}
-                </span>
-              ))}
+      <div className="flex min-h-[calc(100vh-120px)] w-full flex-col gap-3">
+        <div className="rounded-2xl border border-white/10 bg-[#0b141a] px-4 py-4 shadow-xl md:px-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-lg">💬</span>
+                <h2 className="text-xl font-bold text-white md:text-2xl">Transferts WhatsApp</h2>
+              </div>
+              <p className="mt-1.5 text-sm text-slate-400">
+                {sharedMeta.fileName || "Fichier importé"}
+                {sharedMeta.importedBy ? ` · par ${sharedMeta.importedBy}` : ""}
+                {sharedMeta.updatedAt
+                  ? ` · ${new Date(sharedMeta.updatedAt).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`
+                  : ""}
+              </p>
             </div>
-          </details>
-        )}
+            {headerButtons}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
+              {stats.total} lignes
+            </span>
+            <span className="rounded-full bg-[#25D366]/20 px-3 py-1 text-xs font-semibold text-[#25D366]">
+              {stats.withPhone} avec tel.
+            </span>
+            {stats.withoutPhone > 0 && (
+              <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-400">
+                {stats.withoutPhone} sans tel.
+              </span>
+            )}
+            <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-400">
+              {stats.sent} envoyé{stats.sent > 1 ? "s" : ""}
+            </span>
+          </div>
+        </div>
 
         {dataTable}
 
@@ -2023,7 +1925,7 @@ export function SituationPage({ activities = [], user }) {
           />
         )}
 
-        <div className="sticky bottom-0 z-10 rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm">
+        <div className="sticky bottom-0 z-10 rounded-2xl border border-white/10 bg-[#0b141a]/95 px-4 py-3 shadow-xl backdrop-blur-md">
           {actionButtons}
         </div>
 
@@ -2034,19 +1936,25 @@ export function SituationPage({ activities = [], user }) {
   }
 
   return (
-    <Section
-      title="📱 Transferts WhatsApp"
-      subtitle="Importez le fichier Excel du jour : téléphone, activité et heure de prise en charge. Visible par toute l'équipe. Envoyez les messages WhatsApp ligne par ligne ou en automatique."
-      right={headerButtons}
-    >
-      <div className="space-y-6">
-        {sharedMetaBanner}
-        <ExcelUploadSection onFileUpload={handleFileUpload} />
-        <DetectedColumnsInfo detectedColumns={detectedColumns} />
-        <SituationStats stats={stats} />
-        {modalsAndOverlays}
+    <div className="mx-auto max-w-2xl space-y-8 py-4 md:py-8">
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#25D366] text-3xl shadow-lg">
+          💬
+        </div>
+        <h2 className="text-2xl font-bold text-white md:text-3xl">Transferts WhatsApp</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-white/75">
+          Importez le fichier Excel du jour pour envoyer les messages de prise en charge à vos clients.
+        </p>
       </div>
-    </Section>
+
+      <ExcelUploadSection onFileUpload={handleFileUpload} />
+
+      <div className="flex flex-wrap justify-center gap-2">
+        {headerButtons}
+      </div>
+
+      {modalsAndOverlays}
+    </div>
   );
 }
 
