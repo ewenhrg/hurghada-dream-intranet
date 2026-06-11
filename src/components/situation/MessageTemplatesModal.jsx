@@ -15,7 +15,6 @@ export default function MessageTemplatesModal({
   saveStatus = "idle",
 }) {
   const [search, setSearch] = useState("");
-  const [newActivity, setNewActivity] = useState("");
   const [selectedActivity, setSelectedActivity] = useState(null);
 
   const sortedNames = useMemo(
@@ -40,16 +39,6 @@ export default function MessageTemplatesModal({
     () => sortedNames.filter((name) => Boolean(getTemplate(name).trim())).length,
     [sortedNames, messageTemplates]
   );
-
-  const handleAddActivity = () => {
-    const name = newActivity.trim();
-    if (!name) return;
-    if (!messageTemplates[name]) {
-      onTemplateChange(name, "");
-    }
-    setNewActivity("");
-    setSelectedActivity(name);
-  };
 
   const saveLabel =
     saveStatus === "saving"
@@ -86,7 +75,7 @@ export default function MessageTemplatesModal({
                 <p className="mt-1 text-sm text-blue-100">
                   {configuredCount} / {sortedNames.length} activité
                   {sortedNames.length > 1 ? "s" : ""} configurée
-                  {configuredCount > 1 ? "s" : ""}
+                  {configuredCount > 1 ? "s" : ""} — même liste que l&apos;onglet Activités
                 </p>
               </>
             )}
@@ -118,14 +107,17 @@ export default function MessageTemplatesModal({
                 className="w-full text-base text-gray-900"
               />
               <p className="mt-2 text-sm text-gray-700">
-                Cliquez sur une activité pour saisir ou modifier son message.
+                Même liste que l&apos;onglet Activités (prix et jours). Cliquez sur une activité pour
+                saisir ou modifier son message.
               </p>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
               {filteredNames.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-gray-700">
-                  Aucune activité. Ajoutez-en une ci-dessous.
+                  {search.trim()
+                    ? "Aucune activité ne correspond à votre recherche."
+                    : "Aucune activité. Ajoutez-les dans l'onglet Activités (prix et jours disponibles)."}
                 </p>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -157,24 +149,6 @@ export default function MessageTemplatesModal({
                   })}
                 </div>
               )}
-
-              <div className="mt-5 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 p-4">
-                <p className="mb-2 font-semibold text-gray-900">Ajouter une activité</p>
-                <div className="flex flex-wrap gap-2">
-                  <TextInput
-                    placeholder="Ex: Orange Bay, Safari..."
-                    value={newActivity}
-                    onChange={(e) => setNewActivity(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleAddActivity();
-                    }}
-                    className="min-w-[200px] flex-1 text-base text-gray-900"
-                  />
-                  <PrimaryBtn onClick={handleAddActivity} disabled={!newActivity.trim()}>
-                    Ajouter
-                  </PrimaryBtn>
-                </div>
-              </div>
             </div>
           </>
         ) : (

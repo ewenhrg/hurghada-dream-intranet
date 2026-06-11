@@ -365,13 +365,8 @@ export function SituationPage({ activities = [], user }) {
   // Les cases marina ne sont plus sauvegardées - elles sont réinitialisées à chaque import
 
   const activityNames = useMemo(
-    () =>
-      buildUniqueActivityNames({
-        activityList: activities.map((a) => a.name),
-        excelTrips: excelData.map((r) => r.trip),
-        templateKeys: Object.keys(messageTemplates),
-      }),
-    [activities, excelData, messageTemplates]
+    () => buildUniqueActivityNames({ activityList: activities.map((a) => a.name) }),
+    [activities]
   );
 
   const handleTemplateChange = useCallback((activityName, template) => {

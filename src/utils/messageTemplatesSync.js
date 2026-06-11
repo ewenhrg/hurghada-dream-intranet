@@ -28,31 +28,20 @@ export function normalizeMessageTemplates(templates = {}) {
   return out;
 }
 
-/** Liste unique : activités intranet > templates > colonnes Excel */
-export function buildUniqueActivityNames({
-  activityList = [],
-  excelTrips = [],
-  templateKeys = [],
-} = {}) {
+/** Liste unique des noms d'activités (même source que l'onglet Activités) */
+export function buildUniqueActivityNames({ activityList = [] } = {}) {
   const map = new Map();
 
-  const add = (name, priority) => {
+  for (const name of activityList) {
     const label = normalizeActivityLabel(name);
-    if (!label) return;
+    if (!label) continue;
     const key = activityNameKey(label);
-    const prev = map.get(key);
-    if (!prev || priority < prev.priority) {
-      map.set(key, { name: label, priority });
+    if (!map.has(key)) {
+      map.set(key, label);
     }
-  };
+  }
 
-  activityList.forEach((name) => add(name, 0));
-  templateKeys.forEach((name) => add(name, 1));
-  excelTrips.forEach((name) => add(name, 2));
-
-  return [...map.values()]
-    .map((v) => v.name)
-    .sort((a, b) => a.localeCompare(b, "fr"));
+  return [...map.values()].sort((a, b) => a.localeCompare(b, "fr"));
 }
 
 /**
