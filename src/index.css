@@ -710,6 +710,14 @@ button {
   border-color: var(--hd-border-hover);
 }
 
+/* Page Transferts : textes lisibles (hd-card force sinon du gris sur gris) */
+.hd-card .transfer-content p,
+.hd-card .transfer-content span,
+.hd-card .transfer-content label,
+.hd-card .transfer-content strong {
+  color: unset;
+}
+
 .hd-border-gradient {
   position: relative;
   border-radius: inherit;

@@ -13,9 +13,8 @@ import {
   SITUATION_TRANSFER_SETTINGS_TYPE,
 } from "../utils/situationTransferSync";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { ExcelUploadSection } from "../components/situation/ExcelUploadSection";
-import { TransferClientCard, CARD_HEIGHT } from "../components/situation/TransferClientCard";
+import { TransferClientCard } from "../components/situation/TransferClientCard";
 import { AutoSendingIndicator } from "../components/situation/AutoSendingIndicator";
 import { MessagePreviewSection } from "../components/situation/MessagePreviewSection";
 import { SendLogSection } from "../components/situation/SendLogSection";
@@ -821,16 +820,7 @@ export function SituationPage({ activities = [], user }) {
     );
   }, [setExcelData]);
 
-  const tableBodyRef = useRef(null);
   const fileInputRef = useRef(null);
-  const rowVirtualizer = useVirtualizer({
-    count: excelData.length,
-    getScrollElement: () => tableBodyRef.current,
-    estimateSize: () => CARD_HEIGHT,
-    overscan: 8,
-  });
-  const virtualRows = rowVirtualizer.getVirtualItems();
-  
   // Wrapper pour generateMessage avec contexte local (mémoïsé pour éviter les recalculs)
   const generateMessageWithContext = useCallback((data) => {
     return generateMessage(data, messageTemplates, rowsWithMarina, exteriorHotels);
@@ -1503,52 +1493,30 @@ export function SituationPage({ activities = [], user }) {
 
   const statsBar = hasWorkData ? (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
-        <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
-        <p className="text-sm font-medium text-slate-600">Clients</p>
+      <div className="rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-center">
+        <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+        <p className="text-sm font-semibold text-gray-700">Clients</p>
       </div>
-      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center">
-        <p className="text-2xl font-bold text-blue-700">{stats.withPhone}</p>
-        <p className="text-sm font-medium text-slate-600">Prêts à envoyer</p>
+      <div className="rounded-xl border-2 border-blue-400 bg-blue-50 px-4 py-3 text-center">
+        <p className="text-3xl font-bold text-blue-900">{stats.withPhone}</p>
+        <p className="text-sm font-semibold text-gray-800">Prêts à envoyer</p>
       </div>
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center">
-        <p className="text-2xl font-bold text-amber-700">{stats.withoutPhone}</p>
-        <p className="text-sm font-medium text-slate-600">À corriger</p>
+      <div className="rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-center">
+        <p className="text-3xl font-bold text-amber-900">{stats.withoutPhone}</p>
+        <p className="text-sm font-semibold text-gray-800">À corriger</p>
       </div>
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
-        <p className="text-2xl font-bold text-emerald-700">{stats.sent}</p>
-        <p className="text-sm font-medium text-slate-600">Envoyés</p>
+      <div className="rounded-xl border-2 border-emerald-400 bg-emerald-50 px-4 py-3 text-center">
+        <p className="text-3xl font-bold text-emerald-900">{stats.sent}</p>
+        <p className="text-sm font-semibold text-gray-800">Envoyés</p>
       </div>
     </div>
   ) : null;
 
   const clientList = hasWorkData ? (
-    <div
-      className="min-h-[420px] flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-100 p-2 md:min-h-[500px]"
-      ref={tableBodyRef}
-    >
-      <div
-        style={{
-          height: `${rowVirtualizer.getTotalSize()}px`,
-          position: "relative",
-        }}
-      >
-        {virtualRows.map((virtualRow) => (
-          <TransferClientCard
-            key={virtualRow.key}
-            row={excelData[virtualRow.index]}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              transform: `translateY(${virtualRow.start}px)`,
-              height: `${virtualRow.size}px`,
-            }}
-            data={listItemData}
-          />
-        ))}
-      </div>
+    <div className="max-h-[65vh] overflow-y-auto rounded-xl border-2 border-gray-300 bg-gray-50 p-3">
+      {excelData.map((row) => (
+        <TransferClientCard key={row.id} row={row} data={listItemData} />
+      ))}
     </div>
   ) : null;
 
@@ -1651,10 +1619,14 @@ export function SituationPage({ activities = [], user }) {
         }
         right={headerButtons}
       >
-        {!hasWorkData && <ExcelUploadSection onFileUpload={handleFileUpload} />}
+        {!hasWorkData && (
+          <div className="transfer-content">
+            <ExcelUploadSection onFileUpload={handleFileUpload} />
+          </div>
+        )}
 
         {hasWorkData && (
-          <div className="space-y-4">
+          <div className="transfer-content space-y-4">
             {statsBar}
             {clientList}
             {autoSending && (

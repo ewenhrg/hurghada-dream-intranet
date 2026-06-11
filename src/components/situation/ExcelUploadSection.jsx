@@ -39,8 +39,8 @@ export const ExcelUploadSection = memo(({ onFileUpload }) => {
           📊
         </div>
         <div>
-          <p className="text-xl font-bold text-slate-800">Cliquez ou glissez votre fichier Excel</p>
-          <p className="mt-2 text-base text-slate-500">Format accepté : .xlsx ou .xls</p>
+          <p className="text-xl font-bold text-gray-900">Cliquez ou glissez votre fichier Excel</p>
+          <p className="mt-2 text-base font-medium text-gray-700">Format accepté : .xlsx ou .xls</p>
         </div>
       </label>
     </div>
