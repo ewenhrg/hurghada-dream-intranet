@@ -7,11 +7,15 @@ import { LS_KEYS, SITE_KEY } from "../constants";
 import { loadLS, saveLS } from "../utils";
 import { extractPhoneFromName, validatePhoneNumber, extractNameFromField, resolvePhoneFromExcelRow } from "../utils/phoneUtils";
 import { convertExcelValue, findColumn } from "../utils/excelParser";
-import { generateMessage, getDefaultTemplate } from "../utils/messageGenerator";
+import { generateMessage } from "../utils/messageGenerator";
 import {
   saveSituationTransferRows,
   SITUATION_TRANSFER_SETTINGS_TYPE,
 } from "../utils/situationTransferSync";
+import {
+  saveMessageTemplates,
+  MESSAGE_TEMPLATES_SETTINGS_TYPE,
+} from "../utils/messageTemplatesSync";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { ExcelUploadSection } from "../components/situation/ExcelUploadSection";
 import { TransferClientCard } from "../components/situation/TransferClientCard";
@@ -44,11 +48,7 @@ export function SituationPage({ activities = [], user }) {
   const [messageTemplates, setMessageTemplates] = useState(() => {
     return loadLS(LS_KEYS.messageTemplates, {});
   });
-  const [selectedActivity, setSelectedActivity] = useState("");
-  const [editingTemplate, setEditingTemplate] = useState({
-    activity: "",
-    template: "",
-  });
+  const [templatesSaveStatus, setTemplatesSaveStatus] = useState("idle");
   
   // État pour la gestion des hôtels avec RDV à l'extérieur
   const [showHotelsModal, setShowHotelsModal] = useState(false);
@@ -68,17 +68,6 @@ export function SituationPage({ activities = [], user }) {
   // État pour l'édition des cellules du tableau
   const [editingCell, setEditingCell] = useState(null); // { rowId: string, field: string }
 
-  const handleEditingTemplateChange = useCallback(
-    (patch) => {
-      setEditingTemplate((prev) => ({ ...prev, ...patch }));
-    },
-    [setEditingTemplate]
-  );
-
-  const handleUseDefaultTemplate = useCallback(() => {
-    setEditingTemplate((prev) => ({ ...prev, template: getDefaultTemplate() }));
-  }, [setEditingTemplate]);
-
   const handleNewHotelChange = useCallback(
     (value) => {
       setNewHotel(value);
@@ -89,6 +78,7 @@ export function SituationPage({ activities = [], user }) {
   const isSupabaseConfigured = __SUPABASE_DEBUG__?.isConfigured;
   const [settingsLoaded, setSettingsLoaded] = useState(!isSupabaseConfigured);
   const messageTemplatesSaveTimeoutRef = useRef(null);
+  const skipNextTemplatesSaveRef = useRef(false);
   const exteriorHotelsSaveTimeoutRef = useRef(null);
   const situationRowsSaveTimeoutRef = useRef(null);
   const lastRemoteSituationAtRef = useRef(null);
@@ -113,6 +103,7 @@ export function SituationPage({ activities = [], user }) {
         if (!error && Array.isArray(data) && !cancelled) {
           const templatesRow = data.find((row) => row.settings_type === "message_templates");
           if (templatesRow && templatesRow.payload && typeof templatesRow.payload === "object") {
+            skipNextTemplatesSaveRef.current = true;
             setMessageTemplates(templatesRow.payload);
             saveLS(LS_KEYS.messageTemplates, templatesRow.payload);
           }
@@ -174,35 +165,37 @@ export function SituationPage({ activities = [], user }) {
   }, [isSupabaseConfigured]);
 
   useEffect(() => {
-      saveLS(LS_KEYS.messageTemplates, messageTemplates);
+    saveLS(LS_KEYS.messageTemplates, messageTemplates);
 
     if (!settingsLoaded || !isSupabaseConfigured) return;
+
+    if (skipNextTemplatesSaveRef.current) {
+      skipNextTemplatesSaveRef.current = false;
+      return;
+    }
 
     if (messageTemplatesSaveTimeoutRef.current) {
       clearTimeout(messageTemplatesSaveTimeoutRef.current);
     }
 
+    setTemplatesSaveStatus("saving");
+
     messageTemplatesSaveTimeoutRef.current = setTimeout(async () => {
       try {
-        const { error } = await supabase
-          .from("message_settings")
-          .upsert(
-            {
-              site_key: SITE_KEY,
-              settings_type: "message_templates",
-              payload: messageTemplates,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "site_key,settings_type" }
-          );
+        const { error } = await saveMessageTemplates(supabase, SITE_KEY, messageTemplates);
 
         if (error) {
           logger.warn("⚠️ Impossible de sauvegarder les templates sur Supabase:", error);
+          setTemplatesSaveStatus("error");
+        } else {
+          setTemplatesSaveStatus("saved");
+          setTimeout(() => setTemplatesSaveStatus("idle"), 2500);
         }
       } catch (saveError) {
         logger.warn("⚠️ Erreur lors de la sauvegarde des templates sur Supabase:", saveError);
+        setTemplatesSaveStatus("error");
       }
-    }, 400);
+    }, 600);
 
     return () => {
       if (messageTemplatesSaveTimeoutRef.current) {
@@ -316,7 +309,16 @@ export function SituationPage({ activities = [], user }) {
         },
         (payload) => {
           const row = payload.new;
-          if (!row || row.settings_type !== SITUATION_TRANSFER_SETTINGS_TYPE) return;
+          if (!row || !row.payload || typeof row.payload !== "object") return;
+
+          if (row.settings_type === MESSAGE_TEMPLATES_SETTINGS_TYPE) {
+            skipNextTemplatesSaveRef.current = true;
+            setMessageTemplates(row.payload);
+            saveLS(LS_KEYS.messageTemplates, row.payload);
+            return;
+          }
+
+          if (row.settings_type !== SITUATION_TRANSFER_SETTINGS_TYPE) return;
           const remoteAt = row.updated_at;
           if (remoteAt && remoteAt === lastRemoteSituationAtRef.current) return;
 
@@ -352,43 +354,32 @@ export function SituationPage({ activities = [], user }) {
   
   // Les cases marina ne sont plus sauvegardées - elles sont réinitialisées à chaque import
 
-  // Ouvrir la configuration pour une activité
-  const handleOpenConfig = (activityName) => {
-    const template = messageTemplates[activityName] || "";
-    setSelectedActivity(activityName);
-    setEditingTemplate({
-      activity: activityName,
-      template: template,
+  const activityNames = useMemo(() => {
+    const names = new Set();
+    activities.forEach((a) => {
+      if (a.name?.trim()) names.add(a.name.trim());
     });
-    setShowConfigModal(true);
-  };
+    excelData.forEach((r) => {
+      if (r.trip?.trim()) names.add(r.trip.trim());
+    });
+    Object.keys(messageTemplates).forEach((k) => {
+      if (k.trim()) names.add(k.trim());
+    });
+    return [...names];
+  }, [activities, excelData, messageTemplates]);
 
-  // Sauvegarder un template
-  const handleSaveTemplate = () => {
-    if (!editingTemplate.activity.trim()) {
-      toast.error("Veuillez sélectionner une activité");
-      return;
-    }
+  const handleTemplateChange = useCallback((activityName, template) => {
+    setMessageTemplates((prev) => ({ ...prev, [activityName]: template }));
+  }, []);
 
-    const newTemplates = {
-      ...messageTemplates,
-      [editingTemplate.activity]: editingTemplate.template,
-    };
-    
-    setMessageTemplates(newTemplates);
-    toast.success(`Template sauvegardé pour "${editingTemplate.activity}"`);
-    setShowConfigModal(false);
-  };
-
-  // Supprimer un template
-  const handleDeleteTemplate = (activityName) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le template pour "${activityName}" ?\n\nCette action est irréversible.`)) {
-      const newTemplates = { ...messageTemplates };
-      delete newTemplates[activityName];
-      setMessageTemplates(newTemplates);
-      toast.success(`Template supprimé pour "${activityName}"`);
-    }
-  };
+  const handleDeleteTemplate = useCallback((activityName) => {
+    setMessageTemplates((prev) => {
+      const next = { ...prev };
+      delete next[activityName];
+      return next;
+    });
+    toast.success(`Message effacé pour « ${activityName} »`);
+  }, []);
   
   // Gestion des hôtels avec RDV à l'extérieur
   const handleAddHotel = () => {
@@ -1486,7 +1477,7 @@ export function SituationPage({ activities = [], user }) {
         Hôtels extérieur
       </GhostBtn>
       <GhostBtn onClick={() => setShowConfigModal(true)} variant="primary">
-        Messages
+        Messages prédéfinis
       </GhostBtn>
     </div>
   );
@@ -1568,19 +1559,14 @@ export function SituationPage({ activities = [], user }) {
             </div>
           }
         >
-          <MessageTemplatesModal
-            activities={activities}
-            messageTemplates={messageTemplates}
-            selectedActivity={selectedActivity}
-            editingTemplate={editingTemplate}
-            onSelectActivity={handleOpenConfig}
-            onEditingTemplateChange={handleEditingTemplateChange}
-            onSaveTemplate={handleSaveTemplate}
-            onDeleteTemplate={handleDeleteTemplate}
-            onUseDefaultTemplate={handleUseDefaultTemplate}
-            onClose={() => setShowConfigModal(false)}
-            user={user}
-          />
+            <MessageTemplatesModal
+              activityNames={activityNames}
+              messageTemplates={messageTemplates}
+              onTemplateChange={handleTemplateChange}
+              onDeleteTemplate={handleDeleteTemplate}
+              onClose={() => setShowConfigModal(false)}
+              saveStatus={templatesSaveStatus}
+            />
         </Suspense>
       )}
 

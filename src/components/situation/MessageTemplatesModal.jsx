@@ -1,296 +1,175 @@
+import { useMemo, useState } from "react";
 import { GhostBtn, PrimaryBtn, TextInput } from "../ui";
+import { getDefaultTemplate } from "../../utils/messageGenerator";
+
+const VARIABLES_HINT =
+  "{name}, {trip}, {date}, {time}, {hotel}, {roomNo}, {adults}, {children}, {infants}, {formLink}";
 
 export default function MessageTemplatesModal({
-  activities = [],
+  activityNames = [],
   messageTemplates = {},
-  selectedActivity,
-  editingTemplate,
-  onSelectActivity,
-  onEditingTemplateChange,
-  onSaveTemplate,
+  onTemplateChange,
   onDeleteTemplate,
-  onUseDefaultTemplate,
   onClose,
-  user,
+  saveStatus = "idle",
 }) {
-  const configuredTemplates = Object.keys(messageTemplates);
-  
-  // Vérifier si l'utilisateur peut ajouter de nouvelles activités (Léa ou Ewen)
-  const canAddNewActivity = user?.name === "Léa" || user?.name === "Ewen";
-  
-  // Fonction pour réinitialiser le formulaire et créer une nouvelle activité
-  const handleNewActivity = () => {
-    onEditingTemplateChange({
-      activity: "",
-      template: "",
-    });
-    onSelectActivity("");
+  const [search, setSearch] = useState("");
+  const [newActivity, setNewActivity] = useState("");
+
+  const sortedNames = useMemo(() => {
+    const unique = [...new Set(activityNames.map((n) => n.trim()).filter(Boolean))];
+    return unique.sort((a, b) => a.localeCompare(b, "fr"));
+  }, [activityNames]);
+
+  const filteredNames = useMemo(() => {
+    if (!search.trim()) return sortedNames;
+    const term = search.toLowerCase();
+    return sortedNames.filter((name) => name.toLowerCase().includes(term));
+  }, [sortedNames, search]);
+
+  const handleAddActivity = () => {
+    const name = newActivity.trim();
+    if (!name) return;
+    if (!messageTemplates[name]) {
+      onTemplateChange(name, getDefaultTemplate());
+    }
+    setNewActivity("");
   };
 
+  const saveLabel =
+    saveStatus === "saving"
+      ? "Sauvegarde en cours..."
+      : saveStatus === "saved"
+      ? "✓ Sauvegardé dans la base"
+      : saveStatus === "error"
+      ? "Erreur de sauvegarde"
+      : "";
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-6 flex items-center justify-between">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-slate-900/60 backdrop-blur-sm">
+      <div className="flex min-h-0 flex-1 flex-col bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-blue-700 px-4 py-4 text-white md:px-6">
           <div>
-            <h3 className="text-xl font-bold">⚙️ Configuration des messages par activité</h3>
-            <p className="text-sm opacity-90 mt-1">
-              Personnalisez les messages WhatsApp pour chaque activité
+            <h3 className="text-xl font-bold md:text-2xl">Messages prédéfinis par activité</h3>
+            <p className="mt-1 text-sm text-blue-100">
+              Un message par activité — sauvegarde automatique pour toute l&apos;équipe
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-white/80 hover:text-white text-2xl font-bold"
-          >
-            ×
-          </button>
+          <div className="flex items-center gap-3">
+            {saveLabel && (
+              <span
+                className={`text-sm font-semibold ${
+                  saveStatus === "error" ? "text-red-200" : "text-emerald-200"
+                }`}
+              >
+                {saveLabel}
+              </span>
+            )}
+            <GhostBtn onClick={onClose} className="bg-white/15 text-white hover:bg-white/25">
+              Fermer
+            </GhostBtn>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
-          {/* Section pour ajouter une nouvelle activité (Léa et Ewen uniquement) */}
-          {canAddNewActivity && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4 md:p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h4 className="text-base md:text-lg font-bold text-blue-900 mb-1">
-                    ➕ Ajouter une nouvelle activité
-                  </h4>
-                  <p className="text-xs md:text-sm text-blue-700">
-                    Créez un nouveau nom d&apos;activité avec son template de message personnalisé
-                  </p>
-                </div>
-                <GhostBtn
-                  onClick={handleNewActivity}
-                  variant="primary"
-                  size="sm"
-                  className="flex-shrink-0"
-                >
-                  ➕ Nouveau
-                </GhostBtn>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">
-                    Nom de l&apos;activité
-                  </label>
-                  <TextInput
-                    placeholder="Ex: Speed Boat, Safari Désert, Snorkeling..."
-                    value={editingTemplate.activity}
-                    onChange={(e) =>
-                      onEditingTemplateChange({
-                        activity: e.target.value,
-                      })
-                    }
-                    className="text-base md:text-sm"
-                  />
-                </div>
-                {editingTemplate.activity && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-xs md:text-sm font-semibold text-slate-700">
-                        Template de message pour &quot;{editingTemplate.activity}&quot;
-                      </label>
-                      <div className="flex gap-2">
-                        <GhostBtn size="sm" onClick={onUseDefaultTemplate} variant="primary">
-                          📋 Template par défaut
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 md:px-6">
+          <TextInput
+            type="search"
+            placeholder="Rechercher une activité..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full text-base text-gray-900"
+          />
+          <p className="mt-2 text-sm text-gray-600">
+            Variables : <code className="rounded bg-gray-200 px-1">{VARIABLES_HINT}</code>
+          </p>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5">
+          {filteredNames.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-gray-700">
+              Aucune activité trouvée. Ajoutez un nom d&apos;activité ci-dessous.
+            </p>
+          ) : (
+            <div className="space-y-5">
+              {filteredNames.map((activityName) => {
+                const template = messageTemplates[activityName] ?? "";
+                const hasTemplate = Boolean(template.trim());
+
+                return (
+                  <div
+                    key={activityName}
+                    className="rounded-xl border-2 border-gray-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <h4 className="text-lg font-bold text-gray-900">{activityName}</h4>
+                      <div className="flex flex-wrap gap-2">
+                        <GhostBtn
+                          size="sm"
+                          onClick={() => onTemplateChange(activityName, getDefaultTemplate())}
+                        >
+                          Modèle par défaut
                         </GhostBtn>
-                        {messageTemplates[editingTemplate.activity] && (
+                        {hasTemplate && (
                           <GhostBtn
                             size="sm"
-                            onClick={() => onDeleteTemplate(editingTemplate.activity)}
                             variant="danger"
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Effacer le message prédéfini pour « ${activityName} » ?`
+                                )
+                              ) {
+                                onDeleteTemplate(activityName);
+                              }
+                            }}
                           >
-                            🗑️ Supprimer
+                            Effacer
                           </GhostBtn>
                         )}
                       </div>
                     </div>
                     <textarea
-                      value={editingTemplate.template}
-                      onChange={(e) =>
-                        onEditingTemplateChange({
-                          template: e.target.value,
-                        })
-                      }
-                      placeholder="Entrez votre template de message ici..."
-                      className="w-full rounded-lg border border-slate-300 bg-white p-3 md:p-4 text-sm font-mono min-h-[200px] md:min-h-[300px] resize-y focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      rows={10}
+                      value={template}
+                      onChange={(e) => onTemplateChange(activityName, e.target.value)}
+                      placeholder={`Message WhatsApp pour ${activityName}...`}
+                      className="min-h-[140px] w-full resize-y rounded-lg border-2 border-gray-300 bg-white p-3 text-base leading-relaxed text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      rows={6}
                     />
-                    <p className="text-xs text-slate-500 mt-2">
-                      Variables disponibles :{" "}
-                      <code className="bg-slate-100 px-1 rounded">{"{name}"}</code>,{" "}
-                      <code className="bg-slate-100 px-1 rounded">{"{trip}"}</code>,{" "}
-                      <code className="bg-slate-100 px-1 rounded">{"{date}"}</code>,{" "}
-                      <code className="bg-slate-100 px-1 rounded">{"{time}"}</code>,{" "}
-                      <code className="bg-slate-100 px-1 rounded">{"{hotel}"}</code>,{" "}
-                      <code className="bg-slate-100 px-1 rounded">{"{roomNo}"}</code>,{" "}
-                      <code className="bg-slate-100 px-1 rounded">{"{adults}"}</code>,{" "}
-                      <code className="bg-slate-100 px-1 rounded">{"{children}"}</code>,{" "}
-                      <code className="bg-slate-100 px-1 rounded">{"{infants}"}</code>,{" "}
-                      <code className="bg-blue-100 px-1 rounded text-blue-700 font-semibold">{"{formLink}"}</code>
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1 font-medium">
-                      💡 <code>{"{formLink}"}</code> génère un lien unique pour chaque client (évite le bannissement WhatsApp)
-                    </p>
+                    {!hasTemplate && (
+                      <p className="mt-1 text-sm font-medium text-amber-700">
+                        Pas encore de message — le modèle par défaut sera utilisé
+                      </p>
+                    )}
                   </div>
-                )}
-              </div>
+                );
+              })}
             </div>
           )}
 
-          {/* Section pour sélectionner une activité existante */}
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Sélectionner une activité existante {canAddNewActivity && "(pour modifier)"}
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              {activities.length > 0 ? (
-                activities.map((activity) => (
-                  <button
-                    key={activity.id}
-                    onClick={() => {
-                      onSelectActivity(activity.name);
-                      // Si c'est Léa ou Ewen, remplir aussi le formulaire d'ajout
-                      if (canAddNewActivity) {
-                        onEditingTemplateChange({
-                          activity: activity.name,
-                          template: messageTemplates[activity.name] || "",
-                        });
-                      }
-                    }}
-                    className={`px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all min-h-[44px] ${
-                      selectedActivity === activity.name
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    }`}
-                  >
-                    {activity.name}
-                    {messageTemplates[activity.name] && (
-                      <span className="ml-2 text-xs opacity-75">✓</span>
-                    )}
-                  </button>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">
-                  Aucune activité disponible. Les templates seront appliqués par nom d&apos;activité
-                  depuis le fichier Excel.
-                </p>
-              )}
+          <div className="mt-6 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 p-4">
+            <p className="mb-2 font-semibold text-gray-900">Ajouter une activité</p>
+            <div className="flex flex-wrap gap-2">
+              <TextInput
+                placeholder="Ex: Speed Boat, Safari..."
+                value={newActivity}
+                onChange={(e) => setNewActivity(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddActivity();
+                }}
+                className="min-w-[200px] flex-1 text-base text-gray-900"
+              />
+              <PrimaryBtn onClick={handleAddActivity} disabled={!newActivity.trim()}>
+                Ajouter
+              </PrimaryBtn>
             </div>
           </div>
-
-          {/* Section pour modifier une activité existante (si pas en mode nouveau) */}
-          {!canAddNewActivity && (
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Ou saisir le nom de l&apos;activité manuellement
-              </label>
-              <TextInput
-                placeholder="Ex: Speed Boat, Safari Désert..."
-                value={editingTemplate.activity}
-                onChange={(e) =>
-                  onEditingTemplateChange({
-                    activity: e.target.value,
-                  })
-                }
-              />
-            </div>
-          )}
-
-          {/* Section d'édition pour activité sélectionnée (si pas en mode nouveau) */}
-          {selectedActivity && selectedActivity === editingTemplate.activity && !canAddNewActivity && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-semibold text-slate-700">
-                  Template de message pour &quot;{editingTemplate.activity}&quot;
-                </label>
-                <div className="flex gap-2">
-                  <GhostBtn size="sm" onClick={onUseDefaultTemplate} variant="primary">
-                    📋 Template par défaut
-                  </GhostBtn>
-                  {messageTemplates[editingTemplate.activity] && (
-                    <GhostBtn
-                      size="sm"
-                      onClick={() => onDeleteTemplate(editingTemplate.activity)}
-                      variant="danger"
-                    >
-                      🗑️ Supprimer
-                    </GhostBtn>
-                  )}
-                </div>
-              </div>
-              <textarea
-                value={editingTemplate.template}
-                onChange={(e) =>
-                  onEditingTemplateChange({
-                    template: e.target.value,
-                  })
-                }
-                placeholder="Entrez votre template de message ici..."
-                className="w-full rounded-lg border border-slate-300 bg-white p-4 text-sm font-mono min-h-[300px] resize-y focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                rows={12}
-              />
-              <p className="text-xs text-slate-500 mt-2">
-                Variables disponibles :{" "}
-                <code className="bg-slate-100 px-1 rounded">{"{name}"}</code>,{" "}
-                <code className="bg-slate-100 px-1 rounded">{"{trip}"}</code>,{" "}
-                <code className="bg-slate-100 px-1 rounded">{"{date}"}</code>,{" "}
-                <code className="bg-slate-100 px-1 rounded">{"{time}"}</code>,{" "}
-                <code className="bg-slate-100 px-1 rounded">{"{hotel}"}</code>,{" "}
-                <code className="bg-slate-100 px-1 rounded">{"{roomNo}"}</code>,{" "}
-                <code className="bg-slate-100 px-1 rounded">{"{adults}"}</code>,{" "}
-                <code className="bg-slate-100 px-1 rounded">{"{children}"}</code>,{" "}
-                <code className="bg-slate-100 px-1 rounded">{"{infants}"}</code>,{" "}
-                <code className="bg-blue-100 px-1 rounded text-blue-700 font-semibold">{"{formLink}"}</code>
-              </p>
-              <p className="text-xs text-blue-600 mt-1 font-medium">
-                💡 <code>{"{formLink}"}</code> génère un lien unique pour chaque client (évite le bannissement WhatsApp)
-              </p>
-            </div>
-          )}
-
-          {configuredTemplates.length > 0 && (
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 mb-3">
-                Templates configurés ({configuredTemplates.length})
-              </h4>
-              <div className="space-y-2">
-                {configuredTemplates.map((activityName) => (
-                  <div
-                    key={activityName}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
-                  >
-                    <span className="text-sm font-medium text-slate-700">{activityName}</span>
-                    <div className="flex gap-2">
-                      <GhostBtn size="sm" onClick={() => onSelectActivity(activityName)}>
-                        ✏️ Modifier
-                      </GhostBtn>
-                      <GhostBtn
-                        size="sm"
-                        onClick={() => onDeleteTemplate(activityName)}
-                        variant="danger"
-                      >
-                        🗑️ Supprimer
-                      </GhostBtn>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
-        <div className="border-t border-slate-200 p-4 md:p-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
-          <GhostBtn onClick={onClose} className="w-full sm:w-auto order-2 sm:order-1">Annuler</GhostBtn>
-          <PrimaryBtn 
-            onClick={onSaveTemplate} 
-            disabled={!editingTemplate.activity.trim()}
-            className="w-full sm:w-auto order-1 sm:order-2"
-          >
-            💾 Sauvegarder le template
-          </PrimaryBtn>
+        <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm text-gray-600 md:px-6">
+          Les messages sont enregistrés automatiquement dans la base de données (partagés avec toute
+          l&apos;équipe).
         </div>
       </div>
     </div>
   );
 }
-
