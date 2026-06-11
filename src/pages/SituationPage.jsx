@@ -15,6 +15,10 @@ import {
 import {
   saveMessageTemplates,
   MESSAGE_TEMPLATES_SETTINGS_TYPE,
+  normalizeMessageTemplates,
+  buildUniqueActivityNames,
+  normalizeActivityLabel,
+  activityNameKey,
 } from "../utils/messageTemplatesSync";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { ExcelUploadSection } from "../components/situation/ExcelUploadSection";
@@ -46,7 +50,7 @@ export function SituationPage({ activities = [], user }) {
   // État pour la configuration des messages
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [messageTemplates, setMessageTemplates] = useState(() => {
-    return loadLS(LS_KEYS.messageTemplates, {});
+    return normalizeMessageTemplates(loadLS(LS_KEYS.messageTemplates, {}));
   });
   const [templatesSaveStatus, setTemplatesSaveStatus] = useState("idle");
   
@@ -104,8 +108,9 @@ export function SituationPage({ activities = [], user }) {
           const templatesRow = data.find((row) => row.settings_type === "message_templates");
           if (templatesRow && templatesRow.payload && typeof templatesRow.payload === "object") {
             skipNextTemplatesSaveRef.current = true;
-            setMessageTemplates(templatesRow.payload);
-            saveLS(LS_KEYS.messageTemplates, templatesRow.payload);
+            const normalized = normalizeMessageTemplates(templatesRow.payload);
+            setMessageTemplates(normalized);
+            saveLS(LS_KEYS.messageTemplates, normalized);
           }
 
           const hotelsRow = data.find((row) => row.settings_type === "exterior_hotels");
@@ -182,7 +187,11 @@ export function SituationPage({ activities = [], user }) {
 
     messageTemplatesSaveTimeoutRef.current = setTimeout(async () => {
       try {
-        const { error } = await saveMessageTemplates(supabase, SITE_KEY, messageTemplates);
+        const { error } = await saveMessageTemplates(
+          supabase,
+          SITE_KEY,
+          normalizeMessageTemplates(messageTemplates)
+        );
 
         if (error) {
           logger.warn("⚠️ Impossible de sauvegarder les templates sur Supabase:", error);
@@ -313,8 +322,9 @@ export function SituationPage({ activities = [], user }) {
 
           if (row.settings_type === MESSAGE_TEMPLATES_SETTINGS_TYPE) {
             skipNextTemplatesSaveRef.current = true;
-            setMessageTemplates(row.payload);
-            saveLS(LS_KEYS.messageTemplates, row.payload);
+            const normalized = normalizeMessageTemplates(row.payload);
+            setMessageTemplates(normalized);
+            saveLS(LS_KEYS.messageTemplates, normalized);
             return;
           }
 
@@ -354,28 +364,35 @@ export function SituationPage({ activities = [], user }) {
   
   // Les cases marina ne sont plus sauvegardées - elles sont réinitialisées à chaque import
 
-  const activityNames = useMemo(() => {
-    const names = new Set();
-    activities.forEach((a) => {
-      if (a.name?.trim()) names.add(a.name.trim());
-    });
-    excelData.forEach((r) => {
-      if (r.trip?.trim()) names.add(r.trip.trim());
-    });
-    Object.keys(messageTemplates).forEach((k) => {
-      if (k.trim()) names.add(k.trim());
-    });
-    return [...names];
-  }, [activities, excelData, messageTemplates]);
+  const activityNames = useMemo(
+    () =>
+      buildUniqueActivityNames({
+        activityList: activities.map((a) => a.name),
+        excelTrips: excelData.map((r) => r.trip),
+        templateKeys: Object.keys(messageTemplates),
+      }),
+    [activities, excelData, messageTemplates]
+  );
 
   const handleTemplateChange = useCallback((activityName, template) => {
-    setMessageTemplates((prev) => ({ ...prev, [activityName]: template }));
+    const label = normalizeActivityLabel(activityName);
+    setMessageTemplates((prev) => {
+      const normalized = normalizeMessageTemplates(prev);
+      const existingKey =
+        Object.keys(normalized).find((k) => activityNameKey(k) === activityNameKey(label)) || label;
+      return { ...normalized, [existingKey]: template };
+    });
   }, []);
 
   const handleDeleteTemplate = useCallback((activityName) => {
     setMessageTemplates((prev) => {
-      const next = { ...prev };
-      delete next[activityName];
+      const normalized = normalizeMessageTemplates(prev);
+      const keyToDelete = Object.keys(normalized).find(
+        (k) => activityNameKey(k) === activityNameKey(activityName)
+      );
+      if (!keyToDelete) return normalized;
+      const next = { ...normalized };
+      delete next[keyToDelete];
       return next;
     });
     toast.success(`Message effacé pour « ${activityName} »`);

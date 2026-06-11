@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { GhostBtn, PrimaryBtn, TextInput } from "../ui";
 import { getDefaultTemplate } from "../../utils/messageGenerator";
+import { buildUniqueActivityNames, activityNameKey } from "../../utils/messageTemplatesSync";
 
 const VARIABLES_HINT =
   "{hotel} ou Hôtel : ___, {time} ou Heure de départ : ___, {trip} ou Activité : ___, {name}, {date}, {formLink}";
@@ -17,10 +18,10 @@ export default function MessageTemplatesModal({
   const [newActivity, setNewActivity] = useState("");
   const [selectedActivity, setSelectedActivity] = useState(null);
 
-  const sortedNames = useMemo(() => {
-    const unique = [...new Set(activityNames.map((n) => n.trim()).filter(Boolean))];
-    return unique.sort((a, b) => a.localeCompare(b, "fr"));
-  }, [activityNames]);
+  const sortedNames = useMemo(
+    () => buildUniqueActivityNames({ activityList: activityNames }),
+    [activityNames]
+  );
 
   const filteredNames = useMemo(() => {
     if (!search.trim()) return sortedNames;
@@ -28,8 +29,15 @@ export default function MessageTemplatesModal({
     return sortedNames.filter((name) => name.toLowerCase().includes(term));
   }, [sortedNames, search]);
 
+  const getTemplate = (activityName) => {
+    const key = Object.keys(messageTemplates).find(
+      (k) => activityNameKey(k) === activityNameKey(activityName)
+    );
+    return key ? messageTemplates[key] ?? "" : messageTemplates[activityName] ?? "";
+  };
+
   const configuredCount = useMemo(
-    () => sortedNames.filter((name) => Boolean(messageTemplates[name]?.trim())).length,
+    () => sortedNames.filter((name) => Boolean(getTemplate(name).trim())).length,
     [sortedNames, messageTemplates]
   );
 
@@ -52,7 +60,7 @@ export default function MessageTemplatesModal({
       ? "Erreur"
       : "";
 
-  const template = selectedActivity ? messageTemplates[selectedActivity] ?? "" : "";
+  const template = selectedActivity ? getTemplate(selectedActivity) : "";
   const hasTemplate = Boolean(template.trim());
 
   return (
@@ -122,7 +130,7 @@ export default function MessageTemplatesModal({
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2">
                   {filteredNames.map((activityName) => {
-                    const isConfigured = Boolean(messageTemplates[activityName]?.trim());
+                    const isConfigured = Boolean(getTemplate(activityName).trim());
                     return (
                       <button
                         key={activityName}
