@@ -1,6 +1,36 @@
 // Fonctions utilitaires pour l'extraction et la validation de numéros de téléphone
 
 /**
+ * Nettoie une cellule Excel qui contient un numéro (colonne Phone / Téléphone).
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function normalizePhoneCell(value) {
+  if (value == null || value === "") return "";
+  const str = String(value).trim();
+  const extracted = extractPhoneFromName(str);
+  if (extracted) return extracted;
+  return str.replace(/[\s\-().]/g, "");
+}
+
+/**
+ * Téléphone : colonne dédiée en priorité, sinon champ Name (souvent nom + numéro).
+ * @param {string} nameField
+ * @param {string} phoneColumnValue
+ * @returns {string}
+ */
+export function resolvePhoneFromExcelRow(nameField, phoneColumnValue) {
+  const fromColumn = normalizePhoneCell(phoneColumnValue);
+  if (fromColumn) {
+    const check = validatePhoneNumber(fromColumn);
+    if (check.valid) return fromColumn;
+  }
+  const fromName = extractPhoneFromName(nameField);
+  if (fromName) return fromName;
+  return fromColumn || "";
+}
+
+/**
  * Extraire le numéro de téléphone depuis le champ "Name"
  * @param {string} nameField - Le champ contenant le nom et potentiellement le téléphone
  * @returns {string|null} - Le numéro de téléphone extrait ou null

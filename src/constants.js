@@ -108,6 +108,7 @@ export const LS_KEYS = {
   quoteForm: "hd_quote_form", // Formulaire de devis en cours
   activityForm: "hd_activity_form", // Formulaire d'activité en cours
   messageTemplates: "hd_message_templates", // Templates de messages par activité
+  situationTransferRows: "hd_situation_transfer_rows", // Cache local lignes Excel transferts
   exteriorHotels: "hd_exterior_hotels", // Liste des hôtels avec RDV à l'extérieur
   users: "hd_users", // Cache utilisateurs pour sécurité anti-suppression auto
 };

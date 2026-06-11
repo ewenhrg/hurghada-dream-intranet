@@ -1,7 +1,7 @@
 import { lazyWithRetry } from "../utils/lazyWithRetry";
 
-/** Page Situation en standby : remettre à false pour réafficher dans le menu et le contenu */
-export const SITUATION_PAGE_STANDBY = true;
+/** Page Transferts WhatsApp (import Excel) — visible par toute l'équipe connectée */
+export const SITUATION_PAGE_STANDBY = false;
 
 export const ActivitiesPage = lazyWithRetry(() =>
   import("../pages/ActivitiesPage").then((module) => ({ default: module.ActivitiesPage }))

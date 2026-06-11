@@ -5,9 +5,13 @@ import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { LS_KEYS, SITE_KEY } from "../constants";
 import { loadLS, saveLS } from "../utils";
-import { extractPhoneFromName, validatePhoneNumber, extractNameFromField } from "../utils/phoneUtils";
+import { extractPhoneFromName, validatePhoneNumber, extractNameFromField, resolvePhoneFromExcelRow } from "../utils/phoneUtils";
 import { convertExcelValue, findColumn } from "../utils/excelParser";
 import { generateMessage, getDefaultTemplate } from "../utils/messageGenerator";
+import {
+  saveSituationTransferRows,
+  SITUATION_TRANSFER_SETTINGS_TYPE,
+} from "../utils/situationTransferSync";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ExcelUploadSection } from "../components/situation/ExcelUploadSection";
@@ -320,7 +324,8 @@ const VirtualizedRow = memo(({ index, style, data }) => {
 VirtualizedRow.displayName = "VirtualizedRow";
 
 export function SituationPage({ activities = [], user }) {
-  const [excelData, setExcelData] = useState([]);
+  const [excelData, setExcelData] = useState(() => loadLS(LS_KEYS.situationTransferRows, []));
+  const [sharedMeta, setSharedMeta] = useState({ fileName: "", importedBy: "", updatedAt: null });
   const [previewMessages, setPreviewMessages] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const [sending, setSending] = useState(false);
@@ -386,6 +391,10 @@ export function SituationPage({ activities = [], user }) {
   const [settingsLoaded, setSettingsLoaded] = useState(!isSupabaseConfigured);
   const messageTemplatesSaveTimeoutRef = useRef(null);
   const exteriorHotelsSaveTimeoutRef = useRef(null);
+  const situationRowsSaveTimeoutRef = useRef(null);
+  const lastRemoteSituationAtRef = useRef(null);
+  const skipNextSituationSaveRef = useRef(false);
+  const lastUploadedFileNameRef = useRef("");
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -399,7 +408,7 @@ export function SituationPage({ activities = [], user }) {
       try {
         const { data, error } = await supabase
           .from("message_settings")
-          .select("settings_type, payload")
+          .select("settings_type, payload, updated_at")
           .eq("site_key", SITE_KEY);
 
         if (!error && Array.isArray(data) && !cancelled) {
@@ -423,6 +432,28 @@ export function SituationPage({ activities = [], user }) {
 
             setExteriorHotels(normalizedHotels);
             saveLS(LS_KEYS.exteriorHotels, normalizedHotels);
+          }
+
+          const situationRow = data.find((row) => row.settings_type === SITUATION_TRANSFER_SETTINGS_TYPE);
+          if (situationRow?.payload && typeof situationRow.payload === "object" && !cancelled) {
+            const p = situationRow.payload;
+            if (Array.isArray(p.rows)) {
+              skipNextSituationSaveRef.current = true;
+              setExcelData(p.rows);
+              saveLS(LS_KEYS.situationTransferRows, p.rows);
+            }
+            if (Array.isArray(p.detectedColumns)) {
+              setDetectedColumns(p.detectedColumns);
+            }
+            if (Array.isArray(p.rowsWithMarina)) {
+              setRowsWithMarina(new Set(p.rowsWithMarina));
+            }
+            setSharedMeta({
+              fileName: p.fileName != null ? String(p.fileName) : "",
+              importedBy: p.importedBy != null ? String(p.importedBy) : "",
+              updatedAt: situationRow.updated_at || p.updated_at || null,
+            });
+            lastRemoteSituationAtRef.current = situationRow.updated_at || p.updated_at || null;
           }
         } else if (error) {
           logger.warn("⚠️ Impossible de charger les paramètres Supabase:", error);
@@ -518,6 +549,107 @@ export function SituationPage({ activities = [], user }) {
       }
     };
   }, [exteriorHotels, settingsLoaded, isSupabaseConfigured]);
+
+  useEffect(() => {
+    saveLS(LS_KEYS.situationTransferRows, excelData);
+
+    if (!settingsLoaded || !isSupabaseConfigured) return;
+
+    if (skipNextSituationSaveRef.current) {
+      skipNextSituationSaveRef.current = false;
+      return;
+    }
+
+    if (situationRowsSaveTimeoutRef.current) {
+      clearTimeout(situationRowsSaveTimeoutRef.current);
+    }
+
+    situationRowsSaveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const payload = {
+          rows: excelData,
+          detectedColumns,
+          rowsWithMarina: [...rowsWithMarina],
+          fileName: sharedMeta.fileName || lastUploadedFileNameRef.current || "",
+          importedBy: sharedMeta.importedBy || user?.name || "",
+        };
+        const { error } = await saveSituationTransferRows(supabase, SITE_KEY, payload);
+        if (error) {
+          logger.warn("⚠️ Impossible de synchroniser les transferts sur Supabase:", error);
+        } else {
+          const now = new Date().toISOString();
+          lastRemoteSituationAtRef.current = now;
+          setSharedMeta((prev) => ({ ...prev, updatedAt: now }));
+        }
+      } catch (saveError) {
+        logger.warn("⚠️ Erreur sync transferts Supabase:", saveError);
+      }
+    }, 600);
+
+    return () => {
+      if (situationRowsSaveTimeoutRef.current) {
+        clearTimeout(situationRowsSaveTimeoutRef.current);
+      }
+    };
+  }, [
+    excelData,
+    detectedColumns,
+    rowsWithMarina,
+    settingsLoaded,
+    isSupabaseConfigured,
+    sharedMeta.fileName,
+    sharedMeta.importedBy,
+    user?.name,
+  ]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const channel = supabase
+      .channel("situation-transfer-rows")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "message_settings",
+          filter: `site_key=eq.${SITE_KEY}`,
+        },
+        (payload) => {
+          const row = payload.new;
+          if (!row || row.settings_type !== SITUATION_TRANSFER_SETTINGS_TYPE) return;
+          const remoteAt = row.updated_at;
+          if (remoteAt && remoteAt === lastRemoteSituationAtRef.current) return;
+
+          const p = row.payload;
+          if (!p || typeof p !== "object") return;
+
+          lastRemoteSituationAtRef.current = remoteAt;
+          skipNextSituationSaveRef.current = true;
+
+          if (Array.isArray(p.rows)) {
+            setExcelData(p.rows);
+            saveLS(LS_KEYS.situationTransferRows, p.rows);
+          }
+          if (Array.isArray(p.detectedColumns)) {
+            setDetectedColumns(p.detectedColumns);
+          }
+          if (Array.isArray(p.rowsWithMarina)) {
+            setRowsWithMarina(new Set(p.rowsWithMarina));
+          }
+          setSharedMeta({
+            fileName: p.fileName != null ? String(p.fileName) : "",
+            importedBy: p.importedBy != null ? String(p.importedBy) : "",
+            updatedAt: remoteAt || null,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isSupabaseConfigured]);
   
   // Les cases marina ne sont plus sauvegardées - elles sont réinitialisées à chaque import
 
@@ -639,7 +771,7 @@ export function SituationPage({ activities = [], user }) {
         // Chercher automatiquement la ligne qui contient les en-têtes
         // On cherche des mots-clés comme "Invoice", "Date", "Name", "Hotel", etc.
         let headerRowIndex = 0;
-        const headerKeywords = ["invoice", "date", "name", "hotel", "room", "pax", "trip", "time", "comment"];
+        const headerKeywords = ["invoice", "date", "name", "hotel", "room", "pax", "trip", "time", "comment", "phone", "telephone", "tel", "mobile"];
         
         for (let i = 0; i < Math.min(rawData.length, 10); i++) {
           const row = rawData[i] || [];
@@ -762,12 +894,35 @@ export function SituationPage({ activities = [], user }) {
           // Utiliser "time" si disponible, sinon "Comment"
           const pickupTime = timeColumn || commentColumn;
           const comment = findColumn(row, ["Notes", "notes", "Commentaire", "commentaire"]);
+          const phoneColumnRaw = findColumn(row, [
+            "Phone",
+            "phone",
+            "Téléphone",
+            "telephone",
+            "Tel",
+            "tel",
+            "Mobile",
+            "mobile",
+            "WhatsApp",
+            "whatsapp",
+            "GSM",
+            "gsm",
+          ]);
 
           // Convertir les valeurs en chaînes pour éviter les erreurs
           const nameStr = String(name || "");
-          
-          // Extraire le téléphone et le nom
-          const phone = extractPhoneFromName(nameStr);
+
+          // Extraire le téléphone (colonne dédiée en priorité, sinon champ Name)
+          let phone = resolvePhoneFromExcelRow(nameStr, phoneColumnRaw);
+          if (!phone) {
+            for (const val of Object.values(row)) {
+              const candidate = resolvePhoneFromExcelRow("", String(val || ""));
+              if (candidate && validatePhoneNumber(candidate).valid) {
+                phone = candidate;
+                break;
+              }
+            }
+          }
           const clientName = extractNameFromField(nameStr);
 
           // Valider le numéro de téléphone
@@ -894,6 +1049,12 @@ export function SituationPage({ activities = [], user }) {
         setRowsWithMarina(new Set()); // Réinitialiser toutes les cases marina à chaque nouvel import
         setShowPreview(false);
         setSendLog([]);
+        lastUploadedFileNameRef.current = file.name;
+        setSharedMeta({
+          fileName: file.name,
+          importedBy: user?.name || "",
+          updatedAt: new Date().toISOString(),
+        });
         
         if (filteredData.length > 0) {
           const message = `${filteredData.length} ligne(s) chargée(s) depuis le fichier Excel${emptyRowsCount > 0 ? ` (${emptyRowsCount} ligne(s) vide(s) supprimée(s))` : ""}`;
@@ -1623,8 +1784,8 @@ export function SituationPage({ activities = [], user }) {
 
   return (
     <Section
-      title="📋 Situation - Envoi de messages"
-      subtitle="Chargez un fichier Excel et envoyez automatiquement les messages de rappel aux clients"
+      title="📱 Transferts WhatsApp"
+      subtitle="Importez le fichier Excel du jour : téléphone, activité et heure de prise en charge. Visible par toute l'équipe. Envoyez les messages WhatsApp ligne par ligne ou en automatique."
       right={
         <div className="flex gap-2 md:gap-3 flex-wrap">
           <GhostBtn 
@@ -1645,6 +1806,28 @@ export function SituationPage({ activities = [], user }) {
       }
     >
       <div className="space-y-6">
+        {(sharedMeta.fileName || sharedMeta.importedBy || sharedMeta.updatedAt) && (
+          <p className="rounded-xl border border-violet-200/80 bg-violet-50/90 px-4 py-3 text-sm text-violet-950">
+            {sharedMeta.fileName ? (
+              <>
+                <span className="font-semibold">Fichier partagé :</span> {sharedMeta.fileName}
+                {" · "}
+              </>
+            ) : null}
+            {sharedMeta.importedBy ? (
+              <>
+                <span className="font-semibold">Importé par :</span> {sharedMeta.importedBy}
+                {" · "}
+              </>
+            ) : null}
+            {sharedMeta.updatedAt ? (
+              <>
+                <span className="font-semibold">Mis à jour :</span>{" "}
+                {new Date(sharedMeta.updatedAt).toLocaleString("fr-FR")}
+              </>
+            ) : null}
+          </p>
+        )}
         {/* Upload */}
         <ExcelUploadSection onFileUpload={handleFileUpload} />
 

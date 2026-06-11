@@ -1319,9 +1319,9 @@ export default function App() {
                     {t("nav.modifications")}
                   </Pill>
                 )} */}
-                {!SITUATION_PAGE_STANDBY && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
+                {!SITUATION_PAGE_STANDBY && (
                   <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
-                    {t("nav.situation")}
+                    📱 Transferts
                   </Pill>
                 )}
                 {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
@@ -1508,7 +1508,7 @@ export default function App() {
           </Section>
         )} */}
 
-        {!SITUATION_PAGE_STANDBY && tab === "situation" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa") && (
+        {!SITUATION_PAGE_STANDBY && tab === "situation" && (
           <SituationPage activities={activities} user={user} />
         )}
 
