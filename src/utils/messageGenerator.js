@@ -97,6 +97,43 @@ function applyMessagePlaceholders(template, data, formLink) {
   return message;
 }
 
+function formatTimeDisplay(time) {
+  const trimmed = String(time || "").trim();
+  return trimmed || "à confirmer";
+}
+
+/** En-tête WhatsApp quand la case « Bateau à la marina » est cochée */
+function buildMarinaMessageTop(data) {
+  const timeDisplay = formatTimeDisplay(data.time);
+  const lines = ["🚤 Votre bateau vous attend à la marina de votre hôtel."];
+  lines.push(`Heure au bateau : ${timeDisplay}`);
+  return `${lines.join("\n")}\n\n`;
+}
+
+/** Adapte le corps du message pour un RDV bateau (marina) */
+function applyMarinaTimeLabels(message) {
+  return message
+    .replace(/Heure de d[ée]part/gi, "Heure au bateau")
+    .replace(/Heure de prise en charge/gi, "Heure au bateau")
+    .replace(/(?:Pick-up|Pickup|Prise en charge)(?=\s*[:：])/gi, "Heure au bateau");
+}
+
+/**
+ * Déterminer le message RDV en haut (hors case marina manuelle)
+ */
+function buildRdvMessageTop(data, exteriorHotels) {
+  const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
+
+  if (hotelInfo) {
+    if (hotelInfo.hasBeachBoats) {
+      return `📍 Rendez-vous directement à la marina du ${data.hotel}.\n\n`;
+    }
+    return "📍 Rendez-vous à l'extérieur de l'hôtel.\n\n";
+  }
+
+  return "📍 Rendez-vous devant la réception de l'hôtel.\n\n";
+}
+
 /**
  * Générer un lien de formulaire unique pour un client (évite la détection de spam WhatsApp)
  * @returns {string} - Le lien unique avec token
@@ -115,6 +152,7 @@ function generateUniqueFormLink() {
  * @returns {string} - Le message généré
  */
 export function generateMessage(data, messageTemplates = {}, rowsWithMarina = new Set(), exteriorHotels = []) {
+  const isMarina = rowsWithMarina.has(data.id);
   // Vérifier si un template existe pour cette activité
   const activityName = data.trip || "";
   
@@ -134,61 +172,58 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
   
   // Si un template personnalisé existe, l'utiliser
   if (template && template.trim() !== "") {
-    // Déterminer le message RDV selon l'hôtel (à mettre en haut)
     let rdvMessageTop = "";
-    if (data.hotel) {
-      // Si la case marina est cochée pour cette ligne, utiliser le message marina
-      if (rowsWithMarina.has(data.id)) {
-        rdvMessageTop = "📍 Rendez-vous directement à la marina de votre hôtel.\n\n";
-      } else {
-        const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
-        
-        if (hotelInfo) {
-          if (hotelInfo.hasBeachBoats) {
-            rdvMessageTop = `📍 Rendez-vous directement à la marina du ${data.hotel}.\n\n`;
-          } else {
-            rdvMessageTop = "📍 Rendez-vous à l'extérieur de l'hôtel.\n\n";
-          }
-        } else {
-          rdvMessageTop = "📍 Rendez-vous devant la réception de l'hôtel.\n\n";
-        }
-      }
+    if (isMarina) {
+      rdvMessageTop = buildMarinaMessageTop(data);
+    } else if (data.hotel) {
+      rdvMessageTop = buildRdvMessageTop(data, exteriorHotels);
     }
-    
+
     // Générer un lien unique pour ce client (évite la détection de spam WhatsApp)
     const uniqueFormLink = generateUniqueFormLink();
-    const message = applyMessagePlaceholders(template, data, uniqueFormLink);
+    let message = applyMessagePlaceholders(template, data, uniqueFormLink);
+    if (isMarina) {
+      message = applyMarinaTimeLabels(message);
+    }
 
     return rdvMessageTop + message;
   }
   
   // Sinon, utiliser le template par défaut
   const parts = [];
+  const timeDisplay = formatTimeDisplay(data.time);
 
-  // Déterminer le message RDV selon l'hôtel (à mettre en haut)
-  if (data.hotel) {
-    // Si la case marina est cochée pour cette ligne, utiliser le message marina
-    if (rowsWithMarina.has(data.id)) {
-      parts.push("📍 Rendez-vous directement à la marina de votre hôtel.");
-    } else {
-      const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
-      
-      if (hotelInfo) {
-        if (hotelInfo.hasBeachBoats) {
-          parts.push(`📍 Rendez-vous directement à la marina du ${data.hotel}.`);
-        } else {
-          parts.push("📍 Rendez-vous à l'extérieur de l'hôtel.");
-        }
+  if (isMarina) {
+    parts.push("🚤 Votre bateau vous attend à la marina de votre hôtel.");
+    parts.push(`Heure au bateau : ${timeDisplay}`);
+    parts.push("");
+  } else if (data.hotel) {
+    const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
+
+    if (hotelInfo) {
+      if (hotelInfo.hasBeachBoats) {
+        parts.push(`📍 Rendez-vous directement à la marina du ${data.hotel}.`);
       } else {
-        parts.push("📍 Rendez-vous devant la réception de l'hôtel.");
+        parts.push("📍 Rendez-vous à l'extérieur de l'hôtel.");
       }
+    } else {
+      parts.push("📍 Rendez-vous devant la réception de l'hôtel.");
     }
     parts.push("");
   }
 
   parts.push(`Bonjour ${data.name || "Client"},`);
   parts.push("");
-  parts.push(`Votre pick-up pour ${data.trip || "l'activité"} est prévu le ${data.date || "la date"} à ${data.time || "l'heure"}.`);
+
+  if (isMarina) {
+    parts.push(
+      `Votre excursion ${data.trip || "l'activité"} est prévue le ${data.date || "la date"}.`
+    );
+  } else {
+    parts.push(
+      `Votre pick-up pour ${data.trip || "l'activité"} est prévu le ${data.date || "la date"} à ${timeDisplay}.`
+    );
+  }
 
   if (data.hotel) {
     parts.push(`📍 Hôtel: ${data.hotel}`);
@@ -208,7 +243,11 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
   }
 
   parts.push("");
-  parts.push("Merci de vous présenter à l'heure indiquée.");
+  parts.push(
+    isMarina
+      ? "Merci de vous présenter à l'heure indiquée à la marina de votre hôtel."
+      : "Merci de vous présenter à l'heure indiquée."
+  );
   
   parts.push("");
   parts.push("Cordialement,");
