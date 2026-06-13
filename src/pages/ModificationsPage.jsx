@@ -6,6 +6,10 @@ import { GhostBtn, PrimaryBtn, TextInput, NumberInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { useDebounce } from "../hooks/useDebounce";
+import {
+  isActivityBlockedForNeighborhood,
+  SPA_ROYAL_NEIGHBORHOOD_MESSAGE,
+} from "../utils/activityNeighborhoodRules.js";
 
 export function ModificationsPage({ quotes, setQuotes, activities, user }) {
   // Map des activités pour des recherches O(1) au lieu de O(n)
@@ -101,6 +105,12 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
         return;
       }
 
+      const neighborhood = selectedQuote.client?.neighborhood || "";
+      if (isActivityBlockedForNeighborhood(newActivity, neighborhood)) {
+        toast.error(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+        return;
+      }
+
       // Calculer le nouveau total en fonction de la nouvelle activité et du nouveau nombre de personnes
       const adults = Number(newAdults) || 0;
       const children = Number(newChildren) || 0;
@@ -116,7 +126,6 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
       }
       
       // Ajouter le supplément transfert si nécessaire (par adulte et enfant, bébés gratuits)
-      const neighborhood = selectedQuote.client?.neighborhood || "";
       const transferInfo = newActivity.transfers?.[neighborhood];
       if (transferInfo && transferInfo.surcharge) {
         newLineTotal += Number(transferInfo.surcharge || 0) * (adults + children);

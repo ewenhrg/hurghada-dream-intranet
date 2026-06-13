@@ -12,6 +12,10 @@ import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIs
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
+import {
+  isActivityBlockedForNeighborhood,
+  SPA_ROYAL_NEIGHBORHOOD_MESSAGE,
+} from "../utils/activityNeighborhoodRules.js";
 
 /** Délai avant suppression auto des devis « non payés » (au moins une ligne sans n° de ticket), à l’ouverture de l’historique. */
 const UNPAID_QUOTE_AUTO_DELETE_DAYS = 20;
@@ -1528,6 +1532,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       const act = activitiesMap.get(it.activityId);
       const weekday = it.date ? new Date(it.date + "T12:00:00").getDay() : null;
       const available = act && weekday != null ? !!act.availableDays?.[weekday] : true;
+      const isNeighborhoodBlocked =
+        act && client?.neighborhood
+          ? isActivityBlockedForNeighborhood(act, client.neighborhood)
+          : false;
       const transferInfo = act && client?.neighborhood ? act.transfers?.[client.neighborhood] || null : null;
 
       let lineTotal = 0;
@@ -1663,7 +1671,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         raw: it,
         act,
         weekday,
-        available,
+        available: available && !isNeighborhoodBlocked,
+        isNeighborhoodBlocked,
         transferInfo,
         lineTotal,
         pickupTime,
@@ -1684,6 +1693,12 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     // Vérifier qu'il y a au moins un item valide
     if (validComputed.length === 0) {
       toast.warning("Veuillez sélectionner au moins une activité.");
+      return;
+    }
+
+    const neighborhoodBlockedItems = validComputed.filter((c) => c.isNeighborhoodBlocked);
+    if (neighborhoodBlockedItems.length > 0) {
+      toast.error(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
       return;
     }
 
@@ -1869,7 +1884,25 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">📍 Quartier</label>
                 <select
                   value={client.neighborhood || ""}
-                  onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
+                  onChange={(e) => {
+                    const newNeighborhood = e.target.value;
+                    setClient((c) => ({ ...c, neighborhood: newNeighborhood }));
+                    setItems((prev) => {
+                      let cleared = false;
+                      const next = prev.map((it) => {
+                        const act = activitiesMap.get(it.activityId);
+                        if (act && isActivityBlockedForNeighborhood(act, newNeighborhood)) {
+                          cleared = true;
+                          return { ...it, activityId: "" };
+                        }
+                        return it;
+                      });
+                      if (cleared) {
+                        toast.warning(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+                      }
+                      return next;
+                    });
+                  }}
                   className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                 >
                   <option value="">— Choisir un quartier —</option>
@@ -1926,16 +1959,39 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🎯 Sélectionner une activité</p>
                     <select
                       value={c.raw.activityId || ""}
-                      onChange={(e) => setItem(idx, { activityId: e.target.value })}
+                      onChange={(e) => {
+                        const newId = e.target.value;
+                        const act = activitiesMap.get(newId);
+                        if (
+                          act &&
+                          client?.neighborhood &&
+                          isActivityBlockedForNeighborhood(act, client.neighborhood)
+                        ) {
+                          toast.error(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+                          return;
+                        }
+                        setItem(idx, { activityId: newId });
+                      }}
                       className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                     >
                       <option value="">— Choisir une activité —</option>
-                      {sortedActivities.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
+                      {sortedActivities.map((a) => {
+                        const blocked =
+                          client?.neighborhood &&
+                          isActivityBlockedForNeighborhood(a, client.neighborhood);
+                        return (
+                          <option key={a.id} value={a.id} disabled={Boolean(blocked)}>
+                            {a.name}
+                            {blocked ? " (Hurghada uniquement)" : ""}
+                          </option>
+                        );
+                      })}
                     </select>
+                    {c.isNeighborhoodBlocked && (
+                      <p className="text-xs md:text-sm text-orange-800 font-semibold mt-2 bg-orange-50 px-3 py-2 rounded-lg border border-orange-200">
+                        📍 {SPA_ROYAL_NEIGHBORHOOD_MESSAGE}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm md:text-base font-bold text-slate-800 mb-3">📅 Date de l'activité</p>

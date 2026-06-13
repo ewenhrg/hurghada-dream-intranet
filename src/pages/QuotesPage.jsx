@@ -13,6 +13,10 @@ import { PaymentModal } from "../components/quotes/PaymentModal";
 import { QuoteSummary } from "../components/quotes/QuoteSummary";
 import { NotesSection } from "../components/quotes/NotesSection";
 import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator";
+import {
+  isActivityBlockedForNeighborhood,
+  SPA_ROYAL_NEIGHBORHOOD_MESSAGE,
+} from "../utils/activityNeighborhoodRules.js";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import { useDebounce } from "../hooks/useDebounce";
 import { salesCache, appCache, createCacheKey } from "../utils/cache";
@@ -880,6 +884,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
+    const neighborhoodBlockedItems = validComputed.filter((c) => c.isNeighborhoodBlocked);
+    if (neighborhoodBlockedItems.length > 0) {
+      toast.error(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+      setIsSubmitting(false);
+      return;
+    }
+
     const notAvailable = validComputed.filter((c) => c.weekday != null && !c.baseAvailable && !c.isPushSale);
     if (notAvailable.length) {
       toast.warning(
@@ -1222,7 +1233,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               </label>
               <select
                 value={client.neighborhood}
-                onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
+                onChange={(e) => {
+                  const newNeighborhood = e.target.value;
+                  setClient((c) => ({ ...c, neighborhood: newNeighborhood }));
+                  setItems((prev) => {
+                    let cleared = false;
+                    const next = prev.map((it) => {
+                      const act = activitiesMap.get(it.activityId);
+                      if (act && isActivityBlockedForNeighborhood(act, newNeighborhood)) {
+                        cleared = true;
+                        return { ...it, activityId: "" };
+                      }
+                      return it;
+                    });
+                    if (cleared) {
+                      toast.warning(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+                    }
+                    return next;
+                  });
+                }}
                 required
                 className="w-full rounded-xl border-2 border-slate-600 bg-slate-900/60 px-4 py-2.5 text-sm font-medium text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md"
               >
@@ -1389,6 +1418,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       onChange={(e) => {
                         const newId = e.target.value;
                         const act = activitiesMap.get(newId);
+                        if (
+                          act &&
+                          client.neighborhood &&
+                          isActivityBlockedForNeighborhood(act, client.neighborhood)
+                        ) {
+                          toast.error(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+                          return;
+                        }
                         const patch = { activityId: newId };
                         if (act && isActivityBabiesForbidden(act)) {
                           patch.babies = 0;
@@ -1402,11 +1439,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-normal text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     >
                       <option value="">— Sélectionner une activité —</option>
-                      {sortedActivities.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
+                      {sortedActivities.map((a) => {
+                        const blocked =
+                          client.neighborhood &&
+                          isActivityBlockedForNeighborhood(a, client.neighborhood);
+                        return (
+                          <option key={a.id} value={a.id} disabled={Boolean(blocked)}>
+                            {a.name}
+                            {blocked ? " (Hurghada uniquement)" : ""}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                   <div>
@@ -1441,6 +1484,21 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     stayStartDate={client.arrivalDate || ""}
                     stayEndDate={client.departureDate || ""}
                   />
+                  {c.act && c.isNeighborhoodBlocked && (
+                    <div className="mt-3 p-3 rounded-lg border-2 border-orange-500 bg-orange-500/20 shadow-lg shadow-orange-500/30">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">📍</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-orange-700 uppercase tracking-wide">
+                            Quartier incompatible
+                          </p>
+                          <p className="text-xs text-orange-800 mt-0.5 font-medium">
+                            {SPA_ROYAL_NEIGHBORHOOD_MESSAGE}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {c.act && c.isStopSale && (
                     <div className="mt-3 p-3 rounded-lg border-2 border-red-500 bg-red-500/20 shadow-lg shadow-red-500/30 animate-pulse">
                       <div className="flex items-center gap-2">

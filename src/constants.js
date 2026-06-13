@@ -145,6 +145,15 @@ export const NEIGHBORHOODS = [
   { key: "autre", label: "Autre" },
 ];
 
+/** Quartiers considérés comme « Hurghada » (SPA ROYAL vendable uniquement ici). */
+export const HURGHADA_NEIGHBORHOOD_KEYS = [
+  "hurghada_cora",
+  "hurghada_kawther",
+  "hurghada_sheraton",
+  "hurghada_arabia",
+  "hurghada_ahyaa",
+];
+
 export function getDefaultActivities() {
   return [
     {

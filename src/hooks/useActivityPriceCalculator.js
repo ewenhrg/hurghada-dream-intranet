@@ -19,6 +19,7 @@ import {
   getLouxorPrivatifPrices,
 } from "../utils/activityHelpers";
 import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
+import { isActivityBlockedForNeighborhood } from "../utils/activityNeighborhoodRules.js";
 
 /**
  * Hook personnalisé pour calculer les prix des activités
@@ -52,8 +53,13 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       }
       
       const programmaticStop = act && it.date ? isProgrammaticStopSale(act, it.date) : false;
-      // Disponibilité : stop programmé (ex. avant 1er septembre) non annulable par push sale
-      const available = programmaticStop ? false : isPushSale || (baseAvailable && !isStopSale);
+      const isNeighborhoodBlocked =
+        act && neighborhood ? isActivityBlockedForNeighborhood(act, neighborhood) : false;
+      // Disponibilité : stop programmé ou quartier incompatible (ex. SPA ROYAL hors Hurghada)
+      const available =
+        programmaticStop || isNeighborhoodBlocked
+          ? false
+          : isPushSale || (baseAvailable && !isStopSale);
       
       const transferInfo = act && neighborhood ? act.transfers?.[neighborhood] || null : null;
 
@@ -279,6 +285,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         baseAvailable,
         isStopSale,
         isPushSale,
+        isNeighborhoodBlocked,
         transferInfo,
         lineTotal,
         pickupTime,
