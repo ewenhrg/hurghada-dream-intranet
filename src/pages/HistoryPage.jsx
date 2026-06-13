@@ -568,11 +568,20 @@ function QuoteCardComponent({
 // QuoteCard exporté directement (la pagination et les autres optimisations suffisent pour les performances)
 const QuoteCard = QuoteCardComponent;
 
+/** Date de création du devis = aujourd'hui (fuseau local). */
+function isQuoteCreatedToday(createdAt) {
+  if (!createdAt) return false;
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return false;
+  return getLocalDateKey(date) === getLocalDateKey();
+}
+
 // Exporter HistoryPage après la déclaration de QuoteCard
 export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
+  const [todayOnlyFilter, setTodayOnlyFilter] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
@@ -583,6 +592,11 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   // Pagination pour améliorer les performances
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20; // Nombre de devis par page
+
+  const todayQuotesCount = useMemo(
+    () => quotes.filter((d) => isQuoteCreatedToday(d.createdAt)).length,
+    [quotes]
+  );
   
   /** Lignes d’activités dans un devis (table quotes) — distinct des écritures sur la table activities. */
   const canModifyActivities = true;
@@ -785,6 +799,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   // Cela évite de calculer les dates formatées pour TOUS les devis quand on n'affiche que 20
   const filtered = useMemo(() => {
     let result = quotes;
+
+    if (todayOnlyFilter) {
+      result = result.filter((d) => isQuoteCreatedToday(d.createdAt));
+    }
     
     // Filtre par statut (payé / en attente) — calcul rapide sans formatage
     if (statusFilter !== "all") {
@@ -819,7 +837,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     }
     
     return result;
-  }, [debouncedQ, quotes, statusFilter]);
+  }, [debouncedQ, quotes, statusFilter, todayOnlyFilter]);
   
   // Calculer les statuts et formater les dates UNIQUEMENT pour les devis filtrés (pas tous les devis)
   const quotesWithStatus = useMemo(() => {
@@ -873,7 +891,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   // Réinitialiser la page quand les filtres changent
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedQ, statusFilter]);
+  }, [debouncedQ, statusFilter, todayOnlyFilter]);
 
   // Scroller en haut de la modale de paiement et de la page quand elle s'ouvre
   useEffect(() => {
@@ -1007,6 +1025,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           </div>
           <div className="flex flex-wrap gap-2 md:gap-3">
             <Pill
+              active={todayOnlyFilter}
+              onClick={() => setTodayOnlyFilter((prev) => !prev)}
+              className="transition-opacity duration-150 hover:opacity-80"
+            >
+              📅 Aujourd&apos;hui{todayQuotesCount > 0 ? ` (${todayQuotesCount})` : ""}
+            </Pill>
+            <Pill
               active={statusFilter === "all"}
               onClick={() => setStatusFilter("all")}
                 className="transition-opacity duration-150 hover:opacity-80"
@@ -1038,11 +1063,17 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           <span className="text-2xl md:text-3xl animate-bounce">📊</span>
           <div>
             {filtered.length === 0 ? (
-              <p className="text-amber-700 font-bold text-base md:text-lg">Aucun devis trouvé</p>
+              <p className="text-amber-700 font-bold text-base md:text-lg">
+                {todayOnlyFilter ? "Aucun devis créé aujourd'hui" : "Aucun devis trouvé"}
+              </p>
             ) : filtered.length === 1 ? (
-              <p className="text-blue-700 font-bold text-base md:text-lg">1 devis trouvé</p>
+              <p className="text-blue-700 font-bold text-base md:text-lg">
+                1 devis{todayOnlyFilter ? " aujourd'hui" : " trouvé"}
+              </p>
             ) : (
-              <p className="text-blue-700 font-bold text-base md:text-lg">{filtered.length} devis trouvés</p>
+              <p className="text-blue-700 font-bold text-base md:text-lg">
+                {filtered.length} devis{todayOnlyFilter ? " aujourd'hui" : " trouvés"}
+              </p>
             )}
             {quotes.length !== filtered.length && (
               <p className="text-slate-600 text-sm font-medium mt-1">
@@ -1076,8 +1107,14 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/70 rounded-2xl border-2 border-slate-200/60 p-12 md:p-16 text-center shadow-lg">
             <div className="flex flex-col items-center gap-4">
               <span className="text-5xl md:text-6xl">📭</span>
-              <p className="text-lg md:text-xl font-bold text-slate-700">Aucun devis trouvé</p>
-              <p className="text-sm md:text-base text-slate-500">Essayez de modifier vos critères de recherche</p>
+              <p className="text-lg md:text-xl font-bold text-slate-700">
+                {todayOnlyFilter ? "Aucun devis créé aujourd'hui" : "Aucun devis trouvé"}
+              </p>
+              <p className="text-sm md:text-base text-slate-500">
+                {todayOnlyFilter
+                  ? "Les devis créés aujourd'hui apparaîtront ici"
+                  : "Essayez de modifier vos critères de recherche"}
+              </p>
             </div>
           </div>
         )}
