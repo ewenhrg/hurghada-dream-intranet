@@ -20,7 +20,6 @@ import {
   HistoryPage,
   UsersPage,
   HotelsPage,
-  TicketPage,
   SITUATION_PAGE_STANDBY,
   SituationPage,
   StopSalePage,
@@ -1040,7 +1039,6 @@ export default function App() {
           import("./pages/ActivityUpdatePage"),
           import("./pages/ActivityCatalogAdminPage"),
           import("./pages/HistoryPage"),
-          import("./pages/TicketPage"),
           import("./pages/ModificationsPage"),
           import("./pages/SituationPage"),
           import("./pages/UsersPage"),
@@ -1303,11 +1301,6 @@ export default function App() {
                   {t("nav.hotelHistory")}
                 </Pill>
                 )}
-                {user?.canAccessTickets !== false && (
-                  <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
-                    {t("nav.tickets")}
-                  </Pill>
-                )}
                 {/* Page Modifications désactivée temporairement */}
                 {/* {(user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
                   <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
@@ -1478,12 +1471,6 @@ export default function App() {
         {tab === "historique-hotel" && user?.canAccessHistory !== false && (
           <Section title={t("page.hotelHistory.title")} subtitle={t("page.hotelHistory.subtitle")}>
             <HotelHistoryPage />
-          </Section>
-        )}
-
-        {tab === "tickets" && user?.canAccessTickets !== false && (
-          <Section title={t("page.tickets.title")} subtitle={t("page.tickets.subtitle")}>
-            <TicketPage quotes={quotes} setQuotes={setQuotes} user={user} />
           </Section>
         )}
 

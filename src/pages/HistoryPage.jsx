@@ -29,10 +29,6 @@ function QuoteCardComponent({
   setQuotes, 
   user, 
   setSelectedQuote, 
-  setTicketNumbers, 
-  setStripeAmount, 
-  setCashAmount, 
-  setShowPaymentModal, 
   setEditClient, 
   setEditItems, 
   setEditNotes, 
@@ -65,18 +61,6 @@ function QuoteCardComponent({
     d.items?.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length || 0,
     [d.items]
   );
-
-  const handlePaymentClick = useCallback(() => {
-    setSelectedQuote(d);
-    const existingTickets = {};
-    d.items?.forEach((item, idx) => {
-      existingTickets[idx] = item.ticketNumber || "";
-    });
-    setTicketNumbers(existingTickets);
-    setStripeAmount(d.paidStripe ? d.paidStripe.toString() : "");
-    setCashAmount(d.paidCash ? d.paidCash.toString() : "");
-    setShowPaymentModal(true);
-  }, [d, setSelectedQuote, setTicketNumbers, setStripeAmount, setCashAmount, setShowPaymentModal]);
 
   const handlePrintClick = useCallback(() => {
     const htmlContent = generateQuoteHTML(d);
@@ -509,17 +493,6 @@ function QuoteCardComponent({
             </div>
             <div className="grid w-full grid-cols-1 min-[400px]:grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 auto-rows-min">
               <button
-                className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl ${
-                  allTicketsFilled 
-                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-500 hover:from-emerald-700 hover:to-teal-700" 
-                    : "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-400 hover:from-emerald-600 hover:to-teal-600"
-                }`}
-                onClick={handlePaymentClick}
-                type="button"
-              >
-                {allTicketsFilled ? "✅ Tickets" : "💰 Payer"}
-              </button>
-              <button
                 className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
                 onClick={handlePrintClick}
                 type="button"
@@ -583,12 +556,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
   const [todayOnlyFilter, setTodayOnlyFilter] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
-  const [ticketNumbers, setTicketNumbers] = useState({});
-  const [stripeAmount, setStripeAmount] = useState("");
-  const [cashAmount, setCashAmount] = useState("");
   
   // Pagination pour améliorer les performances
   const [currentPage, setCurrentPage] = useState(1);
@@ -601,10 +570,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   
   /** Lignes d’activités dans un devis (table quotes) — distinct des écritures sur la table activities. */
   const canModifyActivities = true;
-  
-  // Références pour le conteneur de la modale de paiement
-  const paymentModalRef = useRef(null);
-  const paymentModalContainerRef = useRef(null);
   
   // Références pour le conteneur de la modale de modification
   const editModalRef = useRef(null);
@@ -894,21 +859,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     setCurrentPage(1);
   }, [debouncedQ, statusFilter, todayOnlyFilter]);
 
-  // Scroller en haut de la modale de paiement et de la page quand elle s'ouvre
-  useEffect(() => {
-    if (!showPaymentModal) return;
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    const timerId = setTimeout(() => {
-      if (paymentModalRef.current) {
-        paymentModalRef.current.scrollTop = 0;
-      }
-      if (paymentModalContainerRef.current) {
-        paymentModalContainerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 100);
-    return () => clearTimeout(timerId);
-  }, [showPaymentModal]);
-
   // Réinitialiser le scroll interne de la modale quand elle s'ouvre (sans déplacer la page)
   useEffect(() => {
     if (showEditModal && editModalRef.current) {
@@ -1094,10 +1044,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             setQuotes={setQuotes}
             user={user}
             setSelectedQuote={setSelectedQuote}
-            setTicketNumbers={setTicketNumbers}
-            setStripeAmount={setStripeAmount}
-            setCashAmount={setCashAmount}
-            setShowPaymentModal={setShowPaymentModal}
             setEditClient={setEditClient}
             setEditItems={setEditItems}
             setEditNotes={setEditNotes}
@@ -1156,228 +1102,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         >
           <span className="text-2xl md:text-3xl font-bold">↑</span>
         </button>
-      )}
-
-      {/* Modale de paiement */}
-      {showPaymentModal && selectedQuote && (
-        <div ref={paymentModalContainerRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
-          <div ref={paymentModalRef} className="bg-white/98 backdrop-blur-md rounded-xl md:rounded-2xl border border-blue-100/60 shadow-2xl p-4 md:p-6 max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-3 md:mb-4">
-              <h3 className="text-base md:text-lg font-semibold">Enregistrer les numéros de ticket</h3>
-              <button
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setSelectedQuote(null);
-                  setTicketNumbers({});
-                  setStripeAmount("");
-                  setCashAmount("");
-                }}
-                className="text-slate-400 hover:text-slate-600 text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="space-y-4 md:space-y-5 mb-6">
-              {selectedQuote.items?.map((item, idx) => (
-                <div key={idx} className="border-2 border-blue-200/60 rounded-xl p-4 md:p-5 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 shadow-lg backdrop-blur-sm">
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-4">
-                    <div className="flex-1">
-                      <p className="font-bold text-base md:text-lg text-slate-900 mb-1">{item.activityName}</p>
-                      <p className="text-xs md:text-sm text-slate-600 font-medium">
-                        📅 {item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?"} — 👥 {formatQuoteItemParticipantsSummary(item)}
-                      </p>
-                    </div>
-                    <div className="text-right bg-white/80 rounded-lg px-3 py-2 border-2 border-blue-100/60">
-                      <p className="text-sm md:text-base font-bold text-slate-900">💵 {currencyNoCents(Math.round(item.lineTotal), selectedQuote.currency)}</p>
-                      <p className="text-xs md:text-sm text-slate-600 font-medium">💳 {currencyNoCents(calculateCardPrice(item.lineTotal), selectedQuote.currency)}</p>
-                      {calculateTransferSurcharge(item) > 0 && (
-                        <p className="text-xs text-cyan-700 font-bold mt-1">
-                          🚗 Transfert: {currencyNoCents(calculateTransferSurcharge(item), selectedQuote.currency)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2">Numéro de ticket unique</label>
-                      <TextInput
-                        placeholder="Ex: T-12345"
-                        value={ticketNumbers[idx] || ""}
-                        onChange={(e) => {
-                          setTicketNumbers((prev) => ({
-                            ...prev,
-                            [idx]: e.target.value,
-                          }));
-                        }}
-                        disabled={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? true : false}
-                        readOnly={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? true : false}
-                        className={`text-base ${user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? "bg-slate-100 cursor-not-allowed" : ""}`}
-                      />
-                      {user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() && (
-                        <p className="text-xs md:text-sm text-emerald-700 font-bold mt-2 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 inline-block">
-                          ✅ Ticket verrouillé (non modifiable)
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Champs de saisie pour les montants Stripe et Cash */}
-            <div className="mt-6 pt-4 border-t border-slate-200">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2">
-                    💳 Montant payé en Stripe ({selectedQuote.currency || "EUR"})
-                  </label>
-                  <NumberInput
-                    placeholder="0"
-                    value={stripeAmount}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Permettre uniquement les nombres et un point décimal
-                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                        setStripeAmount(value);
-                      }
-                    }}
-                    className="text-base"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-2">
-                    💵 Montant payé en Cash ({selectedQuote.currency || "EUR"})
-                  </label>
-                  <NumberInput
-                    placeholder="0"
-                    value={cashAmount}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Permettre uniquement les nombres et un point décimal
-                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                        setCashAmount(value);
-                      }
-                    }}
-                    className="text-base"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 md:mt-6 pt-4 border-t">
-              <GhostBtn
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setSelectedQuote(null);
-                  setTicketNumbers({});
-                  setStripeAmount("");
-                  setCashAmount("");
-                }}
-                className="w-full sm:w-auto order-2 sm:order-1"
-              >
-                Annuler
-              </GhostBtn>
-              <PrimaryBtn
-                className="w-full sm:w-auto order-1 sm:order-2"
-                variant="success"
-                onClick={async () => {
-                  // Vérifier que tous les tickets sont renseignés
-                  const allFilled = selectedQuote.items?.every((_, idx) => ticketNumbers[idx]?.trim());
-                  if (!allFilled) {
-                    toast.warning("Veuillez renseigner tous les numéros de ticket.");
-                    return;
-                  }
-
-                  // Vérifier qu'au moins un montant est renseigné
-                  const stripeValue = parseFloat(stripeAmount) || 0;
-                  const cashValue = parseFloat(cashAmount) || 0;
-                  if (stripeValue === 0 && cashValue === 0) {
-                    toast.warning("Veuillez renseigner au moins un montant (Stripe ou Cash).");
-                    return;
-                  }
-
-                  // Mettre à jour le devis avec les numéros de ticket et les montants de paiement
-                  const updatedQuote = {
-                    ...selectedQuote,
-                    updated_at: new Date().toISOString(),
-                    paidStripe: stripeValue,
-                    paidCash: cashValue,
-                    items: selectedQuote.items.map((item, idx) => ({
-                      ...item,
-                      ticketNumber: ticketNumbers[idx]?.trim() || "",
-                    })),
-                  };
-
-                  const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? updatedQuote : q));
-                  setQuotes(updatedQuotes);
-                  saveLS(LS_KEYS.quotes, updatedQuotes);
-
-                  // Mettre à jour dans Supabase si configuré
-                  if (supabase) {
-                    try {
-                      const supabaseUpdate = {
-                        items: JSON.stringify(updatedQuote.items),
-                        paid_stripe: stripeValue,
-                        paid_cash: cashValue,
-                        updated_at: new Date().toISOString(),
-                      };
-                      
-                      // Utiliser supabase_id en priorité pour identifier le devis à mettre à jour
-                      let updateQuery = supabase
-                        .from("quotes")
-                        .update(supabaseUpdate)
-                        .eq("site_key", SITE_KEY);
-
-                      if (selectedQuote.supabase_id) {
-                        // Si le devis a un supabase_id, l'utiliser (le plus fiable)
-                        updateQuery = updateQuery.eq("id", selectedQuote.supabase_id);
-                      } else {
-                        // Sinon, utiliser client_phone + created_at (pour compatibilité avec les anciens devis)
-                        updateQuery = updateQuery
-                          .eq("client_phone", updatedQuote.client.phone || "")
-                          .eq("created_at", updatedQuote.createdAt);
-                      }
-                      
-                      const { data, error: updateError } = await updateQuery.select();
-                      
-                      if (updateError) {
-                        logger.error("❌ Erreur mise à jour Supabase:", updateError);
-                        toast.error(`Erreur lors de la sauvegarde sur Supabase: ${updateError.message || 'Erreur inconnue'}. Les modifications sont sauvegardées localement.`);
-                      } else {
-                        logger.log("✅ Devis mis à jour dans Supabase avec succès:", data);
-                        // Mettre à jour le supabase_id si ce n'était pas déjà fait
-                        const updatedData = Array.isArray(data) ? data[0] : data;
-                        if (updatedData && updatedData.id && !updatedQuote.supabase_id) {
-                          const finalUpdatedQuote = { ...updatedQuote, supabase_id: updatedData.id };
-                          const finalUpdatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? finalUpdatedQuote : q));
-                          setQuotes(finalUpdatedQuotes);
-                          saveLS(LS_KEYS.quotes, finalUpdatedQuotes);
-                        }
-                      }
-                    } catch (updateErr) {
-                      logger.error("❌ Exception lors de la mise à jour Supabase:", updateErr);
-                      toast.error(`Exception lors de la sauvegarde sur Supabase: ${updateErr.message || 'Erreur inconnue'}. Les modifications sont sauvegardées localement.`);
-                    }
-                  }
-
-                  setShowPaymentModal(false);
-                  setSelectedQuote(null);
-                  setTicketNumbers({});
-                  setStripeAmount("");
-                  setCashAmount("");
-                  toast.success("Numéros de ticket et montants enregistrés avec succès !");
-                }}
-              >
-                Enregistrer les tickets
-              </PrimaryBtn>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Modale de modification de devis - Rendu via Portal directement dans le body */}
