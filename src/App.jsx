@@ -31,7 +31,6 @@ import {
   PublicCatalogueActivityPage,
   EwenDashboardPage,
   PublicDevisPage,
-  AutoDevisPage,
   PublicHotelRequestPage,
   HotelHistoryPage,
 } from "./config/lazyPages";
@@ -1273,9 +1272,6 @@ export default function App() {
                 <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
                   {t("nav.devis")}
                 </Pill>
-                <Pill active={tab === "devis-auto"} onClick={() => setTab("devis-auto")}>
-                  {t("nav.autoDevis")}
-                </Pill>
                 {user?.canAccessActivities !== false && (
                 <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
                   {t("nav.activities")}
@@ -1482,12 +1478,6 @@ export default function App() {
         {tab === "historique-hotel" && user?.canAccessHistory !== false && (
           <Section title={t("page.hotelHistory.title")} subtitle={t("page.hotelHistory.subtitle")}>
             <HotelHistoryPage />
-          </Section>
-        )}
-
-        {tab === "devis-auto" && (
-          <Section title={t("page.autoDevis.title")} subtitle={t("page.autoDevis.subtitle")}>
-            <AutoDevisPage activities={activities} />
           </Section>
         )}
 

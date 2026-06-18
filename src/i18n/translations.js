@@ -3,7 +3,6 @@ export const translations = {
   fr: {
     // Navigation
     "nav.devis": "Devis",
-    "nav.autoDevis": "Devis auto",
     "nav.activities": "Activités",
     "nav.activityUpdate": "Maj prix",
     "nav.catalogAdmin": "Catalogue public",
@@ -36,9 +35,6 @@ export const translations = {
     // Pages
     "page.devis.title": "Créer & gérer les devis (multi-activités)",
     "page.devis.subtitle": "Supplément transfert = (par adulte/enfant) × (nombre d'adultes + enfants). Bébés gratuits. Alerte si jour hors-dispo, mais le devis peut être créé.",
-    "page.autoDevis.title": "Devis automatique (texte collé)",
-    "page.autoDevis.subtitle": "Analyse un message client et préremplit l’onglet Devis (activités, coordonnées, dates, participants).",
-    "page.autoDevis.warningsTitle": "À vérifier :",
     "page.activities.title": "Gestion des activités",
     "page.activities.subtitle": "Ajoutez, modifiez les prix, jours, transferts par quartier.",
     "page.activityUpdate.title": "Mise à jour des prix et notes",
@@ -95,7 +91,6 @@ export const translations = {
   en: {
     // Navigation
     "nav.devis": "Quotes",
-    "nav.autoDevis": "Auto quote",
     "nav.activities": "Activities",
     "nav.activityUpdate": "Price update",
     "nav.catalogAdmin": "Public catalogue",
@@ -128,9 +123,6 @@ export const translations = {
     // Pages
     "page.devis.title": "Create & manage quotes (multi-activities)",
     "page.devis.subtitle": "Transfer surcharge = (per adult/child) × (number of adults + children). Babies free. Alert if day unavailable, but quote can be created.",
-    "page.autoDevis.title": "Auto quote (paste text)",
-    "page.autoDevis.subtitle": "Parse a client message and prefill the Quotes tab (activities, contact, dates, party size).",
-    "page.autoDevis.warningsTitle": "Please review:",
     "page.activities.title": "Activities management",
     "page.activities.subtitle": "Add, edit prices, days, transfers by neighborhood.",
     "page.activityUpdate.title": "Prices & notes update",
