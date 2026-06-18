@@ -8,6 +8,10 @@ import {
 } from "./utils/activityHelpers";
 import { SPEED_BOAT_EXTRAS } from "./constants/activityExtras";
 import { logger } from "./utils/logger";
+import {
+  getQuoteItemDetailLines,
+  getQuoteItemParticipantCells,
+} from "./utils/quoteItemDisplay.js";
 
 // Options d'extra pour Speed Boat uniquement (gardé pour compatibilité)
 const SPEED_BOAT_EXTRAS_LOCAL = [
@@ -348,10 +352,14 @@ export function generateQuoteHTML(quote, options = {}) {
       const amountPart = hasExtraAmount ? `: ${currencyNoCents(extraAmountValue, quote.currency)}` : "";
       extrasInfo.push(`➕ ${label}${amountPart}`);
     }
+
+    getQuoteItemDetailLines(item).forEach((line) => extrasInfo.push(line));
     
     const extrasHTML = extrasInfo.length > 0 
       ? `<div style="margin-top: 5px; font-size: 11px; color: #2563eb; font-weight: 500;">${extrasInfo.join("<br>")}</div>`
       : "";
+    
+    const participantCells = getQuoteItemParticipantCells(item);
     
     return `
       <tr>
@@ -362,9 +370,9 @@ export function generateQuoteHTML(quote, options = {}) {
         </td>
         <td>${itemDate}</td>
         <td class="text-center">${item.pickupTime || "—"}</td>
-        <td class="text-center">${item.adults || 0}</td>
-        <td class="text-center">${item.children || 0}</td>
-        <td class="text-center">${item.babies || 0}</td>
+        <td class="text-center">${participantCells.adults}</td>
+        <td class="text-center">${participantCells.children}</td>
+        <td class="text-center">${participantCells.babies}</td>
         <td class="text-right">${currencyNoCents(Math.round(item.lineTotal), quote.currency)}</td>
         ${item.ticketNumber ? `<td class="text-center"><span class="ticket-badge">🎫 ${item.ticketNumber}</span></td>` : '<td class="text-center">—</td>'}
       </tr>

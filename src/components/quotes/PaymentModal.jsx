@@ -2,6 +2,7 @@ import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { LS_KEYS } from "../../constants";
 import { currency, saveLS } from "../../utils";
+import { formatQuoteItemParticipantsSummary } from "../../utils/quoteItemDisplay.js";
 import { TextInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
 import { logger } from "../../utils/logger";
@@ -127,8 +128,7 @@ export function PaymentModal({
                 <div>
                   <p className="font-medium text-sm">{item.activityName}</p>
                   <p className="text-xs text-gray-500">
-                    {new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")} — {item.adults} adulte(s),{" "}
-                    {item.children} enfant(s)
+                    {new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")} — {formatQuoteItemParticipantsSummary(item)}
                   </p>
                 </div>
                 <p className="text-sm font-semibold">{currency(item.lineTotal, selectedQuote.currency)}</p>

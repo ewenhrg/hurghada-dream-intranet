@@ -16,6 +16,7 @@ import {
   isActivityBlockedForNeighborhood,
   SPA_ROYAL_NEIGHBORHOOD_MESSAGE,
 } from "../utils/activityNeighborhoodRules.js";
+import { formatQuoteItemParticipantsSummary } from "../utils/quoteItemDisplay.js";
 
 /** Délai avant suppression auto des devis « non payés » (au moins une ligne sans n° de ticket), à l’ouverture de l’historique. */
 const UNPAID_QUOTE_AUTO_DELETE_DAYS = 20;
@@ -465,7 +466,7 @@ function QuoteCardComponent({
                       <span className="break-words [overflow-wrap:anywhere] flex items-center gap-1.5">
                         <span className="shrink-0">👥</span>
                         <span>
-                          {li.adults ?? 0} adt / {li.children ?? 0} enf / {li.babies ?? 0} bébé(s)
+                          {formatQuoteItemParticipantsSummary(li)}
                         </span>
                       </span>
                     </div>
@@ -1184,7 +1185,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     <div className="flex-1">
                       <p className="font-bold text-base md:text-lg text-slate-900 mb-1">{item.activityName}</p>
                       <p className="text-xs md:text-sm text-slate-600 font-medium">
-                        📅 {item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?"} — 👥 {item.adults} adulte(s), {item.children} enfant(s), {item.babies ?? 0} bébé(s)
+                        📅 {item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR") : "Date ?"} — 👥 {formatQuoteItemParticipantsSummary(item)}
                       </p>
                     </div>
                     <div className="text-right bg-white/80 rounded-lg px-3 py-2 border-2 border-blue-100/60">
