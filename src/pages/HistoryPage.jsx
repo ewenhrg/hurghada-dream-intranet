@@ -253,7 +253,8 @@ function QuoteCardComponent({
         activityId: item.activityId || "",
         date: item.date || new Date().toISOString().slice(0, 10),
         extraLabel: item.extraLabel || "",
-        extraAmount: item.extraAmount || "",
+        extraAmount:
+          item.extraAmount !== undefined && item.extraAmount !== null ? item.extraAmount : "",
         extraDolphin: Boolean(item.extraDolphin),
         slot: item.slot || "",
         ticketNumber: item.ticketNumber || "",
@@ -1290,8 +1291,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
   const computed = useMemo(() => {
     if (!items || items.length === 0 || !client) return [];
     const speedBoatExtrasMap = speedBoatExtrasMapRef.current;
-    return items.map((it) => {
-      const act = activitiesMap.get(it.activityId);
+    return items.map((it, itemIndex) => {
+      let act = activitiesMap.get(it.activityId);
+      if (!act && quote?.items?.[itemIndex]?.activityName) {
+        act = activities.find((a) => a.name === quote.items[itemIndex].activityName) || null;
+      }
       const weekday = it.date ? new Date(it.date + "T12:00:00").getDay() : null;
       const available = act && weekday != null ? !!act.availableDays?.[weekday] : true;
       const isNeighborhoodBlocked =
@@ -1432,6 +1436,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       return {
         raw: it,
         act,
+        activityName: act?.name || quote?.items?.[itemIndex]?.activityName || "",
+        isSpeedBoat: isSpeedBoatActivity(act?.name || quote?.items?.[itemIndex]?.activityName || ""),
         weekday,
         available: available && !isNeighborhoodBlocked,
         isNeighborhoodBlocked,
@@ -1441,7 +1447,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         currency: currencyCode,
       };
     });
-  }, [items, activitiesMap, client?.neighborhood]);
+  }, [items, activitiesMap, client?.neighborhood, activities, quote?.items]);
 
   const grandCurrency = computed.find((c) => c.currency)?.currency || "EUR";
   const grandTotal = computed.reduce((s, c) => s + (c.lineTotal || 0), 0);
@@ -1511,7 +1517,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           children,
           babies,
           extraLabel: c.raw.extraLabel || "",
-          extraAmount: Number(c.raw.extraAmount || 0),
+          extraAmount:
+            c.raw.extraAmount !== undefined && c.raw.extraAmount !== null && c.raw.extraAmount !== ""
+              ? Number(c.raw.extraAmount)
+              : 0,
           extraDolphin: c.raw.extraDolphin || false,
           speedBoatExtra: Array.isArray(c.raw.speedBoatExtra) ? c.raw.speedBoatExtra : (c.raw.speedBoatExtra ? [c.raw.speedBoatExtra] : []),
           buggySimple: Number(c.raw.buggySimple || 0),
@@ -2072,67 +2081,73 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     </div>
                   </div>
                 ) : null}
-                {/* Créneaux et Extras - Modifiables par tous */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
-                  {c.transferInfo && (
-                    <div>
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">⏰ Créneau de transfert</p>
-                      <select
-                        value={c.raw.slot || ""}
-                        onChange={(e) => setItem(idx, { slot: e.target.value })}
-                        className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
-                      >
-                        <option value="">— Choisir un créneau —</option>
-                        {c.transferInfo.morningEnabled && <option value="morning">🌅 Matin ({c.transferInfo.morningTime})</option>}
-                        {c.transferInfo.afternoonEnabled && <option value="afternoon">☀️ Après-midi ({c.transferInfo.afternoonTime})</option>}
-                        {c.transferInfo.eveningEnabled && <option value="evening">🌆 Soir ({c.transferInfo.eveningTime})</option>}
-                      </select>
-                    </div>
-                  )}
-                  {c.act && isSpeedBoatActivity(c.act.name) ? (
-                    <div className="lg:col-span-2 space-y-4 md:space-y-5">
-                      {allowsSpeedBoatIslandExtras(c.act.name) ? (
+                {/* Créneau de transfert */}
+                {c.transferInfo && (
+                  <div className="max-w-md">
+                    <p className="text-sm md:text-base font-bold text-slate-800 mb-3">⏰ Créneau de transfert</p>
+                    <select
+                      value={c.raw.slot || ""}
+                      onChange={(e) => setItem(idx, { slot: e.target.value })}
+                      className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
+                    >
+                      <option value="">— Choisir un créneau —</option>
+                      {c.transferInfo.morningEnabled && <option value="morning">🌅 Matin ({c.transferInfo.morningTime})</option>}
+                      {c.transferInfo.afternoonEnabled && <option value="afternoon">☀️ Après-midi ({c.transferInfo.afternoonTime})</option>}
+                      {c.transferInfo.eveningEnabled && <option value="evening">🌆 Soir ({c.transferInfo.eveningTime})</option>}
+                    </select>
+                  </div>
+                )}
+
+                {/* Speed Boat : extras îles + ajustement manuel (comme page Devis) */}
+                {c.isSpeedBoat ? (
+                  <div className="space-y-4 md:space-y-5 rounded-xl border-2 border-blue-300/70 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 p-4 md:p-5">
+                    {allowsSpeedBoatIslandExtras(c.activityName) ? (
                       <div>
-                        <p className="text-sm md:text-base font-bold text-slate-800 mb-3">⚡ Extras Speed Boat (plusieurs sélections possibles)</p>
-                        <div className="space-y-3 border-2 border-blue-300/70 rounded-xl p-4 md:p-5 bg-white/99 shadow-md">
+                        <p className="text-sm md:text-base font-bold text-slate-800 mb-3">
+                          ⚡ Extras Speed Boat (plusieurs sélections possibles)
+                        </p>
+                        <div className="space-y-3 border-2 border-blue-200/70 rounded-xl p-4 bg-white/95 shadow-sm">
                           {getSpeedBoatIslandExtras().map((extra) => {
-                            // Gérer la compatibilité avec l'ancien format (string) et le nouveau format (array)
-                            const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
-                              ? c.raw.speedBoatExtra 
-                              : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
-                                ? [c.raw.speedBoatExtra] 
-                                : []);
+                            const currentExtras = Array.isArray(c.raw.speedBoatExtra)
+                              ? c.raw.speedBoatExtra
+                              : c.raw.speedBoatExtra &&
+                                  typeof c.raw.speedBoatExtra === "string" &&
+                                  c.raw.speedBoatExtra !== ""
+                                ? [c.raw.speedBoatExtra]
+                                : [];
                             const isChecked = currentExtras.includes(extra.id);
-                            
+
                             return (
-                              <label key={extra.id} className="flex items-center gap-2 p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-50/50">
+                              <label
+                                key={extra.id}
+                                className="flex items-center gap-2 p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-50/50"
+                              >
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={(e) => {
-                                    // Utiliser une fonction de mise à jour pour lire la valeur la plus récente
                                     setItems((prev) => {
                                       const currentItem = prev[idx];
-                                      const currentExtras = Array.isArray(currentItem.speedBoatExtra) 
-                                        ? currentItem.speedBoatExtra 
-                                        : (currentItem.speedBoatExtra && typeof currentItem.speedBoatExtra === "string" && currentItem.speedBoatExtra !== "" 
-                                          ? [currentItem.speedBoatExtra] 
-                                          : []);
-                                      
+                                      const prevExtras = Array.isArray(currentItem.speedBoatExtra)
+                                        ? currentItem.speedBoatExtra
+                                        : currentItem.speedBoatExtra &&
+                                            typeof currentItem.speedBoatExtra === "string" &&
+                                            currentItem.speedBoatExtra !== ""
+                                          ? [currentItem.speedBoatExtra]
+                                          : [];
+
                                       let newExtras;
                                       if (e.target.checked) {
-                                        // Ajouter l'extra s'il n'est pas déjà dans la liste
-                                        if (!currentExtras.includes(extra.id)) {
-                                          newExtras = [...currentExtras, extra.id];
-                                        } else {
-                                          newExtras = currentExtras;
-                                        }
+                                        newExtras = prevExtras.includes(extra.id)
+                                          ? prevExtras
+                                          : [...prevExtras, extra.id];
                                       } else {
-                                        // Retirer l'extra de la liste
-                                        newExtras = currentExtras.filter((id) => id !== extra.id);
+                                        newExtras = prevExtras.filter((id) => id !== extra.id);
                                       }
-                                      
-                                      return prev.map((it, i) => (i === idx ? { ...it, speedBoatExtra: newExtras } : it));
+
+                                      return prev.map((it, i) =>
+                                        i === idx ? { ...it, speedBoatExtra: newExtras } : it
+                                      );
                                     });
                                   }}
                                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -2150,63 +2165,68 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           })}
                         </div>
                       </div>
-                      ) : null}
-                      {/* Champ Extra pour ajuster le prix manuellement */}
-                      <div>
-                        <p className="text-sm md:text-base font-bold text-slate-800 mb-3">💰 Ajustement de prix (montant à ajouter ou soustraire)</p>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                          <NumberInput
-                            value={c.raw.extraAmount || ""}
-                            onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
-                            placeholder="0.00"
-                            className="flex-1 text-base md:text-lg py-3"
-                          />
-                          <span className="text-sm md:text-base text-slate-600 font-medium whitespace-nowrap">
-                            € (positif = +, négatif = -)
-                          </span>
-                        </div>
-                        <p className="text-xs md:text-sm text-slate-500 font-medium mt-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
-                          💡 Utilisez un nombre positif pour augmenter le prix, négatif pour le diminuer
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div>
-                        <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🏷️ Extra (label)</p>
-                        <TextInput 
-                          value={c.raw.extraLabel || ""} 
-                          onChange={(e) => setItem(idx, { extraLabel: e.target.value })}
-                          className="text-base md:text-lg py-3"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-sm md:text-base font-bold text-slate-800 mb-3">💰 Extra (montant)</p>
-                        <NumberInput 
-                          value={c.raw.extraAmount || ""} 
+                    ) : null}
+
+                    <div className="rounded-xl border-2 border-amber-300/80 bg-amber-50/80 p-4 md:p-5">
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">
+                        💰 Ajustement manuel du prix
+                      </p>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <NumberInput
+                          value={c.raw.extraAmount ?? ""}
                           onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
-                          className="text-base md:text-lg py-3"
+                          placeholder="0.00"
+                          className="flex-1 text-base md:text-lg py-3"
                         />
+                        <span className="text-sm md:text-base text-slate-600 font-medium whitespace-nowrap">
+                          € (positif = +, négatif = −)
+                        </span>
                       </div>
-                    </>
-                  )}
-                </div>
-                {/* Extra dauphin (uniquement pour Speed Boat) - Modifiable par tous */}
-                {c.act && allowsSpeedBoatDolphinExtra(c.act.name) && (
-                  <div className="flex items-center gap-3 mt-4 p-4 bg-cyan-50/60 rounded-xl border-2 border-cyan-300/70">
-                    <input
-                      type="checkbox"
-                      id={`edit-extraDolphin-${idx}`}
-                      checked={c.raw.extraDolphin || false}
-                      onChange={(e) => setItem(idx, { extraDolphin: e.target.checked })}
-                      className="w-5 h-5 text-blue-600 border-gray-400 rounded focus:ring-blue-500 cursor-pointer"
-                    />
-                    <label htmlFor={`edit-extraDolphin-${idx}`} className="text-sm md:text-base font-bold text-slate-800 cursor-pointer flex items-center gap-2">
-                      <span>🐬</span>
-                      <span>Extra dauphin (+20€)</span>
-                    </label>
+                      <p className="text-xs md:text-sm text-amber-900/80 font-medium mt-2">
+                        💡 Exemple : +20 pour augmenter, −10 pour baisser le prix de l&apos;activité
+                      </p>
+                    </div>
+
+                    {allowsSpeedBoatDolphinExtra(c.activityName) && (
+                      <div className="flex items-center gap-3 p-4 bg-cyan-50/80 rounded-xl border-2 border-cyan-300/70">
+                        <input
+                          type="checkbox"
+                          id={`edit-extraDolphin-${idx}`}
+                          checked={c.raw.extraDolphin || false}
+                          onChange={(e) => setItem(idx, { extraDolphin: e.target.checked })}
+                          className="w-5 h-5 text-blue-600 border-gray-400 rounded focus:ring-blue-500 cursor-pointer"
+                        />
+                        <label
+                          htmlFor={`edit-extraDolphin-${idx}`}
+                          className="text-sm md:text-base font-bold text-slate-800 cursor-pointer flex items-center gap-2"
+                        >
+                          <span>🐬</span>
+                          <span>Extra dauphin (+20€)</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🏷️ Extra (label)</p>
+                      <TextInput
+                        value={c.raw.extraLabel || ""}
+                        onChange={(e) => setItem(idx, { extraLabel: e.target.value })}
+                        className="text-base md:text-lg py-3"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">💰 Extra (montant)</p>
+                      <NumberInput
+                        value={c.raw.extraAmount ?? ""}
+                        onChange={(e) => setItem(idx, { extraAmount: e.target.value })}
+                        className="text-base md:text-lg py-3"
+                      />
+                    </div>
                   </div>
                 )}
+                {/* Extra dauphin — géré dans le bloc Speed Boat ci-dessus */}
                 {/* Afficher le numéro de ticket si présent (non modifiable) */}
                 {((c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber)) && (
                   <div className="mt-4 p-4 md:p-5 bg-emerald-50/80 border-2 border-emerald-300/70 rounded-xl">
