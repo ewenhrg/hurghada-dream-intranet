@@ -47,6 +47,35 @@ export function getSpeedBoatIslandExtras() {
   return SPEED_BOAT_EXTRAS.filter((e) => e.id);
 }
 
+/** Formules avec repas (indisponibles au créneau matin). */
+export function isSpeedBoatMealExtra(extraId) {
+  return String(extraId || "").endsWith("_lunch");
+}
+
+/** Extras îles proposés selon le créneau (matin = sans repas). */
+export function getSpeedBoatIslandExtrasForSlot(slot) {
+  return getSpeedBoatIslandExtras().filter((e) => isSpeedBoatExtraAllowedForSlot(e.id, slot));
+}
+
+export function isSpeedBoatExtraAllowedForSlot(extraId, slot) {
+  if (!extraId) return true;
+  if (slot === "morning" && isSpeedBoatMealExtra(extraId)) return false;
+  return true;
+}
+
+/** Retire les extras repas si le créneau est le matin ; une seule île à la fois. */
+export function normalizeSpeedBoatExtrasForSlot(extrasRaw, slot) {
+  const extras = normalizeSpeedBoatExtrasList(extrasRaw);
+  const filtered = extras.filter((id) => isSpeedBoatExtraAllowedForSlot(id, slot));
+  return filtered.length > 0 ? [filtered[0]] : [];
+}
+
+export function normalizeSpeedBoatExtrasList(extrasRaw) {
+  if (Array.isArray(extrasRaw)) return extrasRaw.filter(Boolean);
+  if (extrasRaw && typeof extrasRaw === "string" && extrasRaw !== "") return [extrasRaw];
+  return [];
+}
+
 /** Grille Speed Boat : base 145 €, +20 €/adt >2, +10 €/enfant, option dauphin +20 €. */
 export function computeSpeedBoatBaseLineTotal(adults, children, extraDolphin) {
   const ad = Number(adults || 0);
@@ -58,28 +87,31 @@ export function computeSpeedBoatBaseLineTotal(adults, children, extraDolphin) {
   return lineTotal;
 }
 
-/** Ajoute les extras îles au total (ignorés pour Speedboat Sunset). */
-export function addSpeedBoatIslandExtrasToLineTotal(lineTotal, activityName, adults, children, extrasRaw) {
+/** Ajoute les extras îles au total (ignorés pour Speedboat Sunset et repas au matin). */
+export function addSpeedBoatIslandExtrasToLineTotal(lineTotal, activityName, adults, children, extrasRaw, slot) {
   if (!allowsSpeedBoatIslandExtras(activityName)) return lineTotal;
   const ad = Number(adults || 0);
   const ch = Number(children || 0);
-  const extras = Array.isArray(extrasRaw) ? extrasRaw : extrasRaw ? [extrasRaw] : [];
+  const extras = normalizeSpeedBoatExtrasForSlot(extrasRaw, slot);
+  const extraId = extras[0];
   let total = lineTotal;
-  extras.forEach((extraId) => {
-    if (!extraId) return;
+  if (extraId) {
     const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === extraId);
     if (selectedExtra) {
       total += ad * selectedExtra.priceAdult + ch * selectedExtra.priceChild;
     }
-  });
+  }
   return total;
 }
 
 /** Total ligne Speed Boat (base + dauphin + îles selon l’activité). */
-export function computeSpeedBoatLineTotal(activityName, adults, children, extraDolphin, speedBoatExtra) {
+export function computeSpeedBoatLineTotal(activityName, adults, children, extraDolphin, speedBoatExtra, slot) {
   const dolphin = allowsSpeedBoatDolphinExtra(activityName) && extraDolphin;
   let total = computeSpeedBoatBaseLineTotal(adults, children, dolphin);
-  return addSpeedBoatIslandExtrasToLineTotal(total, activityName, adults, children, speedBoatExtra);
+  if (!dolphin) {
+    total = addSpeedBoatIslandExtrasToLineTotal(total, activityName, adults, children, speedBoatExtra, slot);
+  }
+  return total;
 }
 
 // Helper pour vérifier si une activité utilise les champs moto cross (ex: "MOTOCROSS", "Moto cross")

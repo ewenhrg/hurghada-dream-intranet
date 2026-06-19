@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtras, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -1557,7 +1557,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     <label className="block text-sm font-medium text-slate-700 mb-2">Créneau</label>
                     <select
                       value={c.raw.slot}
-                      onChange={(e) => setItem(idx, { slot: e.target.value })}
+                      onChange={(e) => {
+                        const slot = e.target.value;
+                        const patch = { slot };
+                        if (c.act && isSpeedBoatActivity(c.act.name)) {
+                          const filteredExtras = normalizeSpeedBoatExtrasForSlot(c.raw.speedBoatExtra, slot);
+                          if (filteredExtras.length !== (Array.isArray(c.raw.speedBoatExtra) ? c.raw.speedBoatExtra : c.raw.speedBoatExtra ? [c.raw.speedBoatExtra] : []).length) {
+                            patch.speedBoatExtra = filteredExtras;
+                          }
+                        }
+                        setItem(idx, patch);
+                      }}
                       className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-normal text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:bg-slate-100 disabled:text-slate-400"
                       disabled={!c.transferInfo || (!c.transferInfo.morningEnabled && !c.transferInfo.afternoonEnabled && !c.transferInfo.eveningEnabled)}
                     >
@@ -1589,48 +1599,50 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 <div className="space-y-5">
                   {allowsSpeedBoatIslandExtras(c.act.name) ? (
                   <div>
-                    <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">Extras Speed Boat (plusieurs sélections possibles)</label>
+                    <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">Options Speed Boat</label>
+                    <p className="text-xs text-slate-600 font-medium mb-2">
+                      Un seul choix possible : dauphin <strong>ou</strong> une île — pas les deux.
+                    </p>
+                    {c.raw.slot === "morning" && (
+                      <p className="text-xs text-amber-800 font-medium mb-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        Les formules avec repas ne sont pas disponibles le matin.
+                      </p>
+                    )}
                     <div className="space-y-2.5 border-2 border-blue-200/60 rounded-xl p-4 bg-gradient-to-br from-blue-50/60 to-indigo-50/40 backdrop-blur-sm shadow-md">
-                      {getSpeedBoatIslandExtras().map((extra) => {
-                        // Gérer la compatibilité avec l'ancien format (string) et le nouveau format (array)
-                        const currentExtras = Array.isArray(c.raw.speedBoatExtra) 
-                          ? c.raw.speedBoatExtra 
-                          : (c.raw.speedBoatExtra && typeof c.raw.speedBoatExtra === "string" && c.raw.speedBoatExtra !== "" 
-                            ? [c.raw.speedBoatExtra] 
-                            : []);
-                        const isChecked = currentExtras.includes(extra.id);
-                        
+                      {allowsSpeedBoatDolphinExtra(c.act.name) && (
+                        <label className="flex items-center gap-2 cursor-pointer hover:bg-blue-50/50 p-2 rounded-lg transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={c.raw.extraDolphin || false}
+                            onChange={(e) =>
+                              setItem(idx, {
+                                extraDolphin: e.target.checked,
+                                ...(e.target.checked ? { speedBoatExtra: [] } : {}),
+                              })
+                            }
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-slate-700 flex-1">
+                            <span className="font-medium">🐬 Extra dauphin</span>
+                            <span className="text-xs text-slate-500 ml-2">(+20€)</span>
+                          </span>
+                        </label>
+                      )}
+                      {getSpeedBoatIslandExtrasForSlot(c.raw.slot).map((extra) => {
+                        const currentExtras = normalizeSpeedBoatExtrasList(c.raw.speedBoatExtra);
+                        const isChecked = currentExtras[0] === extra.id;
+
                         return (
                           <label key={extra.id} className="flex items-center gap-2 cursor-pointer hover:bg-blue-50/50 p-2 rounded-lg transition-colors">
                             <input
                               type="checkbox"
                               checked={isChecked}
-                              onChange={(e) => {
-                                // Utiliser une fonction de mise à jour pour lire la valeur la plus récente
-                                setItems((prev) => {
-                                  const currentItem = prev[idx];
-                                  const currentExtras = Array.isArray(currentItem.speedBoatExtra) 
-                                    ? currentItem.speedBoatExtra 
-                                    : (currentItem.speedBoatExtra && typeof currentItem.speedBoatExtra === "string" && currentItem.speedBoatExtra !== "" 
-                                      ? [currentItem.speedBoatExtra] 
-                                      : []);
-                                  
-                                  let newExtras;
-                                  if (e.target.checked) {
-                                    // Ajouter l'extra s'il n'est pas déjà dans la liste
-                                    if (!currentExtras.includes(extra.id)) {
-                                      newExtras = [...currentExtras, extra.id];
-                                    } else {
-                                      newExtras = currentExtras;
-                                    }
-                                  } else {
-                                    // Retirer l'extra de la liste
-                                    newExtras = currentExtras.filter((id) => id !== extra.id);
-                                  }
-                                  
-                                  return prev.map((it, i) => (i === idx ? { ...it, speedBoatExtra: newExtras } : it));
-                                });
-                              }}
+                              onChange={(e) =>
+                                setItem(idx, {
+                                  speedBoatExtra: e.target.checked ? [extra.id] : [],
+                                  extraDolphin: false,
+                                })
+                              }
                               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                             />
                             <span className="text-sm text-slate-700 flex-1">
@@ -2642,22 +2654,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                 </div>
               ) : null}
-
-              {/* Extra dauphin (Speed Boat classique uniquement) */}
-              {c.act && allowsSpeedBoatDolphinExtra(c.act.name) && (
-                <div className="flex items-center gap-2 mt-2">
-                  <input
-                    type="checkbox"
-                    id={`extraDolphin-${idx}`}
-                    checked={c.raw.extraDolphin || false}
-                    onChange={(e) => setItem(idx, { extraDolphin: e.target.checked })}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <label htmlFor={`extraDolphin-${idx}`} className="text-sm text-gray-700 cursor-pointer">
-                    Extra dauphin 20€
-                  </label>
-                </div>
-              )}
 
               {/* Sous-total de l'activité */}
               <div className="mt-6 pt-6 border-t border-slate-700/80">

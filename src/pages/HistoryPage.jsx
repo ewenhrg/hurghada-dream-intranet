@@ -8,7 +8,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtras, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -1314,7 +1314,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           it.adults,
           it.children,
           it.extraDolphin,
-          it.speedBoatExtra
+          it.speedBoatExtra,
+          it.slot
         );
       } else if (act && isBuggyActivity(act.name)) {
         // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy 2 pers. et 4 pers.
@@ -2087,7 +2088,22 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     <p className="text-sm md:text-base font-bold text-slate-800 mb-3">⏰ Créneau de transfert</p>
                     <select
                       value={c.raw.slot || ""}
-                      onChange={(e) => setItem(idx, { slot: e.target.value })}
+                      onChange={(e) => {
+                        const slot = e.target.value;
+                        const patch = { slot };
+                        if (c.isSpeedBoat) {
+                          const currentExtras = Array.isArray(c.raw.speedBoatExtra)
+                            ? c.raw.speedBoatExtra
+                            : c.raw.speedBoatExtra
+                              ? [c.raw.speedBoatExtra]
+                              : [];
+                          const filteredExtras = normalizeSpeedBoatExtrasForSlot(c.raw.speedBoatExtra, slot);
+                          if (filteredExtras.length !== currentExtras.length) {
+                            patch.speedBoatExtra = filteredExtras;
+                          }
+                        }
+                        setItem(idx, patch);
+                      }}
                       className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                     >
                       <option value="">— Choisir un créneau —</option>
@@ -2103,19 +2119,41 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   <div className="space-y-4 md:space-y-5 rounded-xl border-2 border-blue-300/70 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 p-4 md:p-5">
                     {allowsSpeedBoatIslandExtras(c.activityName) ? (
                       <div>
-                        <p className="text-sm md:text-base font-bold text-slate-800 mb-3">
-                          ⚡ Extras Speed Boat (plusieurs sélections possibles)
+                        <p className="text-sm md:text-base font-bold text-slate-800 mb-2">
+                          ⚡ Options Speed Boat
                         </p>
+                        <p className="text-xs md:text-sm text-slate-600 font-medium mb-3">
+                          Un seul choix possible : dauphin <strong>ou</strong> une île — pas les deux.
+                        </p>
+                        {c.raw.slot === "morning" && (
+                          <p className="text-xs md:text-sm text-amber-900 font-medium mb-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                            Les formules avec repas ne sont pas disponibles le matin.
+                          </p>
+                        )}
                         <div className="space-y-3 border-2 border-blue-200/70 rounded-xl p-4 bg-white/95 shadow-sm">
-                          {getSpeedBoatIslandExtras().map((extra) => {
-                            const currentExtras = Array.isArray(c.raw.speedBoatExtra)
-                              ? c.raw.speedBoatExtra
-                              : c.raw.speedBoatExtra &&
-                                  typeof c.raw.speedBoatExtra === "string" &&
-                                  c.raw.speedBoatExtra !== ""
-                                ? [c.raw.speedBoatExtra]
-                                : [];
-                            const isChecked = currentExtras.includes(extra.id);
+                          {allowsSpeedBoatDolphinExtra(c.activityName) && (
+                            <label className="flex items-center gap-3 p-2 rounded-lg transition-colors cursor-pointer hover:bg-cyan-50/50">
+                              <input
+                                type="checkbox"
+                                id={`edit-extraDolphin-${idx}`}
+                                checked={c.raw.extraDolphin || false}
+                                onChange={(e) =>
+                                  setItem(idx, {
+                                    extraDolphin: e.target.checked,
+                                    ...(e.target.checked ? { speedBoatExtra: [] } : {}),
+                                  })
+                                }
+                                className="w-5 h-5 text-blue-600 border-gray-400 rounded focus:ring-blue-500 cursor-pointer"
+                              />
+                              <span className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-2">
+                                <span>🐬</span>
+                                <span>Extra dauphin (+20€)</span>
+                              </span>
+                            </label>
+                          )}
+                          {getSpeedBoatIslandExtrasForSlot(c.raw.slot).map((extra) => {
+                            const currentExtras = normalizeSpeedBoatExtrasList(c.raw.speedBoatExtra);
+                            const isChecked = currentExtras[0] === extra.id;
 
                             return (
                               <label
@@ -2125,31 +2163,12 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
-                                  onChange={(e) => {
-                                    setItems((prev) => {
-                                      const currentItem = prev[idx];
-                                      const prevExtras = Array.isArray(currentItem.speedBoatExtra)
-                                        ? currentItem.speedBoatExtra
-                                        : currentItem.speedBoatExtra &&
-                                            typeof currentItem.speedBoatExtra === "string" &&
-                                            currentItem.speedBoatExtra !== ""
-                                          ? [currentItem.speedBoatExtra]
-                                          : [];
-
-                                      let newExtras;
-                                      if (e.target.checked) {
-                                        newExtras = prevExtras.includes(extra.id)
-                                          ? prevExtras
-                                          : [...prevExtras, extra.id];
-                                      } else {
-                                        newExtras = prevExtras.filter((id) => id !== extra.id);
-                                      }
-
-                                      return prev.map((it, i) =>
-                                        i === idx ? { ...it, speedBoatExtra: newExtras } : it
-                                      );
-                                    });
-                                  }}
+                                  onChange={(e) =>
+                                    setItem(idx, {
+                                      speedBoatExtra: e.target.checked ? [extra.id] : [],
+                                      extraDolphin: false,
+                                    })
+                                  }
                                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-slate-700 flex-1">
@@ -2187,24 +2206,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       </p>
                     </div>
 
-                    {allowsSpeedBoatDolphinExtra(c.activityName) && (
-                      <div className="flex items-center gap-3 p-4 bg-cyan-50/80 rounded-xl border-2 border-cyan-300/70">
-                        <input
-                          type="checkbox"
-                          id={`edit-extraDolphin-${idx}`}
-                          checked={c.raw.extraDolphin || false}
-                          onChange={(e) => setItem(idx, { extraDolphin: e.target.checked })}
-                          className="w-5 h-5 text-blue-600 border-gray-400 rounded focus:ring-blue-500 cursor-pointer"
-                        />
-                        <label
-                          htmlFor={`edit-extraDolphin-${idx}`}
-                          className="text-sm md:text-base font-bold text-slate-800 cursor-pointer flex items-center gap-2"
-                        >
-                          <span>🐬</span>
-                          <span>Extra dauphin (+20€)</span>
-                        </label>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
