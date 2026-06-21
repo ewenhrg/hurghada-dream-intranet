@@ -20,6 +20,7 @@ import {
 } from "../utils/activityHelpers";
 import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
 import { isActivityBlockedForNeighborhood } from "../utils/activityNeighborhoodRules.js";
+import { computeActivityTransferSurcharge } from "../utils/transferPricing.js";
 
 /**
  * Hook personnalisé pour calculer les prix des activités
@@ -241,22 +242,9 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         
       }
 
-      // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits)
-      // Ne pas appliquer pour ZERO TRACAS, ZERO TRACAS HORS ZONE, CAIRE PRIVATIF et LOUXOR PRIVATIF car le transfert est déjà inclus dans les prix
-      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name) && !isZeroTracasHorsZoneActivity(act?.name) && !isCairePrivatifActivity(act?.name) && !isLouxorPrivatifActivity(act?.name)) {
-        if (act && isMotoCrossActivity(act.name)) {
-          // Pour MOTO CROSS, le supplément est calculé sur le nombre total de motos
-          const totalMotos = Number(it.yamaha250 || 0) + Number(it.ktm640 || 0) + Number(it.ktm530 || 0);
-          lineTotal += Number(transferInfo.surcharge || 0) * totalMotos;
-        } else if (act && isBoatPartyActivity(act.name)) {
-          const totalGuests = Number(it.boatPartyMen || 0) + Number(it.boatPartyWomen || 0);
-          lineTotal += Number(transferInfo.surcharge || 0) * totalGuests;
-        } else {
-          // Pour toutes les autres activités (y compris buggy), le supplément est calculé sur le nombre d'adultes + enfants (bébés gratuits)
-          const adults = Number(it.adults || 0);
-          const children = Number(it.children || 0);
-          lineTotal += Number(transferInfo.surcharge || 0) * (adults + children);
-        }
+      // supplément transfert (forfait Marsa Alam ou par personne selon la catégorie)
+      if (transferInfo && act) {
+        lineTotal += computeActivityTransferSurcharge(transferInfo, act, it);
       }
 
       // extra (montant à ajouter ou soustraire) - s'applique à toutes les activités

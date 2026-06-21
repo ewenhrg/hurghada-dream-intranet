@@ -10,6 +10,7 @@ import {
   isActivityBlockedForNeighborhood,
   SPA_ROYAL_NEIGHBORHOOD_MESSAGE,
 } from "../utils/activityNeighborhoodRules.js";
+import { computeActivityTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
 
 export function ModificationsPage({ quotes, setQuotes, activities, user }) {
   // Map des activités pour des recherches O(1) au lieu de O(n)
@@ -125,10 +126,14 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
         newLineTotal += (newActivity.babiesForbidden ? 0 : babies * Number(newActivity.priceBaby || 0));
       }
       
-      // Ajouter le supplément transfert si nécessaire (par adulte et enfant, bébés gratuits)
+      // Ajouter le supplément transfert si nécessaire
       const transferInfo = newActivity.transfers?.[neighborhood];
-      if (transferInfo && transferInfo.surcharge) {
-        newLineTotal += Number(transferInfo.surcharge || 0) * (adults + children);
+      if (transferInfo) {
+        newLineTotal += computeActivityTransferSurcharge(transferInfo, newActivity, {
+          adults,
+          children,
+          babies,
+        });
       }
       
       // Créer le nouvel item avec les nouvelles données
@@ -140,8 +145,7 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
         children: children,
         babies: babies,
         lineTotal: newLineTotal,
-        // Préserver les informations de transfert
-        transferSurchargePerAdult: transferInfo?.surcharge || 0,
+        ...getTransferSurchargeFieldsForQuoteItem(newActivity, transferInfo),
         // Garder les autres informations (date, ticketNumber, etc.)
       };
 

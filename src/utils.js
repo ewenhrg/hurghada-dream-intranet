@@ -1,7 +1,6 @@
 import { NEIGHBORHOODS } from "./constants";
 import {
   isBoatPartyActivity,
-  isMotoCrossActivity,
   isSpeedBoatActivity,
   allowsSpeedBoatIslandExtras,
   allowsSpeedBoatDolphinExtra,
@@ -12,6 +11,7 @@ import {
   getQuoteItemDetailLines,
   getQuoteItemParticipantCells,
 } from "./utils/quoteItemDisplay.js";
+import { calculateTransferSurchargeFromItem } from "./utils/transferPricing.js";
 
 // Options d'extra pour Speed Boat uniquement (gardé pour compatibilité)
 const SPEED_BOAT_EXTRAS_LOCAL = [
@@ -158,6 +158,8 @@ export function emptyTransfers() {
       eveningEnabled: false,
       eveningTime: "",
       surcharge: 0,
+      surchargeUpTo2: 0,
+      surchargeOver2: 0,
     };
   });
   return obj;
@@ -181,6 +183,8 @@ export function mergeTransfers(fromDb) {
         eveningEnabled: fromDb[key].eveningEnabled ?? base[key].eveningEnabled,
         eveningTime: fromDb[key].eveningTime ?? base[key].eveningTime,
         surcharge: Number(fromDb[key].surcharge) || base[key].surcharge,
+        surchargeUpTo2: Number(fromDb[key].surchargeUpTo2) || base[key].surchargeUpTo2,
+        surchargeOver2: Number(fromDb[key].surchargeOver2) || base[key].surchargeOver2,
       };
     }
   });
@@ -240,31 +244,7 @@ export function toBoundedInt10(value, { min = 0, max = 999, fallback = 0 } = {})
 
 // Calculer le montant total du supplément transfert pour un item
 export function calculateTransferSurcharge(item) {
-  if (!item || !item.transferSurchargePerAdult || item.transferSurchargePerAdult === 0) {
-    return 0;
-  }
-  
-  const surchargePerAdult = Number(item.transferSurchargePerAdult || 0);
-
-  if (isBoatPartyActivity(item.activityName)) {
-    const men = Number(item.boatPartyMen || 0);
-    const women = Number(item.boatPartyWomen || 0);
-    return surchargePerAdult * (men + women);
-  }
-
-  // Pour MotoCross : multiplier par le nombre total de motos (yamaha250 + ktm640 + ktm530)
-  if (isMotoCrossActivity(item.activityName)) {
-    const yamaha250 = Number(item.yamaha250 || 0);
-    const ktm640 = Number(item.ktm640 || 0);
-    const ktm530 = Number(item.ktm530 || 0);
-    const totalMotos = yamaha250 + ktm640 + ktm530;
-    return surchargePerAdult * totalMotos;
-  }
-  
-  // Buggy, activités classiques, etc. : adultes + enfants (bébés gratuits)
-  const adults = Number(item.adults || 0);
-  const children = Number(item.children || 0);
-  return surchargePerAdult * (adults + children);
+  return calculateTransferSurchargeFromItem(item);
 }
 
 /**

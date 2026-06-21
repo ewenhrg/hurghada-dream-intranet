@@ -1694,8 +1694,16 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               <h3 className="text-xs font-bold text-violet-700 uppercase tracking-wider mb-3 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-violet-500" /> Transferts par quartier
               </h3>
-              <p className="text-xs text-slate-500 mb-3">Matin / Après-midi / Soir, heures et suppléments par quartier</p>
-              <TransfersEditor value={form.transfers} onChange={(v) => setForm((f) => ({ ...f, transfers: v }))} />
+              <p className="text-xs text-slate-500 mb-3">
+                {form.category === "marsa_alam"
+                  ? "Matin / Après-midi / Soir, heures et tarifs transfert forfaitaires (1–2 pers. / plus de 2 pers.) par quartier"
+                  : "Matin / Après-midi / Soir, heures et suppléments par quartier"}
+              </p>
+              <TransfersEditor
+                category={form.category}
+                value={form.transfers}
+                onChange={(v) => setForm((f) => ({ ...f, transfers: v }))}
+              />
             </div>
 
             <div className="rounded-xl p-4 bg-slate-100/80 border border-slate-200">

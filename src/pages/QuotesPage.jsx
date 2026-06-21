@@ -12,6 +12,7 @@ import { StopPushSalesSummary } from "../components/quotes/StopPushSalesSummary"
 import { PaymentModal } from "../components/quotes/PaymentModal";
 import { QuoteSummary } from "../components/quotes/QuoteSummary";
 import { NotesSection } from "../components/quotes/NotesSection";
+import { getTransferSurchargeFieldsForQuoteItem, isMarsaAlamCategory } from "../utils/transferPricing";
 import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator";
 import {
   isActivityBlockedForNeighborhood,
@@ -950,7 +951,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
         lineTotal: c.lineTotal,
-        transferSurchargePerAdult: c.transferInfo?.surcharge || 0,
+        ...getTransferSurchargeFieldsForQuoteItem(c.act, c.transferInfo),
       })),
       total: validGrandTotal,
       totalCash: Math.round(validGrandTotal),
@@ -1588,7 +1589,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </select>
                     {c.transferInfo && (
                       <p className="text-xs text-slate-600 mt-2">
-                        💰 Supplément transfert: {currency(c.transferInfo.surcharge || 0, c.currency)} / adulte et enfant (bébé gratuit)
+                        {isMarsaAlamCategory(c.act?.category) ? (
+                          <>
+                            💰 Transfert forfait : {currency(c.transferInfo.surchargeUpTo2 || 0, c.currency)} (1–2 pers.) ·{" "}
+                            {currency(c.transferInfo.surchargeOver2 || 0, c.currency)} (plus de 2 pers.) — adultes + enfants
+                          </>
+                        ) : (
+                          <>
+                            💰 Supplément transfert: {currency(c.transferInfo.surcharge || 0, c.currency)} / adulte et enfant (bébé gratuit)
+                          </>
+                        )}
                       </p>
                     )}
                   </div>

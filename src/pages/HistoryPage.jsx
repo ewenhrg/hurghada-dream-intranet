@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
+import { computeActivityTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -1396,23 +1397,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         lineTotal += (act.babiesForbidden ? 0 : Number(it.babies || 0) * Number(act.priceBaby || 0));
       }
 
-      // supplément transfert PAR ADULTE ET ENFANT (bébés gratuits)
-      // Ne pas appliquer pour ZERO TRACAS, ZERO TRACAS HORS ZONE, CAIRE PRIVATIF et LOUXOR PRIVATIF car le transfert est déjà inclus dans les prix
-      // IMPORTANT : cette logique doit rester strictement identique à celle utilisée dans `useActivityPriceCalculator`
-      if (transferInfo && transferInfo.surcharge && !isZeroTracasActivity(act?.name) && !isZeroTracasHorsZoneActivity(act?.name) && !isCairePrivatifActivity(act?.name) && !isLouxorPrivatifActivity(act?.name)) {
-        if (act && isMotoCrossActivity(act.name)) {
-          // Pour MOTO CROSS, le supplément est calculé sur le nombre total de motos
-          const totalMotos = Number(it.yamaha250 || 0) + Number(it.ktm640 || 0) + Number(it.ktm530 || 0);
-          lineTotal += Number(transferInfo.surcharge || 0) * totalMotos;
-        } else if (act && isBoatPartyActivity(act.name)) {
-          const totalGuests = Number(it.boatPartyMen || 0) + Number(it.boatPartyWomen || 0);
-          lineTotal += Number(transferInfo.surcharge || 0) * totalGuests;
-        } else {
-          // Pour toutes les autres activités (y compris buggy), le supplément est calculé sur le nombre d'adultes + enfants (bébés gratuits)
-          const adults = Number(it.adults || 0);
-          const children = Number(it.children || 0);
-          lineTotal += Number(transferInfo.surcharge || 0) * (adults + children);
-        }
+      // supplément transfert (forfait Marsa Alam ou par personne selon la catégorie)
+      if (transferInfo && act) {
+        lineTotal += computeActivityTransferSurcharge(transferInfo, act, it);
       }
 
       // extra (montant à ajouter ou soustraire) - s'applique à toutes les activités
@@ -1542,7 +1529,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           slot: c.raw.slot,
           pickupTime: c.pickupTime || "",
           lineTotal: c.lineTotal,
-          transferSurchargePerAdult: c.transferInfo?.surcharge || 0,
+          ...getTransferSurchargeFieldsForQuoteItem(c.act, c.transferInfo),
           // Préserver le ticketNumber existant - ne peut pas être modifié si déjà rempli
           ticketNumber: (c.raw.ticketNumber && c.raw.ticketNumber.trim()) 
             ? c.raw.ticketNumber 
