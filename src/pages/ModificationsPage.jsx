@@ -8,7 +8,8 @@ import { logger } from "../utils/logger";
 import { useDebounce } from "../hooks/useDebounce";
 import {
   isActivityBlockedForNeighborhood,
-  SPA_ROYAL_NEIGHBORHOOD_MESSAGE,
+  getActivityNeighborhoodBlockMessage,
+  getActivityNeighborhoodBlockOptionSuffix,
 } from "../utils/activityNeighborhoodRules.js";
 import { computeActivityTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
 
@@ -108,7 +109,7 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
 
       const neighborhood = selectedQuote.client?.neighborhood || "";
       if (isActivityBlockedForNeighborhood(newActivity, neighborhood)) {
-        toast.error(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+        toast.error(getActivityNeighborhoodBlockMessage(newActivity));
         return;
       }
 
@@ -422,11 +423,17 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
                     className="w-full rounded-xl border border-blue-200/50 bg-white px-3 py-2 text-sm"
                   >
                     <option value="">— Choisir —</option>
-                    {activities.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
+                    {activities.map((a) => {
+                      const neighborhood = selectedQuote.client?.neighborhood || "";
+                      const blocked =
+                        neighborhood && isActivityBlockedForNeighborhood(a, neighborhood);
+                      return (
+                        <option key={a.id} value={a.id} disabled={Boolean(blocked)}>
+                          {a.name}
+                          {blocked ? ` (${getActivityNeighborhoodBlockOptionSuffix(a)})` : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 {/* Champs pour modifier le nombre de personnes */}

@@ -15,7 +15,8 @@ import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
 import {
   isActivityBlockedForNeighborhood,
-  SPA_ROYAL_NEIGHBORHOOD_MESSAGE,
+  getActivityNeighborhoodBlockMessage,
+  getActivityNeighborhoodBlockOptionSuffix,
 } from "../utils/activityNeighborhoodRules.js";
 import { formatQuoteItemParticipantsSummary } from "../utils/quoteItemDisplay.js";
 
@@ -1454,7 +1455,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
 
     const neighborhoodBlockedItems = validComputed.filter((c) => c.isNeighborhoodBlocked);
     if (neighborhoodBlockedItems.length > 0) {
-      toast.error(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+      toast.error(getActivityNeighborhoodBlockMessage(neighborhoodBlockedItems[0].act));
       return;
     }
 
@@ -1657,7 +1658,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         return it;
                       });
                       if (cleared) {
-                        toast.warning(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+                        const blockedAct = prev
+                          .map((it) => activitiesMap.get(it.activityId))
+                          .find((act) => act && isActivityBlockedForNeighborhood(act, newNeighborhood));
+                        toast.warning(getActivityNeighborhoodBlockMessage(blockedAct));
                       }
                       return next;
                     });
@@ -1726,7 +1730,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           client?.neighborhood &&
                           isActivityBlockedForNeighborhood(act, client.neighborhood)
                         ) {
-                          toast.error(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+                          toast.error(getActivityNeighborhoodBlockMessage(act));
                           return;
                         }
                         setItem(idx, { activityId: newId });
@@ -1741,14 +1745,14 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         return (
                           <option key={a.id} value={a.id} disabled={Boolean(blocked)}>
                             {a.name}
-                            {blocked ? " (Hurghada uniquement)" : ""}
+                            {blocked ? ` (${getActivityNeighborhoodBlockOptionSuffix(a)})` : ""}
                           </option>
                         );
                       })}
                     </select>
                     {c.isNeighborhoodBlocked && (
                       <p className="text-xs md:text-sm text-orange-800 font-semibold mt-2 bg-orange-50 px-3 py-2 rounded-lg border border-orange-200">
-                        📍 {SPA_ROYAL_NEIGHBORHOOD_MESSAGE}
+                        📍 {getActivityNeighborhoodBlockMessage(c.act)}
                       </p>
                     )}
                   </div>

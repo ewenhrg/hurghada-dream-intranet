@@ -16,7 +16,8 @@ import { getTransferSurchargeFieldsForQuoteItem, isMarsaAlamCategory } from "../
 import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator";
 import {
   isActivityBlockedForNeighborhood,
-  SPA_ROYAL_NEIGHBORHOOD_MESSAGE,
+  getActivityNeighborhoodBlockMessage,
+  getActivityNeighborhoodBlockOptionSuffix,
 } from "../utils/activityNeighborhoodRules.js";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import { useDebounce } from "../hooks/useDebounce";
@@ -887,7 +888,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
     const neighborhoodBlockedItems = validComputed.filter((c) => c.isNeighborhoodBlocked);
     if (neighborhoodBlockedItems.length > 0) {
-      toast.error(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+      toast.error(getActivityNeighborhoodBlockMessage(neighborhoodBlockedItems[0].act));
       setIsSubmitting(false);
       return;
     }
@@ -1248,7 +1249,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       return it;
                     });
                     if (cleared) {
-                      toast.warning(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+                      const blockedAct = prev
+                        .map((it) => activitiesMap.get(it.activityId))
+                        .find((act) => act && isActivityBlockedForNeighborhood(act, newNeighborhood));
+                      toast.warning(getActivityNeighborhoodBlockMessage(blockedAct));
                     }
                     return next;
                   });
@@ -1424,7 +1428,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                           client.neighborhood &&
                           isActivityBlockedForNeighborhood(act, client.neighborhood)
                         ) {
-                          toast.error(SPA_ROYAL_NEIGHBORHOOD_MESSAGE);
+                          toast.error(getActivityNeighborhoodBlockMessage(act));
                           return;
                         }
                         const patch = { activityId: newId };
@@ -1447,7 +1451,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         return (
                           <option key={a.id} value={a.id} disabled={Boolean(blocked)}>
                             {a.name}
-                            {blocked ? " (Hurghada uniquement)" : ""}
+                            {blocked ? ` (${getActivityNeighborhoodBlockOptionSuffix(a)})` : ""}
                           </option>
                         );
                       })}
@@ -1494,7 +1498,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                             Quartier incompatible
                           </p>
                           <p className="text-xs text-orange-800 mt-0.5 font-medium">
-                            {SPA_ROYAL_NEIGHBORHOOD_MESSAGE}
+                            {getActivityNeighborhoodBlockMessage(c.act)}
                           </p>
                         </div>
                       </div>
