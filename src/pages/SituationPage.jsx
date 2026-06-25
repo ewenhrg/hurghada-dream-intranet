@@ -22,7 +22,8 @@ import {
 } from "../utils/messageTemplatesSync";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { ExcelUploadSection } from "../components/situation/ExcelUploadSection";
-import { TransferClientCard } from "../components/situation/TransferClientCard";
+import { TransferClientsTable } from "../components/situation/TransferClientsTable";
+import { TransferMessagePreviewModal } from "../components/situation/TransferMessagePreviewModal";
 import { AutoSendingIndicator } from "../components/situation/AutoSendingIndicator";
 import { MessagePreviewSection } from "../components/situation/MessagePreviewSection";
 import { SendLogSection } from "../components/situation/SendLogSection";
@@ -71,6 +72,8 @@ export function SituationPage({ activities = [], user }) {
   
   // État pour l'édition des cellules du tableau
   const [editingCell, setEditingCell] = useState(null); // { rowId: string, field: string }
+  const [messageOverrides, setMessageOverrides] = useState({});
+  const [messagePreviewRow, setMessagePreviewRow] = useState(null);
 
   const handleNewHotelChange = useCallback(
     (value) => {
@@ -738,6 +741,7 @@ export function SituationPage({ activities = [], user }) {
         
         setExcelData(filteredData);
         setRowsWithMarina(new Set()); // Réinitialiser toutes les cases marina à chaque nouvel import
+        setMessageOverrides({});
         setShowPreview(false);
         setSendLog([]);
         lastUploadedFileNameRef.current = file.name;
@@ -778,6 +782,12 @@ export function SituationPage({ activities = [], user }) {
       }
       return newSet;
     });
+    setMessageOverrides((prev) => {
+      if (!(rowId in prev)) return prev;
+      const next = { ...prev };
+      delete next[rowId];
+      return next;
+    });
   }, []);
   
   const handleCellEdit = useCallback((rowId, field, value) => {
@@ -810,6 +820,12 @@ export function SituationPage({ activities = [], user }) {
         return row;
       })
     );
+    setMessageOverrides((prev) => {
+      if (!(rowId in prev)) return prev;
+      const next = { ...prev };
+      delete next[rowId];
+      return next;
+    });
   }, [setExcelData]);
 
   const fileInputRef = useRef(null);
@@ -817,6 +833,60 @@ export function SituationPage({ activities = [], user }) {
   const generateMessageWithContext = useCallback((data) => {
     return generateMessage(data, messageTemplates, rowsWithMarina, exteriorHotels);
   }, [messageTemplates, rowsWithMarina, exteriorHotels]);
+
+  const getMessageForRow = useCallback(
+    (data) => {
+      if (messageOverrides[data.id] != null) {
+        return messageOverrides[data.id];
+      }
+      const previewMessage = previewMessages.find((msg) => msg.id === data.id);
+      if (previewMessage?.message) {
+        return previewMessage.message;
+      }
+      return generateMessageWithContext(data);
+    },
+    [messageOverrides, previewMessages, generateMessageWithContext]
+  );
+
+  const handleOpenMessagePreview = useCallback((row) => {
+    setMessagePreviewRow(row);
+  }, []);
+
+  const handleSaveMessageOverride = useCallback(
+    (draft) => {
+      if (!messagePreviewRow) return;
+      setMessageOverrides((prev) => ({ ...prev, [messagePreviewRow.id]: draft }));
+      setPreviewMessages((prev) => {
+        const idx = prev.findIndex((m) => m.id === messagePreviewRow.id);
+        if (idx === -1) return prev;
+        const next = [...prev];
+        next[idx] = { ...next[idx], message: draft };
+        return next;
+      });
+      toast.success("Message enregistré");
+      setMessagePreviewRow(null);
+    },
+    [messagePreviewRow]
+  );
+
+  const handleResetMessagePreview = useCallback(() => {
+    if (!messagePreviewRow) return;
+    const rowId = messagePreviewRow.id;
+    setMessageOverrides((prev) => {
+      if (!(rowId in prev)) return prev;
+      const next = { ...prev };
+      delete next[rowId];
+      return next;
+    });
+    setPreviewMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === rowId);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next[idx] = { ...next[idx], message: generateMessageWithContext(messagePreviewRow) };
+      return next;
+    });
+    toast.info("Message réinitialisé");
+  }, [messagePreviewRow, generateMessageWithContext]);
 
   // Prévisualiser les messages
   const handlePreviewMessages = () => {
@@ -827,8 +897,7 @@ export function SituationPage({ activities = [], user }) {
 
     const messages = excelData.map((data) => ({
       ...data,
-      message: generateMessageWithContext(data),
-
+      message: getMessageForRow(data),
     }));
 
     setPreviewMessages(messages);
@@ -1065,12 +1134,10 @@ export function SituationPage({ activities = [], user }) {
   };
 
   // Envoyer un message via WhatsApp Web automatiquement
-  const sendWhatsAppMessage = async (data, index, total) => {
+  const sendWhatsAppMessage = async (data, index, total, messageOverride) => {
     logger.log(`📨 Envoi du message ${index + 1}/${total} pour ${data.name} (${data.phone})`);
-    
-    // Utiliser le message modifié depuis previewMessages s'il existe, sinon générer le message
-    const previewMessage = previewMessages.find((msg) => msg.id === data.id);
-    const message = previewMessage?.message || generateMessageWithContext(data);
+
+    const message = messageOverride ?? getMessageForRow(data);
     
     // IMPORTANT: Attendre 10 secondes minimum entre chaque message pour éviter le bannissement WhatsApp
     // C'est le délai minimum recommandé par WhatsApp pour éviter les restrictions
@@ -1163,18 +1230,53 @@ export function SituationPage({ activities = [], user }) {
     }
   }, [excelData]);
 
-  // Données pour les lignes virtualisées (doit être après handleSendSingleMessage)
+  const handleSendFromPreview = useCallback(
+    async (draft) => {
+      if (!messagePreviewRow) return;
+      const row = messagePreviewRow;
+      if (!row.phone || !row.phoneValid) {
+        toast.error("Cette ligne n'a pas de numéro de téléphone valide.");
+        return;
+      }
+      if (row.messageSent) {
+        toast.info("Ce message a déjà été envoyé.");
+        return;
+      }
+      setMessageOverrides((prev) => ({ ...prev, [row.id]: draft }));
+      setMessagePreviewRow(null);
+      try {
+        const index = excelData.findIndex((item) => item.id === row.id);
+        await sendWhatsAppMessage(row, index, excelData.length, draft);
+        toast.success(`WhatsApp ouvert pour ${row.name}`);
+      } catch (error) {
+        logger.error("Erreur lors de l'envoi du message:", error);
+        toast.error("Erreur lors de l'envoi du message. Veuillez réessayer.");
+      }
+    },
+    [messagePreviewRow, excelData]
+  );
+
+  // Données pour le tableau clients
   const listItemData = useMemo(
     () => ({
-      excelData,
       editingCell,
       setEditingCell,
       handleCellEdit,
       handleToggleMarina,
       rowsWithMarina,
       handleSendSingleMessage,
+      handleOpenMessagePreview,
+      messageOverrides,
     }),
-    [excelData, editingCell, handleCellEdit, handleToggleMarina, rowsWithMarina, handleSendSingleMessage]
+    [
+      editingCell,
+      handleCellEdit,
+      handleToggleMarina,
+      rowsWithMarina,
+      handleSendSingleMessage,
+      handleOpenMessagePreview,
+      messageOverrides,
+    ]
   );
 
   // Démarrer l'envoi automatique des messages
@@ -1403,9 +1505,7 @@ export function SituationPage({ activities = [], user }) {
     // Simuler l'envoi des messages
     for (let i = 0; i < dataWithPhone.length; i++) {
       const data = dataWithPhone[i];
-      // Utiliser le message modifié depuis previewMessages s'il existe, sinon générer le message
-      const previewMessage = previewMessages.find((msg) => msg.id === data.id);
-      const message = previewMessage?.message || generateMessageWithContext(data);
+      const message = getMessageForRow(data);
 
       try {
         // TODO: Remplacer par un vrai service d'envoi (Twilio, WhatsApp API, etc.)
@@ -1484,44 +1584,45 @@ export function SituationPage({ activities = [], user }) {
   );
 
   const statsBar = hasWorkData ? (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <div className="rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-center">
-        <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
-        <p className="text-sm font-semibold text-gray-700">Clients</p>
-      </div>
-      <div className="rounded-xl border-2 border-blue-400 bg-blue-50 px-4 py-3 text-center">
-        <p className="text-3xl font-bold text-blue-900">{stats.withPhone}</p>
-        <p className="text-sm font-semibold text-gray-800">Prêts à envoyer</p>
-      </div>
-      <div className="rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-center">
-        <p className="text-3xl font-bold text-amber-900">{stats.withoutPhone}</p>
-        <p className="text-sm font-semibold text-gray-800">À corriger</p>
-      </div>
-      <div className="rounded-xl border-2 border-emerald-400 bg-emerald-50 px-4 py-3 text-center">
-        <p className="text-3xl font-bold text-emerald-900">{stats.sent}</p>
-        <p className="text-sm font-semibold text-gray-800">Envoyés</p>
-      </div>
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 font-medium text-slate-700">
+        {stats.total} client{stats.total > 1 ? "s" : ""}
+      </span>
+      <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 font-medium text-blue-800">
+        {stats.withPhone} prêt{stats.withPhone > 1 ? "s" : ""}
+      </span>
+      {stats.withoutPhone > 0 && (
+        <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">
+          {stats.withoutPhone} à corriger
+        </span>
+      )}
+      {stats.sent > 0 && (
+        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-800">
+          {stats.sent} envoyé{stats.sent > 1 ? "s" : ""}
+        </span>
+      )}
     </div>
   ) : null;
 
   const clientList = hasWorkData ? (
-    <div className="max-h-[65vh] overflow-y-auto rounded-xl border-2 border-gray-300 bg-gray-50 p-3">
-      {excelData.map((row) => (
-        <TransferClientCard key={row.id} row={row} data={listItemData} />
-      ))}
-    </div>
+    <>
+      <TransferClientsTable rows={excelData} data={listItemData} />
+      {Object.keys(messageOverrides).length > 0 && (
+        <p className="text-[11px] text-slate-500">* = message modifié manuellement</p>
+      )}
+    </>
   ) : null;
 
   const actionButtons = hasWorkData ? (
     <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-4">
       <GhostBtn onClick={handlePreviewMessages} disabled={sending || autoSending}>
-        Voir les messages
+        Tous les messages
       </GhostBtn>
       <PrimaryBtn
         onClick={handleAutoSendMessages}
         disabled={sending || autoSending || stats.withPhone === 0}
         variant="success"
-        className="px-6 py-3 text-base font-bold"
+        className="px-4 py-2 text-sm font-semibold"
       >
         {autoSending ? "Envoi en cours..." : `Envoyer tout (${stats.withPhone})`}
       </PrimaryBtn>
@@ -1543,10 +1644,25 @@ export function SituationPage({ activities = [], user }) {
           previewMessages={previewMessages}
           onMessageChange={(index, value) => {
             const updatedMessages = [...previewMessages];
-            updatedMessages[index] = { ...updatedMessages[index], message: value };
+            const row = updatedMessages[index];
+            updatedMessages[index] = { ...row, message: value };
             setPreviewMessages(updatedMessages);
+            if (row?.id) {
+              setMessageOverrides((prev) => ({ ...prev, [row.id]: value }));
+            }
           }}
           onClose={() => setShowPreview(false)}
+        />
+      )}
+
+      {messagePreviewRow && (
+        <TransferMessagePreviewModal
+          row={messagePreviewRow}
+          initialMessage={getMessageForRow(messagePreviewRow)}
+          onSave={handleSaveMessageOverride}
+          onReset={handleResetMessagePreview}
+          onSendWhatsApp={handleSendFromPreview}
+          onClose={() => setMessagePreviewRow(null)}
         />
       )}
 
@@ -1613,7 +1729,7 @@ export function SituationPage({ activities = [], user }) {
         )}
 
         {hasWorkData && (
-          <div className="transfer-content space-y-4">
+          <div className="transfer-content space-y-2">
             {statsBar}
             {clientList}
             {autoSending && (
