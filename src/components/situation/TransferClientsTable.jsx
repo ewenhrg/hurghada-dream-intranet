@@ -7,7 +7,9 @@ export const TransferClientsTable = memo(({ rows, data }) => {
     setEditingCell,
     handleCellEdit,
     handleToggleMarina,
+    handleToggleExterior,
     rowsWithMarina,
+    rowsWithExterior,
     handleSendSingleMessage,
     handleOpenMessagePreview,
     messageOverrides,
@@ -17,7 +19,7 @@ export const TransferClientsTable = memo(({ rows, data }) => {
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <table className="w-full min-w-[900px] border-collapse text-xs">
+      <table className="w-full min-w-[980px] border-collapse text-xs">
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600">
             <th className="px-2 py-1.5 w-8">St</th>
@@ -28,6 +30,7 @@ export const TransferClientsTable = memo(({ rows, data }) => {
             <th className="px-2 py-1.5">Hôtel</th>
             <th className="px-2 py-1.5 w-12">Ch.</th>
             <th className="px-2 py-1.5 w-14 text-center">Marina</th>
+            <th className="px-2 py-1.5 w-20 text-center">Ext.</th>
             <th className="px-2 py-1.5 w-28 text-center">Actions</th>
           </tr>
         </thead>
@@ -36,6 +39,7 @@ export const TransferClientsTable = memo(({ rows, data }) => {
             const isEditingPhone =
               editingCell?.rowId === row.id && editingCell?.field === "phone";
             const marina = rowsWithMarina.has(row.id);
+            const isExterior = rowsWithExterior.has(row.id);
             const hasCustomMessage = messageOverrides?.[row.id] != null;
 
             let rowClass = "border-b border-slate-100 hover:bg-slate-50/80";
@@ -109,6 +113,29 @@ export const TransferClientsTable = memo(({ rows, data }) => {
                     className="h-3.5 w-3.5 cursor-pointer"
                     title="Bateau à la marina"
                   />
+                </td>
+                <td className="px-2 py-1 align-middle text-center">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleExterior(row.id)}
+                    disabled={marina}
+                    className={`rounded border px-1.5 py-0.5 text-[10px] font-medium ${
+                      isExterior
+                        ? "border-orange-300 bg-orange-50 text-orange-800"
+                        : marina
+                          ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300"
+                          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                    title={
+                      marina
+                        ? "Indisponible avec marina"
+                        : isExterior
+                          ? "RDV à l'extérieur de l'hôtel (actif)"
+                          : "RDV à l'extérieur de l'hôtel"
+                    }
+                  >
+                    Ext.
+                  </button>
                 </td>
                 <td className="px-2 py-1 align-middle">
                   <div className="flex items-center justify-center gap-1">

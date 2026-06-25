@@ -69,6 +69,7 @@ export function SituationPage({ activities = [], user }) {
   
   // État pour stocker les lignes avec marina cochée (non sauvegardé, réinitialisé à chaque import)
   const [rowsWithMarina, setRowsWithMarina] = useState(() => new Set());
+  const [rowsWithExterior, setRowsWithExterior] = useState(() => new Set());
   
   // État pour l'édition des cellules du tableau
   const [editingCell, setEditingCell] = useState(null); // { rowId: string, field: string }
@@ -145,6 +146,9 @@ export function SituationPage({ activities = [], user }) {
             }
             if (Array.isArray(p.rowsWithMarina)) {
               setRowsWithMarina(new Set(p.rowsWithMarina));
+            }
+            if (Array.isArray(p.rowsWithExterior)) {
+              setRowsWithExterior(new Set(p.rowsWithExterior));
             }
             setSharedMeta({
               fileName: p.fileName != null ? String(p.fileName) : "",
@@ -274,6 +278,7 @@ export function SituationPage({ activities = [], user }) {
           rows: excelData,
           detectedColumns,
           rowsWithMarina: [...rowsWithMarina],
+          rowsWithExterior: [...rowsWithExterior],
           fileName: sharedMeta.fileName || lastUploadedFileNameRef.current || "",
           importedBy: sharedMeta.importedBy || user?.name || "",
         };
@@ -299,6 +304,7 @@ export function SituationPage({ activities = [], user }) {
     excelData,
     detectedColumns,
     rowsWithMarina,
+    rowsWithExterior,
     settingsLoaded,
     isSupabaseConfigured,
     sharedMeta.fileName,
@@ -350,6 +356,9 @@ export function SituationPage({ activities = [], user }) {
           }
           if (Array.isArray(p.rowsWithMarina)) {
             setRowsWithMarina(new Set(p.rowsWithMarina));
+          }
+          if (Array.isArray(p.rowsWithExterior)) {
+            setRowsWithExterior(new Set(p.rowsWithExterior));
           }
           setSharedMeta({
             fileName: p.fileName != null ? String(p.fileName) : "",
@@ -741,6 +750,7 @@ export function SituationPage({ activities = [], user }) {
         
         setExcelData(filteredData);
         setRowsWithMarina(new Set()); // Réinitialiser toutes les cases marina à chaque nouvel import
+        setRowsWithExterior(new Set());
         setMessageOverrides({});
         setShowPreview(false);
         setSendLog([]);
@@ -775,10 +785,42 @@ export function SituationPage({ activities = [], user }) {
   const handleToggleMarina = useCallback((rowId) => {
     setRowsWithMarina((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(rowId)) {
-        newSet.delete(rowId);
-      } else {
+      const enabling = !newSet.has(rowId);
+      if (enabling) {
         newSet.add(rowId);
+        setRowsWithExterior((extPrev) => {
+          if (!extPrev.has(rowId)) return extPrev;
+          const ext = new Set(extPrev);
+          ext.delete(rowId);
+          return ext;
+        });
+      } else {
+        newSet.delete(rowId);
+      }
+      return newSet;
+    });
+    setMessageOverrides((prev) => {
+      if (!(rowId in prev)) return prev;
+      const next = { ...prev };
+      delete next[rowId];
+      return next;
+    });
+  }, []);
+
+  const handleToggleExterior = useCallback((rowId) => {
+    setRowsWithExterior((prev) => {
+      const newSet = new Set(prev);
+      const enabling = !newSet.has(rowId);
+      if (enabling) {
+        newSet.add(rowId);
+        setRowsWithMarina((marinaPrev) => {
+          if (!marinaPrev.has(rowId)) return marinaPrev;
+          const marina = new Set(marinaPrev);
+          marina.delete(rowId);
+          return marina;
+        });
+      } else {
+        newSet.delete(rowId);
       }
       return newSet;
     });
@@ -831,8 +873,8 @@ export function SituationPage({ activities = [], user }) {
   const fileInputRef = useRef(null);
   // Wrapper pour generateMessage avec contexte local (mémoïsé pour éviter les recalculs)
   const generateMessageWithContext = useCallback((data) => {
-    return generateMessage(data, messageTemplates, rowsWithMarina, exteriorHotels);
-  }, [messageTemplates, rowsWithMarina, exteriorHotels]);
+    return generateMessage(data, messageTemplates, rowsWithMarina, exteriorHotels, rowsWithExterior);
+  }, [messageTemplates, rowsWithMarina, exteriorHotels, rowsWithExterior]);
 
   const getMessageForRow = useCallback(
     (data) => {
@@ -1263,7 +1305,9 @@ export function SituationPage({ activities = [], user }) {
       setEditingCell,
       handleCellEdit,
       handleToggleMarina,
+      handleToggleExterior,
       rowsWithMarina,
+      rowsWithExterior,
       handleSendSingleMessage,
       handleOpenMessagePreview,
       messageOverrides,
@@ -1272,7 +1316,9 @@ export function SituationPage({ activities = [], user }) {
       editingCell,
       handleCellEdit,
       handleToggleMarina,
+      handleToggleExterior,
       rowsWithMarina,
+      rowsWithExterior,
       handleSendSingleMessage,
       handleOpenMessagePreview,
       messageOverrides,

@@ -23,6 +23,7 @@ export async function loadSituationTransferRows(supabase, siteKey) {
     rows: Array.isArray(p.rows) ? p.rows : [],
     detectedColumns: Array.isArray(p.detectedColumns) ? p.detectedColumns : [],
     rowsWithMarina: Array.isArray(p.rowsWithMarina) ? p.rowsWithMarina : [],
+    rowsWithExterior: Array.isArray(p.rowsWithExterior) ? p.rowsWithExterior : [],
     fileName: p.fileName != null ? String(p.fileName) : "",
     importedBy: p.importedBy != null ? String(p.importedBy) : "",
     updatedAt: data.updated_at || p.updated_at || null,

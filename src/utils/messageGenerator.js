@@ -155,10 +155,29 @@ function applyMarinaTimeLabels(message) {
     .replace(/(?:Pick-up|Pickup|Prise en charge)(?=\s*[:：])/gi, "Heure au bateau");
 }
 
+/** Message RDV quand le bouton « Extérieur » est activé sur la ligne */
+const EXTERIOR_RDV_LINE = "📍 Rendez-vous à l'extérieur de votre hôtel.";
+
+function applyExteriorRdvReplacements(message) {
+  return message
+    .replace(
+      /📍\s*Rendez-vous devant la réception de (?:votre |l')?hôtel\.?/gi,
+      EXTERIOR_RDV_LINE
+    )
+    .replace(
+      /Rendez-vous devant la réception de (?:votre |l')?hôtel\.?/gi,
+      "Rendez-vous à l'extérieur de votre hôtel."
+    );
+}
+
 /**
  * Déterminer le message RDV en haut (hors case marina manuelle)
  */
-function buildRdvMessageTop(data, exteriorHotels) {
+function buildRdvMessageTop(data, exteriorHotels, forceExterior = false) {
+  if (forceExterior) {
+    return `${EXTERIOR_RDV_LINE}\n\n`;
+  }
+
   const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
 
   if (hotelInfo) {
@@ -186,10 +205,18 @@ function generateUniqueFormLink() {
  * @param {Object} messageTemplates - Les templates de messages par activité
  * @param {Set} rowsWithMarina - Set des IDs de lignes avec marina cochée
  * @param {Array} exteriorHotels - Liste des hôtels avec RDV à l'extérieur
+ * @param {Set} rowsWithExterior - Set des IDs avec bouton « Extérieur » activé
  * @returns {string} - Le message généré
  */
-export function generateMessage(data, messageTemplates = {}, rowsWithMarina = new Set(), exteriorHotels = []) {
+export function generateMessage(
+  data,
+  messageTemplates = {},
+  rowsWithMarina = new Set(),
+  exteriorHotels = [],
+  rowsWithExterior = new Set()
+) {
   const isMarina = rowsWithMarina.has(data.id);
+  const isExterior = !isMarina && rowsWithExterior.has(data.id);
   // Vérifier si un template existe pour cette activité
   const activityName = data.trip || "";
   
@@ -213,7 +240,7 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
     if (isMarina) {
       rdvMessageTop = buildMarinaMessageTop();
     } else if (data.hotel) {
-      rdvMessageTop = buildRdvMessageTop(data, exteriorHotels);
+      rdvMessageTop = buildRdvMessageTop(data, exteriorHotels, isExterior);
     }
 
     const uniqueFormLink = generateUniqueFormLink();
@@ -222,6 +249,8 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
     if (isMarina) {
       message = applyMarinaTimeLabels(message);
       message = stripMarinaIgnoredLines(message);
+    } else if (isExterior) {
+      message = applyExteriorRdvReplacements(message);
     }
 
     return rdvMessageTop + message;
@@ -236,16 +265,20 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
     parts.push("🚤 Votre bateau vous attend à la marina de votre hôtel.");
     parts.push("");
   } else if (data.hotel) {
-    const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
-
-    if (hotelInfo) {
-      if (hotelInfo.hasBeachBoats) {
-        parts.push(`📍 Rendez-vous directement à la marina du ${data.hotel}.`);
-      } else {
-        parts.push("📍 Rendez-vous à l'extérieur de l'hôtel.");
-      }
+    if (isExterior) {
+      parts.push(EXTERIOR_RDV_LINE);
     } else {
-      parts.push("📍 Rendez-vous devant la réception de l'hôtel.");
+      const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
+
+      if (hotelInfo) {
+        if (hotelInfo.hasBeachBoats) {
+          parts.push(`📍 Rendez-vous directement à la marina du ${data.hotel}.`);
+        } else {
+          parts.push("📍 Rendez-vous à l'extérieur de l'hôtel.");
+        }
+      } else {
+        parts.push("📍 Rendez-vous devant la réception de l'hôtel.");
+      }
     }
     parts.push("");
   }
