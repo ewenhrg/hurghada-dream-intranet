@@ -283,3 +283,19 @@ export function findColumn(row, possibleNames) {
   return "";
 }
 
+/** Colonnes ignorées à l'import Excel de la page Transferts (pax, ch, inf, time, invoice). */
+export function isIgnoredTransferExcelColumn(columnName) {
+  const n = String(columnName || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!n) return false;
+  if (n.includes("invoice") || n.includes("facture")) return true;
+  if (n === "pax" || n === "adults" || n === "adultes") return true;
+  if (n === "ch" || n === "children" || n === "enfants") return true;
+  if (n === "inf" || n === "infants" || n === "bebes" || n === "babies") return true;
+  if (n === "time" || n === "heure" || n === "pickup") return true;
+  return false;
+}
+

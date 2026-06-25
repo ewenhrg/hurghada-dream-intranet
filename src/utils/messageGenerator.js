@@ -103,11 +103,36 @@ function formatTimeDisplay(time) {
 }
 
 /** En-tête WhatsApp quand la case « Bateau à la marina » est cochée */
-function buildMarinaMessageTop(data) {
-  const timeDisplay = formatTimeDisplay(data.time);
-  const lines = ["🚤 Votre bateau vous attend à la marina de votre hôtel."];
-  lines.push(`Heure au bateau : ${timeDisplay}`);
-  return `${lines.join("\n")}\n\n`;
+function buildMarinaMessageTop() {
+  return "🚤 Votre bateau vous attend à la marina de votre hôtel.\n\n";
+}
+
+function prepareMarinaMessageData(data) {
+  return {
+    ...data,
+    time: "",
+    adults: 0,
+    children: 0,
+    infants: 0,
+    invoiceN: "",
+  };
+}
+
+function stripMarinaIgnoredLines(message) {
+  return message
+    .split("\n")
+    .filter((line) => {
+      const t = line.trim();
+      if (!t) return true;
+      if (/invoice/i.test(t)) return false;
+      if (/👥|participants?\s*:/i.test(t)) return false;
+      if (/adulte|enfant|bébé|bebe|pax\b/i.test(t)) return false;
+      if (/heure au bateau\s*:\s*à confirmer/i.test(t)) return false;
+      return true;
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /** Adapte le corps du message pour un RDV bateau (marina) */
@@ -174,16 +199,17 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
   if (template && template.trim() !== "") {
     let rdvMessageTop = "";
     if (isMarina) {
-      rdvMessageTop = buildMarinaMessageTop(data);
+      rdvMessageTop = buildMarinaMessageTop();
     } else if (data.hotel) {
       rdvMessageTop = buildRdvMessageTop(data, exteriorHotels);
     }
 
-    // Générer un lien unique pour ce client (évite la détection de spam WhatsApp)
     const uniqueFormLink = generateUniqueFormLink();
-    let message = applyMessagePlaceholders(template, data, uniqueFormLink);
+    const messageData = isMarina ? prepareMarinaMessageData(data) : data;
+    let message = applyMessagePlaceholders(template, messageData, uniqueFormLink);
     if (isMarina) {
       message = applyMarinaTimeLabels(message);
+      message = stripMarinaIgnoredLines(message);
     }
 
     return rdvMessageTop + message;
@@ -195,7 +221,6 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
 
   if (isMarina) {
     parts.push("🚤 Votre bateau vous attend à la marina de votre hôtel.");
-    parts.push(`Heure au bateau : ${timeDisplay}`);
     parts.push("");
   } else if (data.hotel) {
     const hotelInfo = findHotelInList(data.hotel, exteriorHotels);
@@ -233,13 +258,15 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
     parts.push(`🛏️ Chambre: ${data.roomNo}`);
   }
 
-  const participants = [];
-  if (data.adults > 0) participants.push(`${data.adults} adulte(s)`);
-  if (data.children > 0) participants.push(`${data.children} enfant(s)`);
-  if (data.infants > 0) participants.push(`${data.infants} bébé(s)`);
-  
-  if (participants.length > 0) {
-    parts.push(`👥 Participants: ${participants.join(", ")}`);
+  if (!isMarina) {
+    const participants = [];
+    if (data.adults > 0) participants.push(`${data.adults} adulte(s)`);
+    if (data.children > 0) participants.push(`${data.children} enfant(s)`);
+    if (data.infants > 0) participants.push(`${data.infants} bébé(s)`);
+
+    if (participants.length > 0) {
+      parts.push(`👥 Participants: ${participants.join(", ")}`);
+    }
   }
 
   parts.push("");

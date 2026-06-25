@@ -6,7 +6,7 @@ import { logger } from "../utils/logger";
 import { LS_KEYS, SITE_KEY } from "../constants";
 import { loadLS, saveLS } from "../utils";
 import { extractPhoneFromName, validatePhoneNumber, extractNameFromField, resolvePhoneFromExcelRow } from "../utils/phoneUtils";
-import { convertExcelValue, findColumn } from "../utils/excelParser";
+import { convertExcelValue, findColumn, isIgnoredTransferExcelColumn } from "../utils/excelParser";
 import { generateMessage } from "../utils/messageGenerator";
 import {
   saveSituationTransferRows,
@@ -473,7 +473,7 @@ export function SituationPage({ activities = [], user }) {
         // Chercher automatiquement la ligne qui contient les en-têtes
         // On cherche des mots-clés comme "Invoice", "Date", "Name", "Hotel", etc.
         let headerRowIndex = 0;
-        const headerKeywords = ["invoice", "date", "name", "hotel", "room", "pax", "trip", "time", "comment", "phone", "telephone", "tel", "mobile"];
+        const headerKeywords = ["date", "name", "hotel", "room", "trip", "comment", "phone", "telephone", "tel", "mobile"];
         
         for (let i = 0; i < Math.min(rawData.length, 10); i++) {
           const row = rawData[i] || [];
@@ -506,7 +506,7 @@ export function SituationPage({ activities = [], user }) {
             const columnsToIgnore = [12, 13];
             const filteredHeaders = headers
               .map((header, index) => ({ header, index }))
-              .filter(({ index }) => !columnsToIgnore.includes(index))
+              .filter(({ index, header }) => !columnsToIgnore.includes(index) && !isIgnoredTransferExcelColumn(header))
               .map(({ header, index }) => ({ header, originalIndex: index }));
             
             // Convertir les lignes suivantes en objets (en sautant la ligne d'en-têtes)
@@ -534,9 +534,8 @@ export function SituationPage({ activities = [], user }) {
           jsonData = fallbackData.map(row => {
             const convertedRow = {};
             Object.keys(row).forEach(key => {
-              // Ignorer les colonnes J, L, M, N
               const normalizedKey = key.toLowerCase().trim();
-              const isIgnoredByName = columnsToIgnoreNames.includes(normalizedKey);
+              const isIgnoredByName = columnsToIgnoreNames.includes(normalizedKey) || isIgnoredTransferExcelColumn(key);
               const isIgnoredByColumnNumber = normalizedKey.startsWith("column_") && 
                 ["10", "12", "13", "14"].some(num => normalizedKey.endsWith("_" + num) || normalizedKey === "column_" + num);
               
@@ -557,16 +556,10 @@ export function SituationPage({ activities = [], user }) {
 
         // Mapper les colonnes (chercher les colonnes possibles)
         const mappedData = jsonDataNormalized.map((row, index) => {
-          // Chercher les colonnes avec toutes les variations possibles
-          const invoiceN = findColumn(row, ["Invoice N", "Invoice #", "Invoice#", "invoice_n", "Invoice", "invoice", "Invoice Number", "invoice_number"]);
           const date = findColumn(row, ["Date", "date"]);
           const name = findColumn(row, ["Name", "name", "Client", "client", "Nom", "nom"]);
           const hotel = findColumn(row, ["Hotel", "hotel", "Hôtel", "hôtel"]);
           const roomNo = findColumn(row, ["Rm No", "Rm No.", "RmNo", "Room No", "Room No.", "RoomNo", "Room#", "rm_no", "room_no", "rmno", "roomno", "room", "Room", "Chambre", "chambre", "Numéro", "numero", "Number", "number"]);
-          const pax = findColumn(row, ["Pax", "pax", "Adults", "adults", "Adultes", "adultes"]) || 0;
-          const ch = findColumn(row, ["Ch", "ch", "Children", "children", "Enfants", "enfants"]) || 0;
-          const inf = findColumn(row, ["inf", "Inf", "Infants", "infants", "Bébés", "bébés", "Babies", "babies"]) || 0;
-          
           // Chercher Trip avec plus de flexibilité (insensible à la casse, avec espaces, etc.)
           // Essayer d'abord avec les noms exacts, puis avec des variations
           let trip = findColumn(row, ["Trip", "trip", "TRIP", "Activity", "activity", "ACTIVITY", "Activité", "activité", "ACTIVITÉ"]);
@@ -590,11 +583,9 @@ export function SituationPage({ activities = [], user }) {
             }
           }
           
-          // Lire l'heure depuis "time" ou "Comment" (priorité à "time")
-          const timeColumn = findColumn(row, ["time", "Time", "TIME", "heure", "Heure", "HEURE", "pickup", "Pickup", "PICKUP"]);
+          // Heure : colonne Comment uniquement (pas time / pax / ch / inf / invoice)
           const commentColumn = findColumn(row, ["Comment", "comment", "COMMENT", "Commentaire", "commentaire"]);
-          // Utiliser "time" si disponible, sinon "Comment"
-          const pickupTime = timeColumn || commentColumn;
+          const pickupTime = commentColumn;
           const comment = findColumn(row, ["Notes", "notes", "Commentaire", "commentaire"]);
           const phoneColumnRaw = findColumn(row, [
             "Phone",
@@ -632,7 +623,7 @@ export function SituationPage({ activities = [], user }) {
 
           return {
             id: `row-${index}`,
-            invoiceN: String(invoiceN || ""),
+            invoiceN: "",
             date: String(date || ""),
             name: clientName || "Client",
             phone: phone || "",
@@ -640,11 +631,11 @@ export function SituationPage({ activities = [], user }) {
             phoneError: phoneValidation.error,
             hotel: String(hotel || ""),
             roomNo: String(roomNo || ""),
-            adults: Number(pax) || 0,
-            children: Number(ch) || 0,
-            infants: Number(inf) || 0,
+            adults: 0,
+            children: 0,
+            infants: 0,
             trip: String(trip || "").trim(),
-            time: String(pickupTime || "").trim(), // Utiliser la colonne "time" ou "Comment" comme heure de prise en charge
+            time: String(pickupTime || "").trim(),
             comment: String(comment || ""),
             messageSent: false,
             messageSentAt: null,
@@ -658,10 +649,8 @@ export function SituationPage({ activities = [], user }) {
           const hasPhone = row.phone && row.phone.trim() !== "";
           const hasTrip = row.trip && row.trip.trim() !== "";
           const hasDate = row.date && row.date.trim() !== "";
-          const hasInvoice = row.invoiceN && row.invoiceN.trim() !== "";
-          
-          // Garder la ligne si elle a au moins un nom ET (téléphone OU trip OU date OU invoice)
-          return hasName && (hasPhone || hasTrip || hasDate || hasInvoice);
+
+          return hasName && (hasPhone || hasTrip || hasDate);
         });
 
         // Afficher le nombre de lignes vides supprimées
@@ -715,7 +704,7 @@ export function SituationPage({ activities = [], user }) {
           
           // Avertir si aucune colonne valide n'est détectée
           if (detectedColumns.length === 0) {
-            toast.error("Aucune colonne valide détectée. Vérifiez que la première ligne de votre Excel contient les en-têtes (Invoice #, Date, Name, etc.)");
+            toast.error("Aucune colonne valide détectée. Vérifiez que la première ligne de votre Excel contient les en-têtes (Date, Name, Hotel, Trip, Comment, etc.)");
           }
         } else {
           setDetectedColumns([]);

@@ -59,7 +59,7 @@ export const TransferClientCard = memo(({ row, data }) => {
           )}
 
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-base text-gray-800">
-            {row.time && (
+            {row.time && !rowsWithMarina.has(row.id) && (
               <span>
                 <strong className="text-gray-900">Heure :</strong> {row.time}
               </span>
