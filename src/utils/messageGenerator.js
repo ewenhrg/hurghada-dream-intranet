@@ -4,6 +4,18 @@ import { findHotelInList } from "./hotelMatcher";
 import { generateRequestToken, generateRequestLink } from "./tokenGenerator";
 
 /**
+ * Date du lendemain au format JJ/MM (heure locale de l'ordinateur).
+ * @returns {string}
+ */
+export function getTomorrowDateLabel() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const day = String(tomorrow.getDate()).padStart(2, "0");
+  const month = String(tomorrow.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}`;
+}
+
+/**
  * Obtenir le template par défaut pour une activité
  * @returns {string} - Le template par défaut
  */
@@ -215,9 +227,10 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
     return rdvMessageTop + message;
   }
   
-  // Sinon, utiliser le template par défaut
+  // Sinon, utiliser le template par défaut (message universel)
   const parts = [];
   const timeDisplay = formatTimeDisplay(data.time);
+  const displayDate = getTomorrowDateLabel();
 
   if (isMarina) {
     parts.push("🚤 Votre bateau vous attend à la marina de votre hôtel.");
@@ -242,11 +255,11 @@ export function generateMessage(data, messageTemplates = {}, rowsWithMarina = ne
 
   if (isMarina) {
     parts.push(
-      `Votre excursion ${data.trip || "l'activité"} est prévue le ${data.date || "la date"}.`
+      `Votre excursion ${data.trip || "l'activité"} est prévue le ${displayDate}.`
     );
   } else {
     parts.push(
-      `Votre pick-up pour ${data.trip || "l'activité"} est prévu le ${data.date || "la date"} à ${timeDisplay}.`
+      `Votre pick-up pour ${data.trip || "l'activité"} est prévu le ${displayDate} à ${timeDisplay}.`
     );
   }
 
