@@ -1,5 +1,6 @@
 import { useMemo, useCallback, useState } from "react";
 import { GhostBtn, PrimaryBtn } from "../components/ui";
+import { UserQuotesCalendarSection } from "../components/dashboard/UserQuotesCalendarSection";
 
 /**
  * Regroupe les entrées Realtime Presence (une par onglet / connexion) par code utilisateur.
@@ -26,6 +27,7 @@ const MAX_SCREEN_MESSAGE_LEN = 500;
 
 export function EwenDashboardPage({
   user,
+  quotes = [],
   presenceState,
   supabaseConfigured,
   onForceLogoutRequest,
@@ -232,9 +234,7 @@ export function EwenDashboardPage({
         </div>
       )}
 
-      <section className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-8 text-center text-slate-500 text-sm">
-        Espace réservé pour de futurs indicateurs (stats devis, alertes, etc.).
-      </section>
+      <UserQuotesCalendarSection quotes={quotes} />
     </div>
   );
 }

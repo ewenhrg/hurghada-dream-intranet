@@ -1516,6 +1516,7 @@ export default function App() {
                 <Suspense fallback={<PageLoader />}>
                   <EwenDashboardPage
                     user={user}
+                    quotes={quotes}
                     presenceState={presenceState}
                     supabaseConfigured={__SUPABASE_DEBUG__.isConfigured}
                     onForceLogoutRequest={sendForceLogoutRequest}
