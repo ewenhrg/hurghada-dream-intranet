@@ -37,10 +37,12 @@ export function getQuoteItemParticipantCells(item) {
     return { adults: 0, children: 0, babies: 0 };
   }
   if (isBoatPartyActivity(item.activityName)) {
+    const men = Number(item.boatPartyMen || 0);
+    const women = Number(item.boatPartyWomen || 0);
     return {
-      adults: Number(item.boatPartyMen || 0),
-      children: Number(item.boatPartyWomen || 0),
-      babies: "—",
+      adults: men + women,
+      children: 0,
+      babies: 0,
     };
   }
   return {

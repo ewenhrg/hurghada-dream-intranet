@@ -922,8 +922,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         activityId: c.act.id,
         activityName: c.act.name || "",
         date: c.raw.date,
-        adults: toBoundedInt10(c.raw.adults, { min: 0, max: 999, fallback: 0 }),
-        children: toBoundedInt10(c.raw.children, { min: 0, max: 999, fallback: 0 }),
+        adults: isBoatPartyActivity(c.act?.name)
+          ? Number(c.raw.boatPartyMen || 0) + Number(c.raw.boatPartyWomen || 0)
+          : toBoundedInt10(c.raw.adults, { min: 0, max: 999, fallback: 0 }),
+        children: isBoatPartyActivity(c.act?.name)
+          ? 0
+          : toBoundedInt10(c.raw.children, { min: 0, max: 999, fallback: 0 }),
         babies:
           c.act && isActivityBabiesForbidden(c.act)
             ? 0

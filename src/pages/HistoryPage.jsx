@@ -1493,6 +1493,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
             ? (typeof originalItem?.children === "number" ? originalItem.children : 0)
             : Number(rawChildren || 0);
 
+        const boatPartyMen = Number(c.raw.boatPartyMen || 0);
+        const boatPartyWomen = Number(c.raw.boatPartyWomen || 0);
+        const finalAdults = isBoatPartyActivity(c.act?.name)
+          ? boatPartyMen + boatPartyWomen
+          : adults;
+        const finalChildren = isBoatPartyActivity(c.act?.name) ? 0 : children;
+
         const babies =
           rawBabies === "" || rawBabies === null || rawBabies === undefined
             ? (typeof originalItem?.babies === "number" ? originalItem.babies : 0)
@@ -1502,8 +1509,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           activityId: c.act.id,
           activityName: c.act.name || "",
           date: c.raw.date,
-          adults,
-          children,
+          adults: finalAdults,
+          children: finalChildren,
           babies,
           extraLabel: c.raw.extraLabel || "",
           extraAmount:
