@@ -20,7 +20,7 @@ import {
 } from "../utils/activityHelpers";
 import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
 import { isActivityBlockedForNeighborhood } from "../utils/activityNeighborhoodRules.js";
-import { computeActivityTransferSurcharge } from "../utils/transferPricing.js";
+import { computeActivityTransferSurcharge, computePrivateTransferSurcharge } from "../utils/transferPricing.js";
 
 /**
  * Hook personnalisé pour calculer les prix des activités
@@ -245,6 +245,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       // supplément transfert (forfait Marsa Alam ou par personne selon la catégorie)
       if (transferInfo && act) {
         lineTotal += computeActivityTransferSurcharge(transferInfo, act, it);
+        lineTotal += computePrivateTransferSurcharge(it.privateTransferTier, act.name);
       }
 
       // extra (montant à ajouter ou soustraire) - s'applique à toutes les activités

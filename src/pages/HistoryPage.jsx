@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
-import { computeActivityTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
+import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -19,6 +19,7 @@ import {
   getActivityNeighborhoodBlockOptionSuffix,
 } from "../utils/activityNeighborhoodRules.js";
 import { formatQuoteItemParticipantsSummary } from "../utils/quoteItemDisplay.js";
+import { PrivateTransferButtons } from "../components/quotes/PrivateTransferButtons";
 
 /** Délai avant suppression auto des devis « non payés » (au moins une ligne sans n° de ticket), à l’ouverture de l’historique. */
 const UNPAID_QUOTE_AUTO_DELETE_DAYS = 20;
@@ -1254,6 +1255,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     louxorPrivatif4pax: false, // Pour LOUXOR PRIVATIF
     louxorPrivatif5pax: false, // Pour LOUXOR PRIVATIF
     louxorPrivatif6pax: false, // Pour LOUXOR PRIVATIF
+    privateTransferTier: "",
   });
 
   const sortedActivities = useMemo(() => {
@@ -1401,6 +1403,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       // supplément transfert (forfait Marsa Alam ou par personne selon la catégorie)
       if (transferInfo && act) {
         lineTotal += computeActivityTransferSurcharge(transferInfo, act, it);
+        lineTotal += computePrivateTransferSurcharge(it.privateTransferTier, act.name);
       }
 
       // extra (montant à ajouter ou soustraire) - s'applique à toutes les activités
@@ -1537,6 +1540,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           slot: c.raw.slot,
           pickupTime: c.pickupTime || "",
           lineTotal: c.lineTotal,
+          privateTransferTier: c.raw.privateTransferTier || "",
           ...getTransferSurchargeFieldsForQuoteItem(c.act, c.transferInfo),
           // Préserver le ticketNumber existant - ne peut pas être modifié si déjà rempli
           ticketNumber: (c.raw.ticketNumber && c.raw.ticketNumber.trim()) 
@@ -2109,6 +2113,12 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       {c.transferInfo.afternoonEnabled && <option value="afternoon">☀️ Après-midi ({c.transferInfo.afternoonTime})</option>}
                       {c.transferInfo.eveningEnabled && <option value="evening">🌆 Soir ({c.transferInfo.eveningTime})</option>}
                     </select>
+                    <PrivateTransferButtons
+                      className="mt-3"
+                      compact
+                      tier={c.raw.privateTransferTier || ""}
+                      onChange={(tier) => setItem(idx, { privateTransferTier: tier })}
+                    />
                   </div>
                 )}
 

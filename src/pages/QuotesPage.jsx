@@ -11,6 +11,7 @@ import { logger } from "../utils/logger";
 import { StopPushSalesSummary } from "../components/quotes/StopPushSalesSummary";
 import { PaymentModal } from "../components/quotes/PaymentModal";
 import { QuoteSummary } from "../components/quotes/QuoteSummary";
+import { PrivateTransferButtons } from "../components/quotes/PrivateTransferButtons";
 import { NotesSection } from "../components/quotes/NotesSection";
 import { getTransferSurchargeFieldsForQuoteItem, isMarsaAlamCategory } from "../utils/transferPricing";
 import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator";
@@ -164,6 +165,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     louxorPrivatif4pax: false, // Pour LOUXOR PRIVATIF
     louxorPrivatif5pax: false, // Pour LOUXOR PRIVATIF
     louxorPrivatif6pax: false, // Pour LOUXOR PRIVATIF
+    privateTransferTier: "", // "" | "upTo4" | "over4"
   }), []);
 
   const defaultClient = draft?.client || {
@@ -956,6 +958,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
         lineTotal: c.lineTotal,
+        privateTransferTier: c.raw.privateTransferTier || "",
         ...getTransferSurchargeFieldsForQuoteItem(c.act, c.transferInfo),
       })),
       total: validGrandTotal,
@@ -1608,6 +1611,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                           </>
                         )}
                       </p>
+                    )}
+                    {c.transferInfo && (
+                      <PrivateTransferButtons
+                        className="mt-3"
+                        tier={c.raw.privateTransferTier || ""}
+                        onChange={(tier) => setItem(idx, { privateTransferTier: tier })}
+                      />
                     )}
                   </div>
                 </div>

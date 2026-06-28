@@ -7,6 +7,25 @@ import {
   isZeroTracasHorsZoneActivity,
 } from "./activityHelpers";
 
+/** Transfert privé — forfait en plus du supplément transfert quartier. */
+export const PRIVATE_TRANSFER_UP_TO_4_PAX = 25;
+export const PRIVATE_TRANSFER_OVER_4_PAX = 35;
+
+/** @typedef {"upTo4"|"over4"|""} PrivateTransferTier */
+
+export function computePrivateTransferSurcharge(tier, activityName = "") {
+  if (!tier || isTransferExcludedActivity(activityName)) return 0;
+  if (tier === "upTo4") return PRIVATE_TRANSFER_UP_TO_4_PAX;
+  if (tier === "over4") return PRIVATE_TRANSFER_OVER_4_PAX;
+  return 0;
+}
+
+export function getPrivateTransferLabel(tier) {
+  if (tier === "upTo4") return `Transfert privé ≤4 pax (${PRIVATE_TRANSFER_UP_TO_4_PAX}€)`;
+  if (tier === "over4") return `Transfert privé +4 pax (${PRIVATE_TRANSFER_OVER_4_PAX}€)`;
+  return "";
+}
+
 export function isMarsaAlamCategory(category) {
   return category === "marsa_alam";
 }
@@ -80,8 +99,8 @@ export function getTransferSurchargeFieldsForQuoteItem(activity, transferInfo) {
   };
 }
 
-/** Recalcule le montant transfert à partir d'un item de devis enregistré. */
-export function calculateTransferSurchargeFromItem(item) {
+/** Recalcule le supplément transfert quartier (hors transfert privé) à partir d'un item de devis enregistré. */
+export function calculateStandardTransferSurchargeFromItem(item) {
   if (!item) return 0;
 
   const usesMarsaFlat =
@@ -102,4 +121,17 @@ export function calculateTransferSurchargeFromItem(item) {
   const surchargePerAdult = Number(item.transferSurchargePerAdult || 0);
   const participants = countParticipantsForTransfer(item.activityName, item);
   return surchargePerAdult * participants;
+}
+
+export function calculatePrivateTransferSurchargeFromItem(item) {
+  if (!item) return 0;
+  return computePrivateTransferSurcharge(item.privateTransferTier, item.activityName);
+}
+
+/** Recalcule le montant transfert total (quartier + privé) à partir d'un item de devis enregistré. */
+export function calculateTransferSurchargeFromItem(item) {
+  return (
+    calculateStandardTransferSurchargeFromItem(item) +
+    calculatePrivateTransferSurchargeFromItem(item)
+  );
 }

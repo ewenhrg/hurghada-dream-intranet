@@ -11,7 +11,7 @@ import {
   getActivityNeighborhoodBlockMessage,
   getActivityNeighborhoodBlockOptionSuffix,
 } from "../utils/activityNeighborhoodRules.js";
-import { computeActivityTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
+import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
 
 export function ModificationsPage({ quotes, setQuotes, activities, user }) {
   // Map des activités pour des recherches O(1) au lieu de O(n)
@@ -135,6 +135,7 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
           children,
           babies,
         });
+        newLineTotal += computePrivateTransferSurcharge(oldItem.privateTransferTier, newActivity.name);
       }
       
       // Créer le nouvel item avec les nouvelles données

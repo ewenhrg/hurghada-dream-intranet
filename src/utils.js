@@ -11,7 +11,7 @@ import {
   getQuoteItemDetailLines,
   getQuoteItemParticipantCells,
 } from "./utils/quoteItemDisplay.js";
-import { calculateTransferSurchargeFromItem } from "./utils/transferPricing.js";
+import { calculateTransferSurchargeFromItem, calculateStandardTransferSurchargeFromItem, calculatePrivateTransferSurchargeFromItem, getPrivateTransferLabel } from "./utils/transferPricing.js";
 
 // Options d'extra pour Speed Boat uniquement (gardé pour compatibilité)
 const SPEED_BOAT_EXTRAS_LOCAL = [
@@ -285,7 +285,8 @@ export function generateQuoteHTML(quote, options = {}) {
     });
     
     // Calculer le montant du supplément transfert
-    const transferSurchargeAmount = calculateTransferSurcharge(item);
+    const transferStandardAmount = calculateStandardTransferSurchargeFromItem(item);
+    const transferPrivateAmount = calculatePrivateTransferSurchargeFromItem(item);
     
     // Vérifier si c'est Speed Boat et récupérer les extras
     const isSpeedBoat = item.activityName && isSpeedBoatActivity(item.activityName);
@@ -318,8 +319,12 @@ export function generateQuoteHTML(quote, options = {}) {
     }
     
     // Ajouter le supplément transfert s'il existe
-    if (transferSurchargeAmount > 0) {
-      extrasInfo.push(`🚗 Transfert: ${currencyNoCents(transferSurchargeAmount, quote.currency)}`);
+    if (transferStandardAmount > 0) {
+      extrasInfo.push(`🚗 Transfert: ${currencyNoCents(transferStandardAmount, quote.currency)}`);
+    }
+    if (transferPrivateAmount > 0) {
+      const label = getPrivateTransferLabel(item.privateTransferTier) || "Transfert privé";
+      extrasInfo.push(`🚐 ${label}: ${currencyNoCents(transferPrivateAmount, quote.currency)}`);
     }
 
     // Extra libre (onglet Devis) : intitulé + montant
