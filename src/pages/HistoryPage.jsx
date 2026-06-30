@@ -1147,6 +1147,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                 const supabaseUpdate = {
                   client_name: finalUpdatedQuote.client.name || "",
                   client_phone: finalUpdatedQuote.client.phone || "",
+                  client_emergency_phone: finalUpdatedQuote.client.emergencyPhone || "",
                   client_hotel: finalUpdatedQuote.client.hotel || "",
                   client_room: finalUpdatedQuote.client.room || "",
                   client_neighborhood: finalUpdatedQuote.client.neighborhood || "",
@@ -1470,6 +1471,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     const cleanedClient = {
       ...client,
       phone: cleanPhoneNumber(client.phone || ""),
+      emergencyPhone: cleanPhoneNumber(client.emergencyPhone || ""),
     };
 
     const updatedQuote = {
@@ -1633,6 +1635,18 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     setClient((c) => ({ ...c, phone: cleaned }));
                   }} 
                   className="text-base md:text-lg py-3"
+                />
+              </div>
+              <div>
+                <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">🆘 Numéro d&apos;urgence</label>
+                <TextInput
+                  value={client.emergencyPhone || ""}
+                  onChange={(e) => {
+                    const cleaned = cleanPhoneNumber(e.target.value);
+                    setClient((c) => ({ ...c, emergencyPhone: cleaned }));
+                  }}
+                  className="text-base md:text-lg py-3"
+                  placeholder="Optionnel"
                 />
               </div>
               <div>

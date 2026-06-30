@@ -171,6 +171,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const defaultClient = draft?.client || {
     name: "",
     phone: "",
+    emergencyPhone: "",
     email: "",
     hotel: "",
     room: "",
@@ -910,6 +911,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     const cleanedClient = {
       ...client,
       phone: cleanPhoneNumber(client.phone || ""),
+      emergencyPhone: cleanPhoneNumber(client.emergencyPhone || ""),
     };
 
     const q = {
@@ -984,6 +986,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           site_key: SITE_KEY,
           client_name: q.client.name || "",
           client_phone: q.client.phone || "",
+          client_emergency_phone: q.client.emergencyPhone || "",
           client_email: q.client.email || "",
           client_hotel: q.client.hotel || "",
           client_room: q.client.room || "",
@@ -1157,6 +1160,21 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 onChange={(e) => {
                   const cleaned = cleanPhoneNumber(e.target.value);
                   setClient((c) => ({ ...c, phone: cleaned }));
+                }}
+                placeholder="+33 6 12 34 56 78"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '125ms' }}>
+              <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.9)]"></span>
+                Numéro d&apos;urgence
+              </label>
+              <TextInput
+                value={client.emergencyPhone || ""}
+                onChange={(e) => {
+                  const cleaned = cleanPhoneNumber(e.target.value);
+                  setClient((c) => ({ ...c, emergencyPhone: cleaned }));
                 }}
                 placeholder="+33 6 12 34 56 78"
                 className="w-full"

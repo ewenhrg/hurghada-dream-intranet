@@ -554,7 +554,7 @@ export default function App() {
         const { data: quotesData, error: quotesError } = await supabase
           .from("quotes")
           .select(
-            "id, client_name, client_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, items, total, currency, paid_stripe, paid_cash"
+            "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, items, total, currency, paid_stripe, paid_cash"
           )
           .in("site_key", quoteSiteKeys)
           .order("created_at", { ascending: false })
@@ -588,6 +588,7 @@ export default function App() {
                 client: {
                   name: row.client_name || "",
                   phone: row.client_phone || "",
+                  emergencyPhone: row.client_emergency_phone || "",
                   email: row.client_email || "",
                   hotel: row.client_hotel || "",
                   room: row.client_room || "",
@@ -733,6 +734,7 @@ export default function App() {
         client: {
           name: row.client_name || "",
           phone: row.client_phone || "",
+          emergencyPhone: row.client_emergency_phone || "",
           email: row.client_email || "",
           hotel: row.client_hotel || "",
           room: row.client_room || "",

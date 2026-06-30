@@ -622,6 +622,7 @@ export function generateQuoteHTML(quote, options = {}) {
           <h3>Informations Client</h3>
           <p><strong>Nom:</strong> ${quote.client?.name || "—"}</p>
           <p><strong>Téléphone:</strong> ${quote.client?.phone || "—"}</p>
+          ${quote.client?.emergencyPhone ? `<p><strong>Numéro d'urgence:</strong> ${quote.client.emergencyPhone}</p>` : ""}
           ${quote.client?.email ? `<p><strong>Email:</strong> ${quote.client.email}</p>` : ""}
           <p><strong>Hôtel:</strong> ${quote.client?.hotel || "—"}</p>
           <p><strong>Chambre:</strong> ${quote.client?.room || "—"}</p>
