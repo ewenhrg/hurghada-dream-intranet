@@ -15,6 +15,9 @@ Thumbs.db
 # Vite
 .vercel
 
+# Outils de dev locaux (captures + script contenant un code d'accès)
+scripts/
+
 # ne pas remonter au-dessus
 ../*
 ../../*
