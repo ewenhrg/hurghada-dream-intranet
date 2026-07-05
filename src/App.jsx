@@ -1367,12 +1367,12 @@ export default function App() {
                           <h2 className="hd-text-gradient font-bold mb-1.5" style={{ fontSize: '1.75rem', letterSpacing: '-0.03em' }}>
                             {t("page.devis.title")}
                           </h2>
-                          <p className="text-sm font-medium leading-relaxed" style={{ color: 'rgba(71, 85, 105, 0.85)' }}>
+                          <p className="text-sm font-medium leading-relaxed" style={{ color: 'rgba(226, 232, 240, 0.75)' }}>
                             {t("page.devis.subtitle")}
                           </p>
                         </div>
                       </div>
-                      <div className="hd-card p-8 md:p-10 lg:p-12">
+                      <div>
                         <QuotesPage
                           activities={activities}
                           quotes={quotes}
