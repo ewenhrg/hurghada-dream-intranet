@@ -1364,7 +1364,7 @@ export default function App() {
                     <section className="space-y-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <h2 className="font-semibold mb-1.5 bg-gradient-to-r from-[#4f46e5] via-[#6366f1] to-[#06b6d4] bg-clip-text text-transparent" style={{ fontSize: '1.75rem', letterSpacing: '-0.03em' }}>
+                          <h2 className="hd-text-gradient font-bold mb-1.5" style={{ fontSize: '1.75rem', letterSpacing: '-0.03em' }}>
                             {t("page.devis.title")}
                           </h2>
                           <p className="text-sm font-medium leading-relaxed" style={{ color: 'rgba(71, 85, 105, 0.85)' }}>
