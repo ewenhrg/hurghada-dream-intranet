@@ -1,8 +1,12 @@
 import { memo } from "react";
 import { getTouchHandlers } from "../utils/touchHandler";
 
-export const Pill = memo(({ active, children, onClick, ...props }) => {
+export const Pill = memo(({ active, children, onClick, tone = "dark", className = "", ...props }) => {
   const touchHandlers = getTouchHandlers(onClick);
+  const inactiveClass =
+    tone === "light"
+      ? "bg-[var(--hd-surface)] text-[#1e293b] border border-[rgba(148,163,184,0.35)] hover:border-[rgba(79,70,229,0.55)] hover:text-[#4338ca] hover:bg-[var(--hd-surface-strong)] hover:shadow-[0_14px_24px_-20px_rgba(79,70,229,0.45)] hover:-translate-y-[1px] active:scale-[0.98]"
+      : "bg-white/10 text-white/85 border border-white/20 backdrop-blur-md hover:border-[rgba(139,92,246,0.6)] hover:text-white hover:bg-white/15 hover:shadow-[0_0_18px_-4px_rgba(139,92,246,0.55)] hover:-translate-y-[1px] active:scale-[0.98]";
   
   return (
     <button
@@ -12,7 +16,9 @@ export const Pill = memo(({ active, children, onClick, ...props }) => {
         "px-4 md:px-6 py-2.5 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-transform duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8b5cf6]/50 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation " +
         (active
           ? "hd-shine bg-gradient-to-r from-[#a855f7] via-[#6366f1] to-[#06b6d4] text-white shadow-[0_0_22px_-2px_rgba(139,92,246,0.7),0_16px_34px_-14px_rgba(124,58,237,0.8)] hover:shadow-[0_0_28px_-2px_rgba(139,92,246,0.85),0_20px_40px_-16px_rgba(124,58,237,0.85)] hover:-translate-y-[1px] active:scale-[0.98]"
-          : "bg-white/10 text-white/85 border border-white/20 backdrop-blur-md hover:border-[rgba(139,92,246,0.6)] hover:text-white hover:bg-white/15 hover:shadow-[0_0_18px_-4px_rgba(139,92,246,0.55)] hover:-translate-y-[1px] active:scale-[0.98]")
+          : inactiveClass) +
+        " " +
+        className
       }
     >
       {children}

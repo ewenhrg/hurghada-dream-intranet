@@ -982,6 +982,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             <Pill
               active={todayOnlyFilter}
               onClick={() => setTodayOnlyFilter((prev) => !prev)}
+              tone="light"
               className="transition-opacity duration-150 hover:opacity-80"
             >
               📅 Aujourd&apos;hui{todayQuotesCount > 0 ? ` (${todayQuotesCount})` : ""}
@@ -989,6 +990,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             <Pill
               active={statusFilter === "all"}
               onClick={() => setStatusFilter("all")}
+              tone="light"
                 className="transition-opacity duration-150 hover:opacity-80"
             >
               📊 Tous
@@ -996,6 +998,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             <Pill
               active={statusFilter === "paid"}
               onClick={() => setStatusFilter("paid")}
+              tone="light"
                 className="transition-opacity duration-150 hover:opacity-80"
             >
               ✅ Payés
@@ -1003,6 +1006,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             <Pill
               active={statusFilter === "pending"}
               onClick={() => setStatusFilter("pending")}
+              tone="light"
                 className="transition-opacity duration-150 hover:opacity-80"
             >
               ⏳ En attente
