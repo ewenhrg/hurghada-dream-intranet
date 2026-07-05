@@ -1137,7 +1137,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-transparent overflow-x-hidden">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6" style={{ backgroundColor: 'rgba(7,13,31,0.98)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
+      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6" style={{ background: 'linear-gradient(180deg, rgba(13,10,40,0.92) 0%, rgba(9,10,32,0.78) 70%, rgba(9,10,32,0) 100%)', backdropFilter: 'blur(14px) saturate(150%)', WebkitBackdropFilter: 'blur(14px) saturate(150%)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
         <div className={headerNavClassName}>
           <div className="flex w-full min-w-0 flex-col gap-3">
             {/* Ligne 1 : identité + langue + déconnexion (ne mange pas la largeur des onglets) */}
@@ -1161,7 +1161,7 @@ export default function App() {
               }}
             />
             <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
-              <h1 className="text-base font-semibold bg-gradient-to-r from-[#4f46e5] via-[#6366f1] to-[#06b6d4] bg-clip-text text-transparent truncate" style={{ letterSpacing: '-0.03em', fontSize: '1.05rem' }}>
+              <h1 className="hd-text-gradient text-base font-bold truncate" style={{ letterSpacing: '-0.03em', fontSize: '1.05rem' }}>
                 {t("header.title")}
               </h1>
               <p className="font-medium hidden md:block" style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.6875rem' }}>{t("header.subtitle")}</p>
