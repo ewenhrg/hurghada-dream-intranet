@@ -957,7 +957,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   return (
     <div className="space-y-6 md:space-y-8">
       {/* Header amélioré */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-lg p-5 md:p-6 lg:p-7">
+      <div className="rounded-2xl border border-white/10 shadow-[0_20px_45px_-25px_rgba(7,13,31,0.8)] p-5 md:p-6 lg:p-7" style={{ background: "linear-gradient(135deg, rgba(23,17,48,0.96), rgba(12,13,38,0.94))" }}>
       <div className="flex flex-col gap-5 md:gap-6">
         <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-start md:items-center justify-between">
           <div className="flex-1 max-w-md">
@@ -978,7 +978,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             <Pill
               active={todayOnlyFilter}
               onClick={() => setTodayOnlyFilter((prev) => !prev)}
-              tone="light"
+              tone="dark"
               className="transition-opacity duration-150 hover:opacity-80"
             >
               📅 Aujourd&apos;hui{todayQuotesCount > 0 ? ` (${todayQuotesCount})` : ""}
@@ -986,7 +986,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             <Pill
               active={statusFilter === "all"}
               onClick={() => setStatusFilter("all")}
-              tone="light"
+              tone="dark"
                 className="transition-opacity duration-150 hover:opacity-80"
             >
               📊 Tous
@@ -994,7 +994,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             <Pill
               active={statusFilter === "paid"}
               onClick={() => setStatusFilter("paid")}
-              tone="light"
+              tone="dark"
                 className="transition-opacity duration-150 hover:opacity-80"
             >
               ✅ Payés
@@ -1002,7 +1002,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             <Pill
               active={statusFilter === "pending"}
               onClick={() => setStatusFilter("pending")}
-              tone="light"
+              tone="dark"
                 className="transition-opacity duration-150 hover:opacity-80"
             >
               ⏳ En attente
@@ -1013,25 +1013,25 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       </div>
       
       {/* Indicateur du nombre de résultats amélioré */}
-      <div className="flex items-center justify-between bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-purple-50/70 rounded-xl border-2 border-blue-200/60 p-4 md:p-5 shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl">
+      <div className="flex items-center justify-between rounded-xl border border-white/10 p-4 md:p-5 shadow-[0_18px_40px_-28px_rgba(7,13,31,0.8)] transition-all duration-200 hover:shadow-xl" style={{ background: "linear-gradient(135deg, rgba(23,17,48,0.94), rgba(12,13,38,0.9))" }}>
         <div className="flex items-center gap-3">
           <span className="text-2xl md:text-3xl animate-bounce">📊</span>
           <div>
             {filtered.length === 0 ? (
-              <p className="text-amber-700 font-bold text-base md:text-lg">
+              <p className="text-amber-300 font-bold text-base md:text-lg">
                 {todayOnlyFilter ? "Aucun devis créé aujourd'hui" : "Aucun devis trouvé"}
               </p>
             ) : filtered.length === 1 ? (
-              <p className="text-blue-700 font-bold text-base md:text-lg">
+              <p className="text-sky-200 font-bold text-base md:text-lg">
                 1 devis{todayOnlyFilter ? " aujourd'hui" : " trouvé"}
               </p>
             ) : (
-              <p className="text-blue-700 font-bold text-base md:text-lg">
+              <p className="text-sky-200 font-bold text-base md:text-lg">
                 {filtered.length} devis{todayOnlyFilter ? " aujourd'hui" : " trouvés"}
               </p>
             )}
             {quotes.length !== filtered.length && (
-              <p className="text-slate-600 text-sm font-medium mt-1">
+              <p className="text-white/60 text-sm font-medium mt-1">
                 sur {quotes.length} total
               </p>
             )}
@@ -2127,12 +2127,14 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       {c.transferInfo.afternoonEnabled && <option value="afternoon">☀️ Après-midi ({c.transferInfo.afternoonTime})</option>}
                       {c.transferInfo.eveningEnabled && <option value="evening">🌆 Soir ({c.transferInfo.eveningTime})</option>}
                     </select>
-                    <PrivateTransferButtons
-                      className="mt-3"
-                      compact
-                      tier={c.raw.privateTransferTier || ""}
-                      onChange={(tier) => setItem(idx, { privateTransferTier: tier })}
-                    />
+                    {c.act?.category !== "luxor_caire" && (
+                      <PrivateTransferButtons
+                        className="mt-3"
+                        compact
+                        tier={c.raw.privateTransferTier || ""}
+                        onChange={(tier) => setItem(idx, { privateTransferTier: tier })}
+                      />
+                    )}
                   </div>
                 )}
 

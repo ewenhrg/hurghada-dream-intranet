@@ -30,33 +30,33 @@ export const StopPushSalesSummary = memo(function StopPushSalesSummary({ stopSal
   if (totalCount === 0) return null;
 
   return (
-    <div className="bg-gradient-to-r from-red-50 via-amber-50 to-green-50 border-2 border-red-500/70 rounded-xl p-4 md:p-5 shadow-lg shadow-red-500/20 animate-fade-in">
+    <div className="rounded-2xl p-4 md:p-5 animate-fade-in border border-white/10 shadow-[0_20px_45px_-25px_rgba(7,13,31,0.8)]" style={{ background: "linear-gradient(135deg, rgba(30,20,60,0.75), rgba(15,16,45,0.7))", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between gap-3 text-left hover:opacity-90 transition-opacity"
       >
-        <div className="flex items-center gap-4 flex-1">
-          <div className="flex items-center gap-2 bg-red-500/20 px-3 py-2 rounded-lg border-2 border-red-500 shadow-md shadow-red-500/30">
-            <span className="text-2xl">🛑</span>
+        <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+          <div className="flex items-center gap-2 bg-red-500/15 px-2.5 py-1.5 rounded-lg border border-red-400/40">
+            <span className="text-xl">🛑</span>
             {stopSales.length > 0 && (
-              <span className="text-sm font-bold bg-red-500 text-white px-3 py-1 rounded-full shadow-lg shadow-red-500/50">
+              <span className="text-xs font-bold bg-red-500 text-white px-2.5 py-0.5 rounded-full shadow-lg shadow-red-500/40">
                 {stopSales.length}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 bg-green-500/20 px-3 py-2 rounded-lg border-2 border-green-500 shadow-md shadow-green-500/30">
-            <span className="text-2xl">✅</span>
+          <div className="flex items-center gap-2 bg-emerald-500/15 px-2.5 py-1.5 rounded-lg border border-emerald-400/40">
+            <span className="text-xl">✅</span>
             {pushSales.length > 0 && (
-              <span className="text-sm font-bold bg-green-500 text-white px-3 py-1 rounded-full shadow-lg shadow-green-500/50">
+              <span className="text-xs font-bold bg-emerald-500 text-white px-2.5 py-0.5 rounded-full shadow-lg shadow-emerald-500/40">
                 {pushSales.length}
               </span>
             )}
           </div>
-          <span className="text-base md:text-lg font-bold text-gray-800">
+          <span className="text-sm md:text-base font-semibold text-white/90 truncate">
             {totalCount} activité{totalCount > 1 ? "s" : ""} en Stop/Push Sale
           </span>
         </div>
-        <span className="text-gray-600 text-sm font-semibold bg-white/80 px-3 py-2 rounded-lg border border-gray-300 hover:bg-white transition-colors">
+        <span className="shrink-0 text-white/80 text-xs md:text-sm font-semibold bg-white/10 px-3 py-2 rounded-lg border border-white/15 hover:bg-white/15 transition-colors">
           {expanded ? "▼ Réduire" : "▶ Voir les détails"}
         </span>
       </button>

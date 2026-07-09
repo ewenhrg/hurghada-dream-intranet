@@ -1630,7 +1630,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         )}
                       </p>
                     )}
-                    {c.transferInfo && (
+                    {c.transferInfo && c.act?.category !== "luxor_caire" && (
                       <PrivateTransferButtons
                         className="mt-3"
                         tier={c.raw.privateTransferTier || ""}

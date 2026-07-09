@@ -132,7 +132,7 @@ export const GhostBtn = memo(({ className = "", size, variant = "neutral", onCli
 
 GhostBtn.displayName = "GhostBtn";
 
-export const Section = memo(({ title, subtitle, right, children }) => (
+export const Section = memo(({ title, subtitle, right, children, bare = false }) => (
   <section className="space-y-4 md:space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3 md:gap-4">
       <div className="flex-1 min-w-0">
@@ -149,9 +149,13 @@ export const Section = memo(({ title, subtitle, right, children }) => (
       </div>
       {right && <div className="flex-shrink-0 w-full md:w-auto">{right}</div>}
     </div>
-    <div className="hd-card hd-border-gradient p-4 md:p-6 lg:p-8">
-      {children}
-    </div>
+    {bare ? (
+      children
+    ) : (
+      <div className="hd-card hd-border-gradient p-4 md:p-6 lg:p-8">
+        {children}
+      </div>
+    )}
   </section>
 ));
 
