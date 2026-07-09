@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateTicketsHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
+import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateTicketsHTML, generateTicketNumber, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
@@ -39,6 +39,9 @@ function QuoteCardComponent({
 }) {
   // NOTE: ne pas télécharger la fiche info côté navigateur (payload trop gros pour Edge Functions).
   // On enverra l'URL à l'Edge Function, qui téléchargera le fichier côté serveur.
+
+  const [showTicketConfirm, setShowTicketConfirm] = useState(false);
+  const [ticketGenerating, setTicketGenerating] = useState(false);
 
   const extractBase64FromDataUrl = useCallback((raw) => {
     const s = String(raw || "");
@@ -80,9 +83,9 @@ function QuoteCardComponent({
     }
   }, [d]);
 
-  const handleTicketsClick = useCallback(() => {
-    const htmlContent = generateTicketsHTML(d);
-    const clientPhone = d.client?.phone || "";
+  const openTicketsWindow = useCallback((quoteForTickets) => {
+    const htmlContent = generateTicketsHTML(quoteForTickets);
+    const clientPhone = quoteForTickets.client?.phone || "";
     const fileName = `Tickets - ${clientPhone}`;
     const newWindow = window.open();
     if (newWindow) {
@@ -90,7 +93,83 @@ function QuoteCardComponent({
       newWindow.document.title = fileName;
       newWindow.document.close();
     }
-  }, [d]);
+  }, []);
+
+  const handleConfirmTickets = useCallback(async () => {
+    setShowTicketConfirm(false);
+    setTicketGenerating(true);
+
+    // Ensemble des numéros déjà utilisés (tous devis confondus) pour garantir l'unicité
+    const usedNumbers = new Set();
+    quotes.forEach((qq) =>
+      qq.items?.forEach((it) => {
+        if (it.ticketNumber && String(it.ticketNumber).trim()) {
+          usedNumbers.add(String(it.ticketNumber).trim());
+        }
+      })
+    );
+
+    // Travailler sur le devis « brut » (sans champs calculés) pour ne pas polluer le stockage
+    const rawQuote = quotes.find((q) => q.id === d.id) || d;
+    const updatedItems = (rawQuote.items || []).map((item) => {
+      if (item.ticketNumber && String(item.ticketNumber).trim()) return item;
+      const num = generateTicketNumber(usedNumbers);
+      usedNumbers.add(num);
+      return { ...item, ticketNumber: num };
+    });
+
+    const updatedQuote = { ...rawQuote, items: updatedItems };
+    const updatedQuotes = quotes.map((q) => (q.id === d.id ? updatedQuote : q));
+    setQuotes(updatedQuotes);
+    saveLS(LS_KEYS.quotes, updatedQuotes);
+
+    if (supabase && d.supabase_id) {
+      try {
+        const supabaseUpdate = {
+          items: updatedItems.map((item) => ({
+            activity_id: item.activityId,
+            date: item.date,
+            adults: item.adults || 0,
+            children: item.children || 0,
+            babies: item.babies || 0,
+            extra_label: item.extraLabel || "",
+            extra_amount: item.extraAmount || 0,
+            slot: item.slot || "",
+            ticket_number: item.ticketNumber || "",
+            payment_method: item.paymentMethod || "",
+            extra_dolphin: item.extraDolphin || false,
+            speed_boat_extra: Array.isArray(item.speedBoatExtra) ? item.speedBoatExtra : (item.speedBoatExtra ? [item.speedBoatExtra] : []),
+            buggy_simple: item.buggySimple || "",
+            buggy_family: item.buggyFamily || "",
+            yamaha250: item.yamaha250 || "",
+            ktm640: item.ktm640 || "",
+            ktm530: item.ktm530 || "",
+            aller_simple: item.allerSimple || false,
+            aller_retour: item.allerRetour || false,
+          })),
+          updated_at: new Date().toISOString(),
+        };
+
+        const { error } = await supabase
+          .from("quotes")
+          .update(supabaseUpdate)
+          .eq("id", d.supabase_id);
+
+        if (error) {
+          logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
+          toast.error("Erreur de synchronisation Supabase (tickets).");
+        } else {
+          toast.success("Numéros de ticket générés.");
+        }
+      } catch (error) {
+        logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
+        toast.error("Erreur de synchronisation Supabase (tickets).");
+      }
+    }
+
+    setTicketGenerating(false);
+    openTicketsWindow(updatedQuote);
+  }, [d, quotes, setQuotes, openTicketsWindow]);
 
   const handleInvoiceClick = useCallback(() => {
     const htmlContent = generateQuoteHTML(d, { variant: "facture" });
@@ -532,7 +611,7 @@ function QuoteCardComponent({
               <button
                 type="button"
                 className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-teal-500 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
-                onClick={handleTicketsClick}
+                onClick={() => setShowTicketConfirm(true)}
               >
                 🎟️ Ticket
               </button>
@@ -558,6 +637,44 @@ function QuoteCardComponent({
           </div>
         </div>
       </div>
+
+      {showTicketConfirm && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowTicketConfirm(false)}>
+          <div
+            className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 p-6 md:p-7"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-3xl">🎟️</span>
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-slate-900">Êtes-vous sûr de vouloir valider ?</h3>
+                <p className="text-sm text-slate-600 mt-1">
+                  Un numéro de ticket unique sera généré automatiquement pour chaque activité sans numéro, puis le PDF des tickets s'ouvrira. Le devis passera en « Payé ».
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 justify-end mt-6">
+              <button
+                type="button"
+                className="w-full sm:w-auto rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 border-2 border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                onClick={() => setShowTicketConfirm(false)}
+                disabled={ticketGenerating}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="w-full sm:w-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white border-2 border-teal-500 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-lg transition-opacity disabled:opacity-60"
+                onClick={() => void handleConfirmTickets()}
+                disabled={ticketGenerating}
+              >
+                {ticketGenerating ? "Génération..." : "✅ Valider"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

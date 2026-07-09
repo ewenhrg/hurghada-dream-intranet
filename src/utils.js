@@ -28,6 +28,28 @@ export function uuid() {
   return "hd-" + Math.random().toString(36).slice(2) + "-" + Date.now().toString(36);
 }
 
+/**
+ * Génère un numéro de ticket lisible et (pratiquement) unique : HD-AAMMJJ-XXXX.
+ * Passez un Set de numéros déjà utilisés pour garantir l'unicité stricte.
+ */
+export function generateTicketNumber(usedSet) {
+  const d = new Date();
+  const yy = String(d.getFullYear()).slice(-2);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const makeRand = () =>
+    Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4).padEnd(4, "0");
+  let candidate = `HD-${yy}${mm}${dd}-${makeRand()}`;
+  if (usedSet && typeof usedSet.has === "function") {
+    let guard = 0;
+    while (usedSet.has(candidate) && guard < 1000) {
+      candidate = `HD-${yy}${mm}${dd}-${makeRand()}`;
+      guard += 1;
+    }
+  }
+  return candidate;
+}
+
 // Formater le prix avec centimes (optimisé avec cache)
 export function currency(n, curr = "EUR") {
   if (n === undefined || n === null) n = 0;
