@@ -695,7 +695,9 @@ h3 {
 }
 
 p, span, li, label {
-  color: var(--hd-muted-inverse);
+  /* Pas de couleur forcée : hériter (clair depuis body sur fond sombre,
+     foncé depuis un parent text-slate-* sur carte claire) pour éviter le
+     gris clair illisible sur les cartes claires non-hd-card. */
   line-height: 1.6;
 }
 
