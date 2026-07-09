@@ -955,16 +955,12 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   }, [quotes, cleanupOldUnpaidQuotes]);
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 bg-gradient-to-br from-slate-50/50 via-white to-blue-50/30 min-h-screen">
+    <div className="space-y-6 md:space-y-8">
       {/* Header amélioré */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-lg p-5 md:p-6 lg:p-7">
       <div className="flex flex-col gap-5 md:gap-6">
         <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-start md:items-center justify-between">
           <div className="flex-1 max-w-md">
-              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 bg-clip-text text-transparent mb-4 flex items-center gap-3">
-                <span className="text-3xl md:text-4xl animate-pulse">📋</span>
-                <span>Historique des devis</span>
-            </h2>
               <div className="space-y-3">
               <TextInput
                 placeholder="Rechercher par téléphone ou email..."

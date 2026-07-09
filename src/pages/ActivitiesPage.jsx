@@ -1298,23 +1298,18 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   const totalActivities = activities.length;
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-6 md:space-y-8">
       {/* En-tête coloré */}
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b-2 border-indigo-200 rounded-xl px-5 py-5 bg-gradient-to-r from-indigo-500/10 via-violet-500/10 to-blue-500/10">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/30">
+      <header className="flex flex-col gap-4 pb-6 border-b-2 border-indigo-200 rounded-xl px-5 py-5 bg-gradient-to-r from-indigo-500/10 via-violet-500/10 to-blue-500/10">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/30">
             <span className="text-white text-xl">🎯</span>
           </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-indigo-900 tracking-tight">
-              Gestion des activités
-            </h1>
-            <p className="text-sm text-indigo-600 mt-1 font-medium">
-              {totalActivities} activité{totalActivities !== 1 ? "s" : ""} · Prix, jours et transferts par quartier
-            </p>
-          </div>
+          <p className="text-sm text-indigo-700 font-semibold">
+            {totalActivities} activité{totalActivities !== 1 ? "s" : ""} · Prix, jours et transferts par quartier
+          </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-wrap gap-3">
           <PrimaryBtn
             onClick={handleDetectDuplicates}
             className="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-pink-600 hover:from-fuchsia-700 hover:to-pink-700 border-0 shadow-lg shadow-pink-500/25"

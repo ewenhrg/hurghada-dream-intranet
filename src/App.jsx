@@ -1350,15 +1350,7 @@ export default function App() {
         {tab === "devis" ? (
           <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
               
-              <div 
-                  className="space-y-6 md:space-y-10 rounded-2xl p-4 md:p-6 lg:p-8"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 30px 60px -35px rgba(15, 23, 42, 0.65)',
-                  borderRadius: '2rem'
-                }}
-              >
+              <div className="space-y-6 md:space-y-10 p-1 sm:p-2 md:p-3">
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}>
                     <section className="space-y-6">
@@ -1393,10 +1385,7 @@ export default function App() {
             className={`${contentContainerClassName} animate-page-enter`}
             style={{ 
               paddingLeft: '0.5rem', 
-              paddingRight: '0.5rem',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 30px 60px -35px rgba(15, 23, 42, 0.65)'
+              paddingRight: '0.5rem'
             }}
           >
             <ErrorBoundary>
