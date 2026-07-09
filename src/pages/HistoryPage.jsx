@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currencyNoCents, calculateCardPrice, generateQuoteHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
+import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateTicketsHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
@@ -77,6 +77,18 @@ function QuoteCardComponent({
       setTimeout(() => {
         newWindow.print();
       }, 500);
+    }
+  }, [d]);
+
+  const handleTicketsClick = useCallback(() => {
+    const htmlContent = generateTicketsHTML(d);
+    const clientPhone = d.client?.phone || "";
+    const fileName = `Tickets - ${clientPhone}`;
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.write(htmlContent);
+      newWindow.document.title = fileName;
+      newWindow.document.close();
     }
   }, [d]);
 
@@ -516,6 +528,13 @@ function QuoteCardComponent({
                 onClick={handleInvoiceClick}
               >
                 📄 Facture
+              </button>
+              <button
+                type="button"
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-teal-500 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                onClick={handleTicketsClick}
+              >
+                🎟️ Ticket
               </button>
               {!allTicketsFilled && (
                 <button

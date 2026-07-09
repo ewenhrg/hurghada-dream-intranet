@@ -695,6 +695,186 @@ export function generateQuoteHTML(quote, options = {}) {
   `.trim();
 }
 
+/**
+ * Génère une page HTML imprimable contenant un « ticket » (bon d'excursion) par activité du devis.
+ * Chaque ticket affiche : prénom/nom, téléphone, hôtel, chambre, activité, date, nombre de personnes,
+ * heure de prise en charge (pick up) et prix.
+ */
+export function generateTicketsHTML(quote) {
+  const esc = (v) =>
+    String(v == null ? "" : v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+  const slotLabel = (slot) =>
+    slot === "morning"
+      ? "Matin"
+      : slot === "afternoon"
+        ? "Après-midi"
+        : slot === "evening"
+          ? "Soir"
+          : "";
+
+  const client = quote.client || {};
+  const clientName = esc(client.name || "—");
+  const clientPhone = esc(client.phone || "—");
+  const clientHotel = esc(client.hotel || "—");
+  const clientRoom = esc(client.room || "—");
+
+  const sortedItems = [...(quote.items || [])].sort((a, b) => {
+    const dateA = a.date ? new Date(a.date + "T12:00:00").getTime() : 0;
+    const dateB = b.date ? new Date(b.date + "T12:00:00").getTime() : 0;
+    return dateA - dateB;
+  });
+
+  const ticketsHTML = sortedItems
+    .map((item) => {
+      const itemDate = item.date
+        ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR", {
+            weekday: "long",
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          })
+        : "—";
+
+      const cells = getQuoteItemParticipantCells(item);
+      const paxParts = [];
+      if (cells.adults > 0) paxParts.push(`${cells.adults} adulte${cells.adults > 1 ? "s" : ""}`);
+      if (cells.children > 0) paxParts.push(`${cells.children} enfant${cells.children > 1 ? "s" : ""}`);
+      if (cells.babies > 0) paxParts.push(`${cells.babies} bébé${cells.babies > 1 ? "s" : ""}`);
+      const paxText = paxParts.length > 0 ? paxParts.join(" · ") : "—";
+      const paxTotal = (cells.adults || 0) + (cells.children || 0) + (cells.babies || 0);
+
+      const pickup = item.pickupTime && String(item.pickupTime).trim()
+        ? esc(item.pickupTime)
+        : slotLabel(item.slot) || "—";
+
+      const priceText = esc(currencyNoCents(Math.round(item.lineTotal || 0), quote.currency));
+
+      return `
+      <div class="ticket">
+        <div class="ticket-accent"></div>
+        <div class="ticket-body">
+          <div class="ticket-head">
+            <div class="ticket-brand">
+              <span class="ticket-brand-name">HURGHADA DREAM</span>
+              <span class="ticket-brand-sub">Bon d'excursion</span>
+            </div>
+            <div class="ticket-price">
+              <span class="ticket-price-label">Prix</span>
+              <span class="ticket-price-value">${priceText}</span>
+            </div>
+          </div>
+          <div class="ticket-activity">${esc(item.activityName || "—")}</div>
+          <div class="ticket-grid">
+            <div class="tf"><span class="tf-l">👤 Nom</span><span class="tf-v">${clientName}</span></div>
+            <div class="tf"><span class="tf-l">📞 Téléphone</span><span class="tf-v">${clientPhone}</span></div>
+            <div class="tf"><span class="tf-l">🏨 Hôtel</span><span class="tf-v">${clientHotel}</span></div>
+            <div class="tf"><span class="tf-l">🚪 Chambre</span><span class="tf-v">${clientRoom}</span></div>
+            <div class="tf"><span class="tf-l">📅 Date</span><span class="tf-v">${esc(itemDate)}</span></div>
+            <div class="tf"><span class="tf-l">⏰ Prise en charge</span><span class="tf-v">${pickup}</span></div>
+            <div class="tf"><span class="tf-l">👥 Personnes</span><span class="tf-v">${esc(paxText)}${paxTotal > 0 ? ` (total ${paxTotal})` : ""}</span></div>
+            ${item.ticketNumber ? `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">${esc(item.ticketNumber)}</span></div>` : `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">—</span></div>`}
+          </div>
+        </div>
+      </div>`;
+    })
+    .join("");
+
+  return `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tickets - ${clientName}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #1e293b;
+      background: #eef2ff;
+      padding: 20px;
+    }
+    .tickets-wrap { max-width: 800px; margin: 0 auto; }
+    .ticket {
+      display: flex;
+      background: #fff;
+      border: 2px dashed #6366f1;
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 18px;
+      box-shadow: 0 6px 18px rgba(30, 41, 59, 0.08);
+      page-break-inside: avoid;
+    }
+    .ticket-accent {
+      width: 10px;
+      background: linear-gradient(180deg, #6366f1, #06b6d4);
+      flex-shrink: 0;
+    }
+    .ticket-body { flex: 1; padding: 18px 22px; }
+    .ticket-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .ticket-brand { display: flex; flex-direction: column; }
+    .ticket-brand-name { font-size: 18px; font-weight: 800; color: #4338ca; letter-spacing: 0.5px; }
+    .ticket-brand-sub { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; }
+    .ticket-price { text-align: right; display: flex; flex-direction: column; }
+    .ticket-price-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
+    .ticket-price-value { font-size: 22px; font-weight: 800; color: #0e7490; }
+    .ticket-activity {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1e293b;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .ticket-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 22px;
+    }
+    .tf { display: flex; flex-direction: column; gap: 2px; }
+    .tf-l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; font-weight: 600; }
+    .tf-v { font-size: 15px; font-weight: 600; color: #0f172a; }
+    .print-btn {
+      display: block;
+      margin: 0 auto 20px;
+      padding: 10px 22px;
+      background: linear-gradient(135deg, #4338ca, #06b6d4);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(67, 56, 202, 0.35);
+    }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .print-btn { display: none; }
+      .ticket { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="tickets-wrap">
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+    ${ticketsHTML || '<p style="text-align:center;color:#64748b;">Aucune activité dans ce devis.</p>'}
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
 // Exporter des devis en CSV (compatible Excel)
 export function exportQuotesToCSV(quotes) {
   if (!quotes || quotes.length === 0) {
