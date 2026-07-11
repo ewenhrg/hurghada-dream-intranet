@@ -190,6 +190,17 @@ export function TicketsPage({ quotes = [] }) {
     }
   }, [filtered, copied, copyRowsToClipboard, markCopied]);
 
+  // Copier UNE seule ligne (sans en-têtes), puis la marquer comme copiée
+  const handleCopyRow = useCallback(async (row) => {
+    const ok = await copyRowsToClipboard([row], false);
+    if (ok) {
+      markCopied([row.ticketNumber]);
+      toast.success(`Ligne ${row.ticketNumber} copiée. Collez avec Ctrl+V dans votre Excel.`);
+    } else {
+      toast.error("Impossible de copier automatiquement. Utilisez l'export .xlsx.");
+    }
+  }, [copyRowsToClipboard, markCopied]);
+
   // Recopier toutes les lignes du filtre (même déjà copiées), sans changer les marques
   const handleCopyAll = useCallback(async () => {
     if (filtered.length === 0) {
@@ -352,19 +363,29 @@ export function TicketsPage({ quotes = [] }) {
                         : "bg-amber-50/60 hover:bg-amber-100/60"
                     }`}
                   >
-                    <td className="px-3 py-2.5 text-center">
-                      <button
-                        type="button"
-                        onClick={() => toggleCopied(r.ticketNumber)}
-                        className={`rounded-full px-2.5 py-1 text-xs font-bold border-2 transition-colors ${
-                          isCopied
-                            ? "border-emerald-300 bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                            : "border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200"
-                        }`}
-                        title={isCopied ? "Marquée comme copiée — cliquer pour annuler" : "Nouvelle — cliquer pour marquer comme copiée"}
-                      >
-                        {isCopied ? "✅ Copié" : "🆕 Nouveau"}
-                      </button>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-1.5 justify-center">
+                        <button
+                          type="button"
+                          onClick={() => void handleCopyRow(r)}
+                          className="rounded-lg px-2.5 py-1 text-xs font-bold text-white border-2 border-emerald-500 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-sm transition-colors whitespace-nowrap"
+                          title="Copier cette ligne dans le presse-papiers (Ctrl+V dans Excel)"
+                        >
+                          📋 Copier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleCopied(r.ticketNumber)}
+                          className={`rounded-full px-2 py-1 text-xs font-bold border-2 transition-colors whitespace-nowrap ${
+                            isCopied
+                              ? "border-emerald-300 bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                              : "border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200"
+                          }`}
+                          title={isCopied ? "Marquée comme copiée — cliquer pour annuler" : "Nouvelle — cliquer pour marquer comme copiée sans copier"}
+                        >
+                          {isCopied ? "✅" : "🆕"}
+                        </button>
+                      </div>
                     </td>
                     <td className={`px-3 py-2.5 font-bold whitespace-nowrap ${isCopied ? "text-slate-400" : "text-indigo-700"}`}>{r.ticketNumber}</td>
                     <td className={`px-3 py-2.5 font-semibold ${isCopied ? "text-slate-400" : "text-slate-800"}`}>{r.activityName}</td>
