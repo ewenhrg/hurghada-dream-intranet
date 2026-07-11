@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import * as XLSX from "xlsx";
 import { currencyNoCents } from "../utils";
 import { formatQuoteItemParticipantsSummary } from "../utils/quoteItemDisplay.js";
 import { TextInput } from "../components/ui";
+import { toast } from "../utils/toast.js";
 
 const slotLabel = (slot) =>
   slot === "morning"
@@ -14,6 +16,24 @@ const slotLabel = (slot) =>
 
 const paymentLabel = (method) =>
   method === "cash" ? "💵 Cash" : method === "stripe" ? "💳 Stripe" : "—";
+
+const paymentText = (method) =>
+  method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
+
+const EXPORT_HEADERS = [
+  "N° Ticket",
+  "Activité",
+  "Date",
+  "Pick-up",
+  "Client",
+  "Téléphone",
+  "Hôtel",
+  "Chambre",
+  "Personnes",
+  "Prix",
+  "Paiement",
+  "Créé par",
+];
 
 /**
  * Registre des tickets : liste toutes les activités (de tous les devis) qui ont
@@ -41,6 +61,7 @@ export function TicketsPage({ quotes = [] }) {
           room: client.room || "",
           pax: formatQuoteItemParticipantsSummary(item),
           price: currencyNoCents(Math.round(item.lineTotal || 0), quote.currency || "EUR"),
+          priceValue: Math.round(item.lineTotal || 0),
           paymentMethod: item.paymentMethod || "",
           createdByName: quote.createdByName || "",
         });
@@ -66,6 +87,82 @@ export function TicketsPage({ quotes = [] }) {
   const formatDate = (d) =>
     d ? new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" }) : "—";
 
+  const dateForExport = (d) =>
+    d ? new Date(d + "T12:00:00").toLocaleDateString("fr-FR") : "";
+
+  /** Construit la matrice de données (en-têtes + lignes) à partir des tickets filtrés. */
+  const buildExportMatrix = useCallback(
+    (withHeaders) => {
+      const body = filtered.map((r) => [
+        r.ticketNumber,
+        r.activityName,
+        dateForExport(r.date),
+        r.pickup || "",
+        r.clientName === "—" ? "" : r.clientName,
+        r.phone === "—" ? "" : r.phone,
+        r.hotel || "",
+        r.room || "",
+        r.pax,
+        r.priceValue,
+        paymentText(r.paymentMethod),
+        r.createdByName || "",
+      ]);
+      return withHeaders ? [EXPORT_HEADERS, ...body] : body;
+    },
+    [filtered]
+  );
+
+  /** Copie les lignes (tabulées) dans le presse-papier pour collage direct dans Excel. */
+  const handleCopyForExcel = useCallback(async () => {
+    if (filtered.length === 0) {
+      toast.warning("Aucun ticket à copier.");
+      return;
+    }
+    const matrix = buildExportMatrix(true);
+    const tsv = matrix
+      .map((row) => row.map((cell) => String(cell ?? "").replace(/\t/g, " ").replace(/\r?\n/g, " ")).join("\t"))
+      .join("\r\n");
+    try {
+      await navigator.clipboard.writeText(tsv);
+      toast.success(`${filtered.length} ligne(s) copiée(s). Collez avec Ctrl+V dans votre Excel.`);
+    } catch {
+      // Fallback si l'API clipboard est bloquée
+      const ta = document.createElement("textarea");
+      ta.value = tsv;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+        toast.success(`${filtered.length} ligne(s) copiée(s). Collez avec Ctrl+V dans votre Excel.`);
+      } catch {
+        toast.error("Impossible de copier automatiquement. Utilisez l'export .xlsx.");
+      }
+      document.body.removeChild(ta);
+    }
+  }, [filtered, buildExportMatrix]);
+
+  /** Télécharge un fichier .xlsx prêt à ouvrir. */
+  const handleExportXlsx = useCallback(() => {
+    if (filtered.length === 0) {
+      toast.warning("Aucun ticket à exporter.");
+      return;
+    }
+    const matrix = buildExportMatrix(true);
+    const ws = XLSX.utils.aoa_to_sheet(matrix);
+    ws["!cols"] = [
+      { wch: 16 }, { wch: 26 }, { wch: 12 }, { wch: 10 }, { wch: 20 },
+      { wch: 15 }, { wch: 22 }, { wch: 10 }, { wch: 22 }, { wch: 10 },
+      { wch: 10 }, { wch: 14 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Tickets");
+    const stamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `tickets-${stamp}.xlsx`);
+    toast.success("Fichier Excel téléchargé.");
+  }, [filtered, buildExportMatrix]);
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -77,9 +174,29 @@ export function TicketsPage({ quotes = [] }) {
             className="w-full"
           />
         </div>
-        <div className="shrink-0 rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800">
-          🎟️ {filtered.length} ticket{filtered.length > 1 ? "s" : ""}
-          {rows.length !== filtered.length ? <span className="font-medium text-emerald-700"> / {rows.length}</span> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleCopyForExcel()}
+            disabled={filtered.length === 0}
+            className="rounded-xl px-3 py-2 text-sm font-bold text-white border-2 border-emerald-500 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-md transition-opacity disabled:opacity-50"
+            title="Copier les lignes pour les coller (Ctrl+V) dans votre Excel"
+          >
+            📋 Copier pour Excel
+          </button>
+          <button
+            type="button"
+            onClick={handleExportXlsx}
+            disabled={filtered.length === 0}
+            className="rounded-xl px-3 py-2 text-sm font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md transition-opacity disabled:opacity-50"
+            title="Télécharger un fichier Excel (.xlsx)"
+          >
+            ⬇️ Exporter .xlsx
+          </button>
+          <div className="shrink-0 rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800">
+            🎟️ {filtered.length} ticket{filtered.length > 1 ? "s" : ""}
+            {rows.length !== filtered.length ? <span className="font-medium text-emerald-700"> / {rows.length}</span> : null}
+          </div>
         </div>
       </div>
 
