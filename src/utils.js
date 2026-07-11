@@ -24,6 +24,24 @@ const SPEED_BOAT_EXTRAS_LOCAL = [
   { id: "ozeria_lunch", label: "OZERIA + LUNCH", priceAdult: 45, priceChild: 25 },
 ];
 
+/** Normalise les lignes d'activité lues depuis Supabase (camelCase + compat snake_case). */
+export function normalizeQuoteItemsFromDb(items) {
+  if (!Array.isArray(items)) return [];
+  return items.map((item) => ({
+    ...item,
+    activityId: item.activityId ?? item.activity_id ?? "",
+    activityName: item.activityName ?? item.activity_name ?? "",
+    ticketNumber: String(item.ticketNumber ?? item.ticket_number ?? "").trim(),
+    paymentMethod: item.paymentMethod ?? item.payment_method ?? "",
+    pickupTime: item.pickupTime ?? item.pickup_time ?? "",
+    extraLabel: item.extraLabel ?? item.extra_label ?? "",
+    extraAmount: item.extraAmount ?? item.extra_amount ?? 0,
+    extraDolphin: item.extraDolphin ?? item.extra_dolphin ?? false,
+    speedBoatExtra: item.speedBoatExtra ?? item.speed_boat_extra ?? [],
+    lineTotal: item.lineTotal ?? item.line_total ?? 0,
+  }));
+}
+
 export function uuid() {
   return "hd-" + Math.random().toString(36).slice(2) + "-" + Date.now().toString(36);
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { LS_KEYS } from "../../constants";
+import { SITE_KEY, LS_KEYS } from "../../constants";
 import { currency, saveLS } from "../../utils";
 import { formatQuoteItemParticipantsSummary } from "../../utils/quoteItemDisplay.js";
 import { TextInput, PrimaryBtn, GhostBtn } from "../ui";
@@ -58,34 +58,24 @@ export function PaymentModal({
     if (supabase) {
       try {
         const supabaseUpdate = {
-          items: updatedQuote.items.map((item) => ({
-            activity_id: item.activityId,
-            date: item.date,
-            adults: item.adults || 0,
-            children: item.children || 0,
-            babies: item.babies || 0,
-            extra_label: item.extraLabel || "",
-            extra_amount: item.extraAmount || 0,
-            slot: item.slot || "",
-            ticket_number: item.ticketNumber || "",
-            payment_method: item.paymentMethod || "",
-            extra_dolphin: item.extraDolphin || false,
-            speed_boat_extra: Array.isArray(item.speedBoatExtra) ? item.speedBoatExtra : (item.speedBoatExtra ? [item.speedBoatExtra] : []),
-            buggy_simple: item.buggySimple || "",
-            buggy_family: item.buggyFamily || "",
-            yamaha250: item.yamaha250 || "",
-            ktm640: item.ktm640 || "",
-            ktm530: item.ktm530 || "",
-            aller_simple: item.allerSimple || false,
-            aller_retour: item.allerRetour || false,
-          })),
+          items: JSON.stringify(updatedQuote.items),
           updated_at: new Date().toISOString(),
         };
 
-        const { error } = await supabase
+        let updateQuery = supabase
           .from("quotes")
           .update(supabaseUpdate)
-          .eq("id", selectedQuote.supabase_id);
+          .eq("site_key", SITE_KEY);
+
+        if (selectedQuote.supabase_id) {
+          updateQuery = updateQuery.eq("id", selectedQuote.supabase_id);
+        } else {
+          updateQuery = updateQuery
+            .eq("client_phone", selectedQuote.client?.phone || "")
+            .eq("created_at", selectedQuote.createdAt);
+        }
+
+        const { error } = await updateQuery;
 
         if (error) {
           logger.error("Erreur lors de la mise à jour Supabase:", error);

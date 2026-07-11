@@ -118,47 +118,43 @@ function QuoteCardComponent({
       return { ...item, ticketNumber: num };
     });
 
-    const updatedQuote = { ...rawQuote, items: updatedItems };
+    const updatedQuote = { ...rawQuote, items: updatedItems, updated_at: new Date().toISOString() };
     const updatedQuotes = quotes.map((q) => (q.id === d.id ? updatedQuote : q));
     setQuotes(updatedQuotes);
     saveLS(LS_KEYS.quotes, updatedQuotes);
 
-    if (supabase && d.supabase_id) {
+    if (supabase) {
       try {
         const supabaseUpdate = {
-          items: updatedItems.map((item) => ({
-            activity_id: item.activityId,
-            date: item.date,
-            adults: item.adults || 0,
-            children: item.children || 0,
-            babies: item.babies || 0,
-            extra_label: item.extraLabel || "",
-            extra_amount: item.extraAmount || 0,
-            slot: item.slot || "",
-            ticket_number: item.ticketNumber || "",
-            payment_method: item.paymentMethod || "",
-            extra_dolphin: item.extraDolphin || false,
-            speed_boat_extra: Array.isArray(item.speedBoatExtra) ? item.speedBoatExtra : (item.speedBoatExtra ? [item.speedBoatExtra] : []),
-            buggy_simple: item.buggySimple || "",
-            buggy_family: item.buggyFamily || "",
-            yamaha250: item.yamaha250 || "",
-            ktm640: item.ktm640 || "",
-            ktm530: item.ktm530 || "",
-            aller_simple: item.allerSimple || false,
-            aller_retour: item.allerRetour || false,
-          })),
-          updated_at: new Date().toISOString(),
+          items: JSON.stringify(updatedItems),
+          updated_at: updatedQuote.updated_at,
         };
 
-        const { error } = await supabase
+        let updateQuery = supabase
           .from("quotes")
           .update(supabaseUpdate)
-          .eq("id", d.supabase_id);
+          .eq("site_key", SITE_KEY);
+
+        if (rawQuote.supabase_id) {
+          updateQuery = updateQuery.eq("id", rawQuote.supabase_id);
+        } else {
+          updateQuery = updateQuery
+            .eq("client_phone", rawQuote.client?.phone || "")
+            .eq("created_at", rawQuote.createdAt);
+        }
+
+        const { data, error } = await updateQuery.select();
 
         if (error) {
           logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
           toast.error("Erreur de synchronisation Supabase (tickets).");
         } else {
+          if (!rawQuote.supabase_id && data?.[0]?.id) {
+            const withId = { ...updatedQuote, supabase_id: data[0].id };
+            const finalQuotes = updatedQuotes.map((q) => (q.id === d.id ? withId : q));
+            setQuotes(finalQuotes);
+            saveLS(LS_KEYS.quotes, finalQuotes);
+          }
           toast.success("Numéros de ticket générés.");
         }
       } catch (error) {

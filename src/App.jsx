@@ -10,7 +10,7 @@ import {
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
 import { canAccessHotelsPage } from "./constants/permissions";
-import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS } from "./utils";
+import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS, normalizeQuoteItemsFromDb } from "./utils";
 import { loadUserFromSession } from "./utils/userPermissions";
 import {
   ActivitiesPage,
@@ -601,7 +601,7 @@ export default function App() {
                 clientDepartureDate: row.client_departure_date || "",
                 notes: row.notes || "",
                 createdByName: row.created_by_name || "",
-                items: items,
+                items: normalizeQuoteItemsFromDb(items),
                 total: row.total || 0,
                 totalCash: Math.round(row.total || 0),
                 totalCard: calculateCardPrice(row.total || 0),
@@ -747,7 +747,7 @@ export default function App() {
         clientDepartureDate: row.client_departure_date || "",
         notes: row.notes || "",
         createdByName: row.created_by_name || "",
-        items: items,
+        items: normalizeQuoteItemsFromDb(items),
         total: row.total || 0,
         totalCash: Math.round(row.total || 0),
         totalCard: calculateCardPrice(row.total || 0),
