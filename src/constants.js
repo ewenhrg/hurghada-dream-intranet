@@ -111,6 +111,7 @@ export const LS_KEYS = {
   situationTransferRows: "hd_situation_transfer_rows", // Cache local lignes Excel transferts
   exteriorHotels: "hd_exterior_hotels", // Liste des hôtels avec RDV à l'extérieur
   users: "hd_users", // Cache utilisateurs pour sécurité anti-suppression auto
+  copiedTickets: "hd_copied_tickets", // N° de tickets déjà copiés/exportés vers Excel
 };
 
 export const WEEKDAYS = [
