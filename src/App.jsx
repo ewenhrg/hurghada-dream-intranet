@@ -18,6 +18,7 @@ import {
   ActivityCatalogAdminPage,
   QuotesPage,
   HistoryPage,
+  TicketsPage,
   UsersPage,
   HotelsPage,
   SITUATION_PAGE_STANDBY,
@@ -1294,6 +1295,11 @@ export default function App() {
                   </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
+                <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
+                  🎟️ Tickets
+                </Pill>
+                )}
+                {user?.canAccessHistory !== false && (
                 <Pill active={tab === "public-devis"} onClick={() => setTab("public-devis")}>
                   {t("nav.publicDevis")}
                 </Pill>
@@ -1450,6 +1456,12 @@ export default function App() {
         {tab === "history" && user?.canAccessHistory !== false && (
           <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")} bare>
             <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
+          </Section>
+        )}
+
+        {tab === "tickets" && user?.canAccessHistory !== false && (
+          <Section title="Registre des tickets" subtitle="Toutes les activités avec un numéro de ticket généré (devis validés).">
+            <TicketsPage quotes={quotes} />
           </Section>
         )}
 

@@ -18,6 +18,9 @@ export const QuotesPage = lazyWithRetry(() =>
 export const HistoryPage = lazyWithRetry(() =>
   import("../pages/HistoryPage").then((module) => ({ default: module.HistoryPage }))
 );
+export const TicketsPage = lazyWithRetry(() =>
+  import("../pages/TicketsPage").then((module) => ({ default: module.TicketsPage }))
+);
 export const UsersPage = lazyWithRetry(() =>
   import("../pages/UsersPage").then((module) => ({ default: module.UsersPage }))
 );
