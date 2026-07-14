@@ -12,15 +12,17 @@ import {
   Sparkles,
   ListChecks,
   CheckCircle2,
-  Clock,
-  Phone,
-  MapPin,
-  Banknote,
-  CreditCard,
 } from "lucide-react";
 import { currencyNoCents, saveLS, loadLS } from "../utils";
 import { LS_KEYS } from "../constants";
-import { formatQuoteItemParticipantsSummary } from "../utils/quoteItemDisplay.js";
+import {
+  formatActivityWithExtras,
+  formatClientShortWithPhone,
+  getQuoteItemParticipantCells,
+} from "../utils/quoteItemDisplay.js";
+import {
+  calculateTransferSurchargeFromItem,
+} from "../utils/transferPricing.js";
 import { TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 
@@ -36,53 +38,35 @@ const slotLabel = (slot) =>
 const paymentText = (method) =>
   method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
 
-// Badge de paiement : icône Lucide + libellé, couleurs alignées sur le thème.
-function PaymentBadge({ method }) {
-  if (method === "cash") {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/70 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-        <Banknote className="size-3.5" aria-hidden="true" />
-        Cash
-      </span>
-    );
-  }
-  if (method === "stripe") {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-300/70 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-        <CreditCard className="size-3.5" aria-hidden="true" />
-        Stripe
-      </span>
-    );
-  }
-  return <span className="text-slate-400">—</span>;
-}
-
+/** En-têtes Excel = ordre exact demandé (15 colonnes). */
 const EXPORT_HEADERS = [
   "N° Ticket",
-  "Activité",
   "Date",
-  "Pick-up",
-  "Client",
-  "Téléphone",
+  "Client (3 lettres + tél)",
   "Hôtel",
   "Chambre",
-  "Personnes",
+  "Adultes",
+  "Enfants",
+  "Bébés",
+  "Activité + extras",
+  "Prise en charge",
+  "Note",
   "Prix",
+  "Supp. transfert",
   "Paiement",
-  "Créé par",
+  "Vendeur",
 ];
 
+const TH =
+  "border border-slate-300 px-2 py-1.5 text-left text-[10px] font-bold uppercase tracking-wide text-slate-700 whitespace-nowrap bg-slate-100";
+const TD = "border border-slate-200 px-2 py-1.5 align-middle text-[12px] whitespace-nowrap";
+
 /**
- * Registre des tickets : liste toutes les activités (de tous les devis) qui ont
- * un numéro de ticket généré/renseigné.
- * Système anti-doublon : chaque ligne copiée/exportée est mémorisée (localStorage)
- * pour éviter de re-copier deux fois la même ligne dans Excel.
+ * Registre des tickets — colonnes alignées Excel pour copier/coller direct.
  */
 export function TicketsPage({ quotes = [] }) {
   const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all"); // "all" | "new" | "copied"
-
-  // Ensemble des n° de tickets déjà copiés (persisté localement)
+  const [statusFilter, setStatusFilter] = useState("all");
   const [copied, setCopied] = useState(() => {
     const stored = loadLS(LS_KEYS.copiedTickets, []);
     return new Set(Array.isArray(stored) ? stored : []);
@@ -113,22 +97,43 @@ export function TicketsPage({ quotes = [] }) {
     const list = [];
     (quotes || []).forEach((quote) => {
       const client = quote.client || {};
+      const note = String(quote.notes || "").trim();
       (quote.items || []).forEach((item, idx) => {
         const ticketNumber = item.ticketNumber ? String(item.ticketNumber).trim() : "";
         if (!ticketNumber) return;
+
+        const pax = getQuoteItemParticipantCells(item);
+        const transferValue = Math.round(calculateTransferSurchargeFromItem(item) || 0);
+        const lineTotal = Math.round(Number(item.lineTotal) || 0);
+        // Prix activité hors supp. transfert (évite le double-compte dans Excel)
+        const priceValue = Math.max(0, lineTotal - transferValue);
+        const pickup =
+          item.pickupTime && String(item.pickupTime).trim()
+            ? String(item.pickupTime).trim()
+            : slotLabel(item.slot);
+
         list.push({
           key: `${quote.id || "q"}-${idx}-${ticketNumber}`,
           ticketNumber,
-          activityName: item.activityName || "—",
           date: item.date || "",
-          pickup: item.pickupTime && String(item.pickupTime).trim() ? String(item.pickupTime).trim() : slotLabel(item.slot),
-          clientName: client.name || "—",
-          phone: client.phone || "—",
+          clientCell: formatClientShortWithPhone(client.name, client.phone),
+          clientName: client.name || "",
+          phone: client.phone || "",
           hotel: client.hotel || "",
           room: client.room || "",
-          pax: formatQuoteItemParticipantsSummary(item),
-          price: currencyNoCents(Math.round(item.lineTotal || 0), quote.currency || "EUR"),
-          priceValue: Math.round(item.lineTotal || 0),
+          adults: pax.adults,
+          children: pax.children,
+          babies: pax.babies,
+          activity: formatActivityWithExtras(item),
+          pickup: pickup || "",
+          note,
+          priceValue,
+          priceLabel: currencyNoCents(priceValue, quote.currency || "EUR"),
+          transferValue,
+          transferLabel:
+            transferValue > 0
+              ? currencyNoCents(transferValue, quote.currency || "EUR")
+              : "",
           paymentMethod: item.paymentMethod || "",
           createdByName: quote.createdByName || "",
         });
@@ -142,8 +147,10 @@ export function TicketsPage({ quotes = [] }) {
     return list;
   }, [quotes]);
 
-  // Nombre de lignes jamais copiées (sur l'ensemble, pas seulement le filtre)
-  const newCount = useMemo(() => rows.filter((r) => !copied.has(r.ticketNumber)).length, [rows, copied]);
+  const newCount = useMemo(
+    () => rows.filter((r) => !copied.has(r.ticketNumber)).length,
+    [rows, copied]
+  );
   const copiedCount = rows.length - newCount;
 
   const filtered = useMemo(() => {
@@ -152,65 +159,86 @@ export function TicketsPage({ quotes = [] }) {
       if (statusFilter === "new" && copied.has(r.ticketNumber)) return false;
       if (statusFilter === "copied" && !copied.has(r.ticketNumber)) return false;
       if (!term) return true;
-      return [r.ticketNumber, r.activityName, r.clientName, r.phone, r.hotel]
-        .some((v) => String(v || "").toLowerCase().includes(term));
+      return [
+        r.ticketNumber,
+        r.activity,
+        r.clientCell,
+        r.clientName,
+        r.phone,
+        r.hotel,
+        r.room,
+        r.note,
+        r.createdByName,
+      ].some((v) => String(v || "").toLowerCase().includes(term));
     });
   }, [rows, q, statusFilter, copied]);
-
-  const formatDate = (d) =>
-    d ? new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" }) : "—";
 
   const dateForExport = (d) =>
     d ? new Date(d + "T12:00:00").toLocaleDateString("fr-FR") : "";
 
-  const matrixFromRows = useCallback(
-    (list, withHeaders) => {
-      const body = list.map((r) => [
-        r.ticketNumber,
-        r.activityName,
-        dateForExport(r.date),
-        r.pickup || "",
-        r.clientName === "—" ? "" : r.clientName,
-        r.phone === "—" ? "" : r.phone,
-        r.hotel || "",
-        r.room || "",
-        r.pax,
-        r.priceValue,
-        paymentText(r.paymentMethod),
-        r.createdByName || "",
-      ]);
-      return withHeaders ? [EXPORT_HEADERS, ...body] : body;
+  const formatDateDisplay = (d) =>
+    d
+      ? new Date(d + "T12:00:00").toLocaleDateString("fr-FR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
+      : "—";
+
+  const matrixFromRows = useCallback((list, withHeaders) => {
+    const body = list.map((r) => [
+      r.ticketNumber,
+      dateForExport(r.date),
+      r.clientCell,
+      r.hotel || "",
+      r.room || "",
+      r.adults || "",
+      r.children || "",
+      r.babies || "",
+      r.activity,
+      r.pickup || "",
+      r.note || "",
+      r.priceValue || "",
+      r.transferValue > 0 ? r.transferValue : "",
+      paymentText(r.paymentMethod),
+      r.createdByName || "",
+    ]);
+    return withHeaders ? [EXPORT_HEADERS, ...body] : body;
+  }, []);
+
+  const copyRowsToClipboard = useCallback(
+    async (list, withHeaders) => {
+      const matrix = matrixFromRows(list, withHeaders);
+      const tsv = matrix
+        .map((row) =>
+          row
+            .map((cell) => String(cell ?? "").replace(/\t/g, " ").replace(/\r?\n/g, " "))
+            .join("\t")
+        )
+        .join("\r\n");
+      try {
+        await navigator.clipboard.writeText(tsv);
+        return true;
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = tsv;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        let ok = false;
+        try {
+          ok = document.execCommand("copy");
+        } catch {
+          ok = false;
+        }
+        document.body.removeChild(ta);
+        return ok;
+      }
     },
-    []
+    [matrixFromRows]
   );
 
-  const copyRowsToClipboard = useCallback(async (list, withHeaders) => {
-    const matrix = matrixFromRows(list, withHeaders);
-    const tsv = matrix
-      .map((row) => row.map((cell) => String(cell ?? "").replace(/\t/g, " ").replace(/\r?\n/g, " ")).join("\t"))
-      .join("\r\n");
-    try {
-      await navigator.clipboard.writeText(tsv);
-      return true;
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = tsv;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      let ok = false;
-      try {
-        ok = document.execCommand("copy");
-      } catch {
-        ok = false;
-      }
-      document.body.removeChild(ta);
-      return ok;
-    }
-  }, [matrixFromRows]);
-
-  // Bouton principal : copie UNIQUEMENT les lignes nouvelles (non copiées) du filtre courant
   const handleCopyNew = useCallback(async () => {
     const list = filtered.filter((r) => !copied.has(r.ticketNumber));
     if (list.length === 0) {
@@ -220,24 +248,27 @@ export function TicketsPage({ quotes = [] }) {
     const ok = await copyRowsToClipboard(list, true);
     if (ok) {
       markCopied(list.map((r) => r.ticketNumber));
-      toast.success(`${list.length} nouvelle(s) ligne(s) copiée(s). Collez avec Ctrl+V dans votre Excel.`);
+      toast.success(
+        `${list.length} nouvelle(s) ligne(s) copiée(s). Collez avec Ctrl+V dans Excel.`
+      );
     } else {
-      toast.error("Impossible de copier automatiquement. Utilisez l'export .xlsx.");
+      toast.error("Impossible de copier. Utilisez l'export .xlsx.");
     }
   }, [filtered, copied, copyRowsToClipboard, markCopied]);
 
-  // Copier UNE seule ligne (sans en-têtes), puis la marquer comme copiée
-  const handleCopyRow = useCallback(async (row) => {
-    const ok = await copyRowsToClipboard([row], false);
-    if (ok) {
-      markCopied([row.ticketNumber]);
-      toast.success(`Ligne ${row.ticketNumber} copiée. Collez avec Ctrl+V dans votre Excel.`);
-    } else {
-      toast.error("Impossible de copier automatiquement. Utilisez l'export .xlsx.");
-    }
-  }, [copyRowsToClipboard, markCopied]);
+  const handleCopyRow = useCallback(
+    async (row) => {
+      const ok = await copyRowsToClipboard([row], false);
+      if (ok) {
+        markCopied([row.ticketNumber]);
+        toast.success(`Ligne ${row.ticketNumber} copiée.`);
+      } else {
+        toast.error("Impossible de copier. Utilisez l'export .xlsx.");
+      }
+    },
+    [copyRowsToClipboard, markCopied]
+  );
 
-  // Recopier toutes les lignes du filtre (même déjà copiées), sans changer les marques
   const handleCopyAll = useCallback(async () => {
     if (filtered.length === 0) {
       toast.warning("Aucune ligne à copier.");
@@ -248,7 +279,7 @@ export function TicketsPage({ quotes = [] }) {
       markCopied(filtered.map((r) => r.ticketNumber));
       toast.success(`${filtered.length} ligne(s) copiée(s).`);
     } else {
-      toast.error("Impossible de copier automatiquement. Utilisez l'export .xlsx.");
+      toast.error("Impossible de copier. Utilisez l'export .xlsx.");
     }
   }, [filtered, copyRowsToClipboard, markCopied]);
 
@@ -260,9 +291,21 @@ export function TicketsPage({ quotes = [] }) {
     const matrix = matrixFromRows(filtered, true);
     const ws = XLSX.utils.aoa_to_sheet(matrix);
     ws["!cols"] = [
-      { wch: 16 }, { wch: 26 }, { wch: 12 }, { wch: 10 }, { wch: 20 },
-      { wch: 15 }, { wch: 22 }, { wch: 10 }, { wch: 22 }, { wch: 10 },
-      { wch: 10 }, { wch: 14 },
+      { wch: 16 },
+      { wch: 12 },
+      { wch: 20 },
+      { wch: 22 },
+      { wch: 10 },
+      { wch: 8 },
+      { wch: 8 },
+      { wch: 8 },
+      { wch: 36 },
+      { wch: 12 },
+      { wch: 24 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 14 },
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Tickets");
@@ -276,7 +319,11 @@ export function TicketsPage({ quotes = [] }) {
       toast.info("Aucune marque « copié » à réinitialiser.");
       return;
     }
-    if (!window.confirm("Réinitialiser toutes les marques « copié » ? Toutes les lignes redeviendront « nouvelles ».")) {
+    if (
+      !window.confirm(
+        "Réinitialiser toutes les marques « copié » ? Toutes les lignes redeviendront « nouvelles »."
+      )
+    ) {
       return;
     }
     setCopied(new Set());
@@ -309,7 +356,6 @@ export function TicketsPage({ quotes = [] }) {
       animate={fade.animate}
       transition={fade.transition}
     >
-      {/* Barre d'outils : recherche + actions principales */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:max-w-md">
@@ -319,7 +365,7 @@ export function TicketsPage({ quotes = [] }) {
             />
             <TextInput
               type="search"
-              placeholder="Rechercher : n° ticket, client, téléphone, activité, hôtel…"
+              placeholder="Rechercher : ticket, client, tél, hôtel, activité, vendeur…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               aria-label="Rechercher un ticket"
@@ -330,7 +376,7 @@ export function TicketsPage({ quotes = [] }) {
                 type="button"
                 onClick={() => setQ("")}
                 aria-label="Effacer la recherche"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 grid size-7 place-items-center rounded-full text-slate-400 hover:bg-slate-200/70 hover:text-slate-600 transition-colors"
+                className="absolute right-2.5 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-full text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-600"
               >
                 <X className="size-4" aria-hidden="true" />
               </button>
@@ -342,8 +388,8 @@ export function TicketsPage({ quotes = [] }) {
               type="button"
               onClick={() => void handleCopyNew()}
               disabled={newInFilteredCount === 0}
-              className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 shadow-[0_10px_24px_-12px_rgba(16,185,129,0.7)] hover:from-emerald-600 hover:to-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none transition-all"
-              title="Copie uniquement les lignes pas encore copiées, puis les marque comme copiées"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-3.5 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_-12px_rgba(16,185,129,0.7)] transition-all hover:from-emerald-600 hover:to-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
+              title="Copie les 15 colonnes Excel des lignes non encore copiées"
             >
               <Copy className="size-4" aria-hidden="true" />
               Copier les nouvelles
@@ -357,8 +403,7 @@ export function TicketsPage({ quotes = [] }) {
               type="button"
               onClick={() => void handleCopyAll()}
               disabled={filtered.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white/70 px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-white hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 focus-visible:ring-offset-2 disabled:opacity-50 transition-all"
-              title="Recopie toutes les lignes affichées (même déjà copiées)"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white/70 px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-400 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 focus-visible:ring-offset-2 disabled:opacity-50"
             >
               <CopyCheck className="size-4" aria-hidden="true" />
               Tout copier
@@ -367,8 +412,7 @@ export function TicketsPage({ quotes = [] }) {
               type="button"
               onClick={handleExportXlsx}
               disabled={filtered.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 shadow-[0_10px_24px_-12px_rgba(99,102,241,0.7)] hover:from-indigo-600 hover:to-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none transition-all"
-              title="Télécharger un fichier Excel (.xlsx)"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-3.5 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_-12px_rgba(99,102,241,0.7)] transition-all hover:from-indigo-600 hover:to-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
             >
               <Download className="size-4" aria-hidden="true" />
               Exporter .xlsx
@@ -376,7 +420,6 @@ export function TicketsPage({ quotes = [] }) {
           </div>
         </div>
 
-        {/* Filtres (segmented control) + réinitialisation */}
         <div className="flex flex-wrap items-center gap-2">
           <div
             role="group"
@@ -414,15 +457,14 @@ export function TicketsPage({ quotes = [] }) {
           <button
             type="button"
             onClick={handleResetCopied}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white/70 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/40 focus-visible:ring-offset-2 transition-all"
-            title="Efface toutes les marques « copié »"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white/70 px-3 py-1.5 text-xs font-semibold text-rose-600 transition-all hover:border-rose-300 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/40 focus-visible:ring-offset-2"
           >
             <RotateCcw className="size-3.5" aria-hidden="true" />
             Réinitialiser les marques
           </button>
 
-          <span className="ml-auto text-xs font-medium text-slate-500 tabular-nums">
-            Affichées : {filtered.length}
+          <span className="ml-auto text-xs font-medium tabular-nums text-slate-500">
+            Affichées : {filtered.length} · 15 colonnes Excel
           </span>
         </div>
       </div>
@@ -455,125 +497,158 @@ export function TicketsPage({ quotes = [] }) {
             animate={fade.animate}
             exit={fade.exit}
             transition={fade.transition}
-            className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm"
+            className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-lg shadow-indigo-950/5"
           >
-            <table className="w-full border-collapse text-sm">
-              <caption className="sr-only">
-                Liste des tickets générés, avec leur état de copie, activité, date, client et prix.
-              </caption>
-              <thead className="sticky top-0 z-10">
-                <tr className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-                  <th scope="col" className="px-3 py-3 text-center font-semibold whitespace-nowrap">État</th>
-                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">N° Ticket</th>
-                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Activité</th>
-                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Date</th>
-                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Pick-up</th>
-                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Client</th>
-                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Téléphone</th>
-                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Hôtel / Chambre</th>
-                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Personnes</th>
-                  <th scope="col" className="px-3 py-3 text-right font-semibold whitespace-nowrap">Prix</th>
-                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Paiement</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => {
-                  const isCopied = copied.has(r.ticketNumber);
-                  return (
-                    <tr
-                      key={r.key}
-                      className={`border-t border-slate-200 transition-colors ${
-                        isCopied
-                          ? "bg-slate-100/80 text-slate-400"
-                          : "bg-amber-50/60 hover:bg-amber-100/60"
-                      }`}
-                    >
-                      <td className="px-3 py-2.5">
-                        <div className="flex items-center gap-1.5 justify-center">
-                          <button
-                            type="button"
-                            onClick={() => void handleCopyRow(r)}
-                            aria-label={`Copier la ligne du ticket ${r.ticketNumber}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 shadow-sm hover:from-emerald-600 hover:to-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-1 transition-colors whitespace-nowrap"
-                            title="Copier cette ligne dans le presse-papiers (Ctrl+V dans Excel)"
-                          >
-                            <Copy className="size-3.5" aria-hidden="true" />
-                            <span className="hidden sm:inline">Copier</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleCopied(r.ticketNumber)}
-                            aria-pressed={isCopied}
-                            aria-label={
-                              isCopied
-                                ? `Ticket ${r.ticketNumber} marqué comme copié — annuler`
-                                : `Marquer le ticket ${r.ticketNumber} comme copié`
-                            }
-                            className={`grid size-7 place-items-center rounded-full border transition-colors ${
-                              isCopied
-                                ? "border-emerald-300 bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                : "border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200"
-                            }`}
-                            title={isCopied ? "Marquée comme copiée — cliquer pour annuler" : "Nouvelle — cliquer pour marquer comme copiée sans copier"}
-                          >
-                            {isCopied ? (
-                              <CheckCircle2 className="size-4" aria-hidden="true" />
-                            ) : (
-                              <Sparkles className="size-4" aria-hidden="true" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                      <th
-                        scope="row"
-                        className={`px-3 py-2.5 text-left font-bold whitespace-nowrap ${isCopied ? "text-slate-400" : "text-indigo-700"}`}
-                      >
-                        {r.ticketNumber}
-                      </th>
-                      <td className={`px-3 py-2.5 font-semibold ${isCopied ? "text-slate-400" : "text-slate-800"}`}>{r.activityName}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{formatDate(r.date)}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">
-                        {r.pickup ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <Clock className={`size-3.5 ${isCopied ? "text-slate-300" : "text-slate-400"}`} aria-hidden="true" />
-                            {r.pickup}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className={`px-3 py-2.5 font-medium ${isCopied ? "text-slate-400" : "text-slate-800"}`}>{r.clientName}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">
-                        {r.phone && r.phone !== "—" ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <Phone className={`size-3.5 ${isCopied ? "text-slate-300" : "text-slate-400"}`} aria-hidden="true" />
-                            {r.phone}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        {r.hotel ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <MapPin className={`size-3.5 shrink-0 ${isCopied ? "text-slate-300" : "text-slate-400"}`} aria-hidden="true" />
-                            {r.hotel}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                        {r.room ? <span className={isCopied ? "text-slate-400" : "text-slate-500"}> · Ch. {r.room}</span> : null}
-                      </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{r.pax}</td>
-                      <td className={`px-3 py-2.5 text-right font-bold tabular-nums whitespace-nowrap ${isCopied ? "text-slate-400" : "text-emerald-700"}`}>{r.price}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">
-                        <PaymentBadge method={r.paymentMethod} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1280px] border-collapse border border-slate-300 text-left font-sans">
+                <caption className="sr-only">
+                  Tableau tickets Excel : 15 colonnes (n° ticket à vendeur).
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" className={`${TH} sticky left-0 z-20 bg-slate-200`}>
+                      Copier
+                    </th>
+                    <th scope="col" className={`${TH} bg-orange-100 text-orange-900`}>
+                      N° Ticket
+                    </th>
+                    <th scope="col" className={TH}>
+                      Date
+                    </th>
+                    <th scope="col" className={TH}>
+                      Client
+                    </th>
+                    <th scope="col" className={TH}>
+                      Hôtel
+                    </th>
+                    <th scope="col" className={TH}>
+                      Ch.
+                    </th>
+                    <th scope="col" className={`${TH} text-center`}>
+                      Adt
+                    </th>
+                    <th scope="col" className={`${TH} text-center`}>
+                      Enf
+                    </th>
+                    <th scope="col" className={`${TH} text-center`}>
+                      Bébé
+                    </th>
+                    <th scope="col" className={TH}>
+                      Activité + extras
+                    </th>
+                    <th scope="col" className={TH}>
+                      Prise en charge
+                    </th>
+                    <th scope="col" className={TH}>
+                      Note
+                    </th>
+                    <th scope="col" className={`${TH} text-right`}>
+                      Prix
+                    </th>
+                    <th scope="col" className={`${TH} text-right`}>
+                      Supp. transfert
+                    </th>
+                    <th scope="col" className={TH}>
+                      Paiement
+                    </th>
+                    <th scope="col" className={TH}>
+                      Vendeur
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r, i) => {
+                    const isCopied = copied.has(r.ticketNumber);
+                    const zebra = i % 2 === 0;
+                    const rowBg = isCopied
+                      ? "bg-slate-100/90 text-slate-400"
+                      : zebra
+                        ? "bg-white"
+                        : "bg-orange-50/30";
+                    return (
+                      <tr key={r.key} className={`transition-colors hover:bg-amber-50/80 ${rowBg}`}>
+                        <td
+                          className={`${TD} sticky left-0 z-10 ${
+                            isCopied ? "bg-slate-100" : zebra ? "bg-white" : "bg-orange-50/40"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => void handleCopyRow(r)}
+                              aria-label={`Copier ${r.ticketNumber}`}
+                              className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                              title="Copier cette ligne (15 colonnes) pour Excel"
+                            >
+                              <Copy className="size-3" aria-hidden="true" />
+                              Copier
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => toggleCopied(r.ticketNumber)}
+                              aria-pressed={isCopied}
+                              className={`grid size-6 place-items-center rounded-full border transition-colors ${
+                                isCopied
+                                  ? "border-emerald-300 bg-emerald-100 text-emerald-700"
+                                  : "border-amber-400 bg-amber-100 text-amber-800"
+                              }`}
+                              title={isCopied ? "Déjà copiée" : "Nouvelle"}
+                            >
+                              {isCopied ? (
+                                <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                              ) : (
+                                <Sparkles className="size-3.5" aria-hidden="true" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                        <th
+                          scope="row"
+                          className={`${TD} bg-orange-200/80 font-bold text-orange-950 ${
+                            isCopied ? "!bg-slate-200 text-slate-400" : ""
+                          }`}
+                        >
+                          {r.ticketNumber}
+                        </th>
+                        <td className={TD}>{formatDateDisplay(r.date)}</td>
+                        <td className={`${TD} font-medium ${isCopied ? "" : "text-slate-900"}`}>
+                          {r.clientCell || ""}
+                        </td>
+                        <td className={`${TD} max-w-[10rem] truncate`} title={r.hotel}>
+                          {r.hotel || ""}
+                        </td>
+                        <td className={TD}>{r.room || ""}</td>
+                        <td className={`${TD} text-center tabular-nums`}>
+                          {r.adults || ""}
+                        </td>
+                        <td className={`${TD} text-center tabular-nums`}>{r.children || ""}</td>
+                        <td className={`${TD} text-center tabular-nums`}>{r.babies || ""}</td>
+                        <td
+                          className={`${TD} max-w-[16rem] whitespace-normal leading-snug ${
+                            isCopied ? "" : "font-medium text-slate-800"
+                          }`}
+                          title={r.activity}
+                        >
+                          {r.activity}
+                        </td>
+                        <td className={TD}>{r.pickup || ""}</td>
+                        <td className={`${TD} max-w-[12rem] truncate`} title={r.note}>
+                          {r.note || ""}
+                        </td>
+                        <td className={`${TD} text-right tabular-nums font-semibold`}>
+                          {r.priceValue || ""}
+                        </td>
+                        <td className={`${TD} text-right tabular-nums`}>
+                          {r.transferValue > 0 ? r.transferValue : ""}
+                        </td>
+                        <td className={TD}>{paymentText(r.paymentMethod)}</td>
+                        <td className={TD}>{r.createdByName || ""}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
