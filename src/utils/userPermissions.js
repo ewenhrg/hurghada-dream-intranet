@@ -26,7 +26,7 @@ function applyFullIntranetPermissions(userData) {
 }
 
 /**
- * Applique les valeurs par défaut manquantes puis les overrides accès complet (Ewen / Léa / Sophia)
+ * Applique les valeurs par défaut manquantes puis les overrides accès complet (Ewen / Léa / Sophia / Karim)
  * @param {Object} userData - Données utilisateur (session)
  * @returns {Object|null} - Données utilisateur avec permissions configurées
  */

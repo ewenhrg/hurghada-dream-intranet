@@ -91,11 +91,11 @@ export function normalizeIntranetUserName(name) {
 
 /**
  * Accès complet type Ewen : mêmes pages, outils et infos
- * (Ewen, Léa / Lea, Sophia).
+ * (Ewen, Léa / Lea, Sophia, Karim).
  */
 export function hasFullIntranetAccess(user) {
   const n = normalizeIntranetUserName(user?.name);
-  return n === "ewen" || n === "lea" || n === "sophia";
+  return n === "ewen" || n === "lea" || n === "sophia" || n === "karim";
 }
 
 /**
@@ -141,7 +141,7 @@ export function formToDbUser(form) {
  * Construit l’objet utilisateur pour la session (camelCase) à partir des données Supabase
  * Utilisé après login pour stocker en sessionStorage
  */
-/** Accès page Hôtels (menu + contenu) — Ewen, Léa et Sophia. */
+/** Accès page Hôtels (menu + contenu) — Ewen, Léa, Sophia et Karim. */
 export function canAccessHotelsPage(user) {
   return hasFullIntranetAccess(user);
 }

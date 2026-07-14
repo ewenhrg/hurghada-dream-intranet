@@ -121,7 +121,7 @@ export function LoginPage({ onSuccess }) {
         if (isIntranetDatabaseWriterName(data.name)) {
           if (writerAuth.missingEmail) {
             toast.warning(
-              "Compte Ewen/Léa/Sophia : définissez intranet_auth_email en base (et un utilisateur Auth Supabase avec le même email, mot de passe = code à 6 chiffres) pour modifier ou supprimer utilisateurs et activités."
+              "Compte Ewen/Léa/Sophia/Karim : définissez intranet_auth_email en base (et un utilisateur Auth Supabase avec le même email, mot de passe = code à 6 chiffres) pour modifier ou supprimer utilisateurs et activités."
             );
           } else if (writerAuth.error) {
             toast.error(

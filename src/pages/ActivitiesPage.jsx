@@ -35,7 +35,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   // Debounce de la recherche pour améliorer les performances
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
-  // Écritures activités (RLS Supabase) : Ewen / Léa / Sophia
+  // Écritures activités (RLS Supabase) : Ewen / Léa / Sophia / Karim
   const canModifyActivities = canAccessHotelsPage(user);
   const hasFullAccess = hasFullIntranetAccess(user);
 
@@ -245,7 +245,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   const handleEdit = useCallback((activity) => {
     if (!canModifyActivities) {
-      toast.warning("Seuls Léa et Ewen peuvent modifier les activités.");
+      toast.warning("Seuls Ewen, Léa, Sophia et Karim peuvent modifier les activités.");
       return;
     }
     setForm({
@@ -342,7 +342,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     
     // Vérifier les permissions
     if (isEditing && !canModifyActivities) {
-      toast.warning("Seuls Léa et Ewen peuvent modifier les activités.");
+      toast.warning("Seuls Ewen, Léa, Sophia et Karim peuvent modifier les activités.");
       return;
     }
     if (!isEditing && !user?.canAddActivity) {
@@ -1011,7 +1011,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   const handleDelete = useCallback(async (id) => {
     if (!canModifyActivities) {
-      toast.warning("Seuls Léa et Ewen peuvent supprimer les activités.");
+      toast.warning("Seuls Ewen, Léa, Sophia et Karim peuvent supprimer les activités.");
       return;
     }
     const activityToDelete = activitiesMap.get(id);
@@ -1880,7 +1880,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 }`}
               />
               {!hasFullAccess && (
-                <p className="text-xs font-medium text-amber-700 mt-2 bg-amber-100 px-2 py-1.5 rounded-lg">Seuls Ewen, Léa et Sophia peuvent modifier la description.</p>
+                <p className="text-xs font-medium text-amber-700 mt-2 bg-amber-100 px-2 py-1.5 rounded-lg">Seuls Ewen, Léa, Sophia et Karim peuvent modifier la description.</p>
               )}
             </div>
             <div className="px-6 py-4 border-t-2 border-indigo-200 flex gap-3 justify-end bg-gradient-to-r from-indigo-50 to-violet-50">

@@ -1,12 +1,12 @@
 -- =============================================================================
--- Extension accès rédacteur intranet : Ewen, Léa / Lea, Sophia
+-- Extension accès rédacteur intranet : ajouter Karim (même niveau qu’Ewen)
 -- À exécuter dans Supabase → SQL Editor (une fois par projet).
 --
--- Prérequis pour Sophia (comme Ewen / Léa) :
---   1) Créer un utilisateur Auth (ex. sophia.intranet@…)
+-- Prérequis pour Karim (comme Ewen / Léa / Sophia) :
+--   1) Créer un utilisateur Auth (ex. karim.intranet@…)
 --   2) Mot de passe Auth = le code à 6 chiffres de public.users.code
---   3) UPDATE public.users SET intranet_auth_email = 'sophia.intranet@…'
---      WHERE LOWER(BTRIM(name)) = 'sophia';
+--   3) UPDATE public.users SET intranet_auth_email = 'karim.intranet@…'
+--      WHERE LOWER(BTRIM(name)) = 'karim';
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.is_intranet_ewen_or_lea_writer()

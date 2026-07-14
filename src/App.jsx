@@ -131,7 +131,7 @@ export default function App() {
     }
   }, [user, tab]);
 
-  /** Contenu catalogue public : accès complet (Ewen / Léa / Sophia) ou éditeurs. */
+  /** Contenu catalogue public : accès complet (Ewen / Léa / Sophia / Karim) ou éditeurs. */
   useEffect(() => {
     if (!user || tab !== "catalog-admin") return;
     if (
@@ -1485,7 +1485,7 @@ export default function App() {
               title={t("page.catalogAdmin.title")}
               subtitle={
                 !canAccessHotelsPage(user)
-                  ? "Consultation du catalogue public. Seuls Ewen, Léa et Sophia peuvent enregistrer des changements en base."
+                  ? "Consultation du catalogue public. Seuls Ewen, Léa, Sophia et Karim peuvent enregistrer des changements en base."
                   : t("page.catalogAdmin.subtitle")
               }
             >

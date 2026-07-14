@@ -54,12 +54,13 @@ AS $$
           LOWER(BTRIM(u.name)) = 'ewen'
           OR LOWER(BTRIM(u.name)) IN ('léa', 'lea')
           OR LOWER(BTRIM(u.name)) = 'sophia'
+          OR LOWER(BTRIM(u.name)) = 'karim'
         )
     );
 $$;
 
 COMMENT ON FUNCTION public.is_intranet_ewen_or_lea_writer() IS
-  'Utilisé par les politiques RLS : rédacteurs base = Ewen/Léa/Sophia avec intranet_auth_email = email JWT.';
+  'Utilisé par les politiques RLS : rédacteurs base = Ewen/Léa/Sophia/Karim avec intranet_auth_email = email JWT.';
 
 -- ---------------------------------------------------------------------------
 -- public.users

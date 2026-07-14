@@ -155,7 +155,7 @@ export function HotelsPage({ user }) {
     
     // Vérifier que seuls Ewen / Léa / Sophia peuvent modifier
     if (!canAccess) {
-      toast.error("Seuls Ewen, Léa et Sophia peuvent ajouter ou modifier des hôtels.");
+      toast.error("Seuls Ewen, Léa, Sophia et Karim peuvent ajouter ou modifier des hôtels.");
       return;
     }
 
@@ -241,7 +241,7 @@ export function HotelsPage({ user }) {
   // Supprimer un hôtel
   async function handleDelete(hotelId, hotelName) {
     if (!canAccess) {
-      toast.error("Seuls Ewen, Léa et Sophia peuvent supprimer des hôtels.");
+      toast.error("Seuls Ewen, Léa, Sophia et Karim peuvent supprimer des hôtels.");
       return;
     }
 
@@ -278,7 +278,7 @@ export function HotelsPage({ user }) {
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
           <p className="text-red-800 font-semibold">Accès refusé</p>
           <p className="text-red-600 text-sm mt-2">
-            Seuls les comptes Ewen, Léa et Sophia peuvent accéder à cette page pour gérer les hôtels.
+            Seuls les comptes Ewen, Léa, Sophia et Karim peuvent accéder à cette page pour gérer les hôtels.
           </p>
         </div>
       </div>
