@@ -152,6 +152,35 @@ function normalizeActivityName(activityName) {
     .trim();
 }
 
+/**
+ * Activités réservables uniquement à partir de 2 personnes (adultes + enfants).
+ * Couvre El Gouna / El Goune, Karting, Parachute, Combo aquatique, Jeux aquatique.
+ */
+export function requiresMinimumTwoParticipants(activityName) {
+  const name = normalizeActivityName(activityName);
+  if (!name) return false;
+  if (name.includes("el gouna") || name.includes("el goune")) return true;
+  if (name.includes("karting")) return true;
+  if (name.includes("parachute")) return true;
+  if (name.includes("combo") && name.includes("aquatique")) return true;
+  if (name.includes("jeux aquatique")) return true;
+  return false;
+}
+
+/** Adultes + enfants (les bébés ne comptent pas pour le minimum). */
+export function countBookableParticipants(counts = {}) {
+  return Number(counts.adults || 0) + Number(counts.children || 0);
+}
+
+export function getMinimumParticipantsRequired(activityName) {
+  return requiresMinimumTwoParticipants(activityName) ? 2 : 1;
+}
+
+export function hasEnoughParticipantsForActivity(activityName, counts = {}) {
+  const min = getMinimumParticipantsRequired(activityName);
+  return countBookableParticipants(counts) >= min;
+}
+
 function hasAllTokens(name, tokens) {
   if (!name) return false;
   return tokens.every((token) => name.includes(token));

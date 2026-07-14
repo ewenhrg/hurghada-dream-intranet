@@ -25,6 +25,8 @@ import {
   getZeroTracasPrices,
   getZeroTracasHorsZonePrices,
   proseFromActivityNotes,
+  requiresMinimumTwoParticipants,
+  hasEnoughParticipantsForActivity,
 } from "../utils/activityHelpers";
 import {
   computePublicCatalogLineTotal,
@@ -212,6 +214,8 @@ function BookingCardShell({
   childrenBeforeParticipants,
   codedTotalPending = false,
   babiesForbidden = false,
+  requiresMinTwo = false,
+  participantsOk = true,
 }) {
   const currency = activity.currency || "EUR";
   const ageChild = String(activity.age_child || "").trim();
@@ -263,6 +267,12 @@ function BookingCardShell({
       </div>
 
       {childrenBeforeParticipants}
+
+      {requiresMinTwo ? (
+        <p className="rounded-xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-sm font-semibold text-amber-950">
+          Minimum 2 personnes (adultes + enfants) pour réserver.
+        </p>
+      ) : null}
 
       <ParticipantSelect
         Icon={IconUsers}
@@ -340,6 +350,11 @@ function BookingCardShell({
         </button>
         {dateError ? (
           <p className="mt-2 text-center text-sm text-red-500">Veuillez sélectionner une date</p>
+        ) : null}
+        {requiresMinTwo && !participantsOk ? (
+          <p className="mt-2 text-center text-sm font-semibold text-red-600">
+            Ajoutez au moins 2 personnes (adultes + enfants).
+          </p>
         ) : null}
       </div>
     </div>
@@ -949,7 +964,17 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   const informationsBody = publicProseFull || DEFAULT_INFOS;
 
-  const canAddToCart = Boolean(date) && !noDatesConfigured && !codedTotalPending;
+  const canAddToCart =
+    Boolean(date) &&
+    !noDatesConfigured &&
+    !codedTotalPending &&
+    hasEnoughParticipantsForActivity(activity?.name, { adults, children: childCount });
+
+  const requiresMinTwo = requiresMinimumTwoParticipants(activity?.name);
+  const participantsOk = hasEnoughParticipantsForActivity(activity?.name, {
+    adults,
+    children: childCount,
+  });
   const showDateHint = !date && !noDatesConfigured;
 
   useEffect(() => {
@@ -1104,6 +1129,14 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   function appendToCartAndReturn() {
     if (!activity || !date) return;
+    if (
+      !hasEnoughParticipantsForActivity(activity.name, {
+        adults,
+        children: childCount,
+      })
+    ) {
+      return;
+    }
     const prev = loadPublicCatalogueCart();
     const line = {
       id: `${activity.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -1389,6 +1422,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   codedTotalPending={codedTotalPending}
                   babiesForbidden={babiesForbidden}
                   priceCaption={bookingPriceCaption}
+                  requiresMinTwo={requiresMinTwo}
+                  participantsOk={participantsOk}
                 />
               </div>
             </div>
@@ -1422,6 +1457,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
               codedTotalPending={codedTotalPending}
               babiesForbidden={babiesForbidden}
               priceCaption={bookingPriceCaption}
+              requiresMinTwo={requiresMinTwo}
+              participantsOk={participantsOk}
             />
           </div>
         </div>

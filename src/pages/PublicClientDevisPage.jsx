@@ -6,6 +6,10 @@ import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "../utils/publicCatalogPricing";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
+import {
+  requiresMinimumTwoParticipants,
+  hasEnoughParticipantsForActivity,
+} from "../utils/activityHelpers";
 
 /** `*` : toutes les colonnes présentes en base (évite erreur si `babies_forbidden` n’est pas encore migrée). */
 const ACTIVITY_COLUMNS = "*";
@@ -371,6 +375,25 @@ export function PublicClientDevisPage() {
       setError("Ajoute au moins une activité au panier.");
       return;
     }
+
+    const belowMinTwo = cartLines.filter((line) => {
+      const name = line.activity?.name || line.activityName || "";
+      if (!requiresMinimumTwoParticipants(name)) return false;
+      return !hasEnoughParticipantsForActivity(name, {
+        adults: line.adults,
+        children: line.children,
+      });
+    });
+    if (belowMinTwo.length > 0) {
+      const names = belowMinTwo
+        .map((line) => line.activity?.name || line.activityName || "activité")
+        .join(", ");
+      setError(
+        `${names} : minimum 2 personnes (adultes + enfants) pour réserver. Retire la ligne et recommence depuis la fiche activité.`,
+      );
+      return;
+    }
+
     if (!supabase || !__SUPABASE_DEBUG__.isConfigured) {
       setError("Base indisponible. Réessaie dans quelques minutes.");
       return;

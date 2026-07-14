@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -874,6 +874,23 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       const activityNames = activitiesWithoutParticipants.map(c => c.act?.name || "une activité sans nom").join(", ");
       toast.error(
         `L'activité ou les activités suivantes n'ont pas de participants (adultes, enfants, bébés ou véhicules) : ${activityNames}. Veuillez ajouter au moins 1 participant pour chaque activité.`,
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Minimum 2 personnes (adultes + enfants) pour El Gouna, Karting, Parachute, Combo aquatique
+    const activitiesBelowMinTwo = validComputed.filter((c) => {
+      if (!requiresMinimumTwoParticipants(c.act?.name)) return false;
+      return !hasEnoughParticipantsForActivity(c.act?.name, {
+        adults: c.raw.adults,
+        children: c.raw.children,
+      });
+    });
+    if (activitiesBelowMinTwo.length > 0) {
+      const activityNames = activitiesBelowMinTwo.map((c) => c.act?.name || "activité").join(", ");
+      toast.error(
+        `${activityNames} : minimum 2 personnes (adultes + enfants) pour réserver.`,
       );
       setIsSubmitting(false);
       return;
@@ -2441,6 +2458,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               ) : (
                 <div className="bg-gradient-to-br from-slate-50/80 to-gray-50/60 border-2 border-slate-200/60 rounded-xl p-4 md:p-5">
                   <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">👥 Participants</label>
+                  {requiresMinimumTwoParticipants(c.act?.name) && (
+                    <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
+                      Minimum 2 personnes (adultes + enfants) pour réserver cette activité.
+                    </p>
+                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-2">Adultes</label>
