@@ -1,6 +1,8 @@
 import { useMemo, useCallback, useState, useEffect } from "react";
-import { GhostBtn, PrimaryBtn } from "../components/ui";
-import { UserQuotesCalendarSection } from "../components/dashboard/UserQuotesCalendarSection";
+import { motion } from "framer-motion";
+import { ChevronRight, Search, Users } from "lucide-react";
+import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
+import { UserActivityDetailModal } from "../components/dashboard/UserActivityDetailModal";
 import { loadLS } from "../utils";
 import { LS_KEYS } from "../constants";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
@@ -10,6 +12,10 @@ import {
   isPresenceRowActiveUser,
   loadPresenceSessions,
 } from "../utils/presenceSessions";
+import {
+  buildQuotesCountByUserAndDay,
+  getTotalQuotesForUser,
+} from "../utils/quoteUserStats";
 
 /**
  * Regroupe les entrées Realtime Presence (une par onglet / connexion) par code utilisateur.
@@ -39,6 +45,13 @@ function formatOnlineSince(onlineAt) {
   return formatDurationMs(ms);
 }
 
+function userMapKey(user) {
+  const code = user?.code != null && String(user.code).trim() !== "" ? String(user.code).trim() : "";
+  const name = String(user?.name || "").trim();
+  if (code) return `code:${code}`;
+  return `name:${name.toLowerCase()}`;
+}
+
 const MAX_SCREEN_MESSAGE_LEN = 500;
 
 export function EwenDashboardPage({
@@ -55,6 +68,8 @@ export function EwenDashboardPage({
   const [messageTargetRow, setMessageTargetRow] = useState(null);
   const [messageDraft, setMessageDraft] = useState("");
   const [messageSending, setMessageSending] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userSearch, setUserSearch] = useState("");
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -107,10 +122,73 @@ export function EwenDashboardPage({
     return all.filter((row) => isPresenceRowActiveUser(row, directoryUsers));
   }, [presenceState, directoryUsers]);
 
+  const onlineKeySet = useMemo(() => {
+    const set = new Set();
+    for (const row of onlineRows) {
+      if (row.code) set.add(`code:${row.code}`);
+      if (row.name) set.add(`name:${String(row.name).toLowerCase()}`);
+    }
+    return set;
+  }, [onlineRows]);
+
   const connectionActivity = useMemo(
     () => buildConnectionActivityByUser(sessionRows, directoryUsers),
     [sessionRows, directoryUsers]
   );
+
+  const activityByKey = useMemo(() => {
+    const map = new Map();
+    for (const entry of connectionActivity) {
+      map.set(userMapKey(entry), entry);
+    }
+    return map;
+  }, [connectionActivity]);
+
+  const quotesByUser = useMemo(() => buildQuotesCountByUserAndDay(quotes), [quotes]);
+
+  const registeredUsers = useMemo(() => {
+    const list = (directoryUsers || [])
+      .map((u) => ({
+        id: u.id,
+        name: String(u?.name || "").trim(),
+        code: u?.code != null && String(u.code).trim() !== "" ? String(u.code).trim() : "",
+      }))
+      .filter((u) => u.name);
+    list.sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }));
+    return list;
+  }, [directoryUsers]);
+
+  const filteredUsers = useMemo(() => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return registeredUsers;
+    return registeredUsers.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        (u.code && u.code.toLowerCase().includes(q))
+    );
+  }, [registeredUsers, userSearch]);
+
+  const selectedActivity = useMemo(() => {
+    if (!selectedUser) return null;
+    return activityByKey.get(userMapKey(selectedUser)) || { days: [], totalMs: 0 };
+  }, [selectedUser, activityByKey]);
+
+  const selectedQuoteDays = useMemo(() => {
+    if (!selectedUser?.name) return new Map();
+    // Match accent-insensitive via quote map keys
+    for (const [name, dayMap] of quotesByUser) {
+      if (name.localeCompare(selectedUser.name, "fr", { sensitivity: "accent" }) === 0) {
+        return dayMap;
+      }
+    }
+    return new Map();
+  }, [selectedUser, quotesByUser]);
+
+  const selectedIsOnline = useMemo(() => {
+    if (!selectedUser) return false;
+    if (selectedUser.code && onlineKeySet.has(`code:${selectedUser.code}`)) return true;
+    return onlineKeySet.has(`name:${selectedUser.name.toLowerCase()}`);
+  }, [selectedUser, onlineKeySet]);
 
   const handleForceLogoutRow = useCallback(
     (row) => {
@@ -173,16 +251,20 @@ export function EwenDashboardPage({
               Vue d&apos;ensemble
             </h1>
             <p className="mt-1 max-w-xl text-sm text-white/70">
-              Présence, activité de connexion et devis créés — uniquement pour les comptes encore dans Utilisateurs.
+              Clique sur un prénom pour ouvrir le calendrier (jours connectés, heures, devis) et le bilan du mois.
             </p>
           </div>
           <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 backdrop-blur-sm">
-            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 shadow shadow-emerald-500/50 animate-pulse" aria-hidden />
+            <span
+              className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 shadow shadow-emerald-500/50 animate-pulse"
+              aria-hidden
+            />
             Connecté : <span className="font-semibold text-white">{user?.name || "—"}</span>
           </div>
         </div>
       </header>
 
+      {/* En ligne */}
       <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 shadow-md shadow-slate-900/5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100/90 bg-gradient-to-r from-emerald-50/80 via-teal-50/50 to-slate-50/80 px-5 py-4">
           <div>
@@ -213,7 +295,16 @@ export function EwenDashboardPage({
                   key={row.mapKey}
                   className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-slate-50/70"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    onClick={() =>
+                      setSelectedUser({
+                        name: row.name,
+                        code: row.code || "",
+                      })
+                    }
+                  >
                     <span
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-sm font-bold text-white shadow-md shadow-emerald-600/20"
                       aria-hidden
@@ -221,13 +312,15 @@ export function EwenDashboardPage({
                       {(row.name || "?").slice(0, 1).toUpperCase()}
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-900">{row.name}</p>
+                      <p className="truncate font-semibold text-slate-900 hover:text-violet-700">
+                        {row.name}
+                      </p>
                       <p className="text-xs text-slate-500">
                         {row.code ? `Code · ${row.code}` : "Pas de code en session"}
                         {since ? ` · connecté depuis ${since}` : ""}
                       </p>
                     </div>
-                  </div>
+                  </button>
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                     {row.sessions > 1 && (
                       <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
@@ -268,61 +361,103 @@ export function EwenDashboardPage({
         )}
       </section>
 
+      {/* Liste équipe */}
       <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 shadow-md shadow-slate-900/5">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100/90 bg-gradient-to-r from-slate-50/95 via-indigo-50/40 to-cyan-50/40 px-5 py-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Activité de connexion</h2>
-            <p className="mt-0.5 text-sm text-slate-600">
-              Jours connectés et durée (sessions fusionnées si plusieurs onglets). Historique ~60 jours.
-            </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100/90 bg-gradient-to-r from-violet-50/90 via-indigo-50/50 to-cyan-50/40 px-5 py-4">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 text-white shadow-md shadow-violet-600/25">
+              <Users className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Équipe enregistrée</h2>
+              <p className="mt-0.5 text-sm text-slate-600">
+                Tous les comptes Utilisateurs — clique sur un prénom pour le détail du mois.
+              </p>
+            </div>
+          </div>
+          <span className="rounded-lg border border-violet-200/80 bg-white/90 px-3 py-1 text-sm font-medium tabular-nums text-violet-900">
+            {registeredUsers.length} compte{registeredUsers.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        <div className="border-b border-slate-100 px-4 py-3 sm:px-5">
+          <div className="relative max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <TextInput
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              placeholder="Rechercher un prénom ou un code…"
+              className="pl-10"
+              aria-label="Rechercher un utilisateur"
+            />
           </div>
         </div>
 
-        {sessionsLoading && connectionActivity.every((u) => u.days.length === 0) ? (
-          <div className="p-8 text-center text-sm text-slate-500">Chargement des sessions…</div>
-        ) : connectionActivity.length === 0 ? (
+        {sessionsLoading && registeredUsers.length === 0 ? (
+          <div className="p-8 text-center text-sm text-slate-500">Chargement…</div>
+        ) : filteredUsers.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500">
-            Aucun utilisateur dans le répertoire pour afficher l&apos;activité.
+            {registeredUsers.length === 0
+              ? "Aucun utilisateur dans le répertoire."
+              : "Aucun résultat pour cette recherche."}
           </div>
         ) : (
-          <div className="grid gap-4 p-4 sm:grid-cols-2 md:p-5 xl:grid-cols-3">
-            {connectionActivity.map((entry) => (
-              <article
-                key={`${entry.code || ""}-${entry.name}`}
-                className="rounded-xl border border-slate-200/90 bg-white/90 p-4 shadow-sm shadow-indigo-900/5"
-              >
-                <div className="mb-3 flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-600 text-sm font-bold text-white">
-                      {(entry.name || "?").slice(0, 1).toUpperCase()}
-                    </span>
-                    <div className="min-w-0">
-                      <h3 className="truncate font-semibold text-slate-900">{entry.name}</h3>
-                      <p className="text-xs text-slate-500">
-                        {entry.days.length} jour{entry.days.length !== 1 ? "s" : ""} ·{" "}
-                        {formatDurationMs(entry.totalMs)} cumulé
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                {entry.days.length === 0 ? (
-                  <p className="text-xs text-slate-400">Aucune session enregistrée pour l&apos;instant.</p>
-                ) : (
-                  <ul className="max-h-48 space-y-1.5 overflow-y-auto pr-1">
-                    {entry.days.slice(0, 21).map((day) => (
-                      <li
-                        key={day.dateKey}
-                        className="flex items-center justify-between gap-2 rounded-lg bg-slate-50/80 px-2.5 py-1.5 text-xs"
+          <ul className="divide-y divide-slate-100/90">
+            {filteredUsers.map((u, index) => {
+              const key = userMapKey(u);
+              const online =
+                (u.code && onlineKeySet.has(`code:${u.code}`)) ||
+                onlineKeySet.has(`name:${u.name.toLowerCase()}`);
+              const activity = activityByKey.get(key);
+              const totalQuotes = getTotalQuotesForUser(quotes, u.name);
+              return (
+                <motion.li
+                  key={key}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.28, delay: Math.min(index * 0.03, 0.35) }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedUser(u)}
+                    className="group flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-violet-50/60 sm:px-5"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-md ${
+                          online
+                            ? "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-600/20"
+                            : "bg-gradient-to-br from-slate-500 to-slate-700 shadow-slate-700/20"
+                        }`}
                       >
-                        <span className="font-medium capitalize text-slate-700">{day.label}</span>
-                        <span className="tabular-nums text-slate-600">{formatDurationMs(day.durationMs)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </article>
-            ))}
-          </div>
+                        {u.name.slice(0, 1).toUpperCase()}
+                        {online ? (
+                          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-400" />
+                        ) : null}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-900 group-hover:text-violet-800">
+                          {u.name}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {u.code ? `Code · ${u.code}` : "Sans code"}
+                          {" · "}
+                          {totalQuotes} devis au total
+                          {activity?.totalMs
+                            ? ` · ${formatDurationMs(activity.totalMs)} cumuls récents`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="flex shrink-0 items-center gap-2 text-xs font-semibold text-violet-600 opacity-80 group-hover:opacity-100">
+                      Calendrier
+                      <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                    </span>
+                  </button>
+                </motion.li>
+              );
+            })}
+          </ul>
         )}
       </section>
 
@@ -343,7 +478,8 @@ export function EwenDashboardPage({
               </h2>
               <p className="mt-0.5 text-sm text-white/85">
                 {messageTargetRow.name}
-                {messageTargetRow.code ? ` · code ${messageTargetRow.code}` : ""} — affichage ~3 secondes.
+                {messageTargetRow.code ? ` · code ${messageTargetRow.code}` : ""} — affichage ~3
+                secondes.
               </p>
             </div>
             <div className="space-y-3 p-5">
@@ -380,7 +516,14 @@ export function EwenDashboardPage({
         </div>
       )}
 
-      <UserQuotesCalendarSection quotes={quotes} users={directoryUsers} />
+      <UserActivityDetailModal
+        open={Boolean(selectedUser)}
+        onClose={() => setSelectedUser(null)}
+        user={selectedUser}
+        activityDays={selectedActivity?.days || []}
+        quoteCountByDay={selectedQuoteDays}
+        isOnline={selectedIsOnline}
+      />
     </div>
   );
 }

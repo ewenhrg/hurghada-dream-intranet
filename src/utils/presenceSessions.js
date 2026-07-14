@@ -226,6 +226,37 @@ export function formatDurationMs(ms) {
   return `${hours} h ${minutes} min`;
 }
 
+/** Format compact pour cellules calendrier (ex. 2h20, 45m). */
+export function formatDurationCompact(ms) {
+  const totalMin = Math.max(0, Math.round(Number(ms) / 60000));
+  if (totalMin < 1) return "<1m";
+  const hours = Math.floor(totalMin / 60);
+  const minutes = totalMin % 60;
+  if (hours <= 0) return `${minutes}m`;
+  if (minutes <= 0) return `${hours}h`;
+  return `${hours}h${String(minutes).padStart(2, "0")}`;
+}
+
+/** Cumul de durée pour un mois donné (days = [{ dateKey, durationMs }]). */
+export function getMonthDurationTotal(days = [], year, month) {
+  const prefix = `${year}-${String(month + 1).padStart(2, "0")}-`;
+  let total = 0;
+  for (const day of days) {
+    if (day?.dateKey?.startsWith(prefix)) total += Number(day.durationMs) || 0;
+  }
+  return total;
+}
+
+/** Map dateKey → durationMs pour accès rapide. */
+export function buildDurationByDayMap(days = []) {
+  const map = new Map();
+  for (const day of days) {
+    if (!day?.dateKey) continue;
+    map.set(day.dateKey, Number(day.durationMs) || 0);
+  }
+  return map;
+}
+
 /**
  * Agrège les sessions par utilisateur actif puis par jour.
  * @returns {Array<{ name, code, days: Array<{ dateKey, durationMs, label }>, totalMs }>}
