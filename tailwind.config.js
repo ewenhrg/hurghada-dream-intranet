@@ -1,6 +1,7 @@
 /* eslint-env node */
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: ["class"],
   content: [
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
@@ -8,6 +9,11 @@ export default {
   // Tailwind v3+ purge automatiquement via `content`.
   theme: {
     extend: {
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
         display: ['Outfit', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
@@ -16,6 +22,42 @@ export default {
         'catalog-display': ['Literata', 'Georgia', 'ui-serif', 'serif'],
       },
       colors: {
+        /** Tokens shadcn/ui (mappés sur les variables CSS de src/index.css).
+         *  Utilisés uniquement par les primitives shadcn ; le thème cosmique
+         *  reste piloté par html/body + .hd-card et n'est pas affecté. */
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        primary: {
+          DEFAULT: "var(--primary)",
+          foreground: "var(--primary-foreground)",
+        },
+        secondary: {
+          DEFAULT: "var(--secondary)",
+          foreground: "var(--secondary-foreground)",
+        },
+        destructive: {
+          DEFAULT: "var(--destructive)",
+          foreground: "var(--primary-foreground)",
+        },
+        muted: {
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
+        },
+        accent: {
+          DEFAULT: "var(--accent)",
+          foreground: "var(--accent-foreground)",
+        },
+        popover: {
+          DEFAULT: "var(--popover)",
+          foreground: "var(--popover-foreground)",
+        },
+        card: {
+          DEFAULT: "var(--card)",
+          foreground: "var(--card-foreground)",
+        },
         /** Palette catalogue public — nuit violette, corail, brume claire */
         catalog: {
           bg: '#e8e2f7',

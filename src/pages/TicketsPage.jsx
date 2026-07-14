@@ -1,5 +1,23 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import * as XLSX from "xlsx";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import {
+  Search,
+  X,
+  Copy,
+  CopyCheck,
+  Download,
+  RotateCcw,
+  Ticket,
+  Sparkles,
+  ListChecks,
+  CheckCircle2,
+  Clock,
+  Phone,
+  MapPin,
+  Banknote,
+  CreditCard,
+} from "lucide-react";
 import { currencyNoCents, saveLS, loadLS } from "../utils";
 import { LS_KEYS } from "../constants";
 import { formatQuoteItemParticipantsSummary } from "../utils/quoteItemDisplay.js";
@@ -15,11 +33,29 @@ const slotLabel = (slot) =>
         ? "Soir"
         : "";
 
-const paymentLabel = (method) =>
-  method === "cash" ? "💵 Cash" : method === "stripe" ? "💳 Stripe" : "—";
-
 const paymentText = (method) =>
   method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
+
+// Badge de paiement : icône Lucide + libellé, couleurs alignées sur le thème.
+function PaymentBadge({ method }) {
+  if (method === "cash") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/70 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+        <Banknote className="size-3.5" aria-hidden="true" />
+        Cash
+      </span>
+    );
+  }
+  if (method === "stripe") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-300/70 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+        <CreditCard className="size-3.5" aria-hidden="true" />
+        Stripe
+      </span>
+    );
+  }
+  return <span className="text-slate-400">—</span>;
+}
 
 const EXPORT_HEADERS = [
   "N° Ticket",
@@ -247,166 +283,300 @@ export function TicketsPage({ quotes = [] }) {
     toast.success("Marques réinitialisées.");
   }, [copied]);
 
-  const filterPill = (value, label) => (
-    <button
-      type="button"
-      onClick={() => setStatusFilter(value)}
-      className={`rounded-lg px-3 py-1.5 text-xs font-bold border-2 transition-colors ${
-        statusFilter === value
-          ? "border-indigo-500 bg-indigo-600 text-white"
-          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-      }`}
-    >
-      {label}
-    </button>
+  const newInFilteredCount = useMemo(
+    () => filtered.filter((r) => !copied.has(r.ticketNumber)).length,
+    [filtered, copied]
   );
 
+  const reduceMotion = useReducedMotion();
+  const fade = {
+    initial: reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    exit: reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 },
+    transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
+  };
+
+  const FILTERS = [
+    { value: "all", label: "Toutes", icon: ListChecks, count: rows.length },
+    { value: "new", label: "Nouvelles", icon: Sparkles, count: newCount },
+    { value: "copied", label: "Copiées", icon: CheckCircle2, count: copiedCount },
+  ];
+
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="w-full md:max-w-md">
+    <motion.div
+      className="space-y-5"
+      initial={fade.initial}
+      animate={fade.animate}
+      transition={fade.transition}
+    >
+      {/* Barre d'outils : recherche + actions principales */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative w-full lg:max-w-md">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+              aria-hidden="true"
+            />
             <TextInput
+              type="search"
               placeholder="Rechercher : n° ticket, client, téléphone, activité, hôtel…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="w-full"
+              aria-label="Rechercher un ticket"
+              className="w-full !pl-11 !pr-10"
             />
+            {q ? (
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                aria-label="Effacer la recherche"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 grid size-7 place-items-center rounded-full text-slate-400 hover:bg-slate-200/70 hover:text-slate-600 transition-colors"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            ) : null}
           </div>
+
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => void handleCopyNew()}
-              disabled={filtered.filter((r) => !copied.has(r.ticketNumber)).length === 0}
-              className="rounded-xl px-3 py-2 text-sm font-bold text-white border-2 border-emerald-500 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-md transition-opacity disabled:opacity-50"
+              disabled={newInFilteredCount === 0}
+              className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 shadow-[0_10px_24px_-12px_rgba(16,185,129,0.7)] hover:from-emerald-600 hover:to-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none transition-all"
               title="Copie uniquement les lignes pas encore copiées, puis les marque comme copiées"
             >
-              📋 Copier les nouvelles
+              <Copy className="size-4" aria-hidden="true" />
+              Copier les nouvelles
+              {newInFilteredCount > 0 ? (
+                <span className="ml-0.5 rounded-full bg-white/25 px-1.5 py-0.5 text-xs font-bold tabular-nums">
+                  {newInFilteredCount}
+                </span>
+              ) : null}
             </button>
             <button
               type="button"
               onClick={() => void handleCopyAll()}
               disabled={filtered.length === 0}
-              className="rounded-xl px-3 py-2 text-sm font-bold text-slate-700 border-2 border-slate-300 bg-white hover:bg-slate-50 shadow-sm transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white/70 px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-white hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 focus-visible:ring-offset-2 disabled:opacity-50 transition-all"
               title="Recopie toutes les lignes affichées (même déjà copiées)"
             >
-              📋 Tout copier
+              <CopyCheck className="size-4" aria-hidden="true" />
+              Tout copier
             </button>
             <button
               type="button"
               onClick={handleExportXlsx}
               disabled={filtered.length === 0}
-              className="rounded-xl px-3 py-2 text-sm font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md transition-opacity disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 shadow-[0_10px_24px_-12px_rgba(99,102,241,0.7)] hover:from-indigo-600 hover:to-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none transition-all"
               title="Télécharger un fichier Excel (.xlsx)"
             >
-              ⬇️ Exporter .xlsx
+              <Download className="size-4" aria-hidden="true" />
+              Exporter .xlsx
             </button>
           </div>
         </div>
 
+        {/* Filtres (segmented control) + réinitialisation */}
         <div className="flex flex-wrap items-center gap-2">
-          {filterPill("all", `Toutes (${rows.length})`)}
-          {filterPill("new", `🆕 Nouvelles (${newCount})`)}
-          {filterPill("copied", `✅ Copiées (${copiedCount})`)}
+          <div
+            role="group"
+            aria-label="Filtrer les tickets par état"
+            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1"
+          >
+            {FILTERS.map(({ value, label, icon: Icon, count }) => {
+              const active = statusFilter === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setStatusFilter(value)}
+                  aria-pressed={active}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                    active
+                      ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <Icon className="size-3.5" aria-hidden="true" />
+                  {label}
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[0.65rem] font-bold tabular-nums ${
+                      active ? "bg-indigo-100 text-indigo-700" : "bg-slate-200/80 text-slate-500"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <button
             type="button"
             onClick={handleResetCopied}
-            className="rounded-lg px-3 py-1.5 text-xs font-bold border-2 border-rose-200 bg-white text-rose-600 hover:bg-rose-50 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white/70 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/40 focus-visible:ring-offset-2 transition-all"
             title="Efface toutes les marques « copié »"
           >
-            ♻️ Réinitialiser les marques
+            <RotateCcw className="size-3.5" aria-hidden="true" />
+            Réinitialiser les marques
           </button>
-          <span className="ml-auto text-xs text-slate-500 font-medium">
+
+          <span className="ml-auto text-xs font-medium text-slate-500 tabular-nums">
             Affichées : {filtered.length}
           </span>
         </div>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-10 text-center">
-          <p className="text-3xl mb-2">🎟️</p>
-          <p className="text-slate-600 font-semibold">
-            {rows.length === 0
-              ? "Aucun ticket pour le moment. Générez des tickets depuis l'Historique (bouton « Ticket »)."
-              : statusFilter === "new"
-                ? "Aucune nouvelle ligne : tout a déjà été copié 🎉"
-                : "Aucun ticket ne correspond à votre recherche."}
-          </p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-                <th className="px-3 py-3 text-center font-semibold whitespace-nowrap">État</th>
-                <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">N° Ticket</th>
-                <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">Activité</th>
-                <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">Date</th>
-                <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">Pick-up</th>
-                <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">Client</th>
-                <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">Téléphone</th>
-                <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">Hôtel / Chambre</th>
-                <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">Personnes</th>
-                <th className="px-3 py-3 text-right font-semibold whitespace-nowrap">Prix</th>
-                <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">Paiement</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => {
-                const isCopied = copied.has(r.ticketNumber);
-                return (
-                  <tr
-                    key={r.key}
-                    className={`border-t border-slate-200 transition-colors ${
-                      isCopied
-                        ? "bg-slate-100/80 text-slate-400"
-                        : "bg-amber-50/60 hover:bg-amber-100/60"
-                    }`}
-                  >
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1.5 justify-center">
-                        <button
-                          type="button"
-                          onClick={() => void handleCopyRow(r)}
-                          className="rounded-lg px-2.5 py-1 text-xs font-bold text-white border-2 border-emerald-500 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-sm transition-colors whitespace-nowrap"
-                          title="Copier cette ligne dans le presse-papiers (Ctrl+V dans Excel)"
-                        >
-                          📋 Copier
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => toggleCopied(r.ticketNumber)}
-                          className={`rounded-full px-2 py-1 text-xs font-bold border-2 transition-colors whitespace-nowrap ${
-                            isCopied
-                              ? "border-emerald-300 bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                              : "border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200"
-                          }`}
-                          title={isCopied ? "Marquée comme copiée — cliquer pour annuler" : "Nouvelle — cliquer pour marquer comme copiée sans copier"}
-                        >
-                          {isCopied ? "✅" : "🆕"}
-                        </button>
-                      </div>
-                    </td>
-                    <td className={`px-3 py-2.5 font-bold whitespace-nowrap ${isCopied ? "text-slate-400" : "text-indigo-700"}`}>{r.ticketNumber}</td>
-                    <td className={`px-3 py-2.5 font-semibold ${isCopied ? "text-slate-400" : "text-slate-800"}`}>{r.activityName}</td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">{formatDate(r.date)}</td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">{r.pickup || "—"}</td>
-                    <td className={`px-3 py-2.5 font-medium ${isCopied ? "text-slate-400" : "text-slate-800"}`}>{r.clientName}</td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">{r.phone}</td>
-                    <td className="px-3 py-2.5">
-                      {r.hotel || "—"}
-                      {r.room ? <span className={isCopied ? "text-slate-400" : "text-slate-500"}> · Ch. {r.room}</span> : null}
-                    </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">{r.pax}</td>
-                    <td className={`px-3 py-2.5 text-right font-bold whitespace-nowrap ${isCopied ? "text-slate-400" : "text-emerald-700"}`}>{r.price}</td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">{paymentLabel(r.paymentMethod)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+      <AnimatePresence mode="wait" initial={false}>
+        {filtered.length === 0 ? (
+          <motion.div
+            key="empty"
+            initial={fade.initial}
+            animate={fade.animate}
+            exit={fade.exit}
+            transition={fade.transition}
+            className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/70 p-10 text-center"
+          >
+            <span className="mx-auto mb-3 grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 text-indigo-500">
+              <Ticket className="size-7" aria-hidden="true" />
+            </span>
+            <p className="font-semibold text-slate-600">
+              {rows.length === 0
+                ? "Aucun ticket pour le moment. Générez des tickets depuis l'Historique (bouton « Ticket »)."
+                : statusFilter === "new"
+                  ? "Aucune nouvelle ligne : tout a déjà été copié."
+                  : "Aucun ticket ne correspond à votre recherche."}
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="table"
+            initial={fade.initial}
+            animate={fade.animate}
+            exit={fade.exit}
+            transition={fade.transition}
+            className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm"
+          >
+            <table className="w-full border-collapse text-sm">
+              <caption className="sr-only">
+                Liste des tickets générés, avec leur état de copie, activité, date, client et prix.
+              </caption>
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                  <th scope="col" className="px-3 py-3 text-center font-semibold whitespace-nowrap">État</th>
+                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">N° Ticket</th>
+                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Activité</th>
+                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Date</th>
+                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Pick-up</th>
+                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Client</th>
+                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Téléphone</th>
+                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Hôtel / Chambre</th>
+                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Personnes</th>
+                  <th scope="col" className="px-3 py-3 text-right font-semibold whitespace-nowrap">Prix</th>
+                  <th scope="col" className="px-3 py-3 text-left font-semibold whitespace-nowrap">Paiement</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r) => {
+                  const isCopied = copied.has(r.ticketNumber);
+                  return (
+                    <tr
+                      key={r.key}
+                      className={`border-t border-slate-200 transition-colors ${
+                        isCopied
+                          ? "bg-slate-100/80 text-slate-400"
+                          : "bg-amber-50/60 hover:bg-amber-100/60"
+                      }`}
+                    >
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-1.5 justify-center">
+                          <button
+                            type="button"
+                            onClick={() => void handleCopyRow(r)}
+                            aria-label={`Copier la ligne du ticket ${r.ticketNumber}`}
+                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 shadow-sm hover:from-emerald-600 hover:to-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-1 transition-colors whitespace-nowrap"
+                            title="Copier cette ligne dans le presse-papiers (Ctrl+V dans Excel)"
+                          >
+                            <Copy className="size-3.5" aria-hidden="true" />
+                            <span className="hidden sm:inline">Copier</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleCopied(r.ticketNumber)}
+                            aria-pressed={isCopied}
+                            aria-label={
+                              isCopied
+                                ? `Ticket ${r.ticketNumber} marqué comme copié — annuler`
+                                : `Marquer le ticket ${r.ticketNumber} comme copié`
+                            }
+                            className={`grid size-7 place-items-center rounded-full border transition-colors ${
+                              isCopied
+                                ? "border-emerald-300 bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                : "border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200"
+                            }`}
+                            title={isCopied ? "Marquée comme copiée — cliquer pour annuler" : "Nouvelle — cliquer pour marquer comme copiée sans copier"}
+                          >
+                            {isCopied ? (
+                              <CheckCircle2 className="size-4" aria-hidden="true" />
+                            ) : (
+                              <Sparkles className="size-4" aria-hidden="true" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                      <th
+                        scope="row"
+                        className={`px-3 py-2.5 text-left font-bold whitespace-nowrap ${isCopied ? "text-slate-400" : "text-indigo-700"}`}
+                      >
+                        {r.ticketNumber}
+                      </th>
+                      <td className={`px-3 py-2.5 font-semibold ${isCopied ? "text-slate-400" : "text-slate-800"}`}>{r.activityName}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">{formatDate(r.date)}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {r.pickup ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <Clock className={`size-3.5 ${isCopied ? "text-slate-300" : "text-slate-400"}`} aria-hidden="true" />
+                            {r.pickup}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className={`px-3 py-2.5 font-medium ${isCopied ? "text-slate-400" : "text-slate-800"}`}>{r.clientName}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {r.phone && r.phone !== "—" ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <Phone className={`size-3.5 ${isCopied ? "text-slate-300" : "text-slate-400"}`} aria-hidden="true" />
+                            {r.phone}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {r.hotel ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <MapPin className={`size-3.5 shrink-0 ${isCopied ? "text-slate-300" : "text-slate-400"}`} aria-hidden="true" />
+                            {r.hotel}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                        {r.room ? <span className={isCopied ? "text-slate-400" : "text-slate-500"}> · Ch. {r.room}</span> : null}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">{r.pax}</td>
+                      <td className={`px-3 py-2.5 text-right font-bold tabular-nums whitespace-nowrap ${isCopied ? "text-slate-400" : "text-emerald-700"}`}>{r.price}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        <PaymentBadge method={r.paymentMethod} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

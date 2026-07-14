@@ -1176,33 +1176,45 @@ export default function App() {
           <div className="flex w-full min-w-0 flex-col gap-3">
             {/* Ligne 1 : identité + langue + déconnexion (ne mange pas la largeur des onglets) */}
             <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-3">
-              <div className="flex min-w-0 max-w-full flex-1 items-center gap-2 md:gap-3.5">
+              <div className="flex min-w-0 max-w-full flex-1 items-center gap-3 md:gap-4">
+            <div
+              className="relative flex-shrink-0 rounded-2xl p-[2px]"
+              style={{
+                background: 'linear-gradient(135deg, rgba(168,85,247,0.9), rgba(99,102,241,0.75), rgba(34,211,238,0.85))',
+                boxShadow: '0 0 24px -6px rgba(139,92,246,0.6), 0 12px 28px -18px rgba(7,13,31,0.7)'
+              }}
+            >
             <img 
               src="/logo.png" 
               alt="Hurghada Dream Logo" 
-              className="w-10 h-10 md:w-12 md:h-12 object-contain rounded-lg shadow-md border flex-shrink-0"
-              style={{ borderColor: 'rgba(226, 232, 240, 0.6)' }}
+              className="w-12 h-12 md:w-14 md:h-14 object-contain rounded-[0.85rem] block"
+              style={{ background: 'rgba(9,10,32,0.85)' }}
               onError={(e) => {
                 // Fallback si le logo n'existe pas - afficher HD
                 e.target.style.display = 'none';
                 const parent = e.target.parentElement;
                 if (parent && !parent.querySelector('.fallback-logo')) {
                   const fallback = document.createElement('div');
-                  fallback.className = 'fallback-logo w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white grid place-items-center font-bold text-sm md:text-base shadow-md flex-shrink-0';
+                  fallback.className = 'fallback-logo w-12 h-12 md:w-14 md:h-14 rounded-[0.85rem] bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white grid place-items-center font-bold text-base md:text-lg';
                   fallback.textContent = 'HD';
                   parent.appendChild(fallback);
                 }
               }}
             />
-            <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
-              <h1 className="hd-text-gradient text-base font-bold truncate" style={{ letterSpacing: '-0.03em', fontSize: '1.05rem' }}>
+            </div>
+            <div className="space-y-1 min-w-0 flex-1">
+              <h1 className="hd-text-gradient font-bold truncate leading-tight" style={{ letterSpacing: '-0.035em', fontSize: '1.3rem' }}>
                 {t("header.title")}
               </h1>
-              <p className="font-medium hidden md:block" style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.6875rem' }}>{t("header.subtitle")}</p>
+              <p className="font-medium hidden md:block" style={{ color: 'rgba(255, 255, 255, 0.62)', fontSize: '0.72rem', letterSpacing: '0.01em' }}>{t("header.subtitle")}</p>
               {user && (
-                <span className="badge-soft px-2 py-1 md:px-2.5 md:py-1.5" style={{ fontSize: '0.6875rem' }}>
-                  <span>👤</span>
-                  <span className="truncate" style={{ maxWidth: '120px' }}>
+                <span className="badge-soft px-2.5 py-1 md:px-3 md:py-1.5" style={{ fontSize: '0.7rem' }}>
+                  <span
+                    aria-hidden
+                    className="inline-block h-1.5 w-1.5 rounded-full"
+                    style={{ background: '#4ade80', boxShadow: '0 0 8px 1px rgba(74,222,128,0.8)' }}
+                  />
+                  <span className="truncate" style={{ maxWidth: '140px' }}>
                     {t("header.connected")} : {user.name}
                   </span>
                 </span>
@@ -1385,7 +1397,7 @@ export default function App() {
       {/* CONTENU CENTRÉ */}
       <main className={mainClassName}>
         <ScrollOptimizer>
-        <PageTransition>
+        <PageTransition transitionKey={tab}>
         {tab === "devis" ? (
           <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
               

@@ -1,92 +1,63 @@
-import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 /**
- * Composant pour gérer les transitions de page avec animations
+ * Transition entre pages / onglets avec Framer Motion.
+ * `transitionKey` : change de valeur => rejoue l'animation (fondu + glissement doux).
  */
-export function PageTransition({ children }) {
-  const location = useLocation();
-  const [displayLocation, setDisplayLocation] = useState(location);
-  const [transitionStage, setTransitionStage] = useState("entering");
-
-  useEffect(() => {
-    if (location !== displayLocation) {
-      setTransitionStage("exiting");
-    }
-  }, [location, displayLocation]);
-
-  useEffect(() => {
-    if (transitionStage === "exiting") {
-      const timer = setTimeout(() => {
-        setDisplayLocation(location);
-        setTransitionStage("entering");
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-  }, [transitionStage, location]);
-
+export function PageTransition({ children, transitionKey }) {
   return (
-    <div
-      className={`animate-page-enter ${
-        transitionStage === "exiting" ? "opacity-0" : "opacity-100"
-      }`}
-      style={{
-        transition: "opacity 0.15s ease-out",
-      }}
-    >
-      {children}
-    </div>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={transitionKey ?? "page"}
+        initial={{ opacity: 0, y: 14, filter: "blur(6px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
-/**
- * Wrapper pour les éléments avec animation d'apparition
- */
+/** Apparition en fondu (montée douce) — pour du contenu ponctuel. */
 export function FadeIn({ children, delay = 0, className = "" }) {
   return (
-    <div
-      className={`animate-fade-in ${className}`}
-      style={{
-        animationDelay: `${delay}ms`,
-        animationFillMode: "both",
-      }}
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
-/**
- * Wrapper pour les éléments avec animation slide-up
- */
+/** Apparition avec glissement vers le haut. */
 export function SlideUp({ children, delay = 0, className = "" }) {
   return (
-    <div
-      className={`animate-slide-up ${className}`}
-      style={{
-        animationDelay: `${delay}ms`,
-        animationFillMode: "both",
-      }}
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
-/**
- * Wrapper pour les éléments avec animation scale-in
- */
+/** Apparition avec léger zoom. */
 export function ScaleIn({ children, delay = 0, className = "" }) {
   return (
-    <div
-      className={`animate-scale-in ${className}`}
-      style={{
-        animationDelay: `${delay}ms`,
-        animationFillMode: "both",
-      }}
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }
-

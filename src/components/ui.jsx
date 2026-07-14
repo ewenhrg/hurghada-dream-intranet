@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { motion } from "framer-motion";
 import { getTouchHandlers } from "../utils/touchHandler";
 
 export const Pill = memo(({ active, children, onClick, tone = "dark", className = "", ...props }) => {
@@ -133,7 +134,12 @@ export const GhostBtn = memo(({ className = "", size, variant = "neutral", onCli
 GhostBtn.displayName = "GhostBtn";
 
 export const Section = memo(({ title, subtitle, right, children, bare = false }) => (
-  <section className="space-y-4 md:space-y-6">
+  <motion.section
+    className="space-y-4 md:space-y-6"
+    initial={{ opacity: 0, y: 18 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
+  >
     <div className="flex flex-wrap items-start justify-between gap-3 md:gap-4">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-3 mb-1 md:mb-1.5">
@@ -156,7 +162,7 @@ export const Section = memo(({ title, subtitle, right, children, bare = false })
         {children}
       </div>
     )}
-  </section>
+  </motion.section>
 ));
 
 Section.displayName = "Section";
