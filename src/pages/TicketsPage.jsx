@@ -58,8 +58,13 @@ const EXPORT_HEADERS = [
 ];
 
 const TH =
-  "border border-slate-300 px-2 py-1.5 text-left text-[10px] font-bold uppercase tracking-wide text-slate-700 whitespace-nowrap bg-slate-100";
-const TD = "border border-slate-200 px-2 py-1.5 align-middle text-[12px] whitespace-nowrap";
+  "border border-slate-300 px-0.5 py-1 text-center text-[9px] font-bold leading-tight text-slate-700 bg-slate-100";
+const TD =
+  "border border-slate-200 px-0.5 py-0.5 align-middle text-[10px] leading-tight overflow-hidden text-ellipsis";
+
+const paymentShort = (method) =>
+  method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
+
 
 /**
  * Registre des tickets — colonnes alignées Excel pour copier/coller direct.
@@ -181,9 +186,9 @@ export function TicketsPage({ quotes = [] }) {
       ? new Date(d + "T12:00:00").toLocaleDateString("fr-FR", {
           day: "2-digit",
           month: "2-digit",
-          year: "numeric",
+          year: "2-digit",
         })
-      : "—";
+      : "";
 
   const matrixFromRows = useCallback((list, withHeaders) => {
     const body = list.map((r) => [
@@ -497,158 +502,173 @@ export function TicketsPage({ quotes = [] }) {
             animate={fade.animate}
             exit={fade.exit}
             transition={fade.transition}
-            className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-lg shadow-indigo-950/5"
+            className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm"
           >
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1280px] border-collapse border border-slate-300 text-left font-sans">
-                <caption className="sr-only">
-                  Tableau tickets Excel : 15 colonnes (n° ticket à vendeur).
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col" className={`${TH} sticky left-0 z-20 bg-slate-200`}>
-                      Copier
-                    </th>
-                    <th scope="col" className={`${TH} bg-orange-100 text-orange-900`}>
-                      N° Ticket
-                    </th>
-                    <th scope="col" className={TH}>
-                      Date
-                    </th>
-                    <th scope="col" className={TH}>
-                      Client
-                    </th>
-                    <th scope="col" className={TH}>
-                      Hôtel
-                    </th>
-                    <th scope="col" className={TH}>
-                      Ch.
-                    </th>
-                    <th scope="col" className={`${TH} text-center`}>
-                      Adt
-                    </th>
-                    <th scope="col" className={`${TH} text-center`}>
-                      Enf
-                    </th>
-                    <th scope="col" className={`${TH} text-center`}>
-                      Bébé
-                    </th>
-                    <th scope="col" className={TH}>
-                      Activité + extras
-                    </th>
-                    <th scope="col" className={TH}>
-                      Prise en charge
-                    </th>
-                    <th scope="col" className={TH}>
-                      Note
-                    </th>
-                    <th scope="col" className={`${TH} text-right`}>
-                      Prix
-                    </th>
-                    <th scope="col" className={`${TH} text-right`}>
-                      Supp. transfert
-                    </th>
-                    <th scope="col" className={TH}>
-                      Paiement
-                    </th>
-                    <th scope="col" className={TH}>
-                      Vendeur
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((r, i) => {
-                    const isCopied = copied.has(r.ticketNumber);
-                    const zebra = i % 2 === 0;
-                    const rowBg = isCopied
-                      ? "bg-slate-100/90 text-slate-400"
-                      : zebra
-                        ? "bg-white"
-                        : "bg-orange-50/30";
-                    return (
-                      <tr key={r.key} className={`transition-colors hover:bg-amber-50/80 ${rowBg}`}>
-                        <td
-                          className={`${TD} sticky left-0 z-10 ${
-                            isCopied ? "bg-slate-100" : zebra ? "bg-white" : "bg-orange-50/40"
-                          }`}
-                        >
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => void handleCopyRow(r)}
-                              aria-label={`Copier ${r.ticketNumber}`}
-                              className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-                              title="Copier cette ligne (15 colonnes) pour Excel"
-                            >
-                              <Copy className="size-3" aria-hidden="true" />
-                              Copier
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => toggleCopied(r.ticketNumber)}
-                              aria-pressed={isCopied}
-                              className={`grid size-6 place-items-center rounded-full border transition-colors ${
-                                isCopied
-                                  ? "border-emerald-300 bg-emerald-100 text-emerald-700"
-                                  : "border-amber-400 bg-amber-100 text-amber-800"
-                              }`}
-                              title={isCopied ? "Déjà copiée" : "Nouvelle"}
-                            >
-                              {isCopied ? (
-                                <CheckCircle2 className="size-3.5" aria-hidden="true" />
-                              ) : (
-                                <Sparkles className="size-3.5" aria-hidden="true" />
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                        <th
-                          scope="row"
-                          className={`${TD} bg-orange-200/80 font-bold text-orange-950 ${
-                            isCopied ? "!bg-slate-200 text-slate-400" : ""
-                          }`}
-                        >
-                          {r.ticketNumber}
-                        </th>
-                        <td className={TD}>{formatDateDisplay(r.date)}</td>
-                        <td className={`${TD} font-medium ${isCopied ? "" : "text-slate-900"}`}>
-                          {r.clientCell || ""}
-                        </td>
-                        <td className={`${TD} max-w-[10rem] truncate`} title={r.hotel}>
-                          {r.hotel || ""}
-                        </td>
-                        <td className={TD}>{r.room || ""}</td>
-                        <td className={`${TD} text-center tabular-nums`}>
-                          {r.adults || ""}
-                        </td>
-                        <td className={`${TD} text-center tabular-nums`}>{r.children || ""}</td>
-                        <td className={`${TD} text-center tabular-nums`}>{r.babies || ""}</td>
-                        <td
-                          className={`${TD} max-w-[16rem] whitespace-normal leading-snug ${
-                            isCopied ? "" : "font-medium text-slate-800"
-                          }`}
-                          title={r.activity}
-                        >
-                          {r.activity}
-                        </td>
-                        <td className={TD}>{r.pickup || ""}</td>
-                        <td className={`${TD} max-w-[12rem] truncate`} title={r.note}>
-                          {r.note || ""}
-                        </td>
-                        <td className={`${TD} text-right tabular-nums font-semibold`}>
-                          {r.priceValue || ""}
-                        </td>
-                        <td className={`${TD} text-right tabular-nums`}>
-                          {r.transferValue > 0 ? r.transferValue : ""}
-                        </td>
-                        <td className={TD}>{paymentText(r.paymentMethod)}</td>
-                        <td className={TD}>{r.createdByName || ""}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <table className="w-full table-fixed border-collapse text-left font-sans">
+              <caption className="sr-only">
+                Tableau tickets compact — toutes les colonnes visibles sans scroll horizontal.
+              </caption>
+              <colgroup>
+                <col style={{ width: "4.5%" }} />
+                <col style={{ width: "8.5%" }} />
+                <col style={{ width: "5.5%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "4%" }} />
+                <col style={{ width: "2.5%" }} />
+                <col style={{ width: "2.5%" }} />
+                <col style={{ width: "2.5%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "4%" }} />
+                <col style={{ width: "4%" }} />
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "6.5%" }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col" className={TH} title="Copier">
+                    ✓
+                  </th>
+                  <th scope="col" className={`${TH} bg-orange-200 text-orange-950`} title="N° Ticket">
+                    N°
+                  </th>
+                  <th scope="col" className={TH} title="Date">
+                    Date
+                  </th>
+                  <th scope="col" className={TH} title="3 lettres + téléphone">
+                    Client
+                  </th>
+                  <th scope="col" className={TH} title="Hôtel">
+                    Hôtel
+                  </th>
+                  <th scope="col" className={TH} title="Chambre">
+                    Ch
+                  </th>
+                  <th scope="col" className={TH} title="Adultes">
+                    A
+                  </th>
+                  <th scope="col" className={TH} title="Enfants">
+                    E
+                  </th>
+                  <th scope="col" className={TH} title="Bébés">
+                    B
+                  </th>
+                  <th scope="col" className={TH} title="Activité + extras">
+                    Activité
+                  </th>
+                  <th scope="col" className={TH} title="Prise en charge">
+                    Heure
+                  </th>
+                  <th scope="col" className={TH} title="Note">
+                    Note
+                  </th>
+                  <th scope="col" className={TH} title="Prix">
+                    Prix
+                  </th>
+                  <th scope="col" className={TH} title="Supplément transfert">
+                    Tr
+                  </th>
+                  <th scope="col" className={TH} title="Paiement">
+                    Pay
+                  </th>
+                  <th scope="col" className={TH} title="Vendeur">
+                    Vend.
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r, i) => {
+                  const isCopied = copied.has(r.ticketNumber);
+                  const zebra = i % 2 === 0;
+                  const rowBg = isCopied
+                    ? "bg-slate-100 text-slate-400"
+                    : zebra
+                      ? "bg-white"
+                      : "bg-orange-50/40";
+                  return (
+                    <tr key={r.key} className={`hover:bg-amber-50/90 ${rowBg}`}>
+                      <td className={`${TD} text-center`}>
+                        <div className="flex items-center justify-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => void handleCopyRow(r)}
+                            aria-label={`Copier ${r.ticketNumber}`}
+                            className="grid size-5 place-items-center rounded bg-emerald-600 text-white hover:bg-emerald-700"
+                            title="Copier la ligne"
+                          >
+                            <Copy className="size-2.5" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleCopied(r.ticketNumber)}
+                            aria-pressed={isCopied}
+                            className={`grid size-5 place-items-center rounded border ${
+                              isCopied
+                                ? "border-emerald-300 bg-emerald-100 text-emerald-700"
+                                : "border-amber-400 bg-amber-100 text-amber-800"
+                            }`}
+                            title={isCopied ? "Copiée" : "Nouvelle"}
+                          >
+                            {isCopied ? (
+                              <CheckCircle2 className="size-2.5" aria-hidden="true" />
+                            ) : (
+                              <Sparkles className="size-2.5" aria-hidden="true" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                      <th
+                        scope="row"
+                        className={`${TD} bg-orange-200/90 text-center font-bold text-orange-950 ${
+                          isCopied ? "!bg-slate-200 text-slate-400" : ""
+                        }`}
+                        title={r.ticketNumber}
+                      >
+                        <span className="block truncate">{r.ticketNumber}</span>
+                      </th>
+                      <td className={`${TD} text-center tabular-nums`} title={formatDateDisplay(r.date)}>
+                        {formatDateDisplay(r.date)}
+                      </td>
+                      <td className={`${TD} truncate font-medium`} title={r.clientCell}>
+                        {r.clientCell || ""}
+                      </td>
+                      <td className={`${TD} truncate`} title={r.hotel}>
+                        {r.hotel || ""}
+                      </td>
+                      <td className={`${TD} truncate text-center`} title={r.room}>
+                        {r.room || ""}
+                      </td>
+                      <td className={`${TD} text-center tabular-nums`}>{r.adults || ""}</td>
+                      <td className={`${TD} text-center tabular-nums`}>{r.children || ""}</td>
+                      <td className={`${TD} text-center tabular-nums`}>{r.babies || ""}</td>
+                      <td className={`${TD} truncate`} title={r.activity}>
+                        {r.activity}
+                      </td>
+                      <td className={`${TD} truncate text-center`} title={r.pickup}>
+                        {r.pickup || ""}
+                      </td>
+                      <td className={`${TD} truncate`} title={r.note}>
+                        {r.note || ""}
+                      </td>
+                      <td className={`${TD} text-center tabular-nums font-semibold`}>
+                        {r.priceValue || ""}
+                      </td>
+                      <td className={`${TD} text-center tabular-nums`}>
+                        {r.transferValue > 0 ? r.transferValue : ""}
+                      </td>
+                      <td className={`${TD} truncate text-center`} title={paymentText(r.paymentMethod)}>
+                        {paymentShort(r.paymentMethod)}
+                      </td>
+                      <td className={`${TD} truncate text-center`} title={r.createdByName}>
+                        {r.createdByName || ""}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </motion.div>
         )}
       </AnimatePresence>

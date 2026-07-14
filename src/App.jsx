@@ -1153,13 +1153,22 @@ export default function App() {
   }
 
   // Calculer la largeur maximale pour le header et le footer
-  const maxWidthClass = (tab === "devis" || tab === "situation") ? "max-w-7xl" : "max-w-6xl";
-  const mainPaddingClass = tab === "devis" ? "px-0" : "px-2 md:px-3 lg:px-6";
+  const maxWidthClass =
+    tab === "tickets"
+      ? "max-w-[min(100%,1600px)]"
+      : tab === "devis" || tab === "situation"
+        ? "max-w-7xl"
+        : "max-w-6xl";
+  const mainPaddingClass =
+    tab === "devis" ? "px-0" : tab === "tickets" ? "px-1 md:px-2 lg:px-3" : "px-2 md:px-3 lg:px-6";
   // Construire les className complets
   const headerNavClassName = `glass-nav mx-auto flex flex-col items-stretch gap-3 md:gap-4 ${maxWidthClass} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`;
   const mainClassName = `flex-1 py-4 md:py-10 ${mainPaddingClass} scroll-container`;
   const footerClassName = `mx-auto px-4 py-8 border-t mt-10 font-medium tracking-wide ${maxWidthClass}`;
-  const contentContainerClassName = `mx-auto space-y-6 md:space-y-10 ${maxWidthClass} rounded-2xl p-4 md:p-6 lg:p-8`;
+  const contentContainerClassName =
+    tab === "tickets"
+      ? `mx-auto space-y-4 md:space-y-6 ${maxWidthClass} rounded-2xl p-2 md:p-3 lg:p-4`
+      : `mx-auto space-y-6 md:space-y-10 ${maxWidthClass} rounded-2xl p-4 md:p-6 lg:p-8`;
   // Construire les className pour les boutons de langue
   const langButtonBaseClass = "px-2 md:px-2.5 py-1.5 font-semibold rounded-lg transition-colors";
   const langButtonActiveClass = "bg-gradient-to-r from-[#4f46e5] to-[#0ea5e9] text-white";
@@ -1505,7 +1514,11 @@ export default function App() {
         )}
 
         {tab === "tickets" && user?.canAccessHistory !== false && (
-          <Section title="Registre des tickets" subtitle="Toutes les activités avec un numéro de ticket généré (devis validés).">
+          <Section
+            title="Registre des tickets"
+            subtitle="Vue compacte — toutes les colonnes visibles. Copie directe vers Excel."
+            bare
+          >
             <TicketsPage quotes={quotes} />
           </Section>
         )}
