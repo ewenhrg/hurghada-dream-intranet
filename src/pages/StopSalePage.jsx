@@ -5,6 +5,7 @@ import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
+import { hasFullIntranetAccess } from "../constants/permissions.js";
 
 export function StopSalePage({ activities, user }) {
   const [stopSales, setStopSales] = useState([]);
@@ -25,9 +26,9 @@ export function StopSalePage({ activities, user }) {
     return map;
   }, [activities]);
 
-  // Vérifier si l'utilisateur peut modifier (Ewen, Léa ou situation)
+  // Vérifier si l'utilisateur peut modifier (accès complet ou situation)
   const canEdit = useMemo(() => {
-    return user?.name === "Ewen" || user?.name === "Léa" || user?.canAccessSituation || user?.name === "situation";
+    return hasFullIntranetAccess(user) || user?.canAccessSituation || user?.name === "situation";
   }, [user]);
 
   // Charger les stop sales et push sales depuis Supabase

@@ -112,6 +112,8 @@ export const LS_KEYS = {
   exteriorHotels: "hd_exterior_hotels", // Liste des hôtels avec RDV à l'extérieur
   users: "hd_users", // Cache utilisateurs pour sécurité anti-suppression auto
   copiedTickets: "hd_copied_tickets", // N° de tickets déjà copiés/exportés vers Excel
+  /** Miroir local des sessions de présence (tableau de bord Ewen). */
+  presenceSessions: "hd_presence_sessions",
 };
 
 export const WEEKDAYS = [

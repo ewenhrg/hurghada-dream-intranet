@@ -37,7 +37,7 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
 
     if (allDates.length === 0) {
       toast.warning(
-        "Aucune date disponible dans le séjour (les activités ne peuvent pas être programmées avant demain ni en dehors des dates d'arrivée et de départ)."
+        "Aucune date disponible dans le séjour (les activités commencent le lendemain de l'arrivée, pas avant demain, et au plus tard le jour de départ)."
       );
       return;
     }

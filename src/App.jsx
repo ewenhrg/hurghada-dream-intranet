@@ -9,7 +9,7 @@ import {
   getQuoteSiteKeysForSync,
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
-import { canAccessHotelsPage } from "./constants/permissions";
+import { canAccessHotelsPage, hasFullIntranetAccess } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS, normalizeQuoteItemsFromDb } from "./utils";
 import { loadUserFromSession } from "./utils/userPermissions";
 import {
@@ -54,6 +54,11 @@ import {
 } from "./utils/activitiesBackup";
 import { normalizeCatalogImageUrlsFromDb } from "./utils/catalogContent";
 import { HD_PUBLIC_QUOTE_TO_DRAFT_EVENT } from "./utils/publicQuoteToDraft";
+import {
+  startPresenceSession,
+  touchPresenceSession,
+  endPresenceSession,
+} from "./utils/presenceSessions";
 
 const PUBLIC_CATALOG_ACCESS_CODE = "101112";
 const SS_PUBLIC_CATALOG_OK = "hd_public_catalog_ok";
@@ -126,11 +131,13 @@ export default function App() {
     }
   }, [user, tab]);
 
-  /** Contenu catalogue public : éditeurs avec permission, ou Léa en consultation uniquement. */
+  /** Contenu catalogue public : accès complet (Ewen / Léa / Sophia) ou éditeurs. */
   useEffect(() => {
     if (!user || tab !== "catalog-admin") return;
-    const leaViewOnly = user.name === "Léa";
-    if (user.canAccessActivities === false || (user.canEditActivity !== true && !leaViewOnly)) {
+    if (
+      user.canAccessActivities === false ||
+      (user.canEditActivity !== true && !hasFullIntranetAccess(user))
+    ) {
       setTab(user.canAccessActivities !== false ? "activities" : "devis");
     }
   }, [user, tab]);
@@ -259,6 +266,18 @@ export default function App() {
 
   /** Présence en ligne : chaque utilisateur connecté rejoint le même canal Realtime (visible sur le tableau de bord Ewen). */
   useEffect(() => {
+    let presenceSessionId = null;
+    let heartbeatTimer = null;
+    let ended = false;
+
+    const endTrackedSession = () => {
+      if (ended || !presenceSessionId) return;
+      ended = true;
+      const id = presenceSessionId;
+      presenceSessionId = null;
+      endPresenceSession(id);
+    };
+
     const clearChannel = () => {
       const ch = intranetPresenceChannelRef.current;
       if (ch) {
@@ -315,6 +334,8 @@ export default function App() {
       );
     };
 
+    const onPageHide = () => endTrackedSession();
+
     channel
       .on("presence", { event: "sync" }, pushPresenceSnapshot)
       .on("presence", { event: "join" }, pushPresenceSnapshot)
@@ -349,14 +370,26 @@ export default function App() {
             logger.warn("Présence intranet : échec du track", error);
           }
           pushPresenceSnapshot();
+          if (!presenceSessionId) {
+            presenceSessionId = await startPresenceSession({ sessionKey: tabId, user });
+            ended = false;
+            if (heartbeatTimer) clearInterval(heartbeatTimer);
+            heartbeatTimer = setInterval(() => {
+              if (presenceSessionId) touchPresenceSession(presenceSessionId);
+            }, 60_000);
+          }
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           logger.warn("Présence intranet : canal", status);
         }
       });
 
     intranetPresenceChannelRef.current = channel;
+    window.addEventListener("pagehide", onPageHide);
 
     return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      endTrackedSession();
       clearChannel();
       setPresenceState({});
     };
@@ -1284,7 +1317,7 @@ export default function App() {
                 </Pill>
                 )}
                 {user?.canAccessActivities !== false &&
-                  (user?.canEditActivity === true || user?.name === "Léa") && (
+                  (user?.canEditActivity === true || hasFullIntranetAccess(user)) && (
                     <Pill active={tab === "catalog-admin"} onClick={() => setTab("catalog-admin")}>
                       {t("nav.catalogAdmin")}
                     </Pill>
@@ -1320,12 +1353,12 @@ export default function App() {
                     📱 Transferts
                   </Pill>
                 )}
-                {(user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
+                {(user?.canAccessSituation || hasFullIntranetAccess(user) || user?.name === "situation") && (
                   <Pill active={tab === "stopsale"} onClick={() => setTab("stopsale")}>
                     🛑 Stop &amp; Push
                   </Pill>
                 )}
-                {(user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
+                {(user?.canResetData || user?.canAccessUsers || hasFullIntranetAccess(user)) && (
                   <Pill active={tab === "users"} onClick={() => setTab("users")}>
                     {t("nav.users")}
                   </Pill>
@@ -1335,7 +1368,7 @@ export default function App() {
                     🏨 Hôtels
                   </Pill>
                 )}
-                {user?.name === "Ewen" && (
+                {hasFullIntranetAccess(user) && (
                   <Pill active={tab === "ewen-dashboard"} onClick={() => setTab("ewen-dashboard")}>
                     {t("nav.ewenDashboard")}
                   </Pill>
@@ -1435,12 +1468,12 @@ export default function App() {
 
         {tab === "catalog-admin" &&
           user?.canAccessActivities !== false &&
-          (user?.canEditActivity === true || user?.name === "Léa") && (
+          (user?.canEditActivity === true || hasFullIntranetAccess(user)) && (
             <Section
               title={t("page.catalogAdmin.title")}
               subtitle={
                 !canAccessHotelsPage(user)
-                  ? "Consultation du catalogue public. Seuls Ewen et Léa peuvent enregistrer des changements en base."
+                  ? "Consultation du catalogue public. Seuls Ewen, Léa et Sophia peuvent enregistrer des changements en base."
                   : t("page.catalogAdmin.subtitle")
               }
             >
@@ -1491,13 +1524,13 @@ export default function App() {
           <SituationPage activities={activities} user={user} />
         )}
 
-        {tab === "stopsale" && (user?.canAccessSituation || user?.name === "Ewen" || user?.name === "Léa" || user?.name === "situation") && (
+        {tab === "stopsale" && (user?.canAccessSituation || hasFullIntranetAccess(user) || user?.name === "situation") && (
           <Section title="Stop Sale &amp; Push Sale" subtitle="Gérez les arrêts de vente et les ouvertures exceptionnelles">
             <StopSalePage activities={activities} user={user} />
           </Section>
         )}
 
-          {tab === "users" && (user?.canResetData || user?.canAccessUsers || user?.name === "Ewen") && (
+          {tab === "users" && (user?.canResetData || user?.canAccessUsers || hasFullIntranetAccess(user)) && (
             <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")}>
               <UsersPage user={user} />
             </Section>
@@ -1513,7 +1546,7 @@ export default function App() {
             </Section>
           )}
 
-          {tab === "ewen-dashboard" && user?.name === "Ewen" && (
+          {tab === "ewen-dashboard" && hasFullIntranetAccess(user) && (
             <Section title={t("page.ewenDashboard.title")} subtitle={t("page.ewenDashboard.subtitle")}>
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>

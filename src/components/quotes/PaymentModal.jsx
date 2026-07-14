@@ -6,6 +6,7 @@ import { formatQuoteItemParticipantsSummary } from "../../utils/quoteItemDisplay
 import { TextInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
 import { logger } from "../../utils/logger";
+import { hasFullIntranetAccess } from "../../constants/permissions.js";
 
 export function PaymentModal({ 
   show, 
@@ -17,6 +18,7 @@ export function PaymentModal({
 }) {
   const [ticketNumbers, setTicketNumbers] = useState({});
   const [paymentMethods, setPaymentMethods] = useState({});
+  const canEditLockedTickets = hasFullIntranetAccess(user);
 
   if (!show || !selectedQuote) return null;
 
@@ -135,11 +137,11 @@ export function PaymentModal({
                         [idx]: e.target.value,
                       }));
                     }}
-                    disabled={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? true : false}
-                    readOnly={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? true : false}
-                    className={user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() ? "bg-gray-100 cursor-not-allowed" : ""}
+                    disabled={!canEditLockedTickets && item.ticketNumber && item.ticketNumber.trim() ? true : false}
+                    readOnly={!canEditLockedTickets && item.ticketNumber && item.ticketNumber.trim() ? true : false}
+                    className={!canEditLockedTickets && item.ticketNumber && item.ticketNumber.trim() ? "bg-gray-100 cursor-not-allowed" : ""}
                   />
-                  {user?.name !== "Ewen" && item.ticketNumber && item.ticketNumber.trim() && (
+                  {!canEditLockedTickets && item.ticketNumber && item.ticketNumber.trim() && (
                     <p className="text-xs text-green-600 mt-1">✅ Ticket verrouillé (non modifiable)</p>
                   )}
                 </div>

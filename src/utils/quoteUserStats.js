@@ -28,18 +28,40 @@ export function toLocalDateKey(isoOrDate) {
   return `${y}-${m}-${day}`;
 }
 
-/** @param {Array<{ name?: string }>} users */
-export function collectQuoteUserNames(users = [], quotes = []) {
+/**
+ * Noms des utilisateurs encore présents dans le répertoire (page Utilisateurs).
+ * Ne réintroduit pas d’anciens créateurs de devis absents de la liste.
+ * @param {Array<{ name?: string }>} users
+ */
+export function collectQuoteUserNames(users = []) {
   const names = new Set();
   for (const u of users) {
     const name = String(u?.name || "").trim();
     if (name) names.add(name);
   }
+  return [...names].sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+}
+
+/** Total de devis créés par un utilisateur (tous temps). */
+export function getTotalQuotesForUser(quotes = [], userName) {
+  const target = String(userName || "").trim();
+  if (!target) return 0;
+  let total = 0;
   for (const q of quotes) {
     const name = String(q?.createdByName || "").trim();
-    if (name) names.add(name);
+    if (name.localeCompare(target, "fr", { sensitivity: "accent" }) === 0) total += 1;
   }
-  return [...names].sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+  return total;
+}
+
+/** Nombre de jours (parmi les devis) avec au moins un devis pour cet utilisateur. */
+export function getActiveQuoteDaysCount(countByDay) {
+  if (!countByDay?.size) return 0;
+  let n = 0;
+  for (const count of countByDay.values()) {
+    if (count > 0) n += 1;
+  }
+  return n;
 }
 
 /**

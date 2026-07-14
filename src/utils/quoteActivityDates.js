@@ -47,8 +47,9 @@ export function isPushSaleForActivity(activity, dateStr, pushSalesMap) {
 }
 
 /**
- * Jours du séjour sélectionnables pour une activité (aligné sur ColoredDatePicker) :
- * - dans [arrivée ; départ] (bornes incluses)
+ * Jours du séjour candidats pour Auto-dates :
+ * - à partir du lendemain de l'arrivée (jamais le jour d'arrivée)
+ * - jusqu'au départ (borne inclusive)
  * - pas aujourd'hui ni le passé (à partir de demain)
  */
 export function buildStayActivityCandidateDates(arrivalStr, departureStr, now = new Date()) {
@@ -61,7 +62,12 @@ export function buildStayActivityCandidateDates(arrivalStr, departureStr, now = 
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const start = new Date(arrival > tomorrow ? arrival : tomorrow);
+  // Pas d'activité le jour d'arrivée : démarrer au lendemain
+  const dayAfterArrival = new Date(arrival);
+  dayAfterArrival.setDate(dayAfterArrival.getDate() + 1);
+  dayAfterArrival.setHours(0, 0, 0, 0);
+
+  const start = new Date(dayAfterArrival > tomorrow ? dayAfterArrival : tomorrow);
   start.setHours(0, 0, 0, 0);
 
   const end = new Date(departure);

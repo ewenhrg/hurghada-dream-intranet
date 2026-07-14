@@ -7,7 +7,7 @@ export function isIntranetDatabaseWriterName(name) {
 }
 
 /**
- * Après login par code sur public.users : ouvre une session JWT pour Ewen/Léa si intranet_auth_email est défini.
+ * Après login par code sur public.users : ouvre une session JWT pour Ewen/Léa/Sophia si intranet_auth_email est défini.
  * Mot de passe Auth = code à 6 chiffres (à synchroniser avec Supabase Dashboard si le code change).
  */
 export async function establishSupabaseWriterSession(supabase, dbUserRow, sixDigitCode) {
@@ -20,7 +20,7 @@ export async function establishSupabaseWriterSession(supabase, dbUserRow, sixDig
   const email = String(dbUserRow.intranet_auth_email || "").trim();
   if (!email) {
     logger.warn(
-      "Intranet : Ewen/Léa sans colonne intranet_auth_email — pas de session Auth (écritures users/activities bloquées par RLS)."
+      "Intranet : Ewen/Léa/Sophia sans colonne intranet_auth_email — pas de session Auth (écritures users/activities bloquées par RLS)."
     );
     return { ok: true, skipped: true, missingEmail: true };
   }

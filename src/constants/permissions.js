@@ -80,6 +80,24 @@ export function getDefaultPermissionForm() {
   return form;
 }
 
+/** Normalise un prénom intranet (casse / accents). */
+export function normalizeIntranetUserName(name) {
+  return String(name ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+/**
+ * Accès complet type Ewen : mêmes pages, outils et infos
+ * (Ewen, Léa / Lea, Sophia).
+ */
+export function hasFullIntranetAccess(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "ewen" || n === "lea" || n === "sophia";
+}
+
 /**
  * Convertit une ligne utilisateur Supabase (snake_case) en objet formulaire (camelCase)
  */
@@ -123,14 +141,9 @@ export function formToDbUser(form) {
  * Construit l’objet utilisateur pour la session (camelCase) à partir des données Supabase
  * Utilisé après login pour stocker en sessionStorage
  */
-/** Accès page Hôtels (menu + contenu) — accepte variantes de casse / accent (ex. « Lea » en base). */
+/** Accès page Hôtels (menu + contenu) — Ewen, Léa et Sophia. */
 export function canAccessHotelsPage(user) {
-  const n = String(user?.name ?? "")
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  return n === "ewen" || n === "lea";
+  return hasFullIntranetAccess(user);
 }
 
 export function dbUserToSessionUser(dbUser) {

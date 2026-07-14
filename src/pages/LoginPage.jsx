@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logger } from "../utils/logger";
 import { dbUserToSessionUser } from "../constants/permissions";
+import { configureUserPermissions } from "../utils/userPermissions";
 import { establishSupabaseWriterSession, isIntranetDatabaseWriterName } from "../utils/intranetSupabaseWriterAuth.js";
 import { toast } from "../utils/toast.js";
 
@@ -107,25 +108,11 @@ export function LoginPage({ onSuccess }) {
           return;
         }
 
-        const userPermissions = dbUserToSessionUser(data);
+        const userPermissions = configureUserPermissions(dbUserToSessionUser(data));
         if (!userPermissions) {
           setError("Données utilisateur invalides.");
           setLoading(false);
           return;
-        }
-        if (data.name === "Léa") {
-          userPermissions.canDeleteQuote = true;
-          userPermissions.canAddActivity = true;
-          userPermissions.canEditActivity = true;
-          userPermissions.canDeleteActivity = true;
-          userPermissions.canAccessActivities = true;
-          userPermissions.canAccessHistory = true;
-          userPermissions.canAccessTickets = true;
-          userPermissions.canAccessModifications = true;
-          userPermissions.canAccessSituation = true;
-          userPermissions.canAccessUsers = true;
-          userPermissions.canAccessActivityPrices = true;
-          userPermissions.canResetData = false;
         }
         sessionStorage.setItem("hd_ok", "1");
         sessionStorage.setItem("hd_user", JSON.stringify(userPermissions));
@@ -134,7 +121,7 @@ export function LoginPage({ onSuccess }) {
         if (isIntranetDatabaseWriterName(data.name)) {
           if (writerAuth.missingEmail) {
             toast.warning(
-              "Compte Ewen/Léa : définissez intranet_auth_email en base (et un utilisateur Auth Supabase avec le même email, mot de passe = code à 6 chiffres) pour modifier ou supprimer utilisateurs et activités."
+              "Compte Ewen/Léa/Sophia : définissez intranet_auth_email en base (et un utilisateur Auth Supabase avec le même email, mot de passe = code à 6 chiffres) pour modifier ou supprimer utilisateurs et activités."
             );
           } else if (writerAuth.error) {
             toast.error(

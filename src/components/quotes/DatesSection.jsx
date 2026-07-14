@@ -34,7 +34,7 @@ export function DatesSection({ client, setClient, onAutoFillDates }) {
               variant="primary"
               size="sm"
               disabled={!client.arrivalDate || !client.departureDate}
-              title={client.arrivalDate && client.departureDate ? "Remplir automatiquement les dates des activités avec les dates du séjour" : "Renseignez les dates d'arrivée et de départ pour activer"}
+              title={client.arrivalDate && client.departureDate ? "Remplir automatiquement les dates des activités avec les dates du séjour (à partir du lendemain de l'arrivée)" : "Renseignez les dates d'arrivée et de départ pour activer"}
               className="whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
             >
               📅 Auto-dates

@@ -26,7 +26,7 @@ import {
   loadActivitiesAutoSnapshot,
 } from "../utils/activitiesBackup";
 import { activitiesTableHasBabiesForbiddenColumn } from "../config/supabaseActivitiesSchema";
-import { canAccessHotelsPage } from "../constants/permissions.js";
+import { canAccessHotelsPage, hasFullIntranetAccess } from "../constants/permissions.js";
 
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,8 +35,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   // Debounce de la recherche pour améliorer les performances
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
-  // Écritures activités (RLS Supabase) : Ewen / Léa — voir supabase_rls_ewen_lea_intranet_writers.sql
+  // Écritures activités (RLS Supabase) : Ewen / Léa / Sophia
   const canModifyActivities = canAccessHotelsPage(user);
+  const hasFullAccess = hasFullIntranetAccess(user);
 
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
@@ -1180,10 +1181,10 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   
   // Ref callback optimisé pour le textarea
   const textareaRefCallback = useCallback((el) => {
-    if (el && descriptionModal.isOpen && user?.name === "Ewen") {
+    if (el && descriptionModal.isOpen && hasFullAccess) {
       setTimeout(() => el.focus(), 100);
     }
-  }, [descriptionModal.isOpen, user?.name]);
+  }, [descriptionModal.isOpen, hasFullAccess]);
 
   // Toutes les catégories sont maintenant toujours visibles pour éviter les carrés blancs
 
@@ -1324,7 +1325,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               {showForm ? "Annuler" : "➕ Ajouter une activité"}
             </PrimaryBtn>
           )}
-          {user?.name === "Ewen" && (
+          {hasFullAccess && (
             <>
               {supabase && (
                 <PrimaryBtn
@@ -1872,14 +1873,14 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                 value={descriptionModal.description}
                 onChange={(e) => setDescriptionModal((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Description de l'activité..."
-                disabled={user?.name !== "Ewen"}
-                readOnly={user?.name !== "Ewen"}
+                disabled={!hasFullAccess}
+                readOnly={!hasFullAccess}
                 className={`w-full h-40 rounded-xl border-2 border-indigo-200 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 resize-none ${
-                  user?.name !== "Ewen" ? "bg-amber-50/50 cursor-not-allowed" : ""
+                  !hasFullAccess ? "bg-amber-50/50 cursor-not-allowed" : ""
                 }`}
               />
-              {user?.name !== "Ewen" && (
-                <p className="text-xs font-medium text-amber-700 mt-2 bg-amber-100 px-2 py-1.5 rounded-lg">Seul Ewen peut modifier la description.</p>
+              {!hasFullAccess && (
+                <p className="text-xs font-medium text-amber-700 mt-2 bg-amber-100 px-2 py-1.5 rounded-lg">Seuls Ewen, Léa et Sophia peuvent modifier la description.</p>
               )}
             </div>
             <div className="px-6 py-4 border-t-2 border-indigo-200 flex gap-3 justify-end bg-gradient-to-r from-indigo-50 to-violet-50">
@@ -1890,7 +1891,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               >
                 Fermer
               </button>
-              {user?.name === "Ewen" && (
+              {hasFullAccess && (
                 <PrimaryBtn onClick={handleSaveDescription} className="text-sm font-semibold px-5 py-2.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 border-0 shadow-md">
                   💾 Enregistrer
                 </PrimaryBtn>

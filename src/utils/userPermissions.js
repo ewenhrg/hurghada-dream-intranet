@@ -4,10 +4,29 @@
  */
 
 import { logger } from "./logger";
-import { getDefaultPermissionForm } from "../constants/permissions";
+import { getDefaultPermissionForm, hasFullIntranetAccess } from "../constants/permissions";
 
 /**
- * Applique les valeurs par défaut manquantes puis les overrides Léa / Ewen
+ * Accorde tous les droits d’accès (comme Ewen).
+ * @param {Object} userData
+ */
+function applyFullIntranetPermissions(userData) {
+  userData.canDeleteQuote = true;
+  userData.canAddActivity = true;
+  userData.canEditActivity = true;
+  userData.canDeleteActivity = true;
+  userData.canResetData = true;
+  userData.canAccessActivities = true;
+  userData.canAccessHistory = true;
+  userData.canAccessTickets = true;
+  userData.canAccessModifications = true;
+  userData.canAccessSituation = true;
+  userData.canAccessUsers = true;
+  userData.canAccessActivityPrices = true;
+}
+
+/**
+ * Applique les valeurs par défaut manquantes puis les overrides accès complet (Ewen / Léa / Sophia)
  * @param {Object} userData - Données utilisateur (session)
  * @returns {Object|null} - Données utilisateur avec permissions configurées
  */
@@ -21,34 +40,8 @@ export function configureUserPermissions(userData) {
     }
   });
 
-  if (userData.name === "Léa") {
-    userData.canDeleteQuote = true;
-    userData.canAddActivity = true;
-    userData.canEditActivity = true;
-    userData.canDeleteActivity = true;
-    userData.canAccessActivities = true;
-    userData.canAccessHistory = true;
-    userData.canAccessTickets = true;
-    userData.canAccessModifications = true;
-    userData.canAccessSituation = true;
-    userData.canAccessUsers = true;
-    userData.canAccessActivityPrices = true;
-    userData.canResetData = false;
-  }
-
-  if (userData.name === "Ewen") {
-    userData.canDeleteQuote = true;
-    userData.canAddActivity = true;
-    userData.canEditActivity = true;
-    userData.canDeleteActivity = true;
-    userData.canResetData = true;
-    userData.canAccessActivities = true;
-    userData.canAccessHistory = true;
-    userData.canAccessTickets = true;
-    userData.canAccessModifications = true;
-    userData.canAccessSituation = true;
-    userData.canAccessUsers = true;
-    userData.canAccessActivityPrices = true;
+  if (hasFullIntranetAccess(userData)) {
+    applyFullIntranetPermissions(userData);
   }
 
   return userData;

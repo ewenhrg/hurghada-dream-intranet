@@ -1,11 +1,11 @@
 -- =============================================================================
--- RLS : seuls les comptes intranet « Ewen » et « Léa » (ou « Lea ») peuvent
--- INSERT / UPDATE / DELETE sur public.users et public.activities.
+-- RLS : seuls les comptes intranet « Ewen », « Léa » (ou « Lea ») et « Sophia »
+-- peuvent INSERT / UPDATE / DELETE sur public.users et public.activities.
 --
 -- Mécanisme : l’application ouvre une session Supabase Auth après la connexion
 -- par code (LoginPage) si la ligne public.users a intranet_auth_email renseigné
--- et que le nom est Ewen ou Léa. Le JWT porte l’email ; cette migration vérifie
--- l’alignement email + nom.
+-- et que le nom est Ewen, Léa ou Sophia. Le JWT porte l’email ; cette migration
+-- vérifie l’alignement email + nom.
 --
 -- À faire AVANT ou JUSTE APRÈS ce script (Dashboard Supabase → Authentication) :
 --   1) Créer deux utilisateurs Auth (ex. ewen.intranet@votredomaine.tld, lea.intranet@…).
@@ -14,6 +14,7 @@
 --   3) Mettre à jour les lignes métier :
 --        UPDATE public.users SET intranet_auth_email = 'ewen.intranet@…' WHERE …;
 --        UPDATE public.users SET intranet_auth_email = 'lea.intranet@…' WHERE …;
+--        UPDATE public.users SET intranet_auth_email = 'sophia.intranet@…' WHERE …;
 --   4) Si vous changez public.users.code pour un de ces comptes, mettez à jour le
 --      mot de passe Auth pour qu’il reste identique au code (sinon signIn échoue).
 --
@@ -31,9 +32,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_users_intranet_auth_email_unique
   WHERE intranet_auth_email IS NOT NULL AND length(trim(intranet_auth_email)) > 0;
 
 COMMENT ON COLUMN public.users.intranet_auth_email IS
-  'Email du compte Supabase Auth pour Ewen/Léa : doit matcher auth.jwt() après signInWithPassword (mot de passe = code à 6 chiffres).';
+  'Email du compte Supabase Auth pour Ewen/Léa/Sophia : doit matcher auth.jwt() après signInWithPassword (mot de passe = code à 6 chiffres).';
 
--- Vrai si le JWT courant correspond à une ligne users Ewen/Léa avec email aligné
+-- Vrai si le JWT courant correspond à une ligne users Ewen/Léa/Sophia avec email aligné
 CREATE OR REPLACE FUNCTION public.is_intranet_ewen_or_lea_writer()
 RETURNS boolean
 LANGUAGE sql
@@ -52,12 +53,13 @@ AS $$
         AND (
           LOWER(BTRIM(u.name)) = 'ewen'
           OR LOWER(BTRIM(u.name)) IN ('léa', 'lea')
+          OR LOWER(BTRIM(u.name)) = 'sophia'
         )
     );
 $$;
 
 COMMENT ON FUNCTION public.is_intranet_ewen_or_lea_writer() IS
-  'Utilisé par les politiques RLS : rédacteurs base = Ewen/Léa avec intranet_auth_email = email JWT.';
+  'Utilisé par les politiques RLS : rédacteurs base = Ewen/Léa/Sophia avec intranet_auth_email = email JWT.';
 
 -- ---------------------------------------------------------------------------
 -- public.users

@@ -1344,7 +1344,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     variant="primary"
                     size="sm"
                     disabled={!client.arrivalDate || !client.departureDate}
-                    title={client.arrivalDate && client.departureDate ? "Remplir automatiquement les dates des activités" : "Renseignez les dates d'arrivée et de départ pour activer"}
+                    title={client.arrivalDate && client.departureDate ? "Remplir automatiquement les dates des activités (à partir du lendemain de l'arrivée)" : "Renseignez les dates d'arrivée et de départ pour activer"}
                     className="whitespace-nowrap shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     ✨ Auto-dates

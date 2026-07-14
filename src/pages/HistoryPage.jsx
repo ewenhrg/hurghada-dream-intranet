@@ -20,6 +20,7 @@ import {
 } from "../utils/activityNeighborhoodRules.js";
 import { formatQuoteItemParticipantsSummary } from "../utils/quoteItemDisplay.js";
 import { PrivateTransferButtons } from "../components/quotes/PrivateTransferButtons";
+import { useAutoFillDates } from "../hooks/useAutoFillDates";
 
 /** Délai avant suppression auto des devis « non payés » (au moins une ligne sans n° de ticket), à l’ouverture de l’historique. */
 const UNPAID_QUOTE_AUTO_DELETE_DAYS = 20;
@@ -1357,6 +1358,46 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     return map;
   }, [activities]);
 
+  const stopSalesMap = useMemo(() => {
+    const map = new Map();
+    (stopSales || []).forEach((stop) => {
+      const date = stop.date;
+      const activityId = String(stop.activity_id || "");
+      map.set(`${activityId}_${date}`, stop);
+      const activity = activitiesMap.get(activityId);
+      if (activity) {
+        if (activity.id && String(activity.id) !== activityId) {
+          map.set(`${activity.id}_${date}`, stop);
+        }
+        if (activity.supabase_id && String(activity.supabase_id) !== activityId) {
+          map.set(`${activity.supabase_id}_${date}`, stop);
+        }
+      }
+    });
+    return map;
+  }, [stopSales, activitiesMap]);
+
+  const pushSalesMap = useMemo(() => {
+    const map = new Map();
+    (pushSales || []).forEach((push) => {
+      const date = push.date;
+      const activityId = String(push.activity_id || "");
+      map.set(`${activityId}_${date}`, push);
+      const activity = activitiesMap.get(activityId);
+      if (activity) {
+        if (activity.id && String(activity.id) !== activityId) {
+          map.set(`${activity.id}_${date}`, push);
+        }
+        if (activity.supabase_id && String(activity.supabase_id) !== activityId) {
+          map.set(`${activity.supabase_id}_${date}`, push);
+        }
+      }
+    });
+    return map;
+  }, [pushSales, activitiesMap]);
+
+  const handleAutoFillDates = useAutoFillDates(client, items, setItems, activitiesMap, stopSalesMap, pushSalesMap);
+
   const blankItem = () => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
@@ -1846,12 +1887,33 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               </div>
               <div>
                 <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">📅 Date de départ</label>
-                <TextInput 
-                  type="date"
-                  value={client.departureDate || ""} 
-                  onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
-                  className="text-base md:text-lg py-3"
-                />
+                <div className="flex gap-2 items-stretch">
+                  <TextInput 
+                    type="date"
+                    value={client.departureDate || ""} 
+                    onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
+                    className="text-base md:text-lg py-3 flex-1"
+                  />
+                  <GhostBtn
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (client.arrivalDate && client.departureDate) handleAutoFillDates();
+                    }}
+                    variant="primary"
+                    size="md"
+                    disabled={!client.arrivalDate || !client.departureDate}
+                    title={
+                      client.arrivalDate && client.departureDate
+                        ? "Remplir automatiquement les dates des activités (à partir du lendemain de l'arrivée)"
+                        : "Renseignez les dates d'arrivée et de départ pour activer"
+                    }
+                    className="whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base px-3 py-2"
+                  >
+                    ✨ Auto-dates
+                  </GhostBtn>
+                </div>
               </div>
             </div>
           </div>
