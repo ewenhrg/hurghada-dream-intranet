@@ -1,8 +1,17 @@
 import path from "path";
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
-// https://vite.dev/config/
+function isReactCoreModule(id) {
+  // Ne pas matcher lucide-react / @base-ui/react / etc.
+  const normalized = id.replace(/\\/g, "/");
+  return (
+    /\/(react|react-dom|scheduler)(\/|$)/.test(normalized) ||
+    normalized.includes("react-router") ||
+    normalized.includes("react-router-dom")
+  );
+}
+
 export default defineConfig({
   plugins: [react()],
 
@@ -10,70 +19,71 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Une seule copie de React (évite O.Activity = … sur undefined)
+    dedupe: ["react", "react-dom"],
   },
 
   build: {
-    // Optimisations de build - utiliser esbuild (plus rapide, déjà inclus)
-    minify: 'esbuild',
-    target: 'esnext',
+    minify: "esbuild",
+    target: "esnext",
     cssCodeSplit: true,
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          if (
-            id.includes('react') ||
-            id.includes('react-dom') ||
-            id.includes('lib/supabase') ||
-            id.includes('@supabase') ||
-            id.includes('react-router')
-          ) {
-            return undefined;
-          }
+        manualChunks(id) {
+          const normalized = id.replace(/\\/g, "/");
 
-          if (id.includes('node_modules')) {
-            if (
-              id.includes('xlsx') ||
-              id.includes('@tanstack/react-virtual') ||
-              id.includes('react-window')
-            ) {
-              return 'utils-vendor';
+          if (normalized.includes("node_modules")) {
+            // React DOIT être dans un seul chunk nommé (pas undefined)
+            if (isReactCoreModule(normalized)) {
+              return "react-vendor";
             }
-            return 'vendor';
+            if (
+              normalized.includes("xlsx") ||
+              normalized.includes("@tanstack/react-virtual") ||
+              normalized.includes("react-window") ||
+              normalized.includes("react-virtualized")
+            ) {
+              return "utils-vendor";
+            }
+            if (
+              normalized.includes("framer-motion") ||
+              normalized.includes("lucide-react") ||
+              normalized.includes("@base-ui") ||
+              normalized.includes("class-variance-authority") ||
+              normalized.includes("clsx") ||
+              normalized.includes("tailwind-merge")
+            ) {
+              return "ui-vendor";
+            }
+            if (normalized.includes("@supabase") || normalized.includes("supabase")) {
+              return "supabase";
+            }
+            return "vendor";
           }
 
-          if (id.includes('/pages/')) {
-            const pageName = id.split('/pages/')[1].split('.')[0];
+          if (normalized.includes("/pages/")) {
+            const pageName = normalized.split("/pages/")[1].split(".")[0];
             return `page-${pageName}`;
           }
 
-          if (id.includes('/components/')) {
-            return 'components';
+          if (normalized.includes("/components/")) {
+            return "components";
           }
 
-          if (id.includes('/utils/') || id.includes('/utils.js')) {
-            return 'utils';
+          if (normalized.includes("/utils/") || normalized.endsWith("/utils.js")) {
+            return "utils";
           }
         },
-        chunkFileNames: 'assets/[name]-[hash].js',
-        entryFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]',
+        chunkFileNames: "assets/[name]-[hash].js",
+        entryFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash].[ext]",
       },
     },
     chunkSizeWarningLimit: 1000,
     sourcemap: false,
+    // Tree-shaking moins agressif : le preset "smallest" cassait l'init React 19.2 (Activity)
     treeshake: {
-      moduleSideEffects: (id) => {
-        if (
-          id.includes('@supabase') ||
-          id.includes('supabase') ||
-          id.includes('react') ||
-          id.includes('react-dom')
-        ) {
-          return true;
-        }
-        return false;
-      },
-      preset: 'smallest',
+      moduleSideEffects: true,
     },
     reportCompressedSize: false,
     assetsInlineLimit: 8192,
@@ -88,6 +98,6 @@ export default defineConfig({
     },
   },
 
-  assetsInclude: ['**/*.xlsx'],
-  publicDir: 'public',
+  assetsInclude: ["**/*.xlsx"],
+  publicDir: "public",
 });
