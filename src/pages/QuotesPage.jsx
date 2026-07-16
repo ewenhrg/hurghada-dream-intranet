@@ -879,7 +879,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
-    // Minimum 2 personnes (adultes + enfants) pour El Gouna, Karting, Parachute, Combo aquatique
+    // Minimum 2 personnes (adultes + enfants) pour El Gouna, Karting, Combo aquatique
     const activitiesBelowMinTwo = validComputed.filter((c) => {
       if (!requiresMinimumTwoParticipants(c.act?.name)) return false;
       return !hasEnoughParticipantsForActivity(c.act?.name, {
