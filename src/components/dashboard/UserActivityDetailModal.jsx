@@ -13,6 +13,7 @@ import {
   MONTH_NAMES,
   WEEK_HEADERS,
   buildMonthCellsMondayFirst,
+  calendarCellDateKey,
   getMonthQuoteTotal,
   toLocalDateKey,
 } from "../../utils/quoteUserStats";
@@ -237,9 +238,17 @@ export function UserActivityDetailModal({
                       </div>
                     ))}
                   </div>
-                  <div className="grid grid-cols-7 gap-1">
+                  <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-slate-500">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" /> Connecté = heures + devis du jour
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-sm bg-rose-400" /> Absent = pas de devis affiché
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1.5">
                     {cells.map((cell) => {
-                      const dateKey = toLocalDateKey(cell.date);
+                      const dateKey = calendarCellDateKey(cell.date);
                       const inMonth = cell.inCurrentMonth;
                       const durationMs = inMonth ? durationByDay.get(dateKey) || 0 : 0;
                       const quotes =
@@ -264,18 +273,16 @@ export function UserActivityDetailModal({
                           title={
                             inMonth && !isFuture
                               ? connected
-                                ? `${formatDurationMs(durationMs)} · ${quotes} devis`
-                                : quotes > 0
-                                  ? `Non connecté · ${quotes} devis`
-                                  : "Non connecté"
+                                ? `${formatDurationMs(durationMs)} · ${quotes} devis créés`
+                                : "Non connecté"
                               : undefined
                           }
-                          className={`flex min-h-[4.25rem] flex-col items-center justify-start gap-0.5 rounded-xl border p-1.5 transition ${tone} ${
+                          className={`flex min-h-[4.75rem] flex-col items-center justify-start gap-0.5 rounded-xl border p-1.5 transition ${tone} ${
                             isToday && inMonth ? "ring-2 ring-violet-400/70 ring-offset-1" : ""
                           }`}
                         >
                           <span
-                            className={`text-[11px] font-semibold tabular-nums ${
+                            className={`text-xs font-bold tabular-nums ${
                               inMonth ? "" : "opacity-40"
                             }`}
                           >
@@ -283,28 +290,16 @@ export function UserActivityDetailModal({
                           </span>
                           {inMonth && !isFuture && connected ? (
                             <>
-                              <span className="rounded bg-emerald-600/15 px-1 text-[9px] font-bold tabular-nums text-emerald-800">
+                              <span className="rounded-md bg-emerald-700/15 px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none text-emerald-900">
                                 {formatDurationCompact(durationMs)}
                               </span>
-                              {quotes > 0 ? (
-                                <span className="text-[9px] font-semibold tabular-nums text-emerald-900/80">
-                                  {quotes} devis
-                                </span>
-                              ) : (
-                                <span className="text-[9px] font-medium tabular-nums text-emerald-800/50">
-                                  0 devis
-                                </span>
-                              )}
+                              <span className="text-[10px] font-semibold tabular-nums text-emerald-900/85">
+                                {quotes} devis
+                              </span>
                             </>
                           ) : null}
                           {inMonth && !isFuture && !connected ? (
-                            quotes > 0 ? (
-                              <span className="mt-0.5 rounded bg-violet-600/10 px-1 text-[9px] font-bold tabular-nums text-violet-800">
-                                {quotes} devis
-                              </span>
-                            ) : (
-                              <span className="mt-1 text-[9px] font-medium text-rose-700/80">—</span>
-                            )
+                            <span className="mt-1 text-[10px] font-medium text-rose-700/80">Absent</span>
                           ) : null}
                         </div>
                       );
@@ -325,7 +320,9 @@ export function UserActivityDetailModal({
                     <p className="text-3xl font-bold tabular-nums tracking-tight text-slate-900">
                       {monthQuotes}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">réalisés sur {MONTH_NAMES[viewMonth]}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      créés ce mois (date de création, heure Hurghada)
+                    </p>
                   </div>
 
                   <div className="rounded-2xl border border-cyan-200/70 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-4 shadow-sm">

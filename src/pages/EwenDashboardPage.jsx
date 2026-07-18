@@ -1,6 +1,14 @@
 import { useMemo, useCallback, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight, Search, Users } from "lucide-react";
+import {
+  ChevronRight,
+  Clock3,
+  FileText,
+  Search,
+  Users,
+  Wifi,
+  AlertTriangle,
+} from "lucide-react";
 import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
 import { UserActivityDetailModal } from "../components/dashboard/UserActivityDetailModal";
 import { loadLS } from "../utils";
@@ -9,13 +17,18 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import {
   buildConnectionActivityByUser,
   formatDurationMs,
+  getMonthDurationTotal,
   isPresenceRowActiveUser,
   loadPresenceSessions,
 } from "../utils/presenceSessions";
 import {
   buildQuotesCountByUserAndDay,
+  getMonthQuoteTotal,
+  getQuoteCountOnDay,
   getQuoteDaysForUser,
   getTotalQuotesForUser,
+  MONTH_NAMES,
+  toLocalDateKey,
 } from "../utils/quoteUserStats";
 
 /**
@@ -66,12 +79,19 @@ export function EwenDashboardPage({
   const [directoryUsers, setDirectoryUsers] = useState(() => loadLS(LS_KEYS.users, []));
   const [sessionRows, setSessionRows] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionsRemoteCount, setSessionsRemoteCount] = useState(0);
+  const [sessionsError, setSessionsError] = useState(null);
   const [messageTargetRow, setMessageTargetRow] = useState(null);
   const [messageDraft, setMessageDraft] = useState("");
   const [messageSending, setMessageSending] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [userSearch, setUserSearch] = useState("");
   const [tick, setTick] = useState(0);
+
+  const now = useMemo(() => new Date(), [tick]);
+  const viewYear = now.getFullYear();
+  const viewMonth = now.getMonth();
+  const todayKey = useMemo(() => toLocalDateKey(now), [now]);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,8 +118,13 @@ export function EwenDashboardPage({
     async function refreshSessions() {
       setSessionsLoading(true);
       try {
-        const rows = await loadPresenceSessions({ days: 90 });
-        if (!cancelled) setSessionRows(rows);
+        const result = await loadPresenceSessions({ days: 90 });
+        if (cancelled) return;
+        // Compat : ancienne API renvoyait un tableau
+        const rows = Array.isArray(result) ? result : result?.rows || [];
+        setSessionRows(rows);
+        setSessionsRemoteCount(Array.isArray(result) ? rows.length : Number(result?.remoteCount) || 0);
+        setSessionsError(Array.isArray(result) ? null : result?.remoteError || null);
       } finally {
         if (!cancelled) setSessionsLoading(false);
       }
@@ -134,7 +159,6 @@ export function EwenDashboardPage({
 
   const connectionActivity = useMemo(
     () => buildConnectionActivityByUser(sessionRows, directoryUsers, { now: Date.now() }),
-    // tick force le recalcul des sessions encore ouvertes (~chaque minute)
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [sessionRows, directoryUsers, tick]
   );
@@ -170,6 +194,47 @@ export function EwenDashboardPage({
         (u.code && u.code.toLowerCase().includes(q))
     );
   }, [registeredUsers, userSearch]);
+
+  const teamRows = useMemo(() => {
+    return filteredUsers.map((u) => {
+      const key = userMapKey(u);
+      const online =
+        (u.code && onlineKeySet.has(`code:${u.code}`)) ||
+        onlineKeySet.has(`name:${u.name.toLowerCase()}`);
+      const activity = activityByKey.get(key);
+      const quoteDays = getQuoteDaysForUser(quotesByUser, u.name);
+      const monthMs = getMonthDurationTotal(activity?.days || [], viewYear, viewMonth);
+      const monthQuotes = getMonthQuoteTotal(quoteDays, viewYear, viewMonth);
+      const totalQuotes = getTotalQuotesForUser(quotes, u.name);
+      const todayMs = Number(
+        (activity?.days || []).find((d) => d.dateKey === todayKey)?.durationMs || 0
+      );
+      const todayQuotesRaw = getQuoteCountOnDay(quoteDays, todayKey);
+      // Un jour sans connexion = pas de devis affichés pour « aujourd'hui »
+      // (évite l'impression qu'ils ont travaillé s'ils sont absents)
+      const todayQuotes = todayMs > 0 ? todayQuotesRaw : 0;
+      return {
+        user: u,
+        key,
+        online,
+        activity,
+        monthMs,
+        monthQuotes,
+        totalQuotes,
+        todayMs,
+        todayQuotes,
+      };
+    });
+  }, [
+    filteredUsers,
+    onlineKeySet,
+    activityByKey,
+    quotesByUser,
+    quotes,
+    viewYear,
+    viewMonth,
+    todayKey,
+  ]);
 
   const selectedActivity = useMemo(() => {
     if (!selectedUser) return null;
@@ -228,6 +293,8 @@ export function EwenDashboardPage({
     }
   }, [onSendUserScreenMessage, messageTargetRow, messageDraft]);
 
+  const monthLabel = MONTH_NAMES[viewMonth];
+
   return (
     <div className="space-y-6">
       <header className="relative overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-slate-900 via-[#1a1640] to-slate-950 px-5 py-6 text-white shadow-xl shadow-indigo-950/40">
@@ -248,21 +315,54 @@ export function EwenDashboardPage({
               Vue d&apos;ensemble
             </h1>
             <p className="mt-1 max-w-xl text-sm text-white/70">
-              Clique sur un prénom pour ouvrir le calendrier (jours connectés, heures, devis) et le bilan du mois.
+              Temps connecté et devis de toute l&apos;équipe — clique sur un prénom pour le calendrier détaillé.
             </p>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 backdrop-blur-sm">
-            <span
-              className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 shadow shadow-emerald-500/50 animate-pulse"
-              aria-hidden
-            />
-            Connecté : <span className="font-semibold text-white">{user?.name || "—"}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 backdrop-blur-sm">
+              <span
+                className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 shadow shadow-emerald-500/50 animate-pulse"
+                aria-hidden
+              />
+              {onlineRows.length} en ligne
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 backdrop-blur-sm">
+              Connecté : <span className="font-semibold text-white">{user?.name || "—"}</span>
+            </div>
           </div>
         </div>
       </header>
 
+      {sessionsError ? (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+        >
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden />
+          <div>
+            <p className="font-semibold">Sessions distantes indisponibles</p>
+            <p className="mt-0.5 text-amber-900/80">
+              Seuls les temps locaux de ce navigateur sont visibles. Erreur : {sessionsError}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {!sessionsLoading && !sessionsError && sessionsRemoteCount === 0 && sessionRows.length > 0 ? (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+        >
+          <Wifi className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden />
+          <p>
+            Aucune session d&apos;équipe reçue depuis Supabase pour le moment. Les autres utilisateurs
+            doivent être connectés au moins une fois (après ce correctif) pour apparaître.
+          </p>
+        </div>
+      ) : null}
+
       {/* En ligne */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 shadow-md shadow-slate-900/5">
+      <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 shadow-md shadow-slate-900/5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100/90 bg-gradient-to-r from-emerald-50/80 via-teal-50/50 to-slate-50/80 px-5 py-4">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Qui est en ligne</h2>
@@ -314,7 +414,7 @@ export function EwenDashboardPage({
                       </p>
                       <p className="text-xs text-slate-500">
                         {row.code ? `Code · ${row.code}` : "Pas de code en session"}
-                        {since ? ` · connecté depuis ${since}` : ""}
+                        {since ? ` · depuis ${since}` : ""}
                       </p>
                     </div>
                   </button>
@@ -324,7 +424,7 @@ export function EwenDashboardPage({
                         {row.sessions} onglets
                       </span>
                     )}
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200/80">
                       <span className="h-2 w-2 rounded-full bg-emerald-500" />
                       En ligne
                     </span>
@@ -359,21 +459,23 @@ export function EwenDashboardPage({
       </section>
 
       {/* Liste équipe */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 shadow-md shadow-slate-900/5">
+      <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 shadow-md shadow-slate-900/5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100/90 bg-gradient-to-r from-violet-50/90 via-indigo-50/50 to-cyan-50/40 px-5 py-4">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 text-white shadow-md shadow-violet-600/25">
               <Users className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">Équipe enregistrée</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Équipe — activité</h2>
               <p className="mt-0.5 text-sm text-slate-600">
-                Tous les comptes Utilisateurs — clique sur un prénom pour le détail du mois.
+                Aujourd&apos;hui (connexion réelle) et bilan {monthLabel}. Les devis n&apos;apparaissent
+                que les jours où la personne était connectée.
               </p>
             </div>
           </div>
           <span className="rounded-lg border border-violet-200/80 bg-white/90 px-3 py-1 text-sm font-medium tabular-nums text-violet-900">
             {registeredUsers.length} compte{registeredUsers.length !== 1 ? "s" : ""}
+            {sessionsLoading ? " · sync…" : ""}
           </span>
         </div>
 
@@ -390,9 +492,21 @@ export function EwenDashboardPage({
           </div>
         </div>
 
+        {/* En-tête colonnes desktop */}
+        <div className="hidden border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:grid md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-4">
+          <span>Collaborateur</span>
+          <span className="inline-flex items-center gap-1.5">
+            <Clock3 className="h-3.5 w-3.5" /> Aujourd&apos;hui
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <FileText className="h-3.5 w-3.5" /> {monthLabel}
+          </span>
+          <span className="text-right">Détail</span>
+        </div>
+
         {sessionsLoading && registeredUsers.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500">Chargement…</div>
-        ) : filteredUsers.length === 0 ? (
+        ) : teamRows.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500">
             {registeredUsers.length === 0
               ? "Aucun utilisateur dans le répertoire."
@@ -400,13 +514,10 @@ export function EwenDashboardPage({
           </div>
         ) : (
           <ul className="divide-y divide-slate-100/90">
-            {filteredUsers.map((u, index) => {
-              const key = userMapKey(u);
-              const online =
-                (u.code && onlineKeySet.has(`code:${u.code}`)) ||
-                onlineKeySet.has(`name:${u.name.toLowerCase()}`);
-              const activity = activityByKey.get(key);
-              const totalQuotes = getTotalQuotesForUser(quotes, u.name);
+            {teamRows.map((row, index) => {
+              const { user: u, key, online, monthMs, monthQuotes, totalQuotes, todayMs, todayQuotes } =
+                row;
+              const workedToday = todayMs > 0;
               return (
                 <motion.li
                   key={key}
@@ -417,7 +528,7 @@ export function EwenDashboardPage({
                   <button
                     type="button"
                     onClick={() => setSelectedUser(u)}
-                    className="group flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-violet-50/60 sm:px-5"
+                    className="group grid w-full grid-cols-1 items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-violet-50/70 sm:px-5 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-4"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <span
@@ -438,15 +549,51 @@ export function EwenDashboardPage({
                         </p>
                         <p className="text-xs text-slate-500">
                           {u.code ? `Code · ${u.code}` : "Sans code"}
-                          {" · "}
-                          {totalQuotes} devis au total
-                          {activity?.totalMs
-                            ? ` · ${formatDurationMs(activity.totalMs)} cumuls récents`
-                            : ""}
+                          {online ? (
+                            <span className="ml-2 font-semibold text-emerald-600">· En ligne</span>
+                          ) : (
+                            <span className="ml-2 text-slate-400">· Hors ligne</span>
+                          )}
                         </p>
                       </div>
                     </div>
-                    <span className="flex shrink-0 items-center gap-2 text-xs font-semibold text-violet-600 opacity-80 group-hover:opacity-100">
+
+                    <div className="flex items-center gap-2 md:block">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 md:hidden">
+                        Aujourd&apos;hui
+                      </span>
+                      {workedToday ? (
+                        <div className="inline-flex flex-col gap-0.5 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2">
+                          <span className="inline-flex items-center gap-1.5 text-sm font-bold tabular-nums text-slate-900">
+                            <Clock3 className="h-3.5 w-3.5 text-emerald-700" aria-hidden />
+                            {formatDurationMs(todayMs)}
+                          </span>
+                          <span className="text-[11px] font-semibold tabular-nums text-emerald-800">
+                            {todayQuotes} devis
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center rounded-xl border border-rose-200/70 bg-rose-50/80 px-3 py-2">
+                          <span className="text-sm font-semibold text-rose-700">Absent</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 md:block">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 md:hidden">
+                        {monthLabel}
+                      </span>
+                      <div className="inline-flex flex-col gap-0.5 rounded-xl border border-violet-200/70 bg-violet-50/80 px-3 py-2">
+                        <span className="text-sm font-bold tabular-nums text-slate-900">
+                          {monthMs > 0 ? formatDurationMs(monthMs) : "—"}
+                        </span>
+                        <span className="text-[11px] tabular-nums text-slate-600">
+                          {monthQuotes} devis · {totalQuotes} total
+                        </span>
+                      </div>
+                    </div>
+
+                    <span className="flex shrink-0 items-center justify-end gap-1.5 text-xs font-semibold text-violet-600 opacity-90 group-hover:opacity-100">
                       Calendrier
                       <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
                     </span>

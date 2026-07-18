@@ -1,7 +1,7 @@
 import { SITE_KEY, LS_KEYS } from "../constants";
 import { loadLS, saveLS } from "../utils";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
-import { toLocalDateKey, personNamesMatch } from "./quoteUserStats";
+import { toLocalDateKey, personNamesMatch, nextBusinessDayStartMs } from "./quoteUserStats";
 import { logger } from "./logger";
 
 const LOCAL_MAX = 800;
@@ -181,8 +181,8 @@ export async function endPresenceSession(sessionId) {
 
 /**
  * Charge les sessions (Supabase + fusion local), pour le tableau de bord.
- * Inclut aussi les sessions encore ouvertes dont last_seen est dans la fenêtre.
  * @param {{ days?: number }} opts
+ * @returns {Promise<{ rows: Array, remoteCount: number, remoteError: string|null }>}
  */
 export async function loadPresenceSessions({ days = 90 } = {}) {
   const since = new Date();
@@ -191,23 +191,50 @@ export async function loadPresenceSessions({ days = 90 } = {}) {
   const sinceMs = since.getTime();
 
   let remote = [];
+  let remoteError = null;
   if (__SUPABASE_DEBUG__?.isConfigured && supabase) {
     try {
-      // Sessions démarrées dans la fenêtre OU encore ouvertes récemment
+      // IMPORTANT : utiliser .gte() (paramètres encodés) et NON .or(`...gte.${iso}`)
+      // car les ":" d'un ISO cassent le parseur PostgREST → 0 ligne remote → seuls
+      // les temps locaux (utilisateur courant) apparaissaient.
       const { data, error } = await supabase
         .from("intranet_presence_sessions")
         .select("id, site_key, session_key, user_code, user_name, user_id, started_at, ended_at, last_seen_at")
         .eq("site_key", SITE_KEY)
-        .or(`started_at.gte.${sinceIso},last_seen_at.gte.${sinceIso}`)
+        .gte("started_at", sinceIso)
         .order("started_at", { ascending: false })
         .limit(5000);
 
       if (error) {
-        logger.warn("Présence sessions : lecture Supabase", error.message || error);
+        remoteError = error.message || String(error);
+        logger.warn("Présence sessions : lecture Supabase", remoteError);
       } else if (Array.isArray(data)) {
         remote = data;
       }
+
+      // Sessions ouvertes démarrées avant la fenêtre mais encore actives récemment
+      try {
+        const { data: openData, error: openError } = await supabase
+          .from("intranet_presence_sessions")
+          .select("id, site_key, session_key, user_code, user_name, user_id, started_at, ended_at, last_seen_at")
+          .eq("site_key", SITE_KEY)
+          .is("ended_at", null)
+          .gte("last_seen_at", sinceIso)
+          .lt("started_at", sinceIso)
+          .order("last_seen_at", { ascending: false })
+          .limit(500);
+
+        if (!openError && Array.isArray(openData) && openData.length) {
+          const seen = new Set(remote.map((r) => r.id));
+          for (const row of openData) {
+            if (row?.id && !seen.has(row.id)) remote.push(row);
+          }
+        }
+      } catch {
+        /* optionnel */
+      }
     } catch (err) {
+      remoteError = err?.message || String(err);
       logger.warn("Présence sessions : lecture", err);
     }
   }
@@ -220,7 +247,7 @@ export async function loadPresenceSessions({ days = 90 } = {}) {
     return false;
   });
 
-  // Fusion par id, puis dédoublonnage logique (session_key + started_at)
+  // Fusion par id — préférer la version remote (UUID) à un clone local
   const byId = new Map();
   for (const row of [...local, ...remote]) {
     if (!row?.id) continue;
@@ -260,7 +287,11 @@ export async function loadPresenceSessions({ days = 90 } = {}) {
     }
   }
 
-  return [...byLogical.values()];
+  return {
+    rows: [...byLogical.values()],
+    remoteCount: remote.length,
+    remoteError,
+  };
 }
 
 function sessionEndMs(row, now = Date.now()) {
@@ -397,15 +428,13 @@ export function buildConnectionActivityByUser(sessions = [], users = [], { now =
     }
     const entry = byUser.get(mapKey);
 
-    // Découper si une session chevauche minuit
+    // Découper aux minuits Hurghada (Africa/Cairo), pas au fuseau du navigateur
     let cursor = start;
     while (cursor < end) {
-      const dayStart = new Date(cursor);
-      dayStart.setHours(0, 0, 0, 0);
-      const nextDay = new Date(dayStart);
-      nextDay.setDate(nextDay.getDate() + 1);
-      const sliceEnd = Math.min(end, nextDay.getTime());
-      const dateKey = toLocalDateKey(dayStart);
+      const dateKey = toLocalDateKey(new Date(cursor));
+      if (!dateKey) break;
+      const sliceEnd = Math.min(end, nextBusinessDayStartMs(cursor));
+      if (sliceEnd <= cursor) break;
       if (!entry.intervalsByDay.has(dateKey)) entry.intervalsByDay.set(dateKey, []);
       entry.intervalsByDay.get(dateKey).push([cursor, sliceEnd]);
       cursor = sliceEnd;

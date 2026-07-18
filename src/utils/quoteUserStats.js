@@ -15,6 +15,9 @@ const MONTH_NAMES = [
   "Décembre",
 ];
 
+/** Fuseau métier Hurghada (évite qu’un devis du soir bascule au « mauvais » jour selon le navigateur). */
+export const BUSINESS_TIMEZONE = "Africa/Cairo";
+
 export { WEEK_HEADERS, MONTH_NAMES };
 
 /**
@@ -28,15 +31,64 @@ export function personNamesMatch(a, b) {
   return na.localeCompare(nb, "fr", { sensitivity: "base" }) === 0;
 }
 
-/** @param {string|Date} isoOrDate */
+/**
+ * Clé calendrier YYYY-MM-DD pour un instant (timestamp ISO / Date),
+ * toujours en heure Hurghada (Africa/Cairo).
+ */
 export function toLocalDateKey(isoOrDate) {
   if (!isoOrDate) return null;
+
+  // Date seule déjà normalisée
+  if (typeof isoOrDate === "string") {
+    const trimmed = isoOrDate.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  }
+
   const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
   if (Number.isNaN(d.getTime())) return null;
+
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: BUSINESS_TIMEZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(d);
+    const y = parts.find((p) => p.type === "year")?.value;
+    const m = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+    if (y && m && day) return `${y}-${m}-${day}`;
+  } catch {
+    /* fallback ci-dessous */
+  }
+
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/** Clé d’une case de calendrier (jour affiché), sans conversion de fuseau. */
+export function calendarCellDateKey(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Prochain instant (ms) où la date Cairo change. */
+export function nextBusinessDayStartMs(fromMs) {
+  const startKey = toLocalDateKey(new Date(fromMs));
+  if (!startKey) return fromMs + 24 * 3600 * 1000;
+  let lo = fromMs + 1;
+  let hi = fromMs + 36 * 3600 * 1000;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (toLocalDateKey(new Date(mid)) === startKey) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
 }
 
 /**
@@ -83,6 +135,7 @@ export function buildQuotesCountByUserAndDay(quotes = []) {
   const map = new Map();
   for (const q of quotes) {
     const rawName = String(q?.createdByName || "").trim() || "Non renseigné";
+    // Uniquement la date de CRÉATION du devis (jamais updated_at / date activité)
     const dateKey = toLocalDateKey(q?.createdAt);
     if (!dateKey) continue;
 
@@ -117,6 +170,12 @@ export function getQuoteDaysForUser(quotesByUser, userName) {
     }
   }
   return merged;
+}
+
+/** Nombre de devis créés un jour donné (dateKey YYYY-MM-DD). */
+export function getQuoteCountOnDay(countByDay, dateKey) {
+  if (!countByDay?.size || !dateKey) return 0;
+  return Number(countByDay.get(dateKey) || 0);
 }
 
 /** Grille calendrier (lundi = 1ère colonne). */
