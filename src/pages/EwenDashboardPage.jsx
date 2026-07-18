@@ -14,6 +14,7 @@ import {
 } from "../utils/presenceSessions";
 import {
   buildQuotesCountByUserAndDay,
+  getQuoteDaysForUser,
   getTotalQuotesForUser,
 } from "../utils/quoteUserStats";
 
@@ -70,7 +71,7 @@ export function EwenDashboardPage({
   const [messageSending, setMessageSending] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [userSearch, setUserSearch] = useState("");
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,7 +98,7 @@ export function EwenDashboardPage({
     async function refreshSessions() {
       setSessionsLoading(true);
       try {
-        const rows = await loadPresenceSessions({ days: 60 });
+        const rows = await loadPresenceSessions({ days: 90 });
         if (!cancelled) setSessionRows(rows);
       } finally {
         if (!cancelled) setSessionsLoading(false);
@@ -132,8 +133,10 @@ export function EwenDashboardPage({
   }, [onlineRows]);
 
   const connectionActivity = useMemo(
-    () => buildConnectionActivityByUser(sessionRows, directoryUsers),
-    [sessionRows, directoryUsers]
+    () => buildConnectionActivityByUser(sessionRows, directoryUsers, { now: Date.now() }),
+    // tick force le recalcul des sessions encore ouvertes (~chaque minute)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sessionRows, directoryUsers, tick]
   );
 
   const activityByKey = useMemo(() => {
@@ -175,13 +178,7 @@ export function EwenDashboardPage({
 
   const selectedQuoteDays = useMemo(() => {
     if (!selectedUser?.name) return new Map();
-    // Match accent-insensitive via quote map keys
-    for (const [name, dayMap] of quotesByUser) {
-      if (name.localeCompare(selectedUser.name, "fr", { sensitivity: "accent" }) === 0) {
-        return dayMap;
-      }
-    }
-    return new Map();
+    return getQuoteDaysForUser(quotesByUser, selectedUser.name);
   }, [selectedUser, quotesByUser]);
 
   const selectedIsOnline = useMemo(() => {

@@ -17,6 +17,17 @@ const MONTH_NAMES = [
 
 export { WEEK_HEADERS, MONTH_NAMES };
 
+/**
+ * Compare deux noms de personne en ignorant casse et accents (José ≡ Jose ≡ JOSE).
+ * `sensitivity: "base"` = accents ignorés ; `"accent"` les rendrait significatifs.
+ */
+export function personNamesMatch(a, b) {
+  const na = String(a || "").trim();
+  const nb = String(b || "").trim();
+  if (!na || !nb) return false;
+  return na.localeCompare(nb, "fr", { sensitivity: "base" }) === 0;
+}
+
 /** @param {string|Date} isoOrDate */
 export function toLocalDateKey(isoOrDate) {
   if (!isoOrDate) return null;
@@ -49,7 +60,7 @@ export function getTotalQuotesForUser(quotes = [], userName) {
   let total = 0;
   for (const q of quotes) {
     const name = String(q?.createdByName || "").trim();
-    if (name.localeCompare(target, "fr", { sensitivity: "accent" }) === 0) total += 1;
+    if (personNamesMatch(name, target)) total += 1;
   }
   return total;
 }
@@ -65,19 +76,47 @@ export function getActiveQuoteDaysCount(countByDay) {
 }
 
 /**
+ * Fusionne les buckets de noms équivalents (casse / accents) sous une seule clé d’affichage.
  * @returns {Map<string, Map<string, number>>} userName -> dateKey -> count
  */
 export function buildQuotesCountByUserAndDay(quotes = []) {
   const map = new Map();
   for (const q of quotes) {
-    const userName = String(q?.createdByName || "").trim() || "Non renseigné";
+    const rawName = String(q?.createdByName || "").trim() || "Non renseigné";
     const dateKey = toLocalDateKey(q?.createdAt);
     if (!dateKey) continue;
-    if (!map.has(userName)) map.set(userName, new Map());
-    const dayMap = map.get(userName);
+
+    let key = rawName;
+    for (const existing of map.keys()) {
+      if (personNamesMatch(existing, rawName)) {
+        key = existing;
+        break;
+      }
+    }
+
+    if (!map.has(key)) map.set(key, new Map());
+    const dayMap = map.get(key);
     dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + 1);
   }
   return map;
+}
+
+/**
+ * Jours de devis pour un utilisateur, en fusionnant toutes les variantes de nom.
+ * @returns {Map<string, number>} dateKey -> count
+ */
+export function getQuoteDaysForUser(quotesByUser, userName) {
+  const merged = new Map();
+  const target = String(userName || "").trim();
+  if (!target || !quotesByUser?.size) return merged;
+
+  for (const [name, dayMap] of quotesByUser) {
+    if (!personNamesMatch(name, target)) continue;
+    for (const [dateKey, count] of dayMap) {
+      merged.set(dateKey, (merged.get(dateKey) || 0) + Number(count || 0));
+    }
+  }
+  return merged;
 }
 
 /** Grille calendrier (lundi = 1ère colonne). */

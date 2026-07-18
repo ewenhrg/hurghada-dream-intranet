@@ -330,6 +330,7 @@ function QuoteCardComponent({
     const clientData = {
       name: d.client?.name || "",
       phone: d.client?.phone || "",
+      emergencyPhone: d.client?.emergencyPhone || "",
       email: d.client?.email || "",
       hotel: d.client?.hotel || "",
       room: d.client?.room || "",
@@ -1281,6 +1282,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   client_name: finalUpdatedQuote.client.name || "",
                   client_phone: finalUpdatedQuote.client.phone || "",
                   client_emergency_phone: finalUpdatedQuote.client.emergencyPhone || "",
+                  client_email: finalUpdatedQuote.client.email || "",
                   client_hotel: finalUpdatedQuote.client.hotel || "",
                   client_room: finalUpdatedQuote.client.room || "",
                   client_neighborhood: finalUpdatedQuote.client.neighborhood || "",
@@ -1840,6 +1842,17 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                   }}
                   className="text-base md:text-lg py-3"
                   placeholder="Optionnel"
+                />
+              </div>
+              <div>
+                <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">📧 Email</label>
+                <TextInput
+                  type="email"
+                  value={client.email || ""}
+                  onChange={(e) => setClient((c) => ({ ...c, email: e.target.value }))}
+                  className="text-base md:text-lg py-3"
+                  placeholder="email@exemple.com"
+                  autoComplete="email"
                 />
               </div>
               <div>

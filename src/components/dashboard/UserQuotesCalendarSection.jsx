@@ -8,6 +8,7 @@ import {
   collectQuoteUserNames,
   getActiveQuoteDaysCount,
   getMonthQuoteTotal,
+  getQuoteDaysForUser,
   getTotalQuotesForUser,
   toLocalDateKey,
 } from "../../utils/quoteUserStats";
@@ -163,7 +164,7 @@ export const UserQuotesCalendarSection = memo(function UserQuotesCalendarSection
   const monthGrandTotal = useMemo(() => {
     let total = 0;
     for (const name of userNames) {
-      total += getMonthQuoteTotal(countsByUser.get(name), viewYear, viewMonth);
+      total += getMonthQuoteTotal(getQuoteDaysForUser(countsByUser, name), viewYear, viewMonth);
     }
     return total;
   }, [userNames, countsByUser, viewYear, viewMonth]);
@@ -201,7 +202,7 @@ export const UserQuotesCalendarSection = memo(function UserQuotesCalendarSection
             <UserMonthCalendar
               key={name}
               userName={name}
-              countByDay={countsByUser.get(name) || new Map()}
+              countByDay={getQuoteDaysForUser(countsByUser, name)}
               viewYear={viewYear}
               viewMonth={viewMonth}
               lifetimeTotal={totalsByUser.get(name) || 0}

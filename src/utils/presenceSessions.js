@@ -1,7 +1,7 @@
 import { SITE_KEY, LS_KEYS } from "../constants";
 import { loadLS, saveLS } from "../utils";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
-import { toLocalDateKey } from "./quoteUserStats";
+import { toLocalDateKey, personNamesMatch } from "./quoteUserStats";
 import { logger } from "./logger";
 
 const LOCAL_MAX = 800;
@@ -39,12 +39,45 @@ function upsertLocalSession(row) {
   return row;
 }
 
+/** Ferme toutes les sessions locales encore ouvertes pour un session_key donné. */
+function closeLocalOpenSessionsForKey(sessionKey, at) {
+  const key = String(sessionKey || "");
+  if (!key) return;
+  const rows = readLocalSessions();
+  let changed = false;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].session_key === key && !rows[i].ended_at) {
+      rows[i] = { ...rows[i], ended_at: at, last_seen_at: at };
+      changed = true;
+    }
+  }
+  if (changed) writeLocalSessions(rows);
+}
+
 /**
  * Démarre une session de présence (Supabase si dispo + miroir localStorage).
+ * Ferme d'abord toute session ouverte pour le même onglet (session_key).
  * @returns {Promise<string|null>} id de session
  */
 export async function startPresenceSession({ sessionKey, user }) {
   const startedAt = nowIso();
+  const key = String(sessionKey || "");
+
+  // Évite les doublons d'onglet : fermer les sessions ouvertes du même session_key
+  closeLocalOpenSessionsForKey(key, startedAt);
+  if (__SUPABASE_DEBUG__?.isConfigured && supabase && key) {
+    try {
+      await supabase
+        .from("intranet_presence_sessions")
+        .update({ ended_at: startedAt, last_seen_at: startedAt })
+        .eq("site_key", SITE_KEY)
+        .eq("session_key", key)
+        .is("ended_at", null);
+    } catch {
+      /* ignore */
+    }
+  }
+
   const localId =
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
@@ -53,7 +86,7 @@ export async function startPresenceSession({ sessionKey, user }) {
   const base = {
     id: localId,
     site_key: SITE_KEY,
-    session_key: String(sessionKey || ""),
+    session_key: key,
     user_code: normalizeCode(user?.code),
     user_name: normalizeName(user?.name) || "—",
     user_id: user?.id != null ? String(user.id) : "",
@@ -82,7 +115,6 @@ export async function startPresenceSession({ sessionKey, user }) {
       .single();
 
     if (error) {
-      // Table absente ou RLS : on continue en local uniquement.
       logger.warn("Présence sessions : insert Supabase", error.message || error);
       return localId;
     }
@@ -98,13 +130,18 @@ export async function startPresenceSession({ sessionKey, user }) {
   }
 }
 
+/**
+ * Heartbeat : met à jour last_seen_at uniquement.
+ * Ne rouvre JAMAIS une session déjà terminée (ended_at).
+ */
 export async function touchPresenceSession(sessionId) {
   if (!sessionId) return;
   const at = nowIso();
   const rows = readLocalSessions();
   const idx = rows.findIndex((r) => r.id === sessionId);
   if (idx >= 0) {
-    rows[idx] = { ...rows[idx], last_seen_at: at, ended_at: null };
+    if (rows[idx].ended_at) return;
+    rows[idx] = { ...rows[idx], last_seen_at: at };
     writeLocalSessions(rows);
   }
 
@@ -112,8 +149,9 @@ export async function touchPresenceSession(sessionId) {
   try {
     await supabase
       .from("intranet_presence_sessions")
-      .update({ last_seen_at: at, ended_at: null })
-      .eq("id", sessionId);
+      .update({ last_seen_at: at })
+      .eq("id", sessionId)
+      .is("ended_at", null);
   } catch {
     /* ignore */
   }
@@ -131,7 +169,7 @@ export async function endPresenceSession(sessionId) {
 
   if (!__SUPABASE_DEBUG__?.isConfigured || !supabase) return;
 
-try {
+  try {
     await supabase
       .from("intranet_presence_sessions")
       .update({ ended_at: at, last_seen_at: at })
@@ -143,23 +181,26 @@ try {
 
 /**
  * Charge les sessions (Supabase + fusion local), pour le tableau de bord.
+ * Inclut aussi les sessions encore ouvertes dont last_seen est dans la fenêtre.
  * @param {{ days?: number }} opts
  */
-export async function loadPresenceSessions({ days = 60 } = {}) {
+export async function loadPresenceSessions({ days = 90 } = {}) {
   const since = new Date();
   since.setDate(since.getDate() - days);
   const sinceIso = since.toISOString();
+  const sinceMs = since.getTime();
 
   let remote = [];
   if (__SUPABASE_DEBUG__?.isConfigured && supabase) {
     try {
+      // Sessions démarrées dans la fenêtre OU encore ouvertes récemment
       const { data, error } = await supabase
         .from("intranet_presence_sessions")
         .select("id, site_key, session_key, user_code, user_name, user_id, started_at, ended_at, last_seen_at")
         .eq("site_key", SITE_KEY)
-        .gte("started_at", sinceIso)
+        .or(`started_at.gte.${sinceIso},last_seen_at.gte.${sinceIso}`)
         .order("started_at", { ascending: false })
-        .limit(2000);
+        .limit(5000);
 
       if (error) {
         logger.warn("Présence sessions : lecture Supabase", error.message || error);
@@ -172,10 +213,14 @@ export async function loadPresenceSessions({ days = 60 } = {}) {
   }
 
   const local = readLocalSessions().filter((r) => {
-    const t = Date.parse(r.started_at || "");
-    return Number.isFinite(t) && t >= since.getTime();
+    const started = Date.parse(r.started_at || "");
+    const lastSeen = Date.parse(r.last_seen_at || r.ended_at || r.started_at || "");
+    if (Number.isFinite(started) && started >= sinceMs) return true;
+    if (!r.ended_at && Number.isFinite(lastSeen) && lastSeen >= sinceMs) return true;
+    return false;
   });
 
+  // Fusion par id, puis dédoublonnage logique (session_key + started_at)
   const byId = new Map();
   for (const row of [...local, ...remote]) {
     if (!row?.id) continue;
@@ -184,13 +229,38 @@ export async function loadPresenceSessions({ days = 60 } = {}) {
       byId.set(row.id, row);
       continue;
     }
-    // Préférer la version avec ended_at / last_seen plus récent
     const prevSeen = Date.parse(prev.last_seen_at || prev.ended_at || prev.started_at || 0);
     const nextSeen = Date.parse(row.last_seen_at || row.ended_at || row.started_at || 0);
-    byId.set(row.id, nextSeen >= prevSeen ? { ...prev, ...row } : { ...row, ...prev });
+    const preferRemote = !String(row.id).startsWith("local-") && String(prev.id).startsWith("local-");
+    byId.set(
+      row.id,
+      preferRemote || nextSeen >= prevSeen ? { ...prev, ...row } : { ...row, ...prev }
+    );
   }
 
-  return [...byId.values()];
+  // Dédupliquer les clones local/remote avec même session_key + started_at
+  const byLogical = new Map();
+  for (const row of byId.values()) {
+    const logicalKey = `${row.session_key || ""}|${row.started_at || ""}`;
+    const prev = byLogical.get(logicalKey);
+    if (!prev) {
+      byLogical.set(logicalKey, row);
+      continue;
+    }
+    const prevIsLocal = String(prev.id).startsWith("local-");
+    const nextIsLocal = String(row.id).startsWith("local-");
+    if (prevIsLocal && !nextIsLocal) {
+      byLogical.set(logicalKey, { ...prev, ...row, id: row.id });
+    } else if (!prevIsLocal && nextIsLocal) {
+      byLogical.set(logicalKey, { ...row, ...prev, id: prev.id });
+    } else {
+      const prevSeen = Date.parse(prev.last_seen_at || prev.ended_at || 0);
+      const nextSeen = Date.parse(row.last_seen_at || row.ended_at || 0);
+      byLogical.set(logicalKey, nextSeen >= prevSeen ? { ...prev, ...row } : { ...row, ...prev });
+    }
+  }
+
+  return [...byLogical.values()];
 }
 
 function sessionEndMs(row, now = Date.now()) {
@@ -258,6 +328,17 @@ export function buildDurationByDayMap(days = []) {
 }
 
 /**
+ * Clé canonique d'un utilisateur actif : toujours `code:X` s'il a un code,
+ * sinon `name:…` (évite de scinder le même compte en deux buckets).
+ */
+function canonicalUserKey(user) {
+  const code = normalizeCode(user?.code);
+  const name = normalizeName(user?.name);
+  if (code) return `code:${code}`;
+  return `name:${name.toLowerCase()}`;
+}
+
+/**
  * Agrège les sessions par utilisateur actif puis par jour.
  * @returns {Array<{ name, code, days: Array<{ dateKey, durationMs, label }>, totalMs }>}
  */
@@ -269,32 +350,40 @@ export function buildConnectionActivityByUser(sessions = [], users = [], { now =
     }))
     .filter((u) => u.name || u.code);
 
-  const activeNames = new Set(active.map((u) => u.name.toLowerCase()).filter(Boolean));
   const activeCodes = new Set(active.map((u) => u.code).filter(Boolean));
 
-  const matchActive = (row) => {
+  const findActiveUser = (row) => {
     const code = normalizeCode(row.user_code);
     const name = normalizeName(row.user_name);
-    if (code && activeCodes.has(code)) return true;
-    if (name && activeNames.has(name.toLowerCase())) return true;
-    return false;
+    if (code && activeCodes.has(code)) {
+      return active.find((a) => a.code === code) || null;
+    }
+    if (name) {
+      return active.find((a) => personNamesMatch(a.name, name)) || null;
+    }
+    return null;
   };
-
-  const filtered = (sessions || []).filter(matchActive);
 
   /** @type {Map<string, { name: string, code: string|null, intervalsByDay: Map<string, Array<[number, number]>> }>} */
   const byUser = new Map();
 
   const resolveKey = (row) => {
+    const matched = findActiveUser(row);
+    if (matched) {
+      return {
+        mapKey: canonicalUserKey(matched),
+        name: matched.name,
+        code: matched.code || null,
+      };
+    }
+    // Fallback (ne devrait pas arriver après filter)
     const code = normalizeCode(row.user_code);
     const name = normalizeName(row.user_name);
-    if (code && activeCodes.has(code)) {
-      const u = active.find((a) => a.code === code);
-      return { mapKey: `code:${code}`, name: u?.name || name || code, code };
-    }
-    const u = active.find((a) => a.name.toLowerCase() === name.toLowerCase());
-    return { mapKey: `name:${(u?.name || name).toLowerCase()}`, name: u?.name || name, code: u?.code || code || null };
+    if (code) return { mapKey: `code:${code}`, name: name || code, code };
+    return { mapKey: `name:${name.toLowerCase()}`, name, code: null };
   };
+
+  const filtered = (sessions || []).filter((row) => Boolean(findActiveUser(row)));
 
   for (const row of filtered) {
     const start = Date.parse(row.started_at || "");
@@ -325,7 +414,7 @@ export function buildConnectionActivityByUser(sessions = [], users = [], { now =
 
   // Inclure les utilisateurs actifs même sans session
   for (const u of active) {
-    const mapKey = u.code ? `code:${u.code}` : `name:${u.name.toLowerCase()}`;
+    const mapKey = canonicalUserKey(u);
     if (!byUser.has(mapKey)) {
       byUser.set(mapKey, { name: u.name, code: u.code || null, intervalsByDay: new Map() });
     }
@@ -370,7 +459,7 @@ export function isPresenceRowActiveUser(row, users = []) {
     const uc = normalizeCode(u?.code);
     const un = normalizeName(u?.name);
     if (code && uc && code === uc) return true;
-    if (name && un && name.localeCompare(un, "fr", { sensitivity: "accent" }) === 0) return true;
+    if (name && un && personNamesMatch(name, un)) return true;
     return false;
   });
 }

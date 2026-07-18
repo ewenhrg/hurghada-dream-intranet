@@ -268,14 +268,39 @@ export default function App() {
   useEffect(() => {
     let presenceSessionId = null;
     let heartbeatTimer = null;
-    let ended = false;
+    let disposed = false;
+    let channelReady = false;
+
+    const stopHeartbeat = () => {
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+      }
+    };
+
+    const startHeartbeat = () => {
+      stopHeartbeat();
+      heartbeatTimer = setInterval(() => {
+        if (presenceSessionId) touchPresenceSession(presenceSessionId);
+      }, 60_000);
+    };
 
     const endTrackedSession = () => {
-      if (ended || !presenceSessionId) return;
-      ended = true;
+      stopHeartbeat();
+      if (!presenceSessionId) return;
       const id = presenceSessionId;
       presenceSessionId = null;
       endPresenceSession(id);
+    };
+
+    const ensureSession = async () => {
+      if (disposed || !channelReady) return;
+      if (!presenceSessionId) {
+        presenceSessionId = await startPresenceSession({ sessionKey: tabId, user });
+      } else {
+        await touchPresenceSession(presenceSessionId);
+      }
+      if (!disposed && presenceSessionId) startHeartbeat();
     };
 
     const clearChannel = () => {
@@ -330,11 +355,24 @@ export default function App() {
       const myName = (user?.name && String(user.name).trim()) || "";
       return (
         myName !== "" &&
-        pName.localeCompare(myName, "fr", { sensitivity: "accent" }) === 0
+        pName.localeCompare(myName, "fr", { sensitivity: "base" }) === 0
       );
     };
 
+    // Fermer la session à la fermeture d'onglet / mise en arrière-plan réelle
     const onPageHide = () => endTrackedSession();
+
+    // Au retour au premier plan : relancer une session (corrige le sous-comptage mobile/tab)
+    const onVisibilityChange = () => {
+      if (disposed) return;
+      if (document.visibilityState === "visible") {
+        void ensureSession();
+      } else if (document.visibilityState === "hidden") {
+        // Pause heartbeat : sans touch, la session sera coupée à last_seen (STALE 3 min)
+        stopHeartbeat();
+        if (presenceSessionId) touchPresenceSession(presenceSessionId);
+      }
+    };
 
     channel
       .on("presence", { event: "sync" }, pushPresenceSnapshot)
@@ -360,6 +398,7 @@ export default function App() {
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
+          channelReady = true;
           const { error } = await channel.track({
             name: user.name || "",
             code: user.code != null ? String(user.code) : "",
@@ -370,14 +409,7 @@ export default function App() {
             logger.warn("Présence intranet : échec du track", error);
           }
           pushPresenceSnapshot();
-          if (!presenceSessionId) {
-            presenceSessionId = await startPresenceSession({ sessionKey: tabId, user });
-            ended = false;
-            if (heartbeatTimer) clearInterval(heartbeatTimer);
-            heartbeatTimer = setInterval(() => {
-              if (presenceSessionId) touchPresenceSession(presenceSessionId);
-            }, 60_000);
-          }
+          await ensureSession();
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           logger.warn("Présence intranet : canal", status);
         }
@@ -385,10 +417,12 @@ export default function App() {
 
     intranetPresenceChannelRef.current = channel;
     window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
+      disposed = true;
       window.removeEventListener("pagehide", onPageHide);
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       endTrackedSession();
       clearChannel();
       setPresenceState({});
@@ -592,7 +626,7 @@ export default function App() {
           )
           .in("site_key", quoteSiteKeys)
           .order("created_at", { ascending: false })
-          .limit(1000); // Limiter à 1000 devis pour éviter de surcharger
+          .limit(5000); // Fenêtre large pour stats tableau de bord (totaux / calendrier)
         
         if (!quotesError && Array.isArray(quotesData)) {
           setQuotes((prevQuotes) => {

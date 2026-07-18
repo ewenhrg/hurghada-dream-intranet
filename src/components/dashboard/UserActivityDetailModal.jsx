@@ -265,7 +265,9 @@ export function UserActivityDetailModal({
                             inMonth && !isFuture
                               ? connected
                                 ? `${formatDurationMs(durationMs)} · ${quotes} devis`
-                                : "Non connecté"
+                                : quotes > 0
+                                  ? `Non connecté · ${quotes} devis`
+                                  : "Non connecté"
                               : undefined
                           }
                           className={`flex min-h-[4.25rem] flex-col items-center justify-start gap-0.5 rounded-xl border p-1.5 transition ${tone} ${
@@ -284,13 +286,25 @@ export function UserActivityDetailModal({
                               <span className="rounded bg-emerald-600/15 px-1 text-[9px] font-bold tabular-nums text-emerald-800">
                                 {formatDurationCompact(durationMs)}
                               </span>
-                              <span className="text-[9px] font-semibold tabular-nums text-emerald-900/80">
-                                {quotes} devis
-                              </span>
+                              {quotes > 0 ? (
+                                <span className="text-[9px] font-semibold tabular-nums text-emerald-900/80">
+                                  {quotes} devis
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-medium tabular-nums text-emerald-800/50">
+                                  0 devis
+                                </span>
+                              )}
                             </>
                           ) : null}
                           {inMonth && !isFuture && !connected ? (
-                            <span className="mt-1 text-[9px] font-medium text-rose-700/80">—</span>
+                            quotes > 0 ? (
+                              <span className="mt-0.5 rounded bg-violet-600/10 px-1 text-[9px] font-bold tabular-nums text-violet-800">
+                                {quotes} devis
+                              </span>
+                            ) : (
+                              <span className="mt-1 text-[9px] font-medium text-rose-700/80">—</span>
+                            )
                           ) : null}
                         </div>
                       );
