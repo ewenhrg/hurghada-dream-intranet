@@ -11,9 +11,10 @@ import {
   MessageCircle,
   X,
 } from "lucide-react";
-import { getHotelById, HOTEL_ACCENT_COVERS, getHotelMapEmbedUrl, getHotelMapsOpenUrl } from "../data/publicHotels";
+import { getHotelMapEmbedUrl, getHotelMapsOpenUrl, HOTEL_ACCENT_COVERS } from "../data/publicHotels";
 import { HotelCover, StarRow } from "../components/public/HotelUI";
 import { AMENITY_META, WHATSAPP_BASE } from "../components/public/hotelAmenities";
+import { loadPublicHotelBySlug } from "../utils/publicHotelsCatalog";
 
 /**
  * Fiche hôtel publique (style Booking) : galerie, description, équipements,
@@ -22,7 +23,23 @@ import { AMENITY_META, WHATSAPP_BASE } from "../components/public/hotelAmenities
  */
 export function PublicHotelDetailPage({ hotelId }) {
   const navigate = useNavigate();
-  const hotel = useMemo(() => getHotelById(hotelId), [hotelId]);
+  const [hotel, setHotel] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      const result = await loadPublicHotelBySlug(hotelId);
+      if (!cancelled) {
+        setHotel(result.hotel);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hotelId]);
 
   const images = useMemo(() => (Array.isArray(hotel?.images) ? hotel.images : []), [hotel]);
   const hasImages = images.length > 0;
@@ -70,6 +87,17 @@ export function PublicHotelDetailPage({ hotelId }) {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [hotelId]);
+
+  if (loading) {
+    return (
+      <div className="hd-public-catalog flex min-h-screen flex-col items-center justify-center bg-catalog-bg font-catalog-sans text-catalog-body">
+        <div className="h-12 w-12 animate-spin rounded-full border-[3px] border-violet-200 border-t-violet-800" aria-hidden />
+        <p className="mt-5 font-catalog-display text-base font-semibold text-catalog-ink">
+          Chargement de l’hôtel…
+        </p>
+      </div>
+    );
+  }
 
   if (!hotel) {
     return (

@@ -34,6 +34,7 @@ import {
   PublicHotelRequestPage,
   PublicHotelsCataloguePage,
   PublicHotelDetailPage,
+  PublicHotelsAdminPage,
   HotelHistoryPage,
 } from "./config/lazyPages";
 import { ScrollOptimizer } from "./components/ScrollOptimizer";
@@ -1467,6 +1468,11 @@ export default function App() {
                     🏨 Hôtels
                   </Pill>
                 )}
+                {canAccessHotelsPage(user) && (
+                  <Pill active={tab === "hotels-catalog"} onClick={() => setTab("hotels-catalog")}>
+                    Catalogue hôtels
+                  </Pill>
+                )}
                 {hasFullIntranetAccess(user) && (
                   <Pill active={tab === "ewen-dashboard"} onClick={() => setTab("ewen-dashboard")}>
                     {t("nav.ewenDashboard")}
@@ -1644,6 +1650,19 @@ export default function App() {
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <HotelsPage user={user} />
+                </Suspense>
+              </ErrorBoundary>
+            </Section>
+          )}
+
+          {tab === "hotels-catalog" && canAccessHotelsPage(user) && (
+            <Section
+              title="Catalogue hôtels"
+              subtitle="Ajoutez et gérez les fiches publiques : description, inclus, photos et carte"
+            >
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>
+                  <PublicHotelsAdminPage />
                 </Suspense>
               </ErrorBoundary>
             </Section>

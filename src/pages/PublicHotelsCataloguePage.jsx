@@ -1,15 +1,32 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, MapPin } from "lucide-react";
-import { PUBLIC_HOTELS } from "../data/publicHotels";
 import { AmenityChip, HotelCover, StarRow } from "../components/public/HotelUI";
 import { WHATSAPP_BASE } from "../components/public/hotelAmenities";
+import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
 
 const MotionArticle = motion.article;
 
 export function PublicHotelsCataloguePage() {
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
+  const [hotels, setHotels] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const result = await loadPublicHotelsCatalog({ publishedOnly: true });
+      if (!cancelled) {
+        setHotels(result.hotels || []);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const goToRequest = () => navigate("/demande-hotel");
   const openHotel = (id) => navigate(`/hotels/${encodeURIComponent(id)}`);
@@ -81,10 +98,35 @@ export function PublicHotelsCataloguePage() {
 
       {/* Grille hôtels */}
       <main className="relative z-10 mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center gap-4 py-24">
+            <div className="h-12 w-12 animate-spin rounded-full border-[3px] border-violet-200 border-t-violet-800" aria-hidden />
+            <p className="font-catalog-display text-base font-semibold text-catalog-ink">
+              Chargement des hôtels…
+            </p>
+          </div>
+        ) : hotels.length === 0 ? (
+          <div className="rounded-3xl border border-violet-200/70 bg-white px-6 py-16 text-center shadow-catalog-premium">
+            <p className="font-catalog-display text-xl font-semibold text-catalog-ink">
+              Aucun hôtel publié pour le moment
+            </p>
+            <p className="mx-auto mt-2 max-w-md text-sm font-semibold text-catalog-muted">
+              Revenez bientôt, ou demandez une offre personnalisée.
+            </p>
+            <button
+              type="button"
+              onClick={goToRequest}
+              className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-6 py-3.5 text-sm font-bold text-white"
+            >
+              Demander une offre
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+        ) : (
         <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
-          {PUBLIC_HOTELS.map((hotel, index) => (
+          {hotels.map((hotel, index) => (
             <MotionArticle
-              key={hotel.id}
+              key={hotel.dbId || hotel.slug || hotel.id}
               initial={reduceMotion ? false : { opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-40px" }}
@@ -93,7 +135,7 @@ export function PublicHotelsCataloguePage() {
             >
               <button
                 type="button"
-                onClick={() => openHotel(hotel.id)}
+                onClick={() => openHotel(hotel.slug || hotel.id)}
                 className="relative block aspect-[5/4] w-full overflow-hidden bg-slate-100 text-left"
                 aria-label={`Découvrir ${hotel.name}`}
               >
@@ -129,19 +171,19 @@ export function PublicHotelsCataloguePage() {
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-1.5">
-                  {hotel.amenities.slice(0, 3).map((a) => (
+                  {(hotel.amenities || []).slice(0, 3).map((a) => (
                     <AmenityChip key={a} amenity={a} />
                   ))}
-                  {hotel.amenities.length > 3 ? (
+                  {(hotel.amenities || []).length > 3 ? (
                     <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-catalog-subtle">
-                      +{hotel.amenities.length - 3}
+                      +{(hotel.amenities || []).length - 3}
                     </span>
                   ) : null}
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => openHotel(hotel.id)}
+                  onClick={() => openHotel(hotel.slug || hotel.id)}
                   className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-violet-200 bg-white px-4 py-3 text-sm font-bold text-violet-800 transition hover:border-violet-400 hover:bg-violet-50"
                 >
                   Découvrir l’hôtel
@@ -151,6 +193,7 @@ export function PublicHotelsCataloguePage() {
             </MotionArticle>
           ))}
         </div>
+        )}
 
         {/* Bandeau bas */}
         <div className="mt-14 overflow-hidden rounded-3xl border-2 border-violet-200/70 bg-gradient-to-br from-white via-violet-50/60 to-orange-50/50 p-7 text-center shadow-catalog-premium sm:p-10">
