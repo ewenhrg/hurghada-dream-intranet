@@ -33,6 +33,7 @@ import {
   PublicDevisPage,
   PublicHotelRequestPage,
   PublicHotelsCataloguePage,
+  PublicHotelDetailPage,
   HotelHistoryPage,
 } from "./config/lazyPages";
 import { ScrollOptimizer } from "./components/ScrollOptimizer";
@@ -1175,6 +1176,19 @@ export default function App() {
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <PublicClientDevisPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  // Fiche hôtel publique (style Booking) — avant la liste /hotels
+  const hotelDetailMatch = location.pathname.match(/^\/hotels\/([^/]+)\/?$/);
+  if (hotelDetailMatch) {
+    const hotelDetailId = decodeURIComponent(hotelDetailMatch[1]);
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <PublicHotelDetailPage hotelId={hotelDetailId} />
         </Suspense>
       </ErrorBoundary>
     );
