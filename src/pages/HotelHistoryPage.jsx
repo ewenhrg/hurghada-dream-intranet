@@ -9,7 +9,6 @@ import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
 import { printHotelRequest } from "../utils/hotelRequestPrint";
 import { formatHotelStayDate } from "../utils/hotelRequestDates";
 import {
-  HOTEL_BOARD_OPTIONS,
   boardFieldsFromRow,
   boardFieldsToPayload,
   boardLabelsFromViewModel,
@@ -169,20 +168,16 @@ function HotelRequestCard({ request, onPrint, onEdit }) {
 
       <div className="border-b border-slate-200/90 px-4 py-4 sm:px-6">
         <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">Formule</p>
-        {boardLabels.length === 0 ? (
-          <p className="text-sm text-slate-600">—</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {boardLabels.map((label) => (
-              <span
-                key={label}
-                className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-900 ring-1 ring-indigo-300/50"
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {boardLabels.map((label) => (
+            <span
+              key={label}
+              className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-900 ring-1 ring-indigo-300/50"
+            >
+              {label}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="px-4 py-4 sm:px-6">
@@ -382,27 +377,9 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
               onChange={(e) => setDraft((d) => ({ ...d, budget: e.target.value }))}
             />
           </label>
-          <div>
-            <p className="text-xs font-bold text-slate-600">Formule</p>
-            <div className="mt-2 space-y-2">
-              {HOTEL_BOARD_OPTIONS.map((opt) => (
-                <label
-                  key={opt.formKey}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
-                >
-                  <input
-                    type="checkbox"
-                    checked={Boolean(draft[opt.formKey])}
-                    onChange={(e) =>
-                      setDraft((d) => ({ ...d, [opt.formKey]: e.target.checked }))
-                    }
-                    className="h-4 w-4 rounded border-slate-300 text-indigo-600"
-                  />
-                  <span className="text-xs font-semibold text-slate-800">{opt.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900">
+            Formule : All inclusive
+          </p>
           <label className="block text-xs font-bold text-slate-600">
             Notes
             <textarea

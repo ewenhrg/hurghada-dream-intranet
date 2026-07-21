@@ -206,8 +206,8 @@ export function PublicHotelsCataloguePage() {
             Vous ne trouvez pas votre bonheur ?
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm font-semibold leading-relaxed text-catalog-muted sm:text-base">
-            Dites-nous vos envies : budget, dates, formule. Nous vous proposons l’hôtel idéal pour
-            votre séjour à Hurghada.
+            Dites-nous vos envies : budget et dates. Nous vous proposons l’hôtel idéal pour
+            votre séjour à Hurghada (All inclusive).
           </p>
           <button
             type="button"

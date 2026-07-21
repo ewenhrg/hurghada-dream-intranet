@@ -3,7 +3,7 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
-import { HOTEL_BOARD_OPTIONS, boardFieldsToPayload } from "../constants/hotelRequestBoardOptions";
+import { boardFieldsToPayload } from "../constants/hotelRequestBoardOptions";
 
 const EMPTY_FORM = {
   firstName: "",
@@ -20,9 +20,6 @@ const EMPTY_FORM = {
   hotelOption2: "",
   hotelOption3: "",
   budget: "",
-  boardAllInclusive: false,
-  boardFullBoard: false,
-  boardBreakfast: false,
   notes: "",
 };
 
@@ -443,40 +440,13 @@ export function PublicHotelRequestPage() {
                 placeholder="Ex. 1 500 € pour le séjour"
                 className={inputClass}
               />
+              <p className="mt-3 rounded-xl border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-900">
+                Formule : All inclusive
+              </p>
             </div>
           </FormSection>
 
-          <FormSection
-            step="4"
-            title="Formule souhaitée"
-            description="Facultatif — vous pouvez en sélectionner plusieurs."
-          >
-            <div className="grid gap-2 sm:grid-cols-1">
-              {HOTEL_BOARD_OPTIONS.map((opt) => {
-                const checked = Boolean(form[opt.formKey]);
-                return (
-                  <label
-                    key={opt.formKey}
-                    className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 transition ${
-                      checked
-                        ? "border-violet-500 bg-gradient-to-r from-indigo-50 to-violet-100 ring-2 ring-violet-400/40 shadow-sm"
-                        : "border-indigo-200/70 bg-indigo-50/40 hover:border-violet-400 hover:bg-violet-50/60"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => updateField(opt.formKey, e.target.checked)}
-                      className="h-4 w-4 shrink-0 rounded border-violet-300 text-violet-600 focus:ring-violet-500"
-                    />
-                    <span className="text-sm font-semibold text-indigo-950">{opt.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </FormSection>
-
-          <FormSection step="5" title="Notes" description="Dates flexibles, type de chambre, enfants…">
+          <FormSection step="4" title="Notes" description="Dates flexibles, type de chambre, enfants…">
             <textarea
               id="hd-notes"
               rows={4}

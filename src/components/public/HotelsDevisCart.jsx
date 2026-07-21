@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Baby, ShoppingBag, Trash2, Users, X } from "lucide-react";
 import { supabase, __SUPABASE_DEBUG__ } from "../../lib/supabase";
 import { SITE_KEY } from "../../constants";
-import { HOTEL_BOARD_OPTIONS, boardFieldsToPayload } from "../../constants/hotelRequestBoardOptions";
+import { boardFieldsToPayload } from "../../constants/hotelRequestBoardOptions";
 import { toast } from "../../utils/toast.js";
 import { logger } from "../../utils/logger";
 import {
@@ -21,9 +21,6 @@ const EMPTY_CLIENT = {
   phone: "",
   email: "",
   budget: "",
-  boardAllInclusive: false,
-  boardFullBoard: false,
-  boardBreakfast: false,
   notes: "",
 };
 
@@ -600,25 +597,9 @@ export function HotelsDevisCart({
               </label>
             </div>
 
-            <fieldset className="mt-4">
-              <legend className="text-sm font-semibold text-catalog-ink">Formule souhaitée</legend>
-              <div className="mt-2 space-y-2">
-                {HOTEL_BOARD_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.formKey}
-                    className="flex cursor-pointer items-center gap-3 rounded-xl border border-violet-100 bg-violet-50/40 px-3 py-2.5 text-sm font-semibold text-catalog-body"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={Boolean(client[opt.formKey])}
-                      onChange={(e) => setClient((p) => ({ ...p, [opt.formKey]: e.target.checked }))}
-                      className="h-4 w-4 rounded border-violet-300 text-violet-700"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+            <p className="mt-4 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2.5 text-sm font-semibold text-emerald-900">
+              Formule : All inclusive
+            </p>
 
             <label className="mt-4 block text-sm font-semibold text-catalog-ink">
               Notes / précisions

@@ -1,26 +1,28 @@
-/** Options de pension (formulaire demande hôtel public). */
+/** Formule unique : All inclusive (les autres colonnes DB restent à false pour compat). */
+export const HOTEL_BOARD_LABEL = "All inclusive";
+
 export const HOTEL_BOARD_OPTIONS = [
-  { formKey: "boardAllInclusive", dbColumn: "board_all_inclusive", label: "All inclusive" },
-  { formKey: "boardFullBoard", dbColumn: "board_full_board", label: "Pension complète" },
-  { formKey: "boardBreakfast", dbColumn: "board_breakfast", label: "Petit déjeuner compris" },
+  { formKey: "boardAllInclusive", dbColumn: "board_all_inclusive", label: HOTEL_BOARD_LABEL },
 ];
 
-export function boardLabelsFromViewModel(vm) {
-  return HOTEL_BOARD_OPTIONS.filter((opt) => vm[opt.formKey] === true).map((opt) => opt.label);
+/** Toujours All inclusive pour l’affichage. */
+export function boardLabelsFromViewModel() {
+  return [HOTEL_BOARD_LABEL];
 }
 
-export function boardFieldsToPayload(vm) {
-  const out = {};
-  for (const opt of HOTEL_BOARD_OPTIONS) {
-    out[opt.dbColumn] = vm[opt.formKey] === true;
-  }
-  return out;
+/** Payload DB : uniquement all inclusive. */
+export function boardFieldsToPayload() {
+  return {
+    board_all_inclusive: true,
+    board_full_board: false,
+    board_breakfast: false,
+  };
 }
 
-export function boardFieldsFromRow(row) {
-  const out = {};
-  for (const opt of HOTEL_BOARD_OPTIONS) {
-    out[opt.formKey] = row[opt.dbColumn] === true;
-  }
-  return out;
+export function boardFieldsFromRow() {
+  return {
+    boardAllInclusive: true,
+    boardFullBoard: false,
+    boardBreakfast: false,
+  };
 }
