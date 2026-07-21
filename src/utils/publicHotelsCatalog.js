@@ -6,8 +6,6 @@ import { logger } from "./logger";
 
 const TABLE = "public_hotels_catalog";
 
-const ACCENTS = new Set(["ocean", "coral", "violet"]);
-
 /** Slug URL-safe à partir d’un nom. */
 export function slugifyHotelName(name) {
   const base = String(name || "")
@@ -46,7 +44,6 @@ function asStringArray(raw) {
  */
 export function mapHotelRowFromDb(row) {
   if (!row) return null;
-  const accent = ACCENTS.has(row.accent) ? row.accent : "violet";
   const stars = Math.min(5, Math.max(1, Number(row.stars) || 4));
   return {
     id: String(row.slug || row.id || "").trim(),
@@ -57,10 +54,7 @@ export function mapHotelRowFromDb(row) {
     address: String(row.address || "").trim(),
     lat: row.lat != null && Number.isFinite(Number(row.lat)) ? Number(row.lat) : null,
     lng: row.lng != null && Number.isFinite(Number(row.lng)) ? Number(row.lng) : null,
-    tagline: String(row.tagline || "").trim(),
     stars,
-    badge: String(row.badge || "").trim(),
-    accent,
     description: String(row.description || "").trim(),
     highlights: asStringArray(row.highlights),
     amenities: asStringArray(row.amenities),
@@ -85,10 +79,10 @@ export function hotelToDbPayload(hotel, { forInsert = false } = {}) {
     address: String(hotel.address || "").trim(),
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
-    tagline: String(hotel.tagline || "").trim(),
+    tagline: "",
     stars: Math.min(5, Math.max(1, Number(hotel.stars) || 4)),
-    badge: String(hotel.badge || "").trim(),
-    accent: ACCENTS.has(hotel.accent) ? hotel.accent : "violet",
+    badge: "",
+    accent: "violet",
     description: String(hotel.description || "").trim(),
     highlights: asStringArray(hotel.highlights),
     amenities: asStringArray(hotel.amenities),
@@ -105,16 +99,15 @@ export function hotelToDbPayload(hotel, { forInsert = false } = {}) {
 
 /**
  * Charge le catalogue (admin = tous ; public = publiés seulement).
- * @returns {Promise<{ hotels: Array, error: string|null, fromFallback: boolean }>}
+ * @returns {Promise<{ hotels: Array, error: string|null, fromFallback: boolean, tableEmpty?: boolean }>}
  */
 export async function loadPublicHotelsCatalog({ publishedOnly = false } = {}) {
   if (!__SUPABASE_DEBUG__?.isConfigured || !supabase) {
     return {
-      hotels: publishedOnly
-        ? PUBLIC_HOTELS.map((h) => ({ ...h, dbId: null, slug: h.id, isPublished: true, sortOrder: 0 }))
-        : PUBLIC_HOTELS.map((h) => ({ ...h, dbId: null, slug: h.id, isPublished: true, sortOrder: 0 })),
+      hotels: PUBLIC_HOTELS.map((h) => ({ ...h, dbId: null, slug: h.id, isPublished: true, sortOrder: 0 })),
       error: "Supabase non configuré",
       fromFallback: true,
+      tableEmpty: false,
     };
   }
 
@@ -144,25 +137,36 @@ export async function loadPublicHotelsCatalog({ publishedOnly = false } = {}) {
         })),
         error: msg,
         fromFallback: true,
+        tableEmpty: false,
       };
     }
 
     const hotels = (data || []).map(mapHotelRowFromDb).filter(Boolean);
     if (hotels.length === 0) {
+      // Admin : table vide → import. Public : seed local pour ne pas afficher une page vide.
+      if (publishedOnly) {
+        return {
+          hotels: PUBLIC_HOTELS.map((h) => ({
+            ...h,
+            dbId: null,
+            slug: h.id,
+            isPublished: true,
+            sortOrder: 0,
+          })),
+          error: null,
+          fromFallback: true,
+          tableEmpty: true,
+        };
+      }
       return {
-        hotels: PUBLIC_HOTELS.map((h) => ({
-          ...h,
-          dbId: null,
-          slug: h.id,
-          isPublished: true,
-          sortOrder: 0,
-        })),
+        hotels: [],
         error: null,
-        fromFallback: true,
+        fromFallback: false,
+        tableEmpty: true,
       };
     }
 
-    return { hotels, error: null, fromFallback: false };
+    return { hotels, error: null, fromFallback: false, tableEmpty: false };
   } catch (err) {
     logger.error("publicHotelsCatalog load:", err);
     return {
@@ -175,6 +179,7 @@ export async function loadPublicHotelsCatalog({ publishedOnly = false } = {}) {
       })),
       error: err?.message || String(err),
       fromFallback: true,
+      tableEmpty: false,
     };
   }
 }
@@ -328,10 +333,7 @@ export function emptyHotelDraft() {
     address: "",
     lat: "",
     lng: "",
-    tagline: "",
     stars: 4,
-    badge: "",
-    accent: "violet",
     description: "",
     highlights: [],
     amenities: [],

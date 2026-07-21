@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-/** Désactive les animations coûteuses pendant le scroll (classe `scrolling` sur body). */
+/** Met en pause les effets coûteux pendant le scroll (classe `scrolling` sur body). */
 export function ScrollOptimizer({ children }) {
   const scrollTimeoutRef = useRef(null);
   const rafIdRef = useRef(null);
@@ -20,7 +20,7 @@ export function ScrollOptimizer({ children }) {
         scrollTimeoutRef.current = setTimeout(() => {
           isScrolling = false;
           document.body.classList.remove("scrolling");
-        }, 200);
+        }, 150);
       });
     };
 
@@ -29,6 +29,7 @@ export function ScrollOptimizer({ children }) {
       window.removeEventListener("scroll", handleScroll);
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      document.body.classList.remove("scrolling");
     };
   }, []);
 

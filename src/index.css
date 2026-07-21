@@ -132,6 +132,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Masque l’aurore globale derrière les pages catalogue (évite le scintillement au scroll). */
+html:has(.hd-public-catalog) body::before,
+html:has(.hd-public-catalog) body::after {
+  animation: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
 .hd-public-catalog h1,
 .hd-public-catalog h2,
 .hd-public-catalog h3 {
@@ -354,12 +362,10 @@ body::after {
   }
 }
 
-/* Perf : couper l'animation du fond pendant le scroll */
-.scrolling body::before,
-.scrolling body::after,
+/* Perf : mettre en pause l’aurore pendant le scroll (sans reset → pas de clignotement) */
 body.scrolling::before,
 body.scrolling::after {
-  animation: none !important;
+  animation-play-state: paused !important;
 }
 
 /* Désactiver les animations pour les utilisateurs qui préfèrent les réduire */
@@ -1396,13 +1402,12 @@ table {
   /* Pas de transform pour éviter les problèmes de scroll */
 }
 
-/* Désactiver TOUTES les transitions et animations pendant le scroll pour améliorer les performances */
+/* Pendant le scroll : couper transitions / will-change, mais NE PAS reset
+   transform/animation (sinon aurore, cartes et gradients clignotent). */
 .scrolling *,
 .scrolling *::before,
 .scrolling *::after {
   transition: none !important;
-  animation: none !important;
-  transform: none !important;
   will-change: auto !important;
 }
 

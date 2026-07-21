@@ -82,5 +82,7 @@ CREATE TRIGGER trg_public_hotels_catalog_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.update_public_hotels_catalog_updated_at();
 
+NOTIFY pgrst, 'reload schema';
+
 COMMENT ON TABLE public.public_hotels_catalog IS
   'Catalogue public des hôtels (/hotels) — éditable depuis l''intranet.';

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -11,8 +11,9 @@ import {
   MessageCircle,
   X,
 } from "lucide-react";
-import { getHotelMapEmbedUrl, getHotelMapsOpenUrl, HOTEL_ACCENT_COVERS } from "../data/publicHotels";
+import { HOTEL_DEFAULT_COVER, getHotelMapEmbedUrl, getHotelMapsOpenUrl } from "../data/publicHotels";
 import { HotelCover, StarRow } from "../components/public/HotelUI";
+import { HotelsDevisCart } from "../components/public/HotelsDevisCart";
 import { AMENITY_META, WHATSAPP_BASE } from "../components/public/hotelAmenities";
 import { loadPublicHotelBySlug } from "../utils/publicHotelsCatalog";
 
@@ -22,7 +23,6 @@ import { loadPublicHotelBySlug } from "../utils/publicHotelsCatalog";
  * @param {{ hotelId: string }} props
  */
 export function PublicHotelDetailPage({ hotelId }) {
-  const navigate = useNavigate();
   const [hotel, setHotel] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -47,8 +47,11 @@ export function PublicHotelDetailPage({ hotelId }) {
   const mapsOpenUrl = useMemo(() => (hotel ? getHotelMapsOpenUrl(hotel) : null), [hotel]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [stayHotel, setStayHotel] = useState(null);
 
-  const goToRequest = useCallback(() => navigate("/demande-hotel"), [navigate]);
+  const requestDevis = useCallback(() => {
+    if (hotel) setStayHotel(hotel);
+  }, [hotel]);
 
   const openLightbox = useCallback(
     (index) => {
@@ -115,7 +118,7 @@ export function PublicHotelDetailPage({ hotelId }) {
     );
   }
 
-  const accentCover = HOTEL_ACCENT_COVERS[hotel.accent] || HOTEL_ACCENT_COVERS.violet;
+  const fallbackCover = HOTEL_DEFAULT_COVER;
 
   const BookingCard = (
     <div className="rounded-2xl border border-violet-900/12 bg-white p-6 shadow-soft shadow-violet-950/12">
@@ -131,10 +134,10 @@ export function PublicHotelDetailPage({ hotelId }) {
       <div className="mt-5 space-y-2.5">
         <button
           type="button"
-          onClick={goToRequest}
+          onClick={requestDevis}
           className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 py-3.5 text-sm font-bold text-white shadow-md shadow-violet-900/25 transition hover:from-violet-900 hover:to-orange-500"
         >
-          Demander un devis
+          Ajouter au panier
           <ArrowRight className="h-4 w-4" aria-hidden />
         </button>
         <a
@@ -157,15 +160,15 @@ export function PublicHotelDetailPage({ hotelId }) {
 
   return (
     <div className="hd-public-catalog relative isolate flex min-h-screen flex-col bg-catalog-bg font-catalog-sans text-catalog-body antialiased selection:bg-violet-200/55 selection:text-catalog-ink">
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-bg" />
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.42]" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-0 bg-catalog-bg" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-0 bg-catalog-mesh opacity-[0.42]" />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-0 bg-catalog-grid opacity-[0.16] [background-size:48px_48px]"
+        className="pointer-events-none absolute inset-0 z-0 bg-catalog-grid opacity-[0.16] [background-size:48px_48px]"
       />
 
       {/* Header */}
-      <header className="sticky top-0 z-[100] border-b border-violet-500/25 bg-catalog-night/95 text-white shadow-[0_16px_48px_-12px_rgba(15,8,32,0.65)] backdrop-blur-md backdrop-saturate-150">
+      <header className="sticky top-0 z-[100] border-b border-violet-500/25 bg-catalog-night text-white shadow-[0_16px_48px_-12px_rgba(15,8,32,0.65)]">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <Link
             to="/hotels"
@@ -222,7 +225,7 @@ export function PublicHotelDetailPage({ hotelId }) {
                     {images[idx] ? (
                       <img src={images[idx]} alt="" className="h-full w-full object-cover transition hover:opacity-95" />
                     ) : (
-                      <div className="h-full w-full" style={{ background: accentCover }} />
+                      <div className="h-full w-full" style={{ background: fallbackCover }} />
                     )}
                     {idx === 2 && images.length > 3 ? (
                       <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-bold text-white">
@@ -250,9 +253,6 @@ export function PublicHotelDetailPage({ hotelId }) {
             <div className="space-y-8 lg:col-span-2">
               <div>
                 <div className="mb-2 flex flex-wrap items-center gap-3">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-violet-800">
-                    {hotel.badge}
-                  </span>
                   <StarRow count={hotel.stars} />
                 </div>
                 <h1 className="font-catalog-display text-3xl font-semibold tracking-tight text-catalog-ink sm:text-4xl">
@@ -261,9 +261,6 @@ export function PublicHotelDetailPage({ hotelId }) {
                 <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-catalog-muted">
                   <MapPin className="h-4 w-4 text-violet-600" aria-hidden />
                   {hotel.location}
-                </p>
-                <p className="mt-3 font-catalog-display text-lg font-semibold text-violet-800">
-                  {hotel.tagline}
                 </p>
               </div>
 
@@ -393,7 +390,7 @@ export function PublicHotelDetailPage({ hotelId }) {
       </footer>
 
       {/* Barre CTA mobile fixe */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-violet-900/12 bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(76,29,149,0.14)] backdrop-blur-md lg:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-violet-900/12 bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(76,29,149,0.14)] backdrop-blur-md lg:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-slate-500">
@@ -403,13 +400,15 @@ export function PublicHotelDetailPage({ hotelId }) {
           </div>
           <button
             type="button"
-            onClick={goToRequest}
+            onClick={requestDevis}
             className="whitespace-nowrap rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-5 py-3 text-sm font-bold text-white shadow-md shadow-violet-900/25 transition hover:from-violet-900 hover:to-orange-500"
           >
-            Demander un devis
+            Ajouter au panier
           </button>
         </div>
       </div>
+
+      <HotelsDevisCart stayHotel={stayHotel} onStayHotelHandled={() => setStayHotel(null)} />
 
       {lightboxOpen && hasImages ? (
         <div

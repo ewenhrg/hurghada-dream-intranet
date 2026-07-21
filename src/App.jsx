@@ -37,7 +37,6 @@ import {
   PublicHotelsAdminPage,
   HotelHistoryPage,
 } from "./config/lazyPages";
-import { ScrollOptimizer } from "./components/ScrollOptimizer";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
 import { useLanguage } from "./contexts/LanguageContext";
@@ -1489,7 +1488,6 @@ export default function App() {
 
       {/* CONTENU CENTRÉ */}
       <main className={mainClassName}>
-        <ScrollOptimizer>
         <PageTransition transitionKey={tab}>
         {tab === "devis" ? (
           <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
@@ -1699,7 +1697,6 @@ export default function App() {
         </div>
         )}
         </PageTransition>
-        </ScrollOptimizer>
       </main>
 
       <footer 

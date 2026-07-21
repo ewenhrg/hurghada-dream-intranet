@@ -5,6 +5,7 @@ import App from "./App.jsx";
 import { initToast } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { ScrollOptimizer } from "./components/ScrollOptimizer";
 import "./index.css"; // 👈 c'est ici qu'on charge le CSS (où il y aura @tailwind)
 
 // Initialiser le système de toasts au démarrage
@@ -27,7 +28,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <LanguageProvider>
-        <App />
+        <ScrollOptimizer>
+          <App />
+        </ScrollOptimizer>
       </LanguageProvider>
     </BrowserRouter>
   </React.StrictMode>

@@ -1,5 +1,5 @@
 import { Building2, Star } from "lucide-react";
-import { HOTEL_ACCENT_COVERS } from "../../data/publicHotels";
+import { HOTEL_DEFAULT_COVER } from "../../data/publicHotels";
 import { AMENITY_META } from "./hotelAmenities";
 
 export function StarRow({ count = 0, className = "" }) {
@@ -13,7 +13,6 @@ export function StarRow({ count = 0, className = "" }) {
 }
 
 export function HotelCover({ hotel, className = "", iconClassName = "h-14 w-14" }) {
-  const cover = HOTEL_ACCENT_COVERS[hotel.accent] || HOTEL_ACCENT_COVERS.violet;
   const firstImage = Array.isArray(hotel.images) ? hotel.images[0] : null;
   if (firstImage) {
     return (
@@ -21,7 +20,7 @@ export function HotelCover({ hotel, className = "", iconClassName = "h-14 w-14" 
     );
   }
   return (
-    <div className={`relative h-full w-full ${className}`} style={{ background: cover }}>
+    <div className={`relative h-full w-full ${className}`} style={{ background: HOTEL_DEFAULT_COVER }}>
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.55),transparent_45%),radial-gradient(circle_at_80%_90%,rgba(255,255,255,0.25),transparent_40%)]"

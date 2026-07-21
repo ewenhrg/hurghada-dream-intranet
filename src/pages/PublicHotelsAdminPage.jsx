@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Building2,
   Check,
@@ -32,11 +32,7 @@ import {
 const CATALOG_IMAGES_BUCKET = "documents";
 const CATALOG_IMAGES_FALLBACK_BUCKET = "Catalogue";
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
-const ACCENT_OPTIONS = [
-  { value: "ocean", label: "Océan" },
-  { value: "coral", label: "Corail" },
-  { value: "violet", label: "Violet" },
-];
+const MAX_IMAGE_SIZE_MB = 10;
 
 function highlightsToText(list) {
   return (Array.isArray(list) ? list : []).join("\n");
@@ -58,6 +54,7 @@ export function PublicHotelsAdminPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [fromFallback, setFromFallback] = useState(false);
+  const [tableEmpty, setTableEmpty] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [draft, setDraft] = useState(() => emptyHotelDraft());
   const [highlightsText, setHighlightsText] = useState("");
@@ -65,6 +62,8 @@ export function PublicHotelsAdminPage() {
   const [uploading, setUploading] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [search, setSearch] = useState("");
+  const fileInputRef = useRef(null);
+  const autoSeedAttempted = useRef(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -72,12 +71,37 @@ export function PublicHotelsAdminPage() {
     setHotels(result.hotels || []);
     setLoadError(result.error);
     setFromFallback(Boolean(result.fromFallback));
+    setTableEmpty(Boolean(result.tableEmpty));
     setLoading(false);
-    return result.hotels || [];
+    return result;
   }, []);
 
   useEffect(() => {
-    void refresh();
+    let cancelled = false;
+    (async () => {
+      const result = await refresh();
+      if (cancelled) return;
+      // Table créée mais vide → import auto une fois (évite le message « seed local » trompeur).
+      if (result?.tableEmpty && !result?.fromFallback && !autoSeedAttempted.current) {
+        autoSeedAttempted.current = true;
+        setSeeding(true);
+        try {
+          const seeded = await seedPublicHotelsFromDefaults({ force: false });
+          if (cancelled) return;
+          if (seeded.ok && !seeded.skipped) {
+            toast.success(`${seeded.inserted} hôtel(s) importé(s) automatiquement.`);
+          } else if (!seeded.ok) {
+            toast.error(seeded.error || "Import automatique impossible.");
+          }
+          await refresh();
+        } finally {
+          if (!cancelled) setSeeding(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [refresh]);
 
   const filtered = useMemo(() => {
@@ -190,8 +214,9 @@ export function PublicHotelsAdminPage() {
         return;
       }
       toast.success(isNew ? "Hôtel créé." : "Hôtel enregistré.");
-      const list = await refresh();
       const saved = result.hotel;
+      const loadResult = await refresh();
+      const list = loadResult?.hotels || [];
       const match =
         list.find((h) => h.dbId === saved?.dbId) ||
         list.find((h) => h.slug === saved?.slug) ||
@@ -254,15 +279,34 @@ export function PublicHotelsAdminPage() {
     }
   }
 
+  function hotelStorageFolder() {
+    const key = String(draft.dbId || draft.slug || draft.id || slugifyHotelName(draft.name) || "").trim();
+    return key || "draft";
+  }
+
+  function openFilePicker() {
+    if (uploading) return;
+    if (!__SUPABASE_DEBUG__.isConfigured || !supabase) {
+      toast.error("Supabase Storage non disponible.");
+      return;
+    }
+    if (!String(draft.name || "").trim() && !draft.dbId && !draft.slug) {
+      toast.warning("Indiquez d’abord le nom de l’hôtel, puis uploadez des photos.");
+      return;
+    }
+    const current = normalizeCatalogImageUrlsFromDb(draft.images);
+    if (current.length >= MAX_CATALOG_IMAGES) {
+      toast.warning(`Maximum atteint (${MAX_CATALOG_IMAGES} images).`);
+      return;
+    }
+    fileInputRef.current?.click();
+  }
+
   async function handleUploadFiles(event) {
     const fileList = Array.from(event.target.files || []);
     event.target.value = "";
     if (!fileList.length) return;
 
-    if (!draft.dbId) {
-      toast.warning("Enregistrez d’abord l’hôtel, puis ajoutez des photos.");
-      return;
-    }
     if (!__SUPABASE_DEBUG__.isConfigured || !supabase) {
       toast.error("Supabase Storage non disponible.");
       return;
@@ -276,22 +320,28 @@ export function PublicHotelsAdminPage() {
     }
 
     const filesToUpload = fileList.slice(0, remaining);
+    const skipped = fileList.length - filesToUpload.length;
+    if (skipped > 0) {
+      toast.warning(`${skipped} fichier(s) ignoré(s) : limite de ${MAX_CATALOG_IMAGES} images.`);
+    }
+
+    const folder = hotelStorageFolder();
     setUploading(true);
     try {
       const uploaded = [];
       for (const file of filesToUpload) {
-        if (!file.type?.startsWith("image/")) {
+        if (!file.type || !file.type.startsWith("image/")) {
           toast.warning(`${file.name} ignoré : ce n’est pas une image.`);
           continue;
         }
         if (file.size > MAX_IMAGE_SIZE_BYTES) {
-          toast.warning(`${file.name} ignoré : max 10 Mo.`);
+          toast.warning(`${file.name} ignoré : max ${MAX_IMAGE_SIZE_MB} Mo.`);
           continue;
         }
         const safeName = String(file.name || "image")
           .replace(/[^\w.-]+/g, "_")
           .replace(/_+/g, "_");
-        const objectPath = `hotels/${draft.dbId}/${Date.now()}_${safeName}`;
+        const objectPath = `hotels/${folder}/${Date.now()}_${safeName}`;
         let usedBucket = CATALOG_IMAGES_BUCKET;
         let { error: uploadError } = await supabase.storage
           .from(usedBucket)
@@ -299,24 +349,46 @@ export function PublicHotelsAdminPage() {
 
         if (
           uploadError &&
-          /bucket not found|not found|does not exist/i.test(String(uploadError.message || ""))
+          (() => {
+            const msg = String(uploadError.message || "").toLowerCase();
+            return (
+              msg.includes("bucket not found") ||
+              msg.includes("not found") ||
+              msg.includes("does not exist")
+            );
+          })()
         ) {
           usedBucket = CATALOG_IMAGES_FALLBACK_BUCKET;
           const retry = await supabase.storage
             .from(usedBucket)
             .upload(objectPath, file, { upsert: false, contentType: file.type });
           uploadError = retry.error || null;
+          if (!uploadError) {
+            toast.warning(
+              `Bucket "${CATALOG_IMAGES_BUCKET}" absent, upload dans "${CATALOG_IMAGES_FALLBACK_BUCKET}".`,
+              5000
+            );
+          }
         }
 
         if (uploadError) {
           logger.warn("Upload hôtel", uploadError);
-          toast.error(uploadError.message || `Échec upload : ${file.name}`);
+          const msg = String(uploadError.message || "");
+          toast.error(
+            msg.toLowerCase().includes("bucket not found")
+              ? `Buckets Storage introuvables : ${CATALOG_IMAGES_BUCKET} et ${CATALOG_IMAGES_FALLBACK_BUCKET}.`
+              : msg || `Échec upload : ${file.name}`
+          );
           continue;
         }
 
         const { data: pub } = supabase.storage.from(usedBucket).getPublicUrl(objectPath);
-        const url = pub?.publicUrl;
-        if (url && isAllowedCatalogImageUrl(url)) uploaded.push(url);
+        const url = String(pub?.publicUrl || "").trim();
+        if (url && isAllowedCatalogImageUrl(url)) {
+          uploaded.push(url);
+        } else {
+          toast.error(`URL publique invalide pour ${file.name}. Vérifiez que le bucket est public.`);
+        }
       }
 
       if (uploaded.length) {
@@ -324,7 +396,7 @@ export function PublicHotelsAdminPage() {
           ...prev,
           images: normalizeCatalogImageUrlsFromDb([...(prev.images || []), ...uploaded]),
         }));
-        toast.success(`${uploaded.length} photo(s) ajoutée(s) — pensez à enregistrer.`);
+        toast.success(`${uploaded.length} photo(s) ajoutée(s) — cliquez sur « Enregistrer ».`);
       }
     } finally {
       setUploading(false);
@@ -353,10 +425,15 @@ export function PublicHotelsAdminPage() {
           </p>
           {fromFallback ? (
             <p className="mt-2 rounded-xl border border-amber-400/40 bg-amber-500/15 px-3 py-2 text-xs font-semibold text-amber-100">
-              Affichage temporaire depuis le seed local
-              {loadError ? ` (${loadError})` : ""}. Exécutez le SQL{" "}
+              Connexion base impossible
+              {loadError ? ` : ${loadError}` : ""}. Vérifiez que le SQL{" "}
               <code className="rounded bg-black/20 px-1">supabase_public_hotels_catalog_table.sql</code>{" "}
-              puis cliquez « Importer les 3 hôtels ».
+              a bien été exécuté, puis rechargez (ou « Importer les 3 hôtels »).
+            </p>
+          ) : null}
+          {!fromFallback && tableEmpty && !loading ? (
+            <p className="mt-2 rounded-xl border border-cyan-400/35 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100">
+              Table prête — aucun hôtel en base. Cliquez « Importer les 3 hôtels » (ou attendez l’import auto).
             </p>
           ) : null}
         </div>
@@ -503,32 +580,12 @@ export function PublicHotelsAdminPage() {
                 </label>
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Badge
-                  </span>
-                  <TextInput
-                    value={draft.badge}
-                    onChange={(e) => updateField("badge", e.target.value)}
-                    placeholder="Signature, Familial…"
-                  />
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                     Localisation courte
                   </span>
                   <TextInput
                     value={draft.location}
                     onChange={(e) => updateField("location", e.target.value)}
                     placeholder="Bord de mer · Hurghada"
-                  />
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Accroche
-                  </span>
-                  <TextInput
-                    value={draft.tagline}
-                    onChange={(e) => updateField("tagline", e.target.value)}
-                    placeholder="Une phrase d’accroche"
                   />
                 </label>
                 <label className="block space-y-1.5 sm:col-span-2">
@@ -575,22 +632,6 @@ export function PublicHotelsAdminPage() {
                     {[1, 2, 3, 4, 5].map((n) => (
                       <option key={n} value={n}>
                         {n} ★
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Accent visuel
-                  </span>
-                  <select
-                    value={draft.accent}
-                    onChange={(e) => updateField("accent", e.target.value)}
-                    className="w-full rounded-xl border-2 border-indigo-200/80 bg-white px-3.5 py-2.5 text-[15px] text-indigo-950"
-                  >
-                    {ACCENT_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
                       </option>
                     ))}
                   </select>
@@ -681,33 +722,39 @@ export function PublicHotelsAdminPage() {
                     Photos ({normalizeCatalogImageUrlsFromDb(draft.images).length}/{MAX_CATALOG_IMAGES})
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-bold text-white transition hover:bg-white/15">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="sr-only"
+                      tabIndex={-1}
+                      aria-hidden
+                      disabled={uploading}
+                      onChange={(e) => void handleUploadFiles(e)}
+                    />
+                    <button
+                      type="button"
+                      onClick={openFilePicker}
+                      disabled={uploading}
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-bold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
                       {uploading ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
                       ) : (
                         <Upload className="h-3.5 w-3.5" aria-hidden />
                       )}
                       {uploading ? "Upload…" : "Uploader"}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        disabled={uploading || !draft.dbId}
-                        onChange={(e) => void handleUploadFiles(e)}
-                      />
-                    </label>
+                    </button>
                     <GhostBtn type="button" variant="neutral" size="sm" onClick={addImageRow}>
                       <ImagePlus className="h-3.5 w-3.5" aria-hidden />
                       URL
                     </GhostBtn>
                   </div>
                 </div>
-                {!draft.dbId ? (
-                  <p className="mb-3 text-xs font-medium text-amber-200/90">
-                    Enregistrez l’hôtel une première fois pour pouvoir uploader des photos.
-                  </p>
-                ) : null}
+                <p className="mb-3 text-xs text-slate-400">
+                  JPG, PNG ou WebP · max {MAX_IMAGE_SIZE_MB} Mo · puis « Enregistrer » pour publier.
+                </p>
                 <div className="space-y-2">
                   {(imageRows.length ? imageRows : [""]).map((url, index) => (
                     <div key={`img-${index}`} className="flex gap-2">
