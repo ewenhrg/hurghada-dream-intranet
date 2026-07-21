@@ -61,6 +61,9 @@ export const PublicDevisPage = lazyWithRetry(() =>
 export const PublicHotelRequestPage = lazyWithRetry(() =>
   import("../pages/PublicHotelRequestPage").then((m) => ({ default: m.PublicHotelRequestPage }))
 );
+export const PublicHotelsCataloguePage = lazyWithRetry(() =>
+  import("../pages/PublicHotelsCataloguePage").then((m) => ({ default: m.PublicHotelsCataloguePage }))
+);
 export const HotelHistoryPage = lazyWithRetry(() =>
   import("../pages/HotelHistoryPage").then((m) => ({ default: m.HotelHistoryPage }))
 );

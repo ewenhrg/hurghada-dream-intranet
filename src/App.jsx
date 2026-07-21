@@ -32,6 +32,7 @@ import {
   EwenDashboardPage,
   PublicDevisPage,
   PublicHotelRequestPage,
+  PublicHotelsCataloguePage,
   HotelHistoryPage,
 } from "./config/lazyPages";
 import { ScrollOptimizer } from "./components/ScrollOptimizer";
@@ -264,12 +265,14 @@ export default function App() {
     return () => window.removeEventListener(HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, handler);
   }, []);
 
-  /** Présence en ligne : chaque utilisateur connecté rejoint le même canal Realtime (visible sur le tableau de bord Ewen). */
+  /**
+   * Sessions de présence en base (temps connecté dashboard).
+   * Indépendant de Realtime : même si le canal « en ligne » échoue, on enregistre quand même.
+   */
   useEffect(() => {
     let presenceSessionId = null;
     let heartbeatTimer = null;
     let disposed = false;
-    let channelReady = false;
 
     const stopHeartbeat = () => {
       if (heartbeatTimer) {
@@ -293,8 +296,21 @@ export default function App() {
       endPresenceSession(id);
     };
 
+    if (!ok || !user || !__SUPABASE_DEBUG__.isConfigured) {
+      return;
+    }
+
+    let tabId = sessionStorage.getItem("hd_presence_tab");
+    if (!tabId) {
+      tabId =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : uuid();
+      sessionStorage.setItem("hd_presence_tab", tabId);
+    }
+
     const ensureSession = async () => {
-      if (disposed || !channelReady) return;
+      if (disposed) return;
       if (!presenceSessionId) {
         presenceSessionId = await startPresenceSession({ sessionKey: tabId, user });
       } else {
@@ -303,6 +319,32 @@ export default function App() {
       if (!disposed && presenceSessionId) startHeartbeat();
     };
 
+    const onPageHide = () => endTrackedSession();
+
+    const onVisibilityChange = () => {
+      if (disposed) return;
+      if (document.visibilityState === "visible") {
+        void ensureSession();
+      } else if (document.visibilityState === "hidden") {
+        stopHeartbeat();
+        if (presenceSessionId) touchPresenceSession(presenceSessionId);
+      }
+    };
+
+    void ensureSession();
+    window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      disposed = true;
+      window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      endTrackedSession();
+    };
+  }, [ok, user?.code, user?.name, user?.id]);
+
+  /** Présence temps réel (« qui est en ligne ») — canal Realtime séparé des sessions DB. */
+  useEffect(() => {
     const clearChannel = () => {
       const ch = intranetPresenceChannelRef.current;
       if (ch) {
@@ -359,21 +401,6 @@ export default function App() {
       );
     };
 
-    // Fermer la session à la fermeture d'onglet / mise en arrière-plan réelle
-    const onPageHide = () => endTrackedSession();
-
-    // Au retour au premier plan : relancer une session (corrige le sous-comptage mobile/tab)
-    const onVisibilityChange = () => {
-      if (disposed) return;
-      if (document.visibilityState === "visible") {
-        void ensureSession();
-      } else if (document.visibilityState === "hidden") {
-        // Pause heartbeat : sans touch, la session sera coupée à last_seen (STALE 3 min)
-        stopHeartbeat();
-        if (presenceSessionId) touchPresenceSession(presenceSessionId);
-      }
-    };
-
     channel
       .on("presence", { event: "sync" }, pushPresenceSnapshot)
       .on("presence", { event: "join" }, pushPresenceSnapshot)
@@ -398,7 +425,6 @@ export default function App() {
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
-          channelReady = true;
           const { error } = await channel.track({
             name: user.name || "",
             code: user.code != null ? String(user.code) : "",
@@ -409,21 +435,14 @@ export default function App() {
             logger.warn("Présence intranet : échec du track", error);
           }
           pushPresenceSnapshot();
-          await ensureSession();
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           logger.warn("Présence intranet : canal", status);
         }
       });
 
     intranetPresenceChannelRef.current = channel;
-    window.addEventListener("pagehide", onPageHide);
-    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
-      disposed = true;
-      window.removeEventListener("pagehide", onPageHide);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      endTrackedSession();
       clearChannel();
       setPresenceState({});
     };
@@ -1156,6 +1175,17 @@ export default function App() {
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <PublicClientDevisPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  // Catalogue hôtels public (liste des hôtels, sans prix)
+  if (location.pathname === "/hotels" || location.pathname === "/hotels/") {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <PublicHotelsCataloguePage />
         </Suspense>
       </ErrorBoundary>
     );

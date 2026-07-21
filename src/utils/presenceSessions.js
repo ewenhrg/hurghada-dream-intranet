@@ -1,4 +1,4 @@
-import { SITE_KEY, LS_KEYS } from "../constants";
+import { SITE_KEY, LS_KEYS, getQuoteSiteKeysForSync } from "../constants";
 import { loadLS, saveLS } from "../utils";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { toLocalDateKey, personNamesMatch, nextBusinessDayStartMs } from "./quoteUserStats";
@@ -17,6 +17,73 @@ function normalizeName(name) {
 
 function normalizeCode(code) {
   return code != null && String(code).trim() !== "" ? String(code).trim() : "";
+}
+
+function presenceSiteKeys() {
+  try {
+    return getQuoteSiteKeysForSync();
+  } catch {
+    return [SITE_KEY];
+  }
+}
+
+/**
+ * Vérifie que la table sessions est lisible (anon ou auth).
+ * @returns {Promise<{ ok: boolean, error: string|null, sampleCount: number }>}
+ */
+export async function probePresenceTable() {
+  if (!__SUPABASE_DEBUG__?.isConfigured || !supabase) {
+    return { ok: false, error: "Supabase non configuré", sampleCount: 0 };
+  }
+  try {
+    const keys = presenceSiteKeys();
+    const { data, error } = await supabase
+      .from("intranet_presence_sessions")
+      .select("id")
+      .in("site_key", keys)
+      .limit(5);
+    if (error) {
+      return { ok: false, error: error.message || String(error), sampleCount: 0 };
+    }
+    return { ok: true, error: null, sampleCount: Array.isArray(data) ? data.length : 0 };
+  } catch (err) {
+    return { ok: false, error: err?.message || String(err), sampleCount: 0 };
+  }
+}
+
+/**
+ * Charge les devis pour le tableau de bord (source Supabase directe).
+ * @returns {Promise<{ quotes: Array<{ createdByName: string, createdAt: string }>, error: string|null }>}
+ */
+export async function loadDashboardQuoteStats({ days = 180 } = {}) {
+  if (!__SUPABASE_DEBUG__?.isConfigured || !supabase) {
+    return { quotes: [], error: "Supabase non configuré" };
+  }
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceIso = since.toISOString();
+  try {
+    const keys = presenceSiteKeys();
+    const { data, error } = await supabase
+      .from("quotes")
+      .select("created_by_name, created_at")
+      .in("site_key", keys)
+      .gte("created_at", sinceIso)
+      .order("created_at", { ascending: false })
+      .limit(10000);
+
+    if (error) {
+      return { quotes: [], error: error.message || String(error) };
+    }
+
+    const quotes = (data || []).map((row) => ({
+      createdByName: String(row.created_by_name || "").trim(),
+      createdAt: row.created_at || "",
+    }));
+    return { quotes, error: null };
+  } catch (err) {
+    return { quotes: [], error: err?.message || String(err) };
+  }
 }
 
 function readLocalSessions() {
@@ -70,7 +137,7 @@ export async function startPresenceSession({ sessionKey, user }) {
       await supabase
         .from("intranet_presence_sessions")
         .update({ ended_at: startedAt, last_seen_at: startedAt })
-        .eq("site_key", SITE_KEY)
+        .in("site_key", presenceSiteKeys())
         .eq("session_key", key)
         .is("ended_at", null);
     } catch {
@@ -112,20 +179,49 @@ export async function startPresenceSession({ sessionKey, user }) {
         last_seen_at: startedAt,
       })
       .select("id")
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      logger.warn("Présence sessions : insert Supabase", error.message || error);
+    let remoteId = data?.id || null;
+
+    // Si RETURNING est bloqué / vide, récupérer la session ouverte de cet onglet
+    if (!remoteId) {
+      const { data: found, error: findErr } = await supabase
+        .from("intranet_presence_sessions")
+        .select("id")
+        .eq("site_key", base.site_key)
+        .eq("session_key", key)
+        .is("ended_at", null)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (findErr) {
+        logger.warn("Présence sessions : lookup après insert", findErr.message || findErr);
+      }
+      remoteId = found?.id || null;
+    }
+
+    if (!remoteId) {
+      const msg = error?.message || "insert sans id retourné (RLS / table ?)";
+      logger.warn("Présence sessions : insert Supabase", msg);
+      if (typeof window !== "undefined") {
+        window.__HD_PRESENCE_INSERT_ERROR__ = msg;
+      }
       return localId;
     }
 
-    const remoteId = data?.id || localId;
+    if (typeof window !== "undefined") {
+      window.__HD_PRESENCE_INSERT_ERROR__ = null;
+    }
+
     const rows = readLocalSessions().filter((r) => r.id !== localId);
     rows.push({ ...base, id: remoteId });
     writeLocalSessions(rows);
     return remoteId;
   } catch (err) {
     logger.warn("Présence sessions : insert", err);
+    if (typeof window !== "undefined") {
+      window.__HD_PRESENCE_INSERT_ERROR__ = err?.message || String(err);
+    }
     return localId;
   }
 }
@@ -180,47 +276,51 @@ export async function endPresenceSession(sessionId) {
 }
 
 /**
- * Charge les sessions (Supabase + fusion local), pour le tableau de bord.
- * @param {{ days?: number }} opts
- * @returns {Promise<{ rows: Array, remoteCount: number, remoteError: string|null }>}
+ * Charge les sessions pour le tableau de bord.
+ * Mode équipe : priorise Supabase (toute l'équipe). Le localStorage n'est qu'un secours
+ * si la table est inaccessible (sinon on ne verrait que l'utilisateur du navigateur).
+ * @param {{ days?: number, teamMode?: boolean }} opts
  */
-export async function loadPresenceSessions({ days = 90 } = {}) {
+export async function loadPresenceSessions({ days = 90, teamMode = true } = {}) {
   const since = new Date();
   since.setDate(since.getDate() - days);
   const sinceIso = since.toISOString();
   const sinceMs = since.getTime();
+  const keys = presenceSiteKeys();
 
   let remote = [];
   let remoteError = null;
+  let tableMissing = false;
+
   if (__SUPABASE_DEBUG__?.isConfigured && supabase) {
     try {
-      // IMPORTANT : utiliser .gte() (paramètres encodés) et NON .or(`...gte.${iso}`)
-      // car les ":" d'un ISO cassent le parseur PostgREST → 0 ligne remote → seuls
-      // les temps locaux (utilisateur courant) apparaissaient.
       const { data, error } = await supabase
         .from("intranet_presence_sessions")
         .select("id, site_key, session_key, user_code, user_name, user_id, started_at, ended_at, last_seen_at")
-        .eq("site_key", SITE_KEY)
+        .in("site_key", keys)
         .gte("started_at", sinceIso)
         .order("started_at", { ascending: false })
         .limit(5000);
 
       if (error) {
         remoteError = error.message || String(error);
+        const low = remoteError.toLowerCase();
+        tableMissing =
+          low.includes("does not exist") ||
+          low.includes("schema cache") ||
+          low.includes("could not find the table");
         logger.warn("Présence sessions : lecture Supabase", remoteError);
       } else if (Array.isArray(data)) {
         remote = data;
       }
 
-      // Sessions ouvertes démarrées avant la fenêtre mais encore actives récemment
       try {
         const { data: openData, error: openError } = await supabase
           .from("intranet_presence_sessions")
           .select("id, site_key, session_key, user_code, user_name, user_id, started_at, ended_at, last_seen_at")
-          .eq("site_key", SITE_KEY)
+          .in("site_key", keys)
           .is("ended_at", null)
           .gte("last_seen_at", sinceIso)
-          .lt("started_at", sinceIso)
           .order("last_seen_at", { ascending: false })
           .limit(500);
 
@@ -247,9 +347,13 @@ export async function loadPresenceSessions({ days = 90 } = {}) {
     return false;
   });
 
-  // Fusion par id — préférer la version remote (UUID) à un clone local
+  // Mode équipe : JAMAIS de localStorage (sinon le dashboard n'affiche que le navigateur courant).
+  // Le local ne sert qu'en mode individuel / secours hors sync.
+  const useLocal = !teamMode;
+  const sourceRows = useLocal ? [...local, ...remote] : [...remote];
+
   const byId = new Map();
-  for (const row of [...local, ...remote]) {
+  for (const row of sourceRows) {
     if (!row?.id) continue;
     const prev = byId.get(row.id);
     if (!prev) {
@@ -265,10 +369,9 @@ export async function loadPresenceSessions({ days = 90 } = {}) {
     );
   }
 
-  // Dédupliquer les clones local/remote avec même session_key + started_at
   const byLogical = new Map();
   for (const row of byId.values()) {
-    const logicalKey = `${row.session_key || ""}|${row.started_at || ""}`;
+    const logicalKey = (row.session_key || "") + "|" + (row.started_at || "");
     const prev = byLogical.get(logicalKey);
     if (!prev) {
       byLogical.set(logicalKey, row);
@@ -287,10 +390,20 @@ export async function loadPresenceSessions({ days = 90 } = {}) {
     }
   }
 
+  const distinctUsers = new Set(
+    [...byLogical.values()]
+      .map((r) => normalizeCode(r.user_code) || normalizeName(r.user_name).toLowerCase())
+      .filter(Boolean)
+  );
+
   return {
     rows: [...byLogical.values()],
     remoteCount: remote.length,
     remoteError,
+    tableMissing,
+    distinctRemoteUsers: distinctUsers.size,
+    // true seulement hors teamMode (local fusionné volontairement)
+    usedLocalFallback: useLocal && local.length > 0 && remote.length === 0,
   };
 }
 
@@ -376,16 +489,22 @@ function canonicalUserKey(user) {
 export function buildConnectionActivityByUser(sessions = [], users = [], { now = Date.now() } = {}) {
   const active = (users || [])
     .map((u) => ({
+      id: u?.id != null ? String(u.id) : "",
       name: normalizeName(u?.name),
       code: normalizeCode(u?.code),
     }))
     .filter((u) => u.name || u.code);
 
   const activeCodes = new Set(active.map((u) => u.code).filter(Boolean));
+  const activeIds = new Set(active.map((u) => u.id).filter(Boolean));
 
   const findActiveUser = (row) => {
+    const id = row.user_id != null ? String(row.user_id).trim() : "";
     const code = normalizeCode(row.user_code);
     const name = normalizeName(row.user_name);
+    if (id && activeIds.has(id)) {
+      return active.find((a) => a.id === id) || null;
+    }
     if (code && activeCodes.has(code)) {
       return active.find((a) => a.code === code) || null;
     }

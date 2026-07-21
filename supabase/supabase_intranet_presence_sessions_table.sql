@@ -1,8 +1,9 @@
 -- =============================================================================
--- Sessions de connexion intranet (durée + jours connectés — tableau de bord Ewen)
+-- RÉPARATION : sessions de présence visibles pour TOUTE l'équipe
 --
--- À exécuter une fois dans Supabase → SQL Editor.
--- Sans cette table, l’app bascule sur un cache localStorage (moins fiable entre postes).
+-- À exécuter dans Supabase → SQL Editor (une fois).
+-- Corrige le cas où seuls les comptes authentifiés (ex. Ewen) écrivent/lisent
+-- les sessions, alors que le reste de l'équipe se connecte en anon (code PIN).
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS public.intranet_presence_sessions (
@@ -27,20 +28,37 @@ CREATE INDEX IF NOT EXISTS idx_presence_sessions_user_code
 CREATE INDEX IF NOT EXISTS idx_presence_sessions_session_key
   ON public.intranet_presence_sessions (site_key, session_key);
 
-COMMENT ON TABLE public.intranet_presence_sessions IS
-  'Historique des connexions intranet (join/leave) pour le tableau de bord Ewen.';
-
 ALTER TABLE public.intranet_presence_sessions ENABLE ROW LEVEL SECURITY;
 
+-- Supprimer toutes les anciennes politiques (noms historiques)
 DROP POLICY IF EXISTS "Allow select presence sessions" ON public.intranet_presence_sessions;
 DROP POLICY IF EXISTS "Allow insert presence sessions" ON public.intranet_presence_sessions;
 DROP POLICY IF EXISTS "Allow update presence sessions" ON public.intranet_presence_sessions;
+DROP POLICY IF EXISTS "presence_select_anon" ON public.intranet_presence_sessions;
+DROP POLICY IF EXISTS "presence_select_authenticated" ON public.intranet_presence_sessions;
+DROP POLICY IF EXISTS "presence_insert_anon" ON public.intranet_presence_sessions;
+DROP POLICY IF EXISTS "presence_insert_authenticated" ON public.intranet_presence_sessions;
+DROP POLICY IF EXISTS "presence_update_anon" ON public.intranet_presence_sessions;
+DROP POLICY IF EXISTS "presence_update_authenticated" ON public.intranet_presence_sessions;
 
-CREATE POLICY "Allow select presence sessions"
-  ON public.intranet_presence_sessions FOR SELECT TO public USING (true);
+-- Lecture / écriture ouvertes pour anon (login code PIN) ET authenticated (JWT intranet)
+CREATE POLICY "presence_select_anon"
+  ON public.intranet_presence_sessions FOR SELECT TO anon USING (true);
+CREATE POLICY "presence_select_authenticated"
+  ON public.intranet_presence_sessions FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "Allow insert presence sessions"
-  ON public.intranet_presence_sessions FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "presence_insert_anon"
+  ON public.intranet_presence_sessions FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "presence_insert_authenticated"
+  ON public.intranet_presence_sessions FOR INSERT TO authenticated WITH CHECK (true);
 
-CREATE POLICY "Allow update presence sessions"
-  ON public.intranet_presence_sessions FOR UPDATE TO public USING (true) WITH CHECK (true);
+CREATE POLICY "presence_update_anon"
+  ON public.intranet_presence_sessions FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "presence_update_authenticated"
+  ON public.intranet_presence_sessions FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.intranet_presence_sessions TO anon, authenticated;
+
+COMMENT ON TABLE public.intranet_presence_sessions IS
+  'Historique connexions intranet — accessible anon+authenticated pour sync équipe complète.';

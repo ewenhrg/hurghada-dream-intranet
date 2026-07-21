@@ -1,13 +1,12 @@
 import { useMemo, useCallback, useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import {
   ChevronRight,
   Clock3,
   FileText,
   Search,
-  Users,
-  Wifi,
   AlertTriangle,
+  MessageSquare,
+  LogOut,
 } from "lucide-react";
 import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
 import { UserActivityDetailModal } from "../components/dashboard/UserActivityDetailModal";
@@ -19,7 +18,9 @@ import {
   formatDurationMs,
   getMonthDurationTotal,
   isPresenceRowActiveUser,
+  loadDashboardQuoteStats,
   loadPresenceSessions,
+  probePresenceTable,
 } from "../utils/presenceSessions";
 import {
   buildQuotesCountByUserAndDay,
@@ -68,6 +69,30 @@ function userMapKey(user) {
 
 const MAX_SCREEN_MESSAGE_LEN = 500;
 
+function SyncBanner({ tone, title, children }) {
+  const styles =
+    tone === "danger"
+      ? "border-rose-200 bg-rose-50 text-rose-950"
+      : tone === "warn"
+        ? "border-amber-200 bg-amber-50 text-amber-950"
+        : "border-sky-200 bg-sky-50 text-sky-950";
+  const icon =
+    tone === "info" ? (
+      <Clock3 className="mt-0.5 h-4 w-4 shrink-0 opacity-70" aria-hidden />
+    ) : (
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 opacity-80" aria-hidden />
+    );
+  return (
+    <div role={tone === "info" ? "status" : "alert"} className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${styles}`}>
+      {icon}
+      <div className="min-w-0 space-y-0.5">
+        {title ? <p className="font-semibold">{title}</p> : null}
+        <div className="text-[13px] leading-relaxed opacity-90">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export function EwenDashboardPage({
   user,
   quotes = [],
@@ -81,6 +106,10 @@ export function EwenDashboardPage({
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [sessionsRemoteCount, setSessionsRemoteCount] = useState(0);
   const [sessionsError, setSessionsError] = useState(null);
+  const [sessionsTableMissing, setSessionsTableMissing] = useState(false);
+  const [sessionsDistinctUsers, setSessionsDistinctUsers] = useState(0);
+  const [dashboardQuotes, setDashboardQuotes] = useState([]);
+  const [quotesSyncError, setQuotesSyncError] = useState(null);
   const [messageTargetRow, setMessageTargetRow] = useState(null);
   const [messageDraft, setMessageDraft] = useState("");
   const [messageSending, setMessageSending] = useState(false);
@@ -92,6 +121,7 @@ export function EwenDashboardPage({
   const viewYear = now.getFullYear();
   const viewMonth = now.getMonth();
   const todayKey = useMemo(() => toLocalDateKey(now), [now]);
+  const monthLabel = MONTH_NAMES[viewMonth];
 
   useEffect(() => {
     let cancelled = false;
@@ -118,13 +148,25 @@ export function EwenDashboardPage({
     async function refreshSessions() {
       setSessionsLoading(true);
       try {
-        const result = await loadPresenceSessions({ days: 90 });
+        const [result, probe, quoteStats] = await Promise.all([
+          loadPresenceSessions({ days: 90, teamMode: true }),
+          probePresenceTable(),
+          loadDashboardQuoteStats({ days: 180 }),
+        ]);
         if (cancelled) return;
-        // Compat : ancienne API renvoyait un tableau
         const rows = Array.isArray(result) ? result : result?.rows || [];
         setSessionRows(rows);
         setSessionsRemoteCount(Array.isArray(result) ? rows.length : Number(result?.remoteCount) || 0);
-        setSessionsError(Array.isArray(result) ? null : result?.remoteError || null);
+        setSessionsError(
+          Array.isArray(result) ? null : result?.remoteError || (!probe.ok ? probe.error : null)
+        );
+        setSessionsTableMissing(
+          Boolean(result?.tableMissing) ||
+            Boolean(probe.error && String(probe.error).toLowerCase().includes("does not exist"))
+        );
+        setSessionsDistinctUsers(Number(result?.distinctRemoteUsers) || 0);
+        setDashboardQuotes(quoteStats?.quotes || []);
+        setQuotesSyncError(quoteStats?.error || null);
       } finally {
         if (!cancelled) setSessionsLoading(false);
       }
@@ -171,8 +213,12 @@ export function EwenDashboardPage({
     return map;
   }, [connectionActivity]);
 
-  const quotesByUser = useMemo(() => buildQuotesCountByUserAndDay(quotes), [quotes]);
+  const quotesByUser = useMemo(
+    () => buildQuotesCountByUserAndDay(dashboardQuotes.length ? dashboardQuotes : quotes),
+    [dashboardQuotes, quotes]
+  );
 
+  const quotesForTotals = dashboardQuotes.length ? dashboardQuotes : quotes;
   const registeredUsers = useMemo(() => {
     const list = (directoryUsers || [])
       .map((u) => ({
@@ -189,9 +235,7 @@ export function EwenDashboardPage({
     const q = userSearch.trim().toLowerCase();
     if (!q) return registeredUsers;
     return registeredUsers.filter(
-      (u) =>
-        u.name.toLowerCase().includes(q) ||
-        (u.code && u.code.toLowerCase().includes(q))
+      (u) => u.name.toLowerCase().includes(q) || (u.code && u.code.toLowerCase().includes(q))
     );
   }, [registeredUsers, userSearch]);
 
@@ -205,14 +249,12 @@ export function EwenDashboardPage({
       const quoteDays = getQuoteDaysForUser(quotesByUser, u.name);
       const monthMs = getMonthDurationTotal(activity?.days || [], viewYear, viewMonth);
       const monthQuotes = getMonthQuoteTotal(quoteDays, viewYear, viewMonth);
-      const totalQuotes = getTotalQuotesForUser(quotes, u.name);
+      const totalQuotes = getTotalQuotesForUser(quotesForTotals, u.name);
       const todayMs = Number(
         (activity?.days || []).find((d) => d.dateKey === todayKey)?.durationMs || 0
       );
-      const todayQuotesRaw = getQuoteCountOnDay(quoteDays, todayKey);
-      // Un jour sans connexion = pas de devis affichés pour « aujourd'hui »
-      // (évite l'impression qu'ils ont travaillé s'ils sont absents)
-      const todayQuotes = todayMs > 0 ? todayQuotesRaw : 0;
+      // Devis toujours depuis Supabase (indépendant du temps connecté)
+      const todayQuotes = getQuoteCountOnDay(quoteDays, todayKey);
       return {
         user: u,
         key,
@@ -230,7 +272,7 @@ export function EwenDashboardPage({
     onlineKeySet,
     activityByKey,
     quotesByUser,
-    quotes,
+    quotesForTotals,
     viewYear,
     viewMonth,
     todayKey,
@@ -293,163 +335,148 @@ export function EwenDashboardPage({
     }
   }, [onSendUserScreenMessage, messageTargetRow, messageDraft]);
 
-  const monthLabel = MONTH_NAMES[viewMonth];
+  const syncOk = !sessionsLoading && !sessionsError && !sessionsTableMissing;
+  const needReconnectOthers =
+    syncOk && sessionsRemoteCount > 0 && sessionsDistinctUsers <= 1;
+  const noRemoteSessions = syncOk && sessionsRemoteCount === 0;
 
   return (
-    <div className="space-y-6">
-      <header className="relative overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-slate-900 via-[#1a1640] to-slate-950 px-5 py-6 text-white shadow-xl shadow-indigo-950/40">
-        <div
-          className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-cyan-400/15 blur-3xl"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -bottom-24 left-10 h-48 w-48 rounded-full bg-indigo-500/20 blur-3xl"
-          aria-hidden
-        />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto max-w-5xl space-y-8 pb-8">
+      {/* Header — une composition simple */}
+      <header className="space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-200/80">
-              Ewen · Tableau de bord
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              Tableau de bord
             </p>
-            <h1 className="font-[family-name:var(--hd-font-display)] text-2xl font-bold tracking-tight">
-              Vue d&apos;ensemble
+            <h1 className="mt-1 font-[family-name:var(--hd-font-display)] text-3xl font-semibold tracking-tight text-slate-900">
+              Équipe
             </h1>
-            <p className="mt-1 max-w-xl text-sm text-white/70">
-              Temps connecté et devis de toute l&apos;équipe — clique sur un prénom pour le calendrier détaillé.
+            <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-slate-500">
+              Temps connecté et devis créés — fuseau Hurghada. Clique un nom pour le calendrier.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 backdrop-blur-sm">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="inline-flex items-center gap-2 text-slate-600">
               <span
-                className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 shadow shadow-emerald-500/50 animate-pulse"
+                className={`h-2 w-2 rounded-full ${onlineRows.length ? "bg-emerald-500" : "bg-slate-300"}`}
                 aria-hidden
               />
-              {onlineRows.length} en ligne
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 backdrop-blur-sm">
-              Connecté : <span className="font-semibold text-white">{user?.name || "—"}</span>
-            </div>
+              <span className="tabular-nums font-medium text-slate-900">{onlineRows.length}</span>
+              en ligne
+            </span>
+            <span className="hidden h-4 w-px bg-slate-200 sm:block" aria-hidden />
+            <span className="text-slate-500">
+              Toi · <span className="font-medium text-slate-800">{user?.name || "—"}</span>
+            </span>
           </div>
         </div>
       </header>
 
-      {sessionsError ? (
-        <div
-          role="alert"
-          className="flex items-start gap-3 rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950"
-        >
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden />
-          <div>
-            <p className="font-semibold">Sessions distantes indisponibles</p>
-            <p className="mt-0.5 text-amber-900/80">
-              Seuls les temps locaux de ce navigateur sont visibles. Erreur : {sessionsError}
-            </p>
-          </div>
-        </div>
+      {/* Un seul bandeau d’état sync */}
+      {sessionsTableMissing || sessionsError ? (
+        <SyncBanner tone="warn" title="Temps d’équipe non synchronisés">
+          Exécute le SQL{" "}
+          <code className="rounded bg-black/5 px-1 text-[11px]">
+            supabase_intranet_presence_sessions_table.sql
+          </code>{" "}
+          dans Supabase, puis demande à chaque collègue de se reconnecter une fois.
+          {sessionsError ? (
+            <p className="mt-1 text-xs opacity-75">Détail : {sessionsError}</p>
+          ) : null}
+        </SyncBanner>
       ) : null}
 
-      {!sessionsLoading && !sessionsError && sessionsRemoteCount === 0 && sessionRows.length > 0 ? (
-        <div
-          role="status"
-          className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
-        >
-          <Wifi className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden />
-          <p>
-            Aucune session d&apos;équipe reçue depuis Supabase pour le moment. Les autres utilisateurs
-            doivent être connectés au moins une fois (après ce correctif) pour apparaître.
+      {quotesSyncError ? (
+        <SyncBanner tone="danger" title="Devis non synchronisés">
+          {quotesSyncError}
+        </SyncBanner>
+      ) : null}
+
+      {needReconnectOthers ? (
+        <SyncBanner tone="info" title="Presque synchronisé">
+          Une seule personne a des sessions en base. Les autres doivent ouvrir l’intranet (se
+          reconnecter) pour que leurs temps apparaissent.
+        </SyncBanner>
+      ) : null}
+
+      {noRemoteSessions ? (
+        <SyncBanner tone="info" title="Aucune session d’équipe pour l’instant">
+          Après le SQL, chaque collègue doit se reconnecter une fois. Les devis s’affichent déjà
+          ci-dessous s’ils sont en base.
+        </SyncBanner>
+      ) : null}
+
+      {/* En ligne — compact */}
+      <section aria-labelledby="hd-online-heading">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 id="hd-online-heading" className="text-sm font-semibold text-slate-900">
+            En ligne maintenant
+          </h2>
+          {!supabaseConfigured ? (
+            <span className="text-xs text-amber-700">Supabase non configuré</span>
+          ) : null}
+        </div>
+
+        {!supabaseConfigured ? null : onlineRows.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-6 text-center text-sm text-slate-500">
+            Personne en ligne pour le moment.
           </p>
-        </div>
-      ) : null}
-
-      {/* En ligne */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 shadow-md shadow-slate-900/5">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100/90 bg-gradient-to-r from-emerald-50/80 via-teal-50/50 to-slate-50/80 px-5 py-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Qui est en ligne</h2>
-            <p className="mt-0.5 text-sm text-slate-600">
-              Connexions actives (temps réel). Un compte sur plusieurs onglets = plusieurs sessions.
-            </p>
-          </div>
-          <span className="rounded-lg border border-emerald-200/80 bg-white/90 px-3 py-1 text-sm font-medium tabular-nums text-emerald-900">
-            {onlineRows.length} personne{onlineRows.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-
-        {!supabaseConfigured ? (
-          <div className="border-t border-amber-100 bg-amber-50 p-6 text-sm text-amber-900">
-            Supabase n&apos;est pas configuré : la présence en ligne n&apos;est pas disponible.
-          </div>
-        ) : onlineRows.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500">
-            Aucune présence détectée parmi les utilisateurs actuels.
-          </div>
         ) : (
-          <ul className="divide-y divide-slate-100/90">
+          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200/80 bg-white">
             {onlineRows.map((row) => {
               const since = formatOnlineSince(row.onlineAt);
               return (
                 <li
                   key={row.mapKey}
-                  className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-slate-50/70"
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5"
                 >
                   <button
                     type="button"
                     className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                    onClick={() =>
-                      setSelectedUser({
-                        name: row.name,
-                        code: row.code || "",
-                      })
-                    }
+                    onClick={() => setSelectedUser({ name: row.name, code: row.code || "" })}
                   >
                     <span
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-sm font-bold text-white shadow-md shadow-emerald-600/20"
+                      className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold text-white"
                       aria-hidden
                     >
                       {(row.name || "?").slice(0, 1).toUpperCase()}
+                      <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-400" />
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-900 hover:text-violet-700">
-                        {row.name}
-                      </p>
+                      <p className="truncate font-medium text-slate-900">{row.name}</p>
                       <p className="text-xs text-slate-500">
-                        {row.code ? `Code · ${row.code}` : "Pas de code en session"}
+                        {row.code ? `Code ${row.code}` : "Sans code"}
                         {since ? ` · depuis ${since}` : ""}
+                        {row.sessions > 1 ? ` · ${row.sessions} onglets` : ""}
                       </p>
                     </div>
                   </button>
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                    {row.sessions > 1 && (
-                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-                        {row.sessions} onglets
-                      </span>
-                    )}
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200/80">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                      En ligne
-                    </span>
-                    {onSendUserScreenMessage && (row.code || (row.name && row.name !== "—")) && (
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {onSendUserScreenMessage && (row.code || (row.name && row.name !== "—")) ? (
                       <GhostBtn
                         type="button"
                         variant="neutral"
                         size="sm"
-                        className="min-h-0 min-w-0 py-2"
+                        className="min-h-0 min-w-0 gap-1.5 py-1.5 text-xs"
                         onClick={() => openMessageModal(row)}
                       >
+                        <MessageSquare className="h-3.5 w-3.5" aria-hidden />
                         Message
                       </GhostBtn>
-                    )}
-                    {onForceLogoutRequest && (row.code || (row.name && row.name !== "—")) && (
+                    ) : null}
+                    {onForceLogoutRequest && (row.code || (row.name && row.name !== "—")) ? (
                       <GhostBtn
                         type="button"
                         variant="danger"
                         size="sm"
-                        className="min-h-0 min-w-0 py-2"
+                        className="min-h-0 min-w-0 gap-1.5 py-1.5 text-xs"
                         onClick={() => handleForceLogoutRow(row)}
                       >
+                        <LogOut className="h-3.5 w-3.5" aria-hidden />
                         Déconnecter
                       </GhostBtn>
-                    )}
+                    ) : null}
                   </div>
                 </li>
               );
@@ -458,156 +485,139 @@ export function EwenDashboardPage({
         )}
       </section>
 
-      {/* Liste équipe */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 shadow-md shadow-slate-900/5">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100/90 bg-gradient-to-r from-violet-50/90 via-indigo-50/50 to-cyan-50/40 px-5 py-4">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 text-white shadow-md shadow-violet-600/25">
-              <Users className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Équipe — activité</h2>
-              <p className="mt-0.5 text-sm text-slate-600">
-                Aujourd&apos;hui (connexion réelle) et bilan {monthLabel}. Les devis n&apos;apparaissent
-                que les jours où la personne était connectée.
-              </p>
-            </div>
+      {/* Activité équipe */}
+      <section aria-labelledby="hd-team-heading">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="hd-team-heading" className="text-sm font-semibold text-slate-900">
+              Activité
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Aujourd’hui · {monthLabel} {viewYear}
+              {sessionsLoading ? " · sync…" : ""}
+              {!quotesSyncError ? (
+                <span className="text-slate-400">
+                  {" "}
+                  · {dashboardQuotes.length || quotes.length} devis chargés
+                </span>
+              ) : null}
+            </p>
           </div>
-          <span className="rounded-lg border border-violet-200/80 bg-white/90 px-3 py-1 text-sm font-medium tabular-nums text-violet-900">
-            {registeredUsers.length} compte{registeredUsers.length !== 1 ? "s" : ""}
-            {sessionsLoading ? " · sync…" : ""}
-          </span>
-        </div>
-
-        <div className="border-b border-slate-100 px-4 py-3 sm:px-5">
-          <div className="relative max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <div className="relative w-full max-w-xs">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              aria-hidden
+            />
             <TextInput
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
-              placeholder="Rechercher un prénom ou un code…"
+              placeholder="Rechercher…"
               className="pl-10"
               aria-label="Rechercher un utilisateur"
             />
           </div>
         </div>
 
-        {/* En-tête colonnes desktop */}
-        <div className="hidden border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:grid md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-4">
-          <span>Collaborateur</span>
-          <span className="inline-flex items-center gap-1.5">
-            <Clock3 className="h-3.5 w-3.5" /> Aujourd&apos;hui
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <FileText className="h-3.5 w-3.5" /> {monthLabel}
-          </span>
-          <span className="text-right">Détail</span>
-        </div>
-
-        {sessionsLoading && registeredUsers.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500">Chargement…</div>
-        ) : teamRows.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500">
-            {registeredUsers.length === 0
-              ? "Aucun utilisateur dans le répertoire."
-              : "Aucun résultat pour cette recherche."}
+        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white">
+          <div className="hidden border-b border-slate-100 bg-slate-50/90 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:grid md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-4">
+            <span>Collaborateur</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Clock3 className="h-3.5 w-3.5" aria-hidden /> Aujourd’hui
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <FileText className="h-3.5 w-3.5" aria-hidden /> {monthLabel}
+            </span>
+            <span className="sr-only">Détail</span>
           </div>
-        ) : (
-          <ul className="divide-y divide-slate-100/90">
-            {teamRows.map((row, index) => {
-              const { user: u, key, online, monthMs, monthQuotes, totalQuotes, todayMs, todayQuotes } =
-                row;
-              const workedToday = todayMs > 0;
-              return (
-                <motion.li
-                  key={key}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.28, delay: Math.min(index * 0.03, 0.35) }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedUser(u)}
-                    className="group grid w-full grid-cols-1 items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-violet-50/70 sm:px-5 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-4"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span
-                        className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-md ${
-                          online
-                            ? "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-600/20"
-                            : "bg-gradient-to-br from-slate-500 to-slate-700 shadow-slate-700/20"
-                        }`}
-                      >
-                        {u.name.slice(0, 1).toUpperCase()}
-                        {online ? (
-                          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-400" />
-                        ) : null}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-slate-900 group-hover:text-violet-800">
-                          {u.name}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {u.code ? `Code · ${u.code}` : "Sans code"}
+
+          {sessionsLoading && registeredUsers.length === 0 ? (
+            <div className="p-10 text-center text-sm text-slate-500">Chargement…</div>
+          ) : teamRows.length === 0 ? (
+            <div className="p-10 text-center text-sm text-slate-500">
+              {registeredUsers.length === 0
+                ? "Aucun utilisateur dans le répertoire."
+                : "Aucun résultat pour cette recherche."}
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {teamRows.map((row) => {
+                const { user: u, key, online, monthMs, monthQuotes, totalQuotes, todayMs, todayQuotes } =
+                  row;
+                return (
+                  <li key={key}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUser(u)}
+                      className="group grid w-full grid-cols-1 items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-slate-50 sm:px-5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-4"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${
+                            online ? "bg-emerald-600" : "bg-slate-400"
+                          }`}
+                          aria-hidden
+                        >
+                          {u.name.slice(0, 1).toUpperCase()}
                           {online ? (
-                            <span className="ml-2 font-semibold text-emerald-600">· En ligne</span>
-                          ) : (
-                            <span className="ml-2 text-slate-400">· Hors ligne</span>
-                          )}
-                        </p>
+                            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-400" />
+                          ) : null}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-slate-900">{u.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {u.code ? `Code ${u.code}` : "Sans code"}
+                            <span className={online ? " text-emerald-600" : " text-slate-400"}>
+                              {" "}
+                              · {online ? "En ligne" : "Hors ligne"}
+                            </span>
+                          </p>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 md:block">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 md:hidden">
-                        Aujourd&apos;hui
-                      </span>
-                      {workedToday ? (
-                        <div className="inline-flex flex-col gap-0.5 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2">
-                          <span className="inline-flex items-center gap-1.5 text-sm font-bold tabular-nums text-slate-900">
-                            <Clock3 className="h-3.5 w-3.5 text-emerald-700" aria-hidden />
-                            {formatDurationMs(todayMs)}
-                          </span>
-                          <span className="text-[11px] font-semibold tabular-nums text-emerald-800">
+                      <div className="flex items-baseline gap-3 md:block">
+                        <span className="w-16 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400 md:hidden">
+                          Aujourd’hui
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold tabular-nums text-slate-900">
+                            {todayMs > 0 ? formatDurationMs(todayMs) : "—"}
+                          </p>
+                          <p className="text-xs tabular-nums text-slate-500">
                             {todayQuotes} devis
-                          </span>
+                          </p>
                         </div>
-                      ) : (
-                        <div className="inline-flex items-center rounded-xl border border-rose-200/70 bg-rose-50/80 px-3 py-2">
-                          <span className="text-sm font-semibold text-rose-700">Absent</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 md:block">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 md:hidden">
-                        {monthLabel}
-                      </span>
-                      <div className="inline-flex flex-col gap-0.5 rounded-xl border border-violet-200/70 bg-violet-50/80 px-3 py-2">
-                        <span className="text-sm font-bold tabular-nums text-slate-900">
-                          {monthMs > 0 ? formatDurationMs(monthMs) : "—"}
-                        </span>
-                        <span className="text-[11px] tabular-nums text-slate-600">
-                          {monthQuotes} devis · {totalQuotes} total
-                        </span>
                       </div>
-                    </div>
 
-                    <span className="flex shrink-0 items-center justify-end gap-1.5 text-xs font-semibold text-violet-600 opacity-90 group-hover:opacity-100">
-                      Calendrier
-                      <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                    </span>
-                  </button>
-                </motion.li>
-              );
-            })}
-          </ul>
-        )}
+                      <div className="flex items-baseline gap-3 md:block">
+                        <span className="w-16 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400 md:hidden">
+                          {monthLabel}
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold tabular-nums text-slate-900">
+                            {monthMs > 0 ? formatDurationMs(monthMs) : "—"}
+                          </p>
+                          <p className="text-xs tabular-nums text-slate-500">
+                            {monthQuotes} devis · {totalQuotes} total
+                          </p>
+                        </div>
+                      </div>
+
+                      <span className="flex items-center justify-end gap-1 text-xs font-medium text-slate-400 transition group-hover:text-slate-700">
+                        Détail
+                        <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </section>
 
       {messageTargetRow && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="hd-screen-msg-title"
@@ -615,19 +625,18 @@ export function EwenDashboardPage({
             if (e.target === e.currentTarget) closeMessageModal();
           }}
         >
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-indigo-200/80 bg-white shadow-2xl">
-            <div className="border-b border-slate-100 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-5 py-4 text-white">
-              <h2 id="hd-screen-msg-title" className="text-lg font-bold">
-                Message à l&apos;écran
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="border-b border-slate-100 px-5 py-4">
+              <h2 id="hd-screen-msg-title" className="text-lg font-semibold text-slate-900">
+                Message à l’écran
               </h2>
-              <p className="mt-0.5 text-sm text-white/85">
+              <p className="mt-0.5 text-sm text-slate-500">
                 {messageTargetRow.name}
-                {messageTargetRow.code ? ` · code ${messageTargetRow.code}` : ""} — affichage ~3
-                secondes.
+                {messageTargetRow.code ? ` · code ${messageTargetRow.code}` : ""} — ~3 secondes.
               </p>
             </div>
             <div className="space-y-3 p-5">
-              <label className="block text-sm font-semibold text-slate-700" htmlFor="hd-screen-msg-body">
+              <label className="block text-sm font-medium text-slate-700" htmlFor="hd-screen-msg-body">
                 Texte
               </label>
               <textarea
@@ -635,16 +644,22 @@ export function EwenDashboardPage({
                 value={messageDraft}
                 onChange={(e) => setMessageDraft(e.target.value.slice(0, MAX_SCREEN_MESSAGE_LEN))}
                 rows={4}
-                className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400"
+                className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 placeholder="Ex. : Peux-tu venir au bureau ?"
                 disabled={messageSending}
               />
-              <p className="text-xs tabular-nums text-slate-500">
+              <p className="text-xs tabular-nums text-slate-400">
                 {messageDraft.length}/{MAX_SCREEN_MESSAGE_LEN}
               </p>
             </div>
             <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4">
-              <GhostBtn type="button" variant="neutral" size="sm" onClick={closeMessageModal} disabled={messageSending}>
+              <GhostBtn
+                type="button"
+                variant="neutral"
+                size="sm"
+                onClick={closeMessageModal}
+                disabled={messageSending}
+              >
                 Annuler
               </GhostBtn>
               <PrimaryBtn

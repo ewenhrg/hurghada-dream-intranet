@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   CalendarDays,
   ChevronLeft,
@@ -24,8 +24,10 @@ import {
   getMonthDurationTotal,
 } from "../../utils/presenceSessions";
 
+const MotionDiv = motion.div;
+
 /**
- * Modale détail activité : calendrier connexion (vert/rouge) + devis + totaux du mois.
+ * Modale détail activité : calendrier (temps + devis) + bilan du mois.
  */
 export function UserActivityDetailModal({
   open,
@@ -35,6 +37,7 @@ export function UserActivityDetailModal({
   quoteCountByDay,
   isOnline = false,
 }) {
+  const reduceMotion = useReducedMotion();
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -107,9 +110,9 @@ export function UserActivityDetailModal({
   return createPortal(
     <AnimatePresence>
       {open && user ? (
-        <motion.div
+        <MotionDiv
           className="fixed inset-0 z-[220] flex items-end justify-center p-3 sm:items-center sm:p-6"
-          initial={{ opacity: 0 }}
+          initial={reduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
@@ -117,89 +120,74 @@ export function UserActivityDetailModal({
         >
           <button
             type="button"
-            className="absolute inset-0 bg-slate-950/55 backdrop-blur-[6px]"
+            className="absolute inset-0 bg-slate-950/50 backdrop-blur-[4px]"
             aria-label="Fermer"
             onClick={onClose}
           />
 
-          <motion.div
+          <MotionDiv
             role="dialog"
             aria-modal="true"
             aria-labelledby="hd-user-activity-title"
-            initial={{ opacity: 0, y: 28, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.98 }}
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-            className="relative z-10 flex max-h-[min(92vh,880px)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-white/20 bg-white shadow-[0_40px_100px_-24px_rgba(15,23,42,0.55)]"
+            initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="relative z-10 flex max-h-[min(92vh,840px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="relative shrink-0 overflow-hidden border-b border-slate-100 bg-gradient-to-br from-slate-900 via-[#1e1b4b] to-cyan-950 px-5 py-5 text-white sm:px-6">
-              <div
-                className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full bg-emerald-400/20 blur-3xl"
-                aria-hidden
-              />
-              <div
-                className="pointer-events-none absolute -bottom-20 left-1/3 h-36 w-36 rounded-full bg-violet-500/25 blur-3xl"
-                aria-hidden
-              />
-              <div className="relative flex items-start justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3.5">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-cyan-500 text-lg font-bold shadow-lg shadow-violet-900/40">
-                    {(user.name || "?").slice(0, 1).toUpperCase()}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-                      Activité mensuelle
-                    </p>
-                    <h2
-                      id="hd-user-activity-title"
-                      className="truncate text-xl font-bold tracking-tight sm:text-2xl"
-                    >
-                      {user.name || "—"}
-                    </h2>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-white/70">
-                      {user.code ? <span>Code · {user.code}</span> : null}
-                      {isOnline ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/15 px-2 py-0.5 text-xs font-semibold text-emerald-200">
-                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
-                          En ligne
-                        </span>
-                      ) : (
-                        <span className="text-xs text-white/50">Hors ligne</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
-                  aria-label="Fermer la modale"
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-semibold text-white ${
+                    isOnline ? "bg-emerald-600" : "bg-slate-400"
+                  }`}
+                  aria-hidden
                 >
-                  <X className="h-5 w-5" />
-                </button>
+                  {(user.name || "?").slice(0, 1).toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                  <h2
+                    id="hd-user-activity-title"
+                    className="truncate text-xl font-semibold tracking-tight text-slate-900"
+                  >
+                    {user.name || "—"}
+                  </h2>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-slate-500">
+                    {user.code ? <span>Code {user.code}</span> : null}
+                    <span className={isOnline ? "text-emerald-600" : "text-slate-400"}>
+                      {isOnline ? "En ligne" : "Hors ligne"}
+                    </span>
+                  </p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                aria-label="Fermer la modale"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            {/* Toolbar */}
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/80 px-4 py-3 sm:px-6">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={goPrev}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-violet-300 hover:text-violet-700"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
                   aria-label="Mois précédent"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
-                <span className="min-w-[10.5rem] text-center text-sm font-semibold text-slate-900">
+                <span className="min-w-[9.5rem] text-center text-sm font-semibold text-slate-900">
                   {MONTH_NAMES[viewMonth]} {viewYear}
                 </span>
                 <button
                   type="button"
                   onClick={goNext}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-violet-300 hover:text-violet-700"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
                   aria-label="Mois suivant"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -207,28 +195,26 @@ export function UserActivityDetailModal({
                 <button
                   type="button"
                   onClick={goToday}
-                  className="ml-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-cyan-300 hover:text-cyan-800"
+                  className="ml-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
                 >
-                  Aujourd&apos;hui
+                  Aujourd’hui
                 </button>
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-slate-600">
+              <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" /> Connecté
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" /> Connecté
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-rose-400" /> Absent
+                  <span className="h-2 w-2 rounded-full bg-slate-300" /> Absent
                 </span>
               </div>
             </div>
 
-            {/* Body */}
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_220px]">
-                {/* Calendar */}
+              <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_200px]">
                 <div>
-                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    <CalendarDays className="h-3.5 w-3.5" />
+                  <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <CalendarDays className="h-3.5 w-3.5" aria-hidden />
                     Calendrier
                   </div>
                   <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">
@@ -238,15 +224,7 @@ export function UserActivityDetailModal({
                       </div>
                     ))}
                   </div>
-                  <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-slate-500">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" /> Connecté = heures + devis du jour
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="h-2.5 w-2.5 rounded-sm bg-rose-400" /> Absent = pas de devis affiché
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-7 gap-1.5">
+                  <div className="grid grid-cols-7 gap-1">
                     {cells.map((cell) => {
                       const dateKey = calendarCellDateKey(cell.date);
                       const inMonth = cell.inCurrentMonth;
@@ -257,14 +235,13 @@ export function UserActivityDetailModal({
                       const isFuture = inMonth && dateKey > todayKey;
                       const isToday = dateKey === todayKey;
 
-                      let tone =
-                        "border-transparent bg-slate-50/40 text-slate-300";
+                      let tone = "text-slate-300";
                       if (inMonth && !isFuture) {
                         tone = connected
-                          ? "border-emerald-200/90 bg-gradient-to-b from-emerald-50 to-emerald-100/80 text-emerald-950 shadow-sm shadow-emerald-900/5"
-                          : "border-rose-200/80 bg-gradient-to-b from-rose-50 to-rose-100/70 text-rose-950";
+                          ? "bg-emerald-50 text-emerald-950"
+                          : "bg-slate-50 text-slate-600";
                       } else if (inMonth && isFuture) {
-                        tone = "border-slate-100 bg-slate-50/70 text-slate-400";
+                        tone = "text-slate-300";
                       }
 
                       return (
@@ -273,85 +250,88 @@ export function UserActivityDetailModal({
                           title={
                             inMonth && !isFuture
                               ? connected
-                                ? `${formatDurationMs(durationMs)} · ${quotes} devis créés`
-                                : "Non connecté"
+                                ? `${formatDurationMs(durationMs)} · ${quotes} devis`
+                                : quotes > 0
+                                  ? `Absent · ${quotes} devis`
+                                  : "Absent"
                               : undefined
                           }
-                          className={`flex min-h-[4.75rem] flex-col items-center justify-start gap-0.5 rounded-xl border p-1.5 transition ${tone} ${
-                            isToday && inMonth ? "ring-2 ring-violet-400/70 ring-offset-1" : ""
+                          className={`flex min-h-[3.75rem] flex-col items-center justify-start gap-0.5 rounded-lg p-1.5 ${tone} ${
+                            isToday && inMonth ? "ring-2 ring-slate-900/15 ring-offset-1" : ""
                           }`}
                         >
                           <span
-                            className={`text-xs font-bold tabular-nums ${
-                              inMonth ? "" : "opacity-40"
+                            className={`text-xs font-semibold tabular-nums ${
+                              inMonth ? "" : "opacity-30"
                             }`}
                           >
                             {cell.date.getDate()}
                           </span>
                           {inMonth && !isFuture && connected ? (
-                            <>
-                              <span className="rounded-md bg-emerald-700/15 px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none text-emerald-900">
-                                {formatDurationCompact(durationMs)}
-                              </span>
-                              <span className="text-[10px] font-semibold tabular-nums text-emerald-900/85">
-                                {quotes} devis
-                              </span>
-                            </>
+                            <span className="text-[10px] font-bold tabular-nums leading-none text-emerald-800">
+                              {formatDurationCompact(durationMs)}
+                            </span>
                           ) : null}
-                          {inMonth && !isFuture && !connected ? (
-                            <span className="mt-1 text-[10px] font-medium text-rose-700/80">Absent</span>
+                          {inMonth && !isFuture && quotes > 0 ? (
+                            <span
+                              className={`text-[10px] font-medium tabular-nums ${
+                                connected ? "text-emerald-800/80" : "text-slate-500"
+                              }`}
+                            >
+                              {quotes}d
+                            </span>
                           ) : null}
                         </div>
                       );
                     })}
                   </div>
+                  <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+                    Temps = connexion réelle · Devis = créés ce jour (même si hors ligne)
+                  </p>
                 </div>
 
-                {/* Right stats */}
                 <aside className="flex flex-col gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                     Bilan du mois
                   </p>
-                  <div className="rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-cyan-50 p-4 shadow-sm">
-                    <div className="mb-2 flex items-center gap-2 text-violet-800">
-                      <FileText className="h-4 w-4" />
-                      <span className="text-xs font-semibold uppercase tracking-wide">Devis</span>
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="mb-1 flex items-center gap-2 text-slate-500">
+                      <FileText className="h-3.5 w-3.5" aria-hidden />
+                      <span className="text-[11px] font-semibold uppercase tracking-wide">Devis</span>
                     </div>
-                    <p className="text-3xl font-bold tabular-nums tracking-tight text-slate-900">
+                    <p className="text-3xl font-semibold tabular-nums tracking-tight text-slate-900">
                       {monthQuotes}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      créés ce mois (date de création, heure Hurghada)
-                    </p>
+                    <p className="mt-1 text-xs text-slate-400">créés ce mois</p>
                   </div>
 
-                  <div className="rounded-2xl border border-cyan-200/70 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-4 shadow-sm">
-                    <div className="mb-2 flex items-center gap-2 text-cyan-800">
-                      <Clock3 className="h-4 w-4" />
-                      <span className="text-xs font-semibold uppercase tracking-wide">Temps</span>
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="mb-1 flex items-center gap-2 text-slate-500">
+                      <Clock3 className="h-3.5 w-3.5" aria-hidden />
+                      <span className="text-[11px] font-semibold uppercase tracking-wide">Temps</span>
                     </div>
-                    <p className="text-2xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-3xl">
+                    <p className="text-2xl font-semibold tabular-nums tracking-tight text-slate-900">
                       {formatDurationMs(monthHoursMs)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">connecté ce mois</p>
+                    <p className="mt-1 text-xs text-slate-400">connecté ce mois</p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                       Jours connectés
                     </p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
                       {connectedDaysInMonth}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      jours verts sur {MONTH_NAMES[viewMonth].toLowerCase()}
+                    <p className="mt-1 text-xs text-slate-400">
+                      sur {MONTH_NAMES[viewMonth].toLowerCase()}
                     </p>
                   </div>
                 </aside>
               </div>
             </div>
-          </motion.div>
-        </motion.div>
+          </MotionDiv>
+        </MotionDiv>
       ) : null}
     </AnimatePresence>,
     document.body
