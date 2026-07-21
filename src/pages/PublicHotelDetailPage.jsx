@@ -3,15 +3,15 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  Building2,
   Check,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   MapPin,
   MessageCircle,
   X,
 } from "lucide-react";
-import { getHotelById, HOTEL_ACCENT_COVERS } from "../data/publicHotels";
+import { getHotelById, HOTEL_ACCENT_COVERS, getHotelMapEmbedUrl, getHotelMapsOpenUrl } from "../data/publicHotels";
 import { HotelCover, StarRow } from "../components/public/HotelUI";
 import { AMENITY_META, WHATSAPP_BASE } from "../components/public/hotelAmenities";
 
@@ -26,6 +26,8 @@ export function PublicHotelDetailPage({ hotelId }) {
 
   const images = useMemo(() => (Array.isArray(hotel?.images) ? hotel.images : []), [hotel]);
   const hasImages = images.length > 0;
+  const mapEmbedUrl = useMemo(() => (hotel ? getHotelMapEmbedUrl(hotel) : null), [hotel]);
+  const mapsOpenUrl = useMemo(() => (hotel ? getHotelMapsOpenUrl(hotel) : null), [hotel]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
@@ -290,19 +292,59 @@ export function PublicHotelDetailPage({ hotelId }) {
                 </section>
               ) : null}
 
-              {/* Emplacement (placeholder soigné, sans carte tierce) */}
+              {/* Emplacement + mini carte Google Maps */}
               <section>
-                <h2 className="font-catalog-display text-xl font-semibold text-catalog-ink">Emplacement</h2>
-                <div className="mt-4 flex items-center gap-3 rounded-2xl border border-violet-100 bg-gradient-to-br from-white to-violet-50/60 px-5 py-4">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white">
-                    <Building2 className="h-5 w-5" aria-hidden />
-                  </span>
-                  <div>
-                    <p className="text-sm font-bold text-catalog-ink">{hotel.location}</p>
-                    <p className="text-xs font-semibold text-catalog-muted">
-                      Transferts et détails précis communiqués lors de votre demande.
-                    </p>
+                <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                  <h2 className="font-catalog-display text-xl font-semibold text-catalog-ink">
+                    Emplacement
+                  </h2>
+                  {mapsOpenUrl ? (
+                    <a
+                      href={mapsOpenUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm font-bold text-violet-700 transition hover:text-violet-900"
+                    >
+                      Ouvrir dans Google Maps
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                    </a>
+                  ) : null}
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
+                  <div className="flex items-start gap-3 border-b border-violet-50 px-4 py-3.5 sm:px-5">
+                    <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white">
+                      <MapPin className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-catalog-ink">{hotel.name}</p>
+                      <p className="mt-0.5 text-sm font-semibold leading-snug text-catalog-body">
+                        {hotel.address || hotel.location}
+                      </p>
+                      {Number.isFinite(Number(hotel.lat)) && Number.isFinite(Number(hotel.lng)) ? (
+                        <p className="mt-1 text-[11px] font-medium tabular-nums text-catalog-subtle">
+                          {Number(hotel.lat).toFixed(5)}, {Number(hotel.lng).toFixed(5)}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
+
+                  {mapEmbedUrl ? (
+                    <div className="relative aspect-[16/10] w-full bg-slate-100 sm:aspect-[16/9]">
+                      <iframe
+                        title={`Carte Google Maps — ${hotel.name}`}
+                        src={mapEmbedUrl}
+                        className="absolute inset-0 h-full w-full border-0"
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : (
+                    <div className="px-5 py-8 text-center text-sm font-semibold text-catalog-muted">
+                      Carte indisponible pour cet hôtel.
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
