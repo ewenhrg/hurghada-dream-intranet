@@ -78,6 +78,7 @@ export function savePublicHotelsCart(cart) {
         .slice(0, MAX_HOTELS_CART_ITEMS),
     };
     sessionStorage.setItem(PUBLIC_HOTELS_CART_KEY, JSON.stringify(payload));
+    emitHotelsCartChanged(payload);
   } catch {
     /* ignore quota / private mode */
   }
@@ -86,6 +87,7 @@ export function savePublicHotelsCart(cart) {
 export function clearPublicHotelsCart() {
   try {
     sessionStorage.removeItem(PUBLIC_HOTELS_CART_KEY);
+    emitHotelsCartChanged({ stay: { ...EMPTY_HOTEL_STAY }, items: [] });
   } catch {
     /* ignore */
   }
@@ -126,6 +128,17 @@ export function validateHotelStay(stay) {
 export function formatStaySummary(stay) {
   const s = normalizeStay(stay);
   if (!s.arrivalDate || !s.departureDate) return "";
+  const fmt = (iso) => {
+    try {
+      return new Date(`${iso}T12:00:00`).toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return iso;
+    }
+  };
   const nights = (() => {
     try {
       const a = new Date(`${s.arrivalDate}T12:00:00`);
@@ -143,5 +156,14 @@ export function formatStaySummary(stay) {
   ]
     .filter(Boolean)
     .join(" · ");
-  return `${s.arrivalDate} → ${s.departureDate}${nights ? ` (${nights} nuit${nights > 1 ? "s" : ""})` : ""} · ${pax}`;
+  return `${fmt(s.arrivalDate)} → ${fmt(s.departureDate)}${nights ? ` · ${nights} nuit${nights > 1 ? "s" : ""}` : ""} · ${pax}`;
+}
+
+/** Notifie les pages ouvertes (badge panier, etc.). */
+export function emitHotelsCartChanged(cart) {
+  try {
+    window.dispatchEvent(new CustomEvent("hd-hotels-cart", { detail: cart }));
+  } catch {
+    /* ignore */
+  }
 }

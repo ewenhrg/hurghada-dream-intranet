@@ -9,6 +9,7 @@ import {
   ExternalLink,
   MapPin,
   MessageCircle,
+  ShoppingBag,
   X,
 } from "lucide-react";
 import { HOTEL_DEFAULT_COVER, getHotelMapEmbedUrl, getHotelMapsOpenUrl } from "../data/publicHotels";
@@ -16,6 +17,7 @@ import { HotelCover, StarRow } from "../components/public/HotelUI";
 import { HotelsDevisCart } from "../components/public/HotelsDevisCart";
 import { AMENITY_META, WHATSAPP_BASE } from "../components/public/hotelAmenities";
 import { loadPublicHotelBySlug } from "../utils/publicHotelsCatalog";
+import { loadPublicHotelsCart } from "../utils/publicHotelsCartStorage";
 
 /**
  * Fiche hôtel publique (style Booking) : galerie, description, équipements,
@@ -48,10 +50,21 @@ export function PublicHotelDetailPage({ hotelId }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [stayHotel, setStayHotel] = useState(null);
+  const [openDrawerSignal, setOpenDrawerSignal] = useState(0);
+  const [cartCount, setCartCount] = useState(() => loadPublicHotelsCart().items.length);
 
   const requestDevis = useCallback(() => {
     if (hotel) setStayHotel(hotel);
   }, [hotel]);
+
+  useEffect(() => {
+    const sync = (e) => {
+      const items = e?.detail?.items;
+      setCartCount(Array.isArray(items) ? items.length : loadPublicHotelsCart().items.length);
+    };
+    window.addEventListener("hd-hotels-cart", sync);
+    return () => window.removeEventListener("hd-hotels-cart", sync);
+  }, []);
 
   const openLightbox = useCallback(
     (index) => {
@@ -121,14 +134,18 @@ export function PublicHotelDetailPage({ hotelId }) {
   const fallbackCover = HOTEL_DEFAULT_COVER;
 
   const BookingCard = (
-    <div className="rounded-2xl border border-violet-900/12 bg-white p-6 shadow-soft shadow-violet-950/12">
-      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-catalog-label">Votre séjour</p>
-      <p className="mt-2 text-2xl font-catalog-display font-semibold tracking-tight text-catalog-ink">
+    <div className="rounded-2xl border border-violet-900/10 bg-white p-6 shadow-soft shadow-violet-950/10">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-catalog-label">Votre séjour</p>
+        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200">
+          All inclusive
+        </span>
+      </div>
+      <p className="mt-2 font-catalog-display text-2xl font-semibold tracking-tight text-catalog-ink">
         Tarif sur demande
       </p>
       <p className="mt-1 text-sm leading-relaxed text-catalog-muted">
-        Le prix dépend de vos dates et du nombre de voyageurs. Recevez une proposition claire, sans
-        engagement.
+        Ajoutez l’hôtel au panier avec vos dates et voyageurs, puis finalisez pour recevoir votre devis.
       </p>
 
       <div className="mt-5 space-y-2.5">
@@ -169,20 +186,38 @@ export function PublicHotelDetailPage({ hotelId }) {
 
       {/* Header */}
       <header className="sticky top-0 z-[100] border-b border-violet-500/25 bg-catalog-night text-white shadow-[0_16px_48px_-12px_rgba(15,8,32,0.65)]">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
-          <Link
-            to="/hotels"
-            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-violet-200/95 transition hover:bg-white/10 hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden /> Hôtels
-          </Link>
-          <div className="h-8 w-px bg-white/15" aria-hidden />
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-orange-600 p-1.5 shadow-lg ring-2 ring-orange-300/45 ring-offset-2 ring-offset-catalog-night">
-              <img src="/logo.png" alt="" className="h-full w-full object-contain drop-shadow" />
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              to="/hotels"
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-violet-200/95 transition hover:bg-white/10 hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden /> Hôtels
+            </Link>
+            <div className="hidden h-8 w-px bg-white/15 sm:block" aria-hidden />
+            <div className="hidden min-w-0 items-center gap-2.5 sm:flex">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-orange-600 p-1.5 shadow-lg ring-2 ring-orange-300/45 ring-offset-2 ring-offset-catalog-night">
+                <img src="/logo.png" alt="" className="h-full w-full object-contain drop-shadow" />
+              </div>
+              <span className="truncate font-catalog-display text-sm font-semibold text-white">
+                Hurghada Dream
+              </span>
             </div>
-            <span className="font-catalog-display text-sm font-semibold text-white">Hurghada Dream</span>
           </div>
+          <button
+            type="button"
+            onClick={() => setOpenDrawerSignal((n) => n + 1)}
+            className="inline-flex min-h-[40px] items-center gap-2 rounded-full bg-white/10 px-3.5 py-2 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/15"
+          >
+            <ShoppingBag className="h-4 w-4" aria-hidden />
+            {cartCount > 0 ? (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-400 px-1 text-[11px] font-extrabold text-slate-950">
+                {cartCount}
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-violet-100">Panier</span>
+            )}
+          </button>
         </div>
       </header>
 
@@ -390,25 +425,39 @@ export function PublicHotelDetailPage({ hotelId }) {
       </footer>
 
       {/* Barre CTA mobile fixe */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-violet-900/12 bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(76,29,149,0.14)] backdrop-blur-md lg:hidden">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              {hotel.name}
-            </p>
-            <p className="font-catalog-display text-sm font-bold text-violet-800">Tarif sur demande</p>
-          </div>
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-violet-900/12 bg-white/95 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(76,29,149,0.14)] backdrop-blur-md lg:hidden">
+        <div className="mx-auto grid max-w-lg grid-cols-[1fr_auto] gap-2">
           <button
             type="button"
             onClick={requestDevis}
-            className="whitespace-nowrap rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-5 py-3 text-sm font-bold text-white shadow-md shadow-violet-900/25 transition hover:from-violet-900 hover:to-orange-500"
+            className="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 text-sm font-bold text-white shadow-md active:scale-[0.98]"
           >
             Ajouter au panier
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpenDrawerSignal((n) => n + 1)}
+            className="relative inline-flex min-h-[48px] min-w-[52px] items-center justify-center rounded-2xl border border-violet-200 bg-white text-violet-800 active:scale-[0.98]"
+            aria-label={`Ouvrir le panier (${cartCount})`}
+          >
+            <ShoppingBag className="h-5 w-5" aria-hidden />
+            {cartCount > 0 ? (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[11px] font-extrabold text-white">
+                {cartCount}
+              </span>
+            ) : null}
           </button>
         </div>
       </div>
 
-      <HotelsDevisCart stayHotel={stayHotel} onStayHotelHandled={() => setStayHotel(null)} />
+      <div className="h-24 lg:hidden" aria-hidden />
+
+      <HotelsDevisCart
+        stayHotel={stayHotel}
+        onStayHotelHandled={() => setStayHotel(null)}
+        openDrawerSignal={openDrawerSignal}
+        hideFab
+      />
 
       {lightboxOpen && hasImages ? (
         <div
