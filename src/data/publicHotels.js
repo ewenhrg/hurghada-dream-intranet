@@ -17,6 +17,10 @@ export const PUBLIC_HOTELS = [
     lat: 27.256743,
     lng: 33.830405,
     stars: 5,
+    babyAgeMin: 0,
+    babyAgeMax: 5,
+    childAgeMin: 6,
+    childAgeMax: 11,
     description:
       "Une adresse raffinée les pieds dans l’eau, pensée pour les séjours qui allient confort, service attentionné et vue imprenable sur la Mer Rouge. Chambres lumineuses, piscines à débordement et espace bien-être pour se ressourcer.",
     highlights: ["Plage privée & ponton", "Piscines à débordement", "Spa & bien-être", "Restaurants à la carte"],

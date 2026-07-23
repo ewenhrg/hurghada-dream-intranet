@@ -15,6 +15,12 @@ import {
   boardLabelsFromViewModel,
 } from "../constants/hotelRequestBoardOptions";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
+import {
+  allocateHiltonChildCharges,
+  getHotelChildFreePolicy,
+  isHiltonPlazaHotel,
+  parseChildAgesInput,
+} from "../utils/hotelChildFreePolicy";
 
 const SELECT_COLUMNS =
   "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, adults_count, children_count, child_ages, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, response_payload, created_at, updated_at";
@@ -371,6 +377,30 @@ function HotelResponseModal({
             Choisissez une catégorie par hôtel. Les tarifs par date seront branchés ensuite pour le
             calcul automatique.
           </p>
+
+          {hotelsDraft.some((h) => isHiltonPlazaHotel(h.hotelName) || isHiltonPlazaHotel(h.catalogSlug)) ? (
+            <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-xs font-medium leading-relaxed text-emerald-950">
+              <p className="font-bold">Child policy Hilton</p>
+              <p className="mt-1">{getHotelChildFreePolicy("hilton-plaza")?.summary}</p>
+              {(() => {
+                const ages = parseChildAgesInput(request.childAges);
+                if (!ages.length) return null;
+                const rows = allocateHiltonChildCharges(ages);
+                return (
+                  <ul className="mt-2 space-y-0.5">
+                    {rows.map((row, i) => (
+                      <li key={`${row.age}-${i}`}>
+                        Enfant {row.age} an{row.age >= 2 ? "s" : ""} →{" "}
+                        <span className="font-bold">
+                          {row.free ? row.reason : "prix Tarifs hôtel"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
+            </div>
+          ) : null}
 
           {hotelsDraft.length === 0 ? (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">

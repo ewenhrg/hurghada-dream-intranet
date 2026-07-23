@@ -10,6 +10,10 @@ import {
   loadHotelRates,
   saveHotelRate,
 } from "../utils/hotelRates";
+import {
+  getHotelChildFreePolicy,
+  isHiltonPlazaHotel,
+} from "../utils/hotelChildFreePolicy";
 
 function formatMoney(value, currency = "EUR") {
   if (value == null || !Number.isFinite(Number(value))) return "—";
@@ -275,6 +279,14 @@ export function HotelTarifsPage() {
                   Ajouter un tarif
                 </PrimaryBtn>
               </div>
+
+              {isHiltonPlazaHotel(selectedHotel) ? (
+                <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-xs font-medium leading-relaxed text-emerald-950">
+                  <span className="font-bold">Child policy Hilton :</span>{" "}
+                  {getHotelChildFreePolicy(selectedHotel)?.summary} Les prix bébé / enfant
+                  saisis ici s’appliquent uniquement aux enfants non gratuits.
+                </p>
+              ) : null}
 
               {roomCategories.length === 0 ? (
                 <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
