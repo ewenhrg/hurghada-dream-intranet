@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS public.public_hotel_requests (
   board_full_board BOOLEAN NOT NULL DEFAULT false,
   board_breakfast BOOLEAN NOT NULL DEFAULT false,
   notes TEXT DEFAULT '',
+  response_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

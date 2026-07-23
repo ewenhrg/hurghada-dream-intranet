@@ -112,6 +112,7 @@ export function mapHotelRowFromDb(row) {
     description: String(row.description || "").trim(),
     highlights: asStringArray(row.highlights),
     amenities: asStringArray(row.amenities),
+    roomCategories: asStringArray(row.room_categories),
     images: normalizeCatalogImageUrlsFromDb(row.image_urls),
     ...ages,
     sortOrder: Number(row.sort_order) || 0,
@@ -149,6 +150,7 @@ export function hotelToDbPayload(hotel, { forInsert = false } = {}) {
     description: String(hotel.description || "").trim(),
     highlights: asStringArray(hotel.highlights),
     amenities: asStringArray(hotel.amenities),
+    room_categories: asStringArray(hotel.roomCategories ?? hotel.room_categories),
     image_urls: normalizeCatalogImageUrlsFromDb(hotel.images ?? hotel.image_urls),
     baby_age_min: ages.babyAgeMin,
     baby_age_max: ages.babyAgeMax,
@@ -175,6 +177,13 @@ export function validateHotelMapsUrl(mapsUrl) {
     return "Impossible de lire la position. Ouvrez Google Maps, zoomez sur l’hôtel, puis copiez l’URL de la barre d’adresse (elle contient @latitude,longitude).";
   }
   return null;
+}
+
+/** Retire les champs internes (ex. catégories de chambres) avant exposition publique. */
+export function stripInternalHotelFields(hotel) {
+  if (!hotel || typeof hotel !== "object") return hotel;
+  const { roomCategories, room_categories, ...rest } = hotel;
+  return rest;
 }
 
 /**
@@ -226,13 +235,15 @@ export async function loadPublicHotelsCatalog({ publishedOnly = false } = {}) {
       // Admin : table vide → import. Public : seed local pour ne pas afficher une page vide.
       if (publishedOnly) {
         return {
-          hotels: PUBLIC_HOTELS.map((h) => ({
-            ...h,
-            dbId: null,
-            slug: h.id,
-            isPublished: true,
-            sortOrder: 0,
-          })),
+          hotels: PUBLIC_HOTELS.map((h) =>
+            stripInternalHotelFields({
+              ...h,
+              dbId: null,
+              slug: h.id,
+              isPublished: true,
+              sortOrder: 0,
+            })
+          ),
           error: null,
           fromFallback: true,
           tableEmpty: true,
@@ -246,7 +257,12 @@ export async function loadPublicHotelsCatalog({ publishedOnly = false } = {}) {
       };
     }
 
-    return { hotels, error: null, fromFallback: false, tableEmpty: false };
+    return {
+      hotels: publishedOnly ? hotels.map(stripInternalHotelFields) : hotels,
+      error: null,
+      fromFallback: false,
+      tableEmpty: false,
+    };
   } catch (err) {
     logger.error("publicHotelsCatalog load:", err);
     return {
@@ -272,7 +288,13 @@ export async function loadPublicHotelBySlug(slug) {
     const local = PUBLIC_HOTELS.find((h) => h.id === target) || null;
     return {
       hotel: local
-        ? { ...local, dbId: null, slug: local.id, isPublished: true, sortOrder: 0 }
+        ? stripInternalHotelFields({
+            ...local,
+            dbId: null,
+            slug: local.id,
+            isPublished: true,
+            sortOrder: 0,
+          })
         : null,
       error: local ? null : "Hôtel introuvable",
       fromFallback: true,
@@ -292,7 +314,13 @@ export async function loadPublicHotelBySlug(slug) {
       const local = PUBLIC_HOTELS.find((h) => h.id === target) || null;
       return {
         hotel: local
-          ? { ...local, dbId: null, slug: local.id, isPublished: true, sortOrder: 0 }
+          ? stripInternalHotelFields({
+              ...local,
+              dbId: null,
+              slug: local.id,
+              isPublished: true,
+              sortOrder: 0,
+            })
           : null,
         error: error.message || String(error),
         fromFallback: Boolean(local),
@@ -300,13 +328,23 @@ export async function loadPublicHotelBySlug(slug) {
     }
 
     if (data) {
-      return { hotel: mapHotelRowFromDb(data), error: null, fromFallback: false };
+      return {
+        hotel: stripInternalHotelFields(mapHotelRowFromDb(data)),
+        error: null,
+        fromFallback: false,
+      };
     }
 
     const local = PUBLIC_HOTELS.find((h) => h.id === target) || null;
     return {
       hotel: local
-        ? { ...local, dbId: null, slug: local.id, isPublished: true, sortOrder: 0 }
+        ? stripInternalHotelFields({
+            ...local,
+            dbId: null,
+            slug: local.id,
+            isPublished: true,
+            sortOrder: 0,
+          })
         : null,
       error: local ? null : "Hôtel introuvable",
       fromFallback: Boolean(local),
@@ -315,7 +353,13 @@ export async function loadPublicHotelBySlug(slug) {
     const local = PUBLIC_HOTELS.find((h) => h.id === target) || null;
     return {
       hotel: local
-        ? { ...local, dbId: null, slug: local.id, isPublished: true, sortOrder: 0 }
+        ? stripInternalHotelFields({
+            ...local,
+            dbId: null,
+            slug: local.id,
+            isPublished: true,
+            sortOrder: 0,
+          })
         : null,
       error: err?.message || String(err),
       fromFallback: Boolean(local),
@@ -440,6 +484,7 @@ export function emptyHotelDraft() {
     description: "",
     highlights: [],
     amenities: [],
+    roomCategories: [],
     images: [],
     ...DEFAULT_AGE_POLICY,
     sortOrder: 0,

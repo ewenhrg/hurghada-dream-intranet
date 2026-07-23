@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { BedDouble, MessageSquareReply } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -13,9 +14,62 @@ import {
   boardFieldsToPayload,
   boardLabelsFromViewModel,
 } from "../constants/hotelRequestBoardOptions";
+import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
 
 const SELECT_COLUMNS =
-  "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, adults_count, children_count, child_ages, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, created_at, updated_at";
+  "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, adults_count, children_count, child_ages, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, response_payload, created_at, updated_at";
+
+function normalizeResponsePayload(raw) {
+  const base = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const hotels = Array.isArray(base.hotels) ? base.hotels : [];
+  return {
+    hotels: hotels
+      .map((h) => ({
+        slot: Number(h?.slot) || 0,
+        hotelName: String(h?.hotelName || "").trim(),
+        roomCategory: String(h?.roomCategory || "").trim(),
+      }))
+      .filter((h) => h.hotelName),
+  };
+}
+
+function requestHotelsList(request) {
+  return [
+    { slot: 1, hotelName: String(request.hotelOption1 || "").trim() },
+    { slot: 2, hotelName: String(request.hotelOption2 || "").trim() },
+    { slot: 3, hotelName: String(request.hotelOption3 || "").trim() },
+  ].filter((h) => h.hotelName);
+}
+
+function findCatalogHotelByName(hotelName, catalog) {
+  const n = String(hotelName || "").trim().toLowerCase();
+  if (!n) return null;
+  const exact = catalog.find((h) => String(h.name || "").trim().toLowerCase() === n);
+  if (exact) return exact;
+  return (
+    catalog.find((h) => {
+      const name = String(h.name || "").trim().toLowerCase();
+      return name.includes(n) || n.includes(name);
+    }) || null
+  );
+}
+
+function buildResponseHotelsDraft(request, catalog) {
+  const saved = normalizeResponsePayload(request.responsePayload).hotels;
+  return requestHotelsList(request).map((item) => {
+    const prev = saved.find((s) => s.slot === item.slot || s.hotelName === item.hotelName);
+    const catalogHotel = findCatalogHotelByName(item.hotelName, catalog);
+    return {
+      slot: item.slot,
+      hotelName: item.hotelName,
+      roomCategory: prev?.roomCategory || "",
+      catalogSlug: catalogHotel?.slug || catalogHotel?.id || "",
+      roomCategories: Array.isArray(catalogHotel?.roomCategories)
+        ? catalogHotel.roomCategories
+        : [],
+    };
+  });
+}
 
 export const HOTEL_CUSTOM_OFFER_LABEL = "Je n'ai pas de choix d'hôtel — faites-moi une offre";
 
@@ -47,6 +101,7 @@ export function rowToHotelRequestViewModel(row) {
     wantsCustomOffer: row.wants_custom_offer === true,
     ...boardFieldsFromRow(row),
     notes: row.notes || "",
+    responsePayload: normalizeResponsePayload(row.response_payload),
     createdAt: row.created_at || "",
     updatedAt: row.updated_at || "",
   };
@@ -80,7 +135,7 @@ function viewModelToPayload(vm) {
   };
 }
 
-function HotelRequestCard({ request, onPrint, onEdit }) {
+function HotelRequestCard({ request, onPrint, onReply, onEdit }) {
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
   const boardLabels = boardLabelsFromViewModel(request);
   const hotels = [
@@ -88,6 +143,8 @@ function HotelRequestCard({ request, onPrint, onEdit }) {
     { label: "Choix 2", value: request.hotelOption2 },
     { label: "Choix 3", value: request.hotelOption3 },
   ].filter((h) => String(h.value || "").trim());
+  const responseHotels = normalizeResponsePayload(request.responsePayload).hotels;
+  const hasResponse = responseHotels.some((h) => h.roomCategory);
 
   return (
     <article className="overflow-hidden rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_12px_40px_-18px_rgba(30,27,75,0.22)] ring-1 ring-slate-200/80">
@@ -103,6 +160,11 @@ function HotelRequestCard({ request, onPrint, onEdit }) {
                 Offre personnalisée demandée
               </span>
             ) : null}
+            {hasResponse ? (
+              <span className="mt-2 ml-0 inline-block rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-950 ring-1 ring-emerald-400/50 sm:ml-2">
+                Réponse préparée
+              </span>
+            ) : null}
             <p className="mt-1 text-xs font-medium text-slate-600">
               {request.createdAt
                 ? new Date(request.createdAt).toLocaleString("fr-FR")
@@ -112,6 +174,10 @@ function HotelRequestCard({ request, onPrint, onEdit }) {
           <div className="flex flex-wrap gap-2 shrink-0">
             <GhostBtn type="button" onClick={() => onPrint(request)}>
               Imprimer
+            </GhostBtn>
+            <GhostBtn type="button" onClick={() => onReply(request)}>
+              <MessageSquareReply className="h-3.5 w-3.5" aria-hidden />
+              Réponse
             </GhostBtn>
             <PrimaryBtn type="button" className="!min-h-0 !min-w-0 !text-sm !px-4 !py-2" onClick={() => onEdit(request)}>
               Modifier
@@ -210,6 +276,171 @@ function HotelRequestCard({ request, onPrint, onEdit }) {
         </p>
       </div>
     </article>
+  );
+}
+
+function HotelResponseModal({
+  request,
+  hotelsDraft,
+  setHotelsDraft,
+  onClose,
+  onSave,
+  saving,
+}) {
+  if (!request) return null;
+
+  const fullName =
+    [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
+  const boardLabels = boardLabelsFromViewModel(request);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="hotel-response-title"
+    >
+      <div className="my-8 w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-violet-600">
+              Réponse devis
+            </p>
+            <h2 id="hotel-response-title" className="mt-1 text-lg font-bold text-slate-900">
+              {fullName}
+            </h2>
+          </div>
+          <GhostBtn type="button" onClick={onClose} disabled={saving}>
+            Fermer
+          </GhostBtn>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-sm text-slate-800">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-700">
+            Demande client
+          </p>
+          <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+            <div>
+              <dt className="text-[11px] font-bold uppercase text-slate-500">Séjour</dt>
+              <dd className="font-semibold text-slate-950">
+                {formatHotelStayDate(request.arrivalDate)} → {formatHotelStayDate(request.departureDate)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-bold uppercase text-slate-500">Voyageurs</dt>
+              <dd className="font-semibold text-slate-950">
+                {request.adultsCount != null ? `${request.adultsCount} adulte(s)` : "—"}
+                {request.childrenCount != null && request.childrenCount > 0
+                  ? ` · ${request.childrenCount} enfant(s)`
+                  : ""}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-bold uppercase text-slate-500">Âges</dt>
+              <dd className="font-semibold text-slate-950">
+                {request.childAges?.trim() ? request.childAges : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-bold uppercase text-slate-500">Budget total</dt>
+              <dd className="font-semibold text-slate-950">
+                {request.budget?.trim() ? request.budget : "—"}
+              </dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-[11px] font-bold uppercase text-slate-500">Formule</dt>
+              <dd className="font-semibold text-slate-950">
+                {boardLabels.length ? boardLabels.join(" · ") : "All inclusive"}
+              </dd>
+            </div>
+            {request.notes?.trim() ? (
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] font-bold uppercase text-slate-500">Notes</dt>
+                <dd className="whitespace-pre-wrap font-medium text-slate-800">{request.notes}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </div>
+
+        <div className="mt-5">
+          <div className="mb-3 flex items-center gap-2">
+            <BedDouble className="h-4 w-4 text-violet-700" aria-hidden />
+            <h3 className="text-sm font-bold text-slate-900">Catégories de chambres</h3>
+          </div>
+          <p className="mb-3 text-xs font-medium text-slate-600">
+            Choisissez une catégorie par hôtel. Les tarifs par date seront branchés ensuite pour le
+            calcul automatique.
+          </p>
+
+          {hotelsDraft.length === 0 ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
+              Aucun hôtel nommé dans cette demande
+              {request.wantsCustomOffer ? " (offre personnalisée)." : "."}
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {hotelsDraft.map((item, index) => (
+                <li
+                  key={`${item.slot}-${item.hotelName}`}
+                  className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        Choix {item.slot}
+                      </p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-950">{item.hotelName}</p>
+                      {item.roomCategories.length === 0 ? (
+                        <p className="mt-1 text-xs font-semibold text-amber-800">
+                          Aucune catégorie dans le catalogue — ajoutez-les dans Catalogue hôtels.
+                        </p>
+                      ) : null}
+                    </div>
+                    <label className="block w-full min-w-[12rem] sm:w-56">
+                      <span className="text-[11px] font-bold uppercase text-slate-500">
+                        Catégorie de chambre
+                      </span>
+                      <select
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                        value={item.roomCategory}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setHotelsDraft((prev) =>
+                            prev.map((h, i) => (i === index ? { ...h, roomCategory: value } : h))
+                          );
+                        }}
+                        disabled={item.roomCategories.length === 0}
+                      >
+                        <option value="">— Sélectionner —</option>
+                        {item.roomCategories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                        {item.roomCategory &&
+                        !item.roomCategories.includes(item.roomCategory) ? (
+                          <option value={item.roomCategory}>{item.roomCategory} (enregistrée)</option>
+                        ) : null}
+                      </select>
+                    </label>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <GhostBtn type="button" onClick={onClose} disabled={saving}>
+            Annuler
+          </GhostBtn>
+          <PrimaryBtn type="button" onClick={onSave} disabled={saving || hotelsDraft.length === 0}>
+            {saving ? "Enregistrement…" : "Enregistrer la réponse"}
+          </PrimaryBtn>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -411,6 +642,9 @@ export function HotelHistoryPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [editDraft, setEditDraft] = useState(null);
+  const [replyRequest, setReplyRequest] = useState(null);
+  const [replyHotelsDraft, setReplyHotelsDraft] = useState([]);
+  const [catalogHotels, setCatalogHotels] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -434,6 +668,10 @@ export function HotelHistoryPage() {
           setError(
             "Table public_hotel_requests absente. Exécutez supabase/supabase_public_hotel_requests_table.sql sur Supabase."
           );
+        } else if (/response_payload/i.test(loadError.message || "")) {
+          setError(
+            "Colonne response_payload absente. Exécutez supabase/supabase_public_hotel_requests_add_response_payload.sql sur Supabase."
+          );
         } else {
           setError(loadError.message || "Impossible de charger les demandes.");
         }
@@ -453,6 +691,17 @@ export function HotelHistoryPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const result = await loadPublicHotelsCatalog({ publishedOnly: false });
+      if (!cancelled) setCatalogHotels(result.hotels || []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -503,6 +752,59 @@ export function HotelHistoryPage() {
   const handleEdit = useCallback((request) => {
     setEditDraft({ ...request });
   }, []);
+
+  const handleReply = useCallback(
+    (request) => {
+      setReplyRequest(request);
+      setReplyHotelsDraft(buildResponseHotelsDraft(request, catalogHotels));
+    },
+    [catalogHotels]
+  );
+
+  const handleSaveReply = useCallback(async () => {
+    if (!replyRequest || !supabase) return;
+    setSaving(true);
+    try {
+      const response_payload = {
+        hotels: replyHotelsDraft.map((h) => ({
+          slot: h.slot,
+          hotelName: h.hotelName,
+          roomCategory: String(h.roomCategory || "").trim(),
+        })),
+        updatedAt: new Date().toISOString(),
+      };
+      const { error: updateError } = await supabase
+        .from("public_hotel_requests")
+        .update({
+          response_payload,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", replyRequest.supabaseId)
+        .eq("site_key", SITE_KEY);
+
+      if (updateError) {
+        logger.error("HotelHistoryPage reply:", updateError);
+        if (/response_payload/i.test(updateError.message || "")) {
+          toast.error(
+            "Colonne response_payload absente : exécutez supabase_public_hotel_requests_add_response_payload.sql",
+            7000
+          );
+        } else {
+          toast.error(updateError.message || "Échec de l'enregistrement.");
+        }
+        return;
+      }
+      toast.success("Réponse enregistrée.");
+      setReplyRequest(null);
+      setReplyHotelsDraft([]);
+      await load();
+    } catch (e) {
+      logger.error("HotelHistoryPage reply save:", e);
+      toast.error("Erreur inattendue.");
+    } finally {
+      setSaving(false);
+    }
+  }, [replyRequest, replyHotelsDraft, load]);
 
   const handleSaveEdit = useCallback(async () => {
     if (!editDraft || !supabase) return;
@@ -591,11 +893,26 @@ export function HotelHistoryPage() {
               key={request.id}
               request={request}
               onPrint={handlePrint}
+              onReply={handleReply}
               onEdit={handleEdit}
             />
           ))}
         </div>
       )}
+
+      <HotelResponseModal
+        request={replyRequest}
+        hotelsDraft={replyHotelsDraft}
+        setHotelsDraft={setReplyHotelsDraft}
+        onClose={() => {
+          if (!saving) {
+            setReplyRequest(null);
+            setReplyHotelsDraft([]);
+          }
+        }}
+        onSave={handleSaveReply}
+        saving={saving}
+      />
 
       <EditHotelRequestModal
         draft={editDraft}

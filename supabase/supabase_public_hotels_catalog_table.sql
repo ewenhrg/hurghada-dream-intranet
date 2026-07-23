@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS public.public_hotels_catalog (
   highlights JSONB NOT NULL DEFAULT '[]'::jsonb,
   amenities JSONB NOT NULL DEFAULT '[]'::jsonb,
   image_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+  room_categories JSONB NOT NULL DEFAULT '[]'::jsonb,
   baby_age_min INTEGER NOT NULL DEFAULT 0,
   baby_age_max INTEGER NOT NULL DEFAULT 1,
   child_age_min INTEGER NOT NULL DEFAULT 2,

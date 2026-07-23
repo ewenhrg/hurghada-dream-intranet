@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  BedDouble,
   Building2,
   Check,
   ImagePlus,
@@ -9,6 +10,7 @@ import {
   Save,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
@@ -60,6 +62,7 @@ export function PublicHotelsAdminPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [draft, setDraft] = useState(() => emptyHotelDraft());
   const [highlightsText, setHighlightsText] = useState("");
+  const [roomCategoryDraft, setRoomCategoryDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [seeding, setSeeding] = useState(false);
@@ -128,9 +131,11 @@ export function PublicHotelsAdminPage() {
       mapsUrl: hotel.mapsUrl || hotel.maps_url || "",
       lat: hotel.lat ?? "",
       lng: hotel.lng ?? "",
+      roomCategories: Array.isArray(hotel.roomCategories) ? hotel.roomCategories : [],
       images: normalizeCatalogImageUrlsFromDb(hotel.images),
     });
     setHighlightsText(highlightsToText(hotel.highlights));
+    setRoomCategoryDraft("");
   }
 
   function startCreate() {
@@ -138,6 +143,7 @@ export function PublicHotelsAdminPage() {
     setSelectedId("new");
     setDraft(draftNew);
     setHighlightsText("");
+    setRoomCategoryDraft("");
   }
 
   function updateField(field, value) {
@@ -158,6 +164,30 @@ export function PublicHotelsAdminPage() {
       else set.add(key);
       return { ...prev, amenities: [...set] };
     });
+  }
+
+  function addRoomCategory() {
+    const name = String(roomCategoryDraft || "").trim();
+    if (!name) {
+      toast.warning("Indiquez le nom de la catégorie de chambre.");
+      return;
+    }
+    setDraft((prev) => {
+      const list = Array.isArray(prev.roomCategories) ? [...prev.roomCategories] : [];
+      if (list.some((c) => c.toLowerCase() === name.toLowerCase())) {
+        toast.info("Cette catégorie existe déjà.");
+        return prev;
+      }
+      return { ...prev, roomCategories: [...list, name] };
+    });
+    setRoomCategoryDraft("");
+  }
+
+  function removeRoomCategory(index) {
+    setDraft((prev) => ({
+      ...prev,
+      roomCategories: (prev.roomCategories || []).filter((_, i) => i !== index),
+    }));
   }
 
   function setImageAt(index, value) {
@@ -214,6 +244,11 @@ export function PublicHotelsAdminPage() {
         if (/maps_url/i.test(msg)) {
           toast.error(
             "Colonne maps_url absente : exécutez supabase_public_hotels_catalog_add_maps_url.sql dans Supabase.",
+            7000
+          );
+        } else if (/room_categories/i.test(msg)) {
+          toast.error(
+            "Colonne room_categories absente : exécutez supabase_public_hotels_catalog_add_room_categories.sql dans Supabase.",
             7000
           );
         } else if (/baby_age|child_age/i.test(msg)) {
@@ -757,6 +792,76 @@ export function PublicHotelsAdminPage() {
                   placeholder={"Plage privée\nPiscines\nSpa…"}
                 />
               </label>
+
+              <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/25 text-amber-100">
+                    <BedDouble className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-100">
+                      Catégories de chambres
+                    </p>
+                    <p className="mt-1 text-xs leading-snug text-slate-400">
+                      Usage interne uniquement — non affiché sur le catalogue public client.
+                    </p>
+
+                    {(draft.roomCategories || []).length > 0 ? (
+                      <ul className="mt-3 space-y-2">
+                        {(draft.roomCategories || []).map((name, index) => (
+                          <li
+                            key={`${name}-${index}`}
+                            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                          >
+                            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
+                              {name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeRoomCategory(index)}
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-500/20 hover:text-rose-200"
+                              aria-label={`Supprimer ${name}`}
+                            >
+                              <X className="h-4 w-4" aria-hidden />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-3 text-xs font-semibold text-slate-500">
+                        Aucune catégorie pour le moment.
+                      </p>
+                    )}
+
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <label className="block min-w-0 flex-1 space-y-1.5">
+                        <span className="text-xs font-semibold text-slate-300">Nom de la catégorie</span>
+                        <TextInput
+                          value={roomCategoryDraft}
+                          onChange={(e) => setRoomCategoryDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addRoomCategory();
+                            }
+                          }}
+                          placeholder="Ex. Standard, Deluxe, Suite…"
+                        />
+                      </label>
+                      <GhostBtn
+                        type="button"
+                        variant="neutral"
+                        size="sm"
+                        onClick={addRoomCategory}
+                        className="shrink-0"
+                      >
+                        <Plus className="h-3.5 w-3.5" aria-hidden />
+                        Ajouter
+                      </GhostBtn>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
