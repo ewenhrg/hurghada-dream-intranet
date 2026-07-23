@@ -396,6 +396,30 @@ export async function savePublicHotel(hotel) {
   }
 }
 
+/** Met à jour uniquement les catégories de chambres (persistance immédiate). */
+export async function updateHotelRoomCategories(dbId, roomCategories) {
+  if (!__SUPABASE_DEBUG__?.isConfigured || !supabase) {
+    return { ok: false, error: "Supabase non configuré", hotel: null };
+  }
+  if (!dbId) return { ok: false, error: "Identifiant hôtel manquant", hotel: null };
+  try {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .update({
+        room_categories: normalizeRoomCategories(roomCategories),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", dbId)
+      .select("*")
+      .maybeSingle();
+    if (error) return { ok: false, error: error.message || String(error), hotel: null };
+    if (!data) return { ok: false, error: "Hôtel introuvable après mise à jour", hotel: null };
+    return { ok: true, error: null, hotel: mapHotelRowFromDb(data) };
+  } catch (err) {
+    return { ok: false, error: err?.message || String(err), hotel: null };
+  }
+}
+
 export async function deletePublicHotel(dbId) {
   if (!__SUPABASE_DEBUG__?.isConfigured || !supabase) {
     return { ok: false, error: "Supabase non configuré" };

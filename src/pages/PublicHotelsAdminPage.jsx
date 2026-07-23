@@ -6,11 +6,11 @@ import {
   ImagePlus,
   Loader2,
   MapPin,
+  Pencil,
   Plus,
   Save,
   Trash2,
   Upload,
-  X,
 } from "lucide-react";
 import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
@@ -29,6 +29,7 @@ import {
   savePublicHotel,
   seedPublicHotelsFromDefaults,
   slugifyHotelName,
+  updateHotelRoomCategories,
   validateHotelMapsUrl,
 } from "../utils/publicHotelsCatalog";
 import { parseLatLngFromMapsUrl } from "../utils/googleMapsUrl";
@@ -36,6 +37,12 @@ import {
   formatRoomOccupancyLabel,
   normalizeRoomCategories,
 } from "../utils/hotelRoomCategories";
+
+const EMPTY_ROOM_CATEGORY = {
+  name: "",
+  option1: { maxAdults: null, maxChildren: null, maxBabies: null },
+  option2: { maxAdults: null, maxChildren: null, maxBabies: null },
+};
 
 const CATALOG_IMAGES_BUCKET = "documents";
 const CATALOG_IMAGES_FALLBACK_BUCKET = "Catalogue";
@@ -67,6 +74,8 @@ export function PublicHotelsAdminPage() {
   const [draft, setDraft] = useState(() => emptyHotelDraft());
   const [highlightsText, setHighlightsText] = useState("");
   const [roomCategoryDraft, setRoomCategoryDraft] = useState("");
+  const [editingRoomCategoryIndex, setEditingRoomCategoryIndex] = useState(null);
+  const [savingRoomCategories, setSavingRoomCategories] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [seeding, setSeeding] = useState(false);
@@ -140,6 +149,7 @@ export function PublicHotelsAdminPage() {
     });
     setHighlightsText(highlightsToText(hotel.highlights));
     setRoomCategoryDraft("");
+    setEditingRoomCategoryIndex(null);
   }
 
   function startCreate() {
@@ -148,6 +158,7 @@ export function PublicHotelsAdminPage() {
     setDraft(draftNew);
     setHighlightsText("");
     setRoomCategoryDraft("");
+    setEditingRoomCategoryIndex(null);
   }
 
   function updateField(field, value) {
@@ -170,34 +181,121 @@ export function PublicHotelsAdminPage() {
     });
   }
 
-  function addRoomCategory() {
+  function roomCategoriesSaveError(msg) {
+    if (/room_categories/i.test(msg) || /schema cache/i.test(msg)) {
+      toast.error(
+        "Colonne room_categories absente ou cache à recharger : exécutez supabase_public_hotels_catalog_add_room_categories.sql puis NOTIFY pgrst, 'reload schema';",
+        8000
+      );
+      return true;
+    }
+    return false;
+  }
+
+  async function persistRoomCategories(nextCategories, successMsg) {
+    const normalized = normalizeRoomCategories(nextCategories);
+    setDraft((prev) => ({ ...prev, roomCategories: normalized }));
+
+    if (!draft.dbId) {
+      toast.info("Catégorie mise à jour dans le brouillon — cliquez Enregistrer pour créer l’hôtel.");
+      return true;
+    }
+
+    setSavingRoomCategories(true);
+    try {
+      const result = await updateHotelRoomCategories(draft.dbId, normalized);
+      if (!result.ok) {
+        const msg = result.error || "Enregistrement impossible.";
+        if (!roomCategoriesSaveError(msg)) toast.error(msg);
+        logger.error("persistRoomCategories:", msg);
+        return false;
+      }
+      const saved = result.hotel;
+      setDraft((prev) => ({
+        ...prev,
+        ...saved,
+        roomCategories: normalizeRoomCategories(saved.roomCategories),
+        mapsUrl: saved.mapsUrl || prev.mapsUrl || "",
+        images: normalizeCatalogImageUrlsFromDb(saved.images),
+      }));
+      setHotels((prev) =>
+        prev.map((h) => (h.dbId === saved.dbId ? { ...h, ...saved } : h))
+      );
+      if (successMsg) toast.success(successMsg);
+      return true;
+    } finally {
+      setSavingRoomCategories(false);
+    }
+  }
+
+  async function addRoomCategory() {
     const name = String(roomCategoryDraft || "").trim();
     if (!name) {
       toast.warning("Indiquez le nom de la catégorie de chambre.");
       return;
     }
-    setDraft((prev) => {
-      const list = normalizeRoomCategories(prev.roomCategories);
-      if (list.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
-        toast.info("Cette catégorie existe déjà.");
-        return prev;
+    const list = normalizeRoomCategories(draft.roomCategories);
+    if (list.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
+      toast.info("Cette catégorie existe déjà.");
+      return;
+    }
+
+    if (editingRoomCategoryIndex != null) {
+      const prev = list[editingRoomCategoryIndex];
+      if (!prev) {
+        setEditingRoomCategoryIndex(null);
+        setRoomCategoryDraft("");
+        return;
       }
-      return {
-        ...prev,
-        roomCategories: [
-          ...list,
-          { name, option1: { maxAdults: null, maxChildren: null, maxBabies: null }, option2: { maxAdults: null, maxChildren: null, maxBabies: null } },
-        ],
-      };
-    });
+      const duplicate = list.some(
+        (c, i) => i !== editingRoomCategoryIndex && c.name.toLowerCase() === name.toLowerCase()
+      );
+      if (duplicate) {
+        toast.info("Cette catégorie existe déjà.");
+        return;
+      }
+      const next = list.map((c, i) =>
+        i === editingRoomCategoryIndex ? { ...c, name } : c
+      );
+      const ok = await persistRoomCategories(next, `Catégorie renommée : ${name}`);
+      if (ok) {
+        setEditingRoomCategoryIndex(null);
+        setRoomCategoryDraft("");
+      }
+      return;
+    }
+
+    const next = [...list, { ...EMPTY_ROOM_CATEGORY, name }];
+    const ok = await persistRoomCategories(next, `Catégorie ajoutée : ${name}`);
+    if (ok) setRoomCategoryDraft("");
+  }
+
+  function startEditRoomCategory(index) {
+    const list = normalizeRoomCategories(draft.roomCategories);
+    const cat = list[index];
+    if (!cat) return;
+    setEditingRoomCategoryIndex(index);
+    setRoomCategoryDraft(cat.name);
+  }
+
+  function cancelEditRoomCategory() {
+    setEditingRoomCategoryIndex(null);
     setRoomCategoryDraft("");
   }
 
-  function removeRoomCategory(index) {
-    setDraft((prev) => ({
-      ...prev,
-      roomCategories: normalizeRoomCategories(prev.roomCategories).filter((_, i) => i !== index),
-    }));
+  async function removeRoomCategory(index) {
+    const list = normalizeRoomCategories(draft.roomCategories);
+    const cat = list[index];
+    if (!cat) return;
+    if (!window.confirm(`Supprimer la catégorie « ${cat.name} » ?`)) return;
+    const next = list.filter((_, i) => i !== index);
+    const ok = await persistRoomCategories(next, `Catégorie supprimée : ${cat.name}`);
+    if (ok && editingRoomCategoryIndex === index) {
+      setEditingRoomCategoryIndex(null);
+      setRoomCategoryDraft("");
+    } else if (ok && editingRoomCategoryIndex != null && editingRoomCategoryIndex > index) {
+      setEditingRoomCategoryIndex(editingRoomCategoryIndex - 1);
+    }
   }
 
   function setImageAt(index, value) {
@@ -247,6 +345,7 @@ export function PublicHotelsAdminPage() {
         id: slug,
         highlights: textToHighlights(highlightsText),
         images: normalizeCatalogImageUrlsFromDb(draft.images),
+        roomCategories: normalizeRoomCategories(draft.roomCategories),
       };
       const result = await savePublicHotel(payload);
       if (!result.ok) {
@@ -813,7 +912,8 @@ export function PublicHotelsAdminPage() {
                       Catégories de chambres
                     </p>
                     <p className="mt-1 text-xs leading-snug text-slate-400">
-                      Usage interne uniquement — non affiché sur le catalogue public client.
+                      Usage interne — enregistrées immédiatement (si l’hôtel existe déjà en base).
+                      Occupations max : page Tarifs hôtel.
                     </p>
 
                     {(draft.roomCategories || []).length > 0 ? (
@@ -821,7 +921,11 @@ export function PublicHotelsAdminPage() {
                         {normalizeRoomCategories(draft.roomCategories).map((cat, index) => (
                           <li
                             key={`${cat.name}-${index}`}
-                            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                            className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${
+                              editingRoomCategoryIndex === index
+                                ? "border-amber-300/50 bg-amber-500/15"
+                                : "border-white/10 bg-white/5"
+                            }`}
                           >
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm font-semibold text-white">
@@ -836,11 +940,21 @@ export function PublicHotelsAdminPage() {
                             </span>
                             <button
                               type="button"
-                              onClick={() => removeRoomCategory(index)}
-                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-500/20 hover:text-rose-200"
+                              onClick={() => startEditRoomCategory(index)}
+                              disabled={savingRoomCategories}
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-violet-500/20 hover:text-violet-100 disabled:opacity-50"
+                              aria-label={`Modifier ${cat.name}`}
+                            >
+                              <Pencil className="h-4 w-4" aria-hidden />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void removeRoomCategory(index)}
+                              disabled={savingRoomCategories}
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-500/20 hover:text-rose-200 disabled:opacity-50"
                               aria-label={`Supprimer ${cat.name}`}
                             >
-                              <X className="h-4 w-4" aria-hidden />
+                              <Trash2 className="h-4 w-4" aria-hidden />
                             </button>
                           </li>
                         ))}
@@ -853,28 +967,56 @@ export function PublicHotelsAdminPage() {
 
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
                       <label className="block min-w-0 flex-1 space-y-1.5">
-                        <span className="text-xs font-semibold text-slate-300">Nom de la catégorie</span>
+                        <span className="text-xs font-semibold text-slate-300">
+                          {editingRoomCategoryIndex != null
+                            ? "Modifier le nom"
+                            : "Nom de la catégorie"}
+                        </span>
                         <TextInput
                           value={roomCategoryDraft}
                           onChange={(e) => setRoomCategoryDraft(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
-                              addRoomCategory();
+                              void addRoomCategory();
+                            }
+                            if (e.key === "Escape" && editingRoomCategoryIndex != null) {
+                              e.preventDefault();
+                              cancelEditRoomCategory();
                             }
                           }}
                           placeholder="Ex. Standard, Deluxe, Suite…"
+                          disabled={savingRoomCategories}
                         />
                       </label>
+                      {editingRoomCategoryIndex != null ? (
+                        <GhostBtn
+                          type="button"
+                          variant="neutral"
+                          size="sm"
+                          onClick={cancelEditRoomCategory}
+                          className="shrink-0"
+                          disabled={savingRoomCategories}
+                        >
+                          Annuler
+                        </GhostBtn>
+                      ) : null}
                       <GhostBtn
                         type="button"
                         variant="neutral"
                         size="sm"
-                        onClick={addRoomCategory}
+                        onClick={() => void addRoomCategory()}
                         className="shrink-0"
+                        disabled={savingRoomCategories}
                       >
-                        <Plus className="h-3.5 w-3.5" aria-hidden />
-                        Ajouter
+                        {savingRoomCategories ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                        ) : editingRoomCategoryIndex != null ? (
+                          <Save className="h-3.5 w-3.5" aria-hidden />
+                        ) : (
+                          <Plus className="h-3.5 w-3.5" aria-hidden />
+                        )}
+                        {editingRoomCategoryIndex != null ? "Enregistrer" : "Ajouter"}
                       </GhostBtn>
                     </div>
                   </div>
