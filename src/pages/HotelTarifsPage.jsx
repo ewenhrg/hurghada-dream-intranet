@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BedDouble, Building2, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { BedDouble, Building2, Loader2, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
-import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
+import { loadPublicHotelsCatalog, savePublicHotel } from "../utils/publicHotelsCatalog";
 import {
   applyHotelRateGain,
   deleteHotelRate,
@@ -14,6 +14,13 @@ import {
   getHotelChildFreePolicy,
   isHiltonPlazaHotel,
 } from "../utils/hotelChildFreePolicy";
+import {
+  findRoomCategory,
+  formatRoomOccupancyLabel,
+  mergeRoomCategoryList,
+  roomCategoryNames,
+  setRoomCategoryOccupancy,
+} from "../utils/hotelRoomCategories";
 
 function formatMoney(value, currency = "EUR") {
   if (value == null || !Number.isFinite(Number(value))) return "—";
@@ -48,7 +55,10 @@ export function HotelTarifsPage() {
   const [selectedSlug, setSelectedSlug] = useState("");
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [savingOccupancy, setSavingOccupancy] = useState("");
   const [search, setSearch] = useState("");
+  /** Occupation en cours d’édition par nom de catégorie. */
+  const [occupancyDrafts, setOccupancyDrafts] = useState({});
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -98,24 +108,96 @@ export function HotelTarifsPage() {
   );
 
   const roomCategories = useMemo(() => {
-    const fromHotel = Array.isArray(selectedHotel?.roomCategories)
-      ? selectedHotel.roomCategories
-      : [];
     const fromRates = hotelRates.map((r) => r.roomCategory).filter(Boolean);
-    return [...new Set([...fromHotel, ...fromRates])];
+    return mergeRoomCategoryList(selectedHotel?.roomCategories, fromRates);
   }, [selectedHotel, hotelRates]);
+
+  const roomCategoryNameList = useMemo(
+    () => roomCategories.map((c) => c.name),
+    [roomCategories]
+  );
+
+  useEffect(() => {
+    const cats = mergeRoomCategoryList(
+      selectedHotel?.roomCategories,
+      hotelRates.map((r) => r.roomCategory).filter(Boolean)
+    );
+    const next = {};
+    for (const cat of cats) {
+      next[cat.name] = {
+        maxAdults: cat.maxAdults ?? "",
+        maxChildren: cat.maxChildren ?? "",
+        maxBabies: cat.maxBabies ?? "",
+      };
+    }
+    setOccupancyDrafts(next);
+    // Reset only when hotel selection changes (not on every rate edit).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: selectedSlug only
+  }, [selectedSlug]);
+
+  function updateOccupancyField(categoryName, field, value) {
+    setOccupancyDrafts((prev) => ({
+      ...prev,
+      [categoryName]: {
+        ...(prev[categoryName] || { maxAdults: "", maxChildren: "", maxBabies: "" }),
+        [field]: value,
+      },
+    }));
+  }
+
+  async function saveOccupancy(categoryName) {
+    if (!selectedHotel?.dbId) {
+      toast.warning("Enregistrez d’abord l’hôtel dans Catalogue hôtels.");
+      return;
+    }
+    const occ = occupancyDrafts[categoryName] || {};
+    setSavingOccupancy(categoryName);
+    try {
+      const nextCategories = setRoomCategoryOccupancy(
+        mergeRoomCategoryList(selectedHotel.roomCategories, roomCategoryNameList),
+        categoryName,
+        occ
+      );
+      const result = await savePublicHotel({
+        ...selectedHotel,
+        roomCategories: nextCategories,
+      });
+      if (!result.ok) {
+        toast.error(result.error || "Échec de l’enregistrement.");
+        return;
+      }
+      setHotels((prev) =>
+        prev.map((h) =>
+          (h.slug || h.id) === selectedSlug
+            ? result.hotel || { ...h, roomCategories: nextCategories }
+            : h
+        )
+      );
+      setOccupancyDrafts((prev) => ({
+        ...prev,
+        [categoryName]: {
+          maxAdults: occ.maxAdults === "" || occ.maxAdults == null ? "" : occ.maxAdults,
+          maxChildren: occ.maxChildren === "" || occ.maxChildren == null ? "" : occ.maxChildren,
+          maxBabies: occ.maxBabies === "" || occ.maxBabies == null ? "" : occ.maxBabies,
+        },
+      }));
+      toast.success(`Occupation enregistrée — ${categoryName}`);
+    } finally {
+      setSavingOccupancy("");
+    }
+  }
 
   function startCreate(roomCategory = "") {
     if (!selectedHotel) {
       toast.warning("Sélectionnez un hôtel.");
       return;
     }
-    if (!roomCategory && roomCategories.length === 0) {
+    if (!roomCategory && roomCategoryNameList.length === 0) {
       toast.warning("Ajoutez d’abord des catégories de chambres dans Catalogue hôtels.");
       return;
     }
     setDraft(
-      emptyHotelRateDraft(selectedHotel, roomCategory || roomCategories[0] || "")
+      emptyHotelRateDraft(selectedHotel, roomCategory || roomCategoryNameList[0] || "")
     );
   }
 
@@ -243,7 +325,7 @@ export function HotelTarifsPage() {
                           {hotel.name}
                         </span>
                         <span className="mt-0.5 block text-[11px] font-semibold text-slate-500">
-                          {(hotel.roomCategories || []).length} cat. · {count} tarif
+                          {roomCategoryNames(hotel.roomCategories).length} cat. · {count} tarif
                           {count !== 1 ? "s" : ""}
                         </span>
                       </span>
@@ -297,19 +379,102 @@ export function HotelTarifsPage() {
                 <div className="space-y-5">
                   {roomCategories.map((cat) => {
                     const rows = hotelRates
-                      .filter((r) => r.roomCategory === cat)
+                      .filter((r) => r.roomCategory === cat.name)
                       .sort((a, b) => String(a.dateFrom).localeCompare(String(b.dateFrom)));
+                    const occ = occupancyDrafts[cat.name] || {
+                      maxAdults: "",
+                      maxChildren: "",
+                      maxBabies: "",
+                    };
+                    const savedLabel = formatRoomOccupancyLabel(
+                      findRoomCategory(selectedHotel?.roomCategories, cat.name) || cat
+                    );
                     return (
-                      <div key={cat} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:p-4">
+                      <div key={cat.name} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:p-4">
                         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                          <p className="inline-flex items-center gap-2 text-sm font-bold text-slate-900">
-                            <BedDouble className="h-4 w-4 text-violet-700" aria-hidden />
-                            {cat}
-                          </p>
-                          <GhostBtn type="button" size="sm" onClick={() => startCreate(cat)}>
+                          <div>
+                            <p className="inline-flex items-center gap-2 text-sm font-bold text-slate-900">
+                              <BedDouble className="h-4 w-4 text-violet-700" aria-hidden />
+                              {cat.name}
+                            </p>
+                            {savedLabel ? (
+                              <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
+                                {savedLabel}
+                              </p>
+                            ) : null}
+                          </div>
+                          <GhostBtn type="button" size="sm" onClick={() => startCreate(cat.name)}>
                             <Plus className="h-3.5 w-3.5" aria-hidden />
                             Période
                           </GhostBtn>
+                        </div>
+
+                        <div className="mb-3 rounded-xl border border-indigo-100 bg-white/90 p-3">
+                          <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-800">
+                            Places max / chambre
+                          </p>
+                          <div className="mt-2 grid grid-cols-3 gap-2">
+                            <label className="block text-[11px] font-semibold text-slate-600">
+                              Adultes
+                              <input
+                                type="number"
+                                min={0}
+                                max={20}
+                                inputMode="numeric"
+                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm font-semibold text-slate-900"
+                                value={occ.maxAdults}
+                                onChange={(e) =>
+                                  updateOccupancyField(cat.name, "maxAdults", e.target.value)
+                                }
+                                placeholder="ex. 2"
+                              />
+                            </label>
+                            <label className="block text-[11px] font-semibold text-slate-600">
+                              Enfants
+                              <input
+                                type="number"
+                                min={0}
+                                max={20}
+                                inputMode="numeric"
+                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm font-semibold text-slate-900"
+                                value={occ.maxChildren}
+                                onChange={(e) =>
+                                  updateOccupancyField(cat.name, "maxChildren", e.target.value)
+                                }
+                                placeholder="ex. 2"
+                              />
+                            </label>
+                            <label className="block text-[11px] font-semibold text-slate-600">
+                              Bébés
+                              <input
+                                type="number"
+                                min={0}
+                                max={20}
+                                inputMode="numeric"
+                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm font-semibold text-slate-900"
+                                value={occ.maxBabies}
+                                onChange={(e) =>
+                                  updateOccupancyField(cat.name, "maxBabies", e.target.value)
+                                }
+                                placeholder="ex. 1"
+                              />
+                            </label>
+                          </div>
+                          <div className="mt-2 flex justify-end">
+                            <GhostBtn
+                              type="button"
+                              size="sm"
+                              disabled={savingOccupancy === cat.name}
+                              onClick={() => void saveOccupancy(cat.name)}
+                            >
+                              {savingOccupancy === cat.name ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                              ) : (
+                                <Save className="h-3.5 w-3.5" aria-hidden />
+                              )}
+                              Enregistrer places
+                            </GhostBtn>
+                          </div>
                         </div>
 
                         {rows.length === 0 ? (
@@ -405,7 +570,7 @@ export function HotelTarifsPage() {
                           setDraft((d) => ({ ...d, roomCategory: e.target.value }))
                         }
                       >
-                        {roomCategories.map((c) => (
+                        {roomCategoryNameList.map((c) => (
                           <option key={c} value={c}>
                             {c}
                           </option>

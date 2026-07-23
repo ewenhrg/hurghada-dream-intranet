@@ -3,6 +3,7 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { normalizeCatalogImageUrlsFromDb } from "./catalogContent";
 import { PUBLIC_HOTELS } from "../data/publicHotels";
 import { isLikelyGoogleMapsUrl, parseLatLngFromMapsUrl } from "./googleMapsUrl";
+import { normalizeRoomCategories } from "./hotelRoomCategories";
 import { logger } from "./logger";
 
 const TABLE = "public_hotels_catalog";
@@ -112,7 +113,7 @@ export function mapHotelRowFromDb(row) {
     description: String(row.description || "").trim(),
     highlights: asStringArray(row.highlights),
     amenities: asStringArray(row.amenities),
-    roomCategories: asStringArray(row.room_categories),
+    roomCategories: normalizeRoomCategories(row.room_categories),
     images: normalizeCatalogImageUrlsFromDb(row.image_urls),
     ...ages,
     sortOrder: Number(row.sort_order) || 0,
@@ -150,7 +151,7 @@ export function hotelToDbPayload(hotel, { forInsert = false } = {}) {
     description: String(hotel.description || "").trim(),
     highlights: asStringArray(hotel.highlights),
     amenities: asStringArray(hotel.amenities),
-    room_categories: asStringArray(hotel.roomCategories ?? hotel.room_categories),
+    room_categories: normalizeRoomCategories(hotel.roomCategories ?? hotel.room_categories),
     image_urls: normalizeCatalogImageUrlsFromDb(hotel.images ?? hotel.image_urls),
     baby_age_min: ages.babyAgeMin,
     baby_age_max: ages.babyAgeMax,

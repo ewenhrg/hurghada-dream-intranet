@@ -26,6 +26,11 @@ import {
   isHiltonPlazaHotel,
   parseChildAgesInput,
 } from "../utils/hotelChildFreePolicy";
+import {
+  formatRoomOccupancyLabel,
+  findRoomCategory,
+  roomCategoryNames,
+} from "../utils/hotelRoomCategories";
 
 const SELECT_COLUMNS =
   "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, adults_count, children_count, child_ages, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, response_payload, created_at, updated_at";
@@ -96,9 +101,7 @@ function buildResponseHotelsDraft(request, catalog) {
       hotelName: item.hotelName,
       roomCategory: prev?.roomCategory || "",
       catalogSlug: catalogHotel?.slug || catalogHotel?.id || "",
-      roomCategories: Array.isArray(catalogHotel?.roomCategories)
-        ? catalogHotel.roomCategories
-        : [],
+      roomCategories: roomCategoryNames(catalogHotel?.roomCategories),
       catalogHotel: catalogHotel || null,
     };
   });
@@ -491,11 +494,21 @@ function HotelResponseModal({
                           Choix {item.slot}
                         </p>
                         <p className="mt-0.5 text-sm font-bold text-slate-950">{item.hotelName}</p>
-                        {item.roomCategories.length === 0 ? (
-                          <p className="mt-1 text-xs font-semibold text-amber-800">
-                            Aucune catégorie dans le catalogue — ajoutez-les dans Catalogue hôtels.
-                          </p>
-                        ) : null}
+                      {item.roomCategories.length === 0 ? (
+                        <p className="mt-1 text-xs font-semibold text-amber-800">
+                          Aucune catégorie dans le catalogue — ajoutez-les dans Catalogue hôtels.
+                        </p>
+                      ) : null}
+                      {item.roomCategory && item.catalogHotel ? (
+                        (() => {
+                          const occ = formatRoomOccupancyLabel(
+                            findRoomCategory(item.catalogHotel.roomCategories, item.roomCategory)
+                          );
+                          return occ ? (
+                            <p className="mt-1 text-[11px] font-semibold text-slate-600">{occ}</p>
+                          ) : null;
+                        })()
+                      ) : null}
                         {item.roomCategory && quote ? (
                           <div className="mt-2 rounded-lg border border-violet-200/80 bg-white px-3 py-2">
                             <p className="text-sm font-bold text-violet-950">

@@ -7,6 +7,6 @@ ALTER TABLE public.public_hotels_catalog
   ADD COLUMN IF NOT EXISTS room_categories JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 COMMENT ON COLUMN public.public_hotels_catalog.room_categories IS
-  'Catégories de chambres (noms) — usage intranet uniquement, non exposé au site public.';
+  'Catégories de chambres (objets {name, maxAdults, maxChildren, maxBabies} ou noms) — intranet uniquement.';
 
 NOTIFY pgrst, 'reload schema';

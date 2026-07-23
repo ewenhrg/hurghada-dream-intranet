@@ -32,6 +32,9 @@ import {
   validateHotelMapsUrl,
 } from "../utils/publicHotelsCatalog";
 import { parseLatLngFromMapsUrl } from "../utils/googleMapsUrl";
+import {
+  normalizeRoomCategories,
+} from "../utils/hotelRoomCategories";
 
 const CATALOG_IMAGES_BUCKET = "documents";
 const CATALOG_IMAGES_FALLBACK_BUCKET = "Catalogue";
@@ -131,7 +134,7 @@ export function PublicHotelsAdminPage() {
       mapsUrl: hotel.mapsUrl || hotel.maps_url || "",
       lat: hotel.lat ?? "",
       lng: hotel.lng ?? "",
-      roomCategories: Array.isArray(hotel.roomCategories) ? hotel.roomCategories : [],
+      roomCategories: normalizeRoomCategories(hotel.roomCategories),
       images: normalizeCatalogImageUrlsFromDb(hotel.images),
     });
     setHighlightsText(highlightsToText(hotel.highlights));
@@ -173,12 +176,18 @@ export function PublicHotelsAdminPage() {
       return;
     }
     setDraft((prev) => {
-      const list = Array.isArray(prev.roomCategories) ? [...prev.roomCategories] : [];
-      if (list.some((c) => c.toLowerCase() === name.toLowerCase())) {
+      const list = normalizeRoomCategories(prev.roomCategories);
+      if (list.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
         toast.info("Cette catégorie existe déjà.");
         return prev;
       }
-      return { ...prev, roomCategories: [...list, name] };
+      return {
+        ...prev,
+        roomCategories: [
+          ...list,
+          { name, maxAdults: null, maxChildren: null, maxBabies: null },
+        ],
+      };
     });
     setRoomCategoryDraft("");
   }
@@ -186,7 +195,7 @@ export function PublicHotelsAdminPage() {
   function removeRoomCategory(index) {
     setDraft((prev) => ({
       ...prev,
-      roomCategories: (prev.roomCategories || []).filter((_, i) => i !== index),
+      roomCategories: normalizeRoomCategories(prev.roomCategories).filter((_, i) => i !== index),
     }));
   }
 
@@ -808,19 +817,30 @@ export function PublicHotelsAdminPage() {
 
                     {(draft.roomCategories || []).length > 0 ? (
                       <ul className="mt-3 space-y-2">
-                        {(draft.roomCategories || []).map((name, index) => (
+                        {normalizeRoomCategories(draft.roomCategories).map((cat, index) => (
                           <li
-                            key={`${name}-${index}`}
+                            key={`${cat.name}-${index}`}
                             className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
                           >
-                            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
-                              {name}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold text-white">
+                                {cat.name}
+                              </span>
+                              {(cat.maxAdults != null ||
+                                cat.maxChildren != null ||
+                                cat.maxBabies != null) && (
+                                <span className="mt-0.5 block text-[11px] font-medium text-slate-400">
+                                  Max {cat.maxAdults ?? "—"}A · {cat.maxChildren ?? "—"}E ·{" "}
+                                  {cat.maxBabies ?? "—"}B
+                                  <span className="text-slate-500"> (via Tarifs hôtel)</span>
+                                </span>
+                              )}
                             </span>
                             <button
                               type="button"
                               onClick={() => removeRoomCategory(index)}
                               className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-500/20 hover:text-rose-200"
-                              aria-label={`Supprimer ${name}`}
+                              aria-label={`Supprimer ${cat.name}`}
                             >
                               <X className="h-4 w-4" aria-hidden />
                             </button>
