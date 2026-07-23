@@ -10,8 +10,28 @@ function toNumberOrNull(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function normalizeGainType(value) {
+  return value === "percent" ? "percent" : "amount";
+}
+
+/** Prix de vente = prix de touche + gain (montant) ou × (1 + %/100). */
+export function applyHotelRateGain(cost, gainType, gainValue) {
+  const base = toNumberOrNull(cost);
+  if (base == null) return null;
+  const gain = Math.max(0, toNumberOrNull(gainValue) ?? 0);
+  if (normalizeGainType(gainType) === "percent") {
+    return Math.round((base * (1 + gain / 100)) * 100) / 100;
+  }
+  return Math.round((base + gain) * 100) / 100;
+}
+
 export function mapHotelRateFromDb(row) {
   if (!row) return null;
+  const gainType = normalizeGainType(row.gain_type);
+  const gainValue = row.gain_value != null ? Number(row.gain_value) : 0;
+  const priceAdult = row.price_adult != null ? Number(row.price_adult) : null;
+  const priceChild = row.price_child != null ? Number(row.price_child) : null;
+  const priceBaby = row.price_baby != null ? Number(row.price_baby) : null;
   return {
     id: String(row.id),
     siteKey: row.site_key || SITE_KEY,
@@ -20,9 +40,14 @@ export function mapHotelRateFromDb(row) {
     roomCategory: String(row.room_category || "").trim(),
     dateFrom: String(row.date_from || "").trim(),
     dateTo: String(row.date_to || "").trim(),
-    priceAdult: row.price_adult != null ? Number(row.price_adult) : null,
-    priceChild: row.price_child != null ? Number(row.price_child) : null,
-    priceBaby: row.price_baby != null ? Number(row.price_baby) : null,
+    priceAdult,
+    priceChild,
+    priceBaby,
+    gainType,
+    gainValue: Number.isFinite(gainValue) ? gainValue : 0,
+    sellAdult: applyHotelRateGain(priceAdult, gainType, gainValue),
+    sellChild: applyHotelRateGain(priceChild, gainType, gainValue),
+    sellBaby: applyHotelRateGain(priceBaby, gainType, gainValue),
     currency: String(row.currency || "EUR").trim() || "EUR",
     notes: String(row.notes || "").trim(),
     createdAt: row.created_at || null,
@@ -41,6 +66,8 @@ export function emptyHotelRateDraft(hotel, roomCategory = "") {
     priceAdult: "",
     priceChild: "",
     priceBaby: "",
+    gainType: "amount",
+    gainValue: "",
     currency: "EUR",
     notes: "",
   };
@@ -53,14 +80,21 @@ export function validateHotelRateDraft(draft) {
   if (!draft.dateTo) return "Date de fin obligatoire.";
   if (draft.dateTo < draft.dateFrom) return "La date de fin doit être après (ou égale à) la date de début.";
   const adult = toNumberOrNull(draft.priceAdult);
-  if (adult == null || adult < 0) return "Prix adulte invalide.";
+  if (adult == null || adult < 0) return "Prix de touche adulte invalide.";
   const child = toNumberOrNull(draft.priceChild);
   if (draft.priceChild !== "" && draft.priceChild != null && (child == null || child < 0)) {
-    return "Prix enfant invalide.";
+    return "Prix de touche enfant invalide.";
   }
   const baby = toNumberOrNull(draft.priceBaby);
   if (draft.priceBaby !== "" && draft.priceBaby != null && (baby == null || baby < 0)) {
-    return "Prix bébé invalide.";
+    return "Prix de touche bébé invalide.";
+  }
+  const gain = toNumberOrNull(draft.gainValue);
+  if (draft.gainValue !== "" && draft.gainValue != null && (gain == null || gain < 0)) {
+    return "Gain invalide.";
+  }
+  if (normalizeGainType(draft.gainType) === "percent" && gain != null && gain > 500) {
+    return "Pourcentage de gain trop élevé.";
   }
   return null;
 }
@@ -76,6 +110,8 @@ function draftToPayload(draft) {
     price_adult: toNumberOrNull(draft.priceAdult),
     price_child: toNumberOrNull(draft.priceChild),
     price_baby: toNumberOrNull(draft.priceBaby),
+    gain_type: normalizeGainType(draft.gainType),
+    gain_value: toNumberOrNull(draft.gainValue) ?? 0,
     currency: String(draft.currency || "EUR").trim() || "EUR",
     notes: String(draft.notes || "").trim(),
     updated_at: new Date().toISOString(),

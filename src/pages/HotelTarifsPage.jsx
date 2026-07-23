@@ -4,6 +4,7 @@ import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
 import {
+  applyHotelRateGain,
   deleteHotelRate,
   emptyHotelRateDraft,
   loadHotelRates,
@@ -125,6 +126,8 @@ export function HotelTarifsPage() {
       priceAdult: rate.priceAdult ?? "",
       priceChild: rate.priceChild ?? "",
       priceBaby: rate.priceBaby ?? "",
+      gainType: rate.gainType || "amount",
+      gainValue: rate.gainValue ?? "",
       currency: rate.currency || "EUR",
       notes: rate.notes || "",
     });
@@ -144,6 +147,11 @@ export function HotelTarifsPage() {
         if (/does not exist|schema cache|relation/i.test(msg)) {
           toast.error(
             "Table absente : exécutez supabase_public_hotel_rates_table.sql dans Supabase.",
+            7000
+          );
+        } else if (/gain_type|gain_value/i.test(msg)) {
+          toast.error(
+            "Colonnes gain absentes : exécutez supabase_public_hotel_rates_add_gain.sql dans Supabase.",
             7000
           );
         } else {
@@ -185,9 +193,9 @@ export function HotelTarifsPage() {
   return (
     <div className="space-y-4">
       <p className="rounded-xl border border-violet-200/80 bg-violet-50/70 px-4 py-3 text-xs font-medium leading-relaxed text-violet-950">
-        Saisissez les prix de vos contrats hôtel : <strong>catégorie de chambre</strong> +{" "}
-        <strong>période</strong> (du → au) + prix adulte / enfant / bébé (€ / personne / nuit). Le
-        calcul automatique des devis s’appuiera sur ces grilles.
+        Saisissez le <strong>prix de touche</strong> (contrat hôtel) par catégorie + période, puis le{" "}
+        <strong>gain</strong> (montant € ou %). Le prix de vente = touche + gain — utilisé ensuite pour
+        le calcul automatique des devis.
       </p>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,280px)_1fr]">
@@ -303,9 +311,11 @@ export function HotelTarifsPage() {
                                 <tr className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
                                   <th className="px-2 py-1.5">Du</th>
                                   <th className="px-2 py-1.5">Au</th>
-                                  <th className="px-2 py-1.5">Adulte</th>
-                                  <th className="px-2 py-1.5">Enfant</th>
-                                  <th className="px-2 py-1.5">Bébé</th>
+                                  <th className="px-2 py-1.5">Touche adulte</th>
+                                  <th className="px-2 py-1.5">Gain</th>
+                                  <th className="px-2 py-1.5">Vente adulte</th>
+                                  <th className="px-2 py-1.5">Vente enfant</th>
+                                  <th className="px-2 py-1.5">Vente bébé</th>
                                   <th className="px-2 py-1.5" />
                                 </tr>
                               </thead>
@@ -318,14 +328,22 @@ export function HotelTarifsPage() {
                                     <td className="px-2 py-2 font-semibold text-slate-800">
                                       {formatDateFr(rate.dateTo)}
                                     </td>
-                                    <td className="px-2 py-2 font-bold text-slate-950">
+                                    <td className="px-2 py-2 font-semibold text-slate-700">
                                       {formatMoney(rate.priceAdult, rate.currency)}
                                     </td>
-                                    <td className="px-2 py-2 font-semibold text-slate-700">
-                                      {formatMoney(rate.priceChild, rate.currency)}
+                                    <td className="px-2 py-2 font-semibold text-violet-800">
+                                      {rate.gainType === "percent"
+                                        ? `${Number(rate.gainValue || 0)} %`
+                                        : formatMoney(rate.gainValue, rate.currency)}
+                                    </td>
+                                    <td className="px-2 py-2 font-bold text-slate-950">
+                                      {formatMoney(rate.sellAdult, rate.currency)}
                                     </td>
                                     <td className="px-2 py-2 font-semibold text-slate-700">
-                                      {formatMoney(rate.priceBaby, rate.currency)}
+                                      {formatMoney(rate.sellChild, rate.currency)}
+                                    </td>
+                                    <td className="px-2 py-2 font-semibold text-slate-700">
+                                      {formatMoney(rate.sellBaby, rate.currency)}
                                     </td>
                                     <td className="px-2 py-2">
                                       <div className="flex justify-end gap-1">
@@ -402,7 +420,7 @@ export function HotelTarifsPage() {
                       />
                     </label>
                     <label className="block text-xs font-bold text-slate-600">
-                      Prix adulte (€ / pers. / nuit)
+                      Prix de touche adulte (€ / pers. / nuit)
                       <TextInput
                         className="mt-1"
                         inputMode="decimal"
@@ -412,7 +430,7 @@ export function HotelTarifsPage() {
                       />
                     </label>
                     <label className="block text-xs font-bold text-slate-600">
-                      Prix enfant (€ / pers. / nuit)
+                      Prix de touche enfant (€ / pers. / nuit)
                       <TextInput
                         className="mt-1"
                         inputMode="decimal"
@@ -422,7 +440,7 @@ export function HotelTarifsPage() {
                       />
                     </label>
                     <label className="block text-xs font-bold text-slate-600">
-                      Prix bébé (€ / pers. / nuit)
+                      Prix de touche bébé (€ / pers. / nuit)
                       <TextInput
                         className="mt-1"
                         inputMode="decimal"
@@ -431,6 +449,67 @@ export function HotelTarifsPage() {
                         placeholder="optionnel / 0"
                       />
                     </label>
+
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 sm:col-span-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-emerald-900">
+                        Gain (bénéfice)
+                      </p>
+                      <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,11rem)_1fr]">
+                        <label className="block text-xs font-bold text-slate-600">
+                          Type
+                          <select
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900"
+                            value={draft.gainType || "amount"}
+                            onChange={(e) =>
+                              setDraft((d) => ({ ...d, gainType: e.target.value }))
+                            }
+                          >
+                            <option value="amount">Montant (€)</option>
+                            <option value="percent">Pourcentage (%)</option>
+                          </select>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-600">
+                          {draft.gainType === "percent"
+                            ? "Valeur du gain (%)"
+                            : "Valeur du gain (€ / pers. / nuit)"}
+                          <TextInput
+                            className="mt-1"
+                            inputMode="decimal"
+                            value={draft.gainValue}
+                            onChange={(e) =>
+                              setDraft((d) => ({ ...d, gainValue: e.target.value }))
+                            }
+                            placeholder={draft.gainType === "percent" ? "ex. 15" : "ex. 20"}
+                          />
+                        </label>
+                      </div>
+                      <p className="mt-2 text-[11px] font-semibold text-emerald-900/80">
+                        Aperçu vente adulte :{" "}
+                        {formatMoney(
+                          applyHotelRateGain(
+                            draft.priceAdult,
+                            draft.gainType,
+                            draft.gainValue
+                          ),
+                          draft.currency
+                        )}
+                        {draft.priceChild !== "" && draft.priceChild != null ? (
+                          <>
+                            {" "}
+                            · enfant :{" "}
+                            {formatMoney(
+                              applyHotelRateGain(
+                                draft.priceChild,
+                                draft.gainType,
+                                draft.gainValue
+                              ),
+                              draft.currency
+                            )}
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+
                     <label className="block text-xs font-bold text-slate-600 sm:col-span-2">
                       Notes
                       <TextInput

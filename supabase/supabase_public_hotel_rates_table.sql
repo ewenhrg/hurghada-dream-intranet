@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS public.public_hotel_rates (
   price_adult NUMERIC(12, 2) NOT NULL,
   price_child NUMERIC(12, 2),
   price_baby NUMERIC(12, 2),
+  gain_type TEXT NOT NULL DEFAULT 'amount' CHECK (gain_type IN ('amount', 'percent')),
+  gain_value NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (gain_value >= 0),
   currency TEXT NOT NULL DEFAULT 'EUR',
   notes TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
