@@ -684,11 +684,11 @@ export function HotelsDevisCart({
                   />
                 </label>
                 <label className="block text-sm font-semibold text-catalog-ink sm:col-span-2">
-                  Budget indicatif
+                  Budget total du séjour
                   <input
                     value={client.budget}
                     onChange={(e) => setClient((p) => ({ ...p, budget: e.target.value }))}
-                    placeholder="Ex. 80–120 € / nuit"
+                    placeholder="Ex. 1 500 € pour tout le séjour"
                     className={fieldClass}
                   />
                 </label>
