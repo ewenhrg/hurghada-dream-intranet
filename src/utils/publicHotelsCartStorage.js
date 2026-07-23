@@ -60,18 +60,20 @@ export function formatMinorCategoryLabel(category, age) {
   const ageTxt = age == null ? "" : ` · ${age} an${age > 1 ? "s" : ""}`;
   if (category === "baby") return `Bébé${ageTxt}`;
   if (category === "child") return `Enfant${ageTxt}`;
-  if (category === "adult") return `Adulte (tarif enfant non applicable)${ageTxt}`;
+  if (category === "adult") return `Compté en adulte${ageTxt}`;
   if (category === "unknown") return age == null ? "Date invalide" : `Hors grille hôtel${ageTxt}`;
   return "Saisissez la date de naissance";
 }
 
 /**
  * Dérive enfants / bébés + âges à partir des dates de naissance.
+ * Les mineurs trop âgés pour la grille enfant sont comptés en adultes.
  */
 export function deriveMinorsFromBirthDates(stay, policy) {
   const s = normalizeStay(stay);
   const babies = [];
   const children = [];
+  const upgradedAdults = [];
   const details = [];
 
   for (let i = 0; i < s.minorsCount; i += 1) {
@@ -81,13 +83,17 @@ export function deriveMinorsFromBirthDates(stay, policy) {
     details.push({ index: i, birthDate, age, category });
     if (category === "baby") babies.push({ birthDate, age });
     else if (category === "child") children.push({ birthDate, age });
+    else if (category === "adult") upgradedAdults.push({ birthDate, age });
   }
 
+  const upgradedAdultsCount = upgradedAdults.length;
   return {
     babiesCount: babies.length,
     childrenCount: children.length,
     babyAges: babies.map((b) => String(b.age)),
     childAges: children.map((c) => String(c.age)),
+    upgradedAdultsCount,
+    effectiveAdultsCount: s.adultsCount + upgradedAdultsCount,
     details,
   };
 }
@@ -244,9 +250,8 @@ export function validateHotelStay(stay, policy = null) {
   if (policy && s.minorsCount > 0) {
     const derived = deriveMinorsFromBirthDates(s, policy);
     for (const d of derived.details) {
-      if (d.category === "adult") {
-        return `Le voyageur ${d.index + 1} a ${d.age} ans à l’arrivée : trop âgé pour le tarif enfant de cet hôtel (max ${policy.childAgeMax} ans). Comptez-le en adulte.`;
-      }
+      // Trop âgé pour enfant → compté en adulte (validé), pas d’erreur.
+      if (d.category === "adult") continue;
       if (d.category === "unknown" || d.category == null) {
         return `Le voyageur ${d.index + 1} (${d.age} ans) ne correspond pas à la grille bébé/enfant de cet hôtel.`;
       }
@@ -287,8 +292,13 @@ export function formatStaySummary(stay, policy = null) {
   })();
 
   const derived = deriveMinorsFromBirthDates(s, policy);
+  const adultsLabel = `${derived.effectiveAdultsCount} adulte${derived.effectiveAdultsCount > 1 ? "s" : ""}${
+    derived.upgradedAdultsCount
+      ? ` (dont ${derived.upgradedAdultsCount} reclassé${derived.upgradedAdultsCount > 1 ? "s" : ""} depuis enfant)`
+      : ""
+  }`;
   const pax = [
-    `${s.adultsCount} adulte${s.adultsCount > 1 ? "s" : ""}`,
+    adultsLabel,
     derived.childrenCount
       ? `${derived.childrenCount} enfant${derived.childrenCount > 1 ? "s" : ""}`
       : null,

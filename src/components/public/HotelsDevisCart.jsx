@@ -77,7 +77,7 @@ function CountStepper({ label, icon: Icon, value, min, max, onChange }) {
 function categoryBadgeClass(category) {
   if (category === "baby") return "border-orange-200 bg-orange-50 text-orange-900";
   if (category === "child") return "border-violet-200 bg-violet-50 text-violet-900";
-  if (category === "adult") return "border-rose-200 bg-rose-50 text-rose-900";
+  if (category === "adult") return "border-sky-200 bg-sky-50 text-sky-900";
   if (category === "unknown") return "border-amber-200 bg-amber-50 text-amber-900";
   return "border-slate-200 bg-slate-50 text-slate-600";
 }
@@ -290,6 +290,9 @@ export function HotelsDevisCart({
         : "",
       derived.babiesCount > 0 ? `Bébés (auto) : ${derived.babiesCount}` : "",
       derived.childrenCount > 0 ? `Enfants (auto) : ${derived.childrenCount}` : "",
+      derived.upgradedAdultsCount > 0
+        ? `Reclassés en adulte (trop âgés pour tarif enfant) : ${derived.upgradedAdultsCount}`
+        : "",
     ]
       .filter(Boolean)
       .join("\n");
@@ -304,7 +307,7 @@ export function HotelsDevisCart({
         client_email: client.email.trim(),
         arrival_date: stay.arrivalDate,
         departure_date: stay.departureDate,
-        adults_count: stay.adultsCount,
+        adults_count: derived.effectiveAdultsCount,
         children_count: derived.childrenCount + derived.babiesCount,
         child_ages: agesText,
         hotel_option_1: hotels[0] || "",
@@ -468,15 +471,22 @@ export function HotelsDevisCart({
                       </label>
                     );
                   })}
-                  {stayDraftDerived.childrenCount + stayDraftDerived.babiesCount > 0 ? (
+                  {stayDraftDerived.childrenCount +
+                    stayDraftDerived.babiesCount +
+                    stayDraftDerived.upgradedAdultsCount >
+                  0 ? (
                     <p className="text-xs font-semibold text-catalog-body">
                       Résumé :{" "}
                       {[
+                        `${stayDraftDerived.effectiveAdultsCount} adulte${stayDraftDerived.effectiveAdultsCount > 1 ? "s" : ""}`,
                         stayDraftDerived.childrenCount
                           ? `${stayDraftDerived.childrenCount} enfant${stayDraftDerived.childrenCount > 1 ? "s" : ""}`
                           : null,
                         stayDraftDerived.babiesCount
                           ? `${stayDraftDerived.babiesCount} bébé${stayDraftDerived.babiesCount > 1 ? "s" : ""}`
+                          : null,
+                        stayDraftDerived.upgradedAdultsCount
+                          ? `(${stayDraftDerived.upgradedAdultsCount} reclassé${stayDraftDerived.upgradedAdultsCount > 1 ? "s" : ""} en adulte)`
                           : null,
                       ]
                         .filter(Boolean)
