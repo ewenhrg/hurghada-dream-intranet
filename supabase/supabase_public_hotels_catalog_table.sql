@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.public_hotels_catalog (
   name TEXT NOT NULL,
   location TEXT NOT NULL DEFAULT '',
   address TEXT NOT NULL DEFAULT '',
+  maps_url TEXT NOT NULL DEFAULT '',
   lat DOUBLE PRECISION,
   lng DOUBLE PRECISION,
   tagline TEXT NOT NULL DEFAULT '',

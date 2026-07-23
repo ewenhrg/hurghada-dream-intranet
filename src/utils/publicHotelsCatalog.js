@@ -2,6 +2,7 @@ import { SITE_KEY } from "../constants";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { normalizeCatalogImageUrlsFromDb } from "./catalogContent";
 import { PUBLIC_HOTELS } from "../data/publicHotels";
+import { isLikelyGoogleMapsUrl, parseLatLngFromMapsUrl } from "./googleMapsUrl";
 import { logger } from "./logger";
 
 const TABLE = "public_hotels_catalog";
@@ -87,6 +88,16 @@ export function mapHotelRowFromDb(row) {
   if (!row) return null;
   const stars = Math.min(5, Math.max(1, Number(row.stars) || 4));
   const ages = normalizeHotelAgePolicy(row);
+  const mapsUrl = String(row.maps_url || "").trim();
+  let lat = row.lat != null && Number.isFinite(Number(row.lat)) ? Number(row.lat) : null;
+  let lng = row.lng != null && Number.isFinite(Number(row.lng)) ? Number(row.lng) : null;
+  if ((lat == null || lng == null) && mapsUrl) {
+    const parsed = parseLatLngFromMapsUrl(mapsUrl);
+    if (parsed) {
+      lat = parsed.lat;
+      lng = parsed.lng;
+    }
+  }
   return {
     id: String(row.slug || row.id || "").trim(),
     dbId: row.id != null ? String(row.id) : null,
@@ -94,8 +105,9 @@ export function mapHotelRowFromDb(row) {
     name: String(row.name || "").trim(),
     location: String(row.location || "").trim(),
     address: String(row.address || "").trim(),
-    lat: row.lat != null && Number.isFinite(Number(row.lat)) ? Number(row.lat) : null,
-    lng: row.lng != null && Number.isFinite(Number(row.lng)) ? Number(row.lng) : null,
+    mapsUrl,
+    lat,
+    lng,
     stars,
     description: String(row.description || "").trim(),
     highlights: asStringArray(row.highlights),
@@ -112,8 +124,14 @@ export function mapHotelRowFromDb(row) {
 /** Objet hôtel → payload insert/update Supabase. */
 export function hotelToDbPayload(hotel, { forInsert = false } = {}) {
   const slug = String(hotel.slug || hotel.id || slugifyHotelName(hotel.name)).trim();
-  const lat = hotel.lat === "" || hotel.lat == null ? null : Number(hotel.lat);
-  const lng = hotel.lng === "" || hotel.lng == null ? null : Number(hotel.lng);
+  const mapsUrl = String(hotel.mapsUrl || hotel.maps_url || "").trim();
+  const parsed = parseLatLngFromMapsUrl(mapsUrl);
+  let lat = hotel.lat === "" || hotel.lat == null ? null : Number(hotel.lat);
+  let lng = hotel.lng === "" || hotel.lng == null ? null : Number(hotel.lng);
+  if (parsed) {
+    lat = parsed.lat;
+    lng = parsed.lng;
+  }
   const ages = normalizeHotelAgePolicy(hotel);
   const payload = {
     site_key: SITE_KEY,
@@ -121,6 +139,7 @@ export function hotelToDbPayload(hotel, { forInsert = false } = {}) {
     name: String(hotel.name || "").trim(),
     location: String(hotel.location || "").trim(),
     address: String(hotel.address || "").trim(),
+    maps_url: mapsUrl,
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
     tagline: "",
@@ -143,6 +162,19 @@ export function hotelToDbPayload(hotel, { forInsert = false } = {}) {
     payload.created_at = new Date().toISOString();
   }
   return payload;
+}
+
+/** Valide le lien Maps avant enregistrement (optionnel mais recommandé pour la carte). */
+export function validateHotelMapsUrl(mapsUrl) {
+  const url = String(mapsUrl || "").trim();
+  if (!url) return null;
+  if (!isLikelyGoogleMapsUrl(url)) {
+    return "Collez un lien Google Maps valide.";
+  }
+  if (!parseLatLngFromMapsUrl(url)) {
+    return "Impossible de lire la position. Ouvrez Google Maps, zoomez sur l’hôtel, puis copiez l’URL de la barre d’adresse (elle contient @latitude,longitude).";
+  }
+  return null;
 }
 
 /**
@@ -401,6 +433,7 @@ export function emptyHotelDraft() {
     name: "",
     location: "",
     address: "",
+    mapsUrl: "",
     lat: "",
     lng: "",
     stars: 4,

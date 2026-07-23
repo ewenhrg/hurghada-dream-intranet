@@ -27,7 +27,9 @@ import {
   savePublicHotel,
   seedPublicHotelsFromDefaults,
   slugifyHotelName,
+  validateHotelMapsUrl,
 } from "../utils/publicHotelsCatalog";
+import { parseLatLngFromMapsUrl } from "../utils/googleMapsUrl";
 
 const CATALOG_IMAGES_BUCKET = "documents";
 const CATALOG_IMAGES_FALLBACK_BUCKET = "Catalogue";
@@ -123,6 +125,7 @@ export function PublicHotelsAdminPage() {
     setDraft({
       ...emptyHotelDraft(),
       ...hotel,
+      mapsUrl: hotel.mapsUrl || hotel.maps_url || "",
       lat: hotel.lat ?? "",
       lng: hotel.lng ?? "",
       images: normalizeCatalogImageUrlsFromDb(hotel.images),
@@ -190,6 +193,11 @@ export function PublicHotelsAdminPage() {
       toast.error("Le slug (URL) est obligatoire.");
       return;
     }
+    const mapsErr = validateHotelMapsUrl(draft.mapsUrl);
+    if (mapsErr) {
+      toast.error(mapsErr, 7000);
+      return;
+    }
 
     setSaving(true);
     try {
@@ -203,7 +211,12 @@ export function PublicHotelsAdminPage() {
       const result = await savePublicHotel(payload);
       if (!result.ok) {
         const msg = result.error || "Enregistrement impossible.";
-        if (/baby_age|child_age/i.test(msg)) {
+        if (/maps_url/i.test(msg)) {
+          toast.error(
+            "Colonne maps_url absente : exécutez supabase_public_hotels_catalog_add_maps_url.sql dans Supabase.",
+            7000
+          );
+        } else if (/baby_age|child_age/i.test(msg)) {
           toast.error(
             "Colonnes âges absentes : exécutez supabase_public_hotels_catalog_add_age_policy.sql dans Supabase.",
             7000
@@ -607,27 +620,28 @@ export function PublicHotelsAdminPage() {
                     placeholder="Rue, quartier, ville…"
                   />
                 </label>
-                <label className="block space-y-1.5">
+                <label className="block space-y-1.5 sm:col-span-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Latitude
+                    Lien Google Maps
                   </span>
                   <TextInput
-                    value={draft.lat}
-                    onChange={(e) => updateField("lat", e.target.value)}
-                    placeholder="27.25674"
-                    inputMode="decimal"
+                    value={draft.mapsUrl || ""}
+                    onChange={(e) => updateField("mapsUrl", e.target.value)}
+                    placeholder="https://www.google.com/maps/place/…/@27.25,33.83,17z"
                   />
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Longitude
+                  <span className="mt-1 block text-[11px] leading-snug text-slate-400">
+                    Collez l’URL de la barre d’adresse Google Maps (avec @latitude,longitude). La
+                    mini-carte du catalogue public se remplit automatiquement.
+                    {(() => {
+                      const parsed = parseLatLngFromMapsUrl(draft.mapsUrl);
+                      if (!parsed) return null;
+                      return (
+                        <span className="mt-1 block font-semibold text-emerald-300">
+                          Position détectée : {parsed.lat.toFixed(5)}, {parsed.lng.toFixed(5)}
+                        </span>
+                      );
+                    })()}
                   </span>
-                  <TextInput
-                    value={draft.lng}
-                    onChange={(e) => updateField("lng", e.target.value)}
-                    placeholder="33.83040"
-                    inputMode="decimal"
-                  />
                 </label>
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">

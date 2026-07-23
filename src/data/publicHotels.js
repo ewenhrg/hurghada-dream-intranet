@@ -1,9 +1,11 @@
+import { parseLatLngFromMapsUrl } from "../utils/googleMapsUrl";
+
 /**
  * Catalogue hôtels public (sans prix pour le moment).
  * Chaque hôtel peut recevoir une liste `images` (URLs) ; en attendant, un
  * dégradé + icône élégante sert de couverture.
  *
- * `lat` / `lng` : position approximative pour la mini carte Google Maps.
+ * `mapsUrl` : lien Google Maps (admin). `lat` / `lng` : dérivés pour la mini carte.
  * Pour ajouter un hôtel : dupliquer un bloc et garder un `id` unique (slug).
  */
 export const PUBLIC_HOTELS = [
@@ -286,8 +288,15 @@ export function getHotelById(id) {
 
 /** URL d’embed Google Maps (aucune clé API requise). */
 export function getHotelMapEmbedUrl(hotel, { zoom = 16 } = {}) {
-  const lat = Number(hotel?.lat);
-  const lng = Number(hotel?.lng);
+  let lat = Number(hotel?.lat);
+  let lng = Number(hotel?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    const parsed = parseLatLngFromMapsUrl(hotel?.mapsUrl || hotel?.maps_url);
+    if (parsed) {
+      lat = parsed.lat;
+      lng = parsed.lng;
+    }
+  }
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   const z = Math.min(20, Math.max(10, Number(zoom) || 16));
   return `https://www.google.com/maps?q=${lat},${lng}&z=${z}&hl=fr&output=embed`;
@@ -295,6 +304,8 @@ export function getHotelMapEmbedUrl(hotel, { zoom = 16 } = {}) {
 
 /** Lien pour ouvrir la position dans Google Maps (nouvel onglet). */
 export function getHotelMapsOpenUrl(hotel) {
+  const mapsUrl = String(hotel?.mapsUrl || hotel?.maps_url || "").trim();
+  if (mapsUrl) return mapsUrl;
   const lat = Number(hotel?.lat);
   const lng = Number(hotel?.lng);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;

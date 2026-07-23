@@ -382,11 +382,6 @@ export function PublicHotelDetailPage({ hotelId }) {
                       <p className="mt-0.5 text-sm font-semibold leading-snug text-catalog-body">
                         {hotel.address || hotel.location}
                       </p>
-                      {Number.isFinite(Number(hotel.lat)) && Number.isFinite(Number(hotel.lng)) ? (
-                        <p className="mt-1 text-[11px] font-medium tabular-nums text-catalog-subtle">
-                          {Number(hotel.lat).toFixed(5)}, {Number(hotel.lng).toFixed(5)}
-                        </p>
-                      ) : null}
                     </div>
                   </div>
 
