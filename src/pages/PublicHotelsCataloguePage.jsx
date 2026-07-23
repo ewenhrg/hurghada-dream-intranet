@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Check, MapPin, ShoppingBag } from "lucide-react";
+import { ArrowRight, Check, ShoppingBag } from "lucide-react";
 import { AmenityChip, HotelCover, StarRow } from "../components/public/HotelUI";
 import { HotelsDevisCart } from "../components/public/HotelsDevisCart";
 import { WHATSAPP_BASE } from "../components/public/hotelAmenities";
@@ -180,13 +180,9 @@ export function PublicHotelsCataloguePage() {
                   </span>
                   <div className="absolute inset-x-3 bottom-3 text-white sm:inset-x-4 sm:bottom-4">
                     <StarRow count={hotel.stars} />
-                    <h2 className="mt-1 font-catalog-display text-xl font-bold leading-tight tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)] sm:text-2xl">
+                    <h2 className="mt-1 font-catalog-display text-xl font-bold leading-tight tracking-tight !text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)] sm:text-2xl">
                       {hotel.name}
                     </h2>
-                    <p className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-white/90">
-                      <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                      {hotel.location}
-                    </p>
                   </div>
                 </button>
 
