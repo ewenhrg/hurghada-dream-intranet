@@ -36,6 +36,7 @@ import {
   PublicHotelDetailPage,
   PublicHotelsAdminPage,
   HotelHistoryPage,
+  HotelTarifsPage,
 } from "./config/lazyPages";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
@@ -1472,6 +1473,11 @@ export default function App() {
                     Catalogue hôtels
                   </Pill>
                 )}
+                {canAccessHotelsPage(user) && (
+                  <Pill active={tab === "hotel-tarifs"} onClick={() => setTab("hotel-tarifs")}>
+                    Tarifs hôtel
+                  </Pill>
+                )}
                 {hasFullIntranetAccess(user) && (
                   <Pill active={tab === "ewen-dashboard"} onClick={() => setTab("ewen-dashboard")}>
                     {t("nav.ewenDashboard")}
@@ -1661,6 +1667,19 @@ export default function App() {
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <PublicHotelsAdminPage />
+                </Suspense>
+              </ErrorBoundary>
+            </Section>
+          )}
+
+          {tab === "hotel-tarifs" && canAccessHotelsPage(user) && (
+            <Section
+              title="Tarifs hôtel"
+              subtitle="Contrats : prix par catégorie de chambre et période (pour le calcul automatique des devis)"
+            >
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>
+                  <HotelTarifsPage />
                 </Suspense>
               </ErrorBoundary>
             </Section>

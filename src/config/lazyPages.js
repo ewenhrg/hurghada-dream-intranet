@@ -73,3 +73,7 @@ export const PublicHotelsAdminPage = lazyWithRetry(() =>
 export const HotelHistoryPage = lazyWithRetry(() =>
   import("../pages/HotelHistoryPage").then((m) => ({ default: m.HotelHistoryPage }))
 );
+
+export const HotelTarifsPage = lazyWithRetry(() =>
+  import("../pages/HotelTarifsPage").then((m) => ({ default: m.HotelTarifsPage }))
+);
