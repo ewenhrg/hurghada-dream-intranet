@@ -20,11 +20,17 @@ CREATE TABLE IF NOT EXISTS public.public_hotels_catalog (
   highlights JSONB NOT NULL DEFAULT '[]'::jsonb,
   amenities JSONB NOT NULL DEFAULT '[]'::jsonb,
   image_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+  baby_age_min INTEGER NOT NULL DEFAULT 0,
+  baby_age_max INTEGER NOT NULL DEFAULT 1,
+  child_age_min INTEGER NOT NULL DEFAULT 2,
+  child_age_max INTEGER NOT NULL DEFAULT 11,
   sort_order INTEGER NOT NULL DEFAULT 0,
   is_published BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT public_hotels_catalog_site_slug_unique UNIQUE (site_key, slug)
+  CONSTRAINT public_hotels_catalog_site_slug_unique UNIQUE (site_key, slug),
+  CONSTRAINT public_hotels_catalog_baby_age_range CHECK (baby_age_min >= 0 AND baby_age_max >= baby_age_min AND baby_age_max <= 17),
+  CONSTRAINT public_hotels_catalog_child_age_range CHECK (child_age_min >= 0 AND child_age_max >= child_age_min AND child_age_max <= 17)
 );
 
 CREATE INDEX IF NOT EXISTS idx_public_hotels_catalog_site_sort

@@ -203,7 +203,12 @@ export function PublicHotelsAdminPage() {
       const result = await savePublicHotel(payload);
       if (!result.ok) {
         const msg = result.error || "Enregistrement impossible.";
-        if (/does not exist|schema cache|relation/i.test(msg)) {
+        if (/baby_age|child_age/i.test(msg)) {
+          toast.error(
+            "Colonnes âges absentes : exécutez supabase_public_hotels_catalog_add_age_policy.sql dans Supabase.",
+            7000
+          );
+        } else if (/does not exist|schema cache|relation/i.test(msg)) {
           toast.error(
             "Table absente : exécutez supabase_public_hotels_catalog_table.sql dans Supabase.",
             6000
@@ -494,6 +499,10 @@ export function PublicHotelsAdminPage() {
                           <MapPin className="h-3 w-3" aria-hidden />
                           <span className="truncate">{hotel.location || "—"}</span>
                         </span>
+                        <span className="mt-1 block truncate text-[10px] font-semibold text-violet-200/90">
+                          Bébé {hotel.babyAgeMin}–{hotel.babyAgeMax} · Enfant {hotel.childAgeMin}–
+                          {hotel.childAgeMax}
+                        </span>
                         {!hotel.isPublished ? (
                           <span className="mt-1 inline-block rounded-md bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-200">
                             Brouillon
@@ -646,7 +655,59 @@ export function PublicHotelsAdminPage() {
                     inputMode="numeric"
                   />
                 </label>
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-4 py-3">
+
+                <div className="sm:col-span-2 rounded-2xl border border-violet-400/30 bg-violet-500/10 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-violet-200">
+                    Âges bébé / enfant (catalogue public)
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Affiché sur /hotels. Ex. bébés 0–1 an, enfants 2–11 ans (selon l’hôtel).
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-semibold text-slate-300">Bébé min</span>
+                      <TextInput
+                        value={draft.babyAgeMin}
+                        onChange={(e) => updateField("babyAgeMin", Number(e.target.value))}
+                        inputMode="numeric"
+                        min={0}
+                        max={17}
+                      />
+                    </label>
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-semibold text-slate-300">Bébé max</span>
+                      <TextInput
+                        value={draft.babyAgeMax}
+                        onChange={(e) => updateField("babyAgeMax", Number(e.target.value))}
+                        inputMode="numeric"
+                        min={0}
+                        max={17}
+                      />
+                    </label>
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-semibold text-slate-300">Enfant min</span>
+                      <TextInput
+                        value={draft.childAgeMin}
+                        onChange={(e) => updateField("childAgeMin", Number(e.target.value))}
+                        inputMode="numeric"
+                        min={0}
+                        max={17}
+                      />
+                    </label>
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-semibold text-slate-300">Enfant max</span>
+                      <TextInput
+                        value={draft.childAgeMax}
+                        onChange={(e) => updateField("childAgeMax", Number(e.target.value))}
+                        inputMode="numeric"
+                        min={0}
+                        max={17}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-4 py-3 sm:col-span-2">
                   <input
                     type="checkbox"
                     checked={draft.isPublished !== false}

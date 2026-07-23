@@ -125,6 +125,40 @@ export function validateHotelStay(stay) {
   return null;
 }
 
+/**
+ * Vérifie que les âges saisis respectent la politique de l’hôtel (ans inclusifs).
+ * @param {object} stay
+ * @param {{ babyAgeMin?: number, babyAgeMax?: number, childAgeMin?: number, childAgeMax?: number }|null} policy
+ */
+export function validateHotelStayAgesAgainstPolicy(stay, policy) {
+  if (!policy) return null;
+  const s = normalizeStay(stay);
+  const babyMin = Number(policy.babyAgeMin);
+  const babyMax = Number(policy.babyAgeMax);
+  const childMin = Number(policy.childAgeMin);
+  const childMax = Number(policy.childAgeMax);
+  const hasChildPolicy = Number.isFinite(childMin) && Number.isFinite(childMax);
+  const hasBabyPolicy = Number.isFinite(babyMin) && Number.isFinite(babyMax);
+
+  if (hasChildPolicy && s.childrenCount > 0) {
+    for (let i = 0; i < s.childrenCount; i += 1) {
+      const n = Number(s.childAges[i]);
+      if (!Number.isFinite(n) || n < childMin || n > childMax) {
+        return `Pour cet hôtel, l’âge enfant doit être entre ${childMin} et ${childMax} ans.`;
+      }
+    }
+  }
+  if (hasBabyPolicy && s.babiesCount > 0) {
+    for (let i = 0; i < s.babiesCount; i += 1) {
+      const n = Number(s.babyAges[i]);
+      if (!Number.isFinite(n) || n < babyMin || n > babyMax) {
+        return `Pour cet hôtel, l’âge bébé doit être entre ${babyMin} et ${babyMax} an${babyMax > 1 ? "s" : ""}.`;
+      }
+    }
+  }
+  return null;
+}
+
 export function formatStaySummary(stay) {
   const s = normalizeStay(stay);
   if (!s.arrivalDate || !s.departureDate) return "";

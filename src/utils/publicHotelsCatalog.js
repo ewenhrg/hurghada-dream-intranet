@@ -39,12 +39,54 @@ function asStringArray(raw) {
   return [];
 }
 
+const DEFAULT_AGE_POLICY = {
+  babyAgeMin: 0,
+  babyAgeMax: 1,
+  childAgeMin: 2,
+  childAgeMax: 11,
+};
+
+function clampAgeYear(value, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(17, Math.max(0, Math.round(n)));
+}
+
+/** Politique d’âge bébé / enfant pour un hôtel (ans, inclusifs). */
+export function normalizeHotelAgePolicy(hotel) {
+  let babyAgeMin = clampAgeYear(hotel?.babyAgeMin ?? hotel?.baby_age_min, DEFAULT_AGE_POLICY.babyAgeMin);
+  let babyAgeMax = clampAgeYear(hotel?.babyAgeMax ?? hotel?.baby_age_max, DEFAULT_AGE_POLICY.babyAgeMax);
+  let childAgeMin = clampAgeYear(hotel?.childAgeMin ?? hotel?.child_age_min, DEFAULT_AGE_POLICY.childAgeMin);
+  let childAgeMax = clampAgeYear(hotel?.childAgeMax ?? hotel?.child_age_max, DEFAULT_AGE_POLICY.childAgeMax);
+  if (babyAgeMax < babyAgeMin) babyAgeMax = babyAgeMin;
+  if (childAgeMax < childAgeMin) childAgeMax = childAgeMin;
+  return { babyAgeMin, babyAgeMax, childAgeMin, childAgeMax };
+}
+
+function formatAgeRangeLabel(min, max, singular, plural) {
+  if (min === max) {
+    const unit = min <= 1 ? singular : plural;
+    return `${min} ${unit}`;
+  }
+  const unit = max <= 1 ? singular : plural;
+  return `${min}–${max} ${unit}`;
+}
+
+/** Texte public : « Bébés : 0–1 an · Enfants : 2–11 ans ». */
+export function formatHotelAgePolicyLabel(hotel) {
+  const p = normalizeHotelAgePolicy(hotel);
+  const baby = formatAgeRangeLabel(p.babyAgeMin, p.babyAgeMax, "an", "ans");
+  const child = formatAgeRangeLabel(p.childAgeMin, p.childAgeMax, "an", "ans");
+  return `Bébés : ${baby} · Enfants : ${child}`;
+}
+
 /**
  * Ligne DB → objet hôtel (même forme que PUBLIC_HOTELS + champs admin).
  */
 export function mapHotelRowFromDb(row) {
   if (!row) return null;
   const stars = Math.min(5, Math.max(1, Number(row.stars) || 4));
+  const ages = normalizeHotelAgePolicy(row);
   return {
     id: String(row.slug || row.id || "").trim(),
     dbId: row.id != null ? String(row.id) : null,
@@ -59,6 +101,7 @@ export function mapHotelRowFromDb(row) {
     highlights: asStringArray(row.highlights),
     amenities: asStringArray(row.amenities),
     images: normalizeCatalogImageUrlsFromDb(row.image_urls),
+    ...ages,
     sortOrder: Number(row.sort_order) || 0,
     isPublished: row.is_published !== false,
     siteKey: row.site_key || SITE_KEY,
@@ -71,6 +114,7 @@ export function hotelToDbPayload(hotel, { forInsert = false } = {}) {
   const slug = String(hotel.slug || hotel.id || slugifyHotelName(hotel.name)).trim();
   const lat = hotel.lat === "" || hotel.lat == null ? null : Number(hotel.lat);
   const lng = hotel.lng === "" || hotel.lng == null ? null : Number(hotel.lng);
+  const ages = normalizeHotelAgePolicy(hotel);
   const payload = {
     site_key: SITE_KEY,
     slug,
@@ -87,6 +131,10 @@ export function hotelToDbPayload(hotel, { forInsert = false } = {}) {
     highlights: asStringArray(hotel.highlights),
     amenities: asStringArray(hotel.amenities),
     image_urls: normalizeCatalogImageUrlsFromDb(hotel.images ?? hotel.image_urls),
+    baby_age_min: ages.babyAgeMin,
+    baby_age_max: ages.babyAgeMax,
+    child_age_min: ages.childAgeMin,
+    child_age_max: ages.childAgeMax,
     sort_order: Number(hotel.sortOrder ?? hotel.sort_order) || 0,
     is_published: hotel.isPublished !== false && hotel.is_published !== false,
     updated_at: new Date().toISOString(),
@@ -360,6 +408,7 @@ export function emptyHotelDraft() {
     highlights: [],
     amenities: [],
     images: [],
+    ...DEFAULT_AGE_POLICY,
     sortOrder: 0,
     isPublished: true,
   };

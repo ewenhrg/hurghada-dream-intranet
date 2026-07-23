@@ -13,7 +13,12 @@ import {
   loadPublicHotelsCart,
   savePublicHotelsCart,
   validateHotelStay,
+  validateHotelStayAgesAgainstPolicy,
 } from "../../utils/publicHotelsCartStorage";
+import {
+  formatHotelAgePolicyLabel,
+  normalizeHotelAgePolicy,
+} from "../../utils/publicHotelsCatalog";
 
 const EMPTY_CLIENT = {
   firstName: "",
@@ -110,6 +115,14 @@ export function HotelsDevisCart({
 
   const itemCount = cart.items.length;
   const staySummary = useMemo(() => formatStaySummary(cart.stay), [cart.stay]);
+  const stayAgePolicy = useMemo(
+    () => (stayHotel ? normalizeHotelAgePolicy(stayHotel) : null),
+    [stayHotel]
+  );
+  const stayAgeLabel = useMemo(
+    () => (stayHotel ? formatHotelAgePolicyLabel(stayHotel) : ""),
+    [stayHotel]
+  );
 
   const closeStayModal = useCallback(() => {
     onStayHotelHandled?.();
@@ -149,6 +162,14 @@ export function HotelsDevisCart({
     const err = validateHotelStay(stayDraft);
     if (err) {
       toast.error(err);
+      return;
+    }
+    const ageErr = validateHotelStayAgesAgainstPolicy(
+      stayDraft,
+      normalizeHotelAgePolicy(stayHotel)
+    );
+    if (ageErr) {
+      toast.error(ageErr);
       return;
     }
     const slug = String(stayHotel.slug || stayHotel.id || "").trim();
@@ -400,19 +421,34 @@ export function HotelsDevisCart({
                 />
               </div>
 
+              {stayAgeLabel ? (
+                <p className="mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold leading-snug text-violet-900">
+                  {stayAgeLabel}
+                </p>
+              ) : null}
+
               {stayDraft.childrenCount > 0 ? (
                 <div className="mt-4 space-y-2 rounded-2xl border border-violet-100 bg-violet-50/50 p-3">
-                  <p className="text-xs font-bold uppercase tracking-wide text-violet-800">Âge des enfants (ans)</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-violet-800">
+                    Âge des enfants (ans)
+                    {stayAgePolicy
+                      ? ` · ${stayAgePolicy.childAgeMin}–${stayAgePolicy.childAgeMax}`
+                      : ""}
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     {Array.from({ length: stayDraft.childrenCount }, (_, i) => (
                       <label key={`c-${i}`} className="block text-xs font-semibold text-catalog-muted">
                         Enfant {i + 1}
                         <input
                           type="number"
-                          min={2}
-                          max={17}
+                          min={stayAgePolicy?.childAgeMin ?? 2}
+                          max={stayAgePolicy?.childAgeMax ?? 17}
                           inputMode="numeric"
-                          placeholder="ex. 8"
+                          placeholder={
+                            stayAgePolicy
+                              ? `${stayAgePolicy.childAgeMin}–${stayAgePolicy.childAgeMax}`
+                              : "ex. 8"
+                          }
                           value={stayDraft.childAges[i] || ""}
                           onChange={(e) => setAgeAt("child", i, e.target.value)}
                           className={fieldClass}
@@ -425,17 +461,26 @@ export function HotelsDevisCart({
 
               {stayDraft.babiesCount > 0 ? (
                 <div className="mt-3 space-y-2 rounded-2xl border border-orange-100 bg-orange-50/50 p-3">
-                  <p className="text-xs font-bold uppercase tracking-wide text-orange-800">Âge des bébés (ans)</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-orange-800">
+                    Âge des bébés (ans)
+                    {stayAgePolicy
+                      ? ` · ${stayAgePolicy.babyAgeMin}–${stayAgePolicy.babyAgeMax}`
+                      : ""}
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     {Array.from({ length: stayDraft.babiesCount }, (_, i) => (
                       <label key={`b-${i}`} className="block text-xs font-semibold text-catalog-muted">
                         Bébé {i + 1}
                         <input
                           type="number"
-                          min={0}
-                          max={2}
+                          min={stayAgePolicy?.babyAgeMin ?? 0}
+                          max={stayAgePolicy?.babyAgeMax ?? 2}
                           inputMode="numeric"
-                          placeholder="ex. 1"
+                          placeholder={
+                            stayAgePolicy
+                              ? `${stayAgePolicy.babyAgeMin}–${stayAgePolicy.babyAgeMax}`
+                              : "ex. 1"
+                          }
                           value={stayDraft.babyAges[i] || ""}
                           onChange={(e) => setAgeAt("baby", i, e.target.value)}
                           className={fieldClass}

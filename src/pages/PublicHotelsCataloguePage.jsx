@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Check, ShoppingBag } from "lucide-react";
-import { AmenityChip, HotelCover, StarRow } from "../components/public/HotelUI";
+import { AmenityChip, HotelAgePolicyBadge, HotelCover, StarRow } from "../components/public/HotelUI";
 import { HotelsDevisCart } from "../components/public/HotelsDevisCart";
 import { WHATSAPP_BASE } from "../components/public/hotelAmenities";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
@@ -187,6 +187,7 @@ export function PublicHotelsCataloguePage() {
                 </button>
 
                 <div className="flex grow flex-col p-4 sm:p-5">
+                  <HotelAgePolicyBadge hotel={hotel} className="mb-3" />
                   {hotel.highlights?.length ? (
                     <ul className="space-y-1.5">
                       {hotel.highlights.slice(0, 2).map((h) => (

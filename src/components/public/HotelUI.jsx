@@ -1,5 +1,6 @@
 import { Building2, Star } from "lucide-react";
 import { HOTEL_DEFAULT_COVER } from "../../data/publicHotels";
+import { formatHotelAgePolicyLabel } from "../../utils/publicHotelsCatalog";
 import { AMENITY_META } from "./hotelAmenities";
 
 export function StarRow({ count = 0, className = "" }) {
@@ -41,5 +42,17 @@ export function AmenityChip({ amenity }) {
       <Icon className="h-3.5 w-3.5 text-violet-600" aria-hidden />
       {label}
     </span>
+  );
+}
+
+/** Politique d’âge bébé / enfant (catalogue public). */
+export function HotelAgePolicyBadge({ hotel, className = "" }) {
+  const label = formatHotelAgePolicyLabel(hotel);
+  return (
+    <p
+      className={`rounded-xl border border-violet-200/80 bg-violet-50/90 px-3 py-2 text-xs font-semibold leading-snug text-violet-900 ${className}`}
+    >
+      {label}
+    </p>
   );
 }

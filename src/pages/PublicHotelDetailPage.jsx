@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { HOTEL_DEFAULT_COVER, getHotelMapEmbedUrl, getHotelMapsOpenUrl } from "../data/publicHotels";
-import { HotelCover, StarRow } from "../components/public/HotelUI";
+import { HotelAgePolicyBadge, HotelCover, StarRow } from "../components/public/HotelUI";
 import { HotelsDevisCart } from "../components/public/HotelsDevisCart";
 import { AMENITY_META, WHATSAPP_BASE } from "../components/public/hotelAmenities";
 import { loadPublicHotelBySlug } from "../utils/publicHotelsCatalog";
@@ -297,6 +297,7 @@ export function PublicHotelDetailPage({ hotelId }) {
                   <MapPin className="h-4 w-4 text-violet-600" aria-hidden />
                   {hotel.location}
                 </p>
+                <HotelAgePolicyBadge hotel={hotel} className="mt-3 max-w-md" />
               </div>
 
               {/* Encart réservation mobile */}
