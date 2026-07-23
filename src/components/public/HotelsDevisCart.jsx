@@ -8,12 +8,14 @@ import { logger } from "../../utils/logger";
 import {
   MAX_HOTELS_CART_ITEMS,
   clearPublicHotelsCart,
+  deriveMinorsFromBirthDates,
   formatHotelStayAgesForDb,
+  formatMinorCategoryLabel,
   formatStaySummary,
   loadPublicHotelsCart,
+  normalizeStay,
   savePublicHotelsCart,
   validateHotelStay,
-  validateHotelStayAgesAgainstPolicy,
 } from "../../utils/publicHotelsCartStorage";
 import {
   formatHotelAgePolicyLabel,
@@ -32,7 +34,7 @@ const EMPTY_CLIENT = {
 const fieldClass =
   "mt-1.5 min-h-[48px] w-full rounded-xl border-2 border-violet-200/80 bg-white px-3.5 py-3 text-base text-catalog-ink shadow-sm placeholder:text-slate-400 transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-400/40 sm:text-[15px]";
 
-function resizeAges(list, count) {
+function resizeBirthDates(list, count) {
   const next = Array.isArray(list) ? [...list] : [];
   while (next.length < count) next.push("");
   return next.slice(0, count);
@@ -72,6 +74,14 @@ function CountStepper({ label, icon: Icon, value, min, max, onChange }) {
   );
 }
 
+function categoryBadgeClass(category) {
+  if (category === "baby") return "border-orange-200 bg-orange-50 text-orange-900";
+  if (category === "child") return "border-violet-200 bg-violet-50 text-violet-900";
+  if (category === "adult") return "border-rose-200 bg-rose-50 text-rose-900";
+  if (category === "unknown") return "border-amber-200 bg-amber-50 text-amber-900";
+  return "border-slate-200 bg-slate-50 text-slate-600";
+}
+
 /**
  * Panier devis hôtels : modal séjour, tiroir panier, checkout (infos client comme le formulaire hôtel).
  * À monter sur /hotels et /hotels/:id.
@@ -96,7 +106,7 @@ export function HotelsDevisCart({
 
   useEffect(() => {
     if (stayHotel) {
-      setStayDraft({ ...cart.stay });
+      setStayDraft(normalizeStay(cart.stay));
     }
   }, [stayHotel]); // eslint-disable-line react-hooks/exhaustive-deps -- only when a hotel is offered
 
@@ -114,14 +124,25 @@ export function HotelsDevisCart({
   }, [drawerOpen, checkoutOpen, successOpen, stayHotel]);
 
   const itemCount = cart.items.length;
-  const staySummary = useMemo(() => formatStaySummary(cart.stay), [cart.stay]);
+  const cartAgePolicy = useMemo(
+    () => cart.stay?.agePolicy || (stayHotel ? normalizeHotelAgePolicy(stayHotel) : null),
+    [cart.stay?.agePolicy, stayHotel]
+  );
   const stayAgePolicy = useMemo(
-    () => (stayHotel ? normalizeHotelAgePolicy(stayHotel) : null),
-    [stayHotel]
+    () => (stayHotel ? normalizeHotelAgePolicy(stayHotel) : cartAgePolicy),
+    [stayHotel, cartAgePolicy]
   );
   const stayAgeLabel = useMemo(
     () => (stayHotel ? formatHotelAgePolicyLabel(stayHotel) : ""),
     [stayHotel]
+  );
+  const staySummary = useMemo(
+    () => formatStaySummary(cart.stay, cartAgePolicy),
+    [cart.stay, cartAgePolicy]
+  );
+  const stayDraftDerived = useMemo(
+    () => deriveMinorsFromBirthDates(stayDraft, stayAgePolicy),
+    [stayDraft, stayAgePolicy]
   );
 
   const closeStayModal = useCallback(() => {
@@ -130,16 +151,11 @@ export function HotelsDevisCart({
 
   function updateStayField(field, value) {
     setStayDraft((prev) => {
-      const next = { ...prev, [field]: value };
-      if (field === "childrenCount") {
+      const next = { ...normalizeStay(prev), [field]: value };
+      if (field === "minorsCount") {
         const n = Math.min(10, Math.max(0, Number(value) || 0));
-        next.childrenCount = n;
-        next.childAges = resizeAges(prev.childAges, n);
-      }
-      if (field === "babiesCount") {
-        const n = Math.min(10, Math.max(0, Number(value) || 0));
-        next.babiesCount = n;
-        next.babyAges = resizeAges(prev.babyAges, n);
+        next.minorsCount = n;
+        next.birthDates = resizeBirthDates(prev.birthDates, n);
       }
       if (field === "adultsCount") {
         next.adultsCount = Math.min(20, Math.max(1, Number(value) || 1));
@@ -148,28 +164,21 @@ export function HotelsDevisCart({
     });
   }
 
-  function setAgeAt(kind, index, value) {
+  function setBirthDateAt(index, value) {
     setStayDraft((prev) => {
-      const key = kind === "baby" ? "babyAges" : "childAges";
-      const list = resizeAges(prev[key], kind === "baby" ? prev.babiesCount : prev.childrenCount);
-      list[index] = value;
-      return { ...prev, [key]: list };
+      const base = normalizeStay(prev);
+      const birthDates = resizeBirthDates(base.birthDates, base.minorsCount);
+      birthDates[index] = value;
+      return { ...base, birthDates };
     });
   }
 
   function confirmAddToCart() {
     if (!stayHotel) return;
-    const err = validateHotelStay(stayDraft);
+    const policy = normalizeHotelAgePolicy(stayHotel);
+    const err = validateHotelStay(stayDraft, policy);
     if (err) {
       toast.error(err);
-      return;
-    }
-    const ageErr = validateHotelStayAgesAgainstPolicy(
-      stayDraft,
-      normalizeHotelAgePolicy(stayHotel)
-    );
-    if (ageErr) {
-      toast.error(ageErr);
       return;
     }
     const slug = String(stayHotel.slug || stayHotel.id || "").trim();
@@ -179,18 +188,23 @@ export function HotelsDevisCart({
       return;
     }
 
+    const normalized = {
+      ...normalizeStay(stayDraft),
+      agePolicy: policy,
+    };
+
     setCart((prev) => {
       if (prev.items.some((it) => it.hotelSlug === slug)) {
         toast.info("Cet hôtel est déjà dans votre panier.");
-        return { ...prev, stay: { ...stayDraft } };
+        return { ...prev, stay: normalized };
       }
       if (prev.items.length >= MAX_HOTELS_CART_ITEMS) {
         toast.warning(`Maximum ${MAX_HOTELS_CART_ITEMS} hôtels par demande.`);
-        return { ...prev, stay: { ...stayDraft } };
+        return { ...prev, stay: normalized };
       }
       toast.success(`${name} ajouté au panier.`);
       return {
-        stay: { ...stayDraft },
+        stay: normalized,
         items: [
           ...prev.items,
           {
@@ -218,7 +232,7 @@ export function HotelsDevisCart({
       toast.warning("Ajoutez au moins un hôtel au panier.");
       return;
     }
-    const err = validateHotelStay(cart.stay);
+    const err = validateHotelStay(cart.stay, cart.stay?.agePolicy || cartAgePolicy);
     if (err) {
       toast.error(err);
       return;
@@ -233,7 +247,7 @@ export function HotelsDevisCart({
       toast.error("Panier vide.");
       return;
     }
-    const stayErr = validateHotelStay(cart.stay);
+    const stayErr = validateHotelStay(cart.stay, cart.stay?.agePolicy || cartAgePolicy);
     if (stayErr) {
       toast.error(stayErr);
       return;
@@ -265,13 +279,17 @@ export function HotelsDevisCart({
     }
 
     const hotels = cart.items.map((it) => it.hotelName);
-    const agesText = formatHotelStayAgesForDb(cart.stay);
+    const stay = normalizeStay(cart.stay);
+    const policy = stay.agePolicy || cartAgePolicy;
+    const derived = deriveMinorsFromBirthDates(stay, policy);
+    const agesText = formatHotelStayAgesForDb(stay, policy);
     const cartNote = [
       client.notes.trim(),
       cart.items.length > 1
         ? `Hôtels demandés : ${cart.items.map((it) => it.hotelName).join(" · ")}`
         : "",
-      cart.stay.babiesCount > 0 ? `Bébés : ${cart.stay.babiesCount}` : "",
+      derived.babiesCount > 0 ? `Bébés (auto) : ${derived.babiesCount}` : "",
+      derived.childrenCount > 0 ? `Enfants (auto) : ${derived.childrenCount}` : "",
     ]
       .filter(Boolean)
       .join("\n");
@@ -284,10 +302,10 @@ export function HotelsDevisCart({
         last_name: client.lastName.trim(),
         client_phone: client.phone.trim(),
         client_email: client.email.trim(),
-        arrival_date: cart.stay.arrivalDate,
-        departure_date: cart.stay.departureDate,
-        adults_count: cart.stay.adultsCount,
-        children_count: cart.stay.childrenCount + cart.stay.babiesCount,
+        arrival_date: stay.arrivalDate,
+        departure_date: stay.departureDate,
+        adults_count: stay.adultsCount,
+        children_count: derived.childrenCount + derived.babiesCount,
         child_ages: agesText,
         hotel_option_1: hotels[0] || "",
         hotel_option_2: hotels[1] || "",
@@ -395,7 +413,7 @@ export function HotelsDevisCart({
                 </label>
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="mt-4 grid grid-cols-2 gap-2">
                 <CountStepper
                   label="Adultes"
                   icon={Users}
@@ -405,89 +423,66 @@ export function HotelsDevisCart({
                   onChange={(n) => updateStayField("adultsCount", n)}
                 />
                 <CountStepper
-                  label="Enfants"
-                  value={stayDraft.childrenCount}
-                  min={0}
-                  max={10}
-                  onChange={(n) => updateStayField("childrenCount", n)}
-                />
-                <CountStepper
-                  label="Bébés"
+                  label="Enfants / bébés"
                   icon={Baby}
-                  value={stayDraft.babiesCount}
+                  value={stayDraft.minorsCount || 0}
                   min={0}
                   max={10}
-                  onChange={(n) => updateStayField("babiesCount", n)}
+                  onChange={(n) => updateStayField("minorsCount", n)}
                 />
               </div>
 
               {stayAgeLabel ? (
                 <p className="mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold leading-snug text-violet-900">
-                  {stayAgeLabel}
+                  Grille hôtel : {stayAgeLabel}
+                  <span className="mt-1 block font-medium text-violet-700/90">
+                    Indiquez la date de naissance : bébé ou enfant est calculé automatiquement à
+                    l’arrivée.
+                  </span>
                 </p>
               ) : null}
 
-              {stayDraft.childrenCount > 0 ? (
-                <div className="mt-4 space-y-2 rounded-2xl border border-violet-100 bg-violet-50/50 p-3">
+              {(stayDraft.minorsCount || 0) > 0 ? (
+                <div className="mt-4 space-y-3 rounded-2xl border border-violet-100 bg-violet-50/50 p-3">
                   <p className="text-xs font-bold uppercase tracking-wide text-violet-800">
-                    Âge des enfants (ans)
-                    {stayAgePolicy
-                      ? ` · ${stayAgePolicy.childAgeMin}–${stayAgePolicy.childAgeMax}`
-                      : ""}
+                    Dates de naissance
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Array.from({ length: stayDraft.childrenCount }, (_, i) => (
-                      <label key={`c-${i}`} className="block text-xs font-semibold text-catalog-muted">
-                        Enfant {i + 1}
+                  {Array.from({ length: stayDraft.minorsCount }, (_, i) => {
+                    const detail = stayDraftDerived.details[i];
+                    const category = detail?.category ?? null;
+                    return (
+                      <label key={`dob-${i}`} className="block text-xs font-semibold text-catalog-muted">
+                        Voyageur {i + 1}
                         <input
-                          type="number"
-                          min={stayAgePolicy?.childAgeMin ?? 2}
-                          max={stayAgePolicy?.childAgeMax ?? 17}
-                          inputMode="numeric"
-                          placeholder={
-                            stayAgePolicy
-                              ? `${stayAgePolicy.childAgeMin}–${stayAgePolicy.childAgeMax}`
-                              : "ex. 8"
-                          }
-                          value={stayDraft.childAges[i] || ""}
-                          onChange={(e) => setAgeAt("child", i, e.target.value)}
+                          type="date"
+                          value={stayDraft.birthDates?.[i] || ""}
+                          max={stayDraft.arrivalDate || undefined}
+                          onChange={(e) => setBirthDateAt(i, e.target.value)}
                           className={fieldClass}
                         />
+                        <span
+                          className={`mt-1.5 inline-flex rounded-lg border px-2.5 py-1 text-[11px] font-bold ${categoryBadgeClass(category)}`}
+                        >
+                          {formatMinorCategoryLabel(category, detail?.age)}
+                        </span>
                       </label>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {stayDraft.babiesCount > 0 ? (
-                <div className="mt-3 space-y-2 rounded-2xl border border-orange-100 bg-orange-50/50 p-3">
-                  <p className="text-xs font-bold uppercase tracking-wide text-orange-800">
-                    Âge des bébés (ans)
-                    {stayAgePolicy
-                      ? ` · ${stayAgePolicy.babyAgeMin}–${stayAgePolicy.babyAgeMax}`
-                      : ""}
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Array.from({ length: stayDraft.babiesCount }, (_, i) => (
-                      <label key={`b-${i}`} className="block text-xs font-semibold text-catalog-muted">
-                        Bébé {i + 1}
-                        <input
-                          type="number"
-                          min={stayAgePolicy?.babyAgeMin ?? 0}
-                          max={stayAgePolicy?.babyAgeMax ?? 2}
-                          inputMode="numeric"
-                          placeholder={
-                            stayAgePolicy
-                              ? `${stayAgePolicy.babyAgeMin}–${stayAgePolicy.babyAgeMax}`
-                              : "ex. 1"
-                          }
-                          value={stayDraft.babyAges[i] || ""}
-                          onChange={(e) => setAgeAt("baby", i, e.target.value)}
-                          className={fieldClass}
-                        />
-                      </label>
-                    ))}
-                  </div>
+                    );
+                  })}
+                  {stayDraftDerived.childrenCount + stayDraftDerived.babiesCount > 0 ? (
+                    <p className="text-xs font-semibold text-catalog-body">
+                      Résumé :{" "}
+                      {[
+                        stayDraftDerived.childrenCount
+                          ? `${stayDraftDerived.childrenCount} enfant${stayDraftDerived.childrenCount > 1 ? "s" : ""}`
+                          : null,
+                        stayDraftDerived.babiesCount
+                          ? `${stayDraftDerived.babiesCount} bébé${stayDraftDerived.babiesCount > 1 ? "s" : ""}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </div>
