@@ -269,9 +269,9 @@ export function PublicHotelsAdminPage() {
         return;
       }
       if (result.skipped) {
-        toast.info("La base contient déjà des hôtels — import ignoré.");
+        toast.info(`Catalogue à jour (${result.total || 0} hôtels dans le seed).`);
       } else {
-        toast.success(`${result.inserted} hôtel(s) importé(s).`);
+        toast.success(`${result.inserted} hôtel(s) ajouté(s) au catalogue.`);
       }
       await refresh();
     } finally {
@@ -428,18 +428,18 @@ export function PublicHotelsAdminPage() {
               Connexion base impossible
               {loadError ? ` : ${loadError}` : ""}. Vérifiez que le SQL{" "}
               <code className="rounded bg-black/20 px-1">supabase_public_hotels_catalog_table.sql</code>{" "}
-              a bien été exécuté, puis rechargez (ou « Importer les 3 hôtels »).
+              a bien été exécuté, puis rechargez (ou « Synchroniser les hôtels »).
             </p>
           ) : null}
           {!fromFallback && tableEmpty && !loading ? (
             <p className="mt-2 rounded-xl border border-cyan-400/35 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100">
-              Table prête — aucun hôtel en base. Cliquez « Importer les 3 hôtels » (ou attendez l’import auto).
+              Table prête — aucun hôtel en base. Cliquez « Synchroniser les hôtels » (ou attendez l’import auto).
             </p>
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <GhostBtn type="button" variant="neutral" size="sm" onClick={() => void handleSeed()} disabled={seeding}>
-            {seeding ? "Import…" : "Importer les 3 hôtels"}
+            {seeding ? "Sync…" : "Synchroniser les hôtels"}
           </GhostBtn>
           <PrimaryBtn type="button" className="min-h-0 gap-1.5 px-4 py-2.5 text-sm" onClick={startCreate}>
             <Plus className="h-4 w-4" aria-hidden />

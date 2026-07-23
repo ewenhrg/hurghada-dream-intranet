@@ -285,39 +285,61 @@ export async function deletePublicHotel(dbId) {
   }
 }
 
-/** Importe les 3 hôtels seed si la table est vide (ou force). */
+/** Importe les hôtels seed manquants (n’écrase pas les fiches déjà en base). */
 export async function seedPublicHotelsFromDefaults({ force = false } = {}) {
   if (!__SUPABASE_DEBUG__?.isConfigured || !supabase) {
     return { ok: false, error: "Supabase non configuré", inserted: 0 };
   }
 
   try {
-    if (!force) {
-      const { count, error: countError } = await supabase
-        .from(TABLE)
-        .select("id", { count: "exact", head: true })
-        .eq("site_key", SITE_KEY);
-      if (countError) return { ok: false, error: countError.message || String(countError), inserted: 0 };
-      if ((count || 0) > 0) {
-        return { ok: true, error: null, inserted: 0, skipped: true };
-      }
+    const { data: existingRows, error: existingError } = await supabase
+      .from(TABLE)
+      .select("slug")
+      .eq("site_key", SITE_KEY);
+    if (existingError) {
+      return { ok: false, error: existingError.message || String(existingError), inserted: 0 };
     }
 
-    const rows = PUBLIC_HOTELS.map((h, index) =>
+    const existingSlugs = new Set((existingRows || []).map((r) => String(r.slug || "").trim()));
+    const missing = PUBLIC_HOTELS.filter((h) => !existingSlugs.has(h.id));
+
+    if (missing.length === 0 && !force) {
+      return {
+        ok: true,
+        error: null,
+        inserted: 0,
+        skipped: true,
+        total: PUBLIC_HOTELS.length,
+      };
+    }
+
+    const source = force ? PUBLIC_HOTELS : missing;
+    const rows = source.map((h, index) =>
       hotelToDbPayload(
         {
           ...h,
           slug: h.id,
-          sortOrder: index + 1,
+          sortOrder: PUBLIC_HOTELS.findIndex((x) => x.id === h.id) + 1 || index + 1,
           isPublished: true,
         },
         { forInsert: true }
       )
     );
 
-    const { data, error } = await supabase.from(TABLE).upsert(rows, { onConflict: "site_key,slug" }).select("id");
+    const { data, error } = await supabase
+      .from(TABLE)
+      .upsert(rows, {
+        onConflict: "site_key,slug",
+        ignoreDuplicates: !force,
+      })
+      .select("id");
     if (error) return { ok: false, error: error.message || String(error), inserted: 0 };
-    return { ok: true, error: null, inserted: Array.isArray(data) ? data.length : rows.length };
+    return {
+      ok: true,
+      error: null,
+      inserted: Array.isArray(data) ? data.length : rows.length,
+      total: PUBLIC_HOTELS.length,
+    };
   } catch (err) {
     return { ok: false, error: err?.message || String(err), inserted: 0 };
   }
