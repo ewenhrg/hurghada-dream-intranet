@@ -33,6 +33,7 @@ import {
 } from "../utils/publicHotelsCatalog";
 import { parseLatLngFromMapsUrl } from "../utils/googleMapsUrl";
 import {
+  formatRoomOccupancyLabel,
   normalizeRoomCategories,
 } from "../utils/hotelRoomCategories";
 
@@ -185,7 +186,7 @@ export function PublicHotelsAdminPage() {
         ...prev,
         roomCategories: [
           ...list,
-          { name, maxAdults: null, maxChildren: null, maxBabies: null },
+          { name, option1: { maxAdults: null, maxChildren: null, maxBabies: null }, option2: { maxAdults: null, maxChildren: null, maxBabies: null } },
         ],
       };
     });
@@ -826,15 +827,12 @@ export function PublicHotelsAdminPage() {
                               <span className="block truncate text-sm font-semibold text-white">
                                 {cat.name}
                               </span>
-                              {(cat.maxAdults != null ||
-                                cat.maxChildren != null ||
-                                cat.maxBabies != null) && (
+                              {formatRoomOccupancyLabel(cat) ? (
                                 <span className="mt-0.5 block text-[11px] font-medium text-slate-400">
-                                  Max {cat.maxAdults ?? "—"}A · {cat.maxChildren ?? "—"}E ·{" "}
-                                  {cat.maxBabies ?? "—"}B
+                                  {formatRoomOccupancyLabel(cat)}
                                   <span className="text-slate-500"> (via Tarifs hôtel)</span>
                                 </span>
-                              )}
+                              ) : null}
                             </span>
                             <button
                               type="button"

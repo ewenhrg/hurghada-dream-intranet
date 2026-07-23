@@ -1,6 +1,6 @@
 /**
- * Catégories de chambres (interne) — nom + occupation max.
- * Compat : anciennes valeurs = chaînes seules.
+ * Catégories de chambres (interne) — nom + 2 options d’occupation max.
+ * Compat : anciennes valeurs = chaînes ou { maxAdults, maxChildren, maxBabies }.
  */
 
 function toMaxOrNull(value) {
@@ -8,6 +8,24 @@ function toMaxOrNull(value) {
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) return null;
   return Math.min(20, Math.round(n));
+}
+
+function emptyOccupancyOption() {
+  return { maxAdults: null, maxChildren: null, maxBabies: null };
+}
+
+function normalizeOccupancyOption(raw) {
+  if (!raw || typeof raw !== "object") return emptyOccupancyOption();
+  return {
+    maxAdults: toMaxOrNull(raw.maxAdults ?? raw.max_adults),
+    maxChildren: toMaxOrNull(raw.maxChildren ?? raw.max_children),
+    maxBabies: toMaxOrNull(raw.maxBabies ?? raw.max_babies),
+  };
+}
+
+function occupancyFromLegacyFlat(raw) {
+  if (!raw || typeof raw !== "object") return emptyOccupancyOption();
+  return normalizeOccupancyOption(raw);
 }
 
 export function roomCategoryLabel(cat) {
@@ -23,20 +41,28 @@ export function normalizeRoomCategory(raw) {
     if (!name) return null;
     return {
       name,
-      maxAdults: null,
-      maxChildren: null,
-      maxBabies: null,
+      option1: emptyOccupancyOption(),
+      option2: emptyOccupancyOption(),
     };
   }
   if (typeof raw !== "object") return null;
   const name = String(raw.name || raw.label || "").trim();
   if (!name) return null;
-  return {
-    name,
-    maxAdults: toMaxOrNull(raw.maxAdults ?? raw.max_adults),
-    maxChildren: toMaxOrNull(raw.maxChildren ?? raw.max_children),
-    maxBabies: toMaxOrNull(raw.maxBabies ?? raw.max_babies),
-  };
+
+  const hasNested =
+    raw.option1 != null ||
+    raw.option2 != null ||
+    raw.occupancy1 != null ||
+    raw.occupancy2 != null;
+
+  const option1 = hasNested
+    ? normalizeOccupancyOption(raw.option1 ?? raw.occupancy1)
+    : occupancyFromLegacyFlat(raw);
+  const option2 = hasNested
+    ? normalizeOccupancyOption(raw.option2 ?? raw.occupancy2)
+    : emptyOccupancyOption();
+
+  return { name, option1, option2 };
 }
 
 export function normalizeRoomCategories(raw) {
@@ -80,37 +106,79 @@ export function mergeRoomCategoryList(hotelCategories, extraNames = []) {
     if (!map.has(key)) {
       map.set(key, {
         name: label,
-        maxAdults: null,
-        maxChildren: null,
-        maxBabies: null,
+        option1: emptyOccupancyOption(),
+        option2: emptyOccupancyOption(),
       });
     }
   }
   return [...map.values()];
 }
 
+/**
+ * @param {object} occupancy — { option1: {...}, option2: {...} } ou legacy flat
+ */
 export function setRoomCategoryOccupancy(list, categoryName, occupancy) {
   const name = String(categoryName || "").trim();
   if (!name) return normalizeRoomCategories(list);
   const next = mergeRoomCategoryList(list, [name]);
+
+  const option1 =
+    occupancy?.option1 != null
+      ? normalizeOccupancyOption(occupancy.option1)
+      : normalizeOccupancyOption(occupancy);
+  const option2 =
+    occupancy?.option2 != null
+      ? normalizeOccupancyOption(occupancy.option2)
+      : emptyOccupancyOption();
+
   return next.map((cat) =>
     cat.name.toLowerCase() === name.toLowerCase()
-      ? {
-          ...cat,
-          maxAdults: toMaxOrNull(occupancy?.maxAdults),
-          maxChildren: toMaxOrNull(occupancy?.maxChildren),
-          maxBabies: toMaxOrNull(occupancy?.maxBabies),
-        }
+      ? { ...cat, option1, option2 }
       : cat
   );
+}
+
+function formatOneOption(opt, label) {
+  if (!opt) return "";
+  const parts = [];
+  if (opt.maxAdults != null) parts.push(`${opt.maxAdults}A`);
+  if (opt.maxChildren != null) parts.push(`${opt.maxChildren}E`);
+  if (opt.maxBabies != null) parts.push(`${opt.maxBabies}B`);
+  return parts.length ? `${label} ${parts.join("+")}` : "";
 }
 
 export function formatRoomOccupancyLabel(cat) {
   const c = normalizeRoomCategory(cat);
   if (!c) return "";
-  const parts = [];
-  if (c.maxAdults != null) parts.push(`${c.maxAdults} adulte${c.maxAdults > 1 ? "s" : ""}`);
-  if (c.maxChildren != null) parts.push(`${c.maxChildren} enfant${c.maxChildren > 1 ? "s" : ""}`);
-  if (c.maxBabies != null) parts.push(`${c.maxBabies} bébé${c.maxBabies > 1 ? "s" : ""}`);
-  return parts.length ? `Max ${parts.join(" · ")}` : "";
+  const a = formatOneOption(c.option1, "Opt.1");
+  const b = formatOneOption(c.option2, "Opt.2");
+  return [a, b].filter(Boolean).join(" · ") || "";
+}
+
+/** Draft UI : chaînes vides pour les inputs. */
+export function occupancyDraftFromCategory(cat) {
+  const c = normalizeRoomCategory(cat) || {
+    option1: emptyOccupancyOption(),
+    option2: emptyOccupancyOption(),
+  };
+  const toInput = (v) => (v == null ? "" : String(v));
+  return {
+    option1: {
+      maxAdults: toInput(c.option1.maxAdults),
+      maxChildren: toInput(c.option1.maxChildren),
+      maxBabies: toInput(c.option1.maxBabies),
+    },
+    option2: {
+      maxAdults: toInput(c.option2.maxAdults),
+      maxChildren: toInput(c.option2.maxChildren),
+      maxBabies: toInput(c.option2.maxBabies),
+    },
+  };
+}
+
+export function emptyOccupancyDraft() {
+  return {
+    option1: { maxAdults: "", maxChildren: "", maxBabies: "" },
+    option2: { maxAdults: "", maxChildren: "", maxBabies: "" },
+  };
 }

@@ -15,9 +15,11 @@ import {
   isHiltonPlazaHotel,
 } from "../utils/hotelChildFreePolicy";
 import {
+  emptyOccupancyDraft,
   findRoomCategory,
   formatRoomOccupancyLabel,
   mergeRoomCategoryList,
+  occupancyDraftFromCategory,
   roomCategoryNames,
   setRoomCategoryOccupancy,
 } from "../utils/hotelRoomCategories";
@@ -124,25 +126,26 @@ export function HotelTarifsPage() {
     );
     const next = {};
     for (const cat of cats) {
-      next[cat.name] = {
-        maxAdults: cat.maxAdults ?? "",
-        maxChildren: cat.maxChildren ?? "",
-        maxBabies: cat.maxBabies ?? "",
-      };
+      next[cat.name] = occupancyDraftFromCategory(cat);
     }
     setOccupancyDrafts(next);
-    // Reset only when hotel selection changes (not on every rate edit).
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: selectedSlug only
   }, [selectedSlug]);
 
-  function updateOccupancyField(categoryName, field, value) {
-    setOccupancyDrafts((prev) => ({
-      ...prev,
-      [categoryName]: {
-        ...(prev[categoryName] || { maxAdults: "", maxChildren: "", maxBabies: "" }),
-        [field]: value,
-      },
-    }));
+  function updateOccupancyField(categoryName, optionKey, field, value) {
+    setOccupancyDrafts((prev) => {
+      const base = prev[categoryName] || emptyOccupancyDraft();
+      return {
+        ...prev,
+        [categoryName]: {
+          ...base,
+          [optionKey]: {
+            ...(base[optionKey] || { maxAdults: "", maxChildren: "", maxBabies: "" }),
+            [field]: value,
+          },
+        },
+      };
+    });
   }
 
   async function saveOccupancy(categoryName) {
@@ -150,7 +153,7 @@ export function HotelTarifsPage() {
       toast.warning("Enregistrez d’abord l’hôtel dans Catalogue hôtels.");
       return;
     }
-    const occ = occupancyDrafts[categoryName] || {};
+    const occ = occupancyDrafts[categoryName] || emptyOccupancyDraft();
     setSavingOccupancy(categoryName);
     try {
       const nextCategories = setRoomCategoryOccupancy(
@@ -173,13 +176,10 @@ export function HotelTarifsPage() {
             : h
         )
       );
+      const saved = findRoomCategory(nextCategories, categoryName);
       setOccupancyDrafts((prev) => ({
         ...prev,
-        [categoryName]: {
-          maxAdults: occ.maxAdults === "" || occ.maxAdults == null ? "" : occ.maxAdults,
-          maxChildren: occ.maxChildren === "" || occ.maxChildren == null ? "" : occ.maxChildren,
-          maxBabies: occ.maxBabies === "" || occ.maxBabies == null ? "" : occ.maxBabies,
-        },
+        [categoryName]: occupancyDraftFromCategory(saved),
       }));
       toast.success(`Occupation enregistrée — ${categoryName}`);
     } finally {
@@ -381,11 +381,7 @@ export function HotelTarifsPage() {
                     const rows = hotelRates
                       .filter((r) => r.roomCategory === cat.name)
                       .sort((a, b) => String(a.dateFrom).localeCompare(String(b.dateFrom)));
-                    const occ = occupancyDrafts[cat.name] || {
-                      maxAdults: "",
-                      maxChildren: "",
-                      maxBabies: "",
-                    };
+                    const occ = occupancyDrafts[cat.name] || emptyOccupancyDraft();
                     const savedLabel = formatRoomOccupancyLabel(
                       findRoomCategory(selectedHotel?.roomCategories, cat.name) || cat
                     );
@@ -411,55 +407,95 @@ export function HotelTarifsPage() {
 
                         <div className="mb-3 rounded-xl border border-indigo-100 bg-white/90 p-3">
                           <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-800">
-                            Places max / chambre
+                            Places max / chambre — 2 options
                           </p>
-                          <div className="mt-2 grid grid-cols-3 gap-2">
-                            <label className="block text-[11px] font-semibold text-slate-600">
-                              Adultes
-                              <input
-                                type="number"
-                                min={0}
-                                max={20}
-                                inputMode="numeric"
-                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm font-semibold text-slate-900"
-                                value={occ.maxAdults}
-                                onChange={(e) =>
-                                  updateOccupancyField(cat.name, "maxAdults", e.target.value)
-                                }
-                                placeholder="ex. 2"
-                              />
-                            </label>
-                            <label className="block text-[11px] font-semibold text-slate-600">
-                              Enfants
-                              <input
-                                type="number"
-                                min={0}
-                                max={20}
-                                inputMode="numeric"
-                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm font-semibold text-slate-900"
-                                value={occ.maxChildren}
-                                onChange={(e) =>
-                                  updateOccupancyField(cat.name, "maxChildren", e.target.value)
-                                }
-                                placeholder="ex. 2"
-                              />
-                            </label>
-                            <label className="block text-[11px] font-semibold text-slate-600">
-                              Bébés
-                              <input
-                                type="number"
-                                min={0}
-                                max={20}
-                                inputMode="numeric"
-                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm font-semibold text-slate-900"
-                                value={occ.maxBabies}
-                                onChange={(e) =>
-                                  updateOccupancyField(cat.name, "maxBabies", e.target.value)
-                                }
-                                placeholder="ex. 1"
-                              />
-                            </label>
-                          </div>
+                          <p className="mt-1 text-[11px] font-medium text-slate-500">
+                            Ex. option 1 : 2 adultes + 2 enfants · option 2 : 3 adultes + 1 enfant
+                          </p>
+
+                          {[
+                            { key: "option1", title: "Option 1" },
+                            { key: "option2", title: "Option 2" },
+                          ].map((opt) => {
+                            const values = occ[opt.key] || {
+                              maxAdults: "",
+                              maxChildren: "",
+                              maxBabies: "",
+                            };
+                            return (
+                              <div
+                                key={opt.key}
+                                className="mt-3 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5"
+                              >
+                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                                  {opt.title}
+                                </p>
+                                <div className="mt-2 grid grid-cols-3 gap-2">
+                                  <label className="block text-[11px] font-semibold text-slate-600">
+                                    Adultes
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={20}
+                                      inputMode="numeric"
+                                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm font-semibold text-slate-900"
+                                      value={values.maxAdults}
+                                      onChange={(e) =>
+                                        updateOccupancyField(
+                                          cat.name,
+                                          opt.key,
+                                          "maxAdults",
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="ex. 2"
+                                    />
+                                  </label>
+                                  <label className="block text-[11px] font-semibold text-slate-600">
+                                    Enfants
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={20}
+                                      inputMode="numeric"
+                                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm font-semibold text-slate-900"
+                                      value={values.maxChildren}
+                                      onChange={(e) =>
+                                        updateOccupancyField(
+                                          cat.name,
+                                          opt.key,
+                                          "maxChildren",
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="ex. 2"
+                                    />
+                                  </label>
+                                  <label className="block text-[11px] font-semibold text-slate-600">
+                                    Bébés
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={20}
+                                      inputMode="numeric"
+                                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm font-semibold text-slate-900"
+                                      value={values.maxBabies}
+                                      onChange={(e) =>
+                                        updateOccupancyField(
+                                          cat.name,
+                                          opt.key,
+                                          "maxBabies",
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="ex. 1"
+                                    />
+                                  </label>
+                                </div>
+                              </div>
+                            );
+                          })}
+
                           <div className="mt-2 flex justify-end">
                             <GhostBtn
                               type="button"
