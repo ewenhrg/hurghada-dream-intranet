@@ -461,50 +461,125 @@ export function PublicHotelDetailPage({ hotelId }) {
 
       {lightboxOpen && hasImages ? (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 p-3 sm:p-6"
-          onClick={closeLightbox}
+          className="fixed inset-0 z-[220] flex flex-col bg-black"
           role="dialog"
           aria-modal="true"
           aria-label="Galerie photos"
+          onClick={closeLightbox}
         >
-          <div className="relative w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+          {/* Top bar */}
+          <div
+            className="relative z-20 flex shrink-0 items-center justify-between px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 sm:px-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold tabular-nums text-white backdrop-blur-sm sm:text-sm">
+              {lightboxIndex + 1} / {images.length}
+            </p>
             <button
               type="button"
               onClick={closeLightbox}
-              className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-lg transition hover:bg-white"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-lg transition active:scale-95 hover:bg-white"
               aria-label="Fermer"
             >
-              <X className="h-5 w-5" />
+              <X className="h-5 w-5" aria-hidden />
             </button>
-            <div className="flex items-center gap-2">
-              {images.length > 1 ? (
+          </div>
+
+          {/* Image stage — plein écran */}
+          <div
+            className="relative min-h-0 flex-1 touch-pan-y"
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => {
+              const t = e.changedTouches?.[0];
+              if (t) e.currentTarget.dataset.touchX = String(t.clientX);
+            }}
+            onTouchEnd={(e) => {
+              const start = Number(e.currentTarget.dataset.touchX || 0);
+              const t = e.changedTouches?.[0];
+              if (!t || !start) return;
+              const dx = t.clientX - start;
+              if (Math.abs(dx) < 50) return;
+              if (dx < 0) nextImg();
+              else prevImg();
+            }}
+          >
+            <img
+              src={images[lightboxIndex]}
+              alt={`${hotel.name} — photo ${lightboxIndex + 1}`}
+              className="absolute inset-0 h-full w-full object-contain"
+              draggable={false}
+            />
+
+            {images.length > 1 ? (
+              <>
                 <button
                   type="button"
                   onClick={prevImg}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-lg transition hover:bg-white"
+                  className="absolute left-2 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-white/25 backdrop-blur-sm transition active:scale-95 hover:bg-black/60 sm:left-4 sm:h-14 sm:w-14"
                   aria-label="Photo précédente"
                 >
-                  <ChevronLeft className="h-5 w-5" />
+                  <ChevronLeft className="h-7 w-7" aria-hidden />
                 </button>
-              ) : null}
-              <div className="h-[60vh] min-h-[280px] w-full overflow-hidden rounded-2xl bg-slate-900">
-                <img src={images[lightboxIndex]} alt="" className="h-full w-full object-contain" />
-              </div>
-              {images.length > 1 ? (
                 <button
                   type="button"
                   onClick={nextImg}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-lg transition hover:bg-white"
+                  className="absolute right-2 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-white/25 backdrop-blur-sm transition active:scale-95 hover:bg-black/60 sm:right-4 sm:h-14 sm:w-14"
                   aria-label="Photo suivante"
                 >
-                  <ChevronRight className="h-5 w-5" />
+                  <ChevronRight className="h-7 w-7" aria-hidden />
                 </button>
-              ) : null}
-            </div>
-            <p className="mt-2 text-center text-xs font-semibold text-white/85">
-              {lightboxIndex + 1} / {images.length}
-            </p>
+              </>
+            ) : null}
           </div>
+
+          {/* Thumbnails — tablette / desktop (sur mobile : swipe + flèches pour maximiser la photo) */}
+          {images.length > 1 ? (
+            <div
+              className="relative z-20 hidden shrink-0 border-t border-white/10 bg-black/80 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:block"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mx-auto flex max-w-5xl gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {images.map((src, idx) => (
+                  <button
+                    key={`${src}-${idx}`}
+                    type="button"
+                    onClick={() => setLightboxIndex(idx)}
+                    className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-lg ring-2 transition ${
+                      idx === lightboxIndex
+                        ? "ring-orange-400"
+                        : "ring-transparent opacity-70 hover:opacity-100"
+                    }`}
+                    aria-label={`Voir la photo ${idx + 1}`}
+                    aria-current={idx === lightboxIndex ? "true" : undefined}
+                  >
+                    <img src={src} alt="" className="h-full w-full object-cover" draggable={false} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Indicateurs mobile */}
+          {images.length > 1 ? (
+            <div
+              className="relative z-20 flex shrink-0 items-center justify-center gap-1.5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 sm:hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {images.map((_, idx) => (
+                <button
+                  key={`dot-${idx}`}
+                  type="button"
+                  onClick={() => setLightboxIndex(idx)}
+                  className={`h-2 rounded-full transition ${
+                    idx === lightboxIndex ? "w-5 bg-orange-400" : "w-2 bg-white/40"
+                  }`}
+                  aria-label={`Photo ${idx + 1}`}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden" aria-hidden />
+          )}
         </div>
       ) : null}
     </div>
