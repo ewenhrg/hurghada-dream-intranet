@@ -115,15 +115,25 @@ function buildQuoteTablesHTML(quoteHotels, { checkIn, checkOut, boardLabel }) {
         Array.isArray(quote.warnings) && quote.warnings.length
           ? `<div class="warn">${escapeHtml(quote.warnings.join(" · "))}</div>`
           : "";
+      const transferNote =
+        quote.transferIncluded && Number(quote.transferFee) > 0
+          ? `<div style="font-size:12px;color:#334155;margin-top:6px;font-weight:600;">supp transfert ${escapeHtml(
+              String(Number(quote.transferFee))
+            )}€</div>`
+          : "";
       const detail = [
         quote.nights != null ? `${quote.nights} nuit(s)` : null,
         quote.freeChildren > 0 ? `${quote.freeChildren} enfant(s) gratuit(s)` : null,
+        quote.priceManual ? "prix modifié" : null,
+        quote.stayTotal != null && quote.transferIncluded
+          ? `séjour ${formatQuoteMoney(quote.stayTotal, quote.currency || "EUR")}`
+          : null,
       ]
         .filter(Boolean)
         .join(" · ");
       return `<tr>
         <td>${escapeHtml(h.hotelName)}</td>
-        <td>${escapeHtml(h.roomCategory || "—")}${detail ? `<div style="font-size:11px;color:#64748b;margin-top:4px;">${escapeHtml(detail)}</div>` : ""}${warn}</td>
+        <td>${escapeHtml(h.roomCategory || "—")}${detail ? `<div style="font-size:11px;color:#64748b;margin-top:4px;">${escapeHtml(detail)}</div>` : ""}${transferNote}${warn}</td>
         <td>${escapeHtml(boardLabel)}</td>
         <td>${escapeHtml(checkIn)}</td>
         <td>${escapeHtml(checkOut)}</td>

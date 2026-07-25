@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { BedDouble, MessageSquareReply } from "lucide-react";
+import { BedDouble, MessageSquareReply, Pencil } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -35,6 +35,19 @@ import {
 const SELECT_COLUMNS =
   "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, adults_count, children_count, child_ages, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, response_payload, created_at, updated_at";
 
+/** Supplément transfert aéroport (devis réponse). */
+export const HOTEL_TRANSFER_FEE_EUR = 40;
+
+function roundMoney(n) {
+  return Math.round(Number(n) * 100) / 100;
+}
+
+function parseMoneyInput(raw) {
+  if (raw == null || raw === "") return null;
+  const n = Number(String(raw).trim().replace(/\s/g, "").replace(",", "."));
+  return Number.isFinite(n) && n >= 0 ? roundMoney(n) : null;
+}
+
 function serializeQuote(quote) {
   if (!quote) return null;
   return {
@@ -42,6 +55,7 @@ function serializeQuote(quote) {
     nights: quote.nights ?? 0,
     coveredNights: quote.coveredNights ?? 0,
     currency: quote.currency || "EUR",
+    stayTotal: quote.stayTotal ?? quote.total,
     total: quote.total,
     adultsTotal: quote.adultsTotal ?? 0,
     childrenTotal: quote.childrenTotal ?? 0,
@@ -51,6 +65,9 @@ function serializeQuote(quote) {
     totalAdults: quote.totalAdults ?? 0,
     warnings: Array.isArray(quote.warnings) ? quote.warnings : [],
     hiltonPolicyApplied: quote.hiltonPolicyApplied === true,
+    transferIncluded: quote.transferIncluded === true,
+    transferFee: quote.transferFee ?? 0,
+    priceManual: quote.priceManual === true,
   };
 }
 
@@ -64,6 +81,11 @@ function normalizeResponsePayload(raw) {
         hotelName: String(h?.hotelName || "").trim(),
         roomCategory: String(h?.roomCategory || "").trim(),
         catalogSlug: String(h?.catalogSlug || "").trim(),
+        includeTransfer: h?.includeTransfer !== false,
+        manualTotal:
+          h?.manualTotal != null && Number.isFinite(Number(h.manualTotal))
+            ? roundMoney(Number(h.manualTotal))
+            : null,
         quote: h?.quote && typeof h.quote === "object" ? serializeQuote(h.quote) : null,
       }))
       .filter((h) => h.hotelName),
@@ -91,6 +113,31 @@ function findCatalogHotelByName(hotelName, catalog) {
   );
 }
 
+function applyQuoteAdjustments(baseQuote, { includeTransfer = true, manualTotal = null } = {}) {
+  if (!baseQuote) return null;
+  const transferOn = includeTransfer !== false;
+  const transferFee = transferOn ? HOTEL_TRANSFER_FEE_EUR : 0;
+  const calculatedStay =
+    baseQuote.total != null && Number.isFinite(Number(baseQuote.total))
+      ? roundMoney(Number(baseQuote.total))
+      : null;
+  const priceManual = manualTotal != null && Number.isFinite(Number(manualTotal));
+  const stayTotal = priceManual
+    ? roundMoney(Number(manualTotal))
+    : calculatedStay;
+  const total =
+    stayTotal != null ? roundMoney(stayTotal + transferFee) : null;
+  return {
+    ...baseQuote,
+    stayTotal,
+    transferIncluded: transferOn,
+    transferFee,
+    priceManual,
+    total,
+    ok: total != null,
+  };
+}
+
 function buildResponseHotelsDraft(request, catalog) {
   const saved = normalizeResponsePayload(request.responsePayload).hotels;
   return requestHotelsList(request).map((item) => {
@@ -103,13 +150,17 @@ function buildResponseHotelsDraft(request, catalog) {
       catalogSlug: catalogHotel?.slug || catalogHotel?.id || "",
       roomCategories: roomCategoryNames(catalogHotel?.roomCategories),
       catalogHotel: catalogHotel || null,
+      includeTransfer: prev ? prev.includeTransfer !== false : true,
+      manualTotal: prev?.manualTotal ?? null,
+      editingPrice: false,
+      priceDraft: "",
     };
   });
 }
 
 function computeQuotesForDraft(request, hotelsDraft, rates) {
   return hotelsDraft.map((item) => {
-    const quote = item.roomCategory
+    const baseQuote = item.roomCategory
       ? calculateHotelStayQuote({
           hotel: item.catalogHotel,
           hotelSlug: item.catalogSlug,
@@ -123,11 +174,17 @@ function computeQuotesForDraft(request, hotelsDraft, rates) {
           rates,
         })
       : null;
+    const quote = applyQuoteAdjustments(baseQuote, {
+      includeTransfer: item.includeTransfer !== false,
+      manualTotal: item.manualTotal,
+    });
     return {
       slot: item.slot,
       hotelName: item.hotelName,
       roomCategory: String(item.roomCategory || "").trim(),
       catalogSlug: item.catalogSlug || "",
+      includeTransfer: item.includeTransfer !== false,
+      manualTotal: item.manualTotal ?? null,
       quote: serializeQuote(quote),
     };
   });
@@ -520,6 +577,17 @@ function HotelResponseModal({
                                   · {quote.nights} nuit{quote.nights > 1 ? "s" : ""}
                                 </span>
                               ) : null}
+                              {quote.priceManual ? (
+                                <span className="ml-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                                  · modifié
+                                </span>
+                              ) : null}
+                            </p>
+                            <p className="mt-0.5 text-[11px] font-medium text-slate-600">
+                              Séjour {formatQuoteMoney(quote.stayTotal, quote.currency)}
+                              {quote.transferIncluded
+                                ? ` · Transfert +${formatQuoteMoney(quote.transferFee, quote.currency)}`
+                                : ""}
                             </p>
                             <p className="mt-0.5 text-[11px] font-medium text-slate-600">
                               Adultes {formatQuoteMoney(quote.adultsTotal, quote.currency)}
@@ -542,6 +610,152 @@ function HotelResponseModal({
                                   : ""}
                               </p>
                             ) : null}
+
+                            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-2">
+                              <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-800">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                                  checked={item.includeTransfer !== false}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setHotelsDraft((prev) =>
+                                      prev.map((h, i) =>
+                                        i === index ? { ...h, includeTransfer: checked } : h
+                                      )
+                                    );
+                                  }}
+                                />
+                                Transfert (+{HOTEL_TRANSFER_FEE_EUR} €)
+                              </label>
+                            </div>
+
+                            {item.editingPrice ? (
+                              <div className="mt-2 flex flex-wrap items-end gap-2">
+                                <label className="block min-w-[8rem] flex-1">
+                                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                    Prix séjour (€)
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    inputMode="decimal"
+                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                                    value={item.priceDraft}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      setHotelsDraft((prev) =>
+                                        prev.map((h, i) =>
+                                          i === index ? { ...h, priceDraft: value } : h
+                                        )
+                                      );
+                                    }}
+                                    aria-label="Prix séjour modifié"
+                                  />
+                                </label>
+                                <GhostBtn
+                                  type="button"
+                                  className="!min-h-0 !px-3 !py-2 !text-xs"
+                                  onClick={() => {
+                                    const parsed = parseMoneyInput(item.priceDraft);
+                                    if (parsed == null) {
+                                      toast.error("Indiquez un prix valide.");
+                                      return;
+                                    }
+                                    setHotelsDraft((prev) =>
+                                      prev.map((h, i) =>
+                                        i === index
+                                          ? {
+                                              ...h,
+                                              manualTotal: parsed,
+                                              editingPrice: false,
+                                              priceDraft: "",
+                                            }
+                                          : h
+                                      )
+                                    );
+                                  }}
+                                >
+                                  OK
+                                </GhostBtn>
+                                <GhostBtn
+                                  type="button"
+                                  className="!min-h-0 !px-3 !py-2 !text-xs"
+                                  onClick={() => {
+                                    setHotelsDraft((prev) =>
+                                      prev.map((h, i) =>
+                                        i === index
+                                          ? {
+                                              ...h,
+                                              editingPrice: false,
+                                              priceDraft: "",
+                                            }
+                                          : h
+                                      )
+                                    );
+                                  }}
+                                >
+                                  Annuler
+                                </GhostBtn>
+                                {item.manualTotal != null ? (
+                                  <GhostBtn
+                                    type="button"
+                                    className="!min-h-0 !px-3 !py-2 !text-xs"
+                                    onClick={() => {
+                                      setHotelsDraft((prev) =>
+                                        prev.map((h, i) =>
+                                          i === index
+                                            ? {
+                                                ...h,
+                                                manualTotal: null,
+                                                editingPrice: false,
+                                                priceDraft: "",
+                                              }
+                                            : h
+                                        )
+                                      );
+                                    }}
+                                  >
+                                    Revenir au calcul
+                                  </GhostBtn>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <div className="mt-2">
+                                <GhostBtn
+                                  type="button"
+                                  className="!min-h-0 !px-3 !py-1.5 !text-xs"
+                                  onClick={() => {
+                                    const stay =
+                                      quote.stayTotal != null
+                                        ? quote.stayTotal
+                                        : quote.total != null && quote.transferIncluded
+                                          ? roundMoney(
+                                              Number(quote.total) - Number(quote.transferFee || 0)
+                                            )
+                                          : quote.total;
+                                    setHotelsDraft((prev) =>
+                                      prev.map((h, i) =>
+                                        i === index
+                                          ? {
+                                              ...h,
+                                              editingPrice: true,
+                                              priceDraft:
+                                                stay != null && Number.isFinite(Number(stay))
+                                                  ? String(stay)
+                                                  : "",
+                                            }
+                                          : h
+                                      )
+                                    );
+                                  }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                                  Modifier le prix
+                                </GhostBtn>
+                              </div>
+                            )}
                           </div>
                         ) : null}
                       </div>
@@ -555,7 +769,17 @@ function HotelResponseModal({
                           onChange={(e) => {
                             const value = e.target.value;
                             setHotelsDraft((prev) =>
-                              prev.map((h, i) => (i === index ? { ...h, roomCategory: value } : h))
+                              prev.map((h, i) =>
+                                i === index
+                                  ? {
+                                      ...h,
+                                      roomCategory: value,
+                                      manualTotal: null,
+                                      editingPrice: false,
+                                      priceDraft: "",
+                                    }
+                                  : h
+                              )
                             );
                           }}
                           disabled={item.roomCategories.length === 0}
