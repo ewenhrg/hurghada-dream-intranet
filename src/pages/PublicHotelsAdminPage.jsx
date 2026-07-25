@@ -42,6 +42,8 @@ const EMPTY_ROOM_CATEGORY = {
   name: "",
   option1: { maxAdults: null, maxChildren: null, maxBabies: null },
   option2: { maxAdults: null, maxChildren: null, maxBabies: null },
+  option3: { maxAdults: null, maxChildren: null, maxBabies: null },
+  option4: { maxAdults: null, maxChildren: null, maxBabies: null },
 };
 
 const CATALOG_IMAGES_BUCKET = "documents";

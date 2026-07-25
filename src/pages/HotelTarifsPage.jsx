@@ -20,6 +20,7 @@ import {
   formatRoomOccupancyLabel,
   mergeRoomCategoryList,
   occupancyDraftFromCategory,
+  ROOM_OCCUPANCY_OPTION_KEYS,
   roomCategoryNames,
   setRoomCategoryOccupancy,
 } from "../utils/hotelRoomCategories";
@@ -407,28 +408,25 @@ export function HotelTarifsPage() {
 
                         <div className="mb-3 rounded-xl border border-indigo-100 bg-white/90 p-3">
                           <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-800">
-                            Places max / chambre — 2 options
+                            Places max / chambre — 4 options
                           </p>
                           <p className="mt-1 text-[11px] font-medium text-slate-500">
-                            Ex. option 1 : 2 adultes + 2 enfants · option 2 : 3 adultes + 1 enfant
+                            Ex. opt.1 : 2A+2E · opt.2 : 3A+1E · opt.3 / opt.4 selon le contrat
                           </p>
 
-                          {[
-                            { key: "option1", title: "Option 1" },
-                            { key: "option2", title: "Option 2" },
-                          ].map((opt) => {
-                            const values = occ[opt.key] || {
+                          {ROOM_OCCUPANCY_OPTION_KEYS.map((key, i) => {
+                            const values = occ[key] || {
                               maxAdults: "",
                               maxChildren: "",
                               maxBabies: "",
                             };
                             return (
                               <div
-                                key={opt.key}
+                                key={key}
                                 className="mt-3 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5"
                               >
                                 <p className="text-[11px] font-bold uppercase tracking-wide text-slate-600">
-                                  {opt.title}
+                                  Option {i + 1}
                                 </p>
                                 <div className="mt-2 grid grid-cols-3 gap-2">
                                   <label className="block text-[11px] font-semibold text-slate-600">
@@ -443,7 +441,7 @@ export function HotelTarifsPage() {
                                       onChange={(e) =>
                                         updateOccupancyField(
                                           cat.name,
-                                          opt.key,
+                                          key,
                                           "maxAdults",
                                           e.target.value
                                         )
@@ -463,7 +461,7 @@ export function HotelTarifsPage() {
                                       onChange={(e) =>
                                         updateOccupancyField(
                                           cat.name,
-                                          opt.key,
+                                          key,
                                           "maxChildren",
                                           e.target.value
                                         )
@@ -483,7 +481,7 @@ export function HotelTarifsPage() {
                                       onChange={(e) =>
                                         updateOccupancyField(
                                           cat.name,
-                                          opt.key,
+                                          key,
                                           "maxBabies",
                                           e.target.value
                                         )
