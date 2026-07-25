@@ -1,7 +1,7 @@
 import { normalizeHotelAgePolicy } from "./publicHotelsCatalog";
 import {
   allocateHiltonChildCharges,
-  isHiltonPlazaHotel,
+  hotelMatchesHiltonChildPolicy,
   parseChildAgesInput,
 } from "./hotelChildFreePolicy";
 
@@ -159,16 +159,27 @@ export function calculateHotelStayQuote({
     }
   }
 
-  const hilton = isHiltonPlazaHotel(hotel || slug || name);
+  // Ne pas court-circuiter sur `hotel` seul : le nom saisi (demande) peut matcher Hilton
+  // alors que le slug catalogue est différent (ex. « Hilton Hurghada »).
+  const hilton = hotelMatchesHiltonChildPolicy(hotel, slug, name);
+  // Âge manquant : on le traite comme < 12 ans pour ouvrir la gratuité Hilton
+  // (sinon l’enfant était facturé alors que la policy s’applique).
   const freeFlags = hilton
     ? allocateHiltonChildCharges(
         minorRows.map((r) =>
-          r.age == null || !Number.isFinite(r.age) ? 99 : r.age
+          r.age == null || !Number.isFinite(r.age) ? 7 : r.age
         )
       ).map((r) => r.free)
     : minorRows.map(() => false);
 
-  // Ages null (missing) should not get Hilton free — allocateHilton with 99 means not free under 12. Good.
+  if (
+    hilton &&
+    minorRows.some((r) => r.age == null || !Number.isFinite(r.age))
+  ) {
+    warnings.push(
+      "Âge(s) enfant manquant(s) — gratuité Hilton appliquée par défaut (< 12 ans). Précisez les âges pour la gratuité < 6 ans."
+    );
+  }
 
   const totalAdults = adults + extraAdultsFromAge;
   let adultsTotal = 0;

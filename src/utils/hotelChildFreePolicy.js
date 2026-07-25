@@ -20,17 +20,19 @@ export function isHiltonPlazaHotel(hotelOrSlugOrName) {
   if (hotelOrSlugOrName == null) return false;
   if (typeof hotelOrSlugOrName === "string") {
     const s = hotelOrSlugOrName.trim().toLowerCase();
-    return (
-      s === HILTON_PLAZA_SLUG ||
-      s.includes("hilton plaza") ||
-      (s.includes("hilton") && s.includes("plaza"))
-    );
+    // Toute variante « Hilton » (Plaza, Hurghada, slug custom…) : même child policy.
+    return s === HILTON_PLAZA_SLUG || s.includes("hilton");
   }
   const slug = String(hotelOrSlugOrName.slug || hotelOrSlugOrName.id || "")
     .trim()
     .toLowerCase();
   const name = String(hotelOrSlugOrName.name || "").trim().toLowerCase();
   return isHiltonPlazaHotel(slug) || isHiltonPlazaHotel(name);
+}
+
+/** True si au moins une des infos hôtel matche la child policy Hilton. */
+export function hotelMatchesHiltonChildPolicy(...candidates) {
+  return candidates.some((c) => isHiltonPlazaHotel(c));
 }
 
 export function getHotelChildFreePolicy(hotelOrSlugOrName) {

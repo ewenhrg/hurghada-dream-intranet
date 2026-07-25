@@ -23,7 +23,7 @@ import {
 import {
   allocateHiltonChildCharges,
   getHotelChildFreePolicy,
-  isHiltonPlazaHotel,
+  hotelMatchesHiltonChildPolicy,
   parseChildAgesInput,
 } from "../utils/hotelChildFreePolicy";
 import {
@@ -449,7 +449,9 @@ function HotelResponseModal({
             (Tarifs hôtel = touche + gain).
           </p>
 
-          {hotelsDraft.some((h) => isHiltonPlazaHotel(h.hotelName) || isHiltonPlazaHotel(h.catalogSlug)) ? (
+          {hotelsDraft.some((h) =>
+            hotelMatchesHiltonChildPolicy(h.hotelName, h.catalogSlug, h.catalogHotel)
+          ) ? (
             <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-xs font-medium leading-relaxed text-emerald-950">
               <p className="font-bold">Child policy Hilton</p>
               <p className="mt-1">{getHotelChildFreePolicy("hilton-plaza")?.summary}</p>
