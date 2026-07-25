@@ -208,8 +208,15 @@ export function clearPublicHotelsCart() {
 export function formatHotelStayAgesForDb(stay, policy = null) {
   const s = normalizeStay(stay);
   const derived = deriveMinorsFromBirthDates(s, policy);
-  const parts = [];
 
+  // Âges numériques bébé/enfant en tête — lisibles par le calcul de devis.
+  const numericAges = derived.details
+    .filter((d) => d.category === "baby" || d.category === "child")
+    .map((d) => d.age)
+    .filter((age) => age != null && Number.isFinite(age));
+  const numeric = numericAges.join(", ");
+
+  const parts = [];
   for (const d of derived.details) {
     const cat = formatMinorCategoryLabel(d.category, d.age);
     const dob = d.birthDate
@@ -224,8 +231,9 @@ export function formatHotelStayAgesForDb(stay, policy = null) {
     parts.push(`${cat} (né(e) le ${dob})`);
   }
 
-  if (parts.length === 0) return "";
-  return parts.join(" · ");
+  if (!numeric && parts.length === 0) return "";
+  if (numeric && parts.length) return `${numeric} | ${parts.join(" · ")}`;
+  return numeric || parts.join(" · ");
 }
 
 export function validateHotelStay(stay, policy = null) {

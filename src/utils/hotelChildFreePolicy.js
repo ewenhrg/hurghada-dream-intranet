@@ -88,13 +88,43 @@ export function allocateHiltonChildCharges(ages) {
     });
 }
 
-/** Parse "4, 8, 2" / "4;8" / "4 8" → nombres. */
+/**
+ * Parse les âges enfants depuis la demande.
+ * Formats supportés :
+ * - simple : "4, 8, 2"
+ * - préfixe numérique : "8, 3 | Enfant · 8 ans (né(e) le …)"
+ * - texte panier : "Enfant · 8 ans (né(e) le 15/03/2018)"
+ *   (ne pas lire 15/03/2018 comme des âges — sinon devis = faux adultes)
+ */
 export function parseChildAgesInput(raw) {
   if (raw == null) return [];
-  return String(raw)
+  const s = String(raw).trim();
+  if (!s) return [];
+
+  const asAge = (value) => {
+    const n = Number(String(value).trim().replace(",", "."));
+    return Number.isFinite(n) && n >= 0 && n <= 17 ? n : null;
+  };
+
+  // 1) Segment avant "|" s’il ne contient que des âges numériques
+  const head = s.split("|")[0].trim();
+  if (head && !/(ans|né|enfant|bébé|bebe|adulte)/i.test(head)) {
+    const ages = head
+      .split(/[,;]+/)
+      .map((p) => asAge(p))
+      .filter((n) => n != null);
+    if (ages.length) return ages;
+  }
+
+  // 2) Motifs « 8 ans » / « 1 an » (format Historique / panier catalogue)
+  const fromAns = [...s.matchAll(/(\d+(?:[.,]\d+)?)\s*ans?\b/gi)]
+    .map((m) => asAge(m[1]))
+    .filter((n) => n != null);
+  if (fromAns.length) return fromAns;
+
+  // 3) Fallback tokens (ignore années type 2018)
+  return s
     .split(/[,;/\s]+/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((p) => Number(p.replace(",", ".")))
-    .filter((n) => Number.isFinite(n) && n >= 0);
+    .map((p) => asAge(p))
+    .filter((n) => n != null);
 }

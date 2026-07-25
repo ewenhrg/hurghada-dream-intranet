@@ -532,6 +532,7 @@ function HotelResponseModal({
                               {quote.freeChildren > 0
                                 ? ` · ${quote.freeChildren} gratuit(s)`
                                 : ""}
+                              {quote.hiltonPolicyApplied ? " · policy Hilton" : ""}
                             </p>
                             {quote.warnings?.length ? (
                               <p className="mt-1 text-[11px] font-semibold text-amber-800">

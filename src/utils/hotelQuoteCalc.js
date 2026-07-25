@@ -130,6 +130,10 @@ export function calculateHotelStayQuote({
 
   let ages = parseChildAgesInput(childAgesRaw);
   const expectedChildren = Math.max(0, Number(childrenCount) || 0);
+  // Trop d’âges parsés (ex. anciennes lignes avec dates de naissance) → garder le bon compte.
+  if (expectedChildren > 0 && ages.length > expectedChildren) {
+    ages = ages.slice(0, expectedChildren);
+  }
   if (expectedChildren > ages.length) {
     const missing = expectedChildren - ages.length;
     warnings.push(
@@ -138,11 +142,19 @@ export function calculateHotelStayQuote({
     for (let i = 0; i < missing; i += 1) ages.push(NaN);
   }
 
+  // Ne pas court-circuiter sur `hotel` seul : le nom saisi (demande) peut matcher Hilton
+  // alors que le slug catalogue est différent (ex. « Hilton Hurghada »).
+  const hilton = hotelMatchesHiltonChildPolicy(hotel, slug, name);
+
   const agePolicy = normalizeHotelAgePolicy(hotel || {});
   const classified = ages.map((age) => {
     const n = Number(age);
     const finite = Number.isFinite(n);
-    const band = finite ? classifyAgeBand(n, agePolicy) : "child";
+    // Hilton : moins de 12 ans = toujours mineur (gratuité / tarif enfant), jamais « adulte ».
+    let band = finite ? classifyAgeBand(n, agePolicy) : "child";
+    if (hilton && finite && n < 12 && band === "adult") {
+      band = n <= (agePolicy.babyAgeMax ?? 5) ? "baby" : "child";
+    }
     return { age: finite ? n : null, band };
   });
 
@@ -158,10 +170,6 @@ export function calculateHotelStayQuote({
       minorRows.push(row);
     }
   }
-
-  // Ne pas court-circuiter sur `hotel` seul : le nom saisi (demande) peut matcher Hilton
-  // alors que le slug catalogue est différent (ex. « Hilton Hurghada »).
-  const hilton = hotelMatchesHiltonChildPolicy(hotel, slug, name);
   // Âge manquant : on le traite comme < 12 ans pour ouvrir la gratuité Hilton
   // (sinon l’enfant était facturé alors que la policy s’applique).
   const freeFlags = hilton
