@@ -3,7 +3,7 @@ import { formatHotelStayDate } from "./hotelRequestDates";
 import { formatQuoteMoney } from "./hotelQuoteCalc";
 
 /**
- * HTML imprimable : demande + devis calculé (tarifs hôtel).
+ * HTML imprimable : devis hôtel propre (client + propositions tarifaires).
  */
 export function generateHotelRequestHTML(request) {
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "—";
@@ -13,15 +13,21 @@ export function generateHotelRequestHTML(request) {
     : [request.hotelOption1, request.hotelOption2, request.hotelOption3].filter((h) =>
         String(h || "").trim()
       );
+  const issuedLabel = new Date().toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
   const createdLabel = request.createdAt
-    ? new Date(request.createdAt).toLocaleString("fr-FR")
+    ? new Date(request.createdAt).toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
     : "—";
   const boardLabels = boardLabelsFromViewModel(request);
-  const boardHtml =
-    boardLabels.length > 0
-      ? boardLabels.map((l) => escapeHtml(l)).join(", ")
-      : "All inclusive";
   const boardLabel = boardLabels.length > 0 ? boardLabels.join(" · ") : "All inclusive";
+  const refId = String(request.id || "").trim() || "—";
 
   const quoteHotels = Array.isArray(request.quoteHotels)
     ? request.quoteHotels
@@ -29,16 +35,26 @@ export function generateHotelRequestHTML(request) {
       ? request.responsePayload.hotels
       : [];
 
-  const hotelRows = wantsOffer
-    ? `<tr><td colspan="2" style="padding:8px 12px;border:1px solid #fde68a;background:#fffbeb;font-weight:600;">Je n'ai pas de choix d'hôtel — faites-moi une offre</td></tr>`
+  const hotelChoicesHtml = wantsOffer
+    ? `<p class="choice-note">Offre personnalisée demandée — sans choix d’hôtel préétabli.</p>`
     : hotels.length > 0
-      ? hotels
-          .map(
-            (name, i) =>
-              `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Choix ${i + 1}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(name)}</td></tr>`
-          )
-          .join("")
-      : `<tr><td colspan="2" style="padding:8px 12px;border:1px solid #e2e8f0;">—</td></tr>`;
+      ? `<ol class="hotel-choices">${hotels
+          .map((name) => `<li>${escapeHtml(name)}</li>`)
+          .join("")}</ol>`
+      : `<p class="muted">Aucun hôtel renseigné.</p>`;
+
+  const travelers = [
+    request.adultsCount != null && request.adultsCount >= 1
+      ? `${request.adultsCount} adulte${request.adultsCount > 1 ? "s" : ""}`
+      : null,
+    request.childrenCount != null && request.childrenCount > 0
+      ? `${request.childrenCount} enfant${request.childrenCount > 1 ? "s" : ""}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const childAges = request.childAges?.trim() || "";
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -46,119 +62,360 @@ export function generateHotelRequestHTML(request) {
   <meta charset="utf-8" />
   <title>Devis hôtel — ${escapeHtml(fullName)}</title>
   <style>
-    body { font-family: "Segoe UI", system-ui, sans-serif; color: #0f172a; margin: 24px; line-height: 1.45; }
-    h1 { font-size: 22px; margin: 0 0 8px; color: #312e81; }
-    h2 { font-size: 16px; margin: 20px 0 8px; color: #4338ca; }
-    .meta { font-size: 13px; color: #64748b; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px; }
-    .notes { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; white-space: pre-wrap; }
-    .quote-section { margin-top: 28px; page-break-inside: avoid; }
-    table.quote-grid { width: 100%; border-collapse: collapse; font-size: 13px; }
-    table.quote-grid th,
-    table.quote-grid td { border: 1px solid #cbd5e1; padding: 10px 8px; vertical-align: middle; }
-    table.quote-grid th { background: #eef2ff; font-weight: 700; text-align: left; color: #312e81; }
-    table.quote-grid td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
-    table.quote-grid tr.total td { background: #f8fafc; font-weight: 700; }
-    .warn { color: #9a3412; font-size: 12px; margin-top: 6px; }
+    @page { margin: 16mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #0f172a;
+      background: #fff;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      font-size: 13.5px;
+      line-height: 1.5;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .sheet {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 8px 4px 24px;
+    }
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #0f172a;
+    }
+    .brand {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #0f172a;
+    }
+    .doc-title {
+      margin: 6px 0 0;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #0f172a;
+    }
+    .meta-block {
+      text-align: right;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.55;
+    }
+    .meta-block strong {
+      display: block;
+      color: #0f172a;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .section {
+      margin-top: 28px;
+    }
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px 18px;
+      background: #fff;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 28px;
+    }
+    .field-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 2px;
+    }
+    .field-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .field-value.muted,
+    .muted {
+      color: #64748b;
+      font-weight: 500;
+    }
+    .hotel-choices {
+      margin: 0;
+      padding-left: 1.15rem;
+      color: #0f172a;
+      font-weight: 600;
+    }
+    .hotel-choices li { margin: 0.2rem 0; }
+    .choice-note {
+      margin: 0;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .quote-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .quote-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      page-break-inside: avoid;
+    }
+    .quote-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 16px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .quote-hotel {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #0f172a;
+    }
+    .quote-room {
+      margin: 4px 0 0;
+      font-size: 13px;
+      font-weight: 500;
+      color: #475569;
+    }
+    .quote-price {
+      text-align: right;
+      white-space: nowrap;
+    }
+    .quote-price-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .quote-price-value {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+    }
+    .quote-card-body {
+      padding: 12px 16px 14px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px 16px;
+    }
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+      padding: 0 16px 14px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #f1f5f9;
+      color: #334155;
+    }
+    .pill.transfer {
+      background: #ecfdf5;
+      color: #065f46;
+    }
+    .empty-quote {
+      margin: 0;
+      padding: 16px 18px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      color: #64748b;
+      font-size: 13px;
+    }
+    .notes {
+      white-space: pre-wrap;
+      font-weight: 500;
+      color: #334155;
+      line-height: 1.55;
+    }
+    .footer {
+      margin-top: 32px;
+      padding-top: 14px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 11px;
+      color: #94a3b8;
+      text-align: center;
+    }
     @media print {
-      body { margin: 12px; }
-      .no-print { display: none !important; }
+      .sheet { padding: 0; max-width: none; }
+    }
+    @media screen {
+      body { background: #f1f5f9; padding: 28px 16px; }
+      .sheet {
+        background: #fff;
+        padding: 36px 40px 40px;
+        border-radius: 16px;
+        box-shadow: 0 18px 50px -28px rgba(15, 23, 42, 0.35);
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Devis hôtel — Hurghada Dream</h1>
-  <p class="meta">Émis le ${escapeHtml(new Date().toLocaleString("fr-FR"))} · Demande du ${escapeHtml(createdLabel)} · Réf. #${escapeHtml(String(request.id || ""))}</p>
+  <div class="sheet">
+    <header class="topbar">
+      <div>
+        <div class="brand">Hurghada Dream</div>
+        <h1 class="doc-title">Devis hôtel</h1>
+      </div>
+      <div class="meta-block">
+        <strong>Réf. #${escapeHtml(refId)}</strong>
+        Émis le ${escapeHtml(issuedLabel)}<br />
+        Demande du ${escapeHtml(createdLabel)}
+      </div>
+    </header>
 
-  <table>
-    <tbody>
-      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;width:32%;">Client</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(fullName)}</td></tr>
-      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Téléphone</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.phone || "—")}</td></tr>
-      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">E-mail</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.email || "—")}</td></tr>
-      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Arrivée</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(formatHotelStayDate(request.arrivalDate))}</td></tr>
-      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Départ</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(formatHotelStayDate(request.departureDate))}</td></tr>
-      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Adultes</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.adultsCount != null && request.adultsCount >= 1 ? String(request.adultsCount) : "—")}</td></tr>
-      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Enfants</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.childrenCount != null && request.childrenCount >= 0 ? String(request.childrenCount) : "—")}</td></tr>
-      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Âge(s) enfants</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(request.childAges?.trim() ? request.childAges : "—")}</td></tr>
-      <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;">Formule</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${boardHtml}</td></tr>
-    </tbody>
-  </table>
+    <section class="section">
+      <h2 class="section-title">Client & séjour</h2>
+      <div class="card grid-2">
+        <div>
+          <span class="field-label">Client</span>
+          <div class="field-value">${escapeHtml(fullName)}</div>
+        </div>
+        <div>
+          <span class="field-label">Formule</span>
+          <div class="field-value">${escapeHtml(boardLabel)}</div>
+        </div>
+        <div>
+          <span class="field-label">Téléphone</span>
+          <div class="field-value">${escapeHtml(request.phone || "—")}</div>
+        </div>
+        <div>
+          <span class="field-label">E-mail</span>
+          <div class="field-value">${escapeHtml(request.email || "—")}</div>
+        </div>
+        <div>
+          <span class="field-label">Arrivée</span>
+          <div class="field-value">${escapeHtml(formatHotelStayDate(request.arrivalDate))}</div>
+        </div>
+        <div>
+          <span class="field-label">Départ</span>
+          <div class="field-value">${escapeHtml(formatHotelStayDate(request.departureDate))}</div>
+        </div>
+        <div>
+          <span class="field-label">Voyageurs</span>
+          <div class="field-value">${escapeHtml(travelers || "—")}</div>
+        </div>
+        <div>
+          <span class="field-label">Âge(s) enfants</span>
+          <div class="field-value ${childAges ? "" : "muted"}">${escapeHtml(childAges || "—")}</div>
+        </div>
+      </div>
+    </section>
 
-  <h2>Hôtels souhaités</h2>
-  <table>
-    <tbody>${hotelRows}</tbody>
-  </table>
+    <section class="section">
+      <h2 class="section-title">Hôtels souhaités</h2>
+      <div class="card">${hotelChoicesHtml}</div>
+    </section>
 
-  ${buildQuoteTablesHTML(quoteHotels, {
-    checkIn: formatHotelStayDate(request.arrivalDate),
-    checkOut: formatHotelStayDate(request.departureDate),
-    boardLabel,
-  })}
+    ${buildQuoteCardsHTML(quoteHotels, {
+      checkIn: formatHotelStayDate(request.arrivalDate),
+      checkOut: formatHotelStayDate(request.departureDate),
+      boardLabel,
+    })}
 
-  <h2>Notes client</h2>
-  <div class="notes">${escapeHtml(request.notes?.trim() ? request.notes : "—")}</div>
+    <section class="section">
+      <h2 class="section-title">Notes client</h2>
+      <div class="card notes">${escapeHtml(request.notes?.trim() ? request.notes : "—")}</div>
+    </section>
+
+    <p class="footer">Hurghada Dream — devis indicatif, sous réserve de disponibilité.</p>
+  </div>
 </body>
 </html>`;
 }
 
-function buildQuoteTablesHTML(quoteHotels, { checkIn, checkOut, boardLabel }) {
+function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel }) {
   const rows = Array.isArray(quoteHotels) ? quoteHotels.filter((h) => h?.hotelName) : [];
   if (!rows.length) {
-    return `<div class="quote-section"><p style="font-size:13px;color:#64748b;">Aucune réponse tarifaire enregistrée — ouvrez <strong>Réponse</strong>, choisissez une catégorie, enregistrez, puis imprimez.</p></div>`;
+    return `<section class="section">
+      <h2 class="section-title">Proposition</h2>
+      <p class="empty-quote">Aucune proposition tarifaire pour le moment.</p>
+    </section>`;
   }
 
-  const body = rows
+  const cards = rows
     .map((h) => {
       const quote = h.quote || {};
       const totalLabel = formatQuoteMoney(quote.total, quote.currency || "EUR");
-      const warn =
-        Array.isArray(quote.warnings) && quote.warnings.length
-          ? `<div class="warn">${escapeHtml(quote.warnings.join(" · "))}</div>`
-          : "";
-      const transferNote =
-        quote.transferIncluded && Number(quote.transferFee) > 0
-          ? `<div style="font-size:12px;color:#334155;margin-top:6px;font-weight:600;">supp transfert ${escapeHtml(
-              String(Number(quote.transferFee))
-            )}€</div>`
-          : "";
-      const detail = [
-        quote.nights != null ? `${quote.nights} nuit(s)` : null,
-        quote.freeChildren > 0 ? `${quote.freeChildren} enfant(s) gratuit(s)` : null,
-        quote.priceManual ? "prix modifié" : null,
-        quote.stayTotal != null && quote.transferIncluded
-          ? `séjour ${formatQuoteMoney(quote.stayTotal, quote.currency || "EUR")}`
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" · ");
-      return `<tr>
-        <td>${escapeHtml(h.hotelName)}</td>
-        <td>${escapeHtml(h.roomCategory || "—")}${detail ? `<div style="font-size:11px;color:#64748b;margin-top:4px;">${escapeHtml(detail)}</div>` : ""}${transferNote}${warn}</td>
-        <td>${escapeHtml(boardLabel)}</td>
-        <td>${escapeHtml(checkIn)}</td>
-        <td>${escapeHtml(checkOut)}</td>
-        <td class="num">${escapeHtml(totalLabel)}</td>
-      </tr>`;
+      const pills = [];
+      if (quote.nights != null && quote.nights > 0) {
+        pills.push(
+          `<span class="pill">${escapeHtml(String(quote.nights))} nuit${quote.nights > 1 ? "s" : ""}</span>`
+        );
+      }
+      if (quote.freeChildren > 0) {
+        pills.push(
+          `<span class="pill">${escapeHtml(String(quote.freeChildren))} enfant(s) gratuit(s)</span>`
+        );
+      }
+      if (quote.transferIncluded) {
+        pills.push(`<span class="pill transfer">transfert inclus</span>`);
+      }
+      return `<article class="quote-card">
+        <div class="quote-card-head">
+          <div>
+            <h3 class="quote-hotel">${escapeHtml(h.hotelName)}</h3>
+            <p class="quote-room">${escapeHtml(h.roomCategory || "Catégorie à confirmer")}</p>
+          </div>
+          <div class="quote-price">
+            <span class="quote-price-label">Total</span>
+            <div class="quote-price-value">${escapeHtml(totalLabel)}</div>
+          </div>
+        </div>
+        <div class="quote-card-body">
+          <div>
+            <span class="field-label">Formule</span>
+            <div class="field-value">${escapeHtml(boardLabel)}</div>
+          </div>
+          <div>
+            <span class="field-label">Check-in</span>
+            <div class="field-value">${escapeHtml(checkIn)}</div>
+          </div>
+          <div>
+            <span class="field-label">Check-out</span>
+            <div class="field-value">${escapeHtml(checkOut)}</div>
+          </div>
+        </div>
+        ${pills.length ? `<div class="pill-row">${pills.join("")}</div>` : ""}
+      </article>`;
     })
     .join("");
 
-  return `
-  <div class="quote-section">
-    <h2>Devis proposé</h2>
-    <table class="quote-grid" aria-label="Devis hôtel">
-      <thead>
-        <tr>
-          <th>Hôtel</th>
-          <th>Type de chambre</th>
-          <th>Formule</th>
-          <th>Check-in</th>
-          <th>Check-out</th>
-          <th>Prix total</th>
-        </tr>
-      </thead>
-      <tbody>${body}</tbody>
-    </table>
-  </div>`;
+  return `<section class="section">
+    <h2 class="section-title">Proposition</h2>
+    <div class="quote-list">${cards}</div>
+  </section>`;
 }
 
 function escapeHtml(value) {

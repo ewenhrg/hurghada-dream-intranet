@@ -585,9 +585,7 @@ function HotelResponseModal({
                             </p>
                             <p className="mt-0.5 text-[11px] font-medium text-slate-600">
                               Séjour {formatQuoteMoney(quote.stayTotal, quote.currency)}
-                              {quote.transferIncluded
-                                ? ` · Transfert +${formatQuoteMoney(quote.transferFee, quote.currency)}`
-                                : ""}
+                              {quote.transferIncluded ? " · transfert inclus" : ""}
                             </p>
                             <p className="mt-0.5 text-[11px] font-medium text-slate-600">
                               Adultes {formatQuoteMoney(quote.adultsTotal, quote.currency)}
