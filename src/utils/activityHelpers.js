@@ -19,6 +19,23 @@ export function getBuggyPrices(activityName) {
   return { simple: 0, family: 0 };
 }
 
+/** Calèche : forfait par calèche (comme buggy = à l’unité), pas par personne. */
+export function isCalecheActivity(activityName) {
+  const name = normalizeActivityName(activityName);
+  if (!name) return false;
+  return name.includes("caleche");
+}
+
+export function getCalecheUnitPrice(activityLike) {
+  const fromDb = Number(activityLike?.priceAdult ?? activityLike?.price_adult ?? NaN);
+  if (Number.isFinite(fromDb) && fromDb > 0) return fromDb;
+  return 45;
+}
+
+export function computeCalecheLineTotal(calecheCount, activityLike) {
+  return Math.max(0, Number(calecheCount) || 0) * getCalecheUnitPrice(activityLike);
+}
+
 // Helper pour vérifier si une activité est Speed Boat (ex: "SPEED BOAT", "SPEEDBOAT", "SPEEDBOAT SUNSET")
 export function isSpeedBoatActivity(activityName) {
   if (!activityName) return false;
@@ -280,6 +297,9 @@ function readStoredListPrices(activityLike) {
  */
 export function getActivityTarifListLines(activityLike) {
   const name = activityLike?.name || "";
+  if (isCalecheActivity(name)) {
+    return [`Calèche : ${getCalecheUnitPrice(activityLike)} € / calèche (pas par personne)`];
+  }
   const { adult, child, baby } = readStoredListPrices(activityLike);
   if (adult > 0 || child > 0 || baby > 0) return null;
 

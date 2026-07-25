@@ -79,6 +79,9 @@ function getCatalogLineOptionLines(item) {
   if (bs > 0) lines.push(`Buggy 2 personnes × ${bs}`);
   if (bf > 0) lines.push(`Buggy 4 personnes × ${bf}`);
 
+  const calecheCount = Number(item.calecheCount) || 0;
+  if (calecheCount > 0) lines.push(`Calèche × ${calecheCount}`);
+
   const y250 = Number(item.yamaha250) || 0;
   const k640 = Number(item.ktm640) || 0;
   const k530 = Number(item.ktm530) || 0;

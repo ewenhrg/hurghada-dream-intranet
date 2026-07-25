@@ -8,6 +8,9 @@ import {
   computeSpeedBoatLineTotal,
   isBuggyActivity,
   getBuggyPrices,
+  isCalecheActivity,
+  computeCalecheLineTotal,
+  getCalecheUnitPrice,
   isMotoCrossActivity,
   getMotoCrossPrices,
   isBoatPartyActivity,
@@ -147,6 +150,10 @@ export function computePublicCatalogLineTotal(activity, line) {
     return num(line?.buggySimple) * p.simple + num(line?.buggyFamily) * p.family;
   }
 
+  if (isCalecheActivity(name)) {
+    return computeCalecheLineTotal(line?.calecheCount, activity);
+  }
+
   if (isMotoCrossActivity(name)) {
     const p = getMotoCrossPrices();
     return (
@@ -198,12 +205,14 @@ export function computePublicCatalogLineTotal(activity, line) {
  */
 export function getPublicCatalogListFromPrice(activity) {
   if (!activity) return null;
+  const name = activity.name || "";
+  if (isCalecheActivity(name)) {
+    return { amount: getCalecheUnitPrice(activity), currency: activity.currency || "EUR" };
+  }
   const db = readDbPrices(activity);
   if (db.adult > 0) {
     return { amount: db.adult, currency: activity.currency || "EUR" };
   }
-
-  const name = activity.name || "";
   if (isSpeedBoatActivity(name)) {
     return { amount: 145, currency: activity.currency || "EUR" };
   }

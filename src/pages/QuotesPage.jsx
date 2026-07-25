@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -145,6 +145,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     speedBoatExtra: [], // Array pour permettre plusieurs extras
     buggySimple: "",
     buggyFamily: "",
+    calecheCount: "",
     yamaha250: "",
     ktm640: "",
     ktm530: "",
@@ -855,15 +856,23 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       const babiesCount =
         c.act && isActivityBabiesForbidden(c.act) ? 0 : Number(c.raw.babies || 0);
       const totalParticipants = Number(c.raw.adults || 0) + Number(c.raw.children || 0) + babiesCount;
-      // Pour les activités buggy/moto, on vérifie les véhicules
+      // Pour les activités buggy/moto/calèche, on vérifie les véhicules
       if (isBoatPartyActivity(c.act?.name)) {
         const totalGuests = Number(c.raw.boatPartyMen || 0) + Number(c.raw.boatPartyWomen || 0);
         return totalGuests === 0;
       }
-      const isBuggyOrMoto = isBuggyActivity(c.act?.name) || isMotoCrossActivity(c.act?.name);
-      if (isBuggyOrMoto) {
-        const totalVehicles = Number(c.raw.buggySimple || 0) + Number(c.raw.buggyFamily || 0) +
-                             Number(c.raw.yamaha250 || 0) + Number(c.raw.ktm640 || 0) + Number(c.raw.ktm530 || 0);
+      const isBuggyOrMotoOrCaleche =
+        isBuggyActivity(c.act?.name) ||
+        isMotoCrossActivity(c.act?.name) ||
+        isCalecheActivity(c.act?.name);
+      if (isBuggyOrMotoOrCaleche) {
+        const totalVehicles =
+          Number(c.raw.buggySimple || 0) +
+          Number(c.raw.buggyFamily || 0) +
+          Number(c.raw.yamaha250 || 0) +
+          Number(c.raw.ktm640 || 0) +
+          Number(c.raw.ktm530 || 0) +
+          Number(c.raw.calecheCount || 0);
         return totalVehicles === 0;
       }
 
@@ -959,6 +968,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         speedBoatExtra: Array.isArray(c.raw.speedBoatExtra) ? c.raw.speedBoatExtra : (c.raw.speedBoatExtra ? [c.raw.speedBoatExtra] : []),
         buggySimple: Number(c.raw.buggySimple || 0),
         buggyFamily: Number(c.raw.buggyFamily || 0),
+        calecheCount: Number(c.raw.calecheCount || 0),
         yamaha250: Number(c.raw.yamaha250 || 0),
         ktm640: Number(c.raw.ktm640 || 0),
         ktm530: Number(c.raw.ktm530 || 0),
@@ -1780,6 +1790,43 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 pt-4 border-t border-orange-200/60">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-2">👥 Adultes (info uniquement)</label>
+                      <NumberInput
+                        value={c.raw.adults ?? ""}
+                        onChange={(e) => setItem(idx, { adults: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-2">
+                        👶 Enfants{c.act?.ageChild ? <span className="text-slate-400 ml-1">({c.act.ageChild})</span> : ""} (info uniquement)
+                      </label>
+                      <NumberInput
+                        value={c.raw.children ?? ""}
+                        onChange={(e) => setItem(idx, { children: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : c.act && isCalecheActivity(c.act.name) ? (
+                <div className="bg-gradient-to-br from-amber-50/60 to-yellow-50/40 border-2 border-amber-200/60 rounded-xl p-4 md:p-5">
+                  <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">
+                    🐴 Calèche — {getCalecheUnitPrice(c.act)}€ / calèche
+                  </label>
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-slate-600 mb-2">
+                      Nombre de calèches ({getCalecheUnitPrice(c.act)}€ / u.)
+                    </label>
+                    <NumberInput
+                      value={c.raw.calecheCount ?? ""}
+                      onChange={(e) =>
+                        setItem(idx, {
+                          calecheCount: e.target.value === "" ? "" : e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 pt-4 border-t border-amber-200/60">
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 mb-2">👥 Adultes (info uniquement)</label>
                       <NumberInput

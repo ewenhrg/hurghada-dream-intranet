@@ -11,6 +11,8 @@ import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import {
   getActivityPublicProse,
   isBuggyActivity,
+  isCalecheActivity,
+  getCalecheUnitPrice,
   isCairePrivatifActivity,
   isLouxorPrivatifActivity,
   isMotoCrossActivity,
@@ -43,6 +45,7 @@ const INITIAL_CATALOG_SPECIAL = {
   speedBoatExtra: [],
   buggySimple: 0,
   buggyFamily: 0,
+  calecheCount: 0,
   yamaha250: 0,
   ktm640: 0,
   ktm530: 0,
@@ -472,6 +475,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
     if (isBuggyActivity(activity.name)) {
       return "Indiquez le nombre de buggys 2 personnes / 4 personnes ci-dessous (prix selon grille interne).";
     }
+    if (isCalecheActivity(activity.name)) {
+      return `Indiquez le nombre de calèches — ${getCalecheUnitPrice(activity)} € / calèche (pas par personne).`;
+    }
     if (isMotoCrossActivity(activity.name)) {
       return "Sélectionnez le nombre de motos par modèle (prix affiché au total).";
     }
@@ -669,6 +675,27 @@ export function PublicCatalogueActivityPage({ activityId }) {
               ))}
             </select>
           </div>
+        </div>
+      );
+    }
+
+    if (isCalecheActivity(name)) {
+      return (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3">
+          <label className="mb-1 block text-xs font-semibold text-gray-700">
+            Nombre de calèches ({getCalecheUnitPrice(activity)} € / u.)
+          </label>
+          <select
+            className="w-full rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm"
+            value={special.calecheCount}
+            onChange={(e) => setSpecial((s) => ({ ...s, calecheCount: Number(e.target.value) }))}
+          >
+            {[0, 1, 2, 3, 4, 5, 6].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
         </div>
       );
     }
@@ -902,6 +929,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
     if (isBuggyActivity(name)) {
       return special.buggySimple === 0 && special.buggyFamily === 0;
+    }
+    if (isCalecheActivity(name)) {
+      return special.calecheCount === 0;
     }
     if (isMotoCrossActivity(name)) {
       return special.yamaha250 + special.ktm640 + special.ktm530 === 0;

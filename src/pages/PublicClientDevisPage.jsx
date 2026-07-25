@@ -421,6 +421,7 @@ export function PublicClientDevisPage() {
             : [],
         buggySimple: toNumber(line.buggySimple),
         buggyFamily: toNumber(line.buggyFamily),
+        calecheCount: toNumber(line.calecheCount),
         yamaha250: toNumber(line.yamaha250),
         boatPartyMen: toNumber(line.boatPartyMen),
         boatPartyWomen: toNumber(line.boatPartyWomen),

@@ -5,6 +5,8 @@ import {
   computeSpeedBoatLineTotal,
   isBuggyActivity,
   getBuggyPrices,
+  isCalecheActivity,
+  computeCalecheLineTotal,
   isBoatPartyActivity,
   computeBoatPartyLineTotal,
   isMotoCrossActivity,
@@ -83,6 +85,8 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         const buggyFamily = Number(it.buggyFamily || 0);
         const prices = getBuggyPrices(act.name);
         lineTotal = buggySimple * prices.simple + buggyFamily * prices.family;
+      } else if (act && isCalecheActivity(act.name)) {
+        lineTotal = computeCalecheLineTotal(it.calecheCount, act);
       } else if (act && isMotoCrossActivity(act.name)) {
         // cas spécial MOTO CROSS : calcul basé sur les trois types de moto
         const yamaha250 = Number(it.yamaha250 || 0);

@@ -20,6 +20,7 @@ export function createBlankQuoteLine() {
     speedBoatExtra: [],
     buggySimple: "",
     buggyFamily: "",
+    calecheCount: "",
     yamaha250: "",
     ktm640: "",
     ktm530: "",
@@ -79,6 +80,7 @@ export function mergePublicSavedLineIntoQuoteItem(line) {
 
   base.buggySimple = toVehicleCountField(line.buggySimple);
   base.buggyFamily = toVehicleCountField(line.buggyFamily);
+  base.calecheCount = toVehicleCountField(line.calecheCount);
   base.yamaha250 = toVehicleCountField(line.yamaha250);
   base.ktm640 = toVehicleCountField(line.ktm640);
   base.ktm530 = toVehicleCountField(line.ktm530);

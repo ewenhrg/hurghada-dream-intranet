@@ -9,7 +9,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -368,6 +368,7 @@ function QuoteCardComponent({
       baseItem.babies = item.babies ?? 0;
       baseItem.buggySimple = item.buggySimple ?? 0;
       baseItem.buggyFamily = item.buggyFamily ?? 0;
+      baseItem.calecheCount = item.calecheCount ?? 0;
       baseItem.yamaha250 = item.yamaha250 ?? 0;
       baseItem.boatPartyMen = item.boatPartyMen ?? 0;
       baseItem.boatPartyWomen = item.boatPartyWomen ?? 0;
@@ -1413,6 +1414,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     speedBoatExtra: [],
     buggySimple: "",
     buggyFamily: "",
+    calecheCount: "",
     yamaha250: "",
     ktm640: "",
     ktm530: "",
@@ -1503,6 +1505,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         const buggyFamily = Number(it.buggyFamily || 0);
         const prices = getBuggyPrices(act.name);
         lineTotal = buggySimple * prices.simple + buggyFamily * prices.family;
+      } else if (act && isCalecheActivity(act.name)) {
+        lineTotal = computeCalecheLineTotal(it.calecheCount, act);
       } else if (act && isMotoCrossActivity(act.name)) {
         // cas spécial MOTO CROSS : calcul basé sur les trois types de moto
         const yamaha250 = Number(it.yamaha250 || 0);
@@ -1721,6 +1725,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           speedBoatExtra: Array.isArray(c.raw.speedBoatExtra) ? c.raw.speedBoatExtra : (c.raw.speedBoatExtra ? [c.raw.speedBoatExtra] : []),
           buggySimple: Number(c.raw.buggySimple || 0),
           buggyFamily: Number(c.raw.buggyFamily || 0),
+          calecheCount: Number(c.raw.calecheCount || 0),
           yamaha250: Number(c.raw.yamaha250 || 0),
           ktm640: Number(c.raw.ktm640 || 0),
           ktm530: Number(c.raw.ktm530 || 0),
@@ -2079,6 +2084,20 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         className="text-base md:text-lg py-3"
                       />
                     </div>
+                  </div>
+                )}
+                {c.act && isCalecheActivity(c.act.name) && (
+                  <div className="mt-4 rounded-xl border-2 border-amber-300/70 bg-amber-50/60 p-5 md:p-6">
+                    <p className="mb-3 text-sm font-bold text-slate-800 md:text-base">
+                      🐴 Nombre de calèches ({getCalecheUnitPrice(c.act)}€ / calèche)
+                    </p>
+                    <NumberInput
+                      value={c.raw.calecheCount ?? ""}
+                      onChange={(e) =>
+                        setItem(idx, { calecheCount: e.target.value === "" ? "" : e.target.value })
+                      }
+                      className="py-3 text-base md:text-lg"
+                    />
                   </div>
                 )}
                 {/* Champs spécifiques pour MotoCross - Modifiables par tous */}
