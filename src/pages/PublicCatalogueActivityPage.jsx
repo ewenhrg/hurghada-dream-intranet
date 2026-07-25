@@ -29,6 +29,8 @@ import {
   proseFromActivityNotes,
   requiresMinimumTwoParticipants,
   hasEnoughParticipantsForActivity,
+  warnsRecommendedTwoParticipants,
+  isBelowRecommendedTwoParticipants,
 } from "../utils/activityHelpers";
 import {
   computePublicCatalogLineTotal,
@@ -219,6 +221,8 @@ function BookingCardShell({
   babiesForbidden = false,
   requiresMinTwo = false,
   participantsOk = true,
+  warnsRecommendedTwo = false,
+  belowRecommendedTwo = false,
 }) {
   const currency = activity.currency || "EUR";
   const ageChild = String(activity.age_child || "").trim();
@@ -274,6 +278,11 @@ function BookingCardShell({
       {requiresMinTwo ? (
         <p className="rounded-xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-sm font-semibold text-amber-950">
           Minimum 2 personnes (adultes + enfants) pour réserver.
+        </p>
+      ) : null}
+      {warnsRecommendedTwo ? (
+        <p className="rounded-xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-sm font-semibold text-amber-950">
+          Attention : El Gouna est recommandé à partir de 2 personnes (adultes + enfants).
         </p>
       ) : null}
 
@@ -357,6 +366,11 @@ function BookingCardShell({
         {requiresMinTwo && !participantsOk ? (
           <p className="mt-2 text-center text-sm font-semibold text-red-600">
             Ajoutez au moins 2 personnes (adultes + enfants).
+          </p>
+        ) : null}
+        {warnsRecommendedTwo && belowRecommendedTwo ? (
+          <p className="mt-2 text-center text-sm font-semibold text-amber-800">
+            Recommandé à partir de 2 personnes — vous pouvez quand même continuer.
           </p>
         ) : null}
       </div>
@@ -1001,7 +1015,12 @@ export function PublicCatalogueActivityPage({ activityId }) {
     hasEnoughParticipantsForActivity(activity?.name, { adults, children: childCount });
 
   const requiresMinTwo = requiresMinimumTwoParticipants(activity?.name);
+  const warnsRecommendedTwo = warnsRecommendedTwoParticipants(activity?.name);
   const participantsOk = hasEnoughParticipantsForActivity(activity?.name, {
+    adults,
+    children: childCount,
+  });
+  const belowRecommendedTwo = isBelowRecommendedTwoParticipants(activity?.name, {
     adults,
     children: childCount,
   });
@@ -1454,6 +1473,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   priceCaption={bookingPriceCaption}
                   requiresMinTwo={requiresMinTwo}
                   participantsOk={participantsOk}
+                  warnsRecommendedTwo={warnsRecommendedTwo}
+                  belowRecommendedTwo={belowRecommendedTwo}
                 />
               </div>
             </div>
@@ -1489,6 +1510,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
               priceCaption={bookingPriceCaption}
               requiresMinTwo={requiresMinTwo}
               participantsOk={participantsOk}
+              warnsRecommendedTwo={warnsRecommendedTwo}
+              belowRecommendedTwo={belowRecommendedTwo}
             />
           </div>
         </div>

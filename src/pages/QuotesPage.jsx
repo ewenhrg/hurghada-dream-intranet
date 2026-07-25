@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -888,7 +888,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
-    // Minimum 2 personnes (adultes + enfants) pour El Gouna, Karting, Combo aquatique
+    // Minimum 2 personnes (adultes + enfants) pour Karting, Combo aquatique, Jeux aquatique
     const activitiesBelowMinTwo = validComputed.filter((c) => {
       if (!requiresMinimumTwoParticipants(c.act?.name)) return false;
       return !hasEnoughParticipantsForActivity(c.act?.name, {
@@ -903,6 +903,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       );
       setIsSubmitting(false);
       return;
+    }
+
+    // El Gouna : alerte seulement (pas de blocage)
+    const elGounaBelowRecommended = validComputed.filter((c) =>
+      isBelowRecommendedTwoParticipants(c.act?.name, {
+        adults: c.raw.adults,
+        children: c.raw.children,
+      })
+    );
+    if (elGounaBelowRecommended.length > 0) {
+      const activityNames = elGounaBelowRecommended.map((c) => c.act?.name || "El Gouna").join(", ");
+      toast.warning(
+        `${activityNames} : recommandé à partir de 2 personnes (adultes + enfants).`,
+      );
     }
 
     // Vérifier les stop sales
@@ -2510,6 +2524,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       Minimum 2 personnes (adultes + enfants) pour réserver cette activité.
                     </p>
                   )}
+                  {warnsRecommendedTwoParticipants(c.act?.name) ? (
+                    <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
+                      Attention : El Gouna est recommandé à partir de 2 personnes (adultes + enfants).
+                    </p>
+                  ) : null}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-2">Adultes</label>

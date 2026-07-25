@@ -9,7 +9,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -1662,6 +1662,19 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       return;
     }
 
+    const elGounaBelowRecommended = validComputed.filter((c) =>
+      isBelowRecommendedTwoParticipants(c.act?.name, {
+        adults: c.raw.adults,
+        children: c.raw.children,
+      })
+    );
+    if (elGounaBelowRecommended.length > 0) {
+      const activityNames = elGounaBelowRecommended.map((c) => c.act?.name || "El Gouna").join(", ");
+      toast.warning(
+        `${activityNames} : recommandé à partir de 2 personnes (adultes + enfants).`,
+      );
+    }
+
     // Calculer le total uniquement avec les items valides
     const validGrandTotal = validComputed.reduce((s, c) => s + (c.lineTotal || 0), 0);
     const validGrandCurrency = validComputed.find((c) => c.currency)?.currency || "EUR";
@@ -2036,6 +2049,11 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       Minimum 2 personnes (adultes + enfants) pour réserver cette activité.
                     </p>
                   )}
+                  {warnsRecommendedTwoParticipants(c.act?.name) ? (
+                    <p className="sm:col-span-3 -mt-1 mb-0 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
+                      Attention : El Gouna est recommandé à partir de 2 personnes (adultes + enfants).
+                    </p>
+                  ) : null}
                   <div>
                     <p className="text-sm md:text-base font-bold text-slate-800 mb-3">👥 Adultes</p>
                     <NumberInput 

@@ -170,18 +170,40 @@ function normalizeActivityName(activityName) {
 }
 
 /**
+ * El Gouna / El Goune — recommandation 2 personnes (alerte seulement, pas de blocage).
+ */
+export function isElGounaActivity(activityName) {
+  const name = normalizeActivityName(activityName);
+  if (!name) return false;
+  return name.includes("el gouna") || name.includes("el goune");
+}
+
+/**
  * Activités réservables uniquement à partir de 2 personnes (adultes + enfants).
- * Couvre El Gouna / El Goune, Karting, Combo aquatique, Jeux aquatique.
+ * Couvre Karting, Combo aquatique, Jeux aquatique.
+ * El Gouna : alerte seulement (voir warnsRecommendedTwoParticipants).
  * Le parachute est autorisé dès 1 personne.
  */
 export function requiresMinimumTwoParticipants(activityName) {
   const name = normalizeActivityName(activityName);
   if (!name) return false;
-  if (name.includes("el gouna") || name.includes("el goune")) return true;
+  if (isElGounaActivity(activityName)) return false;
   if (name.includes("karting")) return true;
   if (name.includes("combo") && name.includes("aquatique")) return true;
   if (name.includes("jeux aquatique")) return true;
   return false;
+}
+
+/** Alerte non bloquante : idéal à partir de 2 personnes (El Gouna). */
+export function warnsRecommendedTwoParticipants(activityName) {
+  return isElGounaActivity(activityName);
+}
+
+export function isBelowRecommendedTwoParticipants(activityName, counts = {}) {
+  return (
+    warnsRecommendedTwoParticipants(activityName) &&
+    countBookableParticipants(counts) < 2
+  );
 }
 
 /** Adultes + enfants (les bébés ne comptent pas pour le minimum). */
