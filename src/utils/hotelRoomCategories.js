@@ -168,6 +168,31 @@ export function formatRoomOccupancyLabel(cat) {
     .join(" · ");
 }
 
+/** Capacité adultes max parmi les options renseignées (null si aucune). */
+export function getMaxAdultsForRoomCategory(cat) {
+  const c = normalizeRoomCategory(cat);
+  if (!c) return null;
+  let max = null;
+  for (const key of ROOM_OCCUPANCY_OPTION_KEYS) {
+    const n = c[key]?.maxAdults;
+    if (n == null) continue;
+    max = max == null ? n : Math.max(max, n);
+  }
+  return max;
+}
+
+/**
+ * Nombre de chambres nécessaires si les adultes dépassent la capacité max.
+ * Ex. 4 adultes / max 2 → 2 chambres. Sans capacité saisie → 1.
+ */
+export function resolveRoomsNeededForAdults(adultsCount, cat) {
+  const adults = Math.max(0, Number(adultsCount) || 0);
+  const maxAdults = getMaxAdultsForRoomCategory(cat);
+  if (!adults || maxAdults == null || maxAdults <= 0) return 1;
+  if (adults <= maxAdults) return 1;
+  return Math.ceil(adults / maxAdults);
+}
+
 /** Draft UI : chaînes vides pour les inputs. */
 export function occupancyDraftFromCategory(cat) {
   const c = normalizeRoomCategory(cat) || emptyOccupancyOptionsMap();

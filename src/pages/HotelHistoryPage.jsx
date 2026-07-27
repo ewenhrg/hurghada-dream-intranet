@@ -63,6 +63,11 @@ function serializeQuote(quote) {
     freeChildren: quote.freeChildren ?? 0,
     chargedChildren: quote.chargedChildren ?? 0,
     totalAdults: quote.totalAdults ?? 0,
+    roomsNeeded: Math.max(1, Number(quote.roomsNeeded) || 1),
+    maxAdultsPerRoom:
+      quote.maxAdultsPerRoom != null && Number.isFinite(Number(quote.maxAdultsPerRoom))
+        ? Number(quote.maxAdultsPerRoom)
+        : null,
     warnings: Array.isArray(quote.warnings) ? quote.warnings : [],
     hiltonPolicyApplied: quote.hiltonPolicyApplied === true,
     transferIncluded: quote.transferIncluded === true,
@@ -586,6 +591,9 @@ function HotelResponseModal({
                             <p className="mt-0.5 text-[11px] font-medium text-slate-600">
                               Séjour {formatQuoteMoney(quote.stayTotal, quote.currency)}
                               {quote.transferIncluded ? " · transfert inclus" : ""}
+                              {quote.roomsNeeded > 1
+                                ? ` · ${quote.roomsNeeded} chambres`
+                                : ""}
                             </p>
                             <p className="mt-0.5 text-[11px] font-medium text-slate-600">
                               Adultes {formatQuoteMoney(quote.adultsTotal, quote.currency)}

@@ -4,6 +4,11 @@ import {
   hotelMatchesHiltonChildPolicy,
   parseChildAgesInput,
 } from "./hotelChildFreePolicy";
+import {
+  findRoomCategory,
+  getMaxAdultsForRoomCategory,
+  resolveRoomsNeededForAdults,
+} from "./hotelRoomCategories";
 
 /** Nuits d’hôtel : [arrivée, départ) — départ non facturé. */
 export function countHotelNights(arrivalDate, departureDate) {
@@ -87,6 +92,15 @@ export function calculateHotelStayQuote({
   const nights = nightsList.length;
   const adults = Math.max(0, Number(adultsCount) || 0);
   const warnings = [];
+
+  const categoryMeta = findRoomCategory(hotel?.roomCategories, category);
+  const maxAdultsPerRoom = getMaxAdultsForRoomCategory(categoryMeta);
+  const roomsNeeded = resolveRoomsNeededForAdults(adults, categoryMeta);
+  if (roomsNeeded > 1 && maxAdultsPerRoom != null) {
+    warnings.push(
+      `${roomsNeeded} chambres nécessaires (${adults} adultes · max ${maxAdultsPerRoom} adulte${maxAdultsPerRoom > 1 ? "s" : ""} / chambre).`
+    );
+  }
 
   if (!category) {
     return {
@@ -303,6 +317,8 @@ export function calculateHotelStayQuote({
     chargedChildren,
     extraAdultsFromAge,
     totalAdults,
+    roomsNeeded,
+    maxAdultsPerRoom,
     warnings: uniqueWarnings,
     lines,
     hiltonPolicyApplied: hilton,

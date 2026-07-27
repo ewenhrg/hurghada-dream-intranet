@@ -245,6 +245,10 @@ export function generateHotelRequestHTML(request) {
       background: #ecfdf5;
       color: #065f46;
     }
+    .pill.rooms {
+      background: #eff6ff;
+      color: #1e40af;
+    }
     .empty-quote {
       margin: 0;
       padding: 16px 18px;
@@ -374,6 +378,12 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel }) {
           `<span class="pill">${escapeHtml(String(quote.nights))} nuit${quote.nights > 1 ? "s" : ""}</span>`
         );
       }
+      if (Number(quote.roomsNeeded) > 1) {
+        const n = Number(quote.roomsNeeded);
+        pills.push(
+          `<span class="pill rooms">${escapeHtml(String(n))} chambre${n > 1 ? "s" : ""}</span>`
+        );
+      }
       if (quote.freeChildren > 0) {
         pills.push(
           `<span class="pill">${escapeHtml(String(quote.freeChildren))} enfant(s) gratuit(s)</span>`
@@ -382,11 +392,17 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel }) {
       if (quote.transferIncluded) {
         pills.push(`<span class="pill transfer">transfert inclus</span>`);
       }
+      const roomLine = [
+        h.roomCategory || "Catégorie à confirmer",
+        Number(quote.roomsNeeded) > 1 ? `${Number(quote.roomsNeeded)} chambres` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
       return `<article class="quote-card">
         <div class="quote-card-head">
           <div>
             <h3 class="quote-hotel">${escapeHtml(h.hotelName)}</h3>
-            <p class="quote-room">${escapeHtml(h.roomCategory || "Catégorie à confirmer")}</p>
+            <p class="quote-room">${escapeHtml(roomLine)}</p>
           </div>
           <div class="quote-price">
             <span class="quote-price-label">Total</span>
