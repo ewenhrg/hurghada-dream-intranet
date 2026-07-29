@@ -108,6 +108,10 @@ export function collectQuoteUserNames(users = []) {
 /** Écart mini création → modification pour compter un vrai edit (évite le bruit updated_at à la création). */
 const QUOTE_EDIT_MIN_MS = 60_000;
 
+function quoteActivityWeight(rawName) {
+  return personNamesMatch(rawName, "Ewen") ? 2 : 1;
+}
+
 function bumpUserDayCount(map, rawName, dateKey) {
   const name = String(rawName || "").trim() || "Non renseigné";
   if (!dateKey) return;
@@ -122,7 +126,8 @@ function bumpUserDayCount(map, rawName, dateKey) {
 
   if (!map.has(key)) map.set(key, new Map());
   const dayMap = map.get(key);
-  dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + 1);
+  const weight = quoteActivityWeight(name);
+  dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + weight);
 }
 
 function isMeaningfulQuoteEdit(quote) {
@@ -138,12 +143,13 @@ function isMeaningfulQuoteEdit(quote) {
 export function getTotalQuotesForUser(quotes = [], userName) {
   const target = String(userName || "").trim();
   if (!target) return 0;
+  const weight = quoteActivityWeight(target);
   let total = 0;
   for (const q of quotes) {
     const createdBy = String(q?.createdByName || "").trim();
-    if (personNamesMatch(createdBy, target)) total += 1;
+    if (personNamesMatch(createdBy, target)) total += weight;
     if (isMeaningfulQuoteEdit(q) && personNamesMatch(q.updatedByName, target)) {
-      total += 1;
+      total += weight;
     }
   }
   return total;
