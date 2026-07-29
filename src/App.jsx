@@ -638,17 +638,34 @@ export default function App() {
       if (!supabase) return;
       
       try {
-        // Sélection spécifique pour réduire la taille des données transférées
+        // Sélection spécifique pour réduire la taille des données transférées.
+        // Pagination : le plafond max-rows Supabase (souvent 1000) ignore un .limit() plus élevé.
         const quoteSiteKeys = getQuoteSiteKeysForSync();
-        const { data: quotesData, error: quotesError } = await supabase
-          .from("quotes")
-          .select(
-            "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, items, total, currency, paid_stripe, paid_cash"
-          )
-          .in("site_key", quoteSiteKeys)
-          .order("created_at", { ascending: false })
-          .limit(5000); // Fenêtre large pour stats tableau de bord (totaux / calendrier)
-        
+        const QUOTES_SYNC_LIMIT = 3000;
+        const QUOTES_PAGE_SIZE = 1000;
+        const quoteSelect =
+          "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, items, total, currency, paid_stripe, paid_cash";
+
+        let quotesData = [];
+        let quotesError = null;
+        for (let from = 0; from < QUOTES_SYNC_LIMIT; from += QUOTES_PAGE_SIZE) {
+          const to = Math.min(from + QUOTES_PAGE_SIZE, QUOTES_SYNC_LIMIT) - 1;
+          const { data: page, error: pageError } = await supabase
+            .from("quotes")
+            .select(quoteSelect)
+            .in("site_key", quoteSiteKeys)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+
+          if (pageError) {
+            quotesError = pageError;
+            break;
+          }
+          if (!Array.isArray(page) || page.length === 0) break;
+          quotesData = quotesData.concat(page);
+          if (page.length < QUOTES_PAGE_SIZE) break;
+        }
+
         if (!quotesError && Array.isArray(quotesData)) {
           setQuotes((prevQuotes) => {
             // Fonction pour convertir un devis Supabase en format local
