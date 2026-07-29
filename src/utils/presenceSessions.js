@@ -53,7 +53,8 @@ export async function probePresenceTable() {
 
 /**
  * Charge les devis pour le tableau de bord (source Supabase directe).
- * @returns {Promise<{ quotes: Array<{ createdByName: string, createdAt: string }>, error: string|null }>}
+ * Inclut créations + modifications (updated_by_name / updated_at).
+ * @returns {Promise<{ quotes: Array<{ createdByName: string, createdAt: string, updatedByName?: string, updatedAt?: string }>, error: string|null }>}
  */
 export async function loadDashboardQuoteStats({ days = 180 } = {}) {
   if (!__SUPABASE_DEBUG__?.isConfigured || !supabase) {
@@ -66,9 +67,9 @@ export async function loadDashboardQuoteStats({ days = 180 } = {}) {
     const keys = presenceSiteKeys();
     const { data, error } = await supabase
       .from("quotes")
-      .select("created_by_name, created_at")
+      .select("created_by_name, created_at, updated_by_name, updated_at")
       .in("site_key", keys)
-      .gte("created_at", sinceIso)
+      .or(`created_at.gte.${sinceIso},updated_at.gte.${sinceIso}`)
       .order("created_at", { ascending: false })
       .limit(10000);
 
@@ -79,6 +80,8 @@ export async function loadDashboardQuoteStats({ days = 180 } = {}) {
     const quotes = (data || []).map((row) => ({
       createdByName: String(row.created_by_name || "").trim(),
       createdAt: row.created_at || "",
+      updatedByName: String(row.updated_by_name || "").trim(),
+      updatedAt: row.updated_at || "",
     }));
     return { quotes, error: null };
   } catch (err) {

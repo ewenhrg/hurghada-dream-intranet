@@ -286,7 +286,7 @@ export function UserActivityDetailModal({
                     })}
                   </div>
                   <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-                    Temps = connexion réelle · Devis = créés ce jour (même si hors ligne)
+                    Temps = connexion réelle · Devis = créés + modifiés ce jour (même si hors ligne)
                   </p>
                 </div>
 
@@ -302,7 +302,7 @@ export function UserActivityDetailModal({
                     <p className="text-3xl font-semibold tabular-nums tracking-tight text-slate-900">
                       {monthQuotes}
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">créés ce mois</p>
+                    <p className="mt-1 text-xs text-slate-400">créés + modifiés ce mois</p>
                   </div>
 
                   <div className="rounded-xl border border-slate-200 bg-white p-4">

@@ -105,14 +105,46 @@ export function collectQuoteUserNames(users = []) {
   return [...names].sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
 }
 
-/** Total de devis créés par un utilisateur (tous temps). */
+/** Écart mini création → modification pour compter un vrai edit (évite le bruit updated_at à la création). */
+const QUOTE_EDIT_MIN_MS = 60_000;
+
+function bumpUserDayCount(map, rawName, dateKey) {
+  const name = String(rawName || "").trim() || "Non renseigné";
+  if (!dateKey) return;
+
+  let key = name;
+  for (const existing of map.keys()) {
+    if (personNamesMatch(existing, name)) {
+      key = existing;
+      break;
+    }
+  }
+
+  if (!map.has(key)) map.set(key, new Map());
+  const dayMap = map.get(key);
+  dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + 1);
+}
+
+function isMeaningfulQuoteEdit(quote) {
+  const updatedBy = String(quote?.updatedByName || "").trim();
+  if (!updatedBy) return false;
+  const createdMs = new Date(quote?.createdAt || 0).getTime();
+  const updatedMs = new Date(quote?.updatedAt || quote?.updated_at || 0).getTime();
+  if (!Number.isFinite(createdMs) || !Number.isFinite(updatedMs)) return false;
+  return updatedMs - createdMs >= QUOTE_EDIT_MIN_MS;
+}
+
+/** Total de devis (créations + modifications) attribués à un utilisateur. */
 export function getTotalQuotesForUser(quotes = [], userName) {
   const target = String(userName || "").trim();
   if (!target) return 0;
   let total = 0;
   for (const q of quotes) {
-    const name = String(q?.createdByName || "").trim();
-    if (personNamesMatch(name, target)) total += 1;
+    const createdBy = String(q?.createdByName || "").trim();
+    if (personNamesMatch(createdBy, target)) total += 1;
+    if (isMeaningfulQuoteEdit(q) && personNamesMatch(q.updatedByName, target)) {
+      total += 1;
+    }
   }
   return total;
 }
@@ -128,28 +160,19 @@ export function getActiveQuoteDaysCount(countByDay) {
 }
 
 /**
- * Fusionne les buckets de noms équivalents (casse / accents) sous une seule clé d’affichage.
+ * Compte créations + modifications par utilisateur et par jour (fuseau Cairo).
  * @returns {Map<string, Map<string, number>>} userName -> dateKey -> count
  */
 export function buildQuotesCountByUserAndDay(quotes = []) {
   const map = new Map();
   for (const q of quotes) {
-    const rawName = String(q?.createdByName || "").trim() || "Non renseigné";
-    // Uniquement la date de CRÉATION du devis (jamais updated_at / date activité)
-    const dateKey = toLocalDateKey(q?.createdAt);
-    if (!dateKey) continue;
+    const createdKey = toLocalDateKey(q?.createdAt);
+    bumpUserDayCount(map, q?.createdByName, createdKey);
 
-    let key = rawName;
-    for (const existing of map.keys()) {
-      if (personNamesMatch(existing, rawName)) {
-        key = existing;
-        break;
-      }
+    if (isMeaningfulQuoteEdit(q)) {
+      const updatedKey = toLocalDateKey(q?.updatedAt || q?.updated_at);
+      bumpUserDayCount(map, q?.updatedByName, updatedKey);
     }
-
-    if (!map.has(key)) map.set(key, new Map());
-    const dayMap = map.get(key);
-    dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + 1);
   }
   return map;
 }

@@ -476,7 +476,14 @@ function QuoteCardComponent({
           </div>
           <p className="text-xs md:text-sm text-slate-500 font-medium">
             📅 {d.formattedCreatedAt}
-            {d.createdByName && <span className="ml-2 text-blue-600 font-semibold">• {d.createdByName}</span>}
+            {d.createdByName && (
+              <span className="ml-2 text-blue-600 font-semibold">• Créé par {d.createdByName}</span>
+            )}
+            {d.updatedByName && (
+              <span className="ml-2 text-violet-700 font-semibold">
+                • Modifié par {d.updatedByName}
+              </span>
+            )}
           </p>
         </div>
         
@@ -1294,6 +1301,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   currency: finalUpdatedQuote.currency,
                   items: JSON.stringify(finalUpdatedQuote.items),
                   created_by_name: finalUpdatedQuote.createdByName || "",
+                  updated_by_name: finalUpdatedQuote.updatedByName || "",
                   updated_at: finalUpdatedQuote.updated_at,
                 };
 
@@ -1350,7 +1358,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 }
 
 // Composant modale de modification de devis
-function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, stopSales = [], pushSales = [], onClose, onSave, editModalRef, editModalContainerRef }) {
+function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setNotes, activities, stopSales = [], pushSales = [], onClose, onSave, editModalRef, editModalContainerRef, user }) {
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
     const map = new Map();
@@ -1693,6 +1701,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       clientDepartureDate: cleanedClient.departureDate || "",
       notes: notes.trim(),
       createdByName: quote.createdByName || "", // Garder le créateur original
+      updatedByName: user?.name || quote.updatedByName || "",
       items: validComputed.map((c, idx) => {
         const originalItem = quote.items?.[idx];
 

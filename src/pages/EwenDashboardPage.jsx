@@ -353,7 +353,7 @@ export function EwenDashboardPage({
               Équipe
             </h1>
             <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-slate-500">
-              Temps connecté et devis créés — fuseau Hurghada. Clique un nom pour le calendrier.
+              Temps connecté et devis (créés + modifiés) — fuseau Hurghada. Clique un nom pour le calendrier.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm">

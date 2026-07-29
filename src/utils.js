@@ -675,6 +675,7 @@ export function generateQuoteHTML(quote, options = {}) {
           <h3>${detailsHeading}</h3>
           <p><strong>Date:</strong> ${date}</p>
           ${quote.createdByName ? `<p><strong>Créé par:</strong> ${quote.createdByName}</p>` : ""}
+          ${quote.updatedByName ? `<p><strong>Modifié par:</strong> ${quote.updatedByName}</p>` : ""}
         </div>
       </div>
     </div>

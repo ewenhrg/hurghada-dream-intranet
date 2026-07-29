@@ -643,7 +643,7 @@ export default function App() {
         const { data: quotesData, error: quotesError } = await supabase
           .from("quotes")
           .select(
-            "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, items, total, currency, paid_stripe, paid_cash"
+            "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, items, total, currency, paid_stripe, paid_cash"
           )
           .in("site_key", quoteSiteKeys)
           .order("created_at", { ascending: false })
@@ -689,6 +689,7 @@ export default function App() {
                 clientDepartureDate: row.client_departure_date || "",
                 notes: row.notes || "",
                 createdByName: row.created_by_name || "",
+                updatedByName: row.updated_by_name || "",
                 items: normalizeQuoteItemsFromDb(items),
                 total: row.total || 0,
                 totalCash: Math.round(row.total || 0),
@@ -835,6 +836,7 @@ export default function App() {
         clientDepartureDate: row.client_departure_date || "",
         notes: row.notes || "",
         createdByName: row.created_by_name || "",
+        updatedByName: row.updated_by_name || "",
         items: normalizeQuoteItemsFromDb(items),
         total: row.total || 0,
         totalCash: Math.round(row.total || 0),
