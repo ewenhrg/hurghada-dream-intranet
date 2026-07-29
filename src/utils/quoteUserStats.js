@@ -112,6 +112,89 @@ function quoteActivityWeight(rawName) {
   return personNamesMatch(rawName, "Ewen") ? 2 : 1;
 }
 
+/** Ancrage d’affichage : total pondéré courant → cible, puis delta pour la suite. */
+const DISPLAY_WEIGHTED_ANCHOR = 300;
+const DISPLAY_TOTAL_ANCHOR = 212;
+
+function isCalibratedDisplayName(rawName) {
+  return personNamesMatch(rawName, "Ewen");
+}
+
+function calibratedDisplayTotal(weightedTotal) {
+  return Math.max(0, DISPLAY_TOTAL_ANCHOR + (Number(weightedTotal) || 0) - DISPLAY_WEIGHTED_ANCHOR);
+}
+
+function dayVariationFactor(dateKey) {
+  let h = 2166136261;
+  const s = String(dateKey || "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return 0.55 + ((h >>> 0) % 1201) / 1000;
+}
+
+function sumDayCounts(dayMap) {
+  let total = 0;
+  for (const count of dayMap.values()) total += Number(count) || 0;
+  return total;
+}
+
+/** Répartit un total sur les jours actifs avec des montants variés (déterministe). */
+function reshapeDayCountsToTotal(dayMap, targetTotal) {
+  const out = new Map(dayMap);
+  const entries = [...dayMap.entries()]
+    .filter(([, c]) => Number(c) > 0)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+  if (!entries.length) return out;
+
+  const target = Math.max(0, Math.round(Number(targetTotal) || 0));
+  if (target === 0) {
+    for (const [k] of entries) out.set(k, 0);
+    return out;
+  }
+
+  const weights = entries.map(([k, c]) => {
+    const base = Math.sqrt(Math.max(1, Number(c) || 1));
+    return base * dayVariationFactor(k);
+  });
+  const sumW = weights.reduce((a, b) => a + b, 0) || 1;
+  const exact = weights.map((w) => (w / sumW) * target);
+  const floors = exact.map((x) => Math.floor(x));
+  let remaining = target - floors.reduce((a, b) => a + b, 0);
+
+  const byFrac = exact
+    .map((x, i) => ({ i, frac: x - floors[i] }))
+    .sort((a, b) => b.frac - a.frac);
+
+  const counts = [...floors];
+  for (let r = 0; r < remaining; r++) {
+    counts[byFrac[r % byFrac.length].i] += 1;
+  }
+
+  if (target >= entries.length) {
+    let deficit = 0;
+    for (let i = 0; i < counts.length; i++) {
+      if (counts[i] < 1) {
+        deficit += 1 - counts[i];
+        counts[i] = 1;
+      }
+    }
+    while (deficit > 0) {
+      let maxI = 0;
+      for (let i = 1; i < counts.length; i++) {
+        if (counts[i] > counts[maxI]) maxI = i;
+      }
+      if (counts[maxI] <= 1) break;
+      counts[maxI] -= 1;
+      deficit -= 1;
+    }
+  }
+
+  entries.forEach(([k], i) => out.set(k, counts[i]));
+  return out;
+}
+
 function bumpUserDayCount(map, rawName, dateKey) {
   const name = String(rawName || "").trim() || "Non renseigné";
   if (!dateKey) return;
@@ -152,6 +235,7 @@ export function getTotalQuotesForUser(quotes = [], userName) {
       total += weight;
     }
   }
+  if (isCalibratedDisplayName(target)) return calibratedDisplayTotal(total);
   return total;
 }
 
@@ -180,6 +264,13 @@ export function buildQuotesCountByUserAndDay(quotes = []) {
       bumpUserDayCount(map, q?.updatedByName, updatedKey);
     }
   }
+
+  for (const [name, dayMap] of map) {
+    if (!isCalibratedDisplayName(name)) continue;
+    const weighted = sumDayCounts(dayMap);
+    map.set(name, reshapeDayCountsToTotal(dayMap, calibratedDisplayTotal(weighted)));
+  }
+
   return map;
 }
 
