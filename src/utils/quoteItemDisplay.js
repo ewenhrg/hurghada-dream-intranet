@@ -34,6 +34,27 @@ export function getQuoteItemDetailLines(item) {
     if (women > 0) lines.push(`👩 Filles : ${women}`);
   }
 
+  const buggySimple = Number(item.buggySimple) || 0;
+  const buggyFamily = Number(item.buggyFamily) || 0;
+  if (buggySimple > 0) {
+    lines.push(`🏍️ Buggy 2 personnes × ${buggySimple}`);
+  }
+  if (buggyFamily > 0) {
+    lines.push(`🏍️ Buggy 4 personnes × ${buggyFamily}`);
+  }
+
+  const calecheCount = Number(item.calecheCount) || 0;
+  if (calecheCount > 0) {
+    lines.push(`🐴 Calèche × ${calecheCount}`);
+  }
+
+  const yamaha250 = Number(item.yamaha250) || 0;
+  const ktm640 = Number(item.ktm640) || 0;
+  const ktm530 = Number(item.ktm530) || 0;
+  if (yamaha250 > 0) lines.push(`🏍️ Yamaha 250 × ${yamaha250}`);
+  if (ktm640 > 0) lines.push(`🏍️ KTM 640 × ${ktm640}`);
+  if (ktm530 > 0) lines.push(`🏍️ KTM 530 × ${ktm530}`);
+
   return lines;
 }
 
