@@ -4,7 +4,7 @@
 -- 1. Créer une table d'audit pour tracer toutes les suppressions
 CREATE TABLE IF NOT EXISTS public.activities_deletion_audit (
   id BIGSERIAL PRIMARY KEY,
-  activity_id BIGINT NOT NULL,
+  activity_id UUID NOT NULL,
   activity_name TEXT,
   activity_site_key TEXT,
   deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -76,9 +76,9 @@ USING (true);
 
 -- 5. Fonction pour restaurer une activité supprimée depuis l'audit
 CREATE OR REPLACE FUNCTION public.restore_deleted_activity(audit_id BIGINT)
-RETURNS BIGINT AS $$
+RETURNS UUID AS $$
 DECLARE
-  restored_id BIGINT;
+  restored_id UUID;
   activity_record JSONB;
 BEGIN
   -- Récupérer les données de l'audit

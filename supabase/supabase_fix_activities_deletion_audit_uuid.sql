@@ -1,36 +1,27 @@
 -- =============================================================================
--- SÉCURITÉ ACTIVITÉS — à exécuter UNE FOIS dans Supabase → SQL Editor
+-- Fix audit suppressions activités : activity_id était BIGINT alors que
+-- public.activities.id est UUID → le trigger bloquait tout DELETE.
 --
--- Protège contre les suppressions « toutes seules » :
---   1) Audit : chaque DELETE est journalisé (table + trigger)
---   2) Blocage DELETE via l’API publique (clé anon du navigateur)
---
--- Après exécution :
---   - L’app peut toujours lire / créer / modifier les activités
---   - DELETE depuis le navigateur (supabase-js) : refusé sauf session Ewen/Léa Auth
---   - Diagnostic : supabase_diagnose_activity_deletions.sql
---   - Restauration : fonction restore_deleted_activity(audit_id)
+-- Exécuter dans Supabase → SQL Editor → Run (une fois).
 -- =============================================================================
 
--- --- 1. Audit des suppressions d’activités ---
-CREATE TABLE IF NOT EXISTS public.activities_deletion_audit (
-  id BIGSERIAL PRIMARY KEY,
-  activity_id UUID NOT NULL,
-  activity_name TEXT,
-  activity_site_key TEXT,
-  deleted_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_by TEXT,
-  deletion_reason TEXT,
-  activity_data JSONB
-);
+DROP VIEW IF EXISTS public.recent_activity_deletions;
 
-CREATE INDEX IF NOT EXISTS idx_activities_deletion_audit_activity_id
-  ON public.activities_deletion_audit (activity_id);
-CREATE INDEX IF NOT EXISTS idx_activities_deletion_audit_deleted_at
-  ON public.activities_deletion_audit (deleted_at);
-CREATE INDEX IF NOT EXISTS idx_activities_deletion_audit_site_key
-  ON public.activities_deletion_audit (activity_site_key);
+-- Conserver l’historique : passer en TEXT d’abord (bigint et uuid cohabitent),
+-- puis en UUID (anciens ids numériques → uuid nil pour rester NOT NULL).
+ALTER TABLE public.activities_deletion_audit
+  ALTER COLUMN activity_id TYPE text USING activity_id::text;
 
+ALTER TABLE public.activities_deletion_audit
+  ALTER COLUMN activity_id TYPE uuid USING (
+    CASE
+      WHEN activity_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        THEN activity_id::uuid
+      ELSE '00000000-0000-0000-0000-000000000000'::uuid
+    END
+  );
+
+-- Trigger d’audit (inchangé fonctionnellement, types alignés)
 CREATE OR REPLACE FUNCTION public.audit_activity_deletion()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -62,22 +53,8 @@ CREATE TRIGGER activity_deletion_audit_trigger
   FOR EACH ROW
   EXECUTE FUNCTION public.audit_activity_deletion();
 
-ALTER TABLE public.activities_deletion_audit ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow select deletion audit" ON public.activities_deletion_audit;
-CREATE POLICY "Allow select deletion audit"
-  ON public.activities_deletion_audit
-  FOR SELECT
-  TO public
-  USING (true);
-
--- --- 2. Bloquer DELETE anon (politique permissive « Allow delete activities ») ---
-DROP POLICY IF EXISTS "Allow delete activities" ON public.activities;
-
--- Si supabase_rls_ewen_lea_intranet_writers.sql est déjà appliqué, la politique
--- activities_delete_authenticated_ewen_lea reste active pour Ewen/Léa connectés Auth.
-
--- --- 3. Fonction de restauration depuis l’audit ---
+-- Restauration : retourne l’uuid de la ligne réinsérée
+DROP FUNCTION IF EXISTS public.restore_deleted_activity(BIGINT);
 CREATE OR REPLACE FUNCTION public.restore_deleted_activity(audit_id BIGINT)
 RETURNS uuid
 LANGUAGE plpgsql
@@ -134,3 +111,20 @@ BEGIN
   RETURN restored_id;
 END;
 $$;
+
+CREATE OR REPLACE VIEW public.recent_activity_deletions AS
+SELECT
+  id,
+  activity_id,
+  activity_name,
+  activity_site_key,
+  deleted_at,
+  deleted_by,
+  deletion_reason
+FROM public.activities_deletion_audit
+ORDER BY deleted_at DESC
+LIMIT 100;
+
+GRANT SELECT ON public.recent_activity_deletions TO public;
+
+NOTIFY pgrst, 'reload schema';
