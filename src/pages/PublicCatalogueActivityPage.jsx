@@ -7,6 +7,7 @@ import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publi
 import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay";
 import { buildSelectableDateOptions, normalizeAvailableDays } from "../utils/activityAvailableDates";
 import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
+import { CatalogPhotoLightbox } from "../components/public/CatalogPhotoLightbox";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import {
   getActivityPublicProse,
@@ -395,7 +396,6 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const carouselRef = useRef(null);
-  const touchStartXRef = useRef(null);
   /** Options tarif codé (même logique que le devis interne) — Speed Boat, Buggy, Moto, privatifs. */
   const [special, setSpecial] = useState(() => ({ ...INITIAL_CATALOG_SPECIAL }));
   const prevActivityIdRef = useRef(null);
@@ -1130,52 +1130,6 @@ export function PublicCatalogueActivityPage({ activityId }) {
     setLightboxOpen(false);
   }, []);
 
-  const goPrevLightbox = useCallback(() => {
-    setLightboxIndex((prev) => {
-      if (!catalogUrls.length) return 0;
-      return (prev - 1 + catalogUrls.length) % catalogUrls.length;
-    });
-  }, [catalogUrls.length]);
-
-  const goNextLightbox = useCallback(() => {
-    setLightboxIndex((prev) => {
-      if (!catalogUrls.length) return 0;
-      return (prev + 1) % catalogUrls.length;
-    });
-  }, [catalogUrls.length]);
-
-  const onLightboxTouchStart = useCallback((event) => {
-    touchStartXRef.current = event.changedTouches?.[0]?.clientX ?? null;
-  }, []);
-
-  const onLightboxTouchEnd = useCallback(
-    (event) => {
-      const startX = touchStartXRef.current;
-      const endX = event.changedTouches?.[0]?.clientX ?? null;
-      touchStartXRef.current = null;
-      if (startX == null || endX == null) return;
-      const delta = endX - startX;
-      if (Math.abs(delta) < 35) return;
-      if (delta < 0) {
-        goNextLightbox();
-      } else {
-        goPrevLightbox();
-      }
-    },
-    [goNextLightbox, goPrevLightbox]
-  );
-
-  useEffect(() => {
-    if (!lightboxOpen) return;
-    function onKeyDown(event) {
-      if (event.key === "Escape") closeLightbox();
-      if (event.key === "ArrowLeft") goPrevLightbox();
-      if (event.key === "ArrowRight") goNextLightbox();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [lightboxOpen, closeLightbox, goPrevLightbox, goNextLightbox]);
-
   function appendToCartAndReturn() {
     if (!activity || !date) return;
     if (
@@ -1552,60 +1506,14 @@ export function PublicCatalogueActivityPage({ activityId }) {
         </svg>
       </a>
 
-      {lightboxOpen && catalogUrls.length > 0 ? (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-3 sm:p-6"
-          onClick={closeLightbox}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Galerie photos"
-        >
-          <div
-            className="relative w-full max-w-4xl rounded-2xl bg-slate-950 p-2 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-            onTouchStart={onLightboxTouchStart}
-            onTouchEnd={onLightboxTouchEnd}
-          >
-            <button
-              type="button"
-              onClick={closeLightbox}
-              className="absolute right-2 top-2 z-10 rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-slate-900 hover:bg-white"
-              aria-label="Fermer"
-            >
-              ✕
-            </button>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={goPrevLightbox}
-                className="rounded-xl bg-white/90 px-3 py-2 text-lg font-bold text-slate-900 hover:bg-white"
-                aria-label="Photo précédente"
-              >
-                ‹
-              </button>
-              <div className="h-[58vh] min-h-[280px] w-full overflow-hidden rounded-xl bg-slate-900 sm:h-[70vh]">
-                <img
-                  src={catalogUrls[lightboxIndex]}
-                  alt=""
-                  className="h-full w-full object-contain"
-                  loading="eager"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={goNextLightbox}
-                className="rounded-xl bg-white/90 px-3 py-2 text-lg font-bold text-slate-900 hover:bg-white"
-                aria-label="Photo suivante"
-              >
-                ›
-              </button>
-            </div>
-            <p className="mt-2 text-center text-xs font-semibold text-white/85">
-              {lightboxIndex + 1} / {catalogUrls.length} — Glissez ou utilisez les flèches
-            </p>
-          </div>
-        </div>
-      ) : null}
+      <CatalogPhotoLightbox
+        open={lightboxOpen}
+        images={catalogUrls}
+        index={lightboxIndex}
+        onIndexChange={setLightboxIndex}
+        onClose={closeLightbox}
+        altPrefix={activity?.name || "Activité"}
+      />
     </div>
   );
 }
