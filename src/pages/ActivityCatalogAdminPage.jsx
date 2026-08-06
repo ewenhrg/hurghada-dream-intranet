@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ImagePlus, Loader2, Upload } from "lucide-react";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { LS_KEYS, CATEGORIES } from "../constants";
 import { saveLS, loadLS } from "../utils";
@@ -148,6 +149,13 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
   const [uploading, setUploading] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const dbId =
+    activity?.supabase_id != null && String(activity.supabase_id).trim() !== ""
+      ? String(activity.supabase_id).trim()
+      : null;
+  const canMutateRow = Boolean(canEdit && dbId);
 
   useEffect(() => {
     setDesc(String(activity.description ?? ""));
@@ -213,7 +221,28 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
     const t = String(r || "").trim();
     return t && isAllowedCatalogImageUrl(t);
   }).length;
-  const canReorderUrls = Boolean(canEdit && activity.supabase_id && validImageSlotCount > 1);
+  const canReorderUrls = Boolean(canMutateRow && validImageSlotCount > 1);
+
+  function openFilePicker() {
+    if (uploading) return;
+    if (!canEdit) {
+      toast.warning("Vous n’avez pas la permission de modifier le catalogue.");
+      return;
+    }
+    if (!dbId) {
+      toast.warning("Activité non synchronisée avec Supabase — synchronisez-la depuis l’onglet Activités avant d’uploader.");
+      return;
+    }
+    if (!__SUPABASE_DEBUG__.isConfigured || !supabase) {
+      toast.error("Supabase Storage non disponible.");
+      return;
+    }
+    if (normalizedUrls.length >= MAX_CATALOG_IMAGES) {
+      toast.warning(`Maximum atteint (${MAX_CATALOG_IMAGES} images).`);
+      return;
+    }
+    fileInputRef.current?.click();
+  }
 
   function handleUrlRowDragStart(e, index) {
     if (!canReorderUrls) return;
@@ -263,7 +292,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
     const fileList = Array.from(event.target.files || []);
     event.target.value = "";
     if (!fileList.length) return;
-    if (!canEdit || !activity.supabase_id) return;
+    if (!canMutateRow) return;
     if (!__SUPABASE_DEBUG__.isConfigured || !supabase) {
       toast.error("Supabase Storage non disponible.");
       return;
@@ -295,7 +324,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
         const safeName = String(file.name || "image")
           .replace(/[^\w.\-]+/g, "_")
           .replace(/_+/g, "_");
-        const objectPath = `activities/${activity.supabase_id}/${Date.now()}_${safeName}`;
+        const objectPath = `activities/${dbId}/${Date.now()}_${safeName}`;
         let usedBucket = CATALOG_IMAGES_BUCKET;
         let { error: uploadError } = await supabase.storage
           .from(usedBucket)
@@ -354,13 +383,13 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h4 className="font-semibold text-slate-900">{activity.name}</h4>
-          {!activity.supabase_id ? (
+          {!dbId ? (
             <p className="mt-1 text-xs font-medium text-amber-700">Non synchronisée avec Supabase — édition impossible.</p>
           ) : null}
         </div>
         <button
           type="button"
-          disabled={!canEdit || !activity.supabase_id || saving}
+          disabled={!canMutateRow || saving}
           onClick={() => void handleSave()}
           className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -374,7 +403,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
             type="checkbox"
             checked={popular}
             onChange={(e) => setPopular(e.target.checked)}
-            disabled={!canEdit || !activity.supabase_id}
+            disabled={!canMutateRow}
             className="mt-0.5 h-4 w-4 shrink-0 rounded border-amber-400 text-amber-700 focus:ring-amber-500"
           />
           <span className="text-sm font-medium leading-snug text-amber-950">
@@ -395,7 +424,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
           <textarea
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
-            disabled={!canEdit || !activity.supabase_id}
+            disabled={!canMutateRow}
             rows={5}
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:opacity-60"
             placeholder="Décrivez l’expérience pour les clients…"
@@ -403,29 +432,50 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Photos du catalogue public
-          </label>
-          <p className="mb-2 text-xs text-slate-600">
-            Importez des images ou collez des liens HTTPS (max {MAX_CATALOG_IMAGES}, {MAX_CATALOG_IMAGE_SIZE_MB} Mo/image).{" "}
-            <span className="font-medium text-slate-800">
-              Glissez-déposez une vignette sur une autre
-            </span>{" "}
-            pour changer l’ordre affiché sur le catalogue.
-          </p>
-          <div className="mb-3">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Photos du catalogue public ({normalizedUrls.length}/{MAX_CATALOG_IMAGES})
+            </label>
+            <div className="flex flex-wrap gap-2">
               <input
+                ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 multiple
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden
+                disabled={uploading}
                 onChange={(e) => void handleUploadFiles(e)}
-                disabled={!canEdit || !activity.supabase_id || uploading || normalizedUrls.length >= MAX_CATALOG_IMAGES}
-                className="hidden"
               />
-              <span>{uploading ? "Upload en cours…" : "Ajouter des images depuis l’ordinateur"}</span>
-            </label>
+              <button
+                type="button"
+                onClick={openFilePicker}
+                disabled={!canMutateRow || uploading || normalizedUrls.length >= MAX_CATALOG_IMAGES}
+                className="inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-900 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {uploading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <Upload className="h-3.5 w-3.5" aria-hidden />
+                )}
+                {uploading ? "Upload…" : "Uploader depuis l’ordinateur"}
+              </button>
+              <button
+                type="button"
+                disabled={!canMutateRow || urlRows.length >= MAX_CATALOG_IMAGES}
+                onClick={addUrlRow}
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ImagePlus className="h-3.5 w-3.5" aria-hidden />
+                Ajouter une URL
+              </button>
+            </div>
           </div>
+          <p className="mb-3 text-xs text-slate-600">
+            JPG, PNG ou WebP · max {MAX_CATALOG_IMAGE_SIZE_MB} Mo · puis « Enregistrer » pour publier.{" "}
+            <span className="font-medium text-slate-800">Glissez-déposez une vignette</span> pour changer l’ordre.
+          </p>
           <ul
             className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
             onDragLeave={(e) => {
@@ -475,7 +525,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
                       draggable={false}
                     >
                       <span className="text-[10px] font-medium text-slate-500 sm:text-xs">Vide</span>
-                      <span className="hidden text-[9px] text-slate-400 sm:block">URL ou import</span>
+                      <span className="hidden text-[9px] text-slate-400 sm:block">Upload ou URL</span>
                     </div>
                   )}
                   <div className="flex flex-col gap-1.5 p-2">
@@ -483,7 +533,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
                       type="url"
                       value={row}
                       onChange={(e) => setUrlAt(index, e.target.value)}
-                      disabled={!canEdit || !activity.supabase_id}
+                      disabled={!canMutateRow}
                       placeholder="https://…"
                       draggable={false}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:opacity-60"
@@ -494,7 +544,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
                     ) : null}
                     <button
                       type="button"
-                      disabled={!canEdit || !activity.supabase_id}
+                      disabled={!canMutateRow}
                       onClick={() => removeUrlAt(index)}
                       draggable={false}
                       className="self-start rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
@@ -506,14 +556,6 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
               );
             })}
           </ul>
-          <button
-            type="button"
-            disabled={!canEdit || !activity.supabase_id || urlRows.length >= MAX_CATALOG_IMAGES}
-            onClick={addUrlRow}
-            className="mt-3 text-sm font-medium text-emerald-700 hover:underline disabled:opacity-40"
-          >
-            + Ajouter un emplacement (URL)
-          </button>
         </div>
       </div>
     </article>
