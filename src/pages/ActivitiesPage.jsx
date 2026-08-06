@@ -8,6 +8,10 @@ import {
   isDeleteReturningNoRows,
   DELETE_ZERO_ROWS_TOAST,
 } from "../utils/supabaseDeleteGuard.js";
+import {
+  ensureIntranetWriterSession,
+  writerSessionFailureToast,
+} from "../utils/intranetSupabaseWriterAuth.js";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DaysSelector } from "../components/DaysSelector";
 import { TransfersEditor } from "../components/TransfersEditor";
@@ -1039,12 +1043,31 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }
 
     try {
+      const writerSession = await ensureIntranetWriterSession(supabase, user);
+      if (!writerSession.ok) {
+        logger.warn("Suppression activité : session rédacteur indisponible", writerSession);
+        toast.error(writerSessionFailureToast(writerSession.reason));
+        return;
+      }
+
+      const runDelete = () =>
+        supabase
+          .from("activities")
+          .delete()
+          .eq("id", activityToDelete.supabase_id)
+          .select();
+
       logger.log(`🔄 Tentative de suppression dans Supabase (ID: ${activityToDelete.supabase_id})...`);
-      const { error, data } = await supabase
-        .from("activities")
-        .delete()
-        .eq("id", activityToDelete.supabase_id)
-        .select();
+      let { error, data } = await runDelete();
+
+      // Session expirée / RLS silencieux : forcer une reconnexion Auth puis 1 nouvel essai
+      if ((!error && isDeleteReturningNoRows(data)) || (error && isApiDeleteBlockedByRls(error))) {
+        const retryAuth = await ensureIntranetWriterSession(supabase, user, { force: true });
+        if (retryAuth.ok) {
+          logger.log("🔄 Nouvel essai de suppression après reconnexion Auth…");
+          ({ error, data } = await runDelete());
+        }
+      }
 
       if (error) {
         logger.error("❌ Erreur lors de la suppression dans Supabase:", {
@@ -1057,7 +1080,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         if (isApiDeleteBlockedByRls(error)) {
           toast.error(API_DELETE_BLOCKED_TOAST);
         } else {
-          toast.error("Suppression annulée: erreur Supabase.");
+          toast.error(
+            `Suppression annulée: erreur Supabase${error.message ? ` — ${error.message}` : "."}`
+          );
         }
         return;
       }
@@ -1083,6 +1108,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         activity_name: activityName,
         deleted_data: data
       });
+      toast.success(`Activité « ${activityName} » supprimée.`);
     } catch (err) {
       logger.error("❌ Exception lors de la suppression dans Supabase:", {
         exception: err,
@@ -1090,7 +1116,9 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         activity_name: activityName,
         stack: err.stack
       });
-      toast.error("Suppression annulée: exception Supabase.");
+      toast.error(
+        `Suppression annulée: exception Supabase${err?.message ? ` — ${err.message}` : "."}`
+      );
     }
   }, [canModifyActivities, activitiesMap, user, setActivities]);
 
