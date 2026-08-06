@@ -45,7 +45,7 @@ import { useTranslation } from "./hooks/useTranslation";
 import PageLoader from "./components/PageLoader";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { PageTransition } from "./components/PageTransition";
-import { toast } from "./utils/toast.js";
+import { toast, clearToasts } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
 import {
@@ -125,6 +125,20 @@ export default function App() {
       setUsedDates([]);
     }
   }, [tab]);
+
+  // Catalogue / pages client : aucune notif interne (sync Supabase, etc.)
+  useEffect(() => {
+    const path = location.pathname || "";
+    const isPublicClient =
+      path === "/catalogue" ||
+      path.startsWith("/catalogue/") ||
+      path === "/hotels" ||
+      path.startsWith("/hotels/") ||
+      path === "/demande-hotel" ||
+      path.startsWith("/demande-hotel/") ||
+      path.startsWith("/request");
+    if (isPublicClient) clearToasts();
+  }, [location.pathname]);
 
   /** Maj prix : onglet réservé aux profils avec permission explicite. */
   useEffect(() => {
