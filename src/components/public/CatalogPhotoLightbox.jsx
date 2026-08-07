@@ -1,18 +1,9 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 /**
  * Lightbox photos plein écran (catalogue public hôtels / activités) :
- * swipe, flèches, pastilles mobile, miniatures desktop.
- *
- * @param {{
- *   open: boolean,
- *   images: string[],
- *   index: number,
- *   onIndexChange: (index: number) => void,
- *   onClose: () => void,
- *   altPrefix?: string,
- * }} props
+ * image en plein cadre, swipe, flèches stables, pastilles / miniatures.
  */
 export function CatalogPhotoLightbox({
   open,
@@ -24,43 +15,103 @@ export function CatalogPhotoLightbox({
 }) {
   const count = Array.isArray(images) ? images.length : 0;
   const hasImages = count > 0;
-  const safeIndex = hasImages ? Math.max(0, Math.min(index, count - 1)) : 0;
+  const safeIndex = hasImages ? Math.max(0, Math.min(Number(index) || 0, count - 1)) : 0;
 
-  const prevImg = useCallback(() => {
-    if (!hasImages) return;
-    onIndexChange((prev) => {
-      const current = Math.max(0, Math.min(Number(prev) || 0, count - 1));
-      return (current - 1 + count) % count;
-    });
-  }, [hasImages, count, onIndexChange]);
+  const indexRef = useRef(safeIndex);
+  indexRef.current = safeIndex;
 
-  const nextImg = useCallback(() => {
-    if (!hasImages) return;
-    onIndexChange((prev) => {
-      const current = Math.max(0, Math.min(Number(prev) || 0, count - 1));
-      return (current + 1) % count;
-    });
-  }, [hasImages, count, onIndexChange]);
+  const pointerStartX = useRef(null);
+  const swipeLocked = useRef(false);
+
+  const goTo = useCallback(
+    (nextIndex) => {
+      if (!hasImages || count < 1) return;
+      const i = ((Number(nextIndex) % count) + count) % count;
+      onIndexChange?.(i);
+    },
+    [hasImages, count, onIndexChange]
+  );
+
+  const prevImg = useCallback(
+    (e) => {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      goTo(indexRef.current - 1);
+    },
+    [goTo]
+  );
+
+  const nextImg = useCallback(
+    (e) => {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      goTo(indexRef.current + 1);
+    },
+    [goTo]
+  );
 
   useEffect(() => {
     if (!open || !hasImages) return undefined;
     const onKey = (e) => {
-      if (e.key === "Escape") onClose?.();
-      if (e.key === "ArrowLeft") prevImg();
-      if (e.key === "ArrowRight") nextImg();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose?.();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        goTo(indexRef.current - 1);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        goTo(indexRef.current + 1);
+      }
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      document.body.style.overflow = prevOverflow;
     };
-  }, [open, hasImages, onClose, prevImg, nextImg]);
+  }, [open, hasImages, onClose, goTo]);
 
   if (!open || !hasImages) return null;
 
   const currentSrc = images[safeIndex];
+
+  const onPointerDown = (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (e.target?.closest?.("[data-lightbox-nav]")) {
+      swipeLocked.current = true;
+      pointerStartX.current = null;
+      return;
+    }
+    swipeLocked.current = false;
+    pointerStartX.current = e.clientX;
+    try {
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const onPointerUp = (e) => {
+    if (swipeLocked.current) {
+      swipeLocked.current = false;
+      pointerStartX.current = null;
+      return;
+    }
+    const startX = pointerStartX.current;
+    pointerStartX.current = null;
+    if (startX == null || count < 2) return;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) < 48) return;
+    if (dx < 0) goTo(indexRef.current + 1);
+    else goTo(indexRef.current - 1);
+  };
+
+  const onPointerCancel = () => {
+    pointerStartX.current = null;
+    swipeLocked.current = false;
+  };
 
   return (
     <div
@@ -71,7 +122,7 @@ export function CatalogPhotoLightbox({
       onClick={onClose}
     >
       <div
-        className="relative z-20 flex shrink-0 items-center justify-between px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 sm:px-5"
+        className="relative z-30 flex shrink-0 items-center justify-between px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 sm:px-5"
         onClick={(e) => e.stopPropagation()}
       >
         <p className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold tabular-nums text-white backdrop-blur-sm sm:text-sm">
@@ -79,7 +130,12 @@ export function CatalogPhotoLightbox({
         </p>
         <button
           type="button"
-          onClick={onClose}
+          data-lightbox-nav
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose?.();
+          }}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-lg transition active:scale-95 hover:bg-white"
           aria-label="Fermer"
         >
@@ -88,26 +144,18 @@ export function CatalogPhotoLightbox({
       </div>
 
       <div
-        className="relative min-h-0 flex-1 touch-pan-y"
+        className="relative z-10 min-h-0 flex-1 touch-none select-none"
         onClick={(e) => e.stopPropagation()}
-        onTouchStart={(e) => {
-          const t = e.changedTouches?.[0];
-          if (t) e.currentTarget.dataset.touchX = String(t.clientX);
-        }}
-        onTouchEnd={(e) => {
-          const start = Number(e.currentTarget.dataset.touchX || 0);
-          const t = e.changedTouches?.[0];
-          if (!t || !start) return;
-          const dx = t.clientX - start;
-          if (Math.abs(dx) < 50) return;
-          if (dx < 0) nextImg();
-          else prevImg();
-        }}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
       >
+        {/* Remplit tout le cadre quel que soit le format */}
         <img
+          key={currentSrc}
           src={currentSrc}
           alt={`${altPrefix} ${safeIndex + 1}`}
-          className="absolute inset-0 h-full w-full object-contain"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           draggable={false}
         />
 
@@ -115,16 +163,20 @@ export function CatalogPhotoLightbox({
           <>
             <button
               type="button"
+              data-lightbox-nav
               onClick={prevImg}
-              className="absolute left-2 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-white/25 backdrop-blur-sm transition active:scale-95 hover:bg-black/60 sm:left-4 sm:h-14 sm:w-14"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="absolute left-2 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/30 backdrop-blur-md transition active:scale-95 hover:bg-black/70 sm:left-4 sm:h-14 sm:w-14"
               aria-label="Photo précédente"
             >
               <ChevronLeft className="h-7 w-7" aria-hidden />
             </button>
             <button
               type="button"
+              data-lightbox-nav
               onClick={nextImg}
-              className="absolute right-2 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-white/25 backdrop-blur-sm transition active:scale-95 hover:bg-black/60 sm:right-4 sm:h-14 sm:w-14"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="absolute right-2 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/30 backdrop-blur-md transition active:scale-95 hover:bg-black/70 sm:right-4 sm:h-14 sm:w-14"
               aria-label="Photo suivante"
             >
               <ChevronRight className="h-7 w-7" aria-hidden />
@@ -135,7 +187,7 @@ export function CatalogPhotoLightbox({
 
       {count > 1 ? (
         <div
-          className="relative z-20 hidden shrink-0 border-t border-white/10 bg-black/80 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:block"
+          className="relative z-30 hidden shrink-0 border-t border-white/10 bg-black/85 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:block"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mx-auto flex max-w-5xl gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -143,7 +195,12 @@ export function CatalogPhotoLightbox({
               <button
                 key={`${src}-${idx}`}
                 type="button"
-                onClick={() => onIndexChange(idx)}
+                data-lightbox-nav
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  goTo(idx);
+                }}
                 className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-lg ring-2 transition ${
                   idx === safeIndex
                     ? "ring-orange-400"
@@ -161,14 +218,19 @@ export function CatalogPhotoLightbox({
 
       {count > 1 ? (
         <div
-          className="relative z-20 flex shrink-0 items-center justify-center gap-1.5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 sm:hidden"
+          className="relative z-30 flex shrink-0 items-center justify-center gap-1.5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 sm:hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {images.map((_, idx) => (
             <button
               key={`dot-${idx}`}
               type="button"
-              onClick={() => onIndexChange(idx)}
+              data-lightbox-nav
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                goTo(idx);
+              }}
               className={`h-2 rounded-full transition ${
                 idx === safeIndex ? "w-5 bg-orange-400" : "w-2 bg-white/40"
               }`}

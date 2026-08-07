@@ -68,8 +68,9 @@ export function saveActivitiesAutoSnapshot(activities, siteKey) {
 }
 
 /**
- * Fusionne Supabase → cache local sans supprimer d'activités.
- * Les lignes absentes de la réponse remote sont conservées (marquées _localOnly si elles avaient un supabase_id).
+ * Fusionne Supabase → cache local.
+ * Source de vérité = Supabase : une activité avec supabase_id absente de la base est retirée.
+ * Brouillons locaux (sans supabase_id) conservés seulement s’ils n’existent pas déjà en base (même nom+catégorie).
  * @param {Array} cachedActivities
  * @param {Array} remoteMapped — activités déjà mappées depuis Supabase
  * @returns {{ merged: Array, stats: object }}
@@ -79,45 +80,16 @@ export function mergeRemoteActivitiesWithLocal(cachedActivities, remoteMapped) {
   const remote = Array.isArray(remoteMapped) ? remoteMapped : [];
 
   const remoteById = new Map();
+  const remoteKeys = new Set();
   for (const a of remote) {
     if (a?.supabase_id != null && a.supabase_id !== "") {
       remoteById.set(String(a.supabase_id), a);
     }
+    remoteKeys.add(activityDedupeKey(a));
   }
 
-  const seenRemoteIds = new Set();
-  const merged = [];
-  let updated = 0;
-  let preservedOrphans = 0;
-  let orphansMarkedLocalOnly = 0;
-
-  for (const local of prev) {
-    if (!local) continue;
-    const rid =
-      local.supabase_id != null && local.supabase_id !== "" ? String(local.supabase_id) : null;
-
-    if (rid && remoteById.has(rid)) {
-      const remoteAct = remoteById.get(rid);
-      seenRemoteIds.add(rid);
-      const { [LOCAL_ONLY_ACTIVITY_KEY]: _lo, ...restLocal } = local;
-      merged.push({
-        ...restLocal,
-        ...remoteAct,
-        id: local.id,
-        supabase_id: remoteAct.supabase_id ?? local.supabase_id,
-      });
-      updated++;
-    } else if (rid && !remoteById.has(rid)) {
-      preservedOrphans++;
-      const { [LOCAL_ONLY_ACTIVITY_KEY]: _lo, ...rest } = local;
-      merged.push({ ...rest, [LOCAL_ONLY_ACTIVITY_KEY]: true });
-      orphansMarkedLocalOnly++;
-    } else {
-      merged.push(local);
-    }
-  }
-
-  let addedFromRemote = 0;
+  // Base = liste Supabase (source de vérité)
+  const merged = remote.map((a) => ({ ...a }));
   const mergedRemoteIds = new Set(
     merged
       .map((a) => (a?.supabase_id != null && a.supabase_id !== "" ? String(a.supabase_id) : null))
@@ -125,18 +97,45 @@ export function mergeRemoteActivitiesWithLocal(cachedActivities, remoteMapped) {
   );
   const seenKeys = new Set(merged.map((a) => activityDedupeKey(a)));
 
-  for (const remoteAct of remote) {
+  let updated = remote.length;
+  let droppedDeleted = 0;
+  let keptLocalDrafts = 0;
+  let addedFromRemote = remote.length;
+
+  for (const local of prev) {
+    if (!local) continue;
     const rid =
-      remoteAct?.supabase_id != null && remoteAct.supabase_id !== ""
-        ? String(remoteAct.supabase_id)
-        : null;
-    if (rid && (seenRemoteIds.has(rid) || mergedRemoteIds.has(rid))) continue;
-    const k = activityDedupeKey(remoteAct);
-    if (seenKeys.has(k)) continue;
-    merged.push(remoteAct);
+      local.supabase_id != null && local.supabase_id !== "" ? String(local.supabase_id) : null;
+
+    if (rid) {
+      if (remoteById.has(rid)) {
+        // Déjà présent via remote — conserver l’id local React si possible
+        const idx = merged.findIndex((a) => String(a.supabase_id) === rid);
+        if (idx >= 0) {
+          merged[idx] = { ...merged[idx], id: local.id || merged[idx].id };
+        }
+      } else {
+        droppedDeleted++;
+      }
+      continue;
+    }
+
+    // Ancien marqueur orphelin / brouillon fantôme : ne pas ressusciter
+    if (local[LOCAL_ONLY_ACTIVITY_KEY]) {
+      droppedDeleted++;
+      continue;
+    }
+
+    const k = activityDedupeKey(local);
+    if (remoteKeys.has(k) || seenKeys.has(k)) {
+      droppedDeleted++;
+      continue;
+    }
+
+    const { [LOCAL_ONLY_ACTIVITY_KEY]: _lo, ...rest } = local;
+    merged.push(rest);
     seenKeys.add(k);
-    if (rid) mergedRemoteIds.add(rid);
-    addedFromRemote++;
+    keptLocalDrafts++;
   }
 
   return {
@@ -147,8 +146,11 @@ export function mergeRemoteActivitiesWithLocal(cachedActivities, remoteMapped) {
       mergedCount: merged.length,
       updated,
       addedFromRemote,
-      preservedOrphans,
-      orphansMarkedLocalOnly,
+      droppedDeleted,
+      keptLocalDrafts,
+      preservedOrphans: 0,
+      orphansMarkedLocalOnly: 0,
+      mergedRemoteIdsSize: mergedRemoteIds.size,
     },
   };
 }
@@ -167,36 +169,14 @@ export function loadActivitiesAutoSnapshot() {
 }
 
 /**
- * Fusionne quand Supabase renvoie moins de lignes que le cache (perte / suppression massive).
- * @param {Array} remoteRows — lignes brutes Supabase
- * @param {Array} cachedActivities — cache local (hd_activities)
- * @param {(row: object) => object} mapRowToActivity — même mapping que App (mapActivitiesFromRows)
+ * Ancien filet de sécurité (réinjection cache si la base renvoie moins de lignes).
+ * Conservé pour compatibilité d’import ; la sync App fait confiance à Supabase.
+ * @deprecated Prefer mergeRemoteActivitiesWithLocal (drops deleted remote rows).
  */
 export function mergeActivitiesWhenRemoteShrunk(remoteRows, cachedActivities, mapRowToActivity) {
   const remote = Array.isArray(remoteRows) ? remoteRows : [];
-  const prev = Array.isArray(cachedActivities) ? cachedActivities : [];
   const remoteMapped = remote.map((row) => mapRowToActivity(row));
-  if (prev.length === 0 || remote.length >= prev.length) {
-    return { merged: remoteMapped, localOnlyAdded: 0, usedMerge: false };
-  }
-  const remoteIds = new Set(remote.map((r) => String(r.id)));
-  const merged = [...remoteMapped];
-  const seenKeys = new Set(remoteMapped.map((a) => activityDedupeKey(a)));
-  let localOnlyAdded = 0;
-  for (const a of prev) {
-    const rid = a.supabase_id != null && a.supabase_id !== "" ? String(a.supabase_id) : null;
-    if (rid && remoteIds.has(rid)) {
-      continue;
-    }
-    const { [LOCAL_ONLY_ACTIVITY_KEY]: _drop, ...rest } = a;
-    const base = { ...rest, supabase_id: undefined, [LOCAL_ONLY_ACTIVITY_KEY]: true };
-    const k = activityDedupeKey(base);
-    if (seenKeys.has(k)) continue;
-    merged.push(base);
-    seenKeys.add(k);
-    localOnlyAdded++;
-  }
-  return { merged, localOnlyAdded, usedMerge: localOnlyAdded > 0 };
+  return { merged: remoteMapped, localOnlyAdded: 0, usedMerge: false };
 }
 
 function scoreActivityForDedupe(a) {

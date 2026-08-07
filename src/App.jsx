@@ -49,11 +49,9 @@ import { toast, clearToasts } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
 import {
-  mergeActivitiesWhenRemoteShrunk,
   mergeRemoteActivitiesWithLocal,
   saveActivitiesAutoSnapshot,
   stripLocalOnlyActivityForStorage,
-  LOCAL_ONLY_ACTIVITY_KEY,
 } from "./utils/activitiesBackup";
 import { normalizeCatalogImageUrlsFromDb } from "./utils/catalogContent";
 import { HD_PUBLIC_QUOTE_TO_DRAFT_EVENT } from "./utils/publicQuoteToDraft";
@@ -79,8 +77,6 @@ export default function App() {
   /** État brut Supabase Presence (canal partagé « qui est en ligne »). */
   const [presenceState, setPresenceState] = useState({});
   const intranetPresenceChannelRef = useRef(null);
-  /** Évite de spammer les toasts d'activités orphelines à chaque sync (60 s). */
-  const activityOrphanWarnRef = useRef({ key: "", at: 0 });
   const [usedDates, setUsedDates] = useState([]);
   const [showDatesModal, setShowDatesModal] = useState(false);
   const { language, setLanguage } = useLanguage();
@@ -524,67 +520,19 @@ export default function App() {
         saveActivitiesAutoSnapshot(current, SITE_KEY);
         if (finalRows.length > 0) {
           const supabaseActivities = mapActivitiesFromRows(finalRows);
-          // Sécurité : ne jamais remplacer par une liste beaucoup plus courte (évite suppression en masse accidentelle).
-          const minAcceptable = current.length > 0 ? Math.max(1, Math.floor(current.length * 0.8)) : 0;
-          if (current.length > 0 && supabaseActivities.length < minAcceptable) {
-            const { merged: massMerged, localOnlyAdded, usedMerge } = mergeActivitiesWhenRemoteShrunk(
-              finalRows,
-              current,
-              mapActivitiesFromRows
+          // Source de vérité = Supabase : retire du cache les activités supprimées en base.
+          const { merged: safeMerged, stats } = mergeRemoteActivitiesWithLocal(
+            current,
+            supabaseActivities
+          );
+          if (stats.droppedDeleted > 0) {
+            logger.log(
+              `🗑️ ${stats.droppedDeleted} activité(s) retirée(s) du cache (absentes de Supabase).`
             );
-            const { merged, stats: massStats } = mergeRemoteActivitiesWithLocal(current, massMerged);
-            logger.warn(
-              `🛡️ Sécurité: Supabase a ${supabaseActivities.length} activité(s), la session en avait ${current.length}. Fusion cache + base (comme pour les utilisateurs). Orphelines: ${massStats.preservedOrphans}.`
-            );
-            const warnKey = `mass:${supabaseActivities.length}:${current.length}`;
-            const now = Date.now();
-            if (
-              activityOrphanWarnRef.current.key !== warnKey ||
-              now - activityOrphanWarnRef.current.at > 5 * 60 * 1000
-            ) {
-              activityOrphanWarnRef.current = { key: warnKey, at: now };
-              toast.warning(
-                `Supabase renvoie beaucoup moins d'activités (${supabaseActivities.length}) qu'attendu (${current.length}). ` +
-                  (usedMerge && localOnlyAdded > 0
-                    ? `${localOnlyAdded} activité(s) récupérée(s) depuis le cache — ouvrez « Activités » puis « Réinsérer dans Supabase » pour les recréer en base. `
-                    : "Liste locale fusionnée avec la base. ") +
-                  `Aucune activité n'a été supprimée automatiquement.`
-              );
-            }
-            setActivities(merged);
-            saveLS(LS_KEYS.activities, stripLocalOnlyActivityForStorage(merged));
-            activitiesCache.set(cacheKey, merged);
-          } else {
-            const { merged: safeMerged, stats } = mergeRemoteActivitiesWithLocal(
-              current,
-              supabaseActivities
-            );
-            if (stats.preservedOrphans > 0) {
-              logger.warn(
-                `🛡️ ${stats.preservedOrphans} activité(s) absente(s) de Supabase — conservée(s) localement.`
-              );
-              const orphanNames = safeMerged
-                .filter((a) => a?.[LOCAL_ONLY_ACTIVITY_KEY] && a?.supabase_id)
-                .slice(0, 3)
-                .map((a) => a.name)
-                .join(", ");
-              const warnKey = `orphan:${stats.preservedOrphans}:${orphanNames}`;
-              const now = Date.now();
-              if (
-                activityOrphanWarnRef.current.key !== warnKey ||
-                now - activityOrphanWarnRef.current.at > 5 * 60 * 1000
-              ) {
-                activityOrphanWarnRef.current = { key: warnKey, at: now };
-                toast.warning(
-                  `${stats.preservedOrphans} activité(s) manquante(s) en base (${orphanNames}${stats.preservedOrphans > 3 ? "…" : ""}). ` +
-                    `Conservée(s) localement — page Activités → « Réinsérer dans Supabase ».`
-                );
-              }
-            }
-            setActivities(safeMerged);
-            saveLS(LS_KEYS.activities, stripLocalOnlyActivityForStorage(safeMerged));
-            activitiesCache.set(cacheKey, safeMerged);
           }
+          setActivities(safeMerged);
+          saveLS(LS_KEYS.activities, stripLocalOnlyActivityForStorage(safeMerged));
+          activitiesCache.set(cacheKey, safeMerged);
         } else {
           logger.warn(
             `📦 Supabase: aucune activité pour site_key=${SITE_KEY}. Conservation des ${current.length} activité(s) actuelles.`
@@ -1087,14 +1035,22 @@ export default function App() {
               }
             });
           } else if (payload.eventType === 'DELETE') {
-            // Sécurité : ne jamais appliquer un DELETE reçu en Realtime (évite que les activités disparaissent toutes seules).
             const deletedId = payload.old?.id;
-            const deletedActivity = payload.old;
-            logger.warn("🗑️ SUPPRESSION D'ACTIVITÉ DÉTECTÉE VIA REALTIME (ignorée en local pour sécurité):", {
+            if (!deletedId) return;
+            logger.log("🗑️ Activité supprimée en base — retrait du cache local:", {
               supabase_id: deletedId,
-              activity_name: deletedActivity?.name
+              activity_name: payload.old?.name,
             });
-            // On n'appelle pas syncWithSupabase() : la liste locale reste inchangée jusqu'au prochain chargement de page.
+            setActivities((prevActivities) => {
+              const updated = prevActivities.filter(
+                (a) =>
+                  String(a?.supabase_id ?? "") !== String(deletedId) &&
+                  String(a?.id ?? "") !== String(deletedId)
+              );
+              if (updated.length === prevActivities.length) return prevActivities;
+              saveLS(LS_KEYS.activities, stripLocalOnlyActivityForStorage(updated));
+              return updated;
+            });
           }
         }
       )

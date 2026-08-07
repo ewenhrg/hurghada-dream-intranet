@@ -1222,7 +1222,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
           <div className="relative aspect-[4/3] w-full animate-catalog-in-soft overflow-hidden rounded-[22px] opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "60ms" }}>
             <div ref={carouselRef} onScroll={onCarouselScroll} className="scrollbar-hide flex h-full snap-x snap-mandatory gap-0 overflow-x-auto">
               {gallerySlides.map((slide, i) => (
-                <div key={i} className="relative h-full min-w-full shrink-0 snap-start overflow-hidden bg-slate-950/85">
+                <div key={i} className="relative h-full min-w-full shrink-0 snap-start overflow-hidden bg-slate-950">
                   {slide.kind === "image" ? (
                     <button
                       type="button"
@@ -1230,8 +1230,13 @@ export function PublicCatalogueActivityPage({ activityId }) {
                       className="h-full w-full"
                       aria-label="Agrandir la photo"
                     >
-                      {/* Mobile: éviter l'effet \"zoom\" (crop) → object-contain */}
-                      <img src={slide.url} alt="" className="h-full w-full bg-slate-950 object-contain" loading="lazy" />
+                      <img
+                        src={slide.url}
+                        alt=""
+                        className="h-full w-full bg-slate-950 object-cover"
+                        loading="lazy"
+                        draggable={false}
+                      />
                     </button>
                   ) : (
                     <div className="h-full w-full" style={{ background: slide.bg }} />
