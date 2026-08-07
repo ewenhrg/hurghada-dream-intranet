@@ -144,18 +144,27 @@ export function CatalogPhotoLightbox({
       </div>
 
       <div
-        className="relative z-10 min-h-0 flex-1 touch-none select-none"
+        className="relative z-10 min-h-0 flex-1 touch-none select-none overflow-hidden bg-black"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
       >
-        {/* Remplit tout le cadre quel que soit le format */}
+        {/* Fond flou pour remplir le cadre sans zoomer la photo */}
+        <img
+          key={`bg-${currentSrc}`}
+          src={currentSrc}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl"
+          draggable={false}
+        />
+        {/* Photo entière, non croppée */}
         <img
           key={currentSrc}
           src={currentSrc}
           alt={`${altPrefix} ${safeIndex + 1}`}
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          className="pointer-events-none absolute inset-0 h-full w-full object-contain"
           draggable={false}
         />
 

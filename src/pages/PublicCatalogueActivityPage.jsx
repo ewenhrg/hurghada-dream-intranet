@@ -1227,13 +1227,20 @@ export function PublicCatalogueActivityPage({ activityId }) {
                     <button
                       type="button"
                       onClick={() => openLightboxAt(i)}
-                      className="h-full w-full"
+                      className="relative h-full w-full"
                       aria-label="Agrandir la photo"
                     >
                       <img
                         src={slide.url}
                         alt=""
-                        className="h-full w-full bg-slate-950 object-cover"
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
+                        draggable={false}
+                      />
+                      <img
+                        src={slide.url}
+                        alt=""
+                        className="relative h-full w-full object-contain"
                         loading="lazy"
                         draggable={false}
                       />
@@ -1315,42 +1322,66 @@ export function PublicCatalogueActivityPage({ activityId }) {
               {/* Galerie desktop (grille WFY) */}
               <div className="hidden max-h-[400px] overflow-hidden rounded-none md:block lg:max-h-[450px]">
                 <div className="grid h-full min-h-[280px] grid-cols-3 gap-2 lg:min-h-[360px]">
-                  <div className="relative col-span-2 row-span-2 overflow-hidden rounded-l-3xl bg-slate-950/85">
+                  <div className="relative col-span-2 row-span-2 overflow-hidden rounded-l-3xl bg-slate-950">
                     {catalogUrls[0] ? (
-                      <button type="button" onClick={() => openLightboxAt(0)} className="h-full w-full" aria-label="Agrandir la photo 1">
+                      <button type="button" onClick={() => openLightboxAt(0)} className="relative h-full w-full" aria-label="Agrandir la photo 1">
                         <img
                           src={catalogUrls[0]}
                           alt=""
-                          className="h-full w-full object-cover transition-opacity hover:opacity-95"
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
+                          draggable={false}
+                        />
+                        <img
+                          src={catalogUrls[0]}
+                          alt=""
+                          className="relative h-full w-full object-contain transition-opacity hover:opacity-95"
                           loading="lazy"
+                          draggable={false}
                         />
                       </button>
                     ) : (
                       <div className="h-full w-full" style={{ background: galleryBackgrounds[0] }} />
                     )}
                   </div>
-                  <div className="relative col-span-1 overflow-hidden rounded-tr-3xl bg-slate-950/85">
+                  <div className="relative col-span-1 overflow-hidden rounded-tr-3xl bg-slate-950">
                     {catalogUrls[1] ? (
-                      <button type="button" onClick={() => openLightboxAt(1)} className="h-full w-full" aria-label="Agrandir la photo 2">
+                      <button type="button" onClick={() => openLightboxAt(1)} className="relative h-full w-full" aria-label="Agrandir la photo 2">
                         <img
                           src={catalogUrls[1]}
                           alt=""
-                          className="h-full min-h-[140px] w-full object-cover transition-opacity hover:opacity-95"
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
+                          draggable={false}
+                        />
+                        <img
+                          src={catalogUrls[1]}
+                          alt=""
+                          className="relative h-full min-h-[140px] w-full object-contain transition-opacity hover:opacity-95"
                           loading="lazy"
+                          draggable={false}
                         />
                       </button>
                     ) : (
                       <div className="h-full min-h-[140px] w-full" style={{ background: galleryBackgrounds[1] }} />
                     )}
                   </div>
-                  <div className="relative col-span-1 overflow-hidden rounded-br-3xl bg-slate-950/85">
+                  <div className="relative col-span-1 overflow-hidden rounded-br-3xl bg-slate-950">
                     {catalogUrls[2] ? (
-                      <button type="button" onClick={() => openLightboxAt(2)} className="h-full w-full" aria-label="Agrandir la photo 3">
+                      <button type="button" onClick={() => openLightboxAt(2)} className="relative h-full w-full" aria-label="Agrandir la photo 3">
                         <img
                           src={catalogUrls[2]}
                           alt=""
-                          className="h-full min-h-[140px] w-full object-cover transition-opacity hover:opacity-95"
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
+                          draggable={false}
+                        />
+                        <img
+                          src={catalogUrls[2]}
+                          alt=""
+                          className="relative h-full min-h-[140px] w-full object-contain transition-opacity hover:opacity-95"
                           loading="lazy"
+                          draggable={false}
                         />
                       </button>
                     ) : (
