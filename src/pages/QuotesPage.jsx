@@ -2810,6 +2810,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           grandTotalCard={grandTotalCard}
           grandCurrency={grandCurrency}
           onAddItem={addItem}
+          onAutoFillDates={handleAutoFillDates}
+          canAutoFillDates={Boolean(client.arrivalDate && client.departureDate)}
         />
 
         {/* Notes */}

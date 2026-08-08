@@ -5,27 +5,53 @@ import { currencyNoCents } from "../../utils";
 /**
  * Composant pour afficher le résumé des totaux du devis
  */
-export const QuoteSummary = memo(function QuoteSummary({ grandTotalCash, grandTotalCard, grandCurrency, onAddItem }) {
+export const QuoteSummary = memo(function QuoteSummary({
+  grandTotalCash,
+  grandTotalCard,
+  grandCurrency,
+  onAddItem,
+  onAutoFillDates,
+  canAutoFillDates = false,
+}) {
   return (
     <div className="bg-slate-900/95 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-sm p-6 md:p-8 animate-scale-in">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <GhostBtn 
-          type="button" 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log("Bouton 'Ajouter une activité' cliqué");
-            if (onAddItem) {
-              onAddItem();
-            } else {
-              console.error("onAddItem n'est pas défini");
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap lg:w-auto">
+          <GhostBtn
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (canAutoFillDates && onAutoFillDates) onAutoFillDates();
+            }}
+            variant="primary"
+            disabled={!canAutoFillDates}
+            title={
+              canAutoFillDates
+                ? "Remplir automatiquement les dates des activités (à partir du lendemain de l'arrivée)"
+                : "Renseignez les dates d'arrivée et de départ pour activer"
             }
-          }} 
-          variant="primary" 
-          className="w-full lg:w-auto shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
-        >
-          ➕ Ajouter une activité
-        </GhostBtn>
+            className="w-full sm:w-auto whitespace-nowrap shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            ✨ Auto-dates
+          </GhostBtn>
+          <GhostBtn 
+            type="button" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (onAddItem) {
+                onAddItem();
+              } else {
+                console.error("onAddItem n'est pas défini");
+              }
+            }} 
+            variant="primary" 
+            className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
+          >
+            ➕ Ajouter une activité
+          </GhostBtn>
+        </div>
         <div className="w-full lg:w-auto bg-slate-900/60 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-slate-700 shadow-lg">
           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-700/80">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">

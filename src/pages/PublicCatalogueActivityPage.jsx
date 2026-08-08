@@ -8,6 +8,7 @@ import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay
 import { buildSelectableDateOptions, normalizeAvailableDays } from "../utils/activityAvailableDates";
 import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
 import { CatalogPhotoLightbox } from "../components/public/CatalogPhotoLightbox";
+import { CatalogPhotoFrame } from "../components/public/CatalogPhotoFrame";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import {
   getActivityPublicProse,
@@ -1219,31 +1220,25 @@ export function PublicCatalogueActivityPage({ activityId }) {
       <main className="relative z-10 flex-grow pt-6 md:pt-8">
         {/* ——— Galerie mobile ——— */}
         <div className="px-4 md:hidden">
-          <div className="relative aspect-[4/3] w-full animate-catalog-in-soft overflow-hidden rounded-[22px] opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "60ms" }}>
-            <div ref={carouselRef} onScroll={onCarouselScroll} className="scrollbar-hide flex h-full snap-x snap-mandatory gap-0 overflow-x-auto">
+          <div
+            className="relative aspect-[16/11] w-full animate-catalog-in-soft overflow-hidden rounded-[22px] opacity-0 motion-reduce:animate-none motion-reduce:opacity-100"
+            style={{ animationDelay: "60ms" }}
+          >
+            <div
+              ref={carouselRef}
+              onScroll={onCarouselScroll}
+              className="scrollbar-hide flex h-full snap-x snap-mandatory gap-0 overflow-x-auto"
+            >
               {gallerySlides.map((slide, i) => (
-                <div key={i} className="relative h-full min-w-full shrink-0 snap-start overflow-hidden bg-slate-950">
+                <div key={i} className="relative h-full min-w-full shrink-0 snap-center overflow-hidden bg-slate-950">
                   {slide.kind === "image" ? (
                     <button
                       type="button"
                       onClick={() => openLightboxAt(i)}
-                      className="relative h-full w-full"
+                      className="block h-full w-full"
                       aria-label="Agrandir la photo"
                     >
-                      <img
-                        src={slide.url}
-                        alt=""
-                        aria-hidden
-                        className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
-                        draggable={false}
-                      />
-                      <img
-                        src={slide.url}
-                        alt=""
-                        className="relative h-full w-full object-contain"
-                        loading="lazy"
-                        draggable={false}
-                      />
+                      <CatalogPhotoFrame src={slide.url} />
                     </button>
                   ) : (
                     <div className="h-full w-full" style={{ background: slide.bg }} />
@@ -1253,14 +1248,18 @@ export function PublicCatalogueActivityPage({ activityId }) {
             </div>
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-44 bg-gradient-to-b from-black/78 via-black/4 to-transparent"
+              className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-36 bg-gradient-to-b from-black/70 via-black/20 to-transparent"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-20 bg-gradient-to-t from-black/45 to-transparent"
             />
             <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(100%-4.5rem)] pr-1 sm:left-4 sm:top-4">
               <h1 className="font-catalog-display text-lg font-bold leading-snug tracking-tight text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_2px_20px_rgba(0,0,0,0.8)] line-clamp-3 sm:text-xl">
                 {activity.name}
               </h1>
             </div>
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1.5 backdrop-blur-sm">
+            <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1.5 backdrop-blur-sm">
               {gallerySlides.map((_, i) => (
                 <div
                   key={i}
@@ -1268,7 +1267,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 />
               ))}
             </div>
-            <div className="absolute right-3 top-1/2 flex -translate-y-1/2 flex-col gap-2">
+            <div className="absolute right-3 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-2">
               <button
                 type="button"
                 onClick={() => void sharePage()}
@@ -1319,89 +1318,61 @@ export function PublicCatalogueActivityPage({ activityId }) {
           <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
             {/* ——— Colonne contenu ——— */}
             <div className="space-y-6 lg:col-span-2">
-              {/* Galerie desktop (grille WFY) */}
-              <div className="hidden max-h-[400px] overflow-hidden rounded-none md:block lg:max-h-[450px]">
-                <div className="grid h-full min-h-[280px] grid-cols-3 gap-2 lg:min-h-[360px]">
-                  <div className="relative col-span-2 row-span-2 overflow-hidden rounded-l-3xl bg-slate-950">
+              {/* Galerie desktop — cadre fixe, photos toujours remplies (comme les hôtels) */}
+              <div className="hidden overflow-hidden rounded-3xl md:block">
+                <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
+                  <button
+                    type="button"
+                    onClick={() => openLightboxAt(0)}
+                    className="relative aspect-[16/11] w-full overflow-hidden bg-slate-950"
+                    aria-label="Agrandir la photo 1"
+                  >
                     {catalogUrls[0] ? (
-                      <button type="button" onClick={() => openLightboxAt(0)} className="relative h-full w-full" aria-label="Agrandir la photo 1">
-                        <img
-                          src={catalogUrls[0]}
-                          alt=""
-                          aria-hidden
-                          className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
-                          draggable={false}
-                        />
-                        <img
-                          src={catalogUrls[0]}
-                          alt=""
-                          className="relative h-full w-full object-contain transition-opacity hover:opacity-95"
-                          loading="lazy"
-                          draggable={false}
-                        />
-                      </button>
+                      <CatalogPhotoFrame src={catalogUrls[0]} imgClassName="transition duration-300 hover:opacity-95" />
                     ) : (
                       <div className="h-full w-full" style={{ background: galleryBackgrounds[0] }} />
                     )}
-                  </div>
-                  <div className="relative col-span-1 overflow-hidden rounded-tr-3xl bg-slate-950">
-                    {catalogUrls[1] ? (
-                      <button type="button" onClick={() => openLightboxAt(1)} className="relative h-full w-full" aria-label="Agrandir la photo 2">
-                        <img
-                          src={catalogUrls[1]}
-                          alt=""
-                          aria-hidden
-                          className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
-                          draggable={false}
-                        />
-                        <img
-                          src={catalogUrls[1]}
-                          alt=""
-                          className="relative h-full min-h-[140px] w-full object-contain transition-opacity hover:opacity-95"
-                          loading="lazy"
-                          draggable={false}
-                        />
-                      </button>
-                    ) : (
-                      <div className="h-full min-h-[140px] w-full" style={{ background: galleryBackgrounds[1] }} />
-                    )}
-                  </div>
-                  <div className="relative col-span-1 overflow-hidden rounded-br-3xl bg-slate-950">
-                    {catalogUrls[2] ? (
-                      <button type="button" onClick={() => openLightboxAt(2)} className="relative h-full w-full" aria-label="Agrandir la photo 3">
-                        <img
-                          src={catalogUrls[2]}
-                          alt=""
-                          aria-hidden
-                          className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
-                          draggable={false}
-                        />
-                        <img
-                          src={catalogUrls[2]}
-                          alt=""
-                          className="relative h-full min-h-[140px] w-full object-contain transition-opacity hover:opacity-95"
-                          loading="lazy"
-                          draggable={false}
-                        />
-                      </button>
-                    ) : (
-                      <div className="h-full min-h-[140px] w-full" style={{ background: galleryBackgrounds[2] }} />
-                    )}
-                    {catalogUrls.length > 3 ? (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                        <span className="flex items-center gap-2 text-base font-semibold text-white">
-                          <IconImages className="h-5 w-5" />
-                          +{catalogUrls.length - 3} photo{catalogUrls.length - 3 > 1 ? "s" : ""}
-                        </span>
-                      </div>
-                    ) : catalogUrls.length === 0 ? (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                        <span className="flex items-center gap-2 text-base font-semibold text-white">
-                          <IconImages className="h-5 w-5" />
-                          Voir toutes les photos
-                        </span>
-                      </div>
-                    ) : null}
+                  </button>
+                  <div className="grid grid-rows-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openLightboxAt(1)}
+                      className="relative min-h-0 overflow-hidden bg-slate-950"
+                      aria-label="Agrandir la photo 2"
+                    >
+                      {catalogUrls[1] ? (
+                        <CatalogPhotoFrame src={catalogUrls[1]} imgClassName="transition duration-300 hover:opacity-95" />
+                      ) : (
+                        <div className="h-full w-full" style={{ background: galleryBackgrounds[1] }} />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openLightboxAt(Math.min(2, Math.max(0, catalogUrls.length - 1)))}
+                      className="relative min-h-0 overflow-hidden bg-slate-950"
+                      aria-label="Agrandir la photo 3"
+                    >
+                      {catalogUrls[2] ? (
+                        <CatalogPhotoFrame src={catalogUrls[2]} imgClassName="transition duration-300 hover:opacity-95" />
+                      ) : (
+                        <div className="h-full w-full" style={{ background: galleryBackgrounds[2] }} />
+                      )}
+                      {catalogUrls.length > 3 ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/55">
+                          <span className="flex items-center gap-2 text-base font-semibold text-white">
+                            <IconImages className="h-5 w-5" />
+                            +{catalogUrls.length - 3} photo{catalogUrls.length - 3 > 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      ) : catalogUrls.length === 0 ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/55">
+                          <span className="flex items-center gap-2 text-base font-semibold text-white">
+                            <IconImages className="h-5 w-5" />
+                            Voir toutes les photos
+                          </span>
+                        </div>
+                      ) : null}
+                    </button>
                   </div>
                 </div>
               </div>

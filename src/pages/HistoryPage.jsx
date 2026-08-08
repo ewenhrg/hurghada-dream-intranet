@@ -2556,9 +2556,30 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           </div>
 
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 bg-gradient-to-r from-emerald-50/80 to-teal-50/70 p-6 md:p-7 rounded-2xl border-2 border-emerald-300/70 shadow-lg">
-            <GhostBtn type="button" onClick={addItem} className="text-base md:text-lg px-6 py-3">
-              ➕ Ajouter une autre activité
-            </GhostBtn>
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap lg:w-auto">
+              <GhostBtn
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (client.arrivalDate && client.departureDate) handleAutoFillDates();
+                }}
+                variant="primary"
+                size="md"
+                disabled={!client.arrivalDate || !client.departureDate}
+                title={
+                  client.arrivalDate && client.departureDate
+                    ? "Remplir automatiquement les dates des activités (à partir du lendemain de l'arrivée)"
+                    : "Renseignez les dates d'arrivée et de départ pour activer"
+                }
+                className="w-full sm:w-auto whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed text-base md:text-lg px-6 py-3"
+              >
+                ✨ Auto-dates
+              </GhostBtn>
+              <GhostBtn type="button" onClick={addItem} className="w-full sm:w-auto text-base md:text-lg px-6 py-3">
+                ➕ Ajouter une autre activité
+              </GhostBtn>
+            </div>
             <div className="text-right lg:text-right w-full lg:w-auto">
               <p className="text-sm md:text-base font-semibold text-slate-700 mb-2">💰 Total du devis</p>
               <p className="text-2xl md:text-3xl font-bold text-emerald-700 mb-1">💵 Espèces: {currencyNoCents(grandTotalCash, grandCurrency)}</p>
