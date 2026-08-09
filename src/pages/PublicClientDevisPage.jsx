@@ -126,6 +126,11 @@ export function PublicClientDevisPage() {
     return categories;
   }, []);
 
+  const publicActivities = useMemo(
+    () => (activities || []).filter((activity) => activity?.catalog_paused !== true),
+    [activities]
+  );
+
   const activityMap = useMemo(() => {
     const map = new Map();
     activities.forEach((activity) => {
@@ -136,9 +141,10 @@ export function PublicClientDevisPage() {
 
   const filteredActivities = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const byCategory = selectedCategory === "all"
-      ? activities
-      : activities.filter((activity) => normalizeCategory(activity.category) === selectedCategory);
+    const byCategory =
+      selectedCategory === "all"
+        ? publicActivities
+        : publicActivities.filter((activity) => normalizeCategory(activity.category) === selectedCategory);
 
     if (!q) return byCategory;
     return byCategory.filter((activity) => {
@@ -147,7 +153,7 @@ export function PublicClientDevisPage() {
       const description = String(activity.description || "").toLowerCase();
       return name.includes(q) || notes.includes(q) || description.includes(q);
     });
-  }, [activities, search, selectedCategory]);
+  }, [publicActivities, search, selectedCategory]);
 
   const groupedActivities = useMemo(() => {
     const grouped = {};
@@ -181,12 +187,14 @@ export function PublicClientDevisPage() {
   }, [groupedActivities]);
 
   const categoryCounts = useMemo(() => {
-    const counts = { all: activities.length };
+    const counts = { all: publicActivities.length };
     publicDisplayCategories.forEach((category) => {
-      counts[category.key] = activities.filter((activity) => normalizeCategory(activity.category) === category.key).length;
+      counts[category.key] = publicActivities.filter(
+        (activity) => normalizeCategory(activity.category) === category.key
+      ).length;
     });
     return counts;
-  }, [activities, publicDisplayCategories]);
+  }, [publicActivities, publicDisplayCategories]);
 
   const cartLines = useMemo(() => {
     return cart

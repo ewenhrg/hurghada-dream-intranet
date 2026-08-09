@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Loader2, Upload } from "lucide-react";
+import { ImagePlus, Loader2, Pause, Play, Upload } from "lucide-react";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { LS_KEYS, CATEGORIES } from "../constants";
 import { saveLS, loadLS } from "../utils";
@@ -76,7 +76,7 @@ function createCatalogPatchMapFromBackup(backupActivities) {
     if (!row) continue;
     const description = row.description != null ? String(row.description) : "";
     const catalogImageUrls = normalizeCatalogImageUrlsFromDb(row.catalogImageUrls ?? row.catalog_image_urls);
-    const patch = { description, catalogImageUrls, popular: row.popular === true };
+    const patch = { description, catalogImageUrls, popular: row.popular === true, catalogPaused: row.catalogPaused === true };
     if (row.supabase_id != null && String(row.supabase_id).trim() !== "") {
       bySupabaseId.set(String(row.supabase_id), patch);
     }
@@ -103,7 +103,7 @@ function applyCatalogBackupToActivities(currentActivities, backupActivities) {
   return { next, patchedCount };
 }
 
-async function persistCatalogRow(activity) {
+async function persistCatalogRow(activity, { successMessage } = {}) {
   if (!__SUPABASE_DEBUG__.isConfigured || !supabase) {
     toast.error("Supabase non disponible.");
     return false;
@@ -117,14 +117,22 @@ async function persistCatalogRow(activity) {
     description: activity.description != null ? String(activity.description) : "",
     catalog_image_urls: urls,
     popular: activity.popular === true,
+    catalog_paused: activity.catalogPaused === true,
   };
   const { error } = await supabase.from("activities").update(payload).eq("id", activity.supabase_id);
   if (error) {
     logger.error("ActivityCatalogAdminPage : erreur Supabase", error);
-    toast.error(error.message || "Erreur lors de l’enregistrement.");
+    const msg = String(error.message || "");
+    if (/catalog_paused/i.test(msg) || error.code === "PGRST204") {
+      toast.error(
+        "Colonne catalog_paused absente : exécutez supabase_activities_add_catalog_paused.sql dans Supabase, puis réessayez."
+      );
+    } else {
+      toast.error(error.message || "Erreur lors de l’enregistrement.");
+    }
     return false;
   }
-  toast.success(`Catalogue enregistré : ${activity.name}`, 2200);
+  toast.success(successMessage || `Catalogue enregistré : ${activity.name}`, 2200);
   return true;
 }
 
@@ -141,11 +149,13 @@ function reorderUrlRows(prev, fromIndex, toIndex) {
 function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
   const [desc, setDesc] = useState(() => String(activity.description ?? ""));
   const [popular, setPopular] = useState(() => activity.popular === true);
+  const [catalogPaused, setCatalogPaused] = useState(() => activity.catalogPaused === true);
   const [urlRows, setUrlRows] = useState(() => {
     const u = normalizeCatalogImageUrlsFromDb(activity.catalogImageUrls);
     return u.length ? u : [""];
   });
   const [saving, setSaving] = useState(false);
+  const [pausing, setPausing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -160,22 +170,28 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
   useEffect(() => {
     setDesc(String(activity.description ?? ""));
     setPopular(activity.popular === true);
+    setCatalogPaused(activity.catalogPaused === true);
     const u = normalizeCatalogImageUrlsFromDb(activity.catalogImageUrls);
     setUrlRows(u.length ? u : [""]);
-  }, [activity.id, activity.description, activity.catalogImageUrls, activity.popular]);
+  }, [activity.id, activity.description, activity.catalogImageUrls, activity.popular, activity.catalogPaused]);
 
   const normalizedUrls = useMemo(
     () => urlRows.map((s) => String(s).trim()).filter(isAllowedCatalogImageUrl).slice(0, MAX_CATALOG_IMAGES),
     [urlRows]
   );
 
-  const applyLocalPatch = useCallback(() => {
-    patchActivity(activity.id, {
-      description: desc,
-      catalogImageUrls: normalizedUrls,
-      popular,
-    });
-  }, [activity.id, desc, normalizedUrls, popular, patchActivity]);
+  const applyLocalPatch = useCallback(
+    (extra = {}) => {
+      patchActivity(activity.id, {
+        description: desc,
+        catalogImageUrls: normalizedUrls,
+        popular,
+        catalogPaused,
+        ...extra,
+      });
+    },
+    [activity.id, desc, normalizedUrls, popular, catalogPaused, patchActivity]
+  );
 
   async function handleSave() {
     if (!canEdit) return;
@@ -187,11 +203,38 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
         description: desc,
         catalogImageUrls: urls,
         popular,
+        catalogPaused,
       };
       const ok = await persistCatalogRow(next);
       if (ok) applyLocalPatch();
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleTogglePause() {
+    if (!canMutateRow || pausing) return;
+    const nextPaused = !catalogPaused;
+    setPausing(true);
+    try {
+      const next = {
+        ...activity,
+        description: desc,
+        catalogImageUrls: normalizedUrls,
+        popular,
+        catalogPaused: nextPaused,
+      };
+      const ok = await persistCatalogRow(next, {
+        successMessage: nextPaused
+          ? `Pause : « ${activity.name} » masquée du catalogue public`
+          : `Reprise : « ${activity.name} » visible sur le catalogue public`,
+      });
+      if (ok) {
+        setCatalogPaused(nextPaused);
+        applyLocalPatch({ catalogPaused: nextPaused });
+      }
+    } finally {
+      setPausing(false);
     }
   }
 
@@ -379,22 +422,66 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
   }
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <article
+      className={`rounded-xl border p-4 shadow-sm ${
+        catalogPaused
+          ? "border-amber-300/80 bg-amber-50/40"
+          : "border-slate-200 bg-white"
+      }`}
+    >
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h4 className="font-semibold text-slate-900">{activity.name}</h4>
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="font-semibold text-slate-900">{activity.name}</h4>
+            {catalogPaused ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-950">
+                <Pause className="h-3 w-3" aria-hidden />
+                En pause
+              </span>
+            ) : null}
+          </div>
           {!dbId ? (
             <p className="mt-1 text-xs font-medium text-amber-700">Non synchronisée avec Supabase — édition impossible.</p>
+          ) : catalogPaused ? (
+            <p className="mt-1 text-xs font-medium text-amber-800">
+              Masquée du site public catalogue. Cliquez sur « Reprendre » pour la republier.
+            </p>
           ) : null}
         </div>
-        <button
-          type="button"
-          disabled={!canMutateRow || saving}
-          onClick={() => void handleSave()}
-          className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {saving ? "Enregistrement…" : "Enregistrer"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={!canMutateRow || pausing || saving}
+            onClick={() => void handleTogglePause()}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              catalogPaused
+                ? "bg-emerald-600 hover:bg-emerald-700"
+                : "bg-amber-600 hover:bg-amber-700"
+            }`}
+            title={
+              catalogPaused
+                ? "Remettre l’activité visible sur le catalogue public"
+                : "Masquer l’activité du catalogue public"
+            }
+          >
+            {pausing ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : catalogPaused ? (
+              <Play className="h-4 w-4" aria-hidden />
+            ) : (
+              <Pause className="h-4 w-4" aria-hidden />
+            )}
+            {pausing ? "…" : catalogPaused ? "Reprendre" : "Pause"}
+          </button>
+          <button
+            type="button"
+            disabled={!canMutateRow || saving || pausing}
+            onClick={() => void handleSave()}
+            className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving ? "Enregistrement…" : "Enregistrer"}
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -723,6 +810,12 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user, read
           )}
           {!readOnly && (
             <>
+              <li>
+                Bouton <strong>Pause</strong> : masque immédiatement l’activité du catalogue public (site
+                /catalogue). <strong>Reprendre</strong> la remet en ligne. Nécessite la colonne SQL{" "}
+                <code className="rounded bg-white px-1">catalog_paused</code> (
+                <code className="rounded bg-white px-1">supabase_activities_add_catalog_paused.sql</code>).
+              </li>
               <li>Les modifications sont enregistrées dans Supabase ; gardez votre code à 6 chiffres confidentiel.</li>
               <li>Seules les URLs en <strong>https://</strong> sont acceptées pour les images (pas de fichier piégé en data:).</li>
               <li>

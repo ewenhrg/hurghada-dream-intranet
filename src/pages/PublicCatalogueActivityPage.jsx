@@ -1084,6 +1084,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
         if (error || !data) {
           setLoadError(error?.message || "Cette activité n'existe pas ou n'est plus disponible.");
           setActivity(null);
+        } else if (data.catalog_paused === true) {
+          setLoadError("Cette activité n'est temporairement plus disponible dans le catalogue.");
+          setActivity(null);
         } else {
           setActivity(data);
         }

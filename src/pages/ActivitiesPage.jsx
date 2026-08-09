@@ -363,6 +363,11 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       name: form.name.trim(),
       category: form.category,
       popular: existingActivity?.popular === true,
+      catalogPaused: existingActivity?.catalogPaused === true,
+      description: existingActivity?.description ?? "",
+      catalogImageUrls: Array.isArray(existingActivity?.catalogImageUrls)
+        ? existingActivity.catalogImageUrls
+        : [],
       priceAdult: Number(form.priceAdult || 0),
       priceChild: Number(form.priceChild || 0),
       priceBaby: forbidden ? 0 : Number(form.priceBaby || 0),

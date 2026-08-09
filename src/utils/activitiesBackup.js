@@ -285,6 +285,7 @@ export function createBackup(activities, siteKey) {
       catalogImageUrls: Array.isArray(a.catalogImageUrls) ? a.catalogImageUrls : [],
       transfers: a.transfers,
       popular: a.popular === true,
+      catalogPaused: a.catalogPaused === true,
     })),
   };
 }
@@ -328,6 +329,7 @@ export function createCatalogBackup(activities, siteKey) {
       description: a.description != null ? String(a.description) : "",
       catalogImageUrls: Array.isArray(a.catalogImageUrls) ? a.catalogImageUrls : [],
       popular: a.popular === true,
+      catalogPaused: a.catalogPaused === true,
     })),
   };
 }
