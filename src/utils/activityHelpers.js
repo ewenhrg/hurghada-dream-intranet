@@ -220,6 +220,50 @@ export function hasEnoughParticipantsForActivity(activityName, counts = {}) {
   return countBookableParticipants(counts) >= min;
 }
 
+/** Parachute ou Combo aquatique : pas de transfert, RDV au Mamma Mia. */
+export function requiresMammaMiaSelfTransfer(activityName) {
+  const name = normalizeActivityName(activityName);
+  if (!name) return false;
+  if (name.includes("parachute")) return true;
+  if (name.includes("combo") && name.includes("aquatique")) return true;
+  return false;
+}
+
+export const MAMMA_MIA_SELF_TRANSFER_NOTE =
+  "Rendez-vous par vos propres moyens au restaurant Mamma Mia (transfert non compris).";
+
+/**
+ * Ajoute ou retire la note Mamma Mia selon les activités du devis, sans dupliquer.
+ * @param {string} notes
+ * @param {boolean} needsNote
+ */
+export function withMammaMiaSelfTransferNote(notes, needsNote) {
+  const base = String(notes || "").trim();
+  const marker = MAMMA_MIA_SELF_TRANSFER_NOTE;
+  const hasMarker = base.includes(marker);
+
+  if (needsNote) {
+    if (hasMarker) return base;
+    return base ? `${base}\n\n${marker}` : marker;
+  }
+
+  if (!hasMarker) return base;
+  return base
+    .replace(marker, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/**
+ * @param {Array<{ name?: string, activityName?: string }|string>} activitiesOrNames
+ */
+export function activitiesNeedMammaMiaSelfTransferNote(activitiesOrNames) {
+  return (activitiesOrNames || []).some((entry) => {
+    if (typeof entry === "string") return requiresMammaMiaSelfTransfer(entry);
+    return requiresMammaMiaSelfTransfer(entry?.name || entry?.activityName || "");
+  });
+}
+
 function hasAllTokens(name, tokens) {
   if (!name) return false;
   return tokens.every((token) => name.includes(token));

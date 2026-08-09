@@ -33,6 +33,8 @@ import {
   hasEnoughParticipantsForActivity,
   warnsRecommendedTwoParticipants,
   isBelowRecommendedTwoParticipants,
+  requiresMammaMiaSelfTransfer,
+  MAMMA_MIA_SELF_TRANSFER_NOTE,
 } from "../utils/activityHelpers";
 import {
   computePublicCatalogLineTotal,
@@ -1016,6 +1018,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
     hasEnoughParticipantsForActivity(activity?.name, { adults, children: childCount });
 
   const requiresMinTwo = requiresMinimumTwoParticipants(activity?.name);
+  const needsMammaMiaNote = requiresMammaMiaSelfTransfer(activity?.name);
   const warnsRecommendedTwo = warnsRecommendedTwoParticipants(activity?.name);
   const participantsOk = hasEnoughParticipantsForActivity(activity?.name, {
     adults,
@@ -1383,6 +1386,15 @@ export function PublicCatalogueActivityPage({ activityId }) {
               {catalogProse ? (
                 <section>
                   <p className="whitespace-pre-line text-sm font-semibold leading-relaxed text-catalog-body sm:text-base">{catalogProse}</p>
+                </section>
+              ) : null}
+
+              {needsMammaMiaNote ? (
+                <section
+                  className="rounded-2xl border border-amber-300/90 bg-amber-50 px-4 py-3 text-sm font-semibold leading-relaxed text-amber-950"
+                  role="note"
+                >
+                  {MAMMA_MIA_SELF_TRANSFER_NOTE}
                 </section>
               ) : null}
 

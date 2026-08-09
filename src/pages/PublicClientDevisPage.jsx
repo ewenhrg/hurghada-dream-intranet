@@ -9,6 +9,8 @@ import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import {
   requiresMinimumTwoParticipants,
   hasEnoughParticipantsForActivity,
+  requiresMammaMiaSelfTransfer,
+  withMammaMiaSelfTransferNote,
 } from "../utils/activityHelpers";
 
 /** `*` : toutes les colonnes présentes en base (évite erreur si `babies_forbidden` n’est pas encore migrée). */
@@ -339,7 +341,12 @@ export function PublicClientDevisPage() {
     const hotel = client.hotel.trim();
     const arrival = client.arrivalDate?.trim() || "";
     const departure = client.departureDate?.trim() || "";
-    const notes = client.notes.trim();
+    const notes = withMammaMiaSelfTransferNote(
+      client.notes.trim(),
+      cartLines.some((line) =>
+        requiresMammaMiaSelfTransfer(line.activity?.name || line.activityName || "")
+      )
+    );
 
     if (!name) {
       setError("Le nom complet est obligatoire.");

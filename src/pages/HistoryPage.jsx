@@ -9,7 +9,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, requiresMammaMiaSelfTransfer, withMammaMiaSelfTransferNote } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -1409,6 +1409,18 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
 
   const handleAutoFillDates = useAutoFillDates(client, items, setItems, activitiesMap, stopSalesMap, pushSalesMap);
 
+  // Parachute / Combo aquatique : note auto RDV Mamma Mia
+  useEffect(() => {
+    const needsNote = (items || []).some((it) => {
+      const act = activitiesMap.get(it.activityId);
+      return requiresMammaMiaSelfTransfer(act?.name || it.activityName || "");
+    });
+    setNotes((prev) => {
+      const next = withMammaMiaSelfTransferNote(prev, needsNote);
+      return next === prev ? prev : next;
+    });
+  }, [items, activitiesMap, setNotes]);
+
   const blankItem = () => ({
     activityId: "",
     date: new Date().toISOString().slice(0, 10),
@@ -1699,7 +1711,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       client: cleanedClient,
       clientArrivalDate: cleanedClient.arrivalDate || "",
       clientDepartureDate: cleanedClient.departureDate || "",
-      notes: notes.trim(),
+      notes: withMammaMiaSelfTransferNote(
+        notes.trim(),
+        validComputed.some((c) => requiresMammaMiaSelfTransfer(c.act?.name || ""))
+      ),
       createdByName: quote.createdByName || "", // Garder le créateur original
       updatedByName: user?.name || quote.updatedByName || "",
       items: validComputed.map((c, idx) => {
