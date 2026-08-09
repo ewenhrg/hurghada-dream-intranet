@@ -34,7 +34,7 @@ import {
   warnsRecommendedTwoParticipants,
   isBelowRecommendedTwoParticipants,
   requiresMammaMiaSelfTransfer,
-  MAMMA_MIA_SELF_TRANSFER_NOTE,
+  buildMammaMiaSelfTransferNote,
 } from "../utils/activityHelpers";
 import {
   computePublicCatalogLineTotal,
@@ -1394,7 +1394,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   className="rounded-2xl border border-amber-300/90 bg-amber-50 px-4 py-3 text-sm font-semibold leading-relaxed text-amber-950"
                   role="note"
                 >
-                  {MAMMA_MIA_SELF_TRANSFER_NOTE}
+                  {buildMammaMiaSelfTransferNote([activity.name])}
                 </section>
               ) : null}
 

@@ -9,7 +9,7 @@ import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import {
   requiresMinimumTwoParticipants,
   hasEnoughParticipantsForActivity,
-  requiresMammaMiaSelfTransfer,
+  getMammaMiaSelfTransferActivityNames,
   withMammaMiaSelfTransferNote,
 } from "../utils/activityHelpers";
 
@@ -343,8 +343,8 @@ export function PublicClientDevisPage() {
     const departure = client.departureDate?.trim() || "";
     const notes = withMammaMiaSelfTransferNote(
       client.notes.trim(),
-      cartLines.some((line) =>
-        requiresMammaMiaSelfTransfer(line.activity?.name || line.activityName || "")
+      getMammaMiaSelfTransferActivityNames(
+        cartLines.map((line) => line.activity?.name || line.activityName || "")
       )
     );
 

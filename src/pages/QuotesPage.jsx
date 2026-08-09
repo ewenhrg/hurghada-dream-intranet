@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10, generateQuoteHTML } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, requiresMammaMiaSelfTransfer, withMammaMiaSelfTransferNote } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -257,12 +257,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
   // Parachute / Combo aquatique : note auto RDV Mamma Mia (transfert non compris)
   useEffect(() => {
-    const needsNote = (items || []).some((it) => {
-      const act = activitiesMap.get(it.activityId);
-      return requiresMammaMiaSelfTransfer(act?.name || it.activityName || "");
-    });
+    const mammaNames = getMammaMiaSelfTransferActivityNames(
+      (items || []).map((it) => activitiesMap.get(it.activityId)?.name || it.activityName || "")
+    );
     setNotes((prev) => {
-      const next = withMammaMiaSelfTransferNote(prev, needsNote);
+      const next = withMammaMiaSelfTransferNote(prev, mammaNames);
       return next === prev ? prev : next;
     });
   }, [items, activitiesMap]);
@@ -976,7 +975,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       clientDepartureDate: cleanedClient.departureDate || "",
       notes: withMammaMiaSelfTransferNote(
         notes.trim(),
-        validComputed.some((c) => requiresMammaMiaSelfTransfer(c.act?.name || ""))
+        getMammaMiaSelfTransferActivityNames(validComputed.map((c) => c.act?.name || ""))
       ),
       createdByName: user?.name || "",
       items: validComputed.map((c) => ({

@@ -3,7 +3,7 @@
  * d’une demande catalogue (table `public_quotes` ou modèle d’affichage équivalent).
  */
 
-import { requiresMammaMiaSelfTransfer, withMammaMiaSelfTransferNote } from "./activityHelpers";
+import { getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote } from "./activityHelpers";
 
 export const HD_PUBLIC_QUOTE_TO_DRAFT_EVENT = "hd-public-quote-to-draft";
 
@@ -128,7 +128,6 @@ export function mapPublicCatalogLinesToQuoteItems(lines) {
  */
 export function buildQuoteDraftFromPublicViewModel(vm) {
   const items = mapPublicCatalogLinesToQuoteItems(vm.parsedItems);
-  const needsMammaMia = items.some((it) => requiresMammaMiaSelfTransfer(it.activityName || ""));
   return {
     client: {
       name: vm.client?.name || "",
@@ -141,6 +140,9 @@ export function buildQuoteDraftFromPublicViewModel(vm) {
       departureDate: vm.client?.departureDate || "",
     },
     items,
-    notes: withMammaMiaSelfTransferNote(vm.notes || "", needsMammaMia),
+    notes: withMammaMiaSelfTransferNote(
+      vm.notes || "",
+      getMammaMiaSelfTransferActivityNames(items.map((it) => it.activityName || ""))
+    ),
   };
 }

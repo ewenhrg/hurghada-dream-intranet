@@ -229,39 +229,78 @@ export function requiresMammaMiaSelfTransfer(activityName) {
   return false;
 }
 
+/** Ancien libellé générique (pour nettoyage des notes déjà enregistrées). */
 export const MAMMA_MIA_SELF_TRANSFER_NOTE =
   "Rendez-vous par vos propres moyens au restaurant Mamma Mia (transfert non compris).";
 
+const MAMMA_MIA_NOTE_CLEAN_RE =
+  /(?:^|\n+)\s*(?:Pour .+? :\s*)?Rendez-vous par vos propres moyens au restaurant Mamma Mia \(transfert non compris\)\.?\s*/gi;
+
 /**
- * Ajoute ou retire la note Mamma Mia selon les activités du devis, sans dupliquer.
- * @param {string} notes
- * @param {boolean} needsNote
+ * Noms d’activités (uniques) concernées par le RDV Mamma Mia.
+ * @param {Array<{ name?: string, activityName?: string }|string>} activitiesOrNames
+ * @returns {string[]}
  */
-export function withMammaMiaSelfTransferNote(notes, needsNote) {
-  const base = String(notes || "").trim();
-  const marker = MAMMA_MIA_SELF_TRANSFER_NOTE;
-  const hasMarker = base.includes(marker);
-
-  if (needsNote) {
-    if (hasMarker) return base;
-    return base ? `${base}\n\n${marker}` : marker;
+export function getMammaMiaSelfTransferActivityNames(activitiesOrNames) {
+  const names = [];
+  const seen = new Set();
+  for (const entry of activitiesOrNames || []) {
+    const raw =
+      typeof entry === "string" ? entry : entry?.name || entry?.activityName || "";
+    if (!requiresMammaMiaSelfTransfer(raw)) continue;
+    const label = String(raw).trim();
+    const key = normalizeActivityName(label);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    names.push(label);
   }
+  return names;
+}
 
-  if (!hasMarker) return base;
-  return base
-    .replace(marker, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+/**
+ * Note avec le(s) nom(s) d’activité précis (seules celles sans transfert).
+ * @param {string[]} activityNames
+ */
+export function buildMammaMiaSelfTransferNote(activityNames) {
+  const names = [...new Set((activityNames || []).map((n) => String(n || "").trim()).filter(Boolean))];
+  if (!names.length) return "";
+  const list =
+    names.length === 1
+      ? names[0]
+      : `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`;
+  return `Pour ${list} : rendez-vous par vos propres moyens au restaurant Mamma Mia (transfert non compris).`;
+}
+
+/**
+ * Ajoute ou retire la note Mamma Mia selon les activités concernées.
+ * @param {string} notes
+ * @param {string[]|boolean} activityNamesOrNeeds — liste de noms, ou boolean (legacy)
+ */
+export function withMammaMiaSelfTransferNote(notes, activityNamesOrNeeds) {
+  const base = String(notes || "").trim();
+  const cleaned = base.replace(MAMMA_MIA_NOTE_CLEAN_RE, "").replace(/\n{3,}/g, "\n\n").trim();
+
+  const names = Array.isArray(activityNamesOrNeeds)
+    ? activityNamesOrNeeds
+    : activityNamesOrNeeds
+      ? []
+      : [];
+
+  const marker = Array.isArray(activityNamesOrNeeds)
+    ? buildMammaMiaSelfTransferNote(names)
+    : activityNamesOrNeeds
+      ? MAMMA_MIA_SELF_TRANSFER_NOTE
+      : "";
+
+  if (!marker) return cleaned;
+  return cleaned ? `${cleaned}\n\n${marker}` : marker;
 }
 
 /**
  * @param {Array<{ name?: string, activityName?: string }|string>} activitiesOrNames
  */
 export function activitiesNeedMammaMiaSelfTransferNote(activitiesOrNames) {
-  return (activitiesOrNames || []).some((entry) => {
-    if (typeof entry === "string") return requiresMammaMiaSelfTransfer(entry);
-    return requiresMammaMiaSelfTransfer(entry?.name || entry?.activityName || "");
-  });
+  return getMammaMiaSelfTransferActivityNames(activitiesOrNames).length > 0;
 }
 
 function hasAllTokens(name, tokens) {
