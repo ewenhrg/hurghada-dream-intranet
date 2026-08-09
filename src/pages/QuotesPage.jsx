@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
-import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10 } from "../utils";
+import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10, generateQuoteHTML } from "../utils";
 import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
@@ -798,9 +798,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
   }, [usedDates, onUsedDatesChange]);
 
-  async function handleCreateQuote(e) {
+  async function handleCreateQuote(e, options = {}) {
     e.preventDefault();
     e.stopPropagation();
+
+    const shouldDownload = options?.download === true;
 
     // Empêcher la double soumission
     if (isSubmitting) {
@@ -1016,6 +1018,24 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return updated;
     });
 
+    // Même flux que « Imprimer » (historique) : avant l’await Supabase pour éviter le bloqueur de popups
+    if (shouldDownload) {
+      const htmlContent = generateQuoteHTML(q);
+      const clientPhone = q.client?.phone || "";
+      const fileName = `Devis - ${clientPhone}`;
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.document.write(htmlContent);
+        newWindow.document.title = fileName;
+        newWindow.document.close();
+        setTimeout(() => {
+          newWindow.print();
+        }, 500);
+      } else {
+        toast.error("Autorisez les fenêtres popup pour télécharger / imprimer le devis.");
+      }
+    }
+
     // Envoyer à Supabase si configuré
     if (supabase) {
       try {
@@ -1099,7 +1119,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     window.scrollTo({ top: 0, behavior: "smooth" });
     
     // Afficher un message de succès
-    toast.success("Devis créé avec succès ! Formulaire réinitialisé.");
+    toast.success(
+      shouldDownload
+        ? "Devis créé avec succès ! Impression / téléchargement ouvert."
+        : "Devis créé avec succès ! Formulaire réinitialisé."
+    );
   }
 
 
@@ -2817,23 +2841,43 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         {/* Notes */}
         <NotesSection notes={notes} onNotesChange={setNotes} />
 
-        {/* Bouton de soumission */}
-        <PrimaryBtn 
-          type="submit" 
-          className="w-full text-base font-semibold py-3"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="animate-spin">⏳</span>
-              Création en cours...
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              ✨ Créer le devis
-            </span>
-          )}
-        </PrimaryBtn>
+        {/* Boutons de soumission */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+          <PrimaryBtn
+            type="submit"
+            className="w-full flex-1 text-base font-semibold py-3"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin">⏳</span>
+                Création en cours...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                ✨ Créer le devis
+              </span>
+            )}
+          </PrimaryBtn>
+          <PrimaryBtn
+            type="button"
+            className="w-full flex-1 text-base font-semibold py-3"
+            disabled={isSubmitting}
+            onClick={(e) => void handleCreateQuote(e, { download: true })}
+            title="Crée le devis puis ouvre l’impression / enregistrement PDF (comme Imprimer dans Historique)"
+          >
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin">⏳</span>
+                Création en cours...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                🖨️ Créer le devis et télécharger
+              </span>
+            )}
+          </PrimaryBtn>
+        </div>
       </form>
 
       {/* Modale de paiement */}
