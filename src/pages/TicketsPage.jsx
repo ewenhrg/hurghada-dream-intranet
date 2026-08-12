@@ -429,33 +429,28 @@ export function TicketsPage({ quotes = [] }) {
       alignment: { horizontal: "left", vertical: "center" },
       border: excelBorder("020617"),
     };
-    const activityBannerStyle = (rgb) => ({
-      font: { bold: true, color: { rgb: "0F172A" }, sz: 10 },
-      fill: excelFill(rgb),
+    /** Titre de paragraphe activité — seule couleur hors en-tête / jour. */
+    const activityBannerStyle = {
+      font: { bold: true, color: { rgb: "1E293B" }, sz: 10 },
+      fill: excelFill("E2E8F0"),
       alignment: { horizontal: "left", vertical: "center" },
       border: excelBorder("94A3B8"),
-    });
-    const dataStyle = (rgb, opts = {}) => ({
+    };
+    /** Lignes clients : pas de fond coloré. */
+    const dataStyle = (opts = {}) => ({
       font: { color: { rgb: "1E293B" }, sz: 10, ...(opts.bold ? { bold: true } : {}) },
-      fill: excelFill(rgb),
+      fill: excelFill("FFFFFF"),
       alignment: {
         horizontal: opts.center ? "center" : "left",
         vertical: "center",
       },
-      border: excelBorder("CBD5E1"),
-    });
-    const ticketStyle = (rgb) => ({
-      font: { bold: true, color: { rgb: "7C2D12" }, sz: 10 },
-      fill: excelFill("FDBA74"),
-      alignment: { horizontal: "center", vertical: "center" },
-      border: excelBorder("EA580C"),
+      border: excelBorder("E2E8F0"),
     });
 
     const aoa = [EXPORT_HEADERS];
     const meta = [{ kind: "header" }];
     let lastDate = null;
     let lastAct = null;
-    let toneIdx = 0;
 
     for (const r of filtered) {
       if (r.date !== lastDate) {
@@ -465,22 +460,19 @@ export function TicketsPage({ quotes = [] }) {
         ]);
         meta.push({ kind: "date" });
         lastAct = null;
-        toneIdx = 0;
         lastDate = r.date;
       }
 
       const actKey = r.activitySortKey || r.activity || "";
       if (actKey !== lastAct) {
-        if (lastAct !== null) toneIdx += 1;
         aoa.push([
           `▶ ${r.activityBaseName || r.activity || "Activité"}`,
           ...Array(EXPORT_HEADERS.length - 1).fill(""),
         ]);
-        meta.push({ kind: "activity", toneIdx });
+        meta.push({ kind: "activity" });
         lastAct = actKey;
       }
 
-      const palette = ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
       aoa.push([
         r.ticketNumber,
         dateForExport(r.date),
@@ -498,7 +490,7 @@ export function TicketsPage({ quotes = [] }) {
         paymentText(r.paymentMethod),
         r.createdByName || "",
       ]);
-      meta.push({ kind: "data", toneIdx, fill: palette.excel });
+      meta.push({ kind: "data" });
     }
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -514,15 +506,13 @@ export function TicketsPage({ quotes = [] }) {
         } else if (m.kind === "date") {
           ws[addr].s = dateBannerStyle;
         } else if (m.kind === "activity") {
-          const strong = ACTIVITY_PALETTE[m.toneIdx % ACTIVITY_PALETTE.length].excelStrong;
-          ws[addr].s = activityBannerStyle(strong);
+          ws[addr].s = activityBannerStyle;
         } else if (m.kind === "data") {
-          if (c === 0) ws[addr].s = ticketStyle(m.fill);
-          else if (c === 5 || c === 6 || c === 7 || c === 11 || c === 12)
-            ws[addr].s = dataStyle(m.fill, { center: true, bold: c === 11 });
-          else if (c === 1 || c === 9 || c === 13 || c === 14)
-            ws[addr].s = dataStyle(m.fill, { center: true });
-          else ws[addr].s = dataStyle(m.fill);
+          if (c === 5 || c === 6 || c === 7 || c === 11 || c === 12)
+            ws[addr].s = dataStyle({ center: true, bold: c === 11 });
+          else if (c === 0 || c === 1 || c === 9 || c === 13 || c === 14)
+            ws[addr].s = dataStyle({ center: true });
+          else ws[addr].s = dataStyle();
         }
       }
       if (m.kind === "date" || m.kind === "activity") {
@@ -556,7 +546,7 @@ export function TicketsPage({ quotes = [] }) {
     XLSX.utils.book_append_sheet(wb, ws, "Tickets");
     const stamp = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `tickets-${stamp}.xlsx`);
-    toast.success("Excel coloré téléchargé (dates + activités).");
+    toast.success("Excel téléchargé (couleurs sur titres et jours uniquement).");
   }, [filtered]);
 
   const handleResetCopied = useCallback(() => {
