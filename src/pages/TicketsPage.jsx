@@ -62,9 +62,30 @@ const TH =
 const TD =
   "border border-slate-200 px-0.5 py-0.5 align-middle text-[10px] leading-tight overflow-hidden text-ellipsis";
 
+const COL_COUNT = 16;
+
+/** Teintes douces par bloc d’activité (style planning / Excel). */
+const ACTIVITY_TONES = [
+  "bg-sky-50/90",
+  "bg-emerald-50/90",
+  "bg-amber-50/70",
+  "bg-violet-50/80",
+  "bg-rose-50/70",
+  "bg-teal-50/80",
+  "bg-orange-50/70",
+  "bg-indigo-50/70",
+];
+
 const paymentShort = (method) =>
   method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
 
+function activitySortKeyFromItem(item) {
+  return String(item?.activityName || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
 
 /**
  * Registre des tickets — colonnes alignées Excel pour copier/coller direct.
@@ -130,6 +151,8 @@ export function TicketsPage({ quotes = [] }) {
           children: pax.children,
           babies: pax.babies,
           activity: formatActivityWithExtras(item),
+          activitySortKey: activitySortKeyFromItem(item),
+          activityBaseName: String(item.activityName || "").trim() || "—",
           pickup: pickup || "",
           note,
           priceValue,
@@ -144,10 +167,16 @@ export function TicketsPage({ quotes = [] }) {
         });
       });
     });
+    // Date croissante → activités regroupées → n° ticket
     list.sort((a, b) => {
-      const da = a.date ? new Date(a.date + "T12:00:00").getTime() : 0;
-      const db = b.date ? new Date(b.date + "T12:00:00").getTime() : 0;
-      return db - da;
+      const da = a.date || "";
+      const db = b.date || "";
+      if (da !== db) return da.localeCompare(db);
+      const act = String(a.activitySortKey || "").localeCompare(String(b.activitySortKey || ""), "fr", {
+        sensitivity: "base",
+      });
+      if (act !== 0) return act;
+      return String(a.ticketNumber).localeCompare(String(b.ticketNumber), "fr", { numeric: true });
     });
     return list;
   }, [quotes]);
@@ -167,6 +196,7 @@ export function TicketsPage({ quotes = [] }) {
       return [
         r.ticketNumber,
         r.activity,
+        r.activityBaseName,
         r.clientCell,
         r.clientName,
         r.phone,
@@ -177,6 +207,44 @@ export function TicketsPage({ quotes = [] }) {
       ].some((v) => String(v || "").toLowerCase().includes(term));
     });
   }, [rows, q, statusFilter, copied]);
+
+  /** Blocs date + lignes (sauts de ligne + teinte par activité). */
+  const displayBlocks = useMemo(() => {
+    const blocks = [];
+    let lastDate = null;
+    let lastAct = null;
+    let toneIdx = 0;
+
+    for (const r of filtered) {
+      const dateKey = r.date || "";
+      if (dateKey !== lastDate) {
+        blocks.push({
+          type: "date",
+          key: `date-${dateKey || "none"}-${blocks.length}`,
+          date: dateKey,
+        });
+        lastDate = dateKey;
+        lastAct = null;
+        toneIdx = 0;
+      }
+
+      const actKey = r.activitySortKey || r.activity || "";
+      const showActivitySep = lastAct !== null && actKey !== lastAct;
+      if (actKey !== lastAct) {
+        if (lastAct !== null) toneIdx += 1;
+        lastAct = actKey;
+      }
+
+      blocks.push({
+        type: "row",
+        key: r.key,
+        row: r,
+        toneClass: ACTIVITY_TONES[toneIdx % ACTIVITY_TONES.length],
+        showActivitySep,
+      });
+    }
+    return blocks;
+  }, [filtered]);
 
   const dateForExport = (d) =>
     d ? new Date(d + "T12:00:00").toLocaleDateString("fr-FR") : "";
@@ -190,24 +258,50 @@ export function TicketsPage({ quotes = [] }) {
         })
       : "";
 
+  const formatDateBanner = (d) =>
+    d
+      ? new Date(d + "T12:00:00").toLocaleDateString("fr-FR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      : "Date non renseignée";
+
   const matrixFromRows = useCallback((list, withHeaders) => {
-    const body = list.map((r) => [
-      r.ticketNumber,
-      dateForExport(r.date),
-      r.clientCell,
-      r.hotel || "",
-      r.room || "",
-      r.adults || "",
-      r.children || "",
-      r.babies || "",
-      r.activity,
-      r.pickup || "",
-      r.note || "",
-      r.priceValue || "",
-      r.transferValue > 0 ? r.transferValue : "",
-      paymentText(r.paymentMethod),
-      r.createdByName || "",
-    ]);
+    const body = [];
+    let lastDate = null;
+    let lastAct = null;
+    for (const r of list) {
+      // Ligne vide entre chaque date (saut de ligne Excel)
+      if (lastDate !== null && r.date !== lastDate) {
+        body.push(Array(EXPORT_HEADERS.length).fill(""));
+        lastAct = null;
+      }
+      // Ligne vide légère entre blocs d’activité (même date)
+      else if (lastAct !== null && (r.activitySortKey || r.activity) !== lastAct) {
+        body.push(Array(EXPORT_HEADERS.length).fill(""));
+      }
+      lastDate = r.date;
+      lastAct = r.activitySortKey || r.activity;
+      body.push([
+        r.ticketNumber,
+        dateForExport(r.date),
+        r.clientCell,
+        r.hotel || "",
+        r.room || "",
+        r.adults || "",
+        r.children || "",
+        r.babies || "",
+        r.activity,
+        r.pickup || "",
+        r.note || "",
+        r.priceValue || "",
+        r.transferValue > 0 ? r.transferValue : "",
+        paymentText(r.paymentMethod),
+        r.createdByName || "",
+      ]);
+    }
     return withHeaders ? [EXPORT_HEADERS, ...body] : body;
   }, []);
 
@@ -469,7 +563,7 @@ export function TicketsPage({ quotes = [] }) {
           </button>
 
           <span className="ml-auto text-xs font-medium tabular-nums text-slate-500">
-            Affichées : {filtered.length} · 15 colonnes Excel
+            Affichées : {filtered.length} · tri date → activité · 15 colonnes Excel
           </span>
         </div>
       </div>
@@ -506,7 +600,7 @@ export function TicketsPage({ quotes = [] }) {
           >
             <table className="w-full table-fixed border-collapse text-left font-sans">
               <caption className="sr-only">
-                Tableau tickets compact — toutes les colonnes visibles sans scroll horizontal.
+                Tableau tickets : trié par date puis par activité, avec séparateurs entre les jours.
               </caption>
               <colgroup>
                 <col style={{ width: "4.5%" }} />
@@ -579,16 +673,37 @@ export function TicketsPage({ quotes = [] }) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r, i) => {
+                {displayBlocks.map((block) => {
+                  if (block.type === "date") {
+                    return (
+                      <tr key={block.key} className="bg-slate-800">
+                        <td
+                          colSpan={COL_COUNT}
+                          className="border-y-2 border-slate-900 px-2 py-1.5 text-[11px] font-bold capitalize tracking-wide text-white"
+                        >
+                          <span className="inline-flex items-center gap-2">
+                            <span aria-hidden>📅</span>
+                            <span>{formatDateBanner(block.date)}</span>
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  const r = block.row;
                   const isCopied = copied.has(r.ticketNumber);
-                  const zebra = i % 2 === 0;
                   const rowBg = isCopied
                     ? "bg-slate-100 text-slate-400"
-                    : zebra
-                      ? "bg-white"
-                      : "bg-orange-50/40";
+                    : block.toneClass;
+                  const activitySep = block.showActivitySep
+                    ? "border-t-2 border-slate-400/80"
+                    : "";
+
                   return (
-                    <tr key={r.key} className={`hover:bg-amber-50/90 ${rowBg}`}>
+                    <tr
+                      key={block.key}
+                      className={`hover:bg-amber-50/90 ${rowBg} ${activitySep}`}
+                    >
                       <td className={`${TD} text-center`}>
                         <div className="flex items-center justify-center gap-0.5">
                           <button
