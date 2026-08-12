@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Search,
@@ -12,6 +12,7 @@ import {
   Sparkles,
   ListChecks,
   CheckCircle2,
+  CalendarDays,
 } from "lucide-react";
 import { currencyNoCents, saveLS, loadLS } from "../utils";
 import { LS_KEYS } from "../constants";
@@ -57,24 +58,24 @@ const EXPORT_HEADERS = [
   "Vendeur",
 ];
 
-const TH =
-  "border border-slate-300 px-0.5 py-1 text-center text-[9px] font-bold leading-tight text-slate-700 bg-slate-100";
-const TD =
-  "border border-slate-200 px-0.5 py-0.5 align-middle text-[10px] leading-tight overflow-hidden text-ellipsis";
-
 const COL_COUNT = 16;
 
-/** Teintes douces par bloc d’activité (style planning / Excel). */
-const ACTIVITY_TONES = [
-  "bg-sky-50/90",
-  "bg-emerald-50/90",
-  "bg-amber-50/70",
-  "bg-violet-50/80",
-  "bg-rose-50/70",
-  "bg-teal-50/80",
-  "bg-orange-50/70",
-  "bg-indigo-50/70",
+/** Teintes intranet + Excel (rgb sans #) par bloc d’activité. */
+const ACTIVITY_PALETTE = [
+  { row: "bg-sky-50", accent: "border-l-sky-400", excel: "E0F2FE", excelStrong: "7DD3FC" },
+  { row: "bg-emerald-50", accent: "border-l-emerald-400", excel: "D1FAE5", excelStrong: "6EE7B7" },
+  { row: "bg-amber-50", accent: "border-l-amber-400", excel: "FEF3C7", excelStrong: "FCD34D" },
+  { row: "bg-violet-50", accent: "border-l-violet-400", excel: "EDE9FE", excelStrong: "C4B5FD" },
+  { row: "bg-rose-50", accent: "border-l-rose-400", excel: "FFE4E6", excelStrong: "FDA4AF" },
+  { row: "bg-teal-50", accent: "border-l-teal-400", excel: "CCFBF1", excelStrong: "5EEAD4" },
+  { row: "bg-orange-50", accent: "border-l-orange-400", excel: "FFEDD5", excelStrong: "FDBA74" },
+  { row: "bg-indigo-50", accent: "border-l-indigo-400", excel: "E0E7FF", excelStrong: "A5B4FC" },
 ];
+
+const TH_BASE =
+  "border border-slate-300/90 px-0.5 py-1.5 text-center text-[9px] font-bold uppercase tracking-wide leading-tight text-white";
+const TD =
+  "border border-slate-200/90 px-0.5 py-1 align-middle text-[10px] leading-tight overflow-hidden text-ellipsis";
 
 const paymentShort = (method) =>
   method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
@@ -85,6 +86,25 @@ function activitySortKeyFromItem(item) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function excelBorder(color = "CBD5E1") {
+  const edge = { style: "thin", color: { rgb: color } };
+  return { top: edge, bottom: edge, left: edge, right: edge };
+}
+
+function excelFill(rgb) {
+  return { patternType: "solid", fgColor: { rgb } };
+}
+
+function colLetter(n) {
+  let s = "";
+  let x = n;
+  while (x >= 0) {
+    s = String.fromCharCode((x % 26) + 65) + s;
+    x = Math.floor(x / 26) - 1;
+  }
+  return s;
 }
 
 /**
@@ -208,7 +228,7 @@ export function TicketsPage({ quotes = [] }) {
     });
   }, [rows, q, statusFilter, copied]);
 
-  /** Blocs date + lignes (sauts de ligne + teinte par activité). */
+  /** Blocs date + en-tête activité + lignes. */
   const displayBlocks = useMemo(() => {
     const blocks = [];
     let lastDate = null;
@@ -229,18 +249,27 @@ export function TicketsPage({ quotes = [] }) {
       }
 
       const actKey = r.activitySortKey || r.activity || "";
-      const showActivitySep = lastAct !== null && actKey !== lastAct;
       if (actKey !== lastAct) {
         if (lastAct !== null) toneIdx += 1;
+        const palette = ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
+        blocks.push({
+          type: "activity",
+          key: `act-${dateKey}-${actKey}-${blocks.length}`,
+          name: r.activityBaseName || r.activity || "Activité",
+          toneClass: palette.row,
+          accentClass: palette.accent,
+        });
         lastAct = actKey;
       }
 
+      const palette = ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
       blocks.push({
         type: "row",
         key: r.key,
         row: r,
-        toneClass: ACTIVITY_TONES[toneIdx % ACTIVITY_TONES.length],
-        showActivitySep,
+        toneClass: palette.row,
+        accentClass: palette.accent,
+        toneIdx,
       });
     }
     return blocks;
@@ -387,31 +416,148 @@ export function TicketsPage({ quotes = [] }) {
       toast.warning("Aucun ticket à exporter.");
       return;
     }
-    const matrix = matrixFromRows(filtered, true);
-    const ws = XLSX.utils.aoa_to_sheet(matrix);
+
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+      fill: excelFill("4F46E5"),
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border: excelBorder("312E81"),
+    };
+    const dateBannerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" }, sz: 12 },
+      fill: excelFill("0F172A"),
+      alignment: { horizontal: "left", vertical: "center" },
+      border: excelBorder("020617"),
+    };
+    const activityBannerStyle = (rgb) => ({
+      font: { bold: true, color: { rgb: "0F172A" }, sz: 10 },
+      fill: excelFill(rgb),
+      alignment: { horizontal: "left", vertical: "center" },
+      border: excelBorder("94A3B8"),
+    });
+    const dataStyle = (rgb, opts = {}) => ({
+      font: { color: { rgb: "1E293B" }, sz: 10, ...(opts.bold ? { bold: true } : {}) },
+      fill: excelFill(rgb),
+      alignment: {
+        horizontal: opts.center ? "center" : "left",
+        vertical: "center",
+      },
+      border: excelBorder("CBD5E1"),
+    });
+    const ticketStyle = (rgb) => ({
+      font: { bold: true, color: { rgb: "7C2D12" }, sz: 10 },
+      fill: excelFill("FDBA74"),
+      alignment: { horizontal: "center", vertical: "center" },
+      border: excelBorder("EA580C"),
+    });
+
+    const aoa = [EXPORT_HEADERS];
+    const meta = [{ kind: "header" }];
+    let lastDate = null;
+    let lastAct = null;
+    let toneIdx = 0;
+
+    for (const r of filtered) {
+      if (r.date !== lastDate) {
+        aoa.push([
+          `📅 ${dateForExport(r.date)} — ${formatDateBanner(r.date)}`,
+          ...Array(EXPORT_HEADERS.length - 1).fill(""),
+        ]);
+        meta.push({ kind: "date" });
+        lastAct = null;
+        toneIdx = 0;
+        lastDate = r.date;
+      }
+
+      const actKey = r.activitySortKey || r.activity || "";
+      if (actKey !== lastAct) {
+        if (lastAct !== null) toneIdx += 1;
+        aoa.push([
+          `▶ ${r.activityBaseName || r.activity || "Activité"}`,
+          ...Array(EXPORT_HEADERS.length - 1).fill(""),
+        ]);
+        meta.push({ kind: "activity", toneIdx });
+        lastAct = actKey;
+      }
+
+      const palette = ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
+      aoa.push([
+        r.ticketNumber,
+        dateForExport(r.date),
+        r.clientCell,
+        r.hotel || "",
+        r.room || "",
+        r.adults || "",
+        r.children || "",
+        r.babies || "",
+        r.activity,
+        r.pickup || "",
+        r.note || "",
+        r.priceValue || "",
+        r.transferValue > 0 ? r.transferValue : "",
+        paymentText(r.paymentMethod),
+        r.createdByName || "",
+      ]);
+      meta.push({ kind: "data", toneIdx, fill: palette.excel });
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const merges = [];
+    const lastCol = EXPORT_HEADERS.length - 1;
+
+    meta.forEach((m, rowIdx) => {
+      for (let c = 0; c <= lastCol; c++) {
+        const addr = `${colLetter(c)}${rowIdx + 1}`;
+        if (!ws[addr]) ws[addr] = { t: "s", v: "" };
+        if (m.kind === "header") {
+          ws[addr].s = headerStyle;
+        } else if (m.kind === "date") {
+          ws[addr].s = dateBannerStyle;
+        } else if (m.kind === "activity") {
+          const strong = ACTIVITY_PALETTE[m.toneIdx % ACTIVITY_PALETTE.length].excelStrong;
+          ws[addr].s = activityBannerStyle(strong);
+        } else if (m.kind === "data") {
+          if (c === 0) ws[addr].s = ticketStyle(m.fill);
+          else if (c === 5 || c === 6 || c === 7 || c === 11 || c === 12)
+            ws[addr].s = dataStyle(m.fill, { center: true, bold: c === 11 });
+          else if (c === 1 || c === 9 || c === 13 || c === 14)
+            ws[addr].s = dataStyle(m.fill, { center: true });
+          else ws[addr].s = dataStyle(m.fill);
+        }
+      }
+      if (m.kind === "date" || m.kind === "activity") {
+        merges.push({ s: { r: rowIdx, c: 0 }, e: { r: rowIdx, c: lastCol } });
+      }
+    });
+
+    ws["!merges"] = merges;
     ws["!cols"] = [
-      { wch: 16 },
+      { wch: 14 },
       { wch: 12 },
-      { wch: 20 },
+      { wch: 18 },
       { wch: 22 },
       { wch: 10 },
       { wch: 8 },
       { wch: 8 },
       { wch: 8 },
-      { wch: 36 },
+      { wch: 34 },
       { wch: 12 },
-      { wch: 24 },
+      { wch: 28 },
       { wch: 10 },
       { wch: 12 },
       { wch: 10 },
       { wch: 14 },
     ];
+    ws["!rows"] = meta.map((m) =>
+      m.kind === "date" ? { hpt: 22 } : m.kind === "activity" ? { hpt: 18 } : { hpt: 16 }
+    );
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Tickets");
     const stamp = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `tickets-${stamp}.xlsx`);
-    toast.success("Fichier Excel téléchargé.");
-  }, [filtered, matrixFromRows]);
+    toast.success("Excel coloré téléchargé (dates + activités).");
+  }, [filtered]);
 
   const handleResetCopied = useCallback(() => {
     if (copied.size === 0) {
@@ -562,8 +708,9 @@ export function TicketsPage({ quotes = [] }) {
             Réinitialiser les marques
           </button>
 
-          <span className="ml-auto text-xs font-medium tabular-nums text-slate-500">
-            Affichées : {filtered.length} · tri date → activité · 15 colonnes Excel
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+            <CalendarDays className="size-3.5" aria-hidden />
+            {filtered.length} ligne{filtered.length !== 1 ? "s" : ""} · date → activité
           </span>
         </div>
       </div>
@@ -596,11 +743,12 @@ export function TicketsPage({ quotes = [] }) {
             animate={fade.animate}
             exit={fade.exit}
             transition={fade.transition}
-            className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm"
+            className="overflow-hidden rounded-2xl border border-indigo-200/70 bg-white shadow-[0_16px_40px_-24px_rgba(79,70,229,0.35)] ring-1 ring-slate-200/80"
           >
+            <div className="max-h-[min(70vh,900px)] overflow-auto">
             <table className="w-full table-fixed border-collapse text-left font-sans">
               <caption className="sr-only">
-                Tableau tickets : trié par date puis par activité, avec séparateurs entre les jours.
+                Tableau tickets : trié par date puis par activité, avec séparateurs colorés.
               </caption>
               <colgroup>
                 <col style={{ width: "4.5%" }} />
@@ -620,54 +768,54 @@ export function TicketsPage({ quotes = [] }) {
                 <col style={{ width: "5%" }} />
                 <col style={{ width: "6.5%" }} />
               </colgroup>
-              <thead>
-                <tr>
-                  <th scope="col" className={TH} title="Copier">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600">
+                  <th scope="col" className={TH_BASE} title="Copier">
                     ✓
                   </th>
-                  <th scope="col" className={`${TH} bg-orange-200 text-orange-950`} title="N° Ticket">
+                  <th scope="col" className={`${TH_BASE} !bg-orange-500`} title="N° Ticket">
                     N°
                   </th>
-                  <th scope="col" className={TH} title="Date">
+                  <th scope="col" className={TH_BASE} title="Date">
                     Date
                   </th>
-                  <th scope="col" className={TH} title="3 lettres + téléphone">
+                  <th scope="col" className={TH_BASE} title="3 lettres + téléphone">
                     Client
                   </th>
-                  <th scope="col" className={TH} title="Hôtel">
+                  <th scope="col" className={TH_BASE} title="Hôtel">
                     Hôtel
                   </th>
-                  <th scope="col" className={TH} title="Chambre">
+                  <th scope="col" className={TH_BASE} title="Chambre">
                     Ch
                   </th>
-                  <th scope="col" className={TH} title="Adultes">
+                  <th scope="col" className={`${TH_BASE} !bg-emerald-600`} title="Adultes">
                     A
                   </th>
-                  <th scope="col" className={TH} title="Enfants">
+                  <th scope="col" className={`${TH_BASE} !bg-sky-600`} title="Enfants">
                     E
                   </th>
-                  <th scope="col" className={TH} title="Bébés">
+                  <th scope="col" className={`${TH_BASE} !bg-pink-600`} title="Bébés">
                     B
                   </th>
-                  <th scope="col" className={TH} title="Activité + extras">
+                  <th scope="col" className={TH_BASE} title="Activité + extras">
                     Activité
                   </th>
-                  <th scope="col" className={TH} title="Prise en charge">
+                  <th scope="col" className={TH_BASE} title="Prise en charge">
                     Heure
                   </th>
-                  <th scope="col" className={TH} title="Note">
+                  <th scope="col" className={TH_BASE} title="Note">
                     Note
                   </th>
-                  <th scope="col" className={TH} title="Prix">
+                  <th scope="col" className={`${TH_BASE} !bg-teal-600`} title="Prix">
                     Prix
                   </th>
-                  <th scope="col" className={TH} title="Supplément transfert">
+                  <th scope="col" className={`${TH_BASE} !bg-cyan-700`} title="Supplément transfert">
                     Tr
                   </th>
-                  <th scope="col" className={TH} title="Paiement">
+                  <th scope="col" className={TH_BASE} title="Paiement">
                     Pay
                   </th>
-                  <th scope="col" className={TH} title="Vendeur">
+                  <th scope="col" className={TH_BASE} title="Vendeur">
                     Vend.
                   </th>
                 </tr>
@@ -676,15 +824,28 @@ export function TicketsPage({ quotes = [] }) {
                 {displayBlocks.map((block) => {
                   if (block.type === "date") {
                     return (
-                      <tr key={block.key} className="bg-slate-800">
+                      <tr key={block.key}>
                         <td
                           colSpan={COL_COUNT}
-                          className="border-y-2 border-slate-900 px-2 py-1.5 text-[11px] font-bold capitalize tracking-wide text-white"
+                          className="border-y-2 border-slate-900 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-800 px-3 py-2 text-[11px] font-bold capitalize tracking-wide text-white shadow-inner"
                         >
                           <span className="inline-flex items-center gap-2">
-                            <span aria-hidden>📅</span>
+                            <CalendarDays className="size-3.5 text-amber-300" aria-hidden />
                             <span>{formatDateBanner(block.date)}</span>
                           </span>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  if (block.type === "activity") {
+                    return (
+                      <tr key={block.key}>
+                        <td
+                          colSpan={COL_COUNT}
+                          className={`border-y border-slate-300/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-800 ${block.toneClass} border-l-4 ${block.accentClass}`}
+                        >
+                          {block.name}
                         </td>
                       </tr>
                     );
@@ -695,14 +856,14 @@ export function TicketsPage({ quotes = [] }) {
                   const rowBg = isCopied
                     ? "bg-slate-100 text-slate-400"
                     : block.toneClass;
-                  const activitySep = block.showActivitySep
-                    ? "border-t-2 border-slate-400/80"
-                    : "";
+                  const pay = paymentShort(r.paymentMethod);
 
                   return (
                     <tr
                       key={block.key}
-                      className={`hover:bg-amber-50/90 ${rowBg} ${activitySep}`}
+                      className={`transition-colors hover:brightness-[0.97] ${rowBg} border-l-4 ${
+                        isCopied ? "border-l-slate-300" : block.accentClass
+                      }`}
                     >
                       <td className={`${TD} text-center`}>
                         <div className="flex items-center justify-center gap-0.5">
@@ -736,14 +897,14 @@ export function TicketsPage({ quotes = [] }) {
                       </td>
                       <th
                         scope="row"
-                        className={`${TD} bg-orange-200/90 text-center font-bold text-orange-950 ${
+                        className={`${TD} bg-orange-300/90 text-center font-bold text-orange-950 ${
                           isCopied ? "!bg-slate-200 text-slate-400" : ""
                         }`}
                         title={r.ticketNumber}
                       >
                         <span className="block truncate">{r.ticketNumber}</span>
                       </th>
-                      <td className={`${TD} text-center tabular-nums`} title={formatDateDisplay(r.date)}>
+                      <td className={`${TD} text-center tabular-nums font-semibold text-indigo-900`} title={formatDateDisplay(r.date)}>
                         {formatDateDisplay(r.date)}
                       </td>
                       <td className={`${TD} truncate font-medium`} title={r.clientCell}>
@@ -752,29 +913,41 @@ export function TicketsPage({ quotes = [] }) {
                       <td className={`${TD} truncate`} title={r.hotel}>
                         {r.hotel || ""}
                       </td>
-                      <td className={`${TD} truncate text-center`} title={r.room}>
+                      <td className={`${TD} truncate text-center font-semibold`} title={r.room}>
                         {r.room || ""}
                       </td>
-                      <td className={`${TD} text-center tabular-nums`}>{r.adults || ""}</td>
-                      <td className={`${TD} text-center tabular-nums`}>{r.children || ""}</td>
-                      <td className={`${TD} text-center tabular-nums`}>{r.babies || ""}</td>
-                      <td className={`${TD} truncate`} title={r.activity}>
+                      <td className={`${TD} text-center tabular-nums font-bold text-emerald-800`}>{r.adults || ""}</td>
+                      <td className={`${TD} text-center tabular-nums font-bold text-sky-800`}>{r.children || ""}</td>
+                      <td className={`${TD} text-center tabular-nums font-bold text-pink-800`}>{r.babies || ""}</td>
+                      <td className={`${TD} truncate font-semibold text-slate-800`} title={r.activity}>
                         {r.activity}
                       </td>
-                      <td className={`${TD} truncate text-center`} title={r.pickup}>
+                      <td className={`${TD} truncate text-center font-semibold text-violet-800`} title={r.pickup}>
                         {r.pickup || ""}
                       </td>
                       <td className={`${TD} truncate`} title={r.note}>
                         {r.note || ""}
                       </td>
-                      <td className={`${TD} text-center tabular-nums font-semibold`}>
+                      <td className={`${TD} text-center tabular-nums font-bold text-teal-800`}>
                         {r.priceValue || ""}
                       </td>
-                      <td className={`${TD} text-center tabular-nums`}>
+                      <td className={`${TD} text-center tabular-nums font-semibold text-cyan-900`}>
                         {r.transferValue > 0 ? r.transferValue : ""}
                       </td>
-                      <td className={`${TD} truncate text-center`} title={paymentText(r.paymentMethod)}>
-                        {paymentShort(r.paymentMethod)}
+                      <td className={`${TD} text-center`} title={paymentText(r.paymentMethod)}>
+                        {pay ? (
+                          <span
+                            className={`inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                              r.paymentMethod === "cash"
+                                ? "bg-emerald-200 text-emerald-900"
+                                : r.paymentMethod === "stripe"
+                                  ? "bg-violet-200 text-violet-900"
+                                  : "bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            {pay}
+                          </span>
+                        ) : null}
                       </td>
                       <td className={`${TD} truncate text-center`} title={r.createdByName}>
                         {r.createdByName || ""}
@@ -784,6 +957,7 @@ export function TicketsPage({ quotes = [] }) {
                 })}
               </tbody>
             </table>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
