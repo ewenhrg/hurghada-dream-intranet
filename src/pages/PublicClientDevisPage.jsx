@@ -12,6 +12,11 @@ import {
   savePublicCatalogueStay,
 } from "../utils/publicCatalogueStayStorage";
 import { CatalogueStayGateModal } from "../components/public/CatalogueStayGateModal";
+import {
+  deriveCatalogueLineMinors,
+  formatActivityMinorCategoryLabel,
+  formatCatalogueMinorsAgesNote,
+} from "../utils/activityAgePolicy";
 import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "../utils/publicCatalogPricing";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import {
@@ -217,15 +222,43 @@ export function PublicClientDevisPage() {
       .map((line) => {
         const activity = activityMap.get(String(line.activityId));
         if (!activity) return null;
-        const lineTotal = computePublicCatalogLineTotal(activity, line);
+        const refDate = String(line.date || stay.arrivalDate || "").trim();
+        const derived = deriveCatalogueLineMinors(line, activity, refDate);
+        const adultsBase = Math.max(0, toNumber(line.adults));
+        const forPrice =
+          derived.complete || derived.minorsCount === 0
+            ? {
+                ...line,
+                children: derived.childrenCount,
+                babies: derived.babiesCount,
+                adults: adultsBase + derived.upgradedAdultsCount,
+              }
+            : {
+                ...line,
+                children: derived.minorsCount,
+                babies: 0,
+                adults: adultsBase,
+              };
+        const lineTotal = computePublicCatalogLineTotal(activity, forPrice);
         return {
           ...line,
+          minorsCount: derived.minorsCount,
+          birthDates: derived.birthDates,
+          children: derived.childrenCount,
+          babies: derived.babiesCount,
           activity,
           lineTotal,
+          derived,
+          adultsBase,
         };
       })
       .filter(Boolean);
-  }, [cart, activityMap]);
+  }, [cart, activityMap, stay.arrivalDate]);
+
+  const cartNeedsMinorBirthDates = useMemo(
+    () => cartLines.some((line) => (line.derived?.minorsCount || 0) > 0),
+    [cartLines]
+  );
 
   const cartTotal = useMemo(() => cartLines.reduce((sum, line) => sum + toNumber(line.lineTotal), 0), [cartLines]);
 
@@ -372,6 +405,27 @@ export function PublicClientDevisPage() {
     setCart((prev) => prev.filter((line) => line.id !== lineId));
   }
 
+  function updateLineBirthDate(lineId, index, value) {
+    setCart((prev) =>
+      prev.map((line) => {
+        if (line.id !== lineId) return line;
+        const minors =
+          Number.isFinite(Number(line.minorsCount)) && Number(line.minorsCount) >= 0
+            ? Number(line.minorsCount)
+            : Math.max(0, toNumber(line.children)) + Math.max(0, toNumber(line.babies));
+        const birthDates = Array.isArray(line.birthDates) ? [...line.birthDates] : [];
+        while (birthDates.length < minors) birthDates.push("");
+        birthDates[index] = value;
+        birthDates.length = minors;
+        return {
+          ...line,
+          minorsCount: minors,
+          birthDates,
+        };
+      })
+    );
+  }
+
   function updateClientField(field, value) {
     setClient((prev) => ({ ...prev, [field]: value }));
   }
@@ -440,9 +494,12 @@ export function PublicClientDevisPage() {
     const belowMinTwo = cartLines.filter((line) => {
       const name = line.activity?.name || line.activityName || "";
       if (!requiresMinimumTwoParticipants(name)) return false;
+      const childrenForMin = line.derived?.complete
+        ? line.derived.childrenCount
+        : line.derived?.minorsCount || 0;
       return !hasEnoughParticipantsForActivity(name, {
-        adults: line.adults,
-        children: line.children,
+        adults: line.adultsBase ?? line.adults,
+        children: childrenForMin,
       });
     });
     if (belowMinTwo.length > 0) {
@@ -455,23 +512,52 @@ export function PublicClientDevisPage() {
       return;
     }
 
+    const incompleteAges = cartLines.filter(
+      (line) => (line.derived?.minorsCount || 0) > 0 && (line.derived?.missingCount || 0) > 0
+    );
+    if (incompleteAges.length > 0) {
+      setError("Indiquez la date de naissance de chaque enfant / bébé pour finaliser le devis.");
+      return;
+    }
+
+    const forbiddenBabies = cartLines.filter((line) => (line.derived?.forbiddenCount || 0) > 0);
+    if (forbiddenBabies.length > 0) {
+      const names = forbiddenBabies
+        .map((line) => line.activity?.name || "activité")
+        .join(", ");
+      setError(
+        `${names} : au moins un voyageur est trop jeune (bébé non autorisé ou hors grille). Modifiez les dates de naissance ou retirez la ligne.`
+      );
+      return;
+    }
+
     if (!supabase || !__SUPABASE_DEBUG__.isConfigured) {
       setError("Base indisponible. Réessaie dans quelques minutes.");
       return;
     }
 
+    const agesNote = formatCatalogueMinorsAgesNote(
+      cartLines.map((line) => ({ line, activity: line.activity, derived: line.derived }))
+    );
+    const notesWithAges = [notes, agesNote ? `Âges auto : ${agesNote}` : ""]
+      .filter(Boolean)
+      .join("\n");
+
     const createdAt = new Date().toISOString();
     const items = cartLines.map((line) => {
       const act = line.activity;
       const babiesForbidden = Boolean(act?.babies_forbidden ?? act?.babiesForbidden);
-      const babiesVal = babiesForbidden ? 0 : toNumber(line.babies);
+      const adultsBase = Math.max(0, toNumber(line.adultsBase ?? line.adults));
+      const babiesVal = babiesForbidden ? 0 : toNumber(line.derived?.babiesCount ?? line.babies);
       return {
         activityId: String(act.id),
         activityName: act.name || "",
         date: line.date || "",
-        adults: toNumber(line.adults),
-        children: toNumber(line.children),
+        adults: adultsBase + toNumber(line.derived?.upgradedAdultsCount),
+        children: toNumber(line.derived?.childrenCount ?? line.children),
         babies: babiesVal,
+        birthDates: Array.isArray(line.birthDates) ? [...line.birthDates] : [],
+        minorsCount: toNumber(line.derived?.minorsCount ?? line.minorsCount),
         lineTotal: toNumber(line.lineTotal),
         // Options catalogue (fiche activité / panier) — nécessaire pour « Commencer le devis » côté intranet
         extraDolphin: Boolean(line.extraDolphin),
@@ -514,7 +600,7 @@ export function PublicClientDevisPage() {
       client_hotel: hotel,
       client_arrival_date: arrival,
       client_departure_date: departure,
-      notes: notes || "",
+      notes: notesWithAges || "",
       total: toNumber(cartTotal),
       currency: "EUR",
       items,
@@ -965,6 +1051,8 @@ export function PublicClientDevisPage() {
               {cartLines.map((line) => {
                 const ageChild = String(line.activity.age_child || "").trim();
                 const ageBaby = String(line.activity.age_baby || "").trim();
+                const minors = line.derived?.minorsCount || 0;
+                const classified = Boolean(line.derived?.complete);
                 return (
                   <div
                     key={line.id}
@@ -995,18 +1083,21 @@ export function PublicClientDevisPage() {
                       <div className="space-y-1">
                         <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-body">Adultes</span>
                         <div className="rounded-lg border-2 border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-catalog-body">
-                          {line.adults ?? 0}
+                          {line.adultsBase ?? line.adults ?? 0}
+                          {classified && (line.derived?.upgradedAdultsCount || 0) > 0
+                            ? `+${line.derived.upgradedAdultsCount}`
+                            : ""}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-body">Enfants</span>
+                        <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-body">
+                          {classified ? "Enfants" : "Enfants / bébés"}
+                        </span>
                         {ageChild ? (
                           <span className="mb-1 block text-[10px] font-semibold leading-tight text-catalog-muted">Âge : {ageChild}</span>
-                        ) : (
-                          <span className="mb-1 block text-[10px] font-semibold leading-tight text-catalog-subtle">Tarif enfant</span>
-                        )}
+                        ) : null}
                         <div className="rounded-lg border-2 border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-catalog-body">
-                          {line.children ?? 0}
+                          {classified ? line.derived.childrenCount : minors}
                         </div>
                       </div>
                       <div className="space-y-1">
@@ -1022,16 +1113,19 @@ export function PublicClientDevisPage() {
                           <>
                             {ageBaby ? (
                               <span className="mb-1 block text-[10px] font-semibold leading-tight text-catalog-muted">Âge : {ageBaby}</span>
-                            ) : (
-                              <span className="mb-1 block text-[10px] font-semibold leading-tight text-catalog-subtle">Tarif bébé</span>
-                            )}
+                            ) : null}
                             <div className="rounded-lg border-2 border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-catalog-body">
-                              {line.babies ?? 0}
+                              {classified ? line.derived.babiesCount : "—"}
                             </div>
                           </>
                         )}
                       </div>
                     </div>
+                    {minors > 0 && !classified ? (
+                      <p className="mt-2 text-[11px] font-semibold text-violet-800">
+                        Dates de naissance demandées à l’étape suivante pour classer bébé / enfant.
+                      </p>
+                    ) : null}
                     <div className="mt-3 border-t border-slate-100 pt-3">
                       <p className="font-catalog-display text-sm font-bold tabular-nums text-violet-800">
                         {formatMoney(line.lineTotal, line.activity.currency)}
@@ -1179,10 +1273,94 @@ export function PublicClientDevisPage() {
                   />
                 </label>
               </div>
+
+              {cartNeedsMinorBirthDates ? (
+                <div className="space-y-3 rounded-2xl border-2 border-violet-200 bg-violet-50/60 p-4">
+                  <div>
+                    <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-violet-800">
+                      Dates de naissance
+                    </p>
+                    <p className="mt-1 text-xs font-medium leading-relaxed text-violet-900/90">
+                      Comme pour les hôtels : indiquez la date de naissance de chaque enfant / bébé. Le système calcule
+                      automatiquement le tarif enfant ou bébé selon la grille de l’activité (âge au jour de
+                      l’excursion).
+                    </p>
+                  </div>
+                  {cartLines
+                    .filter((line) => (line.derived?.minorsCount || 0) > 0)
+                    .map((line) => {
+                      const ageChild = String(line.activity?.age_child || "").trim();
+                      const ageBaby = String(line.activity?.age_baby || "").trim();
+                      const babiesForbidden = Boolean(
+                        line.activity?.babies_forbidden ?? line.activity?.babiesForbidden
+                      );
+                      return (
+                        <div
+                          key={`dob-${line.id}`}
+                          className="rounded-xl border border-violet-200/80 bg-white p-3 shadow-sm"
+                        >
+                          <p className="text-sm font-bold text-catalog-ink">{line.activity?.name}</p>
+                          <p className="mt-0.5 text-[11px] font-semibold text-catalog-muted">
+                            {formatCartLineDate(line.date)}
+                            {ageChild || ageBaby
+                              ? ` · enfant ${ageChild || "—"} · bébé ${babiesForbidden ? "interdit" : ageBaby || "—"}`
+                              : ""}
+                          </p>
+                          <div className="mt-3 space-y-2.5">
+                            {Array.from({ length: line.derived.minorsCount }, (_, i) => {
+                              const detail = line.derived.details[i];
+                              return (
+                                <label key={`${line.id}-dob-${i}`} className="block text-xs font-semibold text-catalog-body">
+                                  Voyageur {i + 1}
+                                  <input
+                                    type="date"
+                                    value={line.birthDates?.[i] || ""}
+                                    max={line.date || client.arrivalDate || undefined}
+                                    required
+                                    onChange={(e) => updateLineBirthDate(line.id, i, e.target.value)}
+                                    className="mt-1 w-full rounded-xl border-2 border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-catalog-body outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
+                                  />
+                                  <span
+                                    className={`mt-1 block text-[11px] font-bold ${
+                                      detail?.category === "forbidden"
+                                        ? "text-rose-700"
+                                        : detail?.category === "baby"
+                                          ? "text-sky-800"
+                                          : detail?.category === "child"
+                                            ? "text-emerald-800"
+                                            : detail?.category === "adult"
+                                              ? "text-amber-800"
+                                              : "text-catalog-muted"
+                                    }`}
+                                  >
+                                    {formatActivityMinorCategoryLabel(detail?.category, detail?.age)}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          {line.derived.complete ? (
+                            <p className="mt-2 text-[11px] font-semibold text-emerald-800">
+                              Classé : {line.derived.childrenCount} enfant
+                              {line.derived.childrenCount !== 1 ? "s" : ""}
+                              {line.derived.babiesCount
+                                ? ` · ${line.derived.babiesCount} bébé${line.derived.babiesCount !== 1 ? "s" : ""}`
+                                : ""}
+                              {line.derived.upgradedAdultsCount
+                                ? ` · ${line.derived.upgradedAdultsCount} reclassé${line.derived.upgradedAdultsCount !== 1 ? "s" : ""} adulte`
+                                : ""}
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                </div>
+              ) : null}
+
               <textarea
                 value={client.notes}
                 onChange={(e) => updateClientField("notes", e.target.value)}
-                placeholder="Précisions (horaires, langue du guide, enfants, etc.) — optionnel"
+                placeholder="Précisions (horaires, langue du guide, etc.) — optionnel"
                 rows={3}
                 className="w-full resize-none rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
               />

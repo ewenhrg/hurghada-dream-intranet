@@ -188,7 +188,7 @@ function IconImages({ className }) {
   );
 }
 
-function ParticipantSelect({ Icon, label, value, onChange, min, max }) {
+function ParticipantSelect({ Icon, label, value, onChange, min, max, pluralize = true }) {
   const options = Array.from({ length: max - min + 1 }, (_, i) => min + i);
   return (
     <div className="relative">
@@ -205,7 +205,7 @@ function ParticipantSelect({ Icon, label, value, onChange, min, max }) {
         {options.map((n) => (
           <option key={n} value={n}>
             {n} {label}
-            {n > 1 ? "s" : ""}
+            {pluralize && n > 1 ? "s" : ""}
           </option>
         ))}
       </select>
@@ -217,10 +217,8 @@ function BookingCardShell({
   activity,
   adults,
   setAdults,
-  children: childrenCount,
-  setChildren,
-  babies,
-  setBabies,
+  minorsCount,
+  setMinorsCount,
   date,
   setDate,
   normalizedDays,
@@ -318,36 +316,31 @@ function BookingCardShell({
       <div>
         <ParticipantSelect
           Icon={IconUsers}
-          label="enfant"
-          value={childrenCount}
-          onChange={setChildren}
+          label="enfants / bébés"
+          value={minorsCount}
+          onChange={setMinorsCount}
           min={0}
           max={10}
+          pluralize={false}
         />
-        {ageChild ? <p className="mt-1.5 text-xs font-medium text-slate-700">Tranche d&apos;âge : {ageChild}</p> : null}
+        <p className="mt-1.5 text-xs font-medium text-slate-700">
+          La classification bébé ou enfant se fait à la validation du panier via la date de naissance
+          {ageChild || ageBaby
+            ? ` (grilles : enfant ${ageChild || "—"} · bébé ${babiesForbidden ? "interdit" : ageBaby || "—"})`
+            : ""}
+          .
+        </p>
       </div>
       {babiesForbidden ? (
         <div className="rounded-xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-center">
           <p className="text-sm font-semibold text-amber-950">Interdit aux bébés</p>
-          <p className="mt-1 text-xs font-medium text-amber-900/90">Cette excursion n&apos;accepte pas les tout-petits.</p>
+          <p className="mt-1 text-xs font-medium text-amber-900/90">
+            Si un voyageur tombe dans la tranche bébé, la réservation sera refusée pour cette activité.
+          </p>
         </div>
-      ) : (
-        <div>
-          <ParticipantSelect
-            Icon={IconUsers}
-            label="bébé"
-            value={babies}
-            onChange={setBabies}
-            min={0}
-            max={10}
-          />
-          {ageBaby ? <p className="mt-1.5 text-xs font-medium text-slate-700">Tranche d&apos;âge : {ageBaby}</p> : null}
-        </div>
-      )}
-
-      {!babiesForbidden && babyPriceZero ? (
+      ) : !babyPriceZero ? null : (
         <p className="text-xs text-green-700">Tarif bébé à 0 € — les bébés ne sont pas facturés sur ce tarif.</p>
-      ) : null}
+      )}
 
       {daysSummary ? <p className="text-xs font-medium text-slate-700">Jours ouverts : {daysSummary}</p> : null}
 
@@ -417,8 +410,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const [loading, setLoading] = useState(true);
 
   const [adults, setAdults] = useState(1);
-  const [childCount, setChildCount] = useState(0);
-  const [babyCount, setBabyCount] = useState(0);
+  const [minorsCount, setMinorsCount] = useState(0);
   const [date, setDate] = useState("");
   const [stay, setStay] = useState(() => loadPublicCatalogueStay());
   const [stayModalOpen, setStayModalOpen] = useState(() => !isValidCatalogueStay(loadPublicCatalogueStay()));
@@ -474,18 +466,13 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const babiesForbidden = Boolean(activity?.babies_forbidden ?? activity?.babiesForbidden);
 
   useEffect(() => {
-    if (babiesForbidden) setBabyCount(0);
-  }, [babiesForbidden, activity?.id]);
-
-  useEffect(() => {
     setSpecial({ ...INITIAL_CATALOG_SPECIAL });
     airportDefaultAppliedRef.current = false;
 
     if (prevActivityIdRef.current !== null && prevActivityIdRef.current !== activityId) {
       setDate("");
       setAdults(1);
-      setChildCount(0);
-      setBabyCount(0);
+      setMinorsCount(0);
     }
     prevActivityIdRef.current = activityId;
   }, [activityId]);
@@ -509,11 +496,12 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const pricingLine = useMemo(
     () => ({
       adults,
-      children: childCount,
-      babies: babyCount,
+      // Estimation provisoire : tous les mineurs au tarif enfant jusqu’à classification checkout
+      children: minorsCount,
+      babies: 0,
       ...special,
     }),
-    [adults, childCount, babyCount, special]
+    [adults, minorsCount, special]
   );
 
   const lineTotal = useMemo(
@@ -1064,18 +1052,18 @@ export function PublicCatalogueActivityPage({ activityId }) {
     !codedTotalPending &&
     !stopDateSet.has(date) &&
     !(activity && isProgrammaticStopSale(activity, date)) &&
-    hasEnoughParticipantsForActivity(activity?.name, { adults, children: childCount });
+    hasEnoughParticipantsForActivity(activity?.name, { adults, children: minorsCount });
 
   const requiresMinTwo = requiresMinimumTwoParticipants(activity?.name);
   const needsMammaMiaNote = requiresMammaMiaSelfTransfer(activity?.name);
   const warnsRecommendedTwo = warnsRecommendedTwoParticipants(activity?.name);
   const participantsOk = hasEnoughParticipantsForActivity(activity?.name, {
     adults,
-    children: childCount,
+    children: minorsCount,
   });
   const belowRecommendedTwo = isBelowRecommendedTwoParticipants(activity?.name, {
     adults,
-    children: childCount,
+    children: minorsCount,
   });
   const showDateHint = !date && !noDatesConfigured;
 
@@ -1274,19 +1262,23 @@ export function PublicCatalogueActivityPage({ activityId }) {
     if (
       !hasEnoughParticipantsForActivity(activity.name, {
         adults,
-        children: childCount,
+        children: minorsCount,
       })
     ) {
       return;
     }
+    const minors = Math.max(0, toNumber(minorsCount));
     const prev = loadPublicCatalogueCart();
     const line = {
       id: `${activity.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       activityId: String(activity.id),
       date,
       adults: Math.max(0, toNumber(adults)),
-      children: Math.max(0, toNumber(childCount)),
-      babies: Math.max(0, toNumber(babyCount)),
+      minorsCount: minors,
+      birthDates: Array.from({ length: minors }, () => ""),
+      // Provisoire jusqu’à classification au checkout
+      children: minors,
+      babies: 0,
       ...special,
     };
     savePublicCatalogueCart([...prev, line]);
@@ -1560,10 +1552,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   activity={activity}
                   adults={adults}
                   setAdults={setAdults}
-                  children={childCount}
-                  setChildren={setChildCount}
-                  babies={babyCount}
-                  setBabies={setBabyCount}
+                  minorsCount={minorsCount}
+                  setMinorsCount={setMinorsCount}
                   date={date}
                   setDate={setDate}
                   normalizedDays={normalizedAvailableDays}
@@ -1601,10 +1591,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
               activity={activity}
               adults={adults}
               setAdults={setAdults}
-              children={childCount}
-              setChildren={setChildCount}
-              babies={babyCount}
-              setBabies={setBabyCount}
+              minorsCount={minorsCount}
+              setMinorsCount={setMinorsCount}
               date={date}
               setDate={setDate}
               normalizedDays={normalizedAvailableDays}
