@@ -103,7 +103,7 @@ function applyCatalogBackupToActivities(currentActivities, backupActivities) {
   return { next, patchedCount };
 }
 
-async function persistCatalogRow(activity, { successMessage } = {}) {
+async function persistCatalogRow(activity, { successMessage, silent } = {}) {
   if (!__SUPABASE_DEBUG__.isConfigured || !supabase) {
     toast.error("Supabase non disponible.");
     return false;
@@ -132,7 +132,35 @@ async function persistCatalogRow(activity, { successMessage } = {}) {
     }
     return false;
   }
-  toast.success(successMessage || `Catalogue enregistré : ${activity.name}`, 2200);
+  if (!silent) {
+    toast.success(successMessage || `Catalogue enregistré : ${activity.name}`, 2200);
+  }
+  return true;
+}
+
+/** Met à jour uniquement le drapeau pause (idéal pour pause catégorie). */
+async function persistCatalogPausedFlag(activity, paused) {
+  if (!__SUPABASE_DEBUG__.isConfigured || !supabase) {
+    toast.error("Supabase non disponible.");
+    return false;
+  }
+  if (!activity?.supabase_id) return false;
+  const { error } = await supabase
+    .from("activities")
+    .update({ catalog_paused: paused === true })
+    .eq("id", activity.supabase_id);
+  if (error) {
+    logger.error("ActivityCatalogAdminPage : pause catégorie", error);
+    const msg = String(error.message || "");
+    if (/catalog_paused/i.test(msg) || error.code === "PGRST204") {
+      toast.error(
+        "Colonne catalog_paused absente : exécutez supabase_activities_add_catalog_paused.sql dans Supabase, puis réessayez."
+      );
+    } else {
+      toast.error(error.message || "Erreur lors de la pause.");
+    }
+    return false;
+  }
   return true;
 }
 
@@ -655,6 +683,7 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user, read
   const canMutate = hasEditPermission && !readOnly;
   const [search, setSearch] = useState("");
   const [restoringBuiltin, setRestoringBuiltin] = useState(false);
+  const [pausingCategoryKey, setPausingCategoryKey] = useState(null);
 
   const filteredActivities = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -677,6 +706,75 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user, read
       });
     },
     [setActivities]
+  );
+
+  const handleToggleCategoryPause = useCallback(
+    async (categoryKey, items, label) => {
+      if (!canMutate || !items?.length || pausingCategoryKey) return;
+      const syncables = items.filter((a) => a?.supabase_id);
+      if (!syncables.length) {
+        toast.error("Aucune activité de cette catégorie n’est liée à Supabase.");
+        return;
+      }
+      const allPaused = syncables.every((a) => a.catalogPaused === true);
+      const nextPaused = !allPaused;
+      const actionLabel = nextPaused ? "Mettre en pause" : "Reprendre";
+      if (
+        !window.confirm(
+          `${actionLabel} toute la catégorie « ${label} » ?\n${syncables.length} activité(s) seront ${
+            nextPaused ? "masquées" : "republiées"
+          } sur le catalogue public.`
+        )
+      ) {
+        return;
+      }
+
+      setPausingCategoryKey(categoryKey);
+      try {
+        const updatedIds = [];
+        let failed = 0;
+        for (const activity of syncables) {
+          if (activity.catalogPaused === nextPaused) {
+            updatedIds.push(activity.id);
+            continue;
+          }
+          const ok = await persistCatalogPausedFlag(activity, nextPaused);
+          if (ok) {
+            updatedIds.push(activity.id);
+          } else {
+            failed += 1;
+            break;
+          }
+        }
+
+        if (updatedIds.length > 0) {
+          const idSet = new Set(updatedIds);
+          setActivities((prev) => {
+            const next = prev.map((a) =>
+              idSet.has(a.id) ? { ...a, catalogPaused: nextPaused } : a
+            );
+            saveLS(LS_KEYS.activities, next);
+            return next;
+          });
+        }
+
+        if (failed > 0) {
+          toast.warning(
+            `Pause catégorie « ${label} » partielle : ${updatedIds.length} OK, puis échec. Vérifiez Supabase.`
+          );
+          return;
+        }
+        toast.success(
+          nextPaused
+            ? `Catégorie « ${label} » en pause (${updatedIds.length} activité(s) masquée(s))`
+            : `Catégorie « ${label} » reprise (${updatedIds.length} activité(s) visible(s))`,
+          3200
+        );
+      } finally {
+        setPausingCategoryKey(null);
+      }
+    },
+    [canMutate, pausingCategoryKey, setActivities]
   );
 
   const persistCatalogRows = useCallback(async (rows) => {
@@ -811,8 +909,8 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user, read
           {!readOnly && (
             <>
               <li>
-                Bouton <strong>Pause</strong> : masque immédiatement l’activité du catalogue public (site
-                /catalogue). <strong>Reprendre</strong> la remet en ligne. Nécessite la colonne SQL{" "}
+                Bouton <strong>Pause</strong> (activité) ou <strong>Pause catégorie</strong> : masque
+                immédiatement du catalogue public. <strong>Reprendre</strong> republie. Nécessite la colonne SQL{" "}
                 <code className="rounded bg-white px-1">catalog_paused</code> (
                 <code className="rounded bg-white px-1">supabase_activities_add_catalog_paused.sql</code>).
               </li>
@@ -897,21 +995,80 @@ export function ActivityCatalogAdminPage({ activities, setActivities, user, read
         </p>
       ) : null}
 
-      {grouped.map(({ key, label, items }) => (
-        <section key={key} className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
-          <div className="border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-slate-50 px-4 py-3">
-            <h3 className="text-base font-semibold text-slate-900">{label}</h3>
-            <p className="text-xs text-slate-500">
-              {items.length} activité{items.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-          <div className="space-y-4 p-4">
-            {items.map((a) => (
-              <CatalogActivityEditor key={a.id} activity={a} canEdit={canMutate} patchActivity={patchActivity} />
-            ))}
-          </div>
-        </section>
-      ))}
+      {grouped.map(({ key, label, items }) => {
+        const categoryAll = (activities || []).filter((a) => (a.category || "desert") === key);
+        const syncables = categoryAll.filter((a) => a?.supabase_id);
+        const allPaused = syncables.length > 0 && syncables.every((a) => a.catalogPaused === true);
+        const pausedCount = categoryAll.filter((a) => a.catalogPaused === true).length;
+        const isPausingThis = pausingCategoryKey === key;
+        return (
+          <section
+            key={key}
+            className={`overflow-hidden rounded-2xl border shadow-sm ${
+              allPaused ? "border-amber-300/80 bg-amber-50/20" : "border-slate-200/90 bg-white"
+            }`}
+          >
+            <div
+              className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 ${
+                allPaused
+                  ? "border-amber-200/80 bg-gradient-to-r from-amber-50 to-orange-50/70"
+                  : "border-slate-100 bg-gradient-to-r from-emerald-50 to-slate-50"
+              }`}
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base font-semibold text-slate-900">{label}</h3>
+                  {allPaused ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-950">
+                      <Pause className="h-3 w-3" aria-hidden />
+                      Catégorie en pause
+                    </span>
+                  ) : pausedCount > 0 ? (
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                      {pausedCount}/{categoryAll.length} en pause
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-xs text-slate-500">
+                  {items.length} activité{items.length !== 1 ? "s" : ""}
+                  {search.trim() && items.length !== categoryAll.length
+                    ? ` affichée${items.length !== 1 ? "s" : ""} (sur ${categoryAll.length})`
+                    : ""}
+                </p>
+              </div>
+              {canMutate ? (
+                <button
+                  type="button"
+                  disabled={!syncables.length || isPausingThis || Boolean(pausingCategoryKey)}
+                  onClick={() => void handleToggleCategoryPause(key, categoryAll, label)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                    allPaused ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"
+                  }`}
+                  title={
+                    allPaused
+                      ? "Republier toutes les activités de cette catégorie sur le catalogue public"
+                      : "Masquer toutes les activités de cette catégorie du catalogue public"
+                  }
+                >
+                  {isPausingThis ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : allPaused ? (
+                    <Play className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <Pause className="h-4 w-4" aria-hidden />
+                  )}
+                  {isPausingThis ? "…" : allPaused ? "Reprendre la catégorie" : "Pause catégorie"}
+                </button>
+              ) : null}
+            </div>
+            <div className="space-y-4 p-4">
+              {items.map((a) => (
+                <CatalogActivityEditor key={a.id} activity={a} canEdit={canMutate} patchActivity={patchActivity} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
