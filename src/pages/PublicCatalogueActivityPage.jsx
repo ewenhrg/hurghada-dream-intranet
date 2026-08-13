@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
-import { CATEGORIES } from "../constants";
+import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay";
 import { buildSelectableDateOptions, normalizeAvailableDays } from "../utils/activityAvailableDates";
+import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
+import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
 import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
 import { CatalogPhotoLightbox } from "../components/public/CatalogPhotoLightbox";
 import { CatalogPhotoFrame } from "../components/public/CatalogPhotoFrame";
@@ -211,6 +213,8 @@ function BookingCardShell({
   date,
   setDate,
   normalizedDays,
+  stopDateSet,
+  pushDateSet,
   lineTotal,
   canAdd,
   onAdd,
@@ -338,6 +342,9 @@ function BookingCardShell({
         value={date}
         onChange={setDate}
         normalizedDays={normalizedDays}
+        stopDateSet={stopDateSet}
+        pushDateSet={pushDateSet}
+        activity={activity}
         disabled={noDatesConfigured}
         maxDaysAhead={120}
       />
@@ -395,6 +402,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const [childCount, setChildCount] = useState(0);
   const [babyCount, setBabyCount] = useState(0);
   const [date, setDate] = useState("");
+  const [stopDateSet, setStopDateSet] = useState(() => new Set());
+  const [pushDateSet, setPushDateSet] = useState(() => new Set());
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -415,8 +424,15 @@ export function PublicCatalogueActivityPage({ activityId }) {
   );
 
   const dateOptions = useMemo(
-    () => (activity ? buildSelectableDateOptions(normalizedAvailableDays) : []),
-    [activity, normalizedAvailableDays]
+    () =>
+      activity
+        ? buildSelectableDateOptions(normalizedAvailableDays, 120, {
+            stopDateSet,
+            pushDateSet,
+            activity,
+          })
+        : [],
+    [activity, normalizedAvailableDays, stopDateSet, pushDateSet]
   );
 
   const daysSummary = useMemo(() => (activity ? formatActivityAvailableDaysSummary(activity) : ""), [activity]);
@@ -1015,6 +1031,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
     Boolean(date) &&
     !noDatesConfigured &&
     !codedTotalPending &&
+    !stopDateSet.has(date) &&
+    !(activity && isProgrammaticStopSale(activity, date)) &&
     hasEnoughParticipantsForActivity(activity?.name, { adults, children: childCount });
 
   const requiresMinTwo = requiresMinimumTwoParticipants(activity?.name);
@@ -1037,6 +1055,76 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
     if (date && !dateOptions.some((o) => o.value === date)) setDate("");
   }, [date, dateOptions]);
+
+  /** Stop sales / push sales pour colorer et bloquer le calendrier public. */
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSales() {
+      if (!supabase || !__SUPABASE_DEBUG__.isConfigured || !activity?.id) {
+        setStopDateSet(new Set());
+        setPushDateSet(new Set());
+        return;
+      }
+
+      const activityIds = new Set(
+        [activity.id, activity.supabase_id].filter(Boolean).map((id) => String(id))
+      );
+      const today = getLocalDateKey();
+
+      try {
+        const [stopRes, pushRes] = await Promise.all([
+          supabase
+            .from("stop_sales")
+            .select("activity_id, date")
+            .eq("site_key", SITE_KEY)
+            .gte("date", today),
+          supabase
+            .from("push_sales")
+            .select("activity_id, date")
+            .eq("site_key", SITE_KEY)
+            .gte("date", today),
+        ]);
+
+        if (cancelled) return;
+
+        if (stopRes.error) {
+          logger.warn("PublicCatalogueActivityPage : stop_sales", stopRes.error);
+        }
+        if (pushRes.error) {
+          logger.warn("PublicCatalogueActivityPage : push_sales", pushRes.error);
+        }
+
+        const stops = new Set();
+        for (const row of stopRes.data || []) {
+          if (!activityIds.has(String(row.activity_id || ""))) continue;
+          if (row.date && String(row.date) >= today) stops.add(String(row.date));
+        }
+
+        const pushes = new Set();
+        for (const row of pushRes.data || []) {
+          if (!activityIds.has(String(row.activity_id || ""))) continue;
+          const d = String(row.date || "");
+          if (!d || isPushSaleExpired(d)) continue;
+          pushes.add(d);
+        }
+
+        setStopDateSet(stops);
+        setPushDateSet(pushes);
+      } catch (err) {
+        logger.error("PublicCatalogueActivityPage loadSales:", err);
+        if (!cancelled) {
+          setStopDateSet(new Set());
+          setPushDateSet(new Set());
+        }
+      }
+    }
+
+    void loadSales();
+    return () => {
+      cancelled = true;
+    };
+  }, [activity?.id, activity?.supabase_id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1139,6 +1227,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   function appendToCartAndReturn() {
     if (!activity || !date) return;
+    if (stopDateSet.has(date) || isProgrammaticStopSale(activity, date)) {
+      return;
+    }
     if (
       !hasEnoughParticipantsForActivity(activity.name, {
         adults,
@@ -1435,6 +1526,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   date={date}
                   setDate={setDate}
                   normalizedDays={normalizedAvailableDays}
+                  stopDateSet={stopDateSet}
+                  pushDateSet={pushDateSet}
                   lineTotal={lineTotal}
                   canAdd={canAddToCart}
                   onAdd={appendToCartAndReturn}
@@ -1472,6 +1565,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
               date={date}
               setDate={setDate}
               normalizedDays={normalizedAvailableDays}
+              stopDateSet={stopDateSet}
+              pushDateSet={pushDateSet}
               lineTotal={lineTotal}
               canAdd={canAddToCart}
               onAdd={appendToCartAndReturn}

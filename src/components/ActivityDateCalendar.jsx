@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { getPublicCatalogDayStatus, toDateSet } from "../utils/activityAvailableDates";
 
 const WEEK_HEADERS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
@@ -60,16 +61,28 @@ function buildMonthCells(year, month) {
 }
 
 /**
- * Calendrier pour choisir une date parmi les jours autorisés (available_days).
+ * Calendrier public : jours ouverts, stop sale (rouge) et push sale (vert).
  * @param {{
  *   value: string,
  *   onChange: (iso: string) => void,
  *   normalizedDays: boolean[],
  *   disabled?: boolean,
  *   maxDaysAhead?: number,
+ *   stopDateSet?: Iterable<string>|Set<string>,
+ *   pushDateSet?: Iterable<string>|Set<string>,
+ *   activity?: object|null,
  * }} props
  */
-export function ActivityDateCalendar({ value, onChange, normalizedDays, disabled = false, maxDaysAhead = 120 }) {
+export function ActivityDateCalendar({
+  value,
+  onChange,
+  normalizedDays,
+  disabled = false,
+  maxDaysAhead = 120,
+  stopDateSet,
+  pushDateSet,
+  activity = null,
+}) {
   const minView = useMemo(() => {
     const t = new Date();
     return { y: t.getFullYear(), m: t.getMonth() };
@@ -83,6 +96,9 @@ export function ActivityDateCalendar({ value, onChange, normalizedDays, disabled
 
   const [view, setView] = useState(() => ({ y: minView.y, m: minView.m }));
 
+  const stops = useMemo(() => toDateSet(stopDateSet), [stopDateSet]);
+  const pushes = useMemo(() => toDateSet(pushDateSet), [pushDateSet]);
+
   useEffect(() => {
     if (!value) return;
     const d = new Date(`${value}T12:00:00`);
@@ -95,19 +111,31 @@ export function ActivityDateCalendar({ value, onChange, normalizedDays, disabled
     });
   }, [value]);
 
-  const days = useMemo(() => (Array.isArray(normalizedDays) && normalizedDays.length === 7 ? normalizedDays : null), [normalizedDays]);
+  const days = useMemo(
+    () => (Array.isArray(normalizedDays) && normalizedDays.length === 7 ? normalizedDays : null),
+    [normalizedDays]
+  );
 
   const cells = useMemo(() => buildMonthCells(view.y, view.m), [view.y, view.m]);
 
-  function isSelectable(d) {
-    if (disabled || !days) return false;
+  function dayMeta(d) {
+    if (disabled || !days) {
+      return { selectable: false, status: "unavailable", inRange: false };
+    }
     const x = startOfDay(d);
     const t0 = startOfDay(new Date());
     const limit = new Date();
     limit.setHours(12, 0, 0, 0);
     limit.setDate(limit.getDate() + maxDaysAhead);
-    if (x < t0 || x > limit) return false;
-    return Boolean(days[x.getDay()]);
+    const inRange = x >= t0 && x <= limit;
+    const iso = toIsoDate(d);
+    const status = getPublicCatalogDayStatus(iso, x.getDay(), days, {
+      stopDateSet: stops,
+      pushDateSet: pushes,
+      activity,
+    });
+    const selectable = inRange && (status === "available" || status === "push-sale");
+    return { selectable, status, inRange, iso };
   }
 
   const canPrevMonth = view.y > minView.y || (view.y === minView.y && view.m > minView.m);
@@ -130,6 +158,7 @@ export function ActivityDateCalendar({ value, onChange, normalizedDays, disabled
   }
 
   const title = `${MONTH_NAMES[view.m]} ${view.y}`;
+  const showSalesLegend = stops.size > 0 || pushes.size > 0;
 
   return (
     <div className="rounded-xl border border-gray-300 bg-white p-3 shadow-sm">
@@ -156,7 +185,7 @@ export function ActivityDateCalendar({ value, onChange, normalizedDays, disabled
             aria-label="Mois suivant"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path d="m9 18 6-6-6-6" />
+              <path d="m9 18 6-6 6-6" />
             </svg>
           </button>
         </div>
@@ -169,27 +198,57 @@ export function ActivityDateCalendar({ value, onChange, normalizedDays, disabled
           </div>
         ))}
         {cells.map((cell, idx) => {
-          const iso = toIsoDate(cell.date);
-          const selectable = isSelectable(cell.date);
+          const { selectable, status, inRange, iso } = dayMeta(cell.date);
           const selected = value === iso;
           const muted = !cell.inCurrentMonth;
+
+          let colorClass = "";
+          if (selected) {
+            colorClass = "bg-emerald-600 text-white shadow-inner ring-2 ring-emerald-700";
+          } else if (cell.inCurrentMonth && inRange && status === "stop-sale") {
+            colorClass =
+              "cursor-not-allowed bg-red-500 font-bold text-white ring-1 ring-red-600 shadow-sm shadow-red-500/40";
+          } else if (selectable && status === "push-sale") {
+            colorClass =
+              "cursor-pointer bg-emerald-500 font-bold text-white ring-1 ring-emerald-600 shadow-sm shadow-emerald-500/40 hover:bg-emerald-600";
+          } else if (selectable && cell.inCurrentMonth) {
+            colorClass =
+              "cursor-pointer bg-emerald-50/90 text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100";
+          } else if (selectable && !cell.inCurrentMonth) {
+            colorClass = "cursor-pointer text-emerald-800 hover:bg-emerald-50";
+          } else if (cell.inCurrentMonth && inRange && status === "unavailable") {
+            colorClass = "cursor-not-allowed bg-red-50 text-red-400/90 ring-1 ring-red-100";
+          } else if (cell.inCurrentMonth) {
+            colorClass = "cursor-not-allowed text-gray-300";
+          } else {
+            colorClass = "cursor-default text-gray-300";
+          }
+
+          const titleHint =
+            status === "stop-sale"
+              ? "Stop sale — date indisponible"
+              : status === "push-sale"
+                ? "Push sale — ouverture exceptionnelle"
+                : status === "available"
+                  ? "Disponible"
+                  : "Non disponible";
 
           return (
             <button
               key={`${iso}-${idx}`}
               type="button"
               disabled={!selectable}
+              title={cell.inCurrentMonth ? titleHint : undefined}
+              aria-label={
+                cell.inCurrentMonth
+                  ? `${cell.date.getDate()} — ${titleHint}`
+                  : String(cell.date.getDate())
+              }
               onClick={() => selectable && onChange(iso)}
               className={[
                 "relative flex h-9 min-w-0 items-center justify-center rounded-lg text-sm font-medium transition sm:h-10",
-                muted ? "text-gray-300" : "text-gray-900",
-                selected ? "bg-emerald-600 text-white shadow-inner ring-2 ring-emerald-700" : "",
-                selectable && !selected && cell.inCurrentMonth
-                  ? "cursor-pointer bg-emerald-50/90 text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100"
-                  : "",
-                selectable && !selected && !cell.inCurrentMonth ? "hover:bg-emerald-50 text-emerald-800" : "",
-                !selectable && cell.inCurrentMonth ? "cursor-not-allowed text-gray-300" : "",
-                !selectable && !cell.inCurrentMonth ? "cursor-default" : "",
+                muted && !selected && status !== "stop-sale" && status !== "push-sale" ? "opacity-70" : "",
+                colorClass,
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -199,6 +258,24 @@ export function ActivityDateCalendar({ value, onChange, normalizedDays, disabled
           );
         })}
       </div>
+
+      {showSalesLegend ? (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-gray-100 pt-2 text-[11px] text-gray-600">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded bg-emerald-50 ring-1 ring-emerald-200" aria-hidden />
+            Ouvert
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded bg-red-500" aria-hidden />
+            Stop sale
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded bg-emerald-500" aria-hidden />
+            Push sale
+          </span>
+        </div>
+      ) : null}
+
       {value ? (
         <p className="mt-2 text-center text-xs text-gray-600">
           Sélection :{" "}
@@ -212,7 +289,9 @@ export function ActivityDateCalendar({ value, onChange, normalizedDays, disabled
           </span>
         </p>
       ) : (
-        <p className="mt-2 text-center text-xs text-gray-500">Choisis un jour en vert dans le calendrier</p>
+        <p className="mt-2 text-center text-xs text-gray-500">
+          Choisis un jour en vert — les dates en rouge (stop sale) sont bloquées
+        </p>
       )}
     </div>
   );
