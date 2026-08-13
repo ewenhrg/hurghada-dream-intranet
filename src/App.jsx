@@ -48,6 +48,7 @@ import { PageTransition } from "./components/PageTransition";
 import { toast, clearToasts } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
+import { usePublicQuotesInbox } from "./hooks/usePublicQuotesInbox";
 import {
   mergeRemoteActivitiesWithLocal,
   saveActivitiesAutoSnapshot,
@@ -78,6 +79,9 @@ export default function App() {
   const [showDatesModal, setShowDatesModal] = useState(false);
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
+  const { pendingCount: pendingPublicQuotesCount } = usePublicQuotesInbox({
+    enabled: Boolean(ok && user && user.canAccessHistory !== false),
+  });
 
   // Réinitialiser les dates utilisées quand on change d'onglet
   useEffect(() => {
@@ -1387,7 +1391,17 @@ export default function App() {
                 )}
                 {user?.canAccessHistory !== false && (
                 <Pill active={tab === "public-devis"} onClick={() => setTab("public-devis")}>
-                  {t("nav.publicDevis")}
+                  <span className="inline-flex items-center gap-1.5">
+                    {t("nav.publicDevis")}
+                    {pendingPublicQuotesCount > 0 ? (
+                      <span
+                        className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-black tabular-nums leading-none text-white shadow-[0_0_10px_rgba(244,63,94,0.65)] ring-2 ring-white/80"
+                        aria-label={`${pendingPublicQuotesCount} demande${pendingPublicQuotesCount > 1 ? "s" : ""} en attente`}
+                      >
+                        {pendingPublicQuotesCount > 99 ? "99+" : pendingPublicQuotesCount}
+                      </span>
+                    ) : null}
+                  </span>
                 </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
@@ -1566,7 +1580,7 @@ export default function App() {
 
         {tab === "public-devis" && user?.canAccessHistory !== false && (
           <Section title={t("page.publicDevis.title")} subtitle={t("page.publicDevis.subtitle")}>
-            <PublicDevisPage />
+            <PublicDevisPage user={user} />
           </Section>
         )}
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, getQuotesRealtimeSiteKeyFilter } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -10,9 +11,7 @@ import {
   buildQuoteDraftFromPublicViewModel,
   HD_PUBLIC_QUOTE_TO_DRAFT_EVENT,
 } from "../utils/publicQuoteToDraft";
-
-/** Les lignes plus anciennes sont supprimées en base (affichage côté « Devis public »). */
-const PUBLIC_QUOTE_TTL_MS = 48 * 60 * 60 * 1000;
+import { markPublicQuoteTreated, PUBLIC_QUOTE_TTL_MS } from "../utils/publicQuoteInbox";
 const PUBLIC_QUOTES_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 
 function parseItems(rawItems) {
@@ -144,13 +143,15 @@ function rowToViewModel(row) {
     total: row.total || 0,
     currency: row.currency || "EUR",
     parsedItems: parseItems(row.items),
+    treatedByName: String(row.treated_by_name || "").trim(),
+    treatedAt: row.treated_at || "",
   };
 }
 
 /**
  * Demandes catalogue public — source : table `public_quotes` (pas `quotes`).
  */
-export function PublicDevisPage() {
+export function PublicDevisPage({ user }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -177,13 +178,28 @@ export function PublicDevisPage() {
       const { data, error: loadError } = await supabase
         .from("public_quotes")
         .select(
-          "id, client_name, client_phone, client_email, client_hotel, client_arrival_date, client_departure_date, notes, total, currency, items, created_at"
+          "id, client_name, client_phone, client_email, client_hotel, client_arrival_date, client_departure_date, notes, total, currency, items, created_at, treated_by_name, treated_at"
         )
         .eq("site_key", SITE_KEY)
         .order("created_at", { ascending: false })
         .limit(500);
 
       if (loadError) {
+        const msg = String(loadError.message || "");
+        if (/treated_by_name|treated_at/i.test(msg) || loadError.code === "PGRST204") {
+          const retry = await supabase
+            .from("public_quotes")
+            .select(
+              "id, client_name, client_phone, client_email, client_hotel, client_arrival_date, client_departure_date, notes, total, currency, items, created_at"
+            )
+            .eq("site_key", SITE_KEY)
+            .order("created_at", { ascending: false })
+            .limit(500);
+          if (!retry.error) {
+            setRows((retry.data || []).map(rowToViewModel));
+            return;
+          }
+        }
         logger.error("PublicDevisPage load:", loadError);
         setError(loadError.message || "Impossible de charger les devis publics.");
         setRows([]);
@@ -233,12 +249,32 @@ export function PublicDevisPage() {
   }, [load, deleteExpiredPublicQuotes]);
 
   const handleStartDevis = useCallback(
-    (quote) => {
+    async (quote) => {
       const draft = buildQuoteDraftFromPublicViewModel(quote);
       window.dispatchEvent(new CustomEvent(HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, { detail: draft }));
       toast.success("Ouverture de l’onglet Devis — pensez à vérifier les infos avant validation.");
+
+      const alreadyTreated = Boolean(quote.treatedByName);
+      if (alreadyTreated) return;
+
+      const agentName = String(user?.name || "").trim();
+      if (!agentName || !quote.supabaseId) return;
+
+      const result = await markPublicQuoteTreated(quote.supabaseId, agentName);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setRows((prev) =>
+        prev.map((row) =>
+          row.id === quote.id
+            ? { ...row, treatedByName: agentName, treatedAt: new Date().toISOString() }
+            : row
+        )
+      );
+      window.dispatchEvent(new CustomEvent("hd-public-quote-inbox-changed"));
     },
-    []
+    [user?.name]
   );
 
   useEffect(() => {
@@ -299,8 +335,8 @@ export function PublicDevisPage() {
   return (
     <div className="space-y-5">
       <p className="rounded-xl border border-slate-200 bg-slate-50/90 px-4 py-3 text-xs font-medium text-slate-700">
-        Les demandes de plus de <strong>48 h</strong> sont supprimées automatiquement. Le bouton « Commencer le
-        devis » ouvre l’onglet Devis avec le formulaire prérempli — la demande reste affichée ici.
+        Les demandes de plus de <strong>48 h</strong> sont supprimées automatiquement. « Commencer le
+        devis » ouvre l’onglet Devis et affiche <strong>Traité par</strong> le commercial qui a pris la demande.
       </p>
 
       {rows.length > 0 && (
@@ -346,9 +382,17 @@ export function PublicDevisPage() {
         {filteredRows.map((quote) => (
           <article
             key={quote.id}
-            className="overflow-hidden rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_12px_40px_-18px_rgba(30,27,75,0.22)] ring-1 ring-slate-200/80"
+            className={`overflow-hidden rounded-2xl border-2 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_12px_40px_-18px_rgba(30,27,75,0.22)] ring-1 ring-slate-200/80 ${
+              quote.treatedByName
+                ? "border-emerald-200/90"
+                : "border-indigo-200/90"
+            }`}
           >
-            <div className="border-b border-indigo-100 bg-gradient-to-r from-indigo-50/90 to-violet-50/50 px-4 py-4 sm:px-6 sm:py-5">
+            <div className={`border-b px-4 py-4 sm:px-6 sm:py-5 ${
+              quote.treatedByName
+                ? "border-emerald-100 bg-gradient-to-r from-emerald-50/90 to-teal-50/50"
+                : "border-indigo-100 bg-gradient-to-r from-indigo-50/90 to-violet-50/50"
+            }`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-indigo-600">Demande catalogue</p>
@@ -357,15 +401,28 @@ export function PublicDevisPage() {
                   </h3>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {quote.treatedByName ? (
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-2 text-sm font-bold text-white shadow-md shadow-emerald-600/20"
+                      title={
+                        quote.treatedAt
+                          ? `Prise en charge le ${new Date(quote.treatedAt).toLocaleString("fr-FR")}`
+                          : "Demande déjà prise en charge"
+                      }
+                    >
+                      <CheckCircle2 className="h-4 w-4" aria-hidden />
+                      Traité par {quote.treatedByName}
+                    </span>
+                  ) : null}
                   <PrimaryBtn
                     type="button"
                     className="!min-h-0 !min-w-0 !text-sm !px-4 !py-2 whitespace-nowrap bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 border-0 shadow-md shadow-indigo-500/20"
-                    onClick={() => handleStartDevis(quote)}
+                    onClick={() => void handleStartDevis(quote)}
                   >
-                    Commencer le devis
+                    {quote.treatedByName ? "Rouvrir le devis" : "Commencer le devis"}
                   </PrimaryBtn>
                   <span className="rounded-full bg-teal-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-teal-900 ring-1 ring-teal-600/30">
-                    Public
+                    {quote.treatedByName ? "Pris" : "En attente"}
                   </span>
                 </div>
               </div>
