@@ -1,4 +1,6 @@
 import { isProgrammaticStopSale } from "./activitySalesBlackouts.js";
+import { getLocalDateKey } from "./pushSaleExpiry.js";
+import { isDateSafeForDiving, isDivingActivityName } from "./divingSafety.js";
 
 /**
  * Jours disponibles (gestion) : tableau de 7 booléens,
@@ -21,6 +23,38 @@ export function toDateSet(dates) {
   if (!dates) return new Set();
   if (dates instanceof Set) return dates;
   return new Set([...dates].map((d) => String(d)));
+}
+
+/**
+ * Plus tôt : après-demain (aujourd’hui + 2) — ni aujourd’hui ni demain.
+ * @param {Date} [now]
+ * @returns {string} YYYY-MM-DD
+ */
+export function getEarliestBookableActivityDateYmd(now = new Date()) {
+  const d = new Date(now);
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + 2);
+  return getLocalDateKey(d);
+}
+
+/**
+ * Fenêtre d’activités pendant le séjour :
+ * lendemain d’arrivée → départ (inclus), croisée avec la date mini réservable.
+ * @returns {{ start: string, end: string, empty: boolean }|null}
+ */
+export function getCatalogueStayActivityBounds(arrivalDate, departureDate, now = new Date()) {
+  const arrival = String(arrivalDate || "").trim();
+  const departure = String(departureDate || "").trim();
+  if (!arrival || !departure || arrival > departure) return null;
+
+  const dayAfterArrival = new Date(`${arrival}T12:00:00`);
+  if (Number.isNaN(dayAfterArrival.getTime())) return null;
+  dayAfterArrival.setDate(dayAfterArrival.getDate() + 1);
+  let start = getLocalDateKey(dayAfterArrival);
+  const earliest = getEarliestBookableActivityDateYmd(now);
+  if (start < earliest) start = earliest;
+  const end = departure;
+  return { start, end, empty: start > end };
 }
 
 /**
@@ -55,16 +89,53 @@ export function getPublicCatalogDayStatus(dateStr, dayOfWeek, normalizedDays, op
 }
 
 /**
- * Dates sélectionnables pour les N prochains jours (masque hebdo + stop/push).
+ * @param {string} dateStr
+ * @param {{
+ *   stayBounds?: { start: string, end: string, empty?: boolean }|null,
+ *   earliestYmd?: string,
+ *   activity?: object|null,
+ *   departureDate?: string,
+ * }} [opts]
+ */
+export function isPublicCatalogDateSelectable(dateStr, opts = {}) {
+  const iso = String(dateStr || "").trim();
+  if (!iso) return false;
+
+  const earliest = opts.earliestYmd || getEarliestBookableActivityDateYmd();
+  if (iso < earliest) return false;
+
+  const bounds = opts.stayBounds;
+  if (bounds) {
+    if (bounds.empty) return false;
+    if (iso < bounds.start || iso > bounds.end) return false;
+  }
+
+  const activity = opts.activity;
+  const departure = String(opts.departureDate || "").trim();
+  if (activity && departure && isDivingActivityName(activity.name || activity.activity_name)) {
+    if (!isDateSafeForDiving(iso, departure)) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Dates sélectionnables (masque hebdo + stop/push + séjour + délai + plongée).
  * @param {boolean[]} normalizedDays
  * @param {number} [maxDaysAhead=120]
- * @param {{ stopDateSet?: Iterable<string>, pushDateSet?: Iterable<string>, activity?: object }} [options]
+ * @param {{
+ *   stopDateSet?: Iterable<string>,
+ *   pushDateSet?: Iterable<string>,
+ *   activity?: object,
+ *   stayBounds?: { start: string, end: string, empty?: boolean }|null,
+ *   earliestYmd?: string,
+ *   departureDate?: string,
+ * }} [options]
  * @returns {{ value: string, label: string, status: string }[]}
  */
 export function buildSelectableDateOptions(normalizedDays, maxDaysAhead = 120, options = {}) {
   const allOff = normalizedDays.every((d) => !d);
   const pushes = toDateSet(options.pushDateSet);
-  // Si aucun jour ouvré et aucun push : rien à vendre en ligne
   if (allOff && pushes.size === 0) return [];
 
   const formatter = new Intl.DateTimeFormat("fr-FR", {
@@ -74,6 +145,11 @@ export function buildSelectableDateOptions(normalizedDays, maxDaysAhead = 120, o
     year: "numeric",
   });
 
+  const earliest = options.earliestYmd || getEarliestBookableActivityDateYmd();
+  const stayBounds = options.stayBounds ?? null;
+  // Catalogue public : séjour obligatoire pour proposer des dates
+  if (options.requireStay && (!stayBounds || stayBounds.empty)) return [];
+
   const out = [];
   const base = new Date();
   base.setHours(12, 0, 0, 0);
@@ -82,10 +158,17 @@ export function buildSelectableDateOptions(normalizedDays, maxDaysAhead = 120, o
     const dt = new Date(base);
     dt.setDate(base.getDate() + i);
     const dow = dt.getDay();
-    const y = dt.getFullYear();
-    const mo = String(dt.getMonth() + 1).padStart(2, "0");
-    const da = String(dt.getDate()).padStart(2, "0");
-    const value = `${y}-${mo}-${da}`;
+    const value = getLocalDateKey(dt);
+    if (
+      !isPublicCatalogDateSelectable(value, {
+        stayBounds,
+        earliestYmd: earliest,
+        activity: options.activity,
+        departureDate: options.departureDate,
+      })
+    ) {
+      continue;
+    }
     const status = getPublicCatalogDayStatus(value, dow, normalizedDays, options);
     if (status === "available" || status === "push-sale") {
       out.push({ value, label: formatter.format(dt), status });

@@ -4,11 +4,22 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
+import {
+  isValidCatalogueStay,
+  loadPublicCatalogueStay,
+  PUBLIC_CATALOGUE_STAY_EVENT,
+} from "../utils/publicCatalogueStayStorage";
 import { formatActivityAvailableDaysSummary } from "../utils/activityDaysDisplay";
-import { buildSelectableDateOptions, normalizeAvailableDays } from "../utils/activityAvailableDates";
+import {
+  buildSelectableDateOptions,
+  getCatalogueStayActivityBounds,
+  getEarliestBookableActivityDateYmd,
+  normalizeAvailableDays,
+} from "../utils/activityAvailableDates";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
 import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
 import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
+import { CatalogueStayGateModal } from "../components/public/CatalogueStayGateModal";
 import { CatalogPhotoLightbox } from "../components/public/CatalogPhotoLightbox";
 import { CatalogPhotoFrame } from "../components/public/CatalogPhotoFrame";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
@@ -215,6 +226,8 @@ function BookingCardShell({
   normalizedDays,
   stopDateSet,
   pushDateSet,
+  stayArrivalDate = "",
+  stayDepartureDate = "",
   lineTotal,
   canAdd,
   onAdd,
@@ -345,9 +358,14 @@ function BookingCardShell({
         stopDateSet={stopDateSet}
         pushDateSet={pushDateSet}
         activity={activity}
-        disabled={noDatesConfigured}
+        stayArrivalDate={stayArrivalDate}
+        stayDepartureDate={stayDepartureDate}
+        disabled={noDatesConfigured || !stayArrivalDate || !stayDepartureDate}
         maxDaysAhead={120}
       />
+      {!stayArrivalDate || !stayDepartureDate ? (
+        <p className="text-sm text-amber-800">Indiquez vos dates de séjour pour choisir une date d’activité.</p>
+      ) : null}
       {noDatesConfigured ? (
         <p className="text-sm text-amber-800">Aucun jour n&apos;est ouvert pour cette activité en ligne. Écrivez-nous sur WhatsApp pour réserver.</p>
       ) : null}
@@ -402,6 +420,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const [childCount, setChildCount] = useState(0);
   const [babyCount, setBabyCount] = useState(0);
   const [date, setDate] = useState("");
+  const [stay, setStay] = useState(() => loadPublicCatalogueStay());
+  const [stayModalOpen, setStayModalOpen] = useState(() => !isValidCatalogueStay(loadPublicCatalogueStay()));
   const [stopDateSet, setStopDateSet] = useState(() => new Set());
   const [pushDateSet, setPushDateSet] = useState(() => new Set());
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -423,6 +443,11 @@ export function PublicCatalogueActivityPage({ activityId }) {
     [activity]
   );
 
+  const stayBounds = useMemo(
+    () => getCatalogueStayActivityBounds(stay.arrivalDate, stay.departureDate),
+    [stay.arrivalDate, stay.departureDate]
+  );
+
   const dateOptions = useMemo(
     () =>
       activity
@@ -430,14 +455,20 @@ export function PublicCatalogueActivityPage({ activityId }) {
             stopDateSet,
             pushDateSet,
             activity,
+            stayBounds,
+            earliestYmd: getEarliestBookableActivityDateYmd(),
+            departureDate: stay.departureDate,
+            requireStay: true,
           })
         : [],
-    [activity, normalizedAvailableDays, stopDateSet, pushDateSet]
+    [activity, normalizedAvailableDays, stopDateSet, pushDateSet, stayBounds, stay.departureDate]
   );
 
   const daysSummary = useMemo(() => (activity ? formatActivityAvailableDaysSummary(activity) : ""), [activity]);
 
-  const noDatesConfigured = Boolean(activity) && dateOptions.length === 0;
+  const noDatesConfigured =
+    Boolean(activity) &&
+    (dateOptions.length === 0 || (stayBounds != null && stayBounds.empty));
 
   // Tolérant : certaines sources peuvent exposer camelCase au lieu de snake_case.
   const babiesForbidden = Boolean(activity?.babies_forbidden ?? activity?.babiesForbidden);
@@ -1056,6 +1087,16 @@ export function PublicCatalogueActivityPage({ activityId }) {
     if (date && !dateOptions.some((o) => o.value === date)) setDate("");
   }, [date, dateOptions]);
 
+  useEffect(() => {
+    function onStayEvent(e) {
+      const next = e?.detail || loadPublicCatalogueStay();
+      setStay(next);
+      if (isValidCatalogueStay(next)) setStayModalOpen(false);
+    }
+    window.addEventListener(PUBLIC_CATALOGUE_STAY_EVENT, onStayEvent);
+    return () => window.removeEventListener(PUBLIC_CATALOGUE_STAY_EVENT, onStayEvent);
+  }, []);
+
   /** Stop sales / push sales pour colorer et bloquer le calendrier public. */
   useEffect(() => {
     let cancelled = false;
@@ -1528,6 +1569,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   normalizedDays={normalizedAvailableDays}
                   stopDateSet={stopDateSet}
                   pushDateSet={pushDateSet}
+                  stayArrivalDate={stay.arrivalDate}
+                  stayDepartureDate={stay.departureDate}
                   lineTotal={lineTotal}
                   canAdd={canAddToCart}
                   onAdd={appendToCartAndReturn}
@@ -1567,6 +1610,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
               normalizedDays={normalizedAvailableDays}
               stopDateSet={stopDateSet}
               pushDateSet={pushDateSet}
+              stayArrivalDate={stay.arrivalDate}
+              stayDepartureDate={stay.departureDate}
               lineTotal={lineTotal}
               canAdd={canAddToCart}
               onAdd={appendToCartAndReturn}
@@ -1630,6 +1675,16 @@ export function PublicCatalogueActivityPage({ activityId }) {
         onIndexChange={setLightboxIndex}
         onClose={closeLightbox}
         altPrefix={activity?.name || "Activité"}
+      />
+
+      <CatalogueStayGateModal
+        open={stayModalOpen}
+        initialStay={stay}
+        allowDismiss={false}
+        onSaved={(next) => {
+          setStay(next);
+          setStayModalOpen(false);
+        }}
       />
     </div>
   );

@@ -4,6 +4,14 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
+import {
+  formatCatalogueStaySummary,
+  isValidCatalogueStay,
+  loadPublicCatalogueStay,
+  PUBLIC_CATALOGUE_STAY_EVENT,
+  savePublicCatalogueStay,
+} from "../utils/publicCatalogueStayStorage";
+import { CatalogueStayGateModal } from "../components/public/CatalogueStayGateModal";
 import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "../utils/publicCatalogPricing";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import {
@@ -102,17 +110,23 @@ export function PublicClientDevisPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [client, setClient] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    hotel: "",
-    arrivalDate: "",
-    departureDate: "",
-    notes: "",
+  const [client, setClient] = useState(() => {
+    const s = loadPublicCatalogueStay();
+    return {
+      name: "",
+      phone: "",
+      email: "",
+      hotel: "",
+      arrivalDate: s.arrivalDate || "",
+      departureDate: s.departureDate || "",
+      notes: "",
+    };
   });
 
   const [cart, setCart] = useState(() => loadPublicCatalogueCart());
+  const [stay, setStay] = useState(() => loadPublicCatalogueStay());
+  const [stayModalOpen, setStayModalOpen] = useState(() => !isValidCatalogueStay(loadPublicCatalogueStay()));
+  const [stayModalAllowDismiss, setStayModalAllowDismiss] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -281,7 +295,21 @@ export function PublicClientDevisPage() {
   }, [cart]);
 
   useEffect(() => {
-    if (cartDrawerOpen || checkoutOpen || successModalOpen) {
+    function onStayEvent(e) {
+      const next = e?.detail || loadPublicCatalogueStay();
+      setStay(next);
+      setClient((c) => ({
+        ...c,
+        arrivalDate: next.arrivalDate || c.arrivalDate,
+        departureDate: next.departureDate || c.departureDate,
+      }));
+    }
+    window.addEventListener(PUBLIC_CATALOGUE_STAY_EVENT, onStayEvent);
+    return () => window.removeEventListener(PUBLIC_CATALOGUE_STAY_EVENT, onStayEvent);
+  }, []);
+
+  useEffect(() => {
+    if (cartDrawerOpen || checkoutOpen || successModalOpen || stayModalOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -289,20 +317,38 @@ export function PublicClientDevisPage() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [cartDrawerOpen, checkoutOpen, successModalOpen]);
+  }, [cartDrawerOpen, checkoutOpen, successModalOpen, stayModalOpen]);
 
   useEffect(() => {
     if (!cartDrawerOpen && !checkoutOpen && !successModalOpen) return undefined;
     function onKey(e) {
       if (e.key === "Escape") {
+        if (stayModalOpen && !stayModalAllowDismiss) return;
         setCheckoutOpen(false);
         setCartDrawerOpen(false);
         setSuccessModalOpen(false);
+        if (stayModalAllowDismiss) setStayModalOpen(false);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cartDrawerOpen, checkoutOpen, successModalOpen]);
+  }, [cartDrawerOpen, checkoutOpen, successModalOpen, stayModalOpen, stayModalAllowDismiss]);
+
+  function handleStaySaved(next) {
+    setStay(next);
+    setClient((c) => ({
+      ...c,
+      arrivalDate: next.arrivalDate,
+      departureDate: next.departureDate,
+    }));
+    setStayModalOpen(false);
+    setStayModalAllowDismiss(false);
+  }
+
+  function openStayEditor() {
+    setStayModalAllowDismiss(isValidCatalogueStay(stay));
+    setStayModalOpen(true);
+  }
 
   useEffect(() => {
     if (!supabase || !__SUPABASE_DEBUG__.isConfigured) return undefined;
@@ -607,6 +653,25 @@ export function PublicClientDevisPage() {
           <p className="mx-auto mt-6 max-w-2xl animate-catalog-in-up text-[15px] font-semibold leading-relaxed text-catalog-body opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:text-lg sm:leading-relaxed" style={{ animationDelay: "130ms" }}>
             Désert, mer, Louxor &amp; Caires — parcourez le catalogue, composez votre panier et recevez une proposition claire, sans engagement.
           </p>
+
+          {isValidCatalogueStay(stay) ? (
+            <div
+              className="mx-auto mt-8 flex max-w-xl animate-catalog-in-up flex-col items-center gap-2 rounded-2xl border border-violet-200/90 bg-white/90 px-4 py-3 shadow-sm opacity-0 backdrop-blur-sm motion-reduce:animate-none motion-reduce:opacity-100 sm:flex-row sm:justify-between"
+              style={{ animationDelay: "160ms" }}
+            >
+              <p className="text-sm font-semibold text-catalog-ink">
+                Séjour :{" "}
+                <span className="text-violet-800">{formatCatalogueStaySummary(stay)}</span>
+              </p>
+              <button
+                type="button"
+                onClick={openStayEditor}
+                className="rounded-full border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-900 transition hover:bg-violet-100"
+              >
+                Modifier les dates
+              </button>
+            </div>
+          ) : null}
 
           <div className="mx-auto mt-12 max-w-xl animate-catalog-in-up opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "190ms" }}>
             <label className="relative block text-left" htmlFor="public-search">
@@ -1081,7 +1146,15 @@ export function PublicClientDevisPage() {
                   <input
                     type="date"
                     value={client.arrivalDate}
-                    onChange={(e) => updateClientField("arrivalDate", e.target.value)}
+                    onChange={(e) => {
+                      updateClientField("arrivalDate", e.target.value);
+                      if (isValidCatalogueStay({ arrivalDate: e.target.value, departureDate: client.departureDate })) {
+                        savePublicCatalogueStay({
+                          arrivalDate: e.target.value,
+                          departureDate: client.departureDate,
+                        });
+                      }
+                    }}
                     required
                     className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
                   />
@@ -1092,7 +1165,15 @@ export function PublicClientDevisPage() {
                     type="date"
                     value={client.departureDate}
                     min={client.arrivalDate || undefined}
-                    onChange={(e) => updateClientField("departureDate", e.target.value)}
+                    onChange={(e) => {
+                      updateClientField("departureDate", e.target.value);
+                      if (isValidCatalogueStay({ arrivalDate: client.arrivalDate, departureDate: e.target.value })) {
+                        savePublicCatalogueStay({
+                          arrivalDate: client.arrivalDate,
+                          departureDate: e.target.value,
+                        });
+                      }
+                    }}
                     required
                     className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
                   />
@@ -1146,6 +1227,17 @@ export function PublicClientDevisPage() {
           </div>
         </div>
       ) : null}
+
+      <CatalogueStayGateModal
+        open={stayModalOpen}
+        initialStay={stay}
+        allowDismiss={stayModalAllowDismiss}
+        onClose={() => {
+          if (!stayModalAllowDismiss) return;
+          setStayModalOpen(false);
+        }}
+        onSaved={handleStaySaved}
+      />
     </div>
   );
 }

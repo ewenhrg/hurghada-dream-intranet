@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { getPublicCatalogDayStatus, toDateSet } from "../utils/activityAvailableDates";
+import {
+  getCatalogueStayActivityBounds,
+  getEarliestBookableActivityDateYmd,
+  getPublicCatalogDayStatus,
+  isPublicCatalogDateSelectable,
+  toDateSet,
+} from "../utils/activityAvailableDates";
+import { isDivingActivityName } from "../utils/divingSafety.js";
 
 const WEEK_HEADERS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
@@ -34,7 +41,6 @@ function toIsoDate(d) {
 }
 
 /**
- * Grille mois (dimanche = première colonne, aligné sur Date.getDay()).
  * @param {number} year
  * @param {number} month 0-11
  */
@@ -61,17 +67,7 @@ function buildMonthCells(year, month) {
 }
 
 /**
- * Calendrier public : jours ouverts, stop sale (rouge) et push sale (vert).
- * @param {{
- *   value: string,
- *   onChange: (iso: string) => void,
- *   normalizedDays: boolean[],
- *   disabled?: boolean,
- *   maxDaysAhead?: number,
- *   stopDateSet?: Iterable<string>|Set<string>,
- *   pushDateSet?: Iterable<string>|Set<string>,
- *   activity?: object|null,
- * }} props
+ * Calendrier public : séjour, délai (pas demain), stop/push, plongée.
  */
 export function ActivityDateCalendar({
   value,
@@ -82,22 +78,43 @@ export function ActivityDateCalendar({
   stopDateSet,
   pushDateSet,
   activity = null,
+  stayArrivalDate = "",
+  stayDepartureDate = "",
 }) {
+  const earliestYmd = useMemo(() => getEarliestBookableActivityDateYmd(), []);
+  const stayBounds = useMemo(
+    () => getCatalogueStayActivityBounds(stayArrivalDate, stayDepartureDate),
+    [stayArrivalDate, stayDepartureDate]
+  );
+  const isDiving = Boolean(activity && isDivingActivityName(activity.name));
+
   const minView = useMemo(() => {
-    const t = new Date();
+    if (stayBounds && !stayBounds.empty) {
+      const d = new Date(`${stayBounds.start}T12:00:00`);
+      if (!Number.isNaN(d.getTime())) return { y: d.getFullYear(), m: d.getMonth() };
+    }
+    const t = new Date(`${earliestYmd}T12:00:00`);
     return { y: t.getFullYear(), m: t.getMonth() };
-  }, []);
+  }, [stayBounds, earliestYmd]);
 
   const maxView = useMemo(() => {
+    if (stayBounds && !stayBounds.empty) {
+      const d = new Date(`${stayBounds.end}T12:00:00`);
+      if (!Number.isNaN(d.getTime())) return { y: d.getFullYear(), m: d.getMonth() };
+    }
     const t = new Date();
     t.setDate(t.getDate() + maxDaysAhead);
     return { y: t.getFullYear(), m: t.getMonth() };
-  }, [maxDaysAhead]);
+  }, [stayBounds, maxDaysAhead]);
 
   const [view, setView] = useState(() => ({ y: minView.y, m: minView.m }));
 
   const stops = useMemo(() => toDateSet(stopDateSet), [stopDateSet]);
   const pushes = useMemo(() => toDateSet(pushDateSet), [pushDateSet]);
+
+  useEffect(() => {
+    setView({ y: minView.y, m: minView.m });
+  }, [minView.y, minView.m]);
 
   useEffect(() => {
     if (!value) return;
@@ -120,22 +137,48 @@ export function ActivityDateCalendar({
 
   function dayMeta(d) {
     if (disabled || !days) {
-      return { selectable: false, status: "unavailable", inRange: false };
+      return { selectable: false, status: "unavailable", inWindow: false, blockReason: "" };
     }
-    const x = startOfDay(d);
-    const t0 = startOfDay(new Date());
-    const limit = new Date();
-    limit.setHours(12, 0, 0, 0);
-    limit.setDate(limit.getDate() + maxDaysAhead);
-    const inRange = x >= t0 && x <= limit;
     const iso = toIsoDate(d);
-    const status = getPublicCatalogDayStatus(iso, x.getDay(), days, {
+    const status = getPublicCatalogDayStatus(iso, d.getDay(), days, {
       stopDateSet: stops,
       pushDateSet: pushes,
       activity,
     });
-    const selectable = inRange && (status === "available" || status === "push-sale");
-    return { selectable, status, inRange, iso };
+
+    const windowOk =
+      Boolean(stayBounds) &&
+      !stayBounds.empty &&
+      isPublicCatalogDateSelectable(iso, {
+        stayBounds,
+        earliestYmd,
+        activity,
+        departureDate: stayDepartureDate,
+      });
+
+    let blockReason = "";
+    if (!windowOk) {
+      if (iso < earliestYmd) {
+        blockReason = "Réservation à partir d’après-demain uniquement";
+      } else if (stayBounds && (iso < stayBounds.start || iso > stayBounds.end || stayBounds.empty)) {
+        blockReason = "Hors de votre séjour";
+      } else if (isDiving && stayDepartureDate) {
+        blockReason = "Plongée trop proche du départ (min. 2 jours)";
+      } else {
+        blockReason = "Date non disponible";
+      }
+    }
+
+    const selectable =
+      windowOk && (status === "available" || status === "push-sale");
+
+    return {
+      selectable,
+      status: !windowOk && isDiving && blockReason.includes("Plongée") ? "diving-blocked" : status,
+      inWindow: windowOk,
+      blockReason,
+      iso,
+    };
   }
 
   const canPrevMonth = view.y > minView.y || (view.y === minView.y && view.m > minView.m);
@@ -159,6 +202,22 @@ export function ActivityDateCalendar({
 
   const title = `${MONTH_NAMES[view.m]} ${view.y}`;
   const showSalesLegend = stops.size > 0 || pushes.size > 0;
+  const stayLabel =
+    stayArrivalDate && stayDepartureDate
+      ? (() => {
+          try {
+            const a = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" }).format(
+              new Date(`${stayArrivalDate}T12:00:00`)
+            );
+            const b = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(
+              new Date(`${stayDepartureDate}T12:00:00`)
+            );
+            return `${a} → ${b}`;
+          } catch {
+            return `${stayArrivalDate} → ${stayDepartureDate}`;
+          }
+        })()
+      : "";
 
   return (
     <div className="rounded-xl border border-gray-300 bg-white p-3 shadow-sm">
@@ -191,6 +250,20 @@ export function ActivityDateCalendar({
         </div>
       </div>
 
+      {stayLabel ? (
+        <p className="mb-2 rounded-lg border border-violet-100 bg-violet-50/80 px-2.5 py-1.5 text-center text-[11px] font-semibold text-violet-950">
+          Dates de votre séjour : {stayLabel}
+          <span className="mt-0.5 block font-medium text-violet-800/90">
+            Excursions à partir du lendemain d’arrivée · pas demain
+            {isDiving ? " · plongée : min. 2 jours avant le départ" : ""}
+          </span>
+        </p>
+      ) : (
+        <p className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-center text-[11px] font-semibold text-amber-950">
+          Indiquez d’abord vos dates de séjour pour choisir une date.
+        </p>
+      )}
+
       <div className="grid grid-cols-7 gap-0.5 text-center text-[11px] font-medium text-gray-500 sm:text-xs">
         {WEEK_HEADERS.map((h) => (
           <div key={h} className="py-1">
@@ -198,16 +271,19 @@ export function ActivityDateCalendar({
           </div>
         ))}
         {cells.map((cell, idx) => {
-          const { selectable, status, inRange, iso } = dayMeta(cell.date);
+          const { selectable, status, inWindow, blockReason, iso } = dayMeta(cell.date);
           const selected = value === iso;
           const muted = !cell.inCurrentMonth;
 
           let colorClass = "";
           if (selected) {
             colorClass = "bg-emerald-600 text-white shadow-inner ring-2 ring-emerald-700";
-          } else if (cell.inCurrentMonth && inRange && status === "stop-sale") {
+          } else if (cell.inCurrentMonth && status === "stop-sale") {
             colorClass =
               "cursor-not-allowed bg-red-500 font-bold text-white ring-1 ring-red-600 shadow-sm shadow-red-500/40";
+          } else if (cell.inCurrentMonth && status === "diving-blocked") {
+            colorClass =
+              "cursor-not-allowed bg-rose-100 font-semibold text-rose-800 ring-1 ring-rose-300";
           } else if (selectable && status === "push-sale") {
             colorClass =
               "cursor-pointer bg-emerald-500 font-bold text-white ring-1 ring-emerald-600 shadow-sm shadow-emerald-500/40 hover:bg-emerald-600";
@@ -216,7 +292,7 @@ export function ActivityDateCalendar({
               "cursor-pointer bg-emerald-50/90 text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100";
           } else if (selectable && !cell.inCurrentMonth) {
             colorClass = "cursor-pointer text-emerald-800 hover:bg-emerald-50";
-          } else if (cell.inCurrentMonth && inRange && status === "unavailable") {
+          } else if (cell.inCurrentMonth && inWindow && status === "unavailable") {
             colorClass = "cursor-not-allowed bg-red-50 text-red-400/90 ring-1 ring-red-100";
           } else if (cell.inCurrentMonth) {
             colorClass = "cursor-not-allowed text-gray-300";
@@ -224,14 +300,16 @@ export function ActivityDateCalendar({
             colorClass = "cursor-default text-gray-300";
           }
 
-          const titleHint =
-            status === "stop-sale"
-              ? "Stop sale — date indisponible"
-              : status === "push-sale"
-                ? "Push sale — ouverture exceptionnelle"
-                : status === "available"
-                  ? "Disponible"
-                  : "Non disponible";
+          const titleHint = selectable
+            ? status === "push-sale"
+              ? "Push sale — ouverture exceptionnelle"
+              : "Disponible"
+            : blockReason ||
+              (status === "stop-sale"
+                ? "Stop sale — date indisponible"
+                : status === "unavailable"
+                  ? "Non disponible"
+                  : "Date non disponible");
 
           return (
             <button
@@ -290,7 +368,7 @@ export function ActivityDateCalendar({
         </p>
       ) : (
         <p className="mt-2 text-center text-xs text-gray-500">
-          Choisis un jour en vert — les dates en rouge (stop sale) sont bloquées
+          Choisis un jour en vert pendant votre séjour
         </p>
       )}
     </div>
