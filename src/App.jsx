@@ -61,9 +61,6 @@ import {
   endPresenceSession,
 } from "./utils/presenceSessions";
 
-const PUBLIC_CATALOG_ACCESS_CODE = "101112";
-const SS_PUBLIC_CATALOG_OK = "hd_public_catalog_ok";
-
 export default function App() {
   const location = useLocation();
   const [ok, setOk] = useState(false);
@@ -81,39 +78,6 @@ export default function App() {
   const [showDatesModal, setShowDatesModal] = useState(false);
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
-  const [publicCatalogOk, setPublicCatalogOk] = useState(() => sessionStorage.getItem(SS_PUBLIC_CATALOG_OK) === "1");
-
-  const renderPublicCatalogGate = useCallback(
-    (title, children) => {
-      if (publicCatalogOk) return children;
-
-      return (
-        <div className="min-h-screen bg-catalog-bg px-4 py-10 text-slate-900">
-          <div className="mx-auto w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl">
-            <div className="mb-4">
-              <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-slate-500">Accès temporaire</p>
-              <h2 className="mt-1 text-xl font-bold text-slate-900">{title}</h2>
-              <p className="mt-2 text-sm font-medium text-slate-600">
-                Le catalogue public est en cours de construction. Entrez le code pour continuer.
-              </p>
-            </div>
-
-            <PublicCatalogCodeForm
-              onSuccess={() => {
-                try {
-                  sessionStorage.setItem(SS_PUBLIC_CATALOG_OK, "1");
-                } catch {
-                  // ignore
-                }
-                setPublicCatalogOk(true);
-              }}
-            />
-          </div>
-        </div>
-      );
-    },
-    [publicCatalogOk]
-  );
 
   // Réinitialiser les dates utilisées quand on change d'onglet
   useEffect(() => {
@@ -1151,8 +1115,7 @@ export default function App() {
   const catalogueActivityMatch = location.pathname.match(/^\/catalogue\/activity\/([^/]+)\/?$/);
   if (catalogueActivityMatch) {
     const catalogueActivityId = decodeURIComponent(catalogueActivityMatch[1]);
-    return renderPublicCatalogGate(
-      "Catalogue public",
+    return (
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <PublicCatalogueActivityPage activityId={catalogueActivityId} />
@@ -1163,8 +1126,7 @@ export default function App() {
 
   // Page publique catalogue + panier + demande de devis
   if (location.pathname === "/catalogue" || location.pathname === "/catalogue/") {
-    return renderPublicCatalogGate(
-      "Catalogue public",
+    return (
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <PublicClientDevisPage />
@@ -1814,48 +1776,5 @@ export default function App() {
         </div>
       )}
     </div>
-  );
-}
-
-function PublicCatalogCodeForm({ onSuccess }) {
-  const [code, setCode] = useState("");
-  const [error, setError] = useState("");
-
-  const submit = useCallback(
-    (e) => {
-      e.preventDefault();
-      const trimmed = String(code || "").trim();
-      if (trimmed === PUBLIC_CATALOG_ACCESS_CODE) {
-        setError("");
-        onSuccess?.();
-        return;
-      }
-      setError("Code incorrect.");
-    },
-    [code, onSuccess]
-  );
-
-  return (
-    <form onSubmit={submit} className="space-y-3">
-      <label htmlFor="public-catalog-code" className="block text-xs font-bold uppercase tracking-wide text-slate-700">
-        Code d’accès
-      </label>
-      <input
-        id="public-catalog-code"
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3 text-base font-semibold tracking-wider text-slate-900 outline-none ring-indigo-400/30 focus:border-indigo-400 focus:ring-2"
-        placeholder="••••••"
-      />
-      {error ? <p className="text-sm font-semibold text-rose-700">{error}</p> : null}
-      <button
-        type="submit"
-        className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-orange-600 px-4 py-3 text-sm font-extrabold tracking-tight text-white shadow-[0_8px_28px_-6px_rgba(76,29,149,0.5)] transition hover:from-violet-950 hover:via-violet-800 hover:to-orange-500"
-      >
-        Accéder au catalogue
-      </button>
-    </form>
   );
 }
