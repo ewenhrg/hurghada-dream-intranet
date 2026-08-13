@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { CalendarDays } from "lucide-react";
-import { getEarliestBookableActivityDateYmd } from "../utils/activityAvailableDates";
+import { getEarliestBookableActivityDateYmd } from "../../utils/activityAvailableDates";
 import {
   isValidCatalogueStay,
   savePublicCatalogueStay,
-} from "../utils/publicCatalogueStayStorage";
+} from "../../utils/publicCatalogueStayStorage";
 
 const fieldClass =
   "mt-1.5 w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25";
