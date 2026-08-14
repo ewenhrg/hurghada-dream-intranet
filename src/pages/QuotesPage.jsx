@@ -20,10 +20,20 @@ import {
   getActivityNeighborhoodBlockMessage,
   getActivityNeighborhoodBlockOptionSuffix,
 } from "../utils/activityNeighborhoodRules.js";
+import {
+  createEmptySecondHotel,
+  getEffectiveNeighborhoodForDate,
+  isSecondHotelConfigured,
+  formatSecondHotelSummary,
+  formatSecondHotelNotesLine,
+  pickSecondHotelFields,
+} from "../utils/clientSecondHotel.js";
+import { DoubleHotelModal } from "../components/quotes/DoubleHotelModal.jsx";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import { useDebounce } from "../hooks/useDebounce";
 import { salesCache, appCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
+import { BedDouble } from "lucide-react";
 
 /** Aligné sur l’onglet Activités (case « Interdit aux bébés »). */
 function isActivityBabiesForbidden(act) {
@@ -179,9 +189,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     neighborhood: "",
     arrivalDate: "",
     departureDate: "",
+    ...createEmptySecondHotel(),
   };
   
-  const [client, setClient] = useState(() => defaultClient);
+  const [client, setClient] = useState(() => ({
+    ...createEmptySecondHotel(),
+    ...defaultClient,
+  }));
   
   // Debounce pour le nom de l'hôtel (attendre 800ms après la fin de la saisie)
   const debouncedHotelName = useDebounce(client.hotel, 800);
@@ -193,6 +207,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   const [_ticketNumbers, setTicketNumbers] = useState({});
   const [_paymentMethods, setPaymentMethods] = useState({}); // { index: "cash" | "stripe" } (réservé)
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDoubleHotelModal, setShowDoubleHotelModal] = useState(false);
   
   // État pour les suggestions de dates automatiques
   const [_autoFillDates] = useState(false);
@@ -336,12 +351,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     const emptyClient = {
       name: "",
       phone: "",
+      emergencyPhone: "",
       email: "",
       hotel: "",
       room: "",
       neighborhood: "",
       arrivalDate: "",
       departureDate: "",
+      ...createEmptySecondHotel(),
     };
     setClient(emptyClient);
     setItems([blankItemMemo()]);
@@ -349,6 +366,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     setTicketNumbers({});
     setPaymentMethods({});
     setGlobalAdults("");
+    setShowDoubleHotelModal(false);
     if (setDraft) {
       setDraft(null);
     }
@@ -750,9 +768,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       if (!it.activityId || it.slot) return; // Ignorer si pas d'activité ou slot déjà défini
 
       const act = activitiesMap.get(it.activityId);
-      if (!act || !act.transfers || !act.transfers[client.neighborhood]) return;
+      const nb = getEffectiveNeighborhoodForDate(client, it.date);
+      if (!act || !act.transfers || !nb || !act.transfers[nb]) return;
 
-      const transferInfo = act.transfers[client.neighborhood];
+      const transferInfo = act.transfers[nb];
       
       // Compter les créneaux disponibles
       const availableSlots = [];
@@ -765,13 +784,18 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         setItem(idx, { slot: availableSlots[0] });
       }
     });
-  }, [items, activitiesMap, client.neighborhood, setItem]);
+  }, [items, activitiesMap, client, setItem]);
 
-  // Hook pour calculer les prix des activités
+  const resolveItemNeighborhood = useCallback(
+    (it) => getEffectiveNeighborhoodForDate(client, it?.date),
+    [client]
+  );
+
+  // Hook pour calculer les prix des activités (quartier selon date si double hôtel)
   const { computed, grandCurrency, grandTotalCash, grandTotalCard } = useActivityPriceCalculator(
     items,
     activitiesMap,
-    client.neighborhood,
+    resolveItemNeighborhood,
     stopSalesMap,
     pushSalesMap
   );
@@ -833,6 +857,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
     if (!client.neighborhood || !String(client.neighborhood).trim()) {
       toast.warning("Veuillez sélectionner un quartier avant de créer le devis.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (client.hasSecondHotel && !isSecondHotelConfigured(client)) {
+      toast.warning(
+        "Double hôtel activé : renseignez les dates et le quartier du 2e hôtel (ouvrez la fiche Double hôtel)."
+      );
+      setShowDoubleHotelModal(true);
       setIsSubmitting(false);
       return;
     }
@@ -963,9 +996,21 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     // Nettoyer le numéro de téléphone avant de créer le devis
     const cleanedClient = {
       ...client,
+      ...pickSecondHotelFields(client),
       phone: cleanPhoneNumber(client.phone || ""),
       emergencyPhone: cleanPhoneNumber(client.emergencyPhone || ""),
     };
+
+    const doubleHotelNote = formatSecondHotelNotesLine(cleanedClient, neighborhoodsOptions);
+    const notesWithDoubleHotel = (() => {
+      const base = withMammaMiaSelfTransferNote(
+        notes.trim(),
+        getMammaMiaSelfTransferActivityNames(validComputed.map((c) => c.act?.name || ""))
+      );
+      if (!doubleHotelNote) return base;
+      if (base.includes("Double hôtel :")) return base;
+      return base ? `${base}\n${doubleHotelNote}` : doubleHotelNote;
+    })();
 
     const q = {
       id: uuid(),
@@ -973,10 +1018,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       client: cleanedClient,
       clientArrivalDate: cleanedClient.arrivalDate || "",
       clientDepartureDate: cleanedClient.departureDate || "",
-      notes: withMammaMiaSelfTransferNote(
-        notes.trim(),
-        getMammaMiaSelfTransferActivityNames(validComputed.map((c) => c.act?.name || ""))
-      ),
+      notes: notesWithDoubleHotel,
       createdByName: user?.name || "",
       items: validComputed.map((c) => ({
         activityId: c.act.id,
@@ -1013,7 +1055,10 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
         zeroTracasVisaSim: Number(c.raw.zeroTracasVisaSim || 0),
         zeroTracasVisaSeul: Number(c.raw.zeroTracasVisaSeul || 0),
-        neighborhood: client.neighborhood,
+        neighborhood:
+          c.effectiveNeighborhood ||
+          getEffectiveNeighborhoodForDate(cleanedClient, c.raw.date) ||
+          client.neighborhood,
         slot: c.raw.slot,
         pickupTime: c.pickupTime || "",
         lineTotal: c.lineTotal,
@@ -1068,6 +1113,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           client_neighborhood: q.client.neighborhood || "",
           client_arrival_date: arrivalDate || null, // Convertir chaîne vide en null
           client_departure_date: departureDate || null, // Convertir chaîne vide en null
+          client_has_second_hotel: Boolean(q.client.hasSecondHotel),
+          client_second_hotel: q.client.secondHotel || "",
+          client_second_room: q.client.secondRoom || "",
+          client_second_neighborhood: q.client.secondNeighborhood || "",
+          client_second_arrival_date: q.client.secondArrivalDate || null,
+          client_second_departure_date: q.client.secondDepartureDate || null,
           notes: q.notes || "",
           total: q.total,
           currency: q.currency,
@@ -1078,7 +1129,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         };
 
         logger.log("🔄 Envoi du devis à Supabase:", supabaseData);
-        const { data, error } = await supabase.from("quotes").insert(supabaseData).select().single();
+        let { data, error } = await supabase.from("quotes").insert(supabaseData).select().single();
+
+        if (
+          error &&
+          /client_second_|client_has_second_hotel/i.test(
+            String(error.message || error.details || "")
+          )
+        ) {
+          const {
+            client_has_second_hotel: _a,
+            client_second_hotel: _b,
+            client_second_room: _c,
+            client_second_neighborhood: _d,
+            client_second_arrival_date: _e,
+            client_second_departure_date: _f,
+            ...fallbackData
+          } = supabaseData;
+          logger.warn("Colonnes double hôtel absentes — insert sans ces champs. Exécutez supabase_quotes_add_second_hotel.sql");
+          ({ data, error } = await supabase.from("quotes").insert(fallbackData).select().single());
+        }
 
         if (error) {
           logger.error("❌ ERREUR Supabase (création devis):", error);
@@ -1373,6 +1443,58 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               </select>
             </div>
           </div>
+
+          {/* Double hôtel — un seul devis si le client change d'établissement */}
+          <div className="mt-5 rounded-xl border border-indigo-400/40 bg-indigo-500/10 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <label className="inline-flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={Boolean(client.hasSecondHotel)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    if (checked) {
+                      setClient((c) => ({ ...c, hasSecondHotel: true }));
+                      setShowDoubleHotelModal(true);
+                    } else {
+                      setClient((c) => ({ ...c, ...createEmptySecondHotel() }));
+                      setShowDoubleHotelModal(false);
+                    }
+                  }}
+                  className="mt-1 size-4 rounded border-slate-400 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>
+                  <span className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+                    <BedDouble className="size-4 text-indigo-300" aria-hidden />
+                    Double hôtel
+                  </span>
+                  <span className="mt-0.5 block text-xs text-slate-400">
+                    Le client change d’hôtel pendant le séjour — évite un second devis.
+                  </span>
+                </span>
+              </label>
+              {client.hasSecondHotel ? (
+                <GhostBtn
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={() => setShowDoubleHotelModal(true)}
+                  className="whitespace-nowrap"
+                >
+                  {isSecondHotelConfigured(client) ? "Modifier le 2e hôtel" : "Renseigner le 2e hôtel"}
+                </GhostBtn>
+              ) : null}
+            </div>
+            {isSecondHotelConfigured(client) ? (
+              <p className="mt-3 rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3 py-2 text-xs font-medium text-emerald-100">
+                {formatSecondHotelSummary(client, neighborhoodsOptions)}
+              </p>
+            ) : client.hasSecondHotel ? (
+              <p className="mt-3 text-xs font-medium text-amber-200">
+                Dates et quartier du 2e hôtel à renseigner.
+              </p>
+            ) : null}
+          </div>
         </div>
 
         {/* Dates séjour */}
@@ -1657,9 +1779,18 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Quartier</label>
                     <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-normal text-slate-700">
-                      {client.neighborhood
-                        ? neighborhoodsOptions.find((n) => n.key === client.neighborhood)?.label
-                        : "— Choisir avec le client"}
+                      {c.effectiveNeighborhood
+                        ? neighborhoodsOptions.find((n) => n.key === c.effectiveNeighborhood)?.label
+                        : client.neighborhood
+                          ? neighborhoodsOptions.find((n) => n.key === client.neighborhood)?.label
+                          : "— Choisir avec le client"}
+                      {isSecondHotelConfigured(client) &&
+                      c.effectiveNeighborhood &&
+                      c.effectiveNeighborhood !== client.neighborhood ? (
+                        <span className="ml-2 text-[11px] font-semibold text-indigo-600">
+                          (2e hôtel)
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <div>
@@ -2906,6 +3037,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           setSelectedQuote(null);
           setTicketNumbers({});
           setPaymentMethods({});
+        }}
+      />
+
+      <DoubleHotelModal
+        open={showDoubleHotelModal}
+        initial={client}
+        neighborhoodsOptions={neighborhoodsOptions}
+        stayArrivalDate={client.arrivalDate || ""}
+        stayDepartureDate={client.departureDate || ""}
+        hotels={hotels}
+        onClose={() => setShowDoubleHotelModal(false)}
+        onSave={(second) => {
+          setClient((c) => ({ ...c, ...second, hasSecondHotel: true }));
+          toast.success("2e hôtel enregistré sur ce devis.");
         }}
       />
 

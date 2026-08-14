@@ -28,7 +28,7 @@ import { computeActivityTransferSurcharge, computePrivateTransferSurcharge } fro
  * Hook personnalisé pour calculer les prix des activités
  * @param {Array} items - Les items du formulaire
  * @param {Map} activitiesMap - Map des activités pour recherche O(1)
- * @param {string} neighborhood - Quartier du client
+ * @param {string|function} neighborhood - Quartier du client, ou `(item) => neighborhoodKey` (ex. double hôtel)
  * @param {Map} stopSalesMap - Map des stop sales
  * @param {Map} pushSalesMap - Map des push sales
  * @returns {Object} - Objet contenant computed, grandTotal, grandTotalCash, grandTotalCard, grandCurrency
@@ -36,6 +36,8 @@ import { computeActivityTransferSurcharge, computePrivateTransferSurcharge } fro
 export function useActivityPriceCalculator(items, activitiesMap, neighborhood, stopSalesMap, pushSalesMap) {
   const computed = useMemo(() => {
     return items.map((it) => {
+      const neighborhoodKey =
+        typeof neighborhood === "function" ? neighborhood(it) : neighborhood;
       // Recherche optimisée O(1) avec Map au lieu de O(n) avec find
       const act = activitiesMap.get(it.activityId);
       const weekday = it.date ? new Date(it.date + "T12:00:00").getDay() : null;
@@ -57,14 +59,14 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       
       const programmaticStop = act && it.date ? isProgrammaticStopSale(act, it.date) : false;
       const isNeighborhoodBlocked =
-        act && neighborhood ? isActivityBlockedForNeighborhood(act, neighborhood) : false;
+        act && neighborhoodKey ? isActivityBlockedForNeighborhood(act, neighborhoodKey) : false;
       // Disponibilité : stop programmé ou quartier incompatible (ex. SPA ROYAL hors Hurghada)
       const available =
         programmaticStop || isNeighborhoodBlocked
           ? false
           : isPushSale || (baseAvailable && !isStopSale);
       
-      const transferInfo = act && neighborhood ? act.transfers?.[neighborhood] || null : null;
+      const transferInfo = act && neighborhoodKey ? act.transfers?.[neighborhoodKey] || null : null;
 
       let lineTotal = 0;
       const currencyCode = act?.currency || "EUR";
@@ -281,6 +283,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         isPushSale,
         isNeighborhoodBlocked,
         transferInfo,
+        effectiveNeighborhood: neighborhoodKey || "",
         lineTotal,
         pickupTime,
         currency: currencyCode,

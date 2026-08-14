@@ -574,11 +574,17 @@ export default function App() {
         const quoteSiteKeys = getQuoteSiteKeysForSync();
         const QUOTES_SYNC_LIMIT = 3000;
         const QUOTES_PAGE_SIZE = 1000;
-        const quoteSelect =
+        const quoteSelectBase =
           "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, items, total, currency, paid_stripe, paid_cash";
+        const quoteSelectWithSecondHotel =
+          quoteSelectBase.replace(
+            "client_departure_date,",
+            "client_departure_date, client_has_second_hotel, client_second_hotel, client_second_room, client_second_neighborhood, client_second_arrival_date, client_second_departure_date,"
+          );
 
         let quotesData = [];
         let quotesError = null;
+        let quoteSelect = quoteSelectWithSecondHotel;
         for (let from = 0; from < QUOTES_SYNC_LIMIT; from += QUOTES_PAGE_SIZE) {
           const to = Math.min(from + QUOTES_PAGE_SIZE, QUOTES_SYNC_LIMIT) - 1;
           const { data: page, error: pageError } = await supabase
@@ -589,6 +595,16 @@ export default function App() {
             .range(from, to);
 
           if (pageError) {
+            // Colonnes double hôtel absentes → retomber sur le select de base
+            const msg = String(pageError.message || pageError.details || "");
+            if (
+              quoteSelect === quoteSelectWithSecondHotel &&
+              /client_second_|client_has_second_hotel/i.test(msg)
+            ) {
+              quoteSelect = quoteSelectBase;
+              from -= QUOTES_PAGE_SIZE;
+              continue;
+            }
             quotesError = pageError;
             break;
           }
@@ -632,6 +648,12 @@ export default function App() {
                   neighborhood: row.client_neighborhood || "",
                   arrivalDate: row.client_arrival_date || "",
                   departureDate: row.client_departure_date || "",
+                  hasSecondHotel: Boolean(row.client_has_second_hotel),
+                  secondHotel: row.client_second_hotel || "",
+                  secondRoom: row.client_second_room || "",
+                  secondNeighborhood: row.client_second_neighborhood || "",
+                  secondArrivalDate: row.client_second_arrival_date || "",
+                  secondDepartureDate: row.client_second_departure_date || "",
                 },
                 clientArrivalDate: row.client_arrival_date || "",
                 clientDepartureDate: row.client_departure_date || "",
@@ -779,6 +801,12 @@ export default function App() {
           neighborhood: row.client_neighborhood || "",
           arrivalDate: row.client_arrival_date || "",
           departureDate: row.client_departure_date || "",
+          hasSecondHotel: Boolean(row.client_has_second_hotel),
+          secondHotel: row.client_second_hotel || "",
+          secondRoom: row.client_second_room || "",
+          secondNeighborhood: row.client_second_neighborhood || "",
+          secondArrivalDate: row.client_second_arrival_date || "",
+          secondDepartureDate: row.client_second_departure_date || "",
         },
         clientArrivalDate: row.client_arrival_date || "",
         clientDepartureDate: row.client_departure_date || "",
@@ -1574,7 +1602,7 @@ export default function App() {
             subtitle="Vue compacte — toutes les colonnes visibles. Copie directe vers Excel."
             bare
           >
-            <TicketsPage quotes={quotes} />
+            <TicketsPage quotes={quotes} setQuotes={setQuotes} />
           </Section>
         )}
 

@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Pencil,
 } from "lucide-react";
 import { currencyNoCents, saveLS, loadLS } from "../utils";
 import { LS_KEYS } from "../constants";
@@ -28,7 +29,9 @@ import {
 import {
   calculateTransferSurchargeFromItem,
 } from "../utils/transferPricing.js";
+import { isBoatPartyActivity } from "../utils/activityHelpers";
 import { TextInput } from "../components/ui";
+import { EditTicketLineModal } from "../components/tickets/EditTicketLineModal.jsx";
 import { toast } from "../utils/toast.js";
 
 const slotLabel = (slot) =>
@@ -139,16 +142,18 @@ function colLetter(n) {
 /**
  * Registre des tickets — colonnes alignées Excel pour copier/coller direct.
  */
-export function TicketsPage({ quotes = [] }) {
+export function TicketsPage({ quotes = [], setQuotes }) {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [editingRow, setEditingRow] = useState(null);
   const scrollRef = useRef(null);
   const [copied, setCopied] = useState(() => {
     const stored = loadLS(LS_KEYS.copiedTickets, []);
     return new Set(Array.isArray(stored) ? stored : []);
   });
+  const canEdit = typeof setQuotes === "function";
 
   useEffect(() => {
     saveLS(LS_KEYS.copiedTickets, Array.from(copied));
@@ -190,8 +195,11 @@ export function TicketsPage({ quotes = [] }) {
             ? String(item.pickupTime).trim()
             : slotLabel(item.slot);
 
+        const boatParty = isBoatPartyActivity(item.activityName);
         list.push({
           key: `${quote.id || "q"}-${idx}-${ticketNumber}`,
+          quoteId: quote.id,
+          itemIndex: idx,
           ticketNumber,
           date: item.date || "",
           clientCell: formatClientShortWithPhone(client.name, client.phone),
@@ -202,6 +210,8 @@ export function TicketsPage({ quotes = [] }) {
           adults: pax.adults,
           children: pax.children,
           babies: pax.babies,
+          boatPartyMen: boatParty ? Number(item.boatPartyMen || 0) : 0,
+          boatPartyWomen: boatParty ? Number(item.boatPartyWomen || 0) : 0,
           activity: formatActivityWithExtras(item),
           activitySortKey: activitySortKeyFromItem(item),
           activityBaseName: String(item.activityName || "").trim() || "—",
@@ -947,6 +957,17 @@ export function TicketsPage({ quotes = [] }) {
                     >
                       <td className={`${TD} text-center`}>
                         <div className="flex items-center justify-center gap-0.5">
+                          {canEdit ? (
+                            <button
+                              type="button"
+                              onClick={() => setEditingRow(r)}
+                              aria-label={`Modifier ${r.ticketNumber}`}
+                              className="grid size-5 place-items-center rounded bg-indigo-600 text-white hover:bg-indigo-700"
+                              title="Modifier la ligne"
+                            >
+                              <Pencil className="size-2.5" aria-hidden="true" />
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => void handleCopyRow(r)}
@@ -1124,6 +1145,14 @@ export function TicketsPage({ quotes = [] }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <EditTicketLineModal
+        open={Boolean(editingRow)}
+        row={editingRow}
+        quotes={quotes}
+        setQuotes={setQuotes}
+        onClose={() => setEditingRow(null)}
+      />
     </motion.div>
   );
 }
