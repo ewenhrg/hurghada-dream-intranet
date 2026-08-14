@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import * as XLSX from "xlsx-js-style";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
@@ -13,6 +13,10 @@ import {
   ListChecks,
   CheckCircle2,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { currencyNoCents, saveLS, loadLS } from "../utils";
 import { LS_KEYS } from "../constants";
@@ -60,6 +64,28 @@ const EXPORT_HEADERS = [
 
 const COL_COUNT = 16;
 
+/** Pagination : évite de monter des milliers de lignes d’un coup. */
+const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
+const DEFAULT_PAGE_SIZE = 100;
+
+/**
+ * Numéros de pages compacts avec ellipses (1 … 4 5 6 … 20).
+ * @returns {(number|'gap-left'|'gap-right')[]}
+ */
+function buildPageItems(current, total) {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const items = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  if (start > 2) items.push("gap-left");
+  for (let p = start; p <= end; p++) items.push(p);
+  if (end < total - 1) items.push("gap-right");
+  items.push(total);
+  return items;
+}
+
 /** Teintes intranet + Excel (rgb sans #) par bloc d’activité. */
 const ACTIVITY_PALETTE = [
   { row: "bg-sky-50", accent: "border-l-sky-400", excel: "E0F2FE", excelStrong: "7DD3FC" },
@@ -76,6 +102,9 @@ const TH_BASE =
   "border border-slate-300/90 px-0.5 py-1.5 text-center text-[9px] font-bold uppercase tracking-wide leading-tight text-white";
 const TD =
   "border border-slate-200/90 px-0.5 py-1 align-middle text-[10px] leading-tight overflow-hidden text-ellipsis";
+
+const PAGER_ICON_BTN =
+  "grid size-8 place-items-center rounded-lg border border-slate-300 bg-white text-slate-600 transition-all hover:border-slate-400 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/50 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-300 disabled:hover:text-slate-600";
 
 const paymentShort = (method) =>
   method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
@@ -113,6 +142,9 @@ function colLetter(n) {
 export function TicketsPage({ quotes = [] }) {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const scrollRef = useRef(null);
   const [copied, setCopied] = useState(() => {
     const stored = loadLS(LS_KEYS.copiedTickets, []);
     return new Set(Array.isArray(stored) ? stored : []);
@@ -228,14 +260,49 @@ export function TicketsPage({ quotes = [] }) {
     });
   }, [rows, q, statusFilter, copied]);
 
-  /** Blocs date + en-tête activité + lignes. */
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  // Clamp au rendu : la liste peut raccourcir avant que l’effet ne recale `page`
+  const currentPage = Math.min(page, totalPages);
+
+  // Nouvelle recherche / nouveau filtre / autre taille de page : on repart de la page 1
+  useEffect(() => {
+    setPage(1);
+  }, [q, statusFilter, pageSize]);
+
+  useEffect(() => {
+    setPage((p) => Math.min(p, totalPages));
+  }, [totalPages]);
+
+  const pageStart = (currentPage - 1) * pageSize;
+  const pageRows = useMemo(
+    () => filtered.slice(pageStart, pageStart + pageSize),
+    [filtered, pageStart, pageSize]
+  );
+
+  const goToPage = useCallback(
+    (next) => {
+      setPage((prev) => {
+        const target = Math.min(Math.max(1, next), totalPages);
+        if (target !== prev && scrollRef.current) scrollRef.current.scrollTop = 0;
+        return target;
+      });
+    },
+    [totalPages]
+  );
+
+  const pageItems = useMemo(
+    () => buildPageItems(currentPage, totalPages),
+    [currentPage, totalPages]
+  );
+
+  /** Blocs date + en-tête activité + lignes (page courante uniquement). */
   const displayBlocks = useMemo(() => {
     const blocks = [];
     let lastDate = null;
     let lastAct = null;
     let toneIdx = 0;
 
-    for (const r of filtered) {
+    for (const r of pageRows) {
       const dateKey = r.date || "";
       if (dateKey !== lastDate) {
         blocks.push({
@@ -273,7 +340,7 @@ export function TicketsPage({ quotes = [] }) {
       });
     }
     return blocks;
-  }, [filtered]);
+  }, [pageRows]);
 
   const dateForExport = (d) =>
     d ? new Date(d + "T12:00:00").toLocaleDateString("fr-FR") : "";
@@ -698,9 +765,32 @@ export function TicketsPage({ quotes = [] }) {
             Réinitialiser les marques
           </button>
 
+          <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+            Lignes par page
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/50"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
             <CalendarDays className="size-3.5" aria-hidden />
-            {filtered.length} ligne{filtered.length !== 1 ? "s" : ""} · date → activité
+            {filtered.length > 0 ? (
+              <>
+                {pageStart + 1}–{Math.min(pageStart + pageSize, filtered.length)} sur{" "}
+                {filtered.length}
+              </>
+            ) : (
+              "0 ligne"
+            )}{" "}
+            · date → activité
           </span>
         </div>
       </div>
@@ -735,7 +825,7 @@ export function TicketsPage({ quotes = [] }) {
             transition={fade.transition}
             className="overflow-hidden rounded-2xl border border-indigo-200/70 bg-white shadow-[0_16px_40px_-24px_rgba(79,70,229,0.35)] ring-1 ring-slate-200/80"
           >
-            <div className="max-h-[min(70vh,900px)] overflow-auto">
+            <div ref={scrollRef} className="max-h-[min(70vh,900px)] overflow-auto">
             <table className="w-full table-fixed border-collapse text-left font-sans">
               <caption className="sr-only">
                 Tableau tickets : trié par date puis par activité, avec séparateurs colorés.
@@ -948,6 +1038,89 @@ export function TicketsPage({ quotes = [] }) {
               </tbody>
             </table>
             </div>
+
+            {totalPages > 1 ? (
+              <nav
+                aria-label="Pagination des tickets"
+                className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/80 px-3 py-2.5"
+              >
+                <p className="text-xs font-semibold text-slate-500" aria-live="polite">
+                  Page <span className="tabular-nums text-slate-800">{currentPage}</span> sur{" "}
+                  <span className="tabular-nums text-slate-800">{totalPages}</span>
+                </p>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => goToPage(1)}
+                    disabled={currentPage === 1}
+                    aria-label="Première page"
+                    className={PAGER_ICON_BTN}
+                  >
+                    <ChevronsLeft className="size-4" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    aria-label="Page précédente"
+                    className={PAGER_ICON_BTN}
+                  >
+                    <ChevronLeft className="size-4" aria-hidden="true" />
+                  </button>
+
+                  {pageItems.map((item) =>
+                    typeof item === "number" ? (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => goToPage(item)}
+                        aria-current={item === currentPage ? "page" : undefined}
+                        aria-label={`Page ${item}`}
+                        className={`grid size-8 place-items-center rounded-lg text-xs font-bold tabular-nums transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/50 focus-visible:ring-offset-1 ${
+                          item === currentPage
+                            ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-[0_8px_18px_-10px_rgba(79,70,229,0.9)]"
+                            : "border border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-900"
+                        }`}
+                      >
+                        {item}
+                      </button>
+                    ) : (
+                      <span
+                        key={item}
+                        aria-hidden="true"
+                        className="grid size-8 place-items-center text-xs font-bold text-slate-400"
+                      >
+                        …
+                      </span>
+                    )
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    aria-label="Page suivante"
+                    className={PAGER_ICON_BTN}
+                  >
+                    <ChevronRight className="size-4" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    aria-label="Dernière page"
+                    className={PAGER_ICON_BTN}
+                  >
+                    <ChevronsRight className="size-4" aria-hidden="true" />
+                  </button>
+                </div>
+
+                <p className="text-xs text-slate-400">
+                  Copie et export .xlsx portent sur les {filtered.length} lignes filtrées.
+                </p>
+              </nav>
+            ) : null}
           </motion.div>
         )}
       </AnimatePresence>
