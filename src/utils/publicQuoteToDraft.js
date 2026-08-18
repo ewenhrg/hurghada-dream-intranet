@@ -19,6 +19,9 @@ export function createBlankQuoteLine() {
     extraAmount: "",
     slot: "",
     extraDolphin: false,
+    divingVisitor: false,
+    divingVisitorCount: "",
+    finSizes: [],
     speedBoatExtra: [],
     buggySimple: "",
     buggyFamily: "",
@@ -79,6 +82,9 @@ export function mergePublicSavedLineIntoQuoteItem(line) {
       ? [extrasRaw]
       : [];
   base.extraDolphin = Boolean(line.extraDolphin);
+  base.divingVisitor = Boolean(line.divingVisitor);
+  base.divingVisitorCount = line.divingVisitorCount ?? "";
+  base.finSizes = Array.isArray(line.finSizes) ? [...line.finSizes] : [];
 
   base.buggySimple = toVehicleCountField(line.buggySimple);
   base.buggyFamily = toVehicleCountField(line.buggyFamily);

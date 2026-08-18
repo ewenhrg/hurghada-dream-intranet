@@ -3,7 +3,8 @@ import { CheckCircle2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, getQuotesRealtimeSiteKeyFilter } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra } from "../utils/activityHelpers";
+import { allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, formatTurtleFinSizesLabel } from "../utils/activityHelpers";
+import { formatDivingVisitorLabel } from "../utils/divingSafety.js";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
 import { PrimaryBtn } from "../components/ui";
@@ -58,6 +59,12 @@ function getCatalogLineOptionLines(item) {
   if (!item || typeof item !== "object") return [];
   const lines = [];
   const activityName = item.activityName || item.activity_name || "";
+
+  const visitorLabel = formatDivingVisitorLabel(item, activityName);
+  if (visitorLabel) lines.push(visitorLabel);
+
+  const finSizesLabel = formatTurtleFinSizesLabel(item, activityName);
+  if (finSizesLabel) lines.push(finSizesLabel);
 
   if (allowsSpeedBoatDolphinExtra(activityName) && item.extraDolphin) {
     lines.push("Dauphin (+20 € sur la ligne)");

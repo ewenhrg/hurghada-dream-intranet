@@ -26,6 +26,7 @@ import {
   getZeroTracasPrices,
   getZeroTracasHorsZonePrices,
 } from "./activityHelpers";
+import { computeDivingVisitorSurcharge } from "./divingSafety.js";
 
 function num(n, fallback = 0) {
   const x = Number(n);
@@ -141,62 +142,50 @@ export function computePublicCatalogLineTotal(activity, line) {
   let bab = num(line?.babies, 0);
   if (activity.babies_forbidden === true || activity.babiesForbidden === true) bab = 0;
 
+  let total = 0;
+
   if (isSpeedBoatActivity(name)) {
-    return computeSpeedBoatLineTotal(name, ad, ch, line?.extraDolphin, line?.speedBoatExtra);
-  }
-
-  if (isBuggyActivity(name)) {
+    total = computeSpeedBoatLineTotal(name, ad, ch, line?.extraDolphin, line?.speedBoatExtra);
+  } else if (isBuggyActivity(name)) {
     const p = getBuggyPrices(name);
-    return num(line?.buggySimple) * p.simple + num(line?.buggyFamily) * p.family;
-  }
-
-  if (isCalecheActivity(name)) {
-    return computeCalecheLineTotal(line?.calecheCount, activity);
-  }
-
-  if (isMotoCrossActivity(name)) {
+    total = num(line?.buggySimple) * p.simple + num(line?.buggyFamily) * p.family;
+  } else if (isCalecheActivity(name)) {
+    total = computeCalecheLineTotal(line?.calecheCount, activity);
+  } else if (isMotoCrossActivity(name)) {
     const p = getMotoCrossPrices();
-    return (
-      num(line?.yamaha250) * p.yamaha250 + num(line?.ktm640) * p.ktm640 + num(line?.ktm530) * p.ktm530
-    );
-  }
-
-  if (isBoatPartyActivity(name)) {
-    return computeBoatPartyLineTotal(line?.boatPartyMen, line?.boatPartyWomen);
-  }
-
-  if (isCairePrivatifActivity(name)) {
+    total =
+      num(line?.yamaha250) * p.yamaha250 + num(line?.ktm640) * p.ktm640 + num(line?.ktm530) * p.ktm530;
+  } else if (isBoatPartyActivity(name)) {
+    total = computeBoatPartyLineTotal(line?.boatPartyMen, line?.boatPartyWomen);
+  } else if (isCairePrivatifActivity(name)) {
     const p = getCairePrivatifPrices();
-    if (line?.cairePrivatif4pax) return p.pax4;
-    if (line?.cairePrivatif5pax) return p.pax5;
-    if (line?.cairePrivatif6pax) return p.pax6;
-    return 0;
-  }
-
-  if (isLouxorPrivatifActivity(name)) {
+    if (line?.cairePrivatif4pax) total = p.pax4;
+    else if (line?.cairePrivatif5pax) total = p.pax5;
+    else if (line?.cairePrivatif6pax) total = p.pax6;
+  } else if (isLouxorPrivatifActivity(name)) {
     const p = getLouxorPrivatifPrices();
-    if (line?.louxorPrivatif4pax) return p.pax4;
-    if (line?.louxorPrivatif5pax) return p.pax5;
-    if (line?.louxorPrivatif6pax) return p.pax6;
-    return 0;
+    if (line?.louxorPrivatif4pax) total = p.pax4;
+    else if (line?.louxorPrivatif5pax) total = p.pax5;
+    else if (line?.louxorPrivatif6pax) total = p.pax6;
+  } else {
+    const zeroTracasTotal = computeZeroTracasStyleLineTotal(name, line);
+    if (zeroTracasTotal !== null) {
+      total = zeroTracasTotal;
+    } else {
+      const airportTotal = computeAirportStyleTransferLineTotal(name, line);
+      if (airportTotal !== null) {
+        total = airportTotal;
+      } else {
+        const db = readDbPrices(activity);
+        if (db.adult > 0 || db.child > 0 || db.baby > 0) {
+          total = ad * db.adult + ch * db.child + bab * db.baby;
+        }
+      }
+    }
   }
 
-  const zeroTracasTotal = computeZeroTracasStyleLineTotal(name, line);
-  if (zeroTracasTotal !== null) {
-    return zeroTracasTotal;
-  }
-
-  const airportTotal = computeAirportStyleTransferLineTotal(name, line);
-  if (airportTotal !== null) {
-    return airportTotal;
-  }
-
-  const db = readDbPrices(activity);
-  if (db.adult > 0 || db.child > 0 || db.baby > 0) {
-    return ad * db.adult + ch * db.child + bab * db.baby;
-  }
-
-  return 0;
+  total += computeDivingVisitorSurcharge(line, name);
+  return total;
 }
 
 /**

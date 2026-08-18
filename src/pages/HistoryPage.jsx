@@ -9,7 +9,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, formatTurtleFinSizesLabel } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -19,8 +19,20 @@ import {
   getActivityNeighborhoodBlockOptionSuffix,
 } from "../utils/activityNeighborhoodRules.js";
 import { formatQuoteItemParticipantsSummary } from "../utils/quoteItemDisplay.js";
+import {
+  buildSecondHotelDbFields,
+  isMissingSecondHotelColumnError,
+  stripSecondHotelColumns,
+} from "../utils/clientSecondHotel.js";
 import { PrivateTransferButtons } from "../components/quotes/PrivateTransferButtons";
+import { TurtleFinSizesFields } from "../components/quotes/TurtleFinSizesFields";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
+import {
+  isDivingActivityName,
+  DIVING_VISITOR_UNIT_PRICE,
+  formatDivingVisitorLabel,
+  computeDivingVisitorSurcharge,
+} from "../utils/divingSafety.js";
 
 /** Délai avant suppression auto des devis « non payés » (au moins une ligne sans n° de ticket), à l’ouverture de l’historique. */
 const UNPAID_QUOTE_AUTO_DELETE_DAYS = 20;
@@ -348,6 +360,9 @@ function QuoteCardComponent({
         extraAmount:
           item.extraAmount !== undefined && item.extraAmount !== null ? item.extraAmount : "",
         extraDolphin: Boolean(item.extraDolphin),
+        divingVisitor: Boolean(item.divingVisitor),
+        divingVisitorCount: item.divingVisitorCount ?? "",
+        finSizes: Array.isArray(item.finSizes) ? [...item.finSizes] : [],
         slot: item.slot || "",
         ticketNumber: item.ticketNumber || "",
       };
@@ -554,6 +569,18 @@ function QuoteCardComponent({
                           {formatQuoteItemParticipantsSummary(li)}
                         </span>
                       </span>
+                      {formatDivingVisitorLabel(li) ? (
+                        <span className="break-words flex items-center gap-1.5 text-cyan-800">
+                          <span className="shrink-0">👀</span>
+                          <span>{formatDivingVisitorLabel(li)}</span>
+                        </span>
+                      ) : null}
+                      {formatTurtleFinSizesLabel(li) ? (
+                        <span className="break-words flex items-center gap-1.5 text-teal-800">
+                          <span className="shrink-0">👟</span>
+                          <span>{formatTurtleFinSizesLabel(li)}</span>
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-slate-200/50 pt-3 md:border-t-0 md:pt-0 md:flex-col md:items-end md:justify-center md:min-w-[7.5rem]">
@@ -1296,12 +1323,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   client_neighborhood: finalUpdatedQuote.client.neighborhood || "",
                   client_arrival_date: finalUpdatedQuote.client.arrivalDate || null,
                   client_departure_date: finalUpdatedQuote.client.departureDate || null,
-                  client_has_second_hotel: Boolean(finalUpdatedQuote.client.hasSecondHotel),
-                  client_second_hotel: finalUpdatedQuote.client.secondHotel || "",
-                  client_second_room: finalUpdatedQuote.client.secondRoom || "",
-                  client_second_neighborhood: finalUpdatedQuote.client.secondNeighborhood || "",
-                  client_second_arrival_date: finalUpdatedQuote.client.secondArrivalDate || null,
-                  client_second_departure_date: finalUpdatedQuote.client.secondDepartureDate || null,
+                  ...buildSecondHotelDbFields(finalUpdatedQuote.client),
                   notes: finalUpdatedQuote.notes || "",
                   total: finalUpdatedQuote.total,
                   currency: finalUpdatedQuote.currency,
@@ -1311,23 +1333,36 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   updated_at: finalUpdatedQuote.updated_at,
                 };
 
-                // Utiliser supabase_id en priorité pour identifier le devis à mettre à jour
-                let updateQuery = supabase
-                  .from("quotes")
-                  .update(supabaseUpdate)
-                  .eq("site_key", SITE_KEY);
+                const runUpdate = (payload) => {
+                  // Utiliser supabase_id en priorité pour identifier le devis à mettre à jour
+                  let updateQuery = supabase
+                    .from("quotes")
+                    .update(payload)
+                    .eq("site_key", SITE_KEY);
 
-                if (selectedQuote.supabase_id) {
-                  // Si le devis a un supabase_id, l'utiliser (le plus fiable)
-                  updateQuery = updateQuery.eq("id", selectedQuote.supabase_id);
-                } else {
-                  // Sinon, utiliser client_phone + created_at (pour compatibilité avec les anciens devis)
-                  updateQuery = updateQuery
-                    .eq("client_phone", selectedQuote.client?.phone || "")
-                    .eq("created_at", selectedQuote.createdAt);
+                  if (selectedQuote.supabase_id) {
+                    // Si le devis a un supabase_id, l'utiliser (le plus fiable)
+                    updateQuery = updateQuery.eq("id", selectedQuote.supabase_id);
+                  } else {
+                    // Sinon, utiliser client_phone + created_at (pour compatibilité avec les anciens devis)
+                    updateQuery = updateQuery
+                      .eq("client_phone", selectedQuote.client?.phone || "")
+                      .eq("created_at", selectedQuote.createdAt);
+                  }
+
+                  return updateQuery.select();
+                };
+
+                let { data, error: updateError } = await runUpdate(supabaseUpdate);
+
+                if (isMissingSecondHotelColumnError(updateError)) {
+                  logger.warn(
+                    "Colonnes double hôtel absentes — mise à jour sans ces champs. Exécutez supabase_quotes_add_second_hotel.sql"
+                  );
+                  ({ data, error: updateError } = await runUpdate(
+                    stripSecondHotelColumns(supabaseUpdate)
+                  ));
                 }
-
-                const { data, error: updateError } = await updateQuery.select();
 
                 if (updateError) {
                   logger.error("❌ Erreur mise à jour Supabase:", updateError);
@@ -1436,6 +1471,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     extraAmount: "",
     slot: "",
     extraDolphin: false,
+    divingVisitor: false,
+    divingVisitorCount: "",
+    finSizes: [],
     speedBoatExtra: [],
     buggySimple: "",
     buggyFamily: "",
@@ -1611,6 +1649,10 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         lineTotal += computePrivateTransferSurcharge(it.privateTransferTier, act.name);
       }
 
+      if (act) {
+        lineTotal += computeDivingVisitorSurcharge(it, act.name);
+      }
+
       // extra (montant à ajouter ou soustraire) - s'applique à toutes les activités
       // Convertir en string d'abord pour gérer les cas où c'est déjà un nombre
       const extraAmountStr = String(it.extraAmount || "").trim();
@@ -1684,6 +1726,30 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       toast.error(
         `${activityNames} : minimum 2 personnes (adultes + enfants) pour réserver.`,
       );
+      return;
+    }
+
+    const speedBoatOverMax = validComputed.filter((c) =>
+      exceedsSpeedBoatMaxParticipants(c.act?.name, {
+        adults: c.raw.adults,
+        children: c.raw.children,
+        babies: c.raw.babies,
+      })
+    );
+    if (speedBoatOverMax.length > 0) {
+      toast.error(getSpeedBoatMaxParticipantsMessage());
+      return;
+    }
+
+    const turtleMissingSizes = validComputed.filter((c) =>
+      !hasAllTurtleFinSizes(c.act?.name, {
+        adults: c.raw.adults,
+        children: c.raw.children,
+        babies: c.raw.babies,
+      }, c.raw.finSizes)
+    );
+    if (turtleMissingSizes.length > 0) {
+      toast.error(getTurtleFinSizesMissingMessage());
       return;
     }
 
@@ -1764,6 +1830,19 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               ? Number(c.raw.extraAmount)
               : 0,
           extraDolphin: c.raw.extraDolphin || false,
+          divingVisitor: Boolean(isDivingActivityName(c.act?.name) && c.raw.divingVisitor),
+          divingVisitorCount: isDivingActivityName(c.act?.name)
+            ? Number(c.raw.divingVisitorCount || 0)
+            : 0,
+          finSizes: persistTurtleFinSizes(
+            c.act?.name,
+            {
+              adults: finalAdults,
+              children: finalChildren,
+              babies,
+            },
+            c.raw.finSizes
+          ),
           speedBoatExtra: Array.isArray(c.raw.speedBoatExtra) ? c.raw.speedBoatExtra : (c.raw.speedBoatExtra ? [c.raw.speedBoatExtra] : []),
           buggySimple: Number(c.raw.buggySimple || 0),
           buggyFamily: Number(c.raw.buggyFamily || 0),
@@ -2083,11 +2162,25 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       Attention : El Gouna est recommandé à partir de 2 personnes (adultes + enfants).
                     </p>
                   ) : null}
+                  {isSpeedBoatActivity(c.act?.name || c.activityName) ? (
+                    <p className="sm:col-span-3 -mt-1 mb-0 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-950">
+                      {getSpeedBoatMaxParticipantsMessage()}
+                    </p>
+                  ) : null}
                   <div>
                     <p className="text-sm md:text-base font-bold text-slate-800 mb-3">👥 Adultes</p>
                     <NumberInput 
                       value={c.raw.adults || 0} 
-                      onChange={(e) => setItem(idx, { adults: e.target.value })}
+                      onChange={(e) =>
+                        setItem(idx, {
+                          adults: capSpeedBoatParticipantField(
+                            c.act?.name || c.activityName,
+                            c.raw,
+                            "adults",
+                            e.target.value
+                          ),
+                        })
+                      }
                       className="text-base md:text-lg py-3"
                     />
                   </div>
@@ -2097,7 +2190,16 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     </p>
                     <NumberInput 
                       value={c.raw.children || 0} 
-                      onChange={(e) => setItem(idx, { children: e.target.value })}
+                      onChange={(e) =>
+                        setItem(idx, {
+                          children: capSpeedBoatParticipantField(
+                            c.act?.name || c.activityName,
+                            c.raw,
+                            "children",
+                            e.target.value
+                          ),
+                        })
+                      }
                       className="text-base md:text-lg py-3"
                     />
                   </div>
@@ -2107,7 +2209,16 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     </p>
                     <NumberInput 
                       value={c.raw.babies || 0} 
-                      onChange={(e) => setItem(idx, { babies: e.target.value })}
+                      onChange={(e) =>
+                        setItem(idx, {
+                          babies: capSpeedBoatParticipantField(
+                            c.act?.name || c.activityName,
+                            c.raw,
+                            "babies",
+                            e.target.value
+                          ),
+                        })
+                      }
                       className="text-base md:text-lg py-3"
                     />
                   </div>
@@ -2435,6 +2546,68 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     )}
                   </div>
                 )}
+
+                {/* Visiteur plongée */}
+                {c.act && isDivingActivityName(c.act.name || c.activityName) ? (
+                  <div className="rounded-xl border-2 border-cyan-300/70 bg-gradient-to-br from-cyan-50/70 to-sky-50/50 p-4 md:p-5">
+                    <p className="mb-3 text-sm font-bold text-slate-800 md:text-base">Visiteur (accompagnant)</p>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <label className="inline-flex cursor-pointer items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(c.raw.divingVisitor)}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setItem(idx, {
+                              divingVisitor: checked,
+                              divingVisitorCount: checked
+                                ? c.raw.divingVisitorCount || 1
+                                : "",
+                            });
+                          }}
+                          className="size-5 rounded border-slate-400 text-cyan-600 focus:ring-cyan-500"
+                        />
+                        <span className="text-sm font-semibold text-slate-800 md:text-base">Visiteur</span>
+                        <span className="text-xs text-slate-500">+{DIVING_VISITOR_UNIT_PRICE}€ / pers.</span>
+                      </label>
+                      <div className="flex items-center gap-2 sm:ml-auto">
+                        <label htmlFor={`edit-diving-visitors-${idx}`} className="text-xs font-semibold text-slate-600">
+                          Nombre
+                        </label>
+                        <NumberInput
+                          id={`edit-diving-visitors-${idx}`}
+                          min={0}
+                          disabled={!c.raw.divingVisitor}
+                          value={c.raw.divingVisitor ? (c.raw.divingVisitorCount ?? "") : ""}
+                          onChange={(e) =>
+                            setItem(idx, {
+                              divingVisitor: true,
+                              divingVisitorCount: e.target.value,
+                            })
+                          }
+                          placeholder="0"
+                          className="w-24"
+                        />
+                      </div>
+                    </div>
+                    {formatDivingVisitorLabel(c.raw, c.act.name || c.activityName) ? (
+                      <p className="mt-3 text-xs font-semibold text-cyan-800">
+                        {formatDivingVisitorLabel(c.raw, c.act.name || c.activityName)}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {c.act && isTurtleActivity(c.act.name || c.activityName) ? (
+                  <TurtleFinSizesFields
+                    adults={Number(c.raw.adults || 0)}
+                    children={Number(c.raw.children || 0)}
+                    babies={Number(c.raw.babies || 0)}
+                    sizes={Array.isArray(c.raw.finSizes) ? c.raw.finSizes : []}
+                    onChange={(finSizes) => setItem(idx, { finSizes })}
+                    idPrefix={`edit-fin-size-${idx}`}
+                  />
+                ) : null}
 
                 {/* Speed Boat : extras îles + ajustement manuel (comme page Devis) */}
                 {c.isSpeedBoat ? (

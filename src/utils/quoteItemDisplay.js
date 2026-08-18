@@ -2,9 +2,11 @@ import {
   isBoatPartyActivity,
   allowsSpeedBoatDolphinExtra,
   allowsSpeedBoatIslandExtras,
+  formatTurtleFinSizesLabel,
 } from "./activityHelpers";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { getPrivateTransferLabel } from "./transferPricing";
+import { formatDivingVisitorLabel } from "./divingSafety.js";
 
 /** Résumé participants pour cartes / modales (ex. historique). */
 export function formatQuoteItemParticipantsSummary(item) {
@@ -26,6 +28,12 @@ export function getQuoteItemDetailLines(item) {
   if (!item) return [];
   const lines = [];
   const name = item.activityName || "";
+
+  const visitorLabel = formatDivingVisitorLabel(item, name);
+  if (visitorLabel) lines.push(`👀 ${visitorLabel}`);
+
+  const finSizesLabel = formatTurtleFinSizesLabel(item, name);
+  if (finSizesLabel) lines.push(`👟 ${finSizesLabel}`);
 
   if (isBoatPartyActivity(name)) {
     const men = Number(item.boatPartyMen || 0);
@@ -163,6 +171,12 @@ export function getQuoteItemExtraLabels(item) {
 
   const privateLabel = getPrivateTransferLabel(item.privateTransferTier);
   if (privateLabel) labels.push(privateLabel);
+
+  const visitorLabel = formatDivingVisitorLabel(item);
+  if (visitorLabel) labels.push(visitorLabel);
+
+  const finSizesLabel = formatTurtleFinSizesLabel(item);
+  if (finSizesLabel) labels.push(finSizesLabel);
 
   const written = String(item.extraNote || item.extraText || item.optionExtra || "").trim();
   if (written) labels.push(written);

@@ -83,3 +83,44 @@ export function formatSecondHotelNotesLine(client, neighborhoods = []) {
   if (!summary) return "";
   return `Double hôtel : ${summary}`;
 }
+
+/** Colonnes ajoutées par supabase_quotes_add_second_hotel.sql. */
+export const SECOND_HOTEL_DB_COLUMNS = [
+  "client_has_second_hotel",
+  "client_second_hotel",
+  "client_second_room",
+  "client_second_neighborhood",
+  "client_second_arrival_date",
+  "client_second_departure_date",
+];
+
+/** Champs Supabase du 2e hôtel depuis un client local. */
+export function buildSecondHotelDbFields(client = {}) {
+  const s = pickSecondHotelFields(client);
+  return {
+    client_has_second_hotel: s.hasSecondHotel,
+    client_second_hotel: s.secondHotel,
+    client_second_room: s.secondRoom,
+    client_second_neighborhood: s.secondNeighborhood,
+    client_second_arrival_date: s.secondArrivalDate || null,
+    client_second_departure_date: s.secondDepartureDate || null,
+  };
+}
+
+/**
+ * Migration SQL pas encore appliquée : PostgREST renvoie 400 (colonne inconnue).
+ */
+export function isMissingSecondHotelColumnError(error) {
+  if (!error) return false;
+  const msg = `${error.message || ""} ${error.details || ""} ${error.hint || ""}`;
+  return /client_second_|client_has_second_hotel/i.test(msg);
+}
+
+/** Retire les colonnes double hôtel d’un payload Supabase. */
+export function stripSecondHotelColumns(payload = {}) {
+  const next = { ...payload };
+  SECOND_HOTEL_DB_COLUMNS.forEach((col) => {
+    delete next[col];
+  });
+  return next;
+}

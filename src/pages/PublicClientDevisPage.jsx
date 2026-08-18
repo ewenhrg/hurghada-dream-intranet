@@ -18,13 +18,22 @@ import {
   formatCatalogueMinorsAgesNote,
 } from "../utils/activityAgePolicy";
 import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "../utils/publicCatalogPricing";
+import { formatDivingVisitorLabel } from "../utils/divingSafety.js";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import {
   requiresMinimumTwoParticipants,
   hasEnoughParticipantsForActivity,
+  exceedsSpeedBoatMaxParticipants,
+  getSpeedBoatMaxParticipantsMessage,
   getMammaMiaSelfTransferActivityNames,
   withMammaMiaSelfTransferNote,
+  isTurtleActivity,
+  persistTurtleFinSizes,
+  hasAllTurtleFinSizes,
+  getTurtleFinSizesMissingMessage,
+  formatTurtleFinSizesLabel,
 } from "../utils/activityHelpers";
+import { TurtleFinSizesFields } from "../components/quotes/TurtleFinSizesFields";
 
 /** `*` : toutes les colonnes présentes en base (évite erreur si `babies_forbidden` n’est pas encore migrée). */
 const ACTIVITY_COLUMNS = "*";
@@ -426,6 +435,14 @@ export function PublicClientDevisPage() {
     );
   }
 
+  function updateLineFinSizes(lineId, next) {
+    setCart((prev) =>
+      prev.map((line) =>
+        line.id === lineId ? { ...line, finSizes: Array.isArray(next) ? next : [] } : line
+      )
+    );
+  }
+
   function updateClientField(field, value) {
     setClient((prev) => ({ ...prev, [field]: value }));
   }
@@ -512,6 +529,40 @@ export function PublicClientDevisPage() {
       return;
     }
 
+    const speedBoatOverMax = cartLines.filter((line) => {
+      const name = line.activity?.name || line.activityName || "";
+      const childrenCount = line.derived?.complete
+        ? line.derived.childrenCount
+        : line.derived?.minorsCount || 0;
+      const babiesCount = line.derived?.complete ? line.derived.babiesCount : 0;
+      return exceedsSpeedBoatMaxParticipants(name, {
+        adults: line.adultsBase ?? line.adults,
+        children: childrenCount,
+        babies: babiesCount,
+      });
+    });
+    if (speedBoatOverMax.length > 0) {
+      setError(getSpeedBoatMaxParticipantsMessage());
+      return;
+    }
+
+    const turtleMissingSizes = cartLines.filter((line) => {
+      const name = line.activity?.name || line.activityName || "";
+      const childrenCount = line.derived?.complete
+        ? line.derived.childrenCount
+        : line.derived?.minorsCount || 0;
+      const babiesCount = line.derived?.complete ? line.derived.babiesCount : 0;
+      return !hasAllTurtleFinSizes(name, {
+        adults: (line.adultsBase ?? line.adults) + toNumber(line.derived?.upgradedAdultsCount),
+        children: childrenCount,
+        babies: babiesCount,
+      }, line.finSizes);
+    });
+    if (turtleMissingSizes.length > 0) {
+      setError(getTurtleFinSizesMissingMessage());
+      return;
+    }
+
     const incompleteAges = cartLines.filter(
       (line) => (line.derived?.minorsCount || 0) > 0 && (line.derived?.missingCount || 0) > 0
     );
@@ -561,6 +612,17 @@ export function PublicClientDevisPage() {
         lineTotal: toNumber(line.lineTotal),
         // Options catalogue (fiche activité / panier) — nécessaire pour « Commencer le devis » côté intranet
         extraDolphin: Boolean(line.extraDolphin),
+        divingVisitor: toNumber(line.divingVisitorCount) > 0 || Boolean(line.divingVisitor),
+        divingVisitorCount: toNumber(line.divingVisitorCount),
+        finSizes: persistTurtleFinSizes(
+          act.name || "",
+          {
+            adults: adultsBase + toNumber(line.derived?.upgradedAdultsCount),
+            children: toNumber(line.derived?.childrenCount ?? line.children),
+            babies: babiesVal,
+          },
+          line.finSizes
+        ),
         speedBoatExtra: Array.isArray(line.speedBoatExtra)
           ? [...line.speedBoatExtra]
           : line.speedBoatExtra
@@ -1126,6 +1188,16 @@ export function PublicClientDevisPage() {
                         Dates de naissance demandées à l’étape suivante pour classer bébé / enfant.
                       </p>
                     ) : null}
+                    {formatDivingVisitorLabel(line, line.activity?.name) ? (
+                      <p className="mt-2 text-[11px] font-semibold text-cyan-800">
+                        {formatDivingVisitorLabel(line, line.activity?.name)}
+                      </p>
+                    ) : null}
+                    {formatTurtleFinSizesLabel(line, line.activity?.name) ? (
+                      <p className="mt-2 text-[11px] font-semibold text-teal-800">
+                        {formatTurtleFinSizesLabel(line, line.activity?.name)}
+                      </p>
+                    ) : null}
                     <div className="mt-3 border-t border-slate-100 pt-3">
                       <p className="font-catalog-display text-sm font-bold tabular-nums text-violet-800">
                         {formatMoney(line.lineTotal, line.activity.currency)}
@@ -1354,6 +1426,28 @@ export function PublicClientDevisPage() {
                         </div>
                       );
                     })}
+                </div>
+              ) : null}
+
+              {cartLines.some((line) => isTurtleActivity(line.activity?.name)) ? (
+                <div className="space-y-3 rounded-2xl border-2 border-teal-200 bg-teal-50/60 p-4">
+                  {cartLines
+                    .filter((line) => isTurtleActivity(line.activity?.name))
+                    .map((line) => (
+                      <div key={`fins-${line.id}`} className="space-y-2">
+                        <p className="text-sm font-bold text-catalog-ink">{line.activity?.name}</p>
+                        <TurtleFinSizesFields
+                          variant="catalog"
+                          adults={toNumber(line.adultsBase ?? line.adults)}
+                          children={toNumber(line.minorsCount ?? line.derived?.minorsCount)}
+                          babies={0}
+                          childLabel="Enfant / bébé"
+                          sizes={Array.isArray(line.finSizes) ? line.finSizes : []}
+                          onChange={(next) => updateLineFinSizes(line.id, next)}
+                          idPrefix={`checkout-fin-size-${line.id}`}
+                        />
+                      </div>
+                    ))}
                 </div>
               ) : null}
 

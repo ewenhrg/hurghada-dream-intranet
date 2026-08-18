@@ -220,6 +220,111 @@ export function hasEnoughParticipantsForActivity(activityName, counts = {}) {
   return countBookableParticipants(counts) >= min;
 }
 
+/** Speed Boat : plafond 7 personnes (adultes + enfants + bébés). */
+export const SPEED_BOAT_MAX_PARTICIPANTS = 7;
+
+export function countAllParticipants(counts = {}) {
+  return (
+    Number(counts.adults || 0) +
+    Number(counts.children || 0) +
+    Number(counts.babies || 0)
+  );
+}
+
+export function exceedsSpeedBoatMaxParticipants(activityName, counts = {}) {
+  if (!isSpeedBoatActivity(activityName)) return false;
+  return countAllParticipants(counts) > SPEED_BOAT_MAX_PARTICIPANTS;
+}
+
+export function getSpeedBoatMaxParticipantsMessage() {
+  return "Speed Boat : maximum 7 personnes (adultes, enfants et bébés confondus).";
+}
+
+/** Tortue Abu Dabbab (et variantes turtle / tortue) : pointures palmes. */
+export function isTurtleActivity(activityName) {
+  const name = normalizeActivityName(activityName);
+  if (!name) return false;
+  return name.includes("tortue") || name.includes("turtle");
+}
+
+export function getTurtleFinSizeSlots({
+  adults = 0,
+  children = 0,
+  babies = 0,
+  childLabel = "Enfant",
+  babyLabel = "Bébé",
+} = {}) {
+  const a = Math.max(0, Math.round(Number(adults) || 0));
+  const c = Math.max(0, Math.round(Number(children) || 0));
+  const b = Math.max(0, Math.round(Number(babies) || 0));
+  const slots = [];
+  for (let i = 0; i < a; i += 1) {
+    slots.push({ key: `adult-${i}`, label: a > 1 || c + b > 0 ? `Adulte ${i + 1}` : "Adulte" });
+  }
+  for (let i = 0; i < c; i += 1) {
+    slots.push({ key: `child-${i}`, label: `${childLabel} ${i + 1}` });
+  }
+  for (let i = 0; i < b; i += 1) {
+    slots.push({ key: `baby-${i}`, label: `${babyLabel} ${i + 1}` });
+  }
+  return slots;
+}
+
+export function getTurtleFinSizeCount(counts = {}) {
+  return getTurtleFinSizeSlots(counts).length;
+}
+
+export function normalizeFinSizes(sizes, count) {
+  const n = Math.max(0, Number(count) || 0);
+  const arr = Array.isArray(sizes) ? sizes.map((s) => String(s ?? "").trim()) : [];
+  return Array.from({ length: n }, (_, i) => arr[i] || "");
+}
+
+export function persistTurtleFinSizes(activityName, counts, sizes) {
+  if (!isTurtleActivity(activityName)) return [];
+  return normalizeFinSizes(sizes, getTurtleFinSizeCount(counts));
+}
+
+export function hasAllTurtleFinSizes(activityName, counts, sizes) {
+  if (!isTurtleActivity(activityName)) return true;
+  const n = getTurtleFinSizeCount(counts);
+  if (n === 0) return true;
+  return normalizeFinSizes(sizes, n).every((s) => s.trim().length > 0);
+}
+
+export function getTurtleFinSizesMissingMessage() {
+  return "Tortue Abu Dabbab : indiquez la pointure de chaque participant (palmes).";
+}
+
+export function formatTurtleFinSizesLabel(item, activityName) {
+  const name = activityName || item?.activityName || item?.activity_name || "";
+  if (!isTurtleActivity(name)) return "";
+  const sizes = Array.isArray(item?.finSizes)
+    ? item.finSizes.map((s) => String(s ?? "").trim()).filter(Boolean)
+    : [];
+  if (!sizes.length) return "";
+  return `Pointures palmes : ${sizes.join(" · ")}`;
+}
+
+/**
+ * Plafonne un champ participants pour rester ≤ 7 au total sur Speed Boat.
+ * @returns {number|""}
+ */
+export function capSpeedBoatParticipantField(activityName, current, field, nextRaw) {
+  if (nextRaw === "" || nextRaw === null || nextRaw === undefined) return "";
+  const n = Math.max(0, Math.round(Number(nextRaw) || 0));
+  if (!isSpeedBoatActivity(activityName)) return n;
+  const adults = Number(current?.adults || 0);
+  const children = Number(current?.children || 0);
+  const babies = Number(current?.babies || 0);
+  const others =
+    (field === "adults" ? 0 : adults) +
+    (field === "children" ? 0 : children) +
+    (field === "babies" ? 0 : babies);
+  const maxForField = Math.max(0, SPEED_BOAT_MAX_PARTICIPANTS - others);
+  return Math.min(n, maxForField);
+}
+
 /** Parachute ou Combo aquatique : pas de transfert, RDV au Mamma Mia. */
 export function requiresMammaMiaSelfTransfer(activityName) {
   const name = normalizeActivityName(activityName);

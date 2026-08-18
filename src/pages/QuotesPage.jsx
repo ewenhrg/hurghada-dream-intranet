@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10, generateQuoteHTML } from "../utils";
-import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -12,6 +12,7 @@ import { StopPushSalesSummary } from "../components/quotes/StopPushSalesSummary"
 import { PaymentModal } from "../components/quotes/PaymentModal";
 import { QuoteSummary } from "../components/quotes/QuoteSummary";
 import { PrivateTransferButtons } from "../components/quotes/PrivateTransferButtons";
+import { TurtleFinSizesFields } from "../components/quotes/TurtleFinSizesFields";
 import { NotesSection } from "../components/quotes/NotesSection";
 import { getTransferSurchargeFieldsForQuoteItem, isMarsaAlamCategory } from "../utils/transferPricing";
 import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator";
@@ -27,6 +28,9 @@ import {
   formatSecondHotelSummary,
   formatSecondHotelNotesLine,
   pickSecondHotelFields,
+  buildSecondHotelDbFields,
+  isMissingSecondHotelColumnError,
+  stripSecondHotelColumns,
 } from "../utils/clientSecondHotel.js";
 import { DoubleHotelModal } from "../components/quotes/DoubleHotelModal.jsx";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
@@ -34,6 +38,11 @@ import { useDebounce } from "../hooks/useDebounce";
 import { salesCache, appCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
 import { BedDouble } from "lucide-react";
+import {
+  isDivingActivityName,
+  DIVING_VISITOR_UNIT_PRICE,
+  formatDivingVisitorLabel,
+} from "../utils/divingSafety.js";
 
 /** Aligné sur l’onglet Activités (case « Interdit aux bébés »). */
 function isActivityBabiesForbidden(act) {
@@ -152,6 +161,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     extraAmount: "",
     slot: "",
     extraDolphin: false,
+    divingVisitor: false,
+    divingVisitorCount: "",
+    finSizes: [],
     speedBoatExtra: [], // Array pour permettre plusieurs extras
     buggySimple: "",
     buggyFamily: "",
@@ -951,6 +963,35 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
+    const speedBoatOverMax = validComputed.filter((c) =>
+      exceedsSpeedBoatMaxParticipants(c.act?.name, {
+        adults: c.raw.adults,
+        children: c.raw.children,
+        babies: isActivityBabiesForbidden(c.act) ? 0 : c.raw.babies,
+      })
+    );
+    if (speedBoatOverMax.length > 0) {
+      toast.error(getSpeedBoatMaxParticipantsMessage());
+      setIsSubmitting(false);
+      return;
+    }
+
+    const turtleMissingSizes = validComputed.filter((c) => {
+      if (!isTurtleActivity(c.act?.name)) return false;
+      const babiesCount =
+        c.act && isActivityBabiesForbidden(c.act) ? 0 : Number(c.raw.babies || 0);
+      return !hasAllTurtleFinSizes(c.act?.name, {
+        adults: c.raw.adults,
+        children: c.raw.children,
+        babies: babiesCount,
+      }, c.raw.finSizes);
+    });
+    if (turtleMissingSizes.length > 0) {
+      toast.error(getTurtleFinSizesMissingMessage());
+      setIsSubmitting(false);
+      return;
+    }
+
     // El Gouna : alerte seulement (pas de blocage)
     const elGounaBelowRecommended = validComputed.filter((c) =>
       isBelowRecommendedTwoParticipants(c.act?.name, {
@@ -1037,6 +1078,26 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         extraLabel: c.raw.extraLabel || "",
         extraAmount: c.raw.extraAmount !== undefined && c.raw.extraAmount !== null && c.raw.extraAmount !== "" ? Number(c.raw.extraAmount) : 0,
         extraDolphin: c.raw.extraDolphin || false,
+        divingVisitor: Boolean(isDivingActivityName(c.act?.name) && c.raw.divingVisitor),
+        divingVisitorCount: isDivingActivityName(c.act?.name)
+          ? toBoundedInt10(c.raw.divingVisitorCount, { min: 0, max: 99, fallback: 0 })
+          : 0,
+        finSizes: persistTurtleFinSizes(
+          c.act?.name,
+          {
+            adults: isBoatPartyActivity(c.act?.name)
+              ? Number(c.raw.boatPartyMen || 0) + Number(c.raw.boatPartyWomen || 0)
+              : toBoundedInt10(c.raw.adults, { min: 0, max: 999, fallback: 0 }),
+            children: isBoatPartyActivity(c.act?.name)
+              ? 0
+              : toBoundedInt10(c.raw.children, { min: 0, max: 999, fallback: 0 }),
+            babies:
+              c.act && isActivityBabiesForbidden(c.act)
+                ? 0
+                : toBoundedInt10(c.raw.babies, { min: 0, max: 999, fallback: 0 }),
+          },
+          c.raw.finSizes
+        ),
         speedBoatExtra: Array.isArray(c.raw.speedBoatExtra) ? c.raw.speedBoatExtra : (c.raw.speedBoatExtra ? [c.raw.speedBoatExtra] : []),
         buggySimple: Number(c.raw.buggySimple || 0),
         buggyFamily: Number(c.raw.buggyFamily || 0),
@@ -1113,12 +1174,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           client_neighborhood: q.client.neighborhood || "",
           client_arrival_date: arrivalDate || null, // Convertir chaîne vide en null
           client_departure_date: departureDate || null, // Convertir chaîne vide en null
-          client_has_second_hotel: Boolean(q.client.hasSecondHotel),
-          client_second_hotel: q.client.secondHotel || "",
-          client_second_room: q.client.secondRoom || "",
-          client_second_neighborhood: q.client.secondNeighborhood || "",
-          client_second_arrival_date: q.client.secondArrivalDate || null,
-          client_second_departure_date: q.client.secondDepartureDate || null,
+          ...buildSecondHotelDbFields(q.client),
           notes: q.notes || "",
           total: q.total,
           currency: q.currency,
@@ -1131,23 +1187,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         logger.log("🔄 Envoi du devis à Supabase:", supabaseData);
         let { data, error } = await supabase.from("quotes").insert(supabaseData).select().single();
 
-        if (
-          error &&
-          /client_second_|client_has_second_hotel/i.test(
-            String(error.message || error.details || "")
-          )
-        ) {
-          const {
-            client_has_second_hotel: _a,
-            client_second_hotel: _b,
-            client_second_room: _c,
-            client_second_neighborhood: _d,
-            client_second_arrival_date: _e,
-            client_second_departure_date: _f,
-            ...fallbackData
-          } = supabaseData;
-          logger.warn("Colonnes double hôtel absentes — insert sans ces champs. Exécutez supabase_quotes_add_second_hotel.sql");
-          ({ data, error } = await supabase.from("quotes").insert(fallbackData).select().single());
+        if (isMissingSecondHotelColumnError(error)) {
+          logger.warn(
+            "Colonnes double hôtel absentes — insert sans ces champs. Exécutez supabase_quotes_add_second_hotel.sql"
+          );
+          ({ data, error } = await supabase
+            .from("quotes")
+            .insert(stripSecondHotelColumns(supabaseData))
+            .select()
+            .single());
         }
 
         if (error) {
@@ -1579,10 +1627,14 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   const value = normalizeCountForForm(e.target.value, { allowEmpty: true, min: 0, max: 999 });
                   setGlobalAdults(value);
                   setItems((prev) =>
-                    prev.map((item) => ({
-                      ...item,
-                      adults: value,
-                    }))
+                    prev.map((item) => {
+                      const act = activitiesMap.get(item.activityId);
+                      if (isSpeedBoatActivity(act?.name) && value !== "") {
+                        const capped = capSpeedBoatParticipantField(act.name, item, "adults", value);
+                        return { ...item, adults: capped === "" ? "" : String(capped) };
+                      }
+                      return { ...item, adults: value };
+                    })
                   );
                 }}
                 placeholder="Ex: 2"
@@ -1849,6 +1901,60 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     )}
                   </div>
                 </div>
+
+              {c.act && isDivingActivityName(c.act.name) ? (
+                <div className="rounded-xl border-2 border-cyan-200/70 bg-gradient-to-br from-cyan-50/70 to-sky-50/40 p-4 md:p-5">
+                  <p className="mb-3 text-xs font-bold text-slate-700 md:text-sm">Visiteur (accompagnant)</p>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <label className="inline-flex cursor-pointer items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(c.raw.divingVisitor)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setItem(idx, {
+                            divingVisitor: checked,
+                            divingVisitorCount: checked
+                              ? c.raw.divingVisitorCount || 1
+                              : "",
+                          });
+                        }}
+                        className="size-4 rounded border-slate-400 text-cyan-600 focus:ring-cyan-500"
+                      />
+                      <span className="text-sm font-semibold text-slate-800">Visiteur</span>
+                      <span className="text-xs text-slate-500">+{DIVING_VISITOR_UNIT_PRICE}€ / pers.</span>
+                    </label>
+                    <div className="flex items-center gap-2 sm:ml-auto">
+                      <label htmlFor={`diving-visitors-${idx}`} className="text-xs font-semibold text-slate-600">
+                        Nombre
+                      </label>
+                      <NumberInput
+                        id={`diving-visitors-${idx}`}
+                        min={0}
+                        disabled={!c.raw.divingVisitor}
+                        value={c.raw.divingVisitor ? (c.raw.divingVisitorCount ?? "") : ""}
+                        onChange={(e) =>
+                          setItem(idx, {
+                            divingVisitor: true,
+                            divingVisitorCount: e.target.value,
+                          })
+                        }
+                        placeholder="0"
+                        className="w-24 !py-2"
+                      />
+                    </div>
+                  </div>
+                  {formatDivingVisitorLabel(c.raw, c.act.name) ? (
+                    <p className="mt-3 text-xs font-semibold text-cyan-800">
+                      {formatDivingVisitorLabel(c.raw, c.act.name)}
+                    </p>
+                  ) : (
+                    <p className="mt-3 text-xs text-slate-500">
+                      Cochez puis indiquez le nombre de visiteurs (non plongeurs).
+                    </p>
+                  )}
+                </div>
+              ) : null}
 
               {/* extra - Speed Boat (îles + ajustement) ou champs classiques */}
               {c.act && isSpeedBoatActivity(c.act.name) ? (
@@ -2698,12 +2804,30 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       Attention : El Gouna est recommandé à partir de 2 personnes (adultes + enfants).
                     </p>
                   ) : null}
+                  {isSpeedBoatActivity(c.act?.name) ? (
+                    <p className="mb-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-950">
+                      {getSpeedBoatMaxParticipantsMessage()}
+                    </p>
+                  ) : null}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-2">Adultes</label>
                       <NumberInput
                         value={c.raw.adults}
-                        onChange={(e) => setItem(idx, { adults: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                        onChange={(e) => {
+                          const capped = capSpeedBoatParticipantField(
+                            c.act?.name,
+                            c.raw,
+                            "adults",
+                            e.target.value
+                          );
+                          setItem(idx, {
+                            adults:
+                              capped === ""
+                                ? ""
+                                : normalizeCountForForm(capped, { allowEmpty: true }),
+                          });
+                        }}
                         placeholder="0"
                       />
                     </div>
@@ -2713,7 +2837,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       </label>
                       <NumberInput
                         value={c.raw.children}
-                        onChange={(e) => setItem(idx, { children: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                        onChange={(e) => {
+                          const capped = capSpeedBoatParticipantField(
+                            c.act?.name,
+                            c.raw,
+                            "children",
+                            e.target.value
+                          );
+                          setItem(idx, {
+                            children:
+                              capped === ""
+                                ? ""
+                                : normalizeCountForForm(capped, { allowEmpty: true }),
+                          });
+                        }}
                         placeholder="0"
                       />
                     </div>
@@ -2728,7 +2865,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       ) : (
                         <NumberInput
                           value={c.raw.babies}
-                          onChange={(e) => setItem(idx, { babies: normalizeCountForForm(e.target.value, { allowEmpty: true }) })}
+                          onChange={(e) => {
+                            const capped = capSpeedBoatParticipantField(
+                              c.act?.name,
+                              c.raw,
+                              "babies",
+                              e.target.value
+                            );
+                            setItem(idx, {
+                              babies:
+                                capped === ""
+                                  ? ""
+                                  : normalizeCountForForm(capped, { allowEmpty: true }),
+                            });
+                          }}
                           placeholder="0"
                         />
                       )}
@@ -2736,6 +2886,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </div>
                 </div>
               )}
+
+              {c.act && isTurtleActivity(c.act.name) ? (
+                <TurtleFinSizesFields
+                  adults={Number(c.raw.adults || 0)}
+                  children={Number(c.raw.children || 0)}
+                  babies={isActivityBabiesForbidden(c.act) ? 0 : Number(c.raw.babies || 0)}
+                  sizes={Array.isArray(c.raw.finSizes) ? c.raw.finSizes : []}
+                  onChange={(finSizes) => setItem(idx, { finSizes })}
+                  idPrefix={`quote-fin-size-${idx}`}
+                />
+              ) : null}
 
               {/* Champs spécifiques pour CAIRE PRIVATIF */}
               {c.act && isCairePrivatifActivity(c.act.name) && (

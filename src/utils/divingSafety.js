@@ -16,6 +16,32 @@ export function isDivingActivityName(activityName) {
   );
 }
 
+/** Supplément visiteur plongée (accompagnant qui ne plonge pas). */
+export const DIVING_VISITOR_UNIT_PRICE = 15;
+
+export function getDivingVisitorCount(item) {
+  if (!item) return 0;
+  const n = Number(item.divingVisitorCount ?? item.diving_visitor_count ?? 0);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.round(n);
+}
+
+export function computeDivingVisitorSurcharge(item, activityName) {
+  const name = activityName || item?.activityName || "";
+  if (!isDivingActivityName(name)) return 0;
+  return getDivingVisitorCount(item) * DIVING_VISITOR_UNIT_PRICE;
+}
+
+export function formatDivingVisitorLabel(item, activityName) {
+  const count = getDivingVisitorCount(item);
+  if (count <= 0) return "";
+  const name = activityName || item?.activityName || "";
+  if (!isDivingActivityName(name)) return "";
+  const total = count * DIVING_VISITOR_UNIT_PRICE;
+  const word = count > 1 ? "Visiteurs" : "Visiteur";
+  return `${word} × ${count} (+${total}€)`;
+}
+
 /** Au moins 2 jours calendaires entre l'activité et le départ (sécurité décompression). */
 export function isDateSafeForDiving(dateStr, departureStr) {
   const activityDate = parseYmdLocal(dateStr);

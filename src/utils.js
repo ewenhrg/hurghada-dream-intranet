@@ -4,6 +4,7 @@ import {
   isSpeedBoatActivity,
   allowsSpeedBoatIslandExtras,
   allowsSpeedBoatDolphinExtra,
+  formatTurtleFinSizesLabel,
 } from "./utils/activityHelpers";
 import { SPEED_BOAT_EXTRAS } from "./constants/activityExtras";
 import { logger } from "./utils/logger";
@@ -11,6 +12,7 @@ import {
   getQuoteItemDetailLines,
   getQuoteItemParticipantCells,
 } from "./utils/quoteItemDisplay.js";
+import { formatDivingVisitorLabel } from "./utils/divingSafety.js";
 import { calculateTransferSurchargeFromItem, calculateStandardTransferSurchargeFromItem, calculatePrivateTransferSurchargeFromItem, getPrivateTransferLabel } from "./utils/transferPricing.js";
 
 // Options d'extra pour Speed Boat uniquement (gardé pour compatibilité)
@@ -37,6 +39,13 @@ export function normalizeQuoteItemsFromDb(items) {
     extraLabel: item.extraLabel ?? item.extra_label ?? "",
     extraAmount: item.extraAmount ?? item.extra_amount ?? 0,
     extraDolphin: item.extraDolphin ?? item.extra_dolphin ?? false,
+    divingVisitor: Boolean(item.divingVisitor ?? item.diving_visitor),
+    divingVisitorCount: Number(item.divingVisitorCount ?? item.diving_visitor_count ?? 0) || 0,
+    finSizes: Array.isArray(item.finSizes)
+      ? item.finSizes.map((s) => String(s ?? "").trim())
+      : Array.isArray(item.fin_sizes)
+        ? item.fin_sizes.map((s) => String(s ?? "").trim())
+        : [],
     speedBoatExtra: item.speedBoatExtra ?? item.speed_boat_extra ?? [],
     lineTotal: item.lineTotal ?? item.line_total ?? 0,
   }));
@@ -809,7 +818,7 @@ export function generateTicketsHTML(quote) {
               <span class="ticket-price-value">${priceText}</span>
             </div>
           </div>
-          <div class="ticket-activity">${esc(item.activityName || "—")}</div>
+          <div class="ticket-activity">${esc(item.activityName || "—")}${formatDivingVisitorLabel(item) ? `<div class="ticket-visitor">${esc(formatDivingVisitorLabel(item))}</div>` : ""}${formatTurtleFinSizesLabel(item) ? `<div class="ticket-visitor">${esc(formatTurtleFinSizesLabel(item))}</div>` : ""}</div>
           <div class="ticket-grid">
             <div class="tf"><span class="tf-l">👤 Nom</span><span class="tf-v">${clientName}</span></div>
             <div class="tf"><span class="tf-l">📞 Téléphone</span><span class="tf-v">${clientPhone}</span></div>
@@ -877,6 +886,13 @@ export function generateTicketsHTML(quote) {
       color: #1e293b;
       text-transform: uppercase;
       margin-bottom: 14px;
+    }
+    .ticket-visitor {
+      margin-top: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: none;
+      color: #0e7490;
     }
     .ticket-grid {
       display: grid;

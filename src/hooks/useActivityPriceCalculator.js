@@ -23,6 +23,7 @@ import {
 import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
 import { isActivityBlockedForNeighborhood } from "../utils/activityNeighborhoodRules.js";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge } from "../utils/transferPricing.js";
+import { computeDivingVisitorSurcharge } from "../utils/divingSafety.js";
 
 /**
  * Hook personnalisé pour calculer les prix des activités
@@ -252,6 +253,10 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       if (transferInfo && act) {
         lineTotal += computeActivityTransferSurcharge(transferInfo, act, it);
         lineTotal += computePrivateTransferSurcharge(it.privateTransferTier, act.name);
+      }
+
+      if (act) {
+        lineTotal += computeDivingVisitorSurcharge(it, act.name);
       }
 
       // extra (montant à ajouter ou soustraire) - s'applique à toutes les activités

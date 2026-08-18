@@ -48,12 +48,24 @@ import {
   isBelowRecommendedTwoParticipants,
   requiresMammaMiaSelfTransfer,
   buildMammaMiaSelfTransferNote,
+  SPEED_BOAT_MAX_PARTICIPANTS,
+  exceedsSpeedBoatMaxParticipants,
+  getSpeedBoatMaxParticipantsMessage,
+  isTurtleActivity,
+  hasAllTurtleFinSizes,
+  getTurtleFinSizesMissingMessage,
 } from "../utils/activityHelpers";
 import {
   computePublicCatalogLineTotal,
   getPublicCatalogListFromPrice,
   isPublicCatalogAirportStyleLine,
 } from "../utils/publicCatalogPricing";
+import {
+  isDivingActivityName,
+  DIVING_VISITOR_UNIT_PRICE,
+  formatDivingVisitorLabel,
+} from "../utils/divingSafety.js";
+import { TurtleFinSizesFields } from "../components/quotes/TurtleFinSizesFields";
 
 /** `*` : toutes les colonnes présentes en base (évite erreur si une migration manque encore). */
 const ACTIVITY_COLUMNS_BASE = "*";
@@ -62,6 +74,9 @@ const ACTIVITY_COLUMNS_FULL = "*";
 const INITIAL_CATALOG_SPECIAL = {
   extraDolphin: false,
   speedBoatExtra: [],
+  divingVisitor: false,
+  divingVisitorCount: 0,
+  finSizes: [],
   buggySimple: 0,
   buggyFamily: 0,
   calecheCount: 0,
@@ -219,6 +234,12 @@ function BookingCardShell({
   setAdults,
   minorsCount,
   setMinorsCount,
+  visitorCount = 0,
+  setVisitorCount,
+  showVisitors = false,
+  showFinSizes = false,
+  finSizes = [],
+  setFinSizes,
   date,
   setDate,
   normalizedDays,
@@ -242,6 +263,9 @@ function BookingCardShell({
   participantsOk = true,
   warnsRecommendedTwo = false,
   belowRecommendedTwo = false,
+  adultMax = 10,
+  minorMax = 10,
+  speedBoatMaxMessage = "",
 }) {
   const currency = activity.currency || "EUR";
   const ageChild = String(activity.age_child || "").trim();
@@ -305,22 +329,28 @@ function BookingCardShell({
         </p>
       ) : null}
 
+      {speedBoatMaxMessage ? (
+        <p className="rounded-xl border border-sky-200/90 bg-sky-50/90 px-4 py-3 text-sm font-semibold text-sky-950">
+          {speedBoatMaxMessage}
+        </p>
+      ) : null}
+
       <ParticipantSelect
         Icon={IconUsers}
         label="adulte"
         value={adults}
         onChange={setAdults}
         min={1}
-        max={10}
+        max={adultMax}
       />
       <div>
         <ParticipantSelect
           Icon={IconUsers}
           label="enfants / bébés"
-          value={minorsCount}
+          value={Math.min(minorsCount, minorMax)}
           onChange={setMinorsCount}
           min={0}
-          max={10}
+          max={minorMax}
           pluralize={false}
         />
         <p className="mt-1.5 text-xs font-medium text-slate-700">
@@ -331,6 +361,46 @@ function BookingCardShell({
           .
         </p>
       </div>
+      {showVisitors ? (
+        <div>
+          <ParticipantSelect
+            Icon={IconUsers}
+            label="visiteur"
+            value={visitorCount}
+            onChange={setVisitorCount}
+            min={0}
+            max={10}
+          />
+          <p className="mt-1.5 text-xs font-medium text-slate-700">
+            Accompagnant qui ne plonge pas · +{DIVING_VISITOR_UNIT_PRICE} € par visiteur.
+          </p>
+          {formatDivingVisitorLabel(
+            { divingVisitorCount: visitorCount },
+            activity?.name
+          ) ? (
+            <p className="mt-1 text-xs font-semibold text-cyan-800">
+              {formatDivingVisitorLabel({ divingVisitorCount: visitorCount }, activity?.name)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {showFinSizes ? (
+        <>
+          <TurtleFinSizesFields
+            variant="catalog"
+            adults={adults}
+            children={minorsCount}
+            babies={0}
+            childLabel="Enfant / bébé"
+            sizes={finSizes}
+            onChange={setFinSizes}
+            idPrefix="catalog-fin-size"
+          />
+          {!hasAllTurtleFinSizes(activity?.name, { adults, children: minorsCount, babies: 0 }, finSizes) ? (
+            <p className="text-xs font-semibold text-amber-900">{getTurtleFinSizesMissingMessage()}</p>
+          ) : null}
+        </>
+      ) : null}
       {babiesForbidden ? (
         <div className="rounded-xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-center">
           <p className="text-sm font-semibold text-amber-950">Interdit aux bébés</p>
@@ -486,6 +556,23 @@ export function PublicCatalogueActivityPage({ activityId }) {
     setSpecial((s) => ({ ...s, allerSimple: true, allerRetour: false }));
   }, [activityId, activity]);
 
+  const isDivingActivity = Boolean(activity && isDivingActivityName(activity.name));
+  const isTurtle = Boolean(activity && isTurtleActivity(activity.name));
+
+  const visitorCount = Math.max(0, toNumber(special.divingVisitorCount));
+  const setVisitorCount = useCallback((n) => {
+    const count = Math.max(0, Math.min(10, toNumber(n)));
+    setSpecial((s) => ({
+      ...s,
+      divingVisitorCount: count,
+      divingVisitor: count > 0,
+    }));
+  }, []);
+
+  const setFinSizes = useCallback((next) => {
+    setSpecial((s) => ({ ...s, finSizes: Array.isArray(next) ? next : [] }));
+  }, []);
+
   const listFromPrice = useMemo(() => (activity ? getPublicCatalogListFromPrice(activity) : null), [activity]);
 
   const headerPriceHint = useMemo(() => {
@@ -513,11 +600,12 @@ export function PublicCatalogueActivityPage({ activityId }) {
     if (!activity) return "";
     if (isSpeedBoatActivity(activity.name)) {
       if (isSpeedBoatSunsetActivity(activity.name)) {
-        return "Grille Speed Boat Sunset : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant (sans extra dauphin ni îles).";
+        return `Grille Speed Boat Sunset : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant (sans extra dauphin ni îles).\n${getSpeedBoatMaxParticipantsMessage()}`;
       }
       return [
         "Grille Speed Boat : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant.",
         "Une seule option payante au choix : dauphin (+20 €) ou une île / formule (baie, lunch…).",
+        getSpeedBoatMaxParticipantsMessage(),
       ].join("\n");
     }
     if (isBoatPartyActivity(activity.name)) {
@@ -541,6 +629,12 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
     if (isPublicCatalogAirportStyleLine(activity)) {
       return "Forfait par trajet : choisissez aller simple ou aller-retour (comme sur le devis intranet). Les tarifs adulte/enfant en base ne s’appliquent pas.";
+    }
+    if (isDivingActivityName(activity.name)) {
+      return `Un visiteur (accompagnant qui ne plonge pas) peut être ajouté : +${DIVING_VISITOR_UNIT_PRICE} € par personne.`;
+    }
+    if (isTurtleActivity(activity.name)) {
+      return "Indiquez la pointure de chaque participant (pointure EU, ex. 42) — nécessaire pour les palmes.";
     }
     return "";
   }, [activity]);
@@ -1052,7 +1146,13 @@ export function PublicCatalogueActivityPage({ activityId }) {
     !codedTotalPending &&
     !stopDateSet.has(date) &&
     !(activity && isProgrammaticStopSale(activity, date)) &&
-    hasEnoughParticipantsForActivity(activity?.name, { adults, children: minorsCount });
+    hasEnoughParticipantsForActivity(activity?.name, { adults, children: minorsCount }) &&
+    !exceedsSpeedBoatMaxParticipants(activity?.name, {
+      adults,
+      children: minorsCount,
+      babies: 0,
+    }) &&
+    hasAllTurtleFinSizes(activity?.name, { adults, children: minorsCount, babies: 0 }, special.finSizes);
 
   const requiresMinTwo = requiresMinimumTwoParticipants(activity?.name);
   const needsMammaMiaNote = requiresMammaMiaSelfTransfer(activity?.name);
@@ -1065,6 +1165,21 @@ export function PublicCatalogueActivityPage({ activityId }) {
     adults,
     children: minorsCount,
   });
+  const isSpeedBoat = Boolean(activity && isSpeedBoatActivity(activity.name));
+  const adultMax = isSpeedBoat ? SPEED_BOAT_MAX_PARTICIPANTS : 10;
+  const minorMax = isSpeedBoat ? Math.max(0, SPEED_BOAT_MAX_PARTICIPANTS - adults) : 10;
+  const speedBoatMaxMessage = isSpeedBoat ? getSpeedBoatMaxParticipantsMessage() : "";
+
+  const handleSetAdults = useCallback(
+    (n) => {
+      const next = Math.max(1, Math.min(adultMax, Number(n) || 1));
+      setAdults(next);
+      if (isSpeedBoat && next + minorsCount > SPEED_BOAT_MAX_PARTICIPANTS) {
+        setMinorsCount(Math.max(0, SPEED_BOAT_MAX_PARTICIPANTS - next));
+      }
+    },
+    [adultMax, isSpeedBoat, minorsCount]
+  );
   const showDateHint = !date && !noDatesConfigured;
 
   useEffect(() => {
@@ -1264,6 +1379,20 @@ export function PublicCatalogueActivityPage({ activityId }) {
         adults,
         children: minorsCount,
       })
+    ) {
+      return;
+    }
+    if (
+      exceedsSpeedBoatMaxParticipants(activity.name, {
+        adults,
+        children: minorsCount,
+        babies: 0,
+      })
+    ) {
+      return;
+    }
+    if (
+      !hasAllTurtleFinSizes(activity.name, { adults, children: minorsCount, babies: 0 }, special.finSizes)
     ) {
       return;
     }
@@ -1551,9 +1680,15 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 <BookingCardShell
                   activity={activity}
                   adults={adults}
-                  setAdults={setAdults}
+                  setAdults={handleSetAdults}
                   minorsCount={minorsCount}
                   setMinorsCount={setMinorsCount}
+                  visitorCount={visitorCount}
+                  setVisitorCount={setVisitorCount}
+                  showVisitors={isDivingActivity}
+                  showFinSizes={isTurtle}
+                  finSizes={special.finSizes || []}
+                  setFinSizes={setFinSizes}
                   date={date}
                   setDate={setDate}
                   normalizedDays={normalizedAvailableDays}
@@ -1577,6 +1712,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   participantsOk={participantsOk}
                   warnsRecommendedTwo={warnsRecommendedTwo}
                   belowRecommendedTwo={belowRecommendedTwo}
+                  adultMax={adultMax}
+                  minorMax={minorMax}
+                  speedBoatMaxMessage={speedBoatMaxMessage}
                 />
               </div>
             </div>
@@ -1590,9 +1728,15 @@ export function PublicCatalogueActivityPage({ activityId }) {
             <BookingCardShell
               activity={activity}
               adults={adults}
-              setAdults={setAdults}
+              setAdults={handleSetAdults}
               minorsCount={minorsCount}
               setMinorsCount={setMinorsCount}
+              visitorCount={visitorCount}
+              setVisitorCount={setVisitorCount}
+              showVisitors={isDivingActivity}
+              showFinSizes={isTurtle}
+              finSizes={special.finSizes || []}
+              setFinSizes={setFinSizes}
               date={date}
               setDate={setDate}
               normalizedDays={normalizedAvailableDays}
@@ -1616,6 +1760,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
               participantsOk={participantsOk}
               warnsRecommendedTwo={warnsRecommendedTwo}
               belowRecommendedTwo={belowRecommendedTwo}
+              adultMax={adultMax}
+              minorMax={minorMax}
+              speedBoatMaxMessage={speedBoatMaxMessage}
             />
           </div>
         </div>
