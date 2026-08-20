@@ -70,18 +70,18 @@ function normalizeResponsePayload(raw) {
   const base = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const hotels = Array.isArray(base.hotels) ? base.hotels : [];
   const normalizedHotels = hotels
-    .map((h) => ({
-      slot: Number(h?.slot) || 0,
-      hotelName: String(h?.hotelName || "").trim(),
-      roomCategory: String(h?.roomCategory || "").trim(),
-      catalogSlug: String(h?.catalogSlug || "").trim(),
+      .map((h) => ({
+        slot: Number(h?.slot) || 0,
+        hotelName: String(h?.hotelName || "").trim(),
+        roomCategory: String(h?.roomCategory || "").trim(),
+        catalogSlug: String(h?.catalogSlug || "").trim(),
       includeTransfer: h?.includeTransfer === true,
-      manualTotal:
-        h?.manualTotal != null && Number.isFinite(Number(h.manualTotal))
-          ? roundMoney(Number(h.manualTotal))
-          : null,
-      quote: h?.quote && typeof h.quote === "object" ? serializeQuote(h.quote) : null,
-    }))
+        manualTotal:
+          h?.manualTotal != null && Number.isFinite(Number(h.manualTotal))
+            ? roundMoney(Number(h.manualTotal))
+            : null,
+        quote: h?.quote && typeof h.quote === "object" ? serializeQuote(h.quote) : null,
+      }))
     .filter((h) => h.hotelName);
 
   let confirmedHotel = null;
@@ -277,7 +277,7 @@ function applyQuoteAdjustments(nights, { includeTransfer = false, manualTotal = 
 }
 
 function createEmptyProposal(slot = 1) {
-  return {
+    return {
     slot,
     hotelName: "",
     roomCategory: "",
@@ -309,8 +309,8 @@ function draftFromSavedHotel(prev, catalog, fallbackSlot) {
     hotelName: prev.hotelName || catalogHotel?.name || "",
     roomCategory: prev.roomCategory || "",
     catalogSlug: catalogHotel?.slug || catalogHotel?.id || prev.catalogSlug || "",
-    roomCategories: roomCategoryNames(catalogHotel?.roomCategories),
-    catalogHotel: catalogHotel || null,
+      roomCategories: roomCategoryNames(catalogHotel?.roomCategories),
+      catalogHotel: catalogHotel || null,
     includeTransfer:
       prev.includeTransfer === true || prev.quote?.transferIncluded === true,
     manualTotal: stay != null && Number.isFinite(Number(stay)) ? roundMoney(Number(stay)) : null,
@@ -433,15 +433,28 @@ function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit, onMark
   const responseTotals = readyHotels
     .map((h) => `${h.hotelName}: ${formatQuoteMoney(h.quote.total, h.quote.currency)}`)
     .join(" · ");
+  const refId = String(request.id || request.supabaseId || "").trim();
+  const shortRef =
+    refId.length > 8 ? refId.slice(0, 8).toUpperCase() : refId.toUpperCase();
 
   return (
     <article className="overflow-hidden rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_12px_40px_-18px_rgba(30,27,75,0.22)] ring-1 ring-slate-200/80">
       <div className="border-b border-indigo-100 bg-gradient-to-r from-indigo-50/90 to-violet-50/50 px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-indigo-600">
               Demande hôtel
             </p>
+              {shortRef ? (
+                <span
+                  className="inline-flex items-center rounded-full bg-white/90 px-2.5 py-0.5 font-mono text-[11px] font-bold tracking-wide text-indigo-900 ring-1 ring-indigo-200"
+                  title={refId ? `Référence complète : ${refId}` : undefined}
+                >
+                  Réf. {shortRef}
+                </span>
+              ) : null}
+            </div>
             <h3 className="mt-1 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">{fullName}</h3>
             {request.wantsCustomOffer ? (
               <span className="mt-2 inline-block rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-950 ring-1 ring-amber-400/50">
@@ -539,6 +552,12 @@ function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit, onMark
       <div className="border-b border-slate-200/90 bg-slate-50/95 px-4 py-4 sm:px-6">
         <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">Coordonnées</p>
         <div className="grid gap-3 text-sm text-slate-800 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm sm:col-span-2 lg:col-span-1">
+            <span className="text-[11px] font-bold uppercase text-slate-500">Référence</span>
+            <p className="mt-0.5 break-all font-mono text-sm font-semibold text-slate-950">
+              {refId || "—"}
+            </p>
+          </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
             <span className="text-[11px] font-bold uppercase text-slate-500">Téléphone</span>
             <p className="mt-0.5 font-semibold text-slate-950">{request.phone || "—"}</p>
@@ -785,7 +804,7 @@ function HotelResponseModal({
         <div className="mt-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <BedDouble className="h-4 w-4 text-violet-700" aria-hidden />
+            <BedDouble className="h-4 w-4 text-violet-700" aria-hidden />
               <h3 className="text-sm font-bold text-slate-900">DEVIS</h3>
             </div>
             <GhostBtn
@@ -817,7 +836,7 @@ function HotelResponseModal({
                     className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3"
                   >
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
                         Option {index + 1}
                       </p>
                       <GhostBtn
@@ -872,34 +891,34 @@ function HotelResponseModal({
                             <option value={item.roomCategory}>
                               {item.roomCategory} (enregistrée)
                             </option>
-                          ) : null}
+                      ) : null}
                         </select>
                         {item.roomCategory && item.catalogHotel
                           ? (() => {
-                              const occ = formatRoomOccupancyLabel(
-                                findRoomCategory(item.catalogHotel.roomCategories, item.roomCategory)
-                              );
-                              return occ ? (
+                          const occ = formatRoomOccupancyLabel(
+                            findRoomCategory(item.catalogHotel.roomCategories, item.roomCategory)
+                          );
+                          return occ ? (
                                 <span className="mt-1 block text-[11px] font-semibold text-slate-600">
                                   {occ}
                                 </span>
-                              ) : null;
-                            })()
+                          ) : null;
+                        })()
                           : null}
-                      </label>
+                              </label>
 
                       <label className="block">
                         <span className="text-[11px] font-bold uppercase text-slate-500">
-                          Prix séjour (€)
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          inputMode="decimal"
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                                    Prix séjour (€)
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    inputMode="decimal"
+                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
                           value={item.manualTotal ?? ""}
-                          onChange={(e) => {
+                                    onChange={(e) => {
                             const parsed = parseMoneyInput(e.target.value);
                             updateProposal(index, {
                               manualTotal: e.target.value === "" ? null : parsed,
@@ -908,8 +927,8 @@ function HotelResponseModal({
                           placeholder="ex. 850"
                           disabled={saving || !item.hotelName}
                           aria-label={`Prix séjour option ${index + 1}`}
-                        />
-                      </label>
+                                  />
+                                </label>
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 pt-3">
@@ -956,24 +975,24 @@ function HotelResponseModal({
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
             Annuler
-          </GhostBtn>
-          <GhostBtn
-            type="button"
+                                </GhostBtn>
+                                <GhostBtn
+                                  type="button"
             onClick={() =>
               onPrintDevis?.(quotedHotels.filter((h) => proposalIsReady(h)), agentNotes)
             }
             disabled={saving || readyCount === 0}
           >
             Imprimer le devis
-          </GhostBtn>
+                                </GhostBtn>
           <PrimaryBtn
-            type="button"
+                                    type="button"
             onClick={onSave}
             disabled={saving || readyCount === 0 || sortedCatalog.length === 0}
           >
             {saving ? "Enregistrement…" : "Enregistrer la réponse"}
           </PrimaryBtn>
-        </div>
+                              </div>
       </div>
     </div>,
     document.body
@@ -1036,8 +1055,8 @@ function HotelConfirmModal({
           </div>
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
             Fermer
-          </GhostBtn>
-        </div>
+                                </GhostBtn>
+                              </div>
 
         <p className="mt-4 text-sm font-medium text-slate-700">
           Quel hôtel le client a-t-il choisi parmi vos propositions ? Le document final n’affichera
@@ -1140,8 +1159,8 @@ function HotelConfirmModal({
                 required
               />
             </label>
-          </div>
-        </div>
+                          </div>
+                      </div>
 
         <div className="mt-6 rounded-2xl border-2 border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 to-violet-50/70 p-4 shadow-sm">
           <label className="flex cursor-pointer items-start gap-3">
@@ -1156,7 +1175,7 @@ function HotelConfirmModal({
               <span className="block text-sm font-bold text-indigo-950">Zero Tracas</span>
               <span className="mt-0.5 block text-xs font-medium text-indigo-800/80">
                 Nombre de visas, de SIM, et montant total saisi à la main.
-              </span>
+                        </span>
             </span>
           </label>
 
@@ -1209,8 +1228,8 @@ function HotelConfirmModal({
                     className="mt-1.5 text-sm"
                     disabled={saving}
                   />
-                </label>
-              </div>
+                      </label>
+                    </div>
               {ztTotal > 0 ? (
                 <p className="mt-4 text-right text-sm font-bold text-indigo-950">
                   Total Zero Tracas : {formatQuoteMoney(ztTotal, "EUR")}
@@ -1565,6 +1584,11 @@ export function HotelHistoryPage() {
     const q = debouncedSearch.trim().toLowerCase();
     if (!q) return list;
     const qDigits = digitsOnly(q);
+    // Réf. affichée = 8 premiers car. de l’UUID ; accepter aussi tirets / préfixe « réf »
+    const qRef = q
+      .replace(/^réf\.?\s*/i, "")
+      .replace(/^ref\.?\s*/i, "")
+      .replace(/[-\s]/g, "");
     return list.filter((r) => {
       const name = [r.firstName, r.lastName].join(" ").toLowerCase();
       const email = (r.email || "").toLowerCase();
@@ -1575,11 +1599,19 @@ export function HotelHistoryPage() {
       const confirmedName = String(
         normalizeResponsePayload(r.responsePayload).confirmedHotel?.hotelName || ""
       ).toLowerCase();
+      const refRaw = String(r.id || r.supabaseId || "").toLowerCase();
+      const refCompact = refRaw.replace(/-/g, "");
+      const shortRef = refCompact.slice(0, 8);
       if (
         name.includes(q) ||
         email.includes(q) ||
         hotels.includes(q) ||
-        confirmedName.includes(q)
+        confirmedName.includes(q) ||
+        (qRef &&
+          (refRaw.includes(q) ||
+            refCompact.includes(qRef) ||
+            shortRef.includes(qRef) ||
+            qRef.includes(shortRef)))
       ) {
         return true;
       }
@@ -1595,15 +1627,15 @@ export function HotelHistoryPage() {
     const quoteHotels = isConfirmed
       ? [payload.confirmedHotel]
       : payload.hotels.filter((h) => proposalIsReady(h));
-    const ok = printHotelRequest({
-      ...request,
-      quoteHotels,
+      const ok = printHotelRequest({
+        ...request,
+        quoteHotels,
       agentNotes: payload.agentNotes,
       flights: payload.flights,
       zeroTracas: payload.zeroTracas,
       documentKind: isConfirmed ? "confirmation" : "devis",
-    });
-    if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer.");
+      });
+      if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer.");
   }, []);
 
   const handleEdit = useCallback((request) => {
@@ -1973,17 +2005,17 @@ export function HotelHistoryPage() {
             htmlFor="hotel-history-search"
             className="block text-xs font-bold uppercase tracking-wide text-indigo-950"
           >
-            Rechercher
-          </label>
-          <TextInput
-            id="hotel-history-search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Nom, e-mail, téléphone ou hôtel"
-            className="mt-2"
-          />
-          <p className="mt-2 text-[11px] font-medium text-indigo-900/80">
-            {filteredRows.length} demande{filteredRows.length > 1 ? "s" : ""}
+          Rechercher
+        </label>
+        <TextInput
+          id="hotel-history-search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+            placeholder="Nom, e-mail, téléphone, hôtel ou référence"
+          className="mt-2"
+        />
+        <p className="mt-2 text-[11px] font-medium text-indigo-900/80">
+          {filteredRows.length} demande{filteredRows.length > 1 ? "s" : ""}
             {statusFilter === "confirmed"
               ? " confirmée" + (filteredRows.length > 1 ? "s" : "")
               : statusFilter === "pending"
