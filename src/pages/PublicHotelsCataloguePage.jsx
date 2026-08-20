@@ -73,8 +73,12 @@ export function PublicHotelsCataloguePage() {
       <header className="sticky top-0 z-30 border-b border-violet-500/25 bg-catalog-night text-white shadow-[0_16px_48px_-12px_rgba(15,8,32,0.65)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3.5">
-            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-orange-600 p-1.5 shadow-xl shadow-violet-950/50 ring-2 ring-orange-300/50 ring-offset-2 ring-offset-catalog-night">
-              <img src="/logo.png" alt="Hurghada Dream" className="relative h-full w-full object-contain drop-shadow-md" />
+            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-orange-600 p-1 shadow-xl shadow-violet-950/50 ring-2 ring-orange-300/60 ring-offset-2 ring-offset-catalog-night sm:h-[4.5rem] sm:w-[4.5rem] sm:p-1.5">
+              <img
+                src="/logo.png"
+                alt="Hurghada Dream"
+                className="relative h-full w-full scale-110 object-contain drop-shadow-md"
+              />
             </div>
             <div className="min-w-0">
               <p className="truncate font-catalog-display text-lg font-semibold tracking-tight text-white">
