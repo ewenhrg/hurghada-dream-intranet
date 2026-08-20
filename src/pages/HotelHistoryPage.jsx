@@ -89,45 +89,39 @@ function serializeQuote(quote) {
   };
 }
 
+function normalizeStayDate(raw) {
+  const s = String(raw || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
+}
+
+function normalizeHotelProposal(h) {
+  if (!h || typeof h !== "object") return null;
+  const hotelName = String(h.hotelName || "").trim();
+  if (!hotelName) return null;
+  return {
+    slot: Number(h.slot) || 0,
+    hotelName,
+    roomCategory: String(h.roomCategory || "").trim(),
+    catalogSlug: String(h.catalogSlug || "").trim(),
+    stayFrom: normalizeStayDate(h.stayFrom),
+    stayTo: normalizeStayDate(h.stayTo),
+    includeTransfer: h.includeTransfer === true,
+    manualTotal:
+      h.manualTotal != null && Number.isFinite(Number(h.manualTotal))
+        ? roundMoney(Number(h.manualTotal))
+        : null,
+    quote: h.quote && typeof h.quote === "object" ? serializeQuote(h.quote) : null,
+  };
+}
+
 function normalizeResponsePayload(raw) {
   const base = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const hotels = Array.isArray(base.hotels) ? base.hotels : [];
-  const normalizedHotels = hotels
-      .map((h) => ({
-        slot: Number(h?.slot) || 0,
-        hotelName: String(h?.hotelName || "").trim(),
-        roomCategory: String(h?.roomCategory || "").trim(),
-        catalogSlug: String(h?.catalogSlug || "").trim(),
-      includeTransfer: h?.includeTransfer === true,
-        manualTotal:
-          h?.manualTotal != null && Number.isFinite(Number(h.manualTotal))
-            ? roundMoney(Number(h.manualTotal))
-            : null,
-        quote: h?.quote && typeof h.quote === "object" ? serializeQuote(h.quote) : null,
-      }))
-    .filter((h) => h.hotelName);
+  const normalizedHotels = hotels.map(normalizeHotelProposal).filter(Boolean);
 
   let confirmedHotel = null;
   if (base.confirmedHotel && typeof base.confirmedHotel === "object") {
-    const name = String(base.confirmedHotel.hotelName || "").trim();
-    if (name) {
-      confirmedHotel = {
-        slot: Number(base.confirmedHotel.slot) || 0,
-        hotelName: name,
-        roomCategory: String(base.confirmedHotel.roomCategory || "").trim(),
-        catalogSlug: String(base.confirmedHotel.catalogSlug || "").trim(),
-        includeTransfer: base.confirmedHotel.includeTransfer === true,
-        manualTotal:
-          base.confirmedHotel.manualTotal != null &&
-          Number.isFinite(Number(base.confirmedHotel.manualTotal))
-            ? roundMoney(Number(base.confirmedHotel.manualTotal))
-            : null,
-        quote:
-          base.confirmedHotel.quote && typeof base.confirmedHotel.quote === "object"
-            ? serializeQuote(base.confirmedHotel.quote)
-            : null,
-      };
-    }
+    confirmedHotel = normalizeHotelProposal(base.confirmedHotel);
   }
 
   return {
@@ -314,20 +308,23 @@ function applyQuoteAdjustments(nights, { includeTransfer = false, manualTotal = 
   };
 }
 
-function createEmptyProposal(slot = 1) {
-    return {
+function createEmptyProposal(slot = 1, stayDefaults = {}) {
+  return {
     slot,
     hotelName: "",
     roomCategory: "",
+    roomCategoryManual: false,
     catalogSlug: "",
     roomCategories: [],
     catalogHotel: null,
+    stayFrom: normalizeStayDate(stayDefaults.stayFrom),
+    stayTo: normalizeStayDate(stayDefaults.stayTo),
     includeTransfer: false,
     manualTotal: null,
   };
 }
 
-function draftFromSavedHotel(prev, catalog, fallbackSlot) {
+function draftFromSavedHotel(prev, catalog, fallbackSlot, request) {
   const catalogHotel =
     (prev.catalogSlug &&
       catalog.find((h) => String(h.slug || h.id) === String(prev.catalogSlug))) ||
@@ -342,13 +339,20 @@ function draftFromSavedHotel(prev, catalog, fallbackSlot) {
           : prev.quote?.total != null
             ? Number(prev.quote.total)
             : null;
+  const cats = roomCategoryNames(catalogHotel?.roomCategories);
+  const roomCategory = String(prev.roomCategory || "").trim();
   return {
     slot: prev.slot || fallbackSlot,
     hotelName: prev.hotelName || catalogHotel?.name || "",
-    roomCategory: prev.roomCategory || "",
+    roomCategory,
+    roomCategoryManual: Boolean(roomCategory && !cats.includes(roomCategory)),
     catalogSlug: catalogHotel?.slug || catalogHotel?.id || prev.catalogSlug || "",
-      roomCategories: roomCategoryNames(catalogHotel?.roomCategories),
-      catalogHotel: catalogHotel || null,
+    roomCategories: cats,
+    catalogHotel: catalogHotel || null,
+    stayFrom:
+      normalizeStayDate(prev.stayFrom) || normalizeStayDate(request?.arrivalDate) || "",
+    stayTo:
+      normalizeStayDate(prev.stayTo) || normalizeStayDate(request?.departureDate) || "",
     includeTransfer:
       prev.includeTransfer === true || prev.quote?.transferIncluded === true,
     manualTotal: stay != null && Number.isFinite(Number(stay)) ? roundMoney(Number(stay)) : null,
@@ -358,16 +362,24 @@ function draftFromSavedHotel(prev, catalog, fallbackSlot) {
 /** Tarifs auto suspendus : propositions libres depuis le catalogue + prix saisis à la main. */
 function buildResponseHotelsDraft(request, catalog) {
   const saved = normalizeResponsePayload(request.responsePayload).hotels;
+  const stayDefaults = {
+    stayFrom: request?.arrivalDate || "",
+    stayTo: request?.departureDate || "",
+  };
   if (saved.length > 0) {
-    return saved.map((prev, idx) => draftFromSavedHotel(prev, catalog, idx + 1));
+    return saved.map((prev, idx) => draftFromSavedHotel(prev, catalog, idx + 1, request));
   }
-  return [createEmptyProposal(1)];
+  return [createEmptyProposal(1, stayDefaults)];
 }
 
 function computeQuotesForDraft(request, hotelsDraft) {
-  const nights = countHotelNights(request?.arrivalDate, request?.departureDate);
   return hotelsDraft.map((item, index) => {
     const hotelName = String(item.hotelName || "").trim();
+    const stayFrom =
+      normalizeStayDate(item.stayFrom) || normalizeStayDate(request?.arrivalDate);
+    const stayTo =
+      normalizeStayDate(item.stayTo) || normalizeStayDate(request?.departureDate);
+    const nights = countHotelNights(stayFrom, stayTo);
     const quote = applyQuoteAdjustments(nights, {
       includeTransfer: false,
       manualTotal: item.manualTotal,
@@ -377,6 +389,8 @@ function computeQuotesForDraft(request, hotelsDraft) {
       hotelName,
       roomCategory: String(item.roomCategory || "").trim(),
       catalogSlug: item.catalogSlug || "",
+      stayFrom,
+      stayTo,
       includeTransfer: false,
       manualTotal: item.manualTotal ?? null,
       quote: serializeQuote(quote),
@@ -862,6 +876,16 @@ function HotelRequestCard({
                   {h.roomCategory ? (
                     <p className="mt-0.5 text-xs font-medium text-slate-600">{h.roomCategory}</p>
                   ) : null}
+                  {h.stayFrom || h.stayTo ? (
+                    <p className="mt-0.5 text-xs font-semibold text-indigo-800">
+                      {formatHotelStayDate(h.stayFrom || request.arrivalDate)} →{" "}
+                      {formatHotelStayDate(h.stayTo || request.departureDate)}
+                      {countHotelNights(h.stayFrom || request.arrivalDate, h.stayTo || request.departureDate) >
+                      0
+                        ? ` · ${countHotelNights(h.stayFrom || request.arrivalDate, h.stayTo || request.departureDate)} nuit${countHotelNights(h.stayFrom || request.arrivalDate, h.stayTo || request.departureDate) > 1 ? "s" : ""}`
+                        : ""}
+                    </p>
+                  ) : null}
                   {h.quote?.total != null ? (
                     <p className="mt-1 text-sm font-bold text-emerald-900">
                       {formatQuoteMoney(h.quote.total, h.quote.currency)}
@@ -980,11 +1004,18 @@ function HotelResponseModal({
       catalogHotel: hotel,
       roomCategories: roomCategoryNames(hotel?.roomCategories),
       roomCategory: "",
+      roomCategoryManual: false,
     });
   };
 
   const addProposal = () => {
-    setHotelsDraft((prev) => [...prev, createEmptyProposal(prev.length + 1)]);
+    setHotelsDraft((prev) => [
+      ...prev,
+      createEmptyProposal(prev.length + 1, {
+        stayFrom: request.arrivalDate || "",
+        stayTo: request.departureDate || "",
+      }),
+    ]);
   };
 
   const removeProposal = (index) => {
@@ -992,7 +1023,12 @@ function HotelResponseModal({
       const next = prev.filter((_, i) => i !== index);
       return next.length > 0
         ? next.map((h, i) => ({ ...h, slot: i + 1 }))
-        : [createEmptyProposal(1)];
+        : [
+            createEmptyProposal(1, {
+              stayFrom: request.arrivalDate || "",
+              stayTo: request.departureDate || "",
+            }),
+          ];
     });
   };
 
@@ -1109,8 +1145,8 @@ function HotelResponseModal({
             </GhostBtn>
           </div>
           <p className="mb-3 text-xs font-medium text-slate-600">
-            Choisissez les hôtels à proposer dans votre catalogue, puis indiquez le prix à côté.
-            Les tarifs automatiques sont suspendus pour le moment.
+            Choisissez les hôtels à proposer, les dates (du / au) pour chaque séjour, puis le prix.
+            Utile si le client change d’hôtel en cours de séjour.
           </p>
 
           {sortedCatalog.length === 0 ? (
@@ -1164,40 +1200,121 @@ function HotelResponseModal({
 
                       <label className="block">
                         <span className="text-[11px] font-bold uppercase text-slate-500">
+                          Du (check-in)
+                        </span>
+                        <input
+                          type="date"
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                          value={item.stayFrom || ""}
+                          min={request.arrivalDate || undefined}
+                          max={item.stayTo || request.departureDate || undefined}
+                          onChange={(e) => updateProposal(index, { stayFrom: e.target.value })}
+                          disabled={saving || !item.catalogSlug}
+                          aria-label={`Date début option ${index + 1}`}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-[11px] font-bold uppercase text-slate-500">
+                          Au (check-out)
+                        </span>
+                        <input
+                          type="date"
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                          value={item.stayTo || ""}
+                          min={item.stayFrom || request.arrivalDate || undefined}
+                          max={request.departureDate || undefined}
+                          onChange={(e) => updateProposal(index, { stayTo: e.target.value })}
+                          disabled={saving || !item.catalogSlug}
+                          aria-label={`Date fin option ${index + 1}`}
+                        />
+                      </label>
+                      {(() => {
+                        const n = countHotelNights(item.stayFrom, item.stayTo);
+                        return n > 0 ? (
+                          <p className="sm:col-span-2 text-xs font-bold text-violet-800">
+                            {n} nuit{n > 1 ? "s" : ""} pour cet hôtel
+                          </p>
+                        ) : null;
+                      })()}
+
+                      <label className="block">
+                        <span className="text-[11px] font-bold uppercase text-slate-500">
                           Catégorie (optionnel)
                         </span>
-                        <select
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
-                          value={item.roomCategory}
-                          onChange={(e) => updateProposal(index, { roomCategory: e.target.value })}
-                          disabled={saving || !item.catalogSlug || item.roomCategories.length === 0}
-                        >
-                          <option value="">— Sans catégorie —</option>
-                          {item.roomCategories.map((cat) => (
-                            <option key={cat} value={cat}>
-                              {cat}
-                            </option>
-                          ))}
-                          {item.roomCategory &&
-                          !item.roomCategories.includes(item.roomCategory) ? (
-                            <option value={item.roomCategory}>
-                              {item.roomCategory} (enregistrée)
-                            </option>
-                      ) : null}
-                        </select>
-                        {item.roomCategory && item.catalogHotel
-                          ? (() => {
-                          const occ = formatRoomOccupancyLabel(
-                            findRoomCategory(item.catalogHotel.roomCategories, item.roomCategory)
-                          );
-                          return occ ? (
-                                <span className="mt-1 block text-[11px] font-semibold text-slate-600">
-                                  {occ}
+                        {(() => {
+                          const isManual =
+                            item.roomCategoryManual === true ||
+                            (Boolean(item.roomCategory) &&
+                              !(item.roomCategories || []).includes(item.roomCategory));
+                          return (
+                            <>
+                              <select
+                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                                value={isManual ? "__manual__" : item.roomCategory || ""}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  if (v === "__manual__") {
+                                    updateProposal(index, {
+                                      roomCategoryManual: true,
+                                      roomCategory: isManual ? item.roomCategory : "",
+                                    });
+                                  } else {
+                                    updateProposal(index, {
+                                      roomCategoryManual: false,
+                                      roomCategory: v,
+                                    });
+                                  }
+                                }}
+                                disabled={saving || !item.catalogSlug}
+                              >
+                                <option value="">— Sans catégorie —</option>
+                                {(item.roomCategories || []).map((cat) => (
+                                  <option key={cat} value={cat}>
+                                    {cat}
+                                  </option>
+                                ))}
+                                <option value="__manual__">Autre (saisie manuelle)</option>
+                              </select>
+                              {isManual ? (
+                                <input
+                                  type="text"
+                                  className="mt-2 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/25"
+                                  value={item.roomCategory || ""}
+                                  onChange={(e) =>
+                                    updateProposal(index, {
+                                      roomCategory: e.target.value,
+                                      roomCategoryManual: true,
+                                    })
+                                  }
+                                  placeholder="Ex. Deluxe Sea View"
+                                  disabled={saving || !item.catalogSlug}
+                                  aria-label={`Catégorie manuelle option ${index + 1}`}
+                                />
+                              ) : null}
+                              {item.roomCategory && item.catalogHotel && !isManual
+                                ? (() => {
+                                    const occ = formatRoomOccupancyLabel(
+                                      findRoomCategory(
+                                        item.catalogHotel.roomCategories,
+                                        item.roomCategory
+                                      )
+                                    );
+                                    return occ ? (
+                                      <span className="mt-1 block text-[11px] font-semibold text-slate-600">
+                                        {occ}
+                                      </span>
+                                    ) : null;
+                                  })()
+                                : null}
+                              {isManual ? (
+                                <span className="mt-1 block text-[11px] font-medium text-violet-700">
+                                  Catégorie saisie à la main (hors catalogue).
                                 </span>
-                          ) : null;
-                        })()
-                          : null}
-                              </label>
+                              ) : null}
+                            </>
+                          );
+                        })()}
+                      </label>
 
                       <label className="block">
                         <span className="text-[11px] font-bold uppercase text-slate-500">
@@ -1385,6 +1502,9 @@ function HotelConfirmModal({
                       <span className="block text-sm font-bold text-slate-950">{hotel.hotelName}</span>
                       <span className="mt-0.5 block text-xs font-medium text-slate-600">
                         {hotel.roomCategory ? `${hotel.roomCategory} · ` : ""}
+                        {hotel.stayFrom || hotel.stayTo
+                          ? `${formatHotelStayDate(hotel.stayFrom)} → ${formatHotelStayDate(hotel.stayTo)} · `
+                          : ""}
                         {formatQuoteMoney(hotel.quote?.total, hotel.quote?.currency)}
                       </span>
                     </span>

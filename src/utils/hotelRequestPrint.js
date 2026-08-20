@@ -1216,6 +1216,12 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTi
         .join(" · ");
 
       const optionLabel = isConfirmation ? "Hôtel confirmé" : `Option ${index + 1}`;
+      const hotelCheckIn = formatHotelStayDate(h.stayFrom) !== "—"
+        ? formatHotelStayDate(h.stayFrom)
+        : checkIn;
+      const hotelCheckOut = formatHotelStayDate(h.stayTo) !== "—"
+        ? formatHotelStayDate(h.stayTo)
+        : checkOut;
 
       return `<article class="quote-card">
         <div class="quote-card-accent" aria-hidden="true"></div>
@@ -1237,11 +1243,11 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTi
           </div>
           <div class="quote-meta-item">
             <span class="info-label">Check-in</span>
-            <div class="info-value">${escapeHtml(checkIn)}</div>
+            <div class="info-value">${escapeHtml(hotelCheckIn)}</div>
           </div>
           <div class="quote-meta-item">
             <span class="info-label">Check-out</span>
-            <div class="info-value">${escapeHtml(checkOut)}</div>
+            <div class="info-value">${escapeHtml(hotelCheckOut)}</div>
           </div>
         </div>
         ${tags.length ? `<div class="tag-row">${tags.join("")}</div>` : `<div style="height:12px"></div>`}
