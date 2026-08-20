@@ -820,25 +820,87 @@ function HotelRequestCard({
       </div>
 
       <div className="px-4 py-4 sm:px-6">
-        <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">Hôtels souhaités</p>
-        {request.wantsCustomOffer ? (
-          <p className="rounded-xl border border-amber-200/90 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-950">
-            {HOTEL_CUSTOM_OFFER_LABEL}
-          </p>
-        ) : hotels.length === 0 ? (
-          <p className="text-sm text-slate-600">—</p>
+        {hasResponse || confirmedHotel ? (
+          <>
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+              {confirmedHotel ? "Hôtel de la confirmation" : "Hôtels de la réponse"}
+            </p>
+            <ul className="space-y-2">
+              {(confirmedHotel ? [confirmedHotel] : readyHotels).map((h, index) => (
+                <li
+                  key={`${h.hotelName}-${h.slot || index}`}
+                  className={`rounded-xl border px-3 py-2.5 text-sm shadow-sm ${
+                    confirmedHotel
+                      ? "border-teal-200/90 bg-teal-50/80"
+                      : "border-emerald-200/90 bg-emerald-50/70"
+                  }`}
+                >
+                  <span className="text-[11px] font-bold uppercase text-emerald-800">
+                    {confirmedHotel ? "Confirmé" : `Option ${index + 1}`}
+                  </span>
+                  <p className="mt-0.5 font-semibold text-slate-950">{h.hotelName}</p>
+                  {h.roomCategory ? (
+                    <p className="mt-0.5 text-xs font-medium text-slate-600">{h.roomCategory}</p>
+                  ) : null}
+                  {h.quote?.total != null ? (
+                    <p className="mt-1 text-sm font-bold text-emerald-900">
+                      {formatQuoteMoney(h.quote.total, h.quote.currency)}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            {!confirmedHotel && readyHotels.length > 1 ? (
+              <p className="mt-2 text-[11px] font-medium text-slate-500">
+                Propositions envoyées / à envoyer au client (réponse).
+              </p>
+            ) : null}
+            {hotels.length > 0 ? (
+              <div className="mt-4 border-t border-slate-200/80 pt-3">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  Demande initiale (choix client)
+                </p>
+                <ul className="flex flex-wrap gap-2">
+                  {hotels.map((h) => (
+                    <li
+                      key={h.label}
+                      className="rounded-lg border border-slate-200/80 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700"
+                    >
+                      <span className="text-[10px] font-bold uppercase text-slate-500">{h.label} · </span>
+                      {h.value}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : request.wantsCustomOffer ? (
+              <p className="mt-3 text-xs font-medium text-amber-800">{HOTEL_CUSTOM_OFFER_LABEL}</p>
+            ) : null}
+          </>
         ) : (
-          <ul className="space-y-2">
-            {hotels.map((h) => (
-              <li
-                key={h.label}
-                className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm"
-              >
-                <span className="text-[11px] font-bold uppercase text-indigo-700">{h.label}</span>
-                <p className="mt-0.5">{h.value}</p>
-              </li>
-            ))}
-          </ul>
+          <>
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+              Hôtels souhaités
+            </p>
+            {request.wantsCustomOffer ? (
+              <p className="rounded-xl border border-amber-200/90 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-950">
+                {HOTEL_CUSTOM_OFFER_LABEL}
+              </p>
+            ) : hotels.length === 0 ? (
+              <p className="text-sm text-slate-600">—</p>
+            ) : (
+              <ul className="space-y-2">
+                {hotels.map((h) => (
+                  <li
+                    key={h.label}
+                    className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm"
+                  >
+                    <span className="text-[11px] font-bold uppercase text-indigo-700">{h.label}</span>
+                    <p className="mt-0.5">{h.value}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </div>
 
@@ -2198,9 +2260,11 @@ export function HotelHistoryPage({ user = null }) {
       const hotels = [r.hotelOption1, r.hotelOption2, r.hotelOption3]
         .join(" ")
         .toLowerCase();
-      const confirmedName = String(
-        normalizeResponsePayload(r.responsePayload).confirmedHotel?.hotelName || ""
-      ).toLowerCase();
+      const payload = normalizeResponsePayload(r.responsePayload);
+      const confirmedName = String(payload.confirmedHotel?.hotelName || "").toLowerCase();
+      const responseNames = (payload.hotels || [])
+        .map((h) => String(h.hotelName || "").toLowerCase())
+        .join(" ");
       const refRaw = String(r.id || r.supabaseId || "").toLowerCase();
       const refCompact = refRaw.replace(/-/g, "");
       const shortRef = refCompact.slice(0, 8);
@@ -2209,6 +2273,7 @@ export function HotelHistoryPage({ user = null }) {
         email.includes(q) ||
         hotels.includes(q) ||
         confirmedName.includes(q) ||
+        responseNames.includes(q) ||
         (qRef &&
           (refRaw.includes(q) ||
             refCompact.includes(qRef) ||
