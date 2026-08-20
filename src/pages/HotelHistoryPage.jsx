@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { BedDouble, MessageSquareReply, Pencil } from "lucide-react";
+import { BedDouble, MessageSquareReply } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -15,17 +15,7 @@ import {
   boardLabelsFromViewModel,
 } from "../constants/hotelRequestBoardOptions";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
-import { loadHotelRates } from "../utils/hotelRates";
-import {
-  calculateHotelStayQuote,
-  formatQuoteMoney,
-} from "../utils/hotelQuoteCalc";
-import {
-  allocateHiltonChildCharges,
-  getHotelChildFreePolicy,
-  hotelMatchesHiltonChildPolicy,
-  parseChildAgesInput,
-} from "../utils/hotelChildFreePolicy";
+import { countHotelNights, formatQuoteMoney } from "../utils/hotelQuoteCalc";
 import {
   formatRoomOccupancyLabel,
   findRoomCategory,
@@ -35,7 +25,7 @@ import {
 const SELECT_COLUMNS =
   "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, adults_count, children_count, child_ages, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, response_payload, created_at, updated_at";
 
-/** Supplément transfert aéroport (devis réponse). */
+/** Supplément transfert aéroport (optionnel, ajouté au prix séjour saisi). */
 export const HOTEL_TRANSFER_FEE_EUR = 40;
 
 function roundMoney(n) {
@@ -86,7 +76,7 @@ function normalizeResponsePayload(raw) {
         hotelName: String(h?.hotelName || "").trim(),
         roomCategory: String(h?.roomCategory || "").trim(),
         catalogSlug: String(h?.catalogSlug || "").trim(),
-        includeTransfer: h?.includeTransfer !== false,
+        includeTransfer: h?.includeTransfer === true,
         manualTotal:
           h?.manualTotal != null && Number.isFinite(Number(h.manualTotal))
             ? roundMoney(Number(h.manualTotal))
@@ -118,81 +108,103 @@ function findCatalogHotelByName(hotelName, catalog) {
   );
 }
 
-function applyQuoteAdjustments(baseQuote, { includeTransfer = true, manualTotal = null } = {}) {
-  if (!baseQuote) return null;
-  const transferOn = includeTransfer !== false;
+function applyQuoteAdjustments(nights, { includeTransfer = false, manualTotal = null } = {}) {
+  const transferOn = includeTransfer === true;
   const transferFee = transferOn ? HOTEL_TRANSFER_FEE_EUR : 0;
-  const calculatedStay =
-    baseQuote.total != null && Number.isFinite(Number(baseQuote.total))
-      ? roundMoney(Number(baseQuote.total))
-      : null;
   const priceManual = manualTotal != null && Number.isFinite(Number(manualTotal));
-  const stayTotal = priceManual
-    ? roundMoney(Number(manualTotal))
-    : calculatedStay;
-  const total =
-    stayTotal != null ? roundMoney(stayTotal + transferFee) : null;
+  const stayTotal = priceManual ? roundMoney(Number(manualTotal)) : null;
+  const total = stayTotal != null ? roundMoney(stayTotal + transferFee) : null;
   return {
-    ...baseQuote,
+    ok: total != null,
+    currency: "EUR",
+    nights: nights > 0 ? nights : null,
+    roomsNeeded: null,
+    adultsTotal: null,
+    childrenTotal: null,
+    babiesTotal: null,
+    freeChildren: 0,
+    warnings: [],
+    hiltonPolicyApplied: false,
     stayTotal,
     transferIncluded: transferOn,
     transferFee,
-    priceManual,
+    priceManual: true,
     total,
-    ok: total != null,
   };
 }
 
-function buildResponseHotelsDraft(request, catalog) {
-  const saved = normalizeResponsePayload(request.responsePayload).hotels;
-  return requestHotelsList(request).map((item) => {
-    const prev = saved.find((s) => s.slot === item.slot || s.hotelName === item.hotelName);
-    const catalogHotel = findCatalogHotelByName(item.hotelName, catalog);
-    return {
-      slot: item.slot,
-      hotelName: item.hotelName,
-      roomCategory: prev?.roomCategory || "",
-      catalogSlug: catalogHotel?.slug || catalogHotel?.id || "",
-      roomCategories: roomCategoryNames(catalogHotel?.roomCategories),
-      catalogHotel: catalogHotel || null,
-      includeTransfer: prev ? prev.includeTransfer !== false : true,
-      manualTotal: prev?.manualTotal ?? null,
-      editingPrice: false,
-      priceDraft: "",
-    };
-  });
+function createEmptyProposal(slot = 1) {
+  return {
+    slot,
+    hotelName: "",
+    roomCategory: "",
+    catalogSlug: "",
+    roomCategories: [],
+    catalogHotel: null,
+    includeTransfer: false,
+    manualTotal: null,
+  };
 }
 
-function computeQuotesForDraft(request, hotelsDraft, rates) {
-  return hotelsDraft.map((item) => {
-    const baseQuote = item.roomCategory
-      ? calculateHotelStayQuote({
-          hotel: item.catalogHotel,
-          hotelSlug: item.catalogSlug,
-          hotelName: item.hotelName,
-          roomCategory: item.roomCategory,
-          arrivalDate: request.arrivalDate,
-          departureDate: request.departureDate,
-          adultsCount: request.adultsCount,
-          childAgesRaw: request.childAges,
-          childrenCount: request.childrenCount,
-          rates,
-        })
-      : null;
-    const quote = applyQuoteAdjustments(baseQuote, {
-      includeTransfer: item.includeTransfer !== false,
+function draftFromSavedHotel(prev, catalog, fallbackSlot) {
+  const catalogHotel =
+    (prev.catalogSlug &&
+      catalog.find((h) => String(h.slug || h.id) === String(prev.catalogSlug))) ||
+    findCatalogHotelByName(prev.hotelName, catalog);
+  const stay =
+    prev.manualTotal != null
+      ? prev.manualTotal
+      : prev.quote?.stayTotal != null
+        ? Number(prev.quote.stayTotal)
+        : prev.quote?.total != null && prev.quote?.transferIncluded
+          ? roundMoney(Number(prev.quote.total) - Number(prev.quote.transferFee || 0))
+          : prev.quote?.total != null
+            ? Number(prev.quote.total)
+            : null;
+  return {
+    slot: prev.slot || fallbackSlot,
+    hotelName: prev.hotelName || catalogHotel?.name || "",
+    roomCategory: prev.roomCategory || "",
+    catalogSlug: catalogHotel?.slug || catalogHotel?.id || prev.catalogSlug || "",
+    roomCategories: roomCategoryNames(catalogHotel?.roomCategories),
+    catalogHotel: catalogHotel || null,
+    includeTransfer:
+      prev.includeTransfer === true || prev.quote?.transferIncluded === true,
+    manualTotal: stay != null && Number.isFinite(Number(stay)) ? roundMoney(Number(stay)) : null,
+  };
+}
+
+/** Tarifs auto suspendus : propositions libres depuis le catalogue + prix saisis à la main. */
+function buildResponseHotelsDraft(request, catalog) {
+  const saved = normalizeResponsePayload(request.responsePayload).hotels;
+  if (saved.length > 0) {
+    return saved.map((prev, idx) => draftFromSavedHotel(prev, catalog, idx + 1));
+  }
+  return [createEmptyProposal(1)];
+}
+
+function computeQuotesForDraft(request, hotelsDraft) {
+  const nights = countHotelNights(request?.arrivalDate, request?.departureDate);
+  return hotelsDraft.map((item, index) => {
+    const hotelName = String(item.hotelName || "").trim();
+    const quote = applyQuoteAdjustments(nights, {
+      includeTransfer: item.includeTransfer === true,
       manualTotal: item.manualTotal,
     });
     return {
-      slot: item.slot,
-      hotelName: item.hotelName,
+      slot: item.slot || index + 1,
+      hotelName,
       roomCategory: String(item.roomCategory || "").trim(),
       catalogSlug: item.catalogSlug || "",
-      includeTransfer: item.includeTransfer !== false,
+      includeTransfer: item.includeTransfer === true,
       manualTotal: item.manualTotal ?? null,
       quote: serializeQuote(quote),
     };
   });
+}
+
+function proposalIsReady(quoted) {
+  return Boolean(quoted?.hotelName && quoted?.quote?.total != null);
 }
 
 export const HOTEL_CUSTOM_OFFER_LABEL = "Je n'ai pas de choix d'hôtel — faites-moi une offre";
@@ -268,9 +280,9 @@ function HotelRequestCard({ request, onPrint, onReply, onEdit }) {
     { label: "Choix 3", value: request.hotelOption3 },
   ].filter((h) => String(h.value || "").trim());
   const responseHotels = normalizeResponsePayload(request.responsePayload).hotels;
-  const hasResponse = responseHotels.some((h) => h.roomCategory);
+  const hasResponse = responseHotels.some((h) => proposalIsReady(h));
   const responseTotals = responseHotels
-    .filter((h) => h.quote?.total != null)
+    .filter((h) => proposalIsReady(h))
     .map((h) => `${h.hotelName}: ${formatQuoteMoney(h.quote.total, h.quote.currency)}`)
     .join(" · ");
 
@@ -414,16 +426,24 @@ function HotelResponseModal({
   request,
   hotelsDraft,
   setHotelsDraft,
-  rates,
+  catalogHotels = [],
   onClose,
   onSave,
   onPrintDevis,
   saving,
 }) {
   const quotedHotels = useMemo(
+    () => (request ? computeQuotesForDraft(request, hotelsDraft) : []),
+    [request, hotelsDraft]
+  );
+  const readyCount = quotedHotels.filter((h) => proposalIsReady(h)).length;
+  const clientWishes = request ? requestHotelsList(request) : [];
+  const sortedCatalog = useMemo(
     () =>
-      request ? computeQuotesForDraft(request, hotelsDraft, rates || []) : [],
-    [request, hotelsDraft, rates]
+      [...(catalogHotels || [])].sort((a, b) =>
+        String(a.name || "").localeCompare(String(b.name || ""), "fr", { sensitivity: "base" })
+      ),
+    [catalogHotels]
   );
 
   if (!request) return null;
@@ -431,6 +451,35 @@ function HotelResponseModal({
   const fullName =
     [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
   const boardLabels = boardLabelsFromViewModel(request);
+
+  const updateProposal = (index, patch) => {
+    setHotelsDraft((prev) => prev.map((h, i) => (i === index ? { ...h, ...patch } : h)));
+  };
+
+  const selectCatalogHotel = (index, slugOrId) => {
+    const hotel =
+      sortedCatalog.find((h) => String(h.slug || h.id) === String(slugOrId)) || null;
+    updateProposal(index, {
+      hotelName: hotel?.name || "",
+      catalogSlug: hotel ? String(hotel.slug || hotel.id || "") : "",
+      catalogHotel: hotel,
+      roomCategories: roomCategoryNames(hotel?.roomCategories),
+      roomCategory: "",
+    });
+  };
+
+  const addProposal = () => {
+    setHotelsDraft((prev) => [...prev, createEmptyProposal(prev.length + 1)]);
+  };
+
+  const removeProposal = (index) => {
+    setHotelsDraft((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      return next.length > 0
+        ? next.map((h, i) => ({ ...h, slot: i + 1 }))
+        : [createEmptyProposal(1)];
+    });
+  };
 
   return createPortal(
     <div
@@ -492,6 +541,29 @@ function HotelResponseModal({
                 {boardLabels.length ? boardLabels.join(" · ") : "All inclusive"}
               </dd>
             </div>
+            <div className="sm:col-span-2">
+              <dt className="text-[11px] font-bold uppercase text-slate-500">Hôtels souhaités</dt>
+              <dd className="mt-1 font-semibold text-slate-950">
+                {request.wantsCustomOffer ? (
+                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-950">
+                    Offre personnalisée
+                  </span>
+                ) : clientWishes.length > 0 ? (
+                  <ul className="flex flex-wrap gap-1.5">
+                    {clientWishes.map((h) => (
+                      <li
+                        key={`wish-${h.slot}`}
+                        className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-indigo-900 ring-1 ring-indigo-200"
+                      >
+                        {h.slot}. {h.hotelName}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  "—"
+                )}
+              </dd>
+            </div>
             {request.notes?.trim() ? (
               <div className="sm:col-span-2">
                 <dt className="text-[11px] font-bold uppercase text-slate-500">Notes</dt>
@@ -502,45 +574,28 @@ function HotelResponseModal({
         </div>
 
         <div className="mt-5">
-          <div className="mb-3 flex items-center gap-2">
-            <BedDouble className="h-4 w-4 text-violet-700" aria-hidden />
-            <h3 className="text-sm font-bold text-slate-900">Catégories & prix</h3>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <BedDouble className="h-4 w-4 text-violet-700" aria-hidden />
+              <h3 className="text-sm font-bold text-slate-900">Vos propositions</h3>
+            </div>
+            <GhostBtn
+              type="button"
+              className="!min-h-0 !px-3 !py-1.5 !text-xs"
+              onClick={addProposal}
+              disabled={saving}
+            >
+              + Ajouter un hôtel
+            </GhostBtn>
           </div>
           <p className="mb-3 text-xs font-medium text-slate-600">
-            Choisissez une catégorie : le total se calcule automatiquement avec les prix de vente
-            (Tarifs hôtel = touche + gain).
+            Choisissez les hôtels à proposer dans votre catalogue, puis indiquez le prix à côté.
+            Les tarifs automatiques sont suspendus pour le moment.
           </p>
 
-          {hotelsDraft.some((h) =>
-            hotelMatchesHiltonChildPolicy(h.hotelName, h.catalogSlug, h.catalogHotel)
-          ) ? (
-            <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-xs font-medium leading-relaxed text-emerald-950">
-              <p className="font-bold">Child policy Hilton</p>
-              <p className="mt-1">{getHotelChildFreePolicy("hilton-plaza")?.summary}</p>
-              {(() => {
-                const ages = parseChildAgesInput(request.childAges);
-                if (!ages.length) return null;
-                const rows = allocateHiltonChildCharges(ages);
-                return (
-                  <ul className="mt-2 space-y-0.5">
-                    {rows.map((row, i) => (
-                      <li key={`${row.age}-${i}`}>
-                        Enfant {row.age} an{row.age >= 2 ? "s" : ""} →{" "}
-                        <span className="font-bold">
-                          {row.free ? row.reason : "prix Tarifs hôtel"}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                );
-              })()}
-            </div>
-          ) : null}
-
-          {hotelsDraft.length === 0 ? (
+          {sortedCatalog.length === 0 ? (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
-              Aucun hôtel nommé dans cette demande
-              {request.wantsCustomOffer ? " (offre personnalisée)." : "."}
+              Catalogue hôtels vide — ajoutez des hôtels dans Catalogue hôtels pour pouvoir répondre.
             </p>
           ) : (
             <ul className="space-y-3">
@@ -549,248 +604,55 @@ function HotelResponseModal({
                 const quote = quoted?.quote;
                 return (
                   <li
-                    key={`${item.slot}-${item.hotelName}`}
+                    key={`proposal-${item.slot}-${index}`}
                     className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3"
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                          Choix {item.slot}
-                        </p>
-                        <p className="mt-0.5 text-sm font-bold text-slate-950">{item.hotelName}</p>
-                      {item.roomCategories.length === 0 ? (
-                        <p className="mt-1 text-xs font-semibold text-amber-800">
-                          Aucune catégorie dans le catalogue — ajoutez-les dans Catalogue hôtels.
-                        </p>
-                      ) : null}
-                      {item.roomCategory && item.catalogHotel ? (
-                        (() => {
-                          const occ = formatRoomOccupancyLabel(
-                            findRoomCategory(item.catalogHotel.roomCategories, item.roomCategory)
-                          );
-                          return occ ? (
-                            <p className="mt-1 text-[11px] font-semibold text-slate-600">{occ}</p>
-                          ) : null;
-                        })()
-                      ) : null}
-                        {item.roomCategory && quote ? (
-                          <div className="mt-2 rounded-lg border border-violet-200/80 bg-white px-3 py-2">
-                            <p className="text-sm font-bold text-violet-950">
-                              Total : {formatQuoteMoney(quote.total, quote.currency)}
-                              {quote.nights ? (
-                                <span className="ml-1 text-xs font-semibold text-slate-500">
-                                  · {quote.nights} nuit{quote.nights > 1 ? "s" : ""}
-                                </span>
-                              ) : null}
-                              {quote.priceManual ? (
-                                <span className="ml-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                                  · modifié
-                                </span>
-                              ) : null}
-                            </p>
-                            <p className="mt-0.5 text-[11px] font-medium text-slate-600">
-                              Séjour {formatQuoteMoney(quote.stayTotal, quote.currency)}
-                              {quote.transferIncluded ? " · transfert inclus" : ""}
-                              {quote.roomsNeeded > 1
-                                ? ` · ${quote.roomsNeeded} chambres`
-                                : ""}
-                            </p>
-                            <p className="mt-0.5 text-[11px] font-medium text-slate-600">
-                              Adultes {formatQuoteMoney(quote.adultsTotal, quote.currency)}
-                              {quote.childrenTotal > 0 || quote.babiesTotal > 0
-                                ? ` · Enfants ${formatQuoteMoney(
-                                    (quote.childrenTotal || 0) + (quote.babiesTotal || 0),
-                                    quote.currency
-                                  )}`
-                                : ""}
-                              {quote.freeChildren > 0
-                                ? ` · ${quote.freeChildren} gratuit(s)`
-                                : ""}
-                              {quote.hiltonPolicyApplied ? " · policy Hilton" : ""}
-                            </p>
-                            {quote.warnings?.length ? (
-                              <p className="mt-1 text-[11px] font-semibold text-amber-800">
-                                {quote.warnings[0]}
-                                {quote.warnings.length > 1
-                                  ? ` (+${quote.warnings.length - 1})`
-                                  : ""}
-                              </p>
-                            ) : null}
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        Option {index + 1}
+                      </p>
+                      <GhostBtn
+                        type="button"
+                        className="!min-h-0 !px-2.5 !py-1 !text-xs"
+                        onClick={() => removeProposal(index)}
+                        disabled={saving}
+                      >
+                        Retirer
+                      </GhostBtn>
+                    </div>
 
-                            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-2">
-                              <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-800">
-                                <input
-                                  type="checkbox"
-                                  className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
-                                  checked={item.includeTransfer !== false}
-                                  onChange={(e) => {
-                                    const checked = e.target.checked;
-                                    setHotelsDraft((prev) =>
-                                      prev.map((h, i) =>
-                                        i === index ? { ...h, includeTransfer: checked } : h
-                                      )
-                                    );
-                                  }}
-                                />
-                                Transfert (+{HOTEL_TRANSFER_FEE_EUR} €)
-                              </label>
-                            </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block sm:col-span-2">
+                        <span className="text-[11px] font-bold uppercase text-slate-500">Hôtel</span>
+                        <select
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                          value={item.catalogSlug || ""}
+                          onChange={(e) => selectCatalogHotel(index, e.target.value)}
+                          disabled={saving}
+                        >
+                          <option value="">— Choisir un hôtel —</option>
+                          {sortedCatalog.map((h) => {
+                            const value = String(h.slug || h.id || "");
+                            return (
+                              <option key={value || h.name} value={value}>
+                                {h.name}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </label>
 
-                            {item.editingPrice ? (
-                              <div className="mt-2 flex flex-wrap items-end gap-2">
-                                <label className="block min-w-[8rem] flex-1">
-                                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                                    Prix séjour (€)
-                                  </span>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    inputMode="decimal"
-                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
-                                    value={item.priceDraft}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      setHotelsDraft((prev) =>
-                                        prev.map((h, i) =>
-                                          i === index ? { ...h, priceDraft: value } : h
-                                        )
-                                      );
-                                    }}
-                                    aria-label="Prix séjour modifié"
-                                  />
-                                </label>
-                                <GhostBtn
-                                  type="button"
-                                  className="!min-h-0 !px-3 !py-2 !text-xs"
-                                  onClick={() => {
-                                    const parsed = parseMoneyInput(item.priceDraft);
-                                    if (parsed == null) {
-                                      toast.error("Indiquez un prix valide.");
-                                      return;
-                                    }
-                                    setHotelsDraft((prev) =>
-                                      prev.map((h, i) =>
-                                        i === index
-                                          ? {
-                                              ...h,
-                                              manualTotal: parsed,
-                                              editingPrice: false,
-                                              priceDraft: "",
-                                            }
-                                          : h
-                                      )
-                                    );
-                                  }}
-                                >
-                                  OK
-                                </GhostBtn>
-                                <GhostBtn
-                                  type="button"
-                                  className="!min-h-0 !px-3 !py-2 !text-xs"
-                                  onClick={() => {
-                                    setHotelsDraft((prev) =>
-                                      prev.map((h, i) =>
-                                        i === index
-                                          ? {
-                                              ...h,
-                                              editingPrice: false,
-                                              priceDraft: "",
-                                            }
-                                          : h
-                                      )
-                                    );
-                                  }}
-                                >
-                                  Annuler
-                                </GhostBtn>
-                                {item.manualTotal != null ? (
-                                  <GhostBtn
-                                    type="button"
-                                    className="!min-h-0 !px-3 !py-2 !text-xs"
-                                    onClick={() => {
-                                      setHotelsDraft((prev) =>
-                                        prev.map((h, i) =>
-                                          i === index
-                                            ? {
-                                                ...h,
-                                                manualTotal: null,
-                                                editingPrice: false,
-                                                priceDraft: "",
-                                              }
-                                            : h
-                                        )
-                                      );
-                                    }}
-                                  >
-                                    Revenir au calcul
-                                  </GhostBtn>
-                                ) : null}
-                              </div>
-                            ) : (
-                              <div className="mt-2">
-                                <GhostBtn
-                                  type="button"
-                                  className="!min-h-0 !px-3 !py-1.5 !text-xs"
-                                  onClick={() => {
-                                    const stay =
-                                      quote.stayTotal != null
-                                        ? quote.stayTotal
-                                        : quote.total != null && quote.transferIncluded
-                                          ? roundMoney(
-                                              Number(quote.total) - Number(quote.transferFee || 0)
-                                            )
-                                          : quote.total;
-                                    setHotelsDraft((prev) =>
-                                      prev.map((h, i) =>
-                                        i === index
-                                          ? {
-                                              ...h,
-                                              editingPrice: true,
-                                              priceDraft:
-                                                stay != null && Number.isFinite(Number(stay))
-                                                  ? String(stay)
-                                                  : "",
-                                            }
-                                          : h
-                                      )
-                                    );
-                                  }}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" aria-hidden />
-                                  Modifier le prix
-                                </GhostBtn>
-                              </div>
-                            )}
-                          </div>
-                        ) : null}
-                      </div>
-                      <label className="block w-full min-w-[12rem] sm:w-56">
+                      <label className="block">
                         <span className="text-[11px] font-bold uppercase text-slate-500">
-                          Catégorie de chambre
+                          Catégorie (optionnel)
                         </span>
                         <select
                           className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
                           value={item.roomCategory}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setHotelsDraft((prev) =>
-                              prev.map((h, i) =>
-                                i === index
-                                  ? {
-                                      ...h,
-                                      roomCategory: value,
-                                      manualTotal: null,
-                                      editingPrice: false,
-                                      priceDraft: "",
-                                    }
-                                  : h
-                              )
-                            );
-                          }}
-                          disabled={item.roomCategories.length === 0}
+                          onChange={(e) => updateProposal(index, { roomCategory: e.target.value })}
+                          disabled={saving || !item.catalogSlug || item.roomCategories.length === 0}
                         >
-                          <option value="">— Sélectionner —</option>
+                          <option value="">— Sans catégorie —</option>
                           {item.roomCategories.map((cat) => (
                             <option key={cat} value={cat}>
                               {cat}
@@ -803,7 +665,71 @@ function HotelResponseModal({
                             </option>
                           ) : null}
                         </select>
+                        {item.roomCategory && item.catalogHotel
+                          ? (() => {
+                              const occ = formatRoomOccupancyLabel(
+                                findRoomCategory(item.catalogHotel.roomCategories, item.roomCategory)
+                              );
+                              return occ ? (
+                                <span className="mt-1 block text-[11px] font-semibold text-slate-600">
+                                  {occ}
+                                </span>
+                              ) : null;
+                            })()
+                          : null}
                       </label>
+
+                      <label className="block">
+                        <span className="text-[11px] font-bold uppercase text-slate-500">
+                          Prix séjour (€)
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                          value={item.manualTotal ?? ""}
+                          onChange={(e) => {
+                            const parsed = parseMoneyInput(e.target.value);
+                            updateProposal(index, {
+                              manualTotal: e.target.value === "" ? null : parsed,
+                            });
+                          }}
+                          placeholder="ex. 850"
+                          disabled={saving || !item.hotelName}
+                          aria-label={`Prix séjour option ${index + 1}`}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 pt-3">
+                      <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-800">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                          checked={item.includeTransfer === true}
+                          onChange={(e) =>
+                            updateProposal(index, { includeTransfer: e.target.checked })
+                          }
+                          disabled={saving}
+                        />
+                        Transfert (+{HOTEL_TRANSFER_FEE_EUR} €)
+                      </label>
+                      {proposalIsReady(quoted) ? (
+                        <p className="text-sm font-bold text-violet-950">
+                          Total : {formatQuoteMoney(quote.total, quote.currency)}
+                          {quote.nights ? (
+                            <span className="ml-1 text-xs font-semibold text-slate-500">
+                              · {quote.nights} nuit{quote.nights > 1 ? "s" : ""}
+                            </span>
+                          ) : null}
+                        </p>
+                      ) : (
+                        <p className="text-xs font-semibold text-slate-500">
+                          Choisissez un hôtel et un prix
+                        </p>
+                      )}
                     </div>
                   </li>
                 );
@@ -818,12 +744,16 @@ function HotelResponseModal({
           </GhostBtn>
           <GhostBtn
             type="button"
-            onClick={() => onPrintDevis?.(quotedHotels)}
-            disabled={saving || !quotedHotels.some((h) => h.roomCategory)}
+            onClick={() => onPrintDevis?.(quotedHotels.filter((h) => proposalIsReady(h)))}
+            disabled={saving || readyCount === 0}
           >
             Imprimer le devis
           </GhostBtn>
-          <PrimaryBtn type="button" onClick={onSave} disabled={saving || hotelsDraft.length === 0}>
+          <PrimaryBtn
+            type="button"
+            onClick={onSave}
+            disabled={saving || readyCount === 0 || sortedCatalog.length === 0}
+          >
             {saving ? "Enregistrement…" : "Enregistrer la réponse"}
           </PrimaryBtn>
         </div>
@@ -1034,7 +964,6 @@ export function HotelHistoryPage() {
   const [replyRequest, setReplyRequest] = useState(null);
   const [replyHotelsDraft, setReplyHotelsDraft] = useState([]);
   const [catalogHotels, setCatalogHotels] = useState([]);
-  const [hotelRates, setHotelRates] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -1085,19 +1014,9 @@ export function HotelHistoryPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [catalog, ratesResult] = await Promise.all([
-        loadPublicHotelsCatalog({ publishedOnly: false }),
-        loadHotelRates(),
-      ]);
+      const catalog = await loadPublicHotelsCatalog({ publishedOnly: false });
       if (cancelled) return;
       setCatalogHotels(catalog.hotels || []);
-      setHotelRates(ratesResult.rates || []);
-      if (ratesResult.error && /does not exist|schema cache|relation/i.test(ratesResult.error)) {
-        toast.error(
-          "Table tarifs absente : exécutez supabase_public_hotel_rates_table.sql",
-          7000
-        );
-      }
     })();
     return () => {
       cancelled = true;
@@ -1145,30 +1064,15 @@ export function HotelHistoryPage() {
     });
   }, [rows, debouncedSearch]);
 
-  const handlePrint = useCallback(
-    (request) => {
-      const saved = normalizeResponsePayload(request.responsePayload).hotels;
-      let quoteHotels = saved.filter((h) => h.roomCategory);
-      if (!quoteHotels.some((h) => h.quote?.total != null)) {
-        const draft = buildResponseHotelsDraft(request, catalogHotels).map((item) => {
-          const prev = saved.find((s) => s.slot === item.slot || s.hotelName === item.hotelName);
-          return {
-            ...item,
-            roomCategory: prev?.roomCategory || item.roomCategory || "",
-          };
-        });
-        quoteHotels = computeQuotesForDraft(request, draft, hotelRates).filter(
-          (h) => h.roomCategory
-        );
-      }
-      const ok = printHotelRequest({
-        ...request,
-        quoteHotels,
-      });
-      if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer.");
-    },
-    [catalogHotels, hotelRates]
-  );
+  const handlePrint = useCallback((request) => {
+    const saved = normalizeResponsePayload(request.responsePayload).hotels;
+    const quoteHotels = saved.filter((h) => proposalIsReady(h));
+    const ok = printHotelRequest({
+      ...request,
+      quoteHotels,
+    });
+    if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer.");
+  }, []);
 
   const handleEdit = useCallback((request) => {
     setEditDraft({ ...request });
@@ -1196,9 +1100,15 @@ export function HotelHistoryPage() {
 
   const handleSaveReply = useCallback(async () => {
     if (!replyRequest || !supabase) return;
+    const hotels = computeQuotesForDraft(replyRequest, replyHotelsDraft).filter((h) =>
+      proposalIsReady(h)
+    );
+    if (hotels.length === 0) {
+      toast.error("Ajoutez au moins un hôtel avec un prix.");
+      return;
+    }
     setSaving(true);
     try {
-      const hotels = computeQuotesForDraft(replyRequest, replyHotelsDraft, hotelRates);
       const response_payload = {
         hotels,
         updatedAt: new Date().toISOString(),
@@ -1234,7 +1144,7 @@ export function HotelHistoryPage() {
     } finally {
       setSaving(false);
     }
-  }, [replyRequest, replyHotelsDraft, hotelRates, load]);
+  }, [replyRequest, replyHotelsDraft, load]);
 
   const handleSaveEdit = useCallback(async () => {
     if (!editDraft || !supabase) return;
@@ -1334,7 +1244,7 @@ export function HotelHistoryPage() {
         request={replyRequest}
         hotelsDraft={replyHotelsDraft}
         setHotelsDraft={setReplyHotelsDraft}
-        rates={hotelRates}
+        catalogHotels={catalogHotels}
         onClose={() => {
           if (!saving) {
             setReplyRequest(null);
