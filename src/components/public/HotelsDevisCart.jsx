@@ -273,6 +273,10 @@ export function HotelsDevisCart({
       toast.error("Veuillez saisir une adresse e-mail valide.");
       return;
     }
+    if (!client.budget.trim()) {
+      toast.error("Veuillez indiquer votre budget maximum pour le séjour.");
+      return;
+    }
     if (!supabase || !__SUPABASE_DEBUG__.isConfigured) {
       toast.error("Service temporairement indisponible. Réessayez plus tard.");
       return;
@@ -684,12 +688,14 @@ export function HotelsDevisCart({
                   />
                 </label>
                 <label className="block text-sm font-semibold text-catalog-ink sm:col-span-2">
-                  Budget total du séjour
+                  Budget maximum du séjour <span className="text-orange-500">*</span>
                   <input
+                    required
                     value={client.budget}
                     onChange={(e) => setClient((p) => ({ ...p, budget: e.target.value }))}
-                    placeholder="Ex. 1 500 € pour tout le séjour"
+                    placeholder="Ex. 1 500 € maximum pour tout le séjour"
                     className={fieldClass}
+                    aria-required="true"
                   />
                 </label>
               </div>

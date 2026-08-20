@@ -128,6 +128,11 @@ export function PublicHotelRequestPage() {
       return;
     }
 
+    if (!form.budget.trim()) {
+      toast.error("Veuillez indiquer votre budget maximum pour le séjour.");
+      return;
+    }
+
     if (!supabase || !__SUPABASE_DEBUG__.isConfigured) {
       toast.error("Service temporairement indisponible. Réessayez plus tard.");
       return;
@@ -431,14 +436,18 @@ export function PublicHotelRequestPage() {
             </div>
 
             <div className="mt-5 border-t border-indigo-100 pt-5">
-              <FieldLabel htmlFor="hd-budget">Budget estimé</FieldLabel>
+              <FieldLabel htmlFor="hd-budget" required>
+                Budget maximum
+              </FieldLabel>
               <input
                 id="hd-budget"
                 type="text"
+                required
                 value={form.budget}
                 onChange={(e) => updateField("budget", e.target.value)}
-                placeholder="Ex. 1 500 € pour le séjour"
+                placeholder="Ex. 1 500 € maximum pour le séjour"
                 className={inputClass}
+                aria-required="true"
               />
               <p className="mt-3 rounded-xl border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-900">
                 Formule : All inclusive
