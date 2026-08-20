@@ -965,6 +965,7 @@ function HotelResponseModal({
   const fullName =
     [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
   const boardLabels = boardLabelsFromViewModel(request);
+  const nightsCount = countHotelNights(request.arrivalDate, request.departureDate);
 
   const updateProposal = (index, patch) => {
     setHotelsDraft((prev) => prev.map((h, i) => (i === index ? { ...h, ...patch } : h)));
@@ -1026,6 +1027,11 @@ function HotelResponseModal({
               <dt className="text-[11px] font-bold uppercase text-slate-500">Séjour</dt>
               <dd className="font-semibold text-slate-950">
                 {formatHotelStayDate(request.arrivalDate)} → {formatHotelStayDate(request.departureDate)}
+                {nightsCount > 0 ? (
+                  <span className="mt-0.5 block text-sm font-bold text-violet-800">
+                    {nightsCount} nuit{nightsCount > 1 ? "s" : ""}
+                  </span>
+                ) : null}
               </dd>
             </div>
             <div>
