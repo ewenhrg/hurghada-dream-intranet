@@ -193,6 +193,24 @@ function isHotelRequestConfirmed(request) {
   return Boolean(payload.confirmedHotel && proposalIsReady(payload.confirmedHotel));
 }
 
+function requestCreatedOnOrAfterToday(request) {
+  const raw = String(request?.createdAt || "").trim();
+  if (!raw) return false;
+  const created = new Date(raw);
+  if (Number.isNaN(created.getTime())) return false;
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return created.getTime() >= start.getTime();
+}
+
+/** Nouvelle demande sans réponse (à partir d’aujourd’hui). */
+function isHotelRequestPending(request) {
+  if (isHotelRequestConfirmed(request)) return false;
+  if (!requestCreatedOnOrAfterToday(request)) return false;
+  const payload = normalizeResponsePayload(request?.responsePayload);
+  return !payload.hotels.some((h) => proposalIsReady(h));
+}
+
 /** Réponse préparée, pas encore envoyée ni confirmée. */
 function isHotelRequestReadyToSend(request) {
   if (isHotelRequestConfirmed(request)) return false;
@@ -428,6 +446,11 @@ function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit, onMark
             {request.wantsCustomOffer ? (
               <span className="mt-2 inline-block rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-950 ring-1 ring-amber-400/50">
                 Offre personnalisée demandée
+              </span>
+            ) : null}
+            {!hasResponse && !confirmedHotel ? (
+              <span className="mt-2 ml-0 inline-block rounded-full bg-slate-200 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-800 ring-1 ring-slate-300/70 sm:ml-2">
+                En attente
               </span>
             ) : null}
             {hasResponse && !confirmedHotel && !sentToClient ? (
@@ -1417,7 +1440,7 @@ export function HotelHistoryPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
-  const [statusFilter, setStatusFilter] = useState("all"); // all | to_send | sent | confirmed
+  const [statusFilter, setStatusFilter] = useState("all"); // all | pending | to_send | sent | confirmed
   const [markingSentId, setMarkingSentId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [replyRequest, setReplyRequest] = useState(null);
@@ -1515,6 +1538,10 @@ export function HotelHistoryPage() {
     () => rows.filter((r) => isHotelRequestConfirmed(r)).length,
     [rows]
   );
+  const pendingCount = useMemo(
+    () => rows.filter((r) => isHotelRequestPending(r)).length,
+    [rows]
+  );
   const toSendCount = useMemo(
     () => rows.filter((r) => isHotelRequestReadyToSend(r)).length,
     [rows]
@@ -1528,6 +1555,8 @@ export function HotelHistoryPage() {
     let list = rows;
     if (statusFilter === "confirmed") {
       list = list.filter((r) => isHotelRequestConfirmed(r));
+    } else if (statusFilter === "pending") {
+      list = list.filter((r) => isHotelRequestPending(r));
     } else if (statusFilter === "to_send") {
       list = list.filter((r) => isHotelRequestReadyToSend(r));
     } else if (statusFilter === "sent") {
@@ -1678,6 +1707,7 @@ export function HotelHistoryPage() {
       setReplyRequest(null);
       setReplyHotelsDraft([]);
       setReplyAgentNotes("");
+      setStatusFilter("to_send");
       await load();
     } catch (e) {
       logger.error("HotelHistoryPage reply save:", e);
@@ -1903,6 +1933,15 @@ export function HotelHistoryPage() {
           <Pill
             type="button"
             tone="light"
+            active={statusFilter === "pending"}
+            onClick={() => setStatusFilter("pending")}
+            className="!px-3.5 !py-2 !text-xs"
+          >
+            En attente ({pendingCount})
+          </Pill>
+          <Pill
+            type="button"
+            tone="light"
             active={statusFilter === "to_send"}
             onClick={() => setStatusFilter("to_send")}
             className="!px-3.5 !py-2 !text-xs"
@@ -1947,11 +1986,13 @@ export function HotelHistoryPage() {
             {filteredRows.length} demande{filteredRows.length > 1 ? "s" : ""}
             {statusFilter === "confirmed"
               ? " confirmée" + (filteredRows.length > 1 ? "s" : "")
-              : statusFilter === "to_send"
-                ? " à envoyer"
-                : statusFilter === "sent"
-                  ? " envoyée" + (filteredRows.length > 1 ? "s" : "")
-                  : ""}
+              : statusFilter === "pending"
+                ? " en attente"
+                : statusFilter === "to_send"
+                  ? " à envoyer"
+                  : statusFilter === "sent"
+                    ? " envoyée" + (filteredRows.length > 1 ? "s" : "")
+                    : ""}
             {debouncedSearch.trim() ? " · recherche" : ""}
             {statusFilter !== "all" || debouncedSearch.trim() ? (
               <>
@@ -1980,11 +2021,13 @@ export function HotelHistoryPage() {
         <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-950">
           {statusFilter === "confirmed"
             ? "Aucune confirmation pour le moment."
-            : statusFilter === "to_send"
-              ? "Aucun devis à envoyer pour le moment. Préparez d’abord une réponse."
-              : statusFilter === "sent"
-                ? "Aucun devis marqué comme envoyé pour le moment."
-                : "Aucune demande ne correspond à la recherche."}
+            : statusFilter === "pending"
+              ? "Aucune nouvelle demande en attente aujourd’hui."
+              : statusFilter === "to_send"
+                ? "Aucun devis à envoyer pour le moment. Préparez d’abord une réponse."
+                : statusFilter === "sent"
+                  ? "Aucun devis marqué comme envoyé pour le moment."
+                  : "Aucune demande ne correspond à la recherche."}
         </div>
       ) : (
         <div className="space-y-8">
