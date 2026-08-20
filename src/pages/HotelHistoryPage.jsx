@@ -114,6 +114,8 @@ function normalizeResponsePayload(raw) {
     confirmedAt: base.confirmedAt || "",
     flights: normalizeFlights(base.flights),
     zeroTracas: normalizeZeroTracas(base.zeroTracas),
+    sentToClient: base.sentToClient === true,
+    sentAt: base.sentAt || "",
   };
 }
 
@@ -189,6 +191,21 @@ function flightsAreComplete(flights) {
 function isHotelRequestConfirmed(request) {
   const payload = normalizeResponsePayload(request?.responsePayload);
   return Boolean(payload.confirmedHotel && proposalIsReady(payload.confirmedHotel));
+}
+
+/** Réponse préparée, pas encore envoyée ni confirmée. */
+function isHotelRequestReadyToSend(request) {
+  if (isHotelRequestConfirmed(request)) return false;
+  const payload = normalizeResponsePayload(request?.responsePayload);
+  if (payload.sentToClient) return false;
+  return payload.hotels.some((h) => proposalIsReady(h));
+}
+
+/** Devis marqué comme envoyé au client (pas encore confirmé). */
+function isHotelRequestSent(request) {
+  if (isHotelRequestConfirmed(request)) return false;
+  const payload = normalizeResponsePayload(request?.responsePayload);
+  return payload.sentToClient === true && payload.hotels.some((h) => proposalIsReady(h));
 }
 
 function hotelProposalKey(hotel, index = 0) {
@@ -379,7 +396,7 @@ function viewModelToPayload(vm) {
   };
 }
 
-function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit }) {
+function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit, onMarkSent, markingSent }) {
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
   const boardLabels = boardLabelsFromViewModel(request);
   const hotels = [
@@ -394,6 +411,7 @@ function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit }) {
   const confirmedHotel = payload.confirmedHotel && proposalIsReady(payload.confirmedHotel)
     ? payload.confirmedHotel
     : null;
+  const sentToClient = payload.sentToClient === true;
   const responseTotals = readyHotels
     .map((h) => `${h.hotelName}: ${formatQuoteMoney(h.quote.total, h.quote.currency)}`)
     .join(" · ");
@@ -412,9 +430,17 @@ function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit }) {
                 Offre personnalisée demandée
               </span>
             ) : null}
-            {hasResponse && !confirmedHotel ? (
-              <span className="mt-2 ml-0 inline-block rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-950 ring-1 ring-emerald-400/50 sm:ml-2">
-                Réponse préparée
+            {hasResponse && !confirmedHotel && !sentToClient ? (
+              <span className="mt-2 ml-0 inline-block rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-950 ring-1 ring-amber-400/50 sm:ml-2">
+                À envoyer au client
+              </span>
+            ) : null}
+            {hasResponse && !confirmedHotel && sentToClient ? (
+              <span className="mt-2 ml-0 inline-block rounded-full bg-sky-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-950 ring-1 ring-sky-400/50 sm:ml-2">
+                Envoyé
+                {payload.sentAt
+                  ? ` · ${new Date(payload.sentAt).toLocaleDateString("fr-FR")}`
+                  : ""}
               </span>
             ) : null}
             {confirmedHotel ? (
@@ -441,6 +467,24 @@ function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit }) {
             </p>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
+            {hasResponse && !confirmedHotel ? (
+              <label
+                className={`inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-bold transition ${
+                  sentToClient
+                    ? "border-sky-400 bg-sky-50 text-sky-950"
+                    : "border-amber-300 bg-amber-50 text-amber-950 hover:border-amber-400"
+                } ${markingSent ? "opacity-60" : ""}`}
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                  checked={sentToClient}
+                  disabled={markingSent}
+                  onChange={(e) => onMarkSent?.(request, e.target.checked)}
+                />
+                Envoyé
+              </label>
+            ) : null}
             <GhostBtn type="button" onClick={() => onPrint(request)}>
               Imprimer
             </GhostBtn>
@@ -1373,7 +1417,8 @@ export function HotelHistoryPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
-  const [statusFilter, setStatusFilter] = useState("all"); // all | confirmed
+  const [statusFilter, setStatusFilter] = useState("all"); // all | to_send | sent | confirmed
+  const [markingSentId, setMarkingSentId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [replyRequest, setReplyRequest] = useState(null);
   const [replyHotelsDraft, setReplyHotelsDraft] = useState([]);
@@ -1470,11 +1515,23 @@ export function HotelHistoryPage() {
     () => rows.filter((r) => isHotelRequestConfirmed(r)).length,
     [rows]
   );
+  const toSendCount = useMemo(
+    () => rows.filter((r) => isHotelRequestReadyToSend(r)).length,
+    [rows]
+  );
+  const sentCount = useMemo(
+    () => rows.filter((r) => isHotelRequestSent(r)).length,
+    [rows]
+  );
 
   const filteredRows = useMemo(() => {
     let list = rows;
     if (statusFilter === "confirmed") {
       list = list.filter((r) => isHotelRequestConfirmed(r));
+    } else if (statusFilter === "to_send") {
+      list = list.filter((r) => isHotelRequestReadyToSend(r));
+    } else if (statusFilter === "sent") {
+      list = list.filter((r) => isHotelRequestSent(r));
     }
     const q = debouncedSearch.trim().toLowerCase();
     if (!q) return list;
@@ -1592,6 +1649,8 @@ export function HotelHistoryPage() {
         confirmedAt: confirmedAt || undefined,
         flights: prev.flights,
         zeroTracas: prev.zeroTracas,
+        sentToClient: prev.sentToClient === true,
+        sentAt: prev.sentAt || undefined,
         updatedAt: new Date().toISOString(),
       };
       const { error: updateError } = await supabase
@@ -1679,6 +1738,8 @@ export function HotelHistoryPage() {
           confirmedAt: new Date().toISOString(),
           flights,
           zeroTracas,
+          sentToClient: payload.sentToClient === true,
+          sentAt: payload.sentAt || undefined,
           updatedAt: new Date().toISOString(),
         };
         const { error: updateError } = await supabase
@@ -1723,6 +1784,54 @@ export function HotelHistoryPage() {
       }
     },
     [confirmRequest, confirmFlights, confirmZeroTracas, load]
+  );
+
+  const handleMarkSent = useCallback(
+    async (request, sent) => {
+      if (!request?.supabaseId || !supabase) return;
+      const prev = normalizeResponsePayload(request.responsePayload);
+      if (!prev.hotels.some((h) => proposalIsReady(h))) {
+        toast.warning("Préparez d’abord une réponse avant de marquer comme envoyé.");
+        return;
+      }
+      setMarkingSentId(request.id);
+      try {
+        const response_payload = {
+          hotels: prev.hotels,
+          agentNotes: prev.agentNotes,
+          confirmedHotel: prev.confirmedHotel,
+          confirmedAt: prev.confirmedAt || undefined,
+          flights: prev.flights,
+          zeroTracas: prev.zeroTracas,
+          sentToClient: sent === true,
+          sentAt: sent ? new Date().toISOString() : undefined,
+          updatedAt: new Date().toISOString(),
+        };
+        const { error: updateError } = await supabase
+          .from("public_hotel_requests")
+          .update({
+            response_payload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", request.supabaseId)
+          .eq("site_key", SITE_KEY);
+
+        if (updateError) {
+          logger.error("HotelHistoryPage mark sent:", updateError);
+          toast.error(updateError.message || "Impossible de mettre à jour le statut.");
+          return;
+        }
+        toast.success(sent ? "Devis marqué comme envoyé." : "Devis remis dans « À envoyer ».");
+        if (sent) setStatusFilter("sent");
+        await load();
+      } catch (e) {
+        logger.error("HotelHistoryPage mark sent:", e);
+        toast.error("Erreur inattendue.");
+      } finally {
+        setMarkingSentId(null);
+      }
+    },
+    [load]
   );
 
   const handleSaveEdit = useCallback(async () => {
@@ -1794,6 +1903,24 @@ export function HotelHistoryPage() {
           <Pill
             type="button"
             tone="light"
+            active={statusFilter === "to_send"}
+            onClick={() => setStatusFilter("to_send")}
+            className="!px-3.5 !py-2 !text-xs"
+          >
+            À envoyer au client ({toSendCount})
+          </Pill>
+          <Pill
+            type="button"
+            tone="light"
+            active={statusFilter === "sent"}
+            onClick={() => setStatusFilter("sent")}
+            className="!px-3.5 !py-2 !text-xs"
+          >
+            Envoyé ({sentCount})
+          </Pill>
+          <Pill
+            type="button"
+            tone="light"
             active={statusFilter === "confirmed"}
             onClick={() => setStatusFilter("confirmed")}
             className="!px-3.5 !py-2 !text-xs"
@@ -1818,9 +1945,15 @@ export function HotelHistoryPage() {
           />
           <p className="mt-2 text-[11px] font-medium text-indigo-900/80">
             {filteredRows.length} demande{filteredRows.length > 1 ? "s" : ""}
-            {statusFilter === "confirmed" ? " confirmée" + (filteredRows.length > 1 ? "s" : "") : ""}
+            {statusFilter === "confirmed"
+              ? " confirmée" + (filteredRows.length > 1 ? "s" : "")
+              : statusFilter === "to_send"
+                ? " à envoyer"
+                : statusFilter === "sent"
+                  ? " envoyée" + (filteredRows.length > 1 ? "s" : "")
+                  : ""}
             {debouncedSearch.trim() ? " · recherche" : ""}
-            {statusFilter === "confirmed" || debouncedSearch.trim() ? (
+            {statusFilter !== "all" || debouncedSearch.trim() ? (
               <>
                 {" · "}
                 <button
@@ -1847,7 +1980,11 @@ export function HotelHistoryPage() {
         <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-950">
           {statusFilter === "confirmed"
             ? "Aucune confirmation pour le moment."
-            : "Aucune demande ne correspond à la recherche."}
+            : statusFilter === "to_send"
+              ? "Aucun devis à envoyer pour le moment. Préparez d’abord une réponse."
+              : statusFilter === "sent"
+                ? "Aucun devis marqué comme envoyé pour le moment."
+                : "Aucune demande ne correspond à la recherche."}
         </div>
       ) : (
         <div className="space-y-8">
@@ -1859,6 +1996,8 @@ export function HotelHistoryPage() {
               onReply={handleReply}
               onConfirm={handleConfirmOpen}
               onEdit={handleEdit}
+              onMarkSent={handleMarkSent}
+              markingSent={markingSentId === request.id}
             />
           ))}
         </div>
