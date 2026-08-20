@@ -9,7 +9,7 @@ import {
   getQuoteSiteKeysForSync,
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
-import { canAccessHotelsPage, hasFullIntranetAccess } from "./constants/permissions";
+import { canAccessHotelsPage, canAccessHotelHistoryPage, hasFullIntranetAccess } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS, normalizeQuoteItemsFromDb } from "./utils";
 import { loadUserFromSession } from "./utils/userPermissions";
 import {
@@ -109,6 +109,14 @@ export default function App() {
     if (!user || tab !== "activity-update") return;
     if (user.canAccessActivities === false || user.canAccessActivityPrices !== true) {
       setTab(user.canAccessActivities !== false ? "activities" : "devis");
+    }
+  }, [user, tab]);
+
+  /** Historique hôtel : Amr, Karim, Ewen, Sara, Mayar, Léa uniquement. */
+  useEffect(() => {
+    if (!user || tab !== "historique-hotel") return;
+    if (!canAccessHotelHistoryPage(user)) {
+      setTab(user.canAccessHistory !== false ? "history" : "devis");
     }
   }, [user, tab]);
 
@@ -1432,7 +1440,7 @@ export default function App() {
                   </span>
                 </Pill>
                 )}
-                {user?.canAccessHistory !== false && (
+                {canAccessHotelHistoryPage(user) && (
                 <Pill active={tab === "historique-hotel"} onClick={() => setTab("historique-hotel")}>
                   {t("nav.hotelHistory")}
                 </Pill>
@@ -1612,9 +1620,9 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "historique-hotel" && user?.canAccessHistory !== false && (
+        {tab === "historique-hotel" && canAccessHotelHistoryPage(user) && (
           <Section title={t("page.hotelHistory.title")} subtitle={t("page.hotelHistory.subtitle")}>
-            <HotelHistoryPage />
+            <HotelHistoryPage user={user} />
           </Section>
         )}
 

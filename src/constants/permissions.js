@@ -146,6 +146,25 @@ export function canAccessHotelsPage(user) {
   return hasFullIntranetAccess(user);
 }
 
+/** Accès page Historique hôtel — Amr, Karim, Ewen, Sara, Mayar, Léa uniquement. */
+export function canAccessHotelHistoryPage(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return (
+    n === "amr" ||
+    n === "karim" ||
+    n === "ewen" ||
+    n === "sara" ||
+    n === "mayar" ||
+    n === "lea"
+  );
+}
+
+/** Supprimer une demande / devis hôtel (historique) — Ewen et Karim uniquement. */
+export function canDeleteHotelRequest(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "ewen" || n === "karim";
+}
+
 export function dbUserToSessionUser(dbUser) {
   if (!dbUser) return null;
   const session = {

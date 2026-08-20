@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Banknote, BedDouble, CheckCircle2, FileText, MessageSquareReply, Upload } from "lucide-react";
+import { Banknote, BedDouble, CheckCircle2, FileText, MessageSquareReply, Trash2, Upload } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -34,7 +34,11 @@ import {
   normalizeClientDocuments,
   serializeClientDocuments,
 } from "../utils/hotelRequestDocuments";
-import { cleanupExpiredHotelRequestDocuments } from "../utils/cleanupExpiredHotelRequestDocuments";
+import {
+  cleanupExpiredHotelRequestDocuments,
+  storageRefFromPublicUrl,
+} from "../utils/cleanupExpiredHotelRequestDocuments";
+import { canDeleteHotelRequest } from "../constants/permissions";
 
 const PAYMENT_PROOF_BUCKET = "documents";
 const PAYMENT_PROOF_FALLBACK_BUCKET = "Catalogue";
@@ -247,6 +251,13 @@ function isHotelRequestSent(request) {
   return payload.sentToClient === true && payload.hotels.some((h) => proposalIsReady(h));
 }
 
+/** Confirmation avec au moins un paiement enregistré (partiel ou total) — reste aussi dans Confirmations. */
+function isHotelRequestInPayerList(request) {
+  if (!isHotelRequestConfirmed(request)) return false;
+  const payload = normalizeResponsePayload(request?.responsePayload);
+  return normalizePayment(payload.payment).entries.length > 0;
+}
+
 function hotelProposalKey(hotel, index = 0) {
   return `${hotel?.slot || index + 1}::${String(hotel?.catalogSlug || "").trim()}::${String(hotel?.hotelName || "").trim()}`;
 }
@@ -445,6 +456,9 @@ function HotelRequestCard({
   markingSent,
   onPay,
   onDocuments,
+  canDelete,
+  onDelete,
+  deleting,
 }) {
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
   const boardLabels = boardLabelsFromViewModel(request);
@@ -612,6 +626,18 @@ function HotelRequestCard({
             <PrimaryBtn type="button" className="!min-h-0 !min-w-0 !text-sm !px-4 !py-2" onClick={() => onEdit(request)}>
               Modifier
             </PrimaryBtn>
+            {canDelete ? (
+              <GhostBtn
+                type="button"
+                onClick={() => onDelete?.(request)}
+                disabled={deleting}
+                className="!border-rose-300 !text-rose-800 hover:!bg-rose-50 disabled:opacity-50"
+                title="Supprimer ce devis (Ewen / Karim)"
+              >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                {deleting ? "Suppression…" : "Supprimer"}
+              </GhostBtn>
+            ) : null}
           </div>
         </div>
       </div>
@@ -1989,14 +2015,16 @@ function HotelDocumentsModal({ request, onClose, onAdd, onRemove, saving }) {
   );
 }
 
-export function HotelHistoryPage() {
+export function HotelHistoryPage({ user = null }) {
+  const canDelete = canDeleteHotelRequest(user);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
-  const [statusFilter, setStatusFilter] = useState("all"); // all | pending | to_send | sent | confirmed
+  const [statusFilter, setStatusFilter] = useState("all"); // all | pending | to_send | sent | confirmed | payer
   const [markingSentId, setMarkingSentId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [replyRequest, setReplyRequest] = useState(null);
   const [replyHotelsDraft, setReplyHotelsDraft] = useState([]);
@@ -2137,11 +2165,17 @@ export function HotelHistoryPage() {
     () => rows.filter((r) => isHotelRequestSent(r)).length,
     [rows]
   );
+  const payerCount = useMemo(
+    () => rows.filter((r) => isHotelRequestInPayerList(r)).length,
+    [rows]
+  );
 
   const filteredRows = useMemo(() => {
     let list = rows;
     if (statusFilter === "confirmed") {
       list = list.filter((r) => isHotelRequestConfirmed(r));
+    } else if (statusFilter === "payer") {
+      list = list.filter((r) => isHotelRequestInPayerList(r));
     } else if (statusFilter === "pending") {
       list = list.filter((r) => isHotelRequestPending(r));
     } else if (statusFilter === "to_send") {
@@ -2593,7 +2627,7 @@ export function HotelHistoryPage() {
             : `Paiement enregistré — reste ${formatQuoteMoney(nextRemaining, status.currency)}.`
         );
         setPayRequest(null);
-        setStatusFilter("confirmed");
+        setStatusFilter("payer");
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage payment:", e);
@@ -2603,6 +2637,77 @@ export function HotelHistoryPage() {
       }
     },
     [payRequest, load]
+  );
+
+  const handleDeleteRequest = useCallback(
+    async (request) => {
+      if (!canDeleteHotelRequest(user)) {
+        toast.error("Vous n’avez pas le droit de supprimer ce devis.");
+        return;
+      }
+      if (!request?.supabaseId || !supabase) return;
+      const fullName =
+        [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "ce client";
+      const short = String(request.id || "").slice(0, 8).toUpperCase();
+      const ok = window.confirm(
+        `Supprimer définitivement le devis de ${fullName}${short ? ` (réf. ${short})` : ""} ?\n\nCette action est irréversible.`
+      );
+      if (!ok) return;
+
+      setDeletingId(request.id);
+      try {
+        const payload = normalizeResponsePayload(request.responsePayload);
+        const refs = [];
+        for (const d of payload.clientDocuments || []) {
+          const storageRef = storageRefFromPublicUrl(d.url);
+          if (storageRef?.bucket && storageRef?.path) refs.push(storageRef);
+        }
+        for (const e of normalizePayment(payload.payment).entries) {
+          const storageRef = storageRefFromPublicUrl(e.proofUrl);
+          if (storageRef?.bucket && storageRef?.path) refs.push(storageRef);
+        }
+        if (refs.length > 0) {
+          const byBucket = new Map();
+          for (const r of refs) {
+            if (!byBucket.has(r.bucket)) byBucket.set(r.bucket, []);
+            byBucket.get(r.bucket).push(r.path);
+          }
+          for (const [bucket, paths] of byBucket) {
+            const unique = [...new Set(paths)];
+            const { error: storageError } = await supabase.storage.from(bucket).remove(unique);
+            if (storageError) {
+              logger.warn("HotelHistoryPage delete storage:", bucket, storageError);
+            }
+          }
+        }
+
+        const { error: deleteError } = await supabase
+          .from("public_hotel_requests")
+          .delete()
+          .eq("id", request.supabaseId)
+          .eq("site_key", SITE_KEY);
+
+        if (deleteError) {
+          logger.error("HotelHistoryPage delete:", deleteError);
+          toast.error(deleteError.message || "Impossible de supprimer le devis.");
+          return;
+        }
+
+        toast.success("Devis supprimé.");
+        if (payRequest?.id === request.id) setPayRequest(null);
+        if (docsRequest?.id === request.id) setDocsRequest(null);
+        if (replyRequest?.id === request.id) setReplyRequest(null);
+        if (confirmRequest?.id === request.id) setConfirmRequest(null);
+        if (editDraft?.id === request.id) setEditDraft(null);
+        await load();
+      } catch (e) {
+        logger.error("HotelHistoryPage delete:", e);
+        toast.error("Erreur inattendue.");
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [user, load, payRequest, docsRequest, replyRequest, confirmRequest, editDraft]
   );
 
   const buildResponsePayloadFromPrev = useCallback((prev, overrides = {}) => {
@@ -2861,6 +2966,15 @@ export function HotelHistoryPage() {
           >
             Confirmations ({confirmedCount})
           </Pill>
+          <Pill
+            type="button"
+            tone="light"
+            active={statusFilter === "payer"}
+            onClick={() => setStatusFilter("payer")}
+            className="!px-3.5 !py-2 !text-xs"
+          >
+            Payer ({payerCount})
+          </Pill>
         </div>
 
         <div>
@@ -2881,7 +2995,9 @@ export function HotelHistoryPage() {
           {filteredRows.length} demande{filteredRows.length > 1 ? "s" : ""}
             {statusFilter === "confirmed"
               ? " confirmée" + (filteredRows.length > 1 ? "s" : "")
-              : statusFilter === "pending"
+              : statusFilter === "payer"
+                ? " avec paiement"
+                : statusFilter === "pending"
                 ? " en attente"
                 : statusFilter === "to_send"
                   ? " à envoyer"
@@ -2916,7 +3032,9 @@ export function HotelHistoryPage() {
         <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-950">
           {statusFilter === "confirmed"
             ? "Aucune confirmation pour le moment."
-            : statusFilter === "pending"
+            : statusFilter === "payer"
+              ? "Aucun paiement enregistré pour le moment. Enregistrez un paiement depuis une confirmation."
+              : statusFilter === "pending"
               ? "Aucune nouvelle demande en attente aujourd’hui."
               : statusFilter === "to_send"
                 ? "Aucun devis à envoyer pour le moment. Préparez d’abord une réponse."
@@ -2938,6 +3056,9 @@ export function HotelHistoryPage() {
               markingSent={markingSentId === request.id}
               onPay={setPayRequest}
               onDocuments={setDocsRequest}
+              canDelete={canDelete}
+              onDelete={handleDeleteRequest}
+              deleting={deletingId === request.id}
             />
           ))}
         </div>
