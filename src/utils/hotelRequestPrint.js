@@ -1284,19 +1284,70 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
-/** Ouvre la fenêtre d’impression navigateur. */
+/**
+ * Impression sans popup (iframe cachée) — évite le bloqueur Chrome.
+ * @returns {boolean}
+ */
+function printHtmlDocument(html, delayMs = 500) {
+  if (!html || typeof document === "undefined") return false;
+  try {
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("title", "Impression document");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.cssText =
+      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;";
+    document.body.appendChild(iframe);
+
+    const win = iframe.contentWindow;
+    const doc = win?.document || iframe.contentDocument;
+    if (!win || !doc) {
+      iframe.remove();
+      return false;
+    }
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      try {
+        iframe.remove();
+      } catch {
+        // ignore
+      }
+    };
+
+    const runPrint = () => {
+      try {
+        win.focus();
+        win.print();
+      } catch {
+        cleanup();
+        return;
+      }
+      try {
+        win.addEventListener("afterprint", cleanup, { once: true });
+      } catch {
+        // ignore
+      }
+      // Filet de sécurité si afterprint n’est pas déclenché
+      setTimeout(cleanup, 90_000);
+    };
+
+    setTimeout(runPrint, Math.max(0, Number(delayMs) || 0));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Ouvre le dialogue d’impression navigateur (sans fenêtre popup). */
 export function printHotelRequest(request) {
   const html = generateHotelRequestHTML(request);
-  const win = window.open("", "_blank");
-  if (!win) return false;
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  // Laisse le temps aux polices Google de charger avant l’impression
-  setTimeout(() => {
-    win.print();
-  }, 700);
-  return true;
+  return printHtmlDocument(html, 600);
 }
 
 /**
@@ -1307,15 +1358,7 @@ export function printHotelRequest(request) {
 export function printHotelPaymentReceipt(request, options = null) {
   const html = generateHotelPaymentReceiptHTML(request, options);
   if (!html) return false;
-  const win = window.open("", "_blank");
-  if (!win) return false;
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  setTimeout(() => {
-    win.print();
-  }, 500);
-  return true;
+  return printHtmlDocument(html, 400);
 }
 
 function generateHotelPaymentReceiptHTML(request, options = null) {

@@ -201,18 +201,6 @@ function computeZeroTracasTotal(zeroTracas) {
   return z.manualTotal;
 }
 
-function flightsAreComplete(flights) {
-  const f = normalizeFlights(flights);
-  return Boolean(
-    f.arrivalFlightNumber &&
-      f.arrivalTime &&
-      f.arrivalDate &&
-      f.departureFlightNumber &&
-      f.departureTime &&
-      f.departureDate
-  );
-}
-
 function isHotelRequestConfirmed(request) {
   const payload = normalizeResponsePayload(request?.responsePayload);
   return Boolean(payload.confirmedHotel && proposalIsReady(payload.confirmedHotel));
@@ -1520,22 +1508,21 @@ function HotelConfirmModal({
             Vols
           </p>
           <p className="mt-1 text-sm font-medium text-slate-600">
-            Dates, numéros et horaires pour les transferts aéroport.
+            Optionnel — dates, numéros et horaires pour les transferts aéroport.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-bold text-slate-600">
-              Date d&apos;arrivée <span className="text-teal-600">*</span>
+              Date d&apos;arrivée
               <input
                 type="date"
                 value={flightValues.arrivalDate || ""}
                 onChange={(e) => updateFlight("arrivalDate", e.target.value)}
                 className={fieldClass}
                 disabled={saving}
-                required
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              Date de départ <span className="text-teal-600">*</span>
+              Date de départ
               <input
                 type="date"
                 value={flightValues.departureDate || ""}
@@ -1543,11 +1530,10 @@ function HotelConfirmModal({
                 onChange={(e) => updateFlight("departureDate", e.target.value)}
                 className={fieldClass}
                 disabled={saving}
-                required
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              N° vol arrivée <span className="text-teal-600">*</span>
+              N° vol arrivée
               <input
                 type="text"
                 autoComplete="off"
@@ -1556,22 +1542,20 @@ function HotelConfirmModal({
                 placeholder="Ex. AF1784"
                 className={fieldClass}
                 disabled={saving}
-                required
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              Heure d&apos;arrivée <span className="text-teal-600">*</span>
+              Heure d&apos;arrivée
               <input
                 type="time"
                 value={flightValues.arrivalTime}
                 onChange={(e) => updateFlight("arrivalTime", e.target.value)}
                 className={fieldClass}
                 disabled={saving}
-                required
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              N° vol départ <span className="text-teal-600">*</span>
+              N° vol départ
               <input
                 type="text"
                 autoComplete="off"
@@ -1580,18 +1564,16 @@ function HotelConfirmModal({
                 placeholder="Ex. AF1785"
                 className={fieldClass}
                 disabled={saving}
-                required
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              Heure de départ <span className="text-teal-600">*</span>
+              Heure de départ
               <input
                 type="time"
                 value={flightValues.departureTime}
                 onChange={(e) => updateFlight("departureTime", e.target.value)}
                 className={fieldClass}
                 disabled={saving}
-                required
               />
             </label>
           </div>
@@ -2471,7 +2453,7 @@ export function HotelHistoryPage({ user = null }) {
       zeroTracas: payload.zeroTracas,
       documentKind: isConfirmed ? "confirmation" : "devis",
       });
-      if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer.");
+      if (!ok) toast.error("Impossible d’ouvrir l’impression. Réessayez.");
   }, []);
 
   const handlePrintReceipt = useCallback((request, entryId = null) => {
@@ -2482,7 +2464,7 @@ export function HotelHistoryPage({ user = null }) {
       },
       entryId ? { entryId } : null
     );
-    if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer le reçu.");
+    if (!ok) toast.error("Impossible d’ouvrir l’impression du reçu. Réessayez.");
   }, []);
 
   const handleEdit = useCallback((request) => {
@@ -2527,7 +2509,7 @@ export function HotelHistoryPage({ user = null }) {
         quoteHotels: quotedHotels || [],
         agentNotes: String(agentNotes || "").trim(),
       });
-      if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer.");
+      if (!ok) toast.error("Impossible d’ouvrir l’impression. Réessayez.");
     },
     [replyRequest]
   );
@@ -2615,30 +2597,6 @@ export function HotelHistoryPage({ user = null }) {
         return;
       }
       const flights = normalizeFlights(flightsInput || confirmFlights);
-      if (!flightsAreComplete(flights)) {
-        if (!flights.arrivalDate) {
-          toast.error("Indiquez la date d’arrivée du vol.");
-          return;
-        }
-        if (!flights.departureDate) {
-          toast.error("Indiquez la date de départ du vol.");
-          return;
-        }
-        if (!flights.arrivalFlightNumber) {
-          toast.error("Indiquez le numéro de vol d’arrivée.");
-          return;
-        }
-        if (!flights.arrivalTime) {
-          toast.error("Indiquez l’heure d’arrivée du vol.");
-          return;
-        }
-        if (!flights.departureFlightNumber) {
-          toast.error("Indiquez le numéro de vol de départ.");
-          return;
-        }
-        toast.error("Indiquez l’heure de départ du vol.");
-        return;
-      }
       const zeroTracas = normalizeZeroTracas(zeroTracasInput || confirmZeroTracas);
       if (zeroTracas.enabled && !isZeroTracasComplete(zeroTracas)) {
         if (parseQtyInput(zeroTracas.visaCount) <= 0 && parseQtyInput(zeroTracas.simCount) <= 0) {
@@ -2701,7 +2659,7 @@ export function HotelHistoryPage({ user = null }) {
           responsePayload: response_payload,
         });
         if (!ok) {
-          toast.warning("Confirmation enregistrée, mais autorisez les popups pour imprimer.");
+          toast.warning("Confirmation enregistrée, mais l’impression n’a pas pu s’ouvrir. Réessayez via Imprimer.");
         } else {
           toast.success(`Confirmé : ${chosen.hotelName}`);
         }
@@ -2892,7 +2850,7 @@ export function HotelHistoryPage({ user = null }) {
           { entryId: entry.id }
         );
         if (!receiptOk) {
-          toast.warning("Paiement enregistré — autorisez les popups pour imprimer le reçu.");
+          toast.warning("Paiement enregistré — l’impression du reçu n’a pas pu s’ouvrir. Utilisez le bouton Reçu.");
         }
         setPayRequest(null);
         setStatusFilter("payer");
