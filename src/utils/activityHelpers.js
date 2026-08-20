@@ -444,6 +444,11 @@ export function isZeroTracasHorsZoneActivity(activityName) {
   return hasAllTokens(name, ["zero", "tracas", "hors", "zone"]);
 }
 
+/** Zero Tracas / Hors zone : prestation le jour d’arrivée (transfert aéroport). */
+export function isArrivalDayServiceActivity(activityName) {
+  return isZeroTracasActivity(activityName) || isZeroTracasHorsZoneActivity(activityName);
+}
+
 // Helper pour obtenir les prix ZERO TRACAS HORS ZONE (+5€ sur chaque option visa)
 export function getZeroTracasHorsZonePrices() {
   return {

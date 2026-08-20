@@ -39,6 +39,7 @@ import {
   getSpeedBoatIslandExtras,
   isZeroTracasActivity,
   isZeroTracasHorsZoneActivity,
+  isArrivalDayServiceActivity,
   getZeroTracasPrices,
   getZeroTracasHorsZonePrices,
   proseFromActivityNotes,
@@ -506,25 +507,27 @@ export function PublicCatalogueActivityPage({ activityId }) {
   );
 
   const stayBounds = useMemo(
-    () => getCatalogueStayActivityBounds(stay.arrivalDate, stay.departureDate),
-    [stay.arrivalDate, stay.departureDate]
+    () =>
+      getCatalogueStayActivityBounds(stay.arrivalDate, stay.departureDate, new Date(), {
+        includeArrivalDay: Boolean(activity && isArrivalDayServiceActivity(activity.name)),
+      }),
+    [stay.arrivalDate, stay.departureDate, activity]
   );
 
-  const dateOptions = useMemo(
-    () =>
-      activity
-        ? buildSelectableDateOptions(normalizedAvailableDays, 120, {
-            stopDateSet,
-            pushDateSet,
-            activity,
-            stayBounds,
-            earliestYmd: getEarliestBookableActivityDateYmd(),
-            departureDate: stay.departureDate,
-            requireStay: true,
-          })
-        : [],
-    [activity, normalizedAvailableDays, stopDateSet, pushDateSet, stayBounds, stay.departureDate]
-  );
+  const dateOptions = useMemo(() => {
+    if (!activity) return [];
+    const pinArrival = isArrivalDayServiceActivity(activity.name);
+    return buildSelectableDateOptions(normalizedAvailableDays, 120, {
+      stopDateSet,
+      pushDateSet,
+      activity,
+      stayBounds,
+      earliestYmd: pinArrival && stay.arrivalDate ? stay.arrivalDate : getEarliestBookableActivityDateYmd(),
+      departureDate: stay.departureDate,
+      requireStay: true,
+      skipEarliestCheck: pinArrival,
+    });
+  }, [activity, normalizedAvailableDays, stopDateSet, pushDateSet, stayBounds, stay.arrivalDate, stay.departureDate]);
 
   const daysSummary = useMemo(() => (activity ? formatActivityAvailableDaysSummary(activity) : ""), [activity]);
 
@@ -625,7 +628,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       return "Choisissez la taille du groupe (4, 5 ou 6 personnes) — prix forfaitaire.";
     }
     if (isZeroTracasHorsZoneActivity(activity.name) || isZeroTracasActivity(activity.name)) {
-      return "Indiquez le nombre de chaque prestation (même grille que sur le devis intranet). Les tarifs adulte/enfant ci-dessus ne s’appliquent pas à cette fiche.";
+      return "Indiquez le nombre de chaque prestation (même grille que sur le devis intranet). Les tarifs adulte/enfant ci-dessus ne s’appliquent pas à cette fiche.\nLa date est automatiquement fixée au jour d’arrivée.";
     }
     if (isPublicCatalogAirportStyleLine(activity)) {
       return "Forfait par trajet : choisissez aller simple ou aller-retour (comme sur le devis intranet). Les tarifs adulte/enfant en base ne s’appliquent pas.";
@@ -1190,6 +1193,15 @@ export function PublicCatalogueActivityPage({ activityId }) {
     if (date && !dateOptions.some((o) => o.value === date)) setDate("");
   }, [date, dateOptions]);
 
+  /** Zero Tracas : date = jour d’arrivée automatiquement. */
+  useEffect(() => {
+    if (!activity || !isArrivalDayServiceActivity(activity.name)) return;
+    const arrival = String(stay.arrivalDate || "").trim();
+    if (!arrival) return;
+    if (!dateOptions.some((o) => o.value === arrival)) return;
+    if (date !== arrival) setDate(arrival);
+  }, [activity, stay.arrivalDate, date, dateOptions]);
+
   useEffect(() => {
     function onStayEvent(e) {
       const next = e?.detail || loadPublicCatalogueStay();
@@ -1341,10 +1353,6 @@ export function PublicCatalogueActivityPage({ activityId }) {
       cancelled = true;
     };
   }, [activityId]);
-
-  const scrollToBooking = useCallback(() => {
-    document.getElementById("disponibilites")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
 
   const onCarouselScroll = useCallback(() => {
     const el = carouselRef.current;
@@ -1722,7 +1730,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
         </div>
 
         {/* Encart mobile « disponibilités » */}
-        <div id="disponibilites" className="mx-auto w-full max-w-7xl px-4 pb-28 sm:px-6 lg:hidden lg:px-8">
+        <div id="disponibilites" className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:hidden lg:px-8">
           <div className="catalog-elevated rounded-3xl border border-violet-900/12 bg-white p-5 shadow-soft shadow-violet-950/12">
             <h2 className="mb-4 font-catalog-display text-lg font-semibold text-catalog-ink">Réserver</h2>
             <BookingCardShell
@@ -1767,35 +1775,13 @@ export function PublicCatalogueActivityPage({ activityId }) {
           </div>
         </div>
 
-        {/* Barre bas mobile */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-violet-900/12 bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(76,29,149,0.14)] backdrop-blur-md lg:hidden">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-800">À partir de</p>
-              <p className="font-display text-lg font-bold text-slate-900 tabular-nums">
-                {headerPriceHint != null && headerPriceHint > 0 ? (
-                  formatMoney(headerPriceHint, activity.currency || "EUR")
-                ) : (
-                  <span className="text-base font-semibold text-violet-900">Sur devis</span>
-                )}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={scrollToBooking}
-              className="whitespace-nowrap rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-violet-900/25 transition hover:from-violet-900 hover:to-orange-500"
-            >
-              Réserver
-            </button>
-          </div>
-        </div>
       </main>
 
       <a
         href="https://wa.me/201062002850?text=Bonjour%20Hurghada%20Dream%2C%20"
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-24 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg transition hover:scale-105 active:scale-95 lg:bottom-6"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg transition hover:scale-105 active:scale-95"
         aria-label="WhatsApp"
       >
         <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden>

@@ -7,6 +7,7 @@ import {
   isDateSafeForDiving,
   isDivingActivityName,
 } from "../utils/quoteActivityDates.js";
+import { isArrivalDayServiceActivity } from "../utils/activityHelpers";
 
 /**
  * Hook personnalisé pour gérer le remplissage automatique des dates
@@ -84,6 +85,11 @@ export function useAutoFillDates(client, items, setItems, activitiesMap, stopSal
       const activity = activitiesMap.get(item.activityId);
       if (!activity) {
         return item;
+      }
+
+      if (isArrivalDayServiceActivity(activity.name) && client.arrivalDate) {
+        datesAssigned++;
+        return { ...item, date: client.arrivalDate };
       }
 
       let assignedDate = findDateForActivity(activity, true);

@@ -40,12 +40,21 @@ export function getEarliestBookableActivityDateYmd(now = new Date()) {
 /**
  * Fenêtre d’activités pendant le séjour :
  * lendemain d’arrivée → départ (inclus), croisée avec la date mini réservable.
+ * @param {string} arrivalDate
+ * @param {string} departureDate
+ * @param {Date} [now]
+ * @param {{ includeArrivalDay?: boolean }} [options]
+ *   includeArrivalDay : Zero Tracas — uniquement le jour d’arrivée (ignore J+2 / lendemain).
  * @returns {{ start: string, end: string, empty: boolean }|null}
  */
-export function getCatalogueStayActivityBounds(arrivalDate, departureDate, now = new Date()) {
+export function getCatalogueStayActivityBounds(arrivalDate, departureDate, now = new Date(), options = {}) {
   const arrival = String(arrivalDate || "").trim();
   const departure = String(departureDate || "").trim();
   if (!arrival || !departure || arrival > departure) return null;
+
+  if (options.includeArrivalDay) {
+    return { start: arrival, end: arrival, empty: false };
+  }
 
   const dayAfterArrival = new Date(`${arrival}T12:00:00`);
   if (Number.isNaN(dayAfterArrival.getTime())) return null;
@@ -95,14 +104,17 @@ export function getPublicCatalogDayStatus(dateStr, dayOfWeek, normalizedDays, op
  *   earliestYmd?: string,
  *   activity?: object|null,
  *   departureDate?: string,
+ *   skipEarliestCheck?: boolean,
  * }} [opts]
  */
 export function isPublicCatalogDateSelectable(dateStr, opts = {}) {
   const iso = String(dateStr || "").trim();
   if (!iso) return false;
 
-  const earliest = opts.earliestYmd || getEarliestBookableActivityDateYmd();
-  if (iso < earliest) return false;
+  if (!opts.skipEarliestCheck) {
+    const earliest = opts.earliestYmd || getEarliestBookableActivityDateYmd();
+    if (iso < earliest) return false;
+  }
 
   const bounds = opts.stayBounds;
   if (bounds) {
@@ -130,6 +142,8 @@ export function isPublicCatalogDateSelectable(dateStr, opts = {}) {
  *   stayBounds?: { start: string, end: string, empty?: boolean }|null,
  *   earliestYmd?: string,
  *   departureDate?: string,
+ *   requireStay?: boolean,
+ *   skipEarliestCheck?: boolean,
  * }} [options]
  * @returns {{ value: string, label: string, status: string }[]}
  */
@@ -154,6 +168,30 @@ export function buildSelectableDateOptions(normalizedDays, maxDaysAhead = 120, o
   const base = new Date();
   base.setHours(12, 0, 0, 0);
 
+  // Zero Tracas : une seule date (arrivée), même hors fenêtre « J+2 »
+  if (stayBounds && stayBounds.start === stayBounds.end && options.skipEarliestCheck) {
+    const value = stayBounds.start;
+    const dt = new Date(`${value}T12:00:00`);
+    if (!Number.isNaN(dt.getTime())) {
+      const dow = dt.getDay();
+      if (
+        isPublicCatalogDateSelectable(value, {
+          stayBounds,
+          earliestYmd: earliest,
+          activity: options.activity,
+          departureDate: options.departureDate,
+          skipEarliestCheck: true,
+        })
+      ) {
+        const status = getPublicCatalogDayStatus(value, dow, normalizedDays, options);
+        if (status === "available" || status === "push-sale") {
+          out.push({ value, label: formatter.format(dt), status });
+        }
+      }
+    }
+    return out;
+  }
+
   for (let i = 0; i < maxDaysAhead; i++) {
     const dt = new Date(base);
     dt.setDate(base.getDate() + i);
@@ -165,6 +203,7 @@ export function buildSelectableDateOptions(normalizedDays, maxDaysAhead = 120, o
         earliestYmd: earliest,
         activity: options.activity,
         departureDate: options.departureDate,
+        skipEarliestCheck: options.skipEarliestCheck,
       })
     ) {
       continue;

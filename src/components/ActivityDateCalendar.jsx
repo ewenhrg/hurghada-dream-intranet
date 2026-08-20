@@ -7,6 +7,7 @@ import {
   toDateSet,
 } from "../utils/activityAvailableDates";
 import { isDivingActivityName } from "../utils/divingSafety.js";
+import { isArrivalDayServiceActivity } from "../utils/activityHelpers";
 
 const WEEK_HEADERS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
@@ -81,10 +82,17 @@ export function ActivityDateCalendar({
   stayArrivalDate = "",
   stayDepartureDate = "",
 }) {
-  const earliestYmd = useMemo(() => getEarliestBookableActivityDateYmd(), []);
+  const pinToArrival = Boolean(activity && isArrivalDayServiceActivity(activity.name));
+  const earliestYmd = useMemo(() => {
+    if (pinToArrival && stayArrivalDate) return String(stayArrivalDate).trim();
+    return getEarliestBookableActivityDateYmd();
+  }, [pinToArrival, stayArrivalDate]);
   const stayBounds = useMemo(
-    () => getCatalogueStayActivityBounds(stayArrivalDate, stayDepartureDate),
-    [stayArrivalDate, stayDepartureDate]
+    () =>
+      getCatalogueStayActivityBounds(stayArrivalDate, stayDepartureDate, new Date(), {
+        includeArrivalDay: pinToArrival,
+      }),
+    [stayArrivalDate, stayDepartureDate, pinToArrival]
   );
   const isDiving = Boolean(activity && isDivingActivityName(activity.name));
 
@@ -154,14 +162,17 @@ export function ActivityDateCalendar({
         earliestYmd,
         activity,
         departureDate: stayDepartureDate,
+        skipEarliestCheck: pinToArrival,
       });
 
     let blockReason = "";
     if (!windowOk) {
-      if (iso < earliestYmd) {
+      if (!pinToArrival && iso < earliestYmd) {
         blockReason = "Réservation à partir d’après-demain uniquement";
       } else if (stayBounds && (iso < stayBounds.start || iso > stayBounds.end || stayBounds.empty)) {
-        blockReason = "Hors de votre séjour";
+        blockReason = pinToArrival
+          ? "Zero Tracas : uniquement le jour d’arrivée"
+          : "Hors de votre séjour";
       } else if (isDiving && stayDepartureDate) {
         blockReason = "Plongée trop proche du départ (min. 2 jours)";
       } else {
@@ -254,8 +265,11 @@ export function ActivityDateCalendar({
         <p className="mb-2 rounded-lg border border-violet-100 bg-violet-50/80 px-2.5 py-1.5 text-center text-[11px] font-semibold text-violet-950">
           Dates de votre séjour : {stayLabel}
           <span className="mt-0.5 block font-medium text-violet-800/90">
-            Excursions à partir du lendemain d’arrivée · pas demain
-            {isDiving ? " · plongée : min. 2 jours avant le départ" : ""}
+            {pinToArrival
+              ? "Zero Tracas : date fixée au jour d’arrivée"
+              : `Excursions à partir du lendemain d’arrivée · pas demain${
+                  isDiving ? " · plongée : min. 2 jours avant le départ" : ""
+                }`}
           </span>
         </p>
       ) : (
