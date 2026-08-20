@@ -6,7 +6,7 @@ import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
-import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
+import { GhostBtn, Pill, PrimaryBtn, TextInput } from "../components/ui";
 import { printHotelRequest } from "../utils/hotelRequestPrint";
 import { formatHotelStayDate } from "../utils/hotelRequestDates";
 import {
@@ -112,7 +112,40 @@ function normalizeResponsePayload(raw) {
     hotels: normalizedHotels,
     confirmedHotel,
     confirmedAt: base.confirmedAt || "",
+    flights: normalizeFlights(base.flights),
   };
+}
+
+function normalizeFlights(raw) {
+  const f = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  return {
+    arrivalFlightNumber: String(f.arrivalFlightNumber || "").trim(),
+    arrivalTime: String(f.arrivalTime || "").trim(),
+    departureFlightNumber: String(f.departureFlightNumber || "").trim(),
+    departureTime: String(f.departureTime || "").trim(),
+  };
+}
+
+const EMPTY_FLIGHTS = {
+  arrivalFlightNumber: "",
+  arrivalTime: "",
+  departureFlightNumber: "",
+  departureTime: "",
+};
+
+function flightsAreComplete(flights) {
+  const f = normalizeFlights(flights);
+  return Boolean(
+    f.arrivalFlightNumber &&
+      f.arrivalTime &&
+      f.departureFlightNumber &&
+      f.departureTime
+  );
+}
+
+function isHotelRequestConfirmed(request) {
+  const payload = normalizeResponsePayload(request?.responsePayload);
+  return Boolean(payload.confirmedHotel && proposalIsReady(payload.confirmedHotel));
 }
 
 function hotelProposalKey(hotel, index = 0) {
@@ -841,7 +874,16 @@ function HotelResponseModal({
   );
 }
 
-function HotelConfirmModal({ request, selectedKey, setSelectedKey, onClose, onConfirm, saving }) {
+function HotelConfirmModal({
+  request,
+  selectedKey,
+  setSelectedKey,
+  flights,
+  setFlights,
+  onClose,
+  onConfirm,
+  saving,
+}) {
   if (!request) return null;
 
   const payload = normalizeResponsePayload(request.responsePayload);
@@ -852,6 +894,14 @@ function HotelConfirmModal({ request, selectedKey, setSelectedKey, onClose, onCo
     selectedKey ||
     (payload.confirmedHotel ? hotelProposalKey(payload.confirmedHotel) : "") ||
     (options[0] ? hotelProposalKey(options[0], 0) : "");
+  const flightValues = flights || EMPTY_FLIGHTS;
+
+  const updateFlight = (key, value) => {
+    setFlights((prev) => ({ ...(prev || EMPTY_FLIGHTS), [key]: value }));
+  };
+
+  const fieldClass =
+    "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20";
 
   return createPortal(
     <div
@@ -876,8 +926,8 @@ function HotelConfirmModal({ request, selectedKey, setSelectedKey, onClose, onCo
         </div>
 
         <p className="mt-4 text-sm font-medium text-slate-700">
-          Quel hôtel le client a-t-il choisi parmi vos propositions ? Le devis final n’affichera que
-          cette option.
+          Quel hôtel le client a-t-il choisi parmi vos propositions ? Le document final n’affichera
+          que cette option.
         </p>
 
         {options.length === 0 ? (
@@ -921,13 +971,72 @@ function HotelConfirmModal({ request, selectedKey, setSelectedKey, onClose, onCo
           </ul>
         )}
 
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">
+            Vols
+          </p>
+          <p className="mt-1 text-sm font-medium text-slate-600">
+            Numéros et horaires pour les transferts aéroport.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-bold text-slate-600">
+              N° vol arrivée <span className="text-teal-600">*</span>
+              <input
+                type="text"
+                autoComplete="off"
+                value={flightValues.arrivalFlightNumber}
+                onChange={(e) => updateFlight("arrivalFlightNumber", e.target.value)}
+                placeholder="Ex. AF1784"
+                className={fieldClass}
+                disabled={saving}
+                required
+              />
+            </label>
+            <label className="block text-xs font-bold text-slate-600">
+              Heure d&apos;arrivée <span className="text-teal-600">*</span>
+              <input
+                type="time"
+                value={flightValues.arrivalTime}
+                onChange={(e) => updateFlight("arrivalTime", e.target.value)}
+                className={fieldClass}
+                disabled={saving}
+                required
+              />
+            </label>
+            <label className="block text-xs font-bold text-slate-600">
+              N° vol départ <span className="text-teal-600">*</span>
+              <input
+                type="text"
+                autoComplete="off"
+                value={flightValues.departureFlightNumber}
+                onChange={(e) => updateFlight("departureFlightNumber", e.target.value)}
+                placeholder="Ex. AF1785"
+                className={fieldClass}
+                disabled={saving}
+                required
+              />
+            </label>
+            <label className="block text-xs font-bold text-slate-600">
+              Heure de départ <span className="text-teal-600">*</span>
+              <input
+                type="time"
+                value={flightValues.departureTime}
+                onChange={(e) => updateFlight("departureTime", e.target.value)}
+                className={fieldClass}
+                disabled={saving}
+                required
+              />
+            </label>
+          </div>
+        </div>
+
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
             Annuler
           </GhostBtn>
           <PrimaryBtn
             type="button"
-            onClick={() => onConfirm?.(currentKey)}
+            onClick={() => onConfirm?.(currentKey, flightValues)}
             disabled={saving || !currentKey || options.length === 0}
             className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 border-0"
           >
@@ -1137,12 +1246,14 @@ export function HotelHistoryPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
+  const [statusFilter, setStatusFilter] = useState("all"); // all | confirmed
   const [editDraft, setEditDraft] = useState(null);
   const [replyRequest, setReplyRequest] = useState(null);
   const [replyHotelsDraft, setReplyHotelsDraft] = useState([]);
   const [replyAgentNotes, setReplyAgentNotes] = useState("");
   const [confirmRequest, setConfirmRequest] = useState(null);
   const [confirmSelectedKey, setConfirmSelectedKey] = useState("");
+  const [confirmFlights, setConfirmFlights] = useState(EMPTY_FLIGHTS);
   const [catalogHotels, setCatalogHotels] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -1227,33 +1338,55 @@ export function HotelHistoryPage() {
     };
   }, [load]);
 
+  const confirmedCount = useMemo(
+    () => rows.filter((r) => isHotelRequestConfirmed(r)).length,
+    [rows]
+  );
+
   const filteredRows = useMemo(() => {
+    let list = rows;
+    if (statusFilter === "confirmed") {
+      list = list.filter((r) => isHotelRequestConfirmed(r));
+    }
     const q = debouncedSearch.trim().toLowerCase();
-    if (!q) return rows;
+    if (!q) return list;
     const qDigits = digitsOnly(q);
-    return rows.filter((r) => {
+    return list.filter((r) => {
       const name = [r.firstName, r.lastName].join(" ").toLowerCase();
       const email = (r.email || "").toLowerCase();
       const phone = digitsOnly(r.phone);
       const hotels = [r.hotelOption1, r.hotelOption2, r.hotelOption3]
         .join(" ")
         .toLowerCase();
-      if (name.includes(q) || email.includes(q) || hotels.includes(q)) return true;
+      const confirmedName = String(
+        normalizeResponsePayload(r.responsePayload).confirmedHotel?.hotelName || ""
+      ).toLowerCase();
+      if (
+        name.includes(q) ||
+        email.includes(q) ||
+        hotels.includes(q) ||
+        confirmedName.includes(q)
+      ) {
+        return true;
+      }
       if (qDigits && phone.includes(qDigits)) return true;
       return false;
     });
-  }, [rows, debouncedSearch]);
+  }, [rows, debouncedSearch, statusFilter]);
 
   const handlePrint = useCallback((request) => {
     const payload = normalizeResponsePayload(request.responsePayload);
-    const quoteHotels =
-      payload.confirmedHotel && proposalIsReady(payload.confirmedHotel)
-        ? [payload.confirmedHotel]
-        : payload.hotels.filter((h) => proposalIsReady(h));
+    const isConfirmed =
+      payload.confirmedHotel && proposalIsReady(payload.confirmedHotel);
+    const quoteHotels = isConfirmed
+      ? [payload.confirmedHotel]
+      : payload.hotels.filter((h) => proposalIsReady(h));
     const ok = printHotelRequest({
       ...request,
       quoteHotels,
       agentNotes: payload.agentNotes,
+      flights: payload.flights,
+      documentKind: isConfirmed ? "confirmation" : "devis",
     });
     if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer.");
   }, []);
@@ -1283,6 +1416,7 @@ export function HotelHistoryPage() {
       : hotelProposalKey(options[0], 0);
     setConfirmRequest(request);
     setConfirmSelectedKey(initialKey);
+    setConfirmFlights(payload.flights || { ...EMPTY_FLIGHTS });
   }, []);
 
   const handlePrintDevisFromModal = useCallback(
@@ -1326,6 +1460,7 @@ export function HotelHistoryPage() {
         agentNotes: String(replyAgentNotes || "").trim(),
         confirmedHotel,
         confirmedAt: confirmedAt || undefined,
+        flights: prev.flights,
         updatedAt: new Date().toISOString(),
       };
       const { error: updateError } = await supabase
@@ -1363,7 +1498,7 @@ export function HotelHistoryPage() {
   }, [replyRequest, replyHotelsDraft, replyAgentNotes, load]);
 
   const handleConfirmSave = useCallback(
-    async (selectedKey) => {
+    async (selectedKey, flightsInput) => {
       if (!confirmRequest || !supabase) return;
       const payload = normalizeResponsePayload(confirmRequest.responsePayload);
       const options = payload.hotels.filter((h) => proposalIsReady(h));
@@ -1373,6 +1508,23 @@ export function HotelHistoryPage() {
         toast.error("Sélectionnez l’hôtel choisi par le client.");
         return;
       }
+      const flights = normalizeFlights(flightsInput || confirmFlights);
+      if (!flightsAreComplete(flights)) {
+        if (!flights.arrivalFlightNumber) {
+          toast.error("Indiquez le numéro de vol d’arrivée.");
+          return;
+        }
+        if (!flights.arrivalTime) {
+          toast.error("Indiquez l’heure d’arrivée du vol.");
+          return;
+        }
+        if (!flights.departureFlightNumber) {
+          toast.error("Indiquez le numéro de vol de départ.");
+          return;
+        }
+        toast.error("Indiquez l’heure de départ du vol.");
+        return;
+      }
       setSaving(true);
       try {
         const response_payload = {
@@ -1380,6 +1532,7 @@ export function HotelHistoryPage() {
           agentNotes: payload.agentNotes,
           confirmedHotel: chosen,
           confirmedAt: new Date().toISOString(),
+          flights,
           updatedAt: new Date().toISOString(),
         };
         const { error: updateError } = await supabase
@@ -1401,6 +1554,9 @@ export function HotelHistoryPage() {
           ...confirmRequest,
           quoteHotels: [chosen],
           agentNotes: payload.agentNotes,
+          flights,
+          documentKind: "confirmation",
+          responsePayload: response_payload,
         });
         if (!ok) {
           toast.warning("Confirmation enregistrée, mais autorisez les popups pour imprimer.");
@@ -1409,6 +1565,7 @@ export function HotelHistoryPage() {
         }
         setConfirmRequest(null);
         setConfirmSelectedKey("");
+        setConfirmFlights({ ...EMPTY_FLIGHTS });
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage confirm save:", e);
@@ -1417,7 +1574,7 @@ export function HotelHistoryPage() {
         setSaving(false);
       }
     },
-    [confirmRequest, load]
+    [confirmRequest, confirmFlights, load]
   );
 
   const handleSaveEdit = useCallback(async () => {
@@ -1475,21 +1632,63 @@ export function HotelHistoryPage() {
         Supabase et se mettent à jour en temps réel.
       </p>
 
-      <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/40 px-4 py-3 shadow-sm sm:px-5 sm:py-4">
-        <label htmlFor="hotel-history-search" className="block text-xs font-bold uppercase tracking-wide text-indigo-950">
-          Rechercher
-        </label>
-        <TextInput
-          id="hotel-history-search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Nom, e-mail, téléphone ou hôtel"
-          className="mt-2"
-        />
-        <p className="mt-2 text-[11px] font-medium text-indigo-900/80">
-          {filteredRows.length} demande{filteredRows.length > 1 ? "s" : ""}
-          {debouncedSearch.trim() ? " (filtrées)" : ""}
-        </p>
+      <div className="space-y-3 rounded-2xl border border-indigo-200/80 bg-indigo-50/40 px-4 py-3 shadow-sm sm:px-5 sm:py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Pill
+            type="button"
+            tone="light"
+            active={statusFilter === "all"}
+            onClick={() => setStatusFilter("all")}
+            className="!px-3.5 !py-2 !text-xs"
+          >
+            Tous ({rows.length})
+          </Pill>
+          <Pill
+            type="button"
+            tone="light"
+            active={statusFilter === "confirmed"}
+            onClick={() => setStatusFilter("confirmed")}
+            className="!px-3.5 !py-2 !text-xs"
+          >
+            Confirmations ({confirmedCount})
+          </Pill>
+        </div>
+
+        <div>
+          <label
+            htmlFor="hotel-history-search"
+            className="block text-xs font-bold uppercase tracking-wide text-indigo-950"
+          >
+            Rechercher
+          </label>
+          <TextInput
+            id="hotel-history-search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Nom, e-mail, téléphone ou hôtel"
+            className="mt-2"
+          />
+          <p className="mt-2 text-[11px] font-medium text-indigo-900/80">
+            {filteredRows.length} demande{filteredRows.length > 1 ? "s" : ""}
+            {statusFilter === "confirmed" ? " confirmée" + (filteredRows.length > 1 ? "s" : "") : ""}
+            {debouncedSearch.trim() ? " · recherche" : ""}
+            {statusFilter === "confirmed" || debouncedSearch.trim() ? (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  className="font-bold text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
+                  onClick={() => {
+                    setSearch("");
+                    setStatusFilter("all");
+                  }}
+                >
+                  Réinitialiser
+                </button>
+              </>
+            ) : null}
+          </p>
+        </div>
       </div>
 
       {rows.length === 0 ? (
@@ -1498,7 +1697,9 @@ export function HotelHistoryPage() {
         </div>
       ) : filteredRows.length === 0 ? (
         <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-950">
-          Aucune demande ne correspond à la recherche.
+          {statusFilter === "confirmed"
+            ? "Aucune confirmation pour le moment."
+            : "Aucune demande ne correspond à la recherche."}
         </div>
       ) : (
         <div className="space-y-8">
@@ -1538,10 +1739,13 @@ export function HotelHistoryPage() {
         request={confirmRequest}
         selectedKey={confirmSelectedKey}
         setSelectedKey={setConfirmSelectedKey}
+        flights={confirmFlights}
+        setFlights={setConfirmFlights}
         onClose={() => {
           if (!saving) {
             setConfirmRequest(null);
             setConfirmSelectedKey("");
+            setConfirmFlights({ ...EMPTY_FLIGHTS });
           }
         }}
         onConfirm={handleConfirmSave}

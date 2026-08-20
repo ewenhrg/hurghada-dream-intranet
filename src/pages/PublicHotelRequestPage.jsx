@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -58,7 +59,18 @@ function FieldLabel({ children, required, htmlFor }) {
 }
 
 export function PublicHotelRequestPage() {
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [searchParams] = useSearchParams();
+  const wantsProposition = useMemo(() => {
+    const raw = String(searchParams.get("proposition") || searchParams.get("offre") || "")
+      .trim()
+      .toLowerCase();
+    return raw === "1" || raw === "true" || raw === "oui" || raw === "yes";
+  }, [searchParams]);
+
+  const [form, setForm] = useState(() => ({
+    ...EMPTY_FORM,
+    wantsCustomOffer: wantsProposition,
+  }));
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 

@@ -36,6 +36,23 @@ export function generateHotelRequestHTML(request) {
       ? request.responsePayload.hotels
       : [];
 
+  const isConfirmation =
+    request.documentKind === "confirmation" ||
+    request.isConfirmation === true ||
+    Boolean(
+      request.responsePayload?.confirmedHotel &&
+        typeof request.responsePayload.confirmedHotel === "object" &&
+        String(request.responsePayload.confirmedHotel.hotelName || "").trim()
+    );
+  const docTitle = isConfirmation ? "CONFIRMATION" : "DEVIS";
+  const docBadgeLabel = isConfirmation ? "Confirmation hôtel" : "Devis hôtel";
+  const pageTitle = isConfirmation
+    ? `Confirmation hôtel — ${fullName}`
+    : `Devis hôtel — ${fullName}`;
+  const footerNote = isConfirmation
+    ? "Confirmation de séjour. Merci de votre confiance."
+    : "Devis indicatif, sous réserve de disponibilité et de confirmation définitive.";
+
   const hotelChoicesHtml = wantsOffer
     ? `<p class="soft-note">Offre personnalisée demandée — sans choix d’hôtel préétabli.</p>`
     : hotels.length > 0
@@ -58,12 +75,31 @@ export function generateHotelRequestHTML(request) {
   const childAges = request.childAges?.trim() || "";
   const checkIn = formatHotelStayDate(request.arrivalDate);
   const checkOut = formatHotelStayDate(request.departureDate);
+  const flightsRaw =
+    request.flights ||
+    request.responsePayload?.flights ||
+    null;
+  const flights =
+    flightsRaw && typeof flightsRaw === "object"
+      ? {
+          arrivalFlightNumber: String(flightsRaw.arrivalFlightNumber || "").trim(),
+          arrivalTime: String(flightsRaw.arrivalTime || "").trim(),
+          departureFlightNumber: String(flightsRaw.departureFlightNumber || "").trim(),
+          departureTime: String(flightsRaw.departureTime || "").trim(),
+        }
+      : null;
+  const hasFlights =
+    flights &&
+    (flights.arrivalFlightNumber ||
+      flights.arrivalTime ||
+      flights.departureFlightNumber ||
+      flights.departureTime);
 
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Devis hôtel — ${escapeHtml(fullName)}</title>
+  <title>${escapeHtml(pageTitle)}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -568,14 +604,14 @@ export function generateHotelRequestHTML(request) {
           <div class="brand-tag">Travel · Red Sea</div>
         </div>
         <div class="doc-badge">
-          <span class="doc-badge-label">Devis hôtel</span>
+          <span class="doc-badge-label">${escapeHtml(docBadgeLabel)}</span>
           <div class="doc-ref">
             <strong>Réf. ${escapeHtml(shortRef)}</strong>
             Émis le ${escapeHtml(issuedLabel)}
           </div>
         </div>
       </div>
-      <h1 class="hero-title">DEVIS</h1>
+      <h1 class="hero-title">${escapeHtml(docTitle)}</h1>
       <p class="hero-sub">Préparé pour ${escapeHtml(fullName)} · Demande du ${escapeHtml(createdLabel)}</p>
     </header>
 
@@ -600,6 +636,34 @@ export function generateHotelRequestHTML(request) {
           </div>
         </div>
       </section>
+
+      ${
+        hasFlights
+          ? `<section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Vols</h2>
+        </div>
+        <div class="info-grid">
+          <div class="info-cell">
+            <span class="info-label">Vol arrivée</span>
+            <div class="info-value">${escapeHtml(flights.arrivalFlightNumber || "—")}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Heure d’arrivée</span>
+            <div class="info-value">${escapeHtml(formatFlightTime(flights.arrivalTime) || "—")}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Vol départ</span>
+            <div class="info-value">${escapeHtml(flights.departureFlightNumber || "—")}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Heure de départ</span>
+            <div class="info-value">${escapeHtml(formatFlightTime(flights.departureTime) || "—")}</div>
+          </div>
+        </div>
+      </section>`
+          : ""
+      }
 
       <section class="section">
         <div class="section-head">
@@ -648,7 +712,7 @@ export function generateHotelRequestHTML(request) {
         ${hotelChoicesHtml}
       </section>
 
-      ${buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel })}
+      ${buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTitle, isConfirmation })}
 
       <section class="section">
         <div class="section-head">
@@ -674,7 +738,7 @@ export function generateHotelRequestHTML(request) {
     <footer class="footer">
       <div>
         <div class="footer-brand">Hurghada Dream</div>
-        <p class="footer-note">Devis indicatif, sous réserve de disponibilité et de confirmation définitive.</p>
+        <p class="footer-note">${escapeHtml(footerNote)}</p>
       </div>
       <div class="footer-stamp">Mer Rouge · Égypte</div>
     </footer>
@@ -683,11 +747,11 @@ export function generateHotelRequestHTML(request) {
 </html>`;
 }
 
-function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel }) {
+function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTitle = "DEVIS", isConfirmation = false }) {
   const rows = Array.isArray(quoteHotels) ? quoteHotels.filter((h) => h?.hotelName) : [];
   if (!rows.length) {
     return `<section class="section">
-      <div class="section-head"><h2 class="section-title">DEVIS</h2></div>
+      <div class="section-head"><h2 class="section-title">${escapeHtml(docTitle)}</h2></div>
       <p class="empty-quote">Aucune proposition tarifaire pour le moment.</p>
     </section>`;
   }
@@ -723,11 +787,13 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel }) {
         .filter(Boolean)
         .join(" · ");
 
+      const optionLabel = isConfirmation ? "Hôtel confirmé" : `Option ${index + 1}`;
+
       return `<article class="quote-card">
         <div class="quote-card-accent" aria-hidden="true"></div>
         <div class="quote-card-main">
           <div>
-            <p class="section-aside" style="margin:0 0 4px;letter-spacing:0.14em;text-transform:uppercase;font-size:10px;font-weight:700;">Option ${index + 1}</p>
+            <p class="section-aside" style="margin:0 0 4px;letter-spacing:0.14em;text-transform:uppercase;font-size:10px;font-weight:700;">${escapeHtml(optionLabel)}</p>
             <h3 class="quote-hotel">${escapeHtml(h.hotelName)}</h3>
             <p class="quote-room">${escapeHtml(roomLine)}</p>
           </div>
@@ -757,11 +823,23 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel }) {
 
   return `<section class="section">
     <div class="section-head">
-      <h2 class="section-title">DEVIS</h2>
-      <span class="section-aside">${rows.length} option${rows.length > 1 ? "s" : ""}</span>
+      <h2 class="section-title">${escapeHtml(docTitle)}</h2>
+      <span class="section-aside">${
+        isConfirmation
+          ? "1 hôtel"
+          : `${rows.length} option${rows.length > 1 ? "s" : ""}`
+      }</span>
     </div>
     <div class="quote-list">${cards}</div>
   </section>`;
+}
+
+function formatFlightTime(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const m = raw.match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return raw;
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
 }
 
 function escapeHtml(value) {

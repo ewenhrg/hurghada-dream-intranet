@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Check, ShoppingBag } from "lucide-react";
+import { ArrowRight, Check, ShoppingBag, Sparkles } from "lucide-react";
 import { AmenityChip, HotelAgePolicyBadge, HotelCover, StarRow } from "../components/public/HotelUI";
 import { HotelsDevisCart } from "../components/public/HotelsDevisCart";
 import { WHATSAPP_BASE } from "../components/public/hotelAmenities";
@@ -56,7 +56,7 @@ export function PublicHotelsCataloguePage() {
     return () => window.removeEventListener("hd-hotels-cart", sync);
   }, []);
 
-  const goToCustomOffer = () => navigate("/demande-hotel");
+  const goToCustomOffer = () => navigate("/demande-hotel?proposition=1");
   const openHotel = (id) => navigate(`/hotels/${encodeURIComponent(id)}`);
   const openCart = () => setOpenDrawerSignal((n) => n + 1);
 
@@ -99,6 +99,32 @@ export function PublicHotelsCataloguePage() {
           </button>
         </div>
       </header>
+
+      <section className="relative z-20 border-b border-orange-300/40 bg-gradient-to-r from-violet-900 via-fuchsia-800 to-orange-600 text-white shadow-[0_10px_30px_-16px_rgba(76,29,149,0.55)]">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:py-4 lg:px-8">
+          <div className="flex min-w-0 items-start gap-3 sm:items-center">
+            <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25 sm:mt-0">
+              <Sparkles className="h-5 w-5 text-amber-200" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-amber-200/95">
+                Sans préférence d’hôtel
+              </p>
+              <p className="mt-0.5 text-sm font-bold leading-snug text-white sm:text-base">
+                Je ne sais pas quel hôtel je veux — je veux une proposition
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={goToCustomOffer}
+            className="inline-flex min-h-[44px] w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-extrabold text-violet-900 shadow-md transition hover:bg-amber-50 active:scale-[0.99] sm:w-auto"
+          >
+            Recevoir une proposition
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+      </section>
 
       <section className="relative z-10 border-b border-violet-200/50 bg-white">
         <div className="relative mx-auto max-w-4xl px-4 pb-8 pt-8 text-center sm:px-6 sm:pb-14 sm:pt-16">
