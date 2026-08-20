@@ -162,6 +162,45 @@ export function generateHotelRequestHTML(request) {
   const showGrandTotal =
     isConfirmation && (hotelQuoteRows.length > 0 || zeroTracasTotal > 0);
   const grandTotal = Math.round((hotelTotal + zeroTracasTotal) * 100) / 100;
+
+  const depositInfo = (() => {
+    if (!isConfirmation || !(grandTotal > 0)) return null;
+    const arrivalIso = String(request.arrivalDate || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(arrivalIso)) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [ay, am, ad] = arrivalIso.split("-").map(Number);
+    const arrival = new Date(ay, am - 1, ad);
+    if (Number.isNaN(arrival.getTime())) return null;
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const daysUntilArrival = Math.round((arrival.getTime() - today.getTime()) / msPerDay);
+    if (daysUntilArrival <= 7) return null;
+    const due = new Date(today);
+    due.setDate(due.getDate() + 7);
+    const dueLabel = due.toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    const depositAmount = Math.round(grandTotal * 0.3 * 100) / 100;
+    return { dueLabel, depositAmount };
+  })();
+
+  const depositBlockHtml = depositInfo
+    ? `<div class="deposit-block">
+          <p class="deposit-title">Acompte</p>
+          <p class="deposit-text">
+            Arrivée dans plus d’une semaine : vous disposez de <strong>7 jours</strong> pour régler un
+            acompte de <strong>30&nbsp;%</strong>, soit
+            <strong>${escapeHtml(formatQuoteMoney(depositInfo.depositAmount, hotelCurrency))}</strong>.
+          </p>
+          <p class="deposit-deadline">
+            Date butoir de l’acompte :
+            <strong>${escapeHtml(depositInfo.dueLabel)}</strong>
+          </p>
+        </div>`
+    : "";
+
   const totalBlockHtml = showGrandTotal
     ? `<section class="section total-section">
         <div class="total-block">
@@ -189,7 +228,141 @@ export function generateHotelRequestHTML(request) {
               formatQuoteMoney(grandTotal, hotelCurrency)
             )}</span>
           </div>
+          ${depositBlockHtml}
         </div>
+      </section>`
+    : "";
+
+  const staySectionHtml = `<section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Séjour</h2>
+          <span class="section-aside">${escapeHtml(boardLabel)}</span>
+        </div>
+        <div class="stay-ribbon">
+          <div class="stay-point">
+            <span class="stay-label">Arrivée</span>
+            <div class="stay-date">${escapeHtml(checkIn)}</div>
+          </div>
+          <div class="stay-arrow">
+            <span>Séjour</span>
+            <span class="stay-arrow-line" aria-hidden="true"></span>
+          </div>
+          <div class="stay-point out">
+            <span class="stay-label">Départ</span>
+            <div class="stay-date">${escapeHtml(checkOut)}</div>
+          </div>
+        </div>
+      </section>`;
+
+  const flightsSectionHtml = hasFlights
+    ? `<section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Vols</h2>
+        </div>
+        <div class="info-grid">
+          <div class="info-cell">
+            <span class="info-label">Vol arrivée</span>
+            <div class="info-value">${escapeHtml(flights.arrivalFlightNumber || "—")}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Heure d’arrivée</span>
+            <div class="info-value">${escapeHtml(formatFlightTime(flights.arrivalTime) || "—")}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Vol départ</span>
+            <div class="info-value">${escapeHtml(flights.departureFlightNumber || "—")}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Heure de départ</span>
+            <div class="info-value">${escapeHtml(formatFlightTime(flights.departureTime) || "—")}</div>
+          </div>
+        </div>
+      </section>`
+    : "";
+
+  const clientSectionHtml = `<section class="section">
+        <div class="section-head">
+          <h2 class="section-title">${isConfirmation ? "Informations client" : "Coordonnées & voyageurs"}</h2>
+        </div>
+        <div class="info-grid">
+          <div class="info-cell">
+            <span class="info-label">Client</span>
+            <div class="info-value">${escapeHtml(fullName)}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Téléphone</span>
+            <div class="info-value">${escapeHtml(request.phone || "—")}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">E-mail</span>
+            <div class="info-value">${escapeHtml(request.email || "—")}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Formule</span>
+            <div class="info-value">${escapeHtml(boardLabel)}</div>
+          </div>
+          ${
+            isConfirmation
+              ? `<div class="info-cell">
+            <span class="info-label">Arrivée</span>
+            <div class="info-value">${escapeHtml(checkIn)}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Départ</span>
+            <div class="info-value">${escapeHtml(checkOut)}</div>
+          </div>`
+              : ""
+          }
+          <div class="info-cell">
+            <span class="info-label">Adultes</span>
+            <div class="info-value">${escapeHtml(adultsLabel)}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Enfants</span>
+            <div class="info-value">${escapeHtml(childrenLabel)}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Âge(s) enfants</span>
+            <div class="info-value ${childAges ? "" : "muted"}">${escapeHtml(childAges || "—")}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Référence</span>
+            <div class="info-value">#${escapeHtml(refId)}</div>
+          </div>
+        </div>
+      </section>`;
+
+  const hotelChoicesSectionHtml = `<section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Hôtels souhaités</h2>
+        </div>
+        ${hotelChoicesHtml}
+      </section>`;
+
+  const hotelQuoteSectionHtml = buildQuoteCardsHTML(quoteHotels, {
+    checkIn,
+    checkOut,
+    boardLabel,
+    docTitle,
+    isConfirmation,
+  });
+
+  const notesSectionHtml = `<section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Notes client</h2>
+        </div>
+        <div class="notes-box">${escapeHtml(request.notes?.trim() ? request.notes : "Aucune note.")}</div>
+      </section>`;
+
+  const agentNotesText = String(
+    request.agentNotes || request.responsePayload?.agentNotes || ""
+  ).trim();
+  const agentNotesSectionHtml = agentNotesText
+    ? `<section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Note</h2>
+        </div>
+        <div class="notes-box">${escapeHtml(agentNotesText)}</div>
       </section>`
     : "";
 
@@ -666,6 +839,37 @@ export function generateHotelRequestHTML(request) {
       color: var(--ink);
       font-variant-numeric: tabular-nums;
     }
+    .deposit-block {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--line-strong);
+    }
+    .deposit-title {
+      margin: 0 0 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .deposit-text {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.5;
+      color: var(--ink-soft);
+    }
+    .deposit-text strong { color: var(--ink); font-weight: 700; }
+    .deposit-deadline {
+      margin: 10px 0 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .deposit-deadline strong {
+      font-weight: 800;
+      color: var(--accent);
+    }
 
     /* Footer */
     .footer {
@@ -761,127 +965,25 @@ export function generateHotelRequestHTML(request) {
     </header>
 
     <div class="body">
-      <section class="section">
-        <div class="section-head">
-          <h2 class="section-title">Séjour</h2>
-          <span class="section-aside">${escapeHtml(boardLabel)}</span>
-        </div>
-        <div class="stay-ribbon">
-          <div class="stay-point">
-            <span class="stay-label">Arrivée</span>
-            <div class="stay-date">${escapeHtml(checkIn)}</div>
-          </div>
-          <div class="stay-arrow">
-            <span>Séjour</span>
-            <span class="stay-arrow-line" aria-hidden="true"></span>
-          </div>
-          <div class="stay-point out">
-            <span class="stay-label">Départ</span>
-            <div class="stay-date">${escapeHtml(checkOut)}</div>
-          </div>
-        </div>
-      </section>
-
       ${
-        hasFlights
-          ? `<section class="section">
-        <div class="section-head">
-          <h2 class="section-title">Vols</h2>
-        </div>
-        <div class="info-grid">
-          <div class="info-cell">
-            <span class="info-label">Vol arrivée</span>
-            <div class="info-value">${escapeHtml(flights.arrivalFlightNumber || "—")}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Heure d’arrivée</span>
-            <div class="info-value">${escapeHtml(formatFlightTime(flights.arrivalTime) || "—")}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Vol départ</span>
-            <div class="info-value">${escapeHtml(flights.departureFlightNumber || "—")}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Heure de départ</span>
-            <div class="info-value">${escapeHtml(formatFlightTime(flights.departureTime) || "—")}</div>
-          </div>
-        </div>
-      </section>`
-          : ""
-      }
-
+        isConfirmation
+          ? `${clientSectionHtml}
+      ${flightsSectionHtml}
+      ${hotelQuoteSectionHtml}
       ${zeroTracasHtml}
-
-      <section class="section">
-        <div class="section-head">
-          <h2 class="section-title">Coordonnées & voyageurs</h2>
-        </div>
-        <div class="info-grid">
-          <div class="info-cell">
-            <span class="info-label">Client</span>
-            <div class="info-value">${escapeHtml(fullName)}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Téléphone</span>
-            <div class="info-value">${escapeHtml(request.phone || "—")}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">E-mail</span>
-            <div class="info-value">${escapeHtml(request.email || "—")}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Formule</span>
-            <div class="info-value">${escapeHtml(boardLabel)}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Adultes</span>
-            <div class="info-value">${escapeHtml(adultsLabel)}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Enfants</span>
-            <div class="info-value">${escapeHtml(childrenLabel)}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Âge(s) enfants</span>
-            <div class="info-value ${childAges ? "" : "muted"}">${escapeHtml(childAges || "—")}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Référence</span>
-            <div class="info-value">#${escapeHtml(refId)}</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="section-head">
-          <h2 class="section-title">Hôtels souhaités</h2>
-        </div>
-        ${hotelChoicesHtml}
-      </section>
-
-      ${buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTitle, isConfirmation })}
-
-      <section class="section">
-        <div class="section-head">
-          <h2 class="section-title">Notes client</h2>
-        </div>
-        <div class="notes-box">${escapeHtml(request.notes?.trim() ? request.notes : "Aucune note.")}</div>
-      </section>
-
-      ${(() => {
-        const agentNotes = String(
-          request.agentNotes || request.responsePayload?.agentNotes || ""
-        ).trim();
-        if (!agentNotes) return "";
-        return `<section class="section">
-        <div class="section-head">
-          <h2 class="section-title">Note</h2>
-        </div>
-        <div class="notes-box">${escapeHtml(agentNotes)}</div>
-      </section>`;
-      })()}
-
-      ${totalBlockHtml}
+      ${notesSectionHtml}
+      ${agentNotesSectionHtml}
+      ${totalBlockHtml}`
+          : `${staySectionHtml}
+      ${flightsSectionHtml}
+      ${zeroTracasHtml}
+      ${clientSectionHtml}
+      ${hotelChoicesSectionHtml}
+      ${hotelQuoteSectionHtml}
+      ${notesSectionHtml}
+      ${agentNotesSectionHtml}
+      ${totalBlockHtml}`
+      }
     </div>
 
     <footer class="footer">
