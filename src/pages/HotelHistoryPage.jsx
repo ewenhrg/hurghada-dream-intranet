@@ -123,15 +123,20 @@ function normalizeResponsePayload(raw) {
   const hotels = Array.isArray(base.hotels) ? base.hotels : [];
   const normalizedHotels = hotels.map(normalizeHotelProposal).filter(Boolean);
 
-  let confirmedHotel = null;
-  if (base.confirmedHotel && typeof base.confirmedHotel === "object") {
-    confirmedHotel = normalizeHotelProposal(base.confirmedHotel);
+  let confirmedHotels = [];
+  if (Array.isArray(base.confirmedHotels) && base.confirmedHotels.length > 0) {
+    confirmedHotels = base.confirmedHotels.map(normalizeHotelProposal).filter(Boolean);
+  } else if (base.confirmedHotel && typeof base.confirmedHotel === "object") {
+    const one = normalizeHotelProposal(base.confirmedHotel);
+    if (one) confirmedHotels = [one];
   }
+  const confirmedHotel = confirmedHotels[0] || null;
 
   return {
     agentNotes: String(base.agentNotes || base.notes || "").trim(),
     hotels: normalizedHotels,
     confirmedHotel,
+    confirmedHotels,
     confirmedAt: base.confirmedAt || "",
     flights: normalizeFlights(base.flights),
     zeroTracas: normalizeZeroTracas(base.zeroTracas),
@@ -205,9 +210,20 @@ function computeZeroTracasTotal(zeroTracas) {
   return z.manualTotal;
 }
 
+function getConfirmedHotelsList(payload) {
+  const p = payload && typeof payload === "object" ? payload : {};
+  if (Array.isArray(p.confirmedHotels) && p.confirmedHotels.length > 0) {
+    return p.confirmedHotels.filter((h) => proposalIsReady(h));
+  }
+  if (p.confirmedHotel && proposalIsReady(p.confirmedHotel)) {
+    return [p.confirmedHotel];
+  }
+  return [];
+}
+
 function isHotelRequestConfirmed(request) {
   const payload = normalizeResponsePayload(request?.responsePayload);
-  return Boolean(payload.confirmedHotel && proposalIsReady(payload.confirmedHotel));
+  return getConfirmedHotelsList(payload).length > 0;
 }
 
 function requestCreatedOnOrAfterToday(request) {
@@ -484,17 +500,21 @@ function HotelRequestCard({
   const responseHotels = payload.hotels;
   const readyHotels = responseHotels.filter((h) => proposalIsReady(h));
   const hasResponse = readyHotels.length > 0;
-  const confirmedHotel = payload.confirmedHotel && proposalIsReady(payload.confirmedHotel)
-    ? payload.confirmedHotel
-    : null;
+  const confirmedHotels = getConfirmedHotelsList(payload);
+  const confirmedHotel = confirmedHotels[0] || null;
+  const isConfirmed = confirmedHotels.length > 0;
   const sentToClient = payload.sentToClient === true;
-  const responseTotals = readyHotels
+  const responseTotals = (isConfirmed ? confirmedHotels : readyHotels)
     .map((h) => `${h.hotelName}: ${formatQuoteMoney(h.quote.total, h.quote.currency)}`)
     .join(" · ");
   const refId = String(request.id || request.supabaseId || "").trim();
   const shortRef = formatHotelRequestShortRef(refId);
-  const paymentStatus = confirmedHotel ? getPaymentStatus(request, payload) : null;
+  const paymentStatus = isConfirmed ? getPaymentStatus(request, payload) : null;
   const clientDocuments = payload.clientDocuments || [];
+  const confirmedLabel =
+    confirmedHotels.length > 1
+      ? confirmedHotels.map((h) => h.hotelName).join(" + ")
+      : confirmedHotel?.hotelName || "";
 
   return (
     <article className="overflow-hidden rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_12px_40px_-18px_rgba(30,27,75,0.22)] ring-1 ring-slate-200/80">
@@ -520,17 +540,17 @@ function HotelRequestCard({
                 Offre personnalisée demandée
               </span>
             ) : null}
-            {!hasResponse && !confirmedHotel ? (
+            {!hasResponse && !isConfirmed ? (
               <span className="mt-2 ml-0 inline-block rounded-full bg-slate-200 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-800 ring-1 ring-slate-300/70 sm:ml-2">
                 En attente
               </span>
             ) : null}
-            {hasResponse && !confirmedHotel && !sentToClient ? (
+            {hasResponse && !isConfirmed && !sentToClient ? (
               <span className="mt-2 ml-0 inline-block rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-950 ring-1 ring-amber-400/50 sm:ml-2">
                 À envoyer au client
               </span>
             ) : null}
-            {hasResponse && !confirmedHotel && sentToClient ? (
+            {hasResponse && !isConfirmed && sentToClient ? (
               <span className="mt-2 ml-0 inline-block rounded-full bg-sky-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-950 ring-1 ring-sky-400/50 sm:ml-2">
                 Envoyé
                 {payload.sentAt
@@ -538,10 +558,10 @@ function HotelRequestCard({
                   : ""}
               </span>
             ) : null}
-            {confirmedHotel ? (
+            {isConfirmed ? (
               <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-teal-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
                 <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-                Confirmé · {confirmedHotel.hotelName}
+                Confirmé · {confirmedLabel}
               </span>
             ) : null}
             {paymentStatus?.isFullyPaid ? (
@@ -555,7 +575,7 @@ function HotelRequestCard({
                 Reste à payer · {formatQuoteMoney(paymentStatus.remaining, paymentStatus.currency)}
               </span>
             ) : null}
-            {confirmedHotel && clientDocuments.length > 0 ? (
+            {isConfirmed && clientDocuments.length > 0 ? (
               <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
                 <FileText className="h-3.5 w-3.5" aria-hidden />
                 {clientDocuments.length} document{clientDocuments.length > 1 ? "s" : ""}
@@ -571,7 +591,7 @@ function HotelRequestCard({
             </p>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            {hasResponse && !confirmedHotel ? (
+            {hasResponse && !isConfirmed ? (
               <label
                 className={`inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-bold transition ${
                   sentToClient
@@ -592,7 +612,7 @@ function HotelRequestCard({
             <GhostBtn type="button" onClick={() => onPrint(request)}>
               Imprimer
             </GhostBtn>
-            {confirmedHotel && paymentStatus && !paymentStatus.isFullyPaid ? (
+            {isConfirmed && paymentStatus && !paymentStatus.isFullyPaid ? (
               <PrimaryBtn
                 type="button"
                 className="!min-h-0 !min-w-0 !bg-emerald-600 !text-sm !px-4 !py-2 hover:!bg-emerald-700"
@@ -602,7 +622,7 @@ function HotelRequestCard({
                 Payer
               </PrimaryBtn>
             ) : null}
-            {confirmedHotel && paymentStatus && paymentStatus.paid > 0.009 ? (
+            {isConfirmed && paymentStatus && paymentStatus.paid > 0.009 ? (
               <GhostBtn
                 type="button"
                 onClick={() => onPrintReceipt?.(request)}
@@ -616,7 +636,7 @@ function HotelRequestCard({
                 Reçu
               </GhostBtn>
             ) : null}
-            {confirmedHotel ? (
+            {isConfirmed ? (
               <GhostBtn type="button" onClick={() => onDocuments?.(request)}>
                 <FileText className="h-3.5 w-3.5" aria-hidden />
                 Document
@@ -747,7 +767,7 @@ function HotelRequestCard({
         </div>
       ) : null}
 
-      {confirmedHotel && clientDocuments.length > 0 ? (
+      {isConfirmed && clientDocuments.length > 0 ? (
         <div className="border-b border-slate-200/90 bg-indigo-50/50 px-4 py-4 sm:px-6">
           <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
             Documents liés
@@ -850,23 +870,31 @@ function HotelRequestCard({
       </div>
 
       <div className="px-4 py-4 sm:px-6">
-        {hasResponse || confirmedHotel ? (
+        {hasResponse || isConfirmed ? (
           <>
             <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-              {confirmedHotel ? "Hôtel de la confirmation" : "Hôtels de la réponse"}
+              {isConfirmed
+                ? confirmedHotels.length > 1
+                  ? "Hôtels confirmés"
+                  : "Hôtel de la confirmation"
+                : "Hôtels de la réponse"}
             </p>
             <ul className="space-y-2">
-              {(confirmedHotel ? [confirmedHotel] : readyHotels).map((h, index) => (
+              {(isConfirmed ? confirmedHotels : readyHotels).map((h, index) => (
                 <li
                   key={`${h.hotelName}-${h.slot || index}`}
                   className={`rounded-xl border px-3 py-2.5 text-sm shadow-sm ${
-                    confirmedHotel
+                    isConfirmed
                       ? "border-teal-200/90 bg-teal-50/80"
                       : "border-emerald-200/90 bg-emerald-50/70"
                   }`}
                 >
                   <span className="text-[11px] font-bold uppercase text-emerald-800">
-                    {confirmedHotel ? "Confirmé" : `Option ${index + 1}`}
+                    {isConfirmed
+                      ? confirmedHotels.length > 1
+                        ? `Confirmé ${index + 1}`
+                        : "Confirmé"
+                      : `Option ${index + 1}`}
                   </span>
                   <p className="mt-0.5 font-semibold text-slate-950">{h.hotelName}</p>
                   {h.roomCategory ? (
@@ -890,7 +918,7 @@ function HotelRequestCard({
                 </li>
               ))}
             </ul>
-            {!confirmedHotel && readyHotels.length > 1 ? (
+            {!isConfirmed && readyHotels.length > 1 ? (
               <p className="mt-2 text-[11px] font-medium text-slate-500">
                 Propositions envoyées / à envoyer au client (réponse).
               </p>
@@ -1406,8 +1434,8 @@ function HotelResponseModal({
 
 function HotelConfirmModal({
   request,
-  selectedKey,
-  setSelectedKey,
+  selectedKeys,
+  setSelectedKeys,
   flights,
   setFlights,
   zeroTracas,
@@ -1422,13 +1450,17 @@ function HotelConfirmModal({
   const options = payload.hotels.filter((h) => proposalIsReady(h));
   const fullName =
     [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
-  const currentKey =
-    selectedKey ||
-    (payload.confirmedHotel ? hotelProposalKey(payload.confirmedHotel) : "") ||
-    (options[0] ? hotelProposalKey(options[0], 0) : "");
+  const currentKeys = Array.isArray(selectedKeys) ? selectedKeys : [];
   const flightValues = flights || EMPTY_FLIGHTS;
   const zt = zeroTracas || EMPTY_ZERO_TRACAS;
   const ztTotal = computeZeroTracasTotal(zt);
+
+  const toggleKey = (key) => {
+    setSelectedKeys((prev) => {
+      const list = Array.isArray(prev) ? prev : [];
+      return list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
+    });
+  };
 
   const updateFlight = (key, value) => {
     setFlights((prev) => ({ ...(prev || EMPTY_FLIGHTS), [key]: value }));
@@ -1460,12 +1492,12 @@ function HotelConfirmModal({
           </div>
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
             Fermer
-                                </GhostBtn>
-                              </div>
+          </GhostBtn>
+        </div>
 
         <p className="mt-4 text-sm font-medium text-slate-700">
-          Quel hôtel le client a-t-il choisi parmi vos propositions ? Le document final n’affichera
-          que cette option.
+          Cochez le ou les hôtels confirmés par le client (un ou deux). Le document final affichera
+          uniquement les options sélectionnées, avec leurs dates respectives.
         </p>
 
         {options.length === 0 ? (
@@ -1476,7 +1508,7 @@ function HotelConfirmModal({
           <ul className="mt-4 space-y-2">
             {options.map((hotel, index) => {
               const key = hotelProposalKey(hotel, index);
-              const selected = currentKey === key;
+              const selected = currentKeys.includes(key);
               return (
                 <li key={key}>
                   <label
@@ -1487,11 +1519,10 @@ function HotelConfirmModal({
                     }`}
                   >
                     <input
-                      type="radio"
-                      name="hotel-confirm-choice"
-                      className="mt-1 h-4 w-4 border-slate-300 text-teal-600 focus:ring-teal-500"
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                       checked={selected}
-                      onChange={() => setSelectedKey(key)}
+                      onChange={() => toggleKey(key)}
                       disabled={saving}
                     />
                     <span className="min-w-0 flex-1">
@@ -1674,11 +1705,15 @@ function HotelConfirmModal({
           </GhostBtn>
           <PrimaryBtn
             type="button"
-            onClick={() => onConfirm?.(currentKey, flightValues, zt)}
-            disabled={saving || !currentKey || options.length === 0}
+            onClick={() => onConfirm?.(currentKeys, flightValues, zt)}
+            disabled={saving || currentKeys.length === 0 || options.length === 0}
             className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 border-0"
           >
-            {saving ? "Validation…" : "Valider et imprimer"}
+            {saving
+              ? "Validation…"
+              : currentKeys.length > 1
+                ? "Valider les 2 hôtels et imprimer"
+                : "Valider et imprimer"}
           </PrimaryBtn>
         </div>
       </div>
@@ -2251,7 +2286,7 @@ export function HotelHistoryPage({ user = null }) {
   const [replyHotelsDraft, setReplyHotelsDraft] = useState([]);
   const [replyAgentNotes, setReplyAgentNotes] = useState("");
   const [confirmRequest, setConfirmRequest] = useState(null);
-  const [confirmSelectedKey, setConfirmSelectedKey] = useState("");
+  const [confirmSelectedKeys, setConfirmSelectedKeys] = useState([]);
   const [confirmFlights, setConfirmFlights] = useState(EMPTY_FLIGHTS);
   const [confirmZeroTracas, setConfirmZeroTracas] = useState(EMPTY_ZERO_TRACAS);
   const [payRequest, setPayRequest] = useState(null);
@@ -2417,7 +2452,9 @@ export function HotelHistoryPage({ user = null }) {
         .join(" ")
         .toLowerCase();
       const payload = normalizeResponsePayload(r.responsePayload);
-      const confirmedName = String(payload.confirmedHotel?.hotelName || "").toLowerCase();
+      const confirmedName = getConfirmedHotelsList(payload)
+        .map((h) => String(h.hotelName || "").toLowerCase())
+        .join(" ");
       const responseNames = (payload.hotels || [])
         .map((h) => String(h.hotelName || "").toLowerCase())
         .join(" ");
@@ -2447,20 +2484,21 @@ export function HotelHistoryPage({ user = null }) {
 
   const handlePrint = useCallback((request) => {
     const payload = normalizeResponsePayload(request.responsePayload);
-    const isConfirmed =
-      payload.confirmedHotel && proposalIsReady(payload.confirmedHotel);
+    const confirmedHotels = getConfirmedHotelsList(payload);
+    const isConfirmed = confirmedHotels.length > 0;
     const quoteHotels = isConfirmed
-      ? [payload.confirmedHotel]
+      ? confirmedHotels
       : payload.hotels.filter((h) => proposalIsReady(h));
-      const ok = printHotelRequest({
-        ...request,
-        quoteHotels,
+    const ok = printHotelRequest({
+      ...request,
+      quoteHotels,
       agentNotes: payload.agentNotes,
       flights: payload.flights,
       zeroTracas: payload.zeroTracas,
       documentKind: isConfirmed ? "confirmation" : "devis",
-      });
-      if (!ok) toast.error("Impossible d’ouvrir l’impression. Réessayez.");
+      responsePayload: payload,
+    });
+    if (!ok) toast.error("Impossible d’ouvrir l’impression. Réessayez.");
   }, []);
 
   const handlePrintReceipt = useCallback((request, entryId = null) => {
@@ -2494,11 +2532,26 @@ export function HotelHistoryPage({ user = null }) {
       toast.warning("Préparez d’abord une réponse avec au moins un hôtel et un prix.");
       return;
     }
-    const initialKey = payload.confirmedHotel
-      ? hotelProposalKey(payload.confirmedHotel)
-      : hotelProposalKey(options[0], 0);
+    const already = getConfirmedHotelsList(payload);
+    let initialKeys = [];
+    if (already.length > 0) {
+      options.forEach((h, i) => {
+        const key = hotelProposalKey(h, i);
+        const matched = already.some(
+          (c) =>
+            hotelProposalKey(c) === key ||
+            (String(c.hotelName || "").trim() === String(h.hotelName || "").trim() &&
+              String(c.catalogSlug || "").trim() === String(h.catalogSlug || "").trim())
+        );
+        if (matched) initialKeys.push(key);
+      });
+    }
+    if (initialKeys.length === 0) {
+      // Pré-coche toutes les propositions (ex. 2 hôtels / 2 dates)
+      initialKeys = options.map((h, i) => hotelProposalKey(h, i));
+    }
     setConfirmRequest(request);
-    setConfirmSelectedKey(initialKey);
+    setConfirmSelectedKeys(initialKeys);
     const existingFlights = normalizeFlights(payload.flights);
     setConfirmFlights({
       ...existingFlights,
@@ -2531,23 +2584,26 @@ export function HotelHistoryPage({ user = null }) {
       return;
     }
     const prev = normalizeResponsePayload(replyRequest.responsePayload);
-    let confirmedHotel = prev.confirmedHotel;
+    let confirmedHotels = getConfirmedHotelsList(prev);
     let confirmedAt = prev.confirmedAt || "";
-    if (confirmedHotel) {
-      const stillThere = hotels.some(
-        (h, i) => hotelProposalKey(h, i) === hotelProposalKey(confirmedHotel)
+    if (confirmedHotels.length > 0) {
+      confirmedHotels = confirmedHotels.filter((confirmed) =>
+        hotels.some(
+          (h, i) =>
+            hotelProposalKey(h, i) === hotelProposalKey(confirmed) ||
+            (String(h.hotelName || "").trim() === String(confirmed.hotelName || "").trim() &&
+              String(h.catalogSlug || "").trim() === String(confirmed.catalogSlug || "").trim())
+        )
       );
-      if (!stillThere) {
-        confirmedHotel = null;
-        confirmedAt = "";
-      }
+      if (confirmedHotels.length === 0) confirmedAt = "";
     }
     setSaving(true);
     try {
       const response_payload = {
         hotels,
         agentNotes: String(replyAgentNotes || "").trim(),
-        confirmedHotel,
+        confirmedHotels,
+        confirmedHotel: confirmedHotels[0] || null,
         confirmedAt: confirmedAt || undefined,
         flights: prev.flights,
         zeroTracas: prev.zeroTracas,
@@ -2593,14 +2649,18 @@ export function HotelHistoryPage({ user = null }) {
   }, [replyRequest, replyHotelsDraft, replyAgentNotes, load]);
 
   const handleConfirmSave = useCallback(
-    async (selectedKey, flightsInput, zeroTracasInput) => {
+    async (selectedKeysInput, flightsInput, zeroTracasInput) => {
       if (!confirmRequest || !supabase) return;
       const payload = normalizeResponsePayload(confirmRequest.responsePayload);
       const options = payload.hotels.filter((h) => proposalIsReady(h));
-      const chosen =
-        options.find((h, i) => hotelProposalKey(h, i) === selectedKey) || null;
-      if (!chosen) {
-        toast.error("Sélectionnez l’hôtel choisi par le client.");
+      const keys = Array.isArray(selectedKeysInput)
+        ? selectedKeysInput
+        : selectedKeysInput
+          ? [selectedKeysInput]
+          : [];
+      const chosen = options.filter((h, i) => keys.includes(hotelProposalKey(h, i)));
+      if (chosen.length === 0) {
+        toast.error("Sélectionnez au moins un hôtel confirmé par le client.");
         return;
       }
       const flights = normalizeFlights(flightsInput || confirmFlights);
@@ -2623,12 +2683,14 @@ export function HotelHistoryPage({ user = null }) {
         const grandTotal = computeConfirmedGrandTotal(chosen, zeroTracas);
         const existingPayment = normalizePayment(payload.payment);
         const schedule =
-          existingPayment.schedule ||
-          buildPaymentSchedule(confirmRequest.arrivalDate, grandTotal, new Date());
+          existingPayment.entries.length > 0 && existingPayment.schedule
+            ? { ...existingPayment.schedule, grandTotal }
+            : buildPaymentSchedule(confirmRequest.arrivalDate, grandTotal, new Date());
         const response_payload = {
           hotels: payload.hotels,
           agentNotes: payload.agentNotes,
-          confirmedHotel: chosen,
+          confirmedHotels: chosen,
+          confirmedHotel: chosen[0],
           confirmedAt: new Date().toISOString(),
           flights,
           zeroTracas,
@@ -2658,20 +2720,21 @@ export function HotelHistoryPage({ user = null }) {
 
         const ok = printHotelRequest({
           ...confirmRequest,
-          quoteHotels: [chosen],
+          quoteHotels: chosen,
           agentNotes: payload.agentNotes,
           flights,
           zeroTracas,
           documentKind: "confirmation",
           responsePayload: response_payload,
         });
+        const namesLabel = chosen.map((h) => h.hotelName).join(" + ");
         if (!ok) {
           toast.warning("Confirmation enregistrée, mais l’impression n’a pas pu s’ouvrir. Réessayez via Imprimer.");
         } else {
-          toast.success(`Confirmé : ${chosen.hotelName}`);
+          toast.success(`Confirmé : ${namesLabel}`);
         }
         setConfirmRequest(null);
-        setConfirmSelectedKey("");
+        setConfirmSelectedKeys([]);
         setConfirmFlights({ ...EMPTY_FLIGHTS });
         setConfirmZeroTracas({ ...EMPTY_ZERO_TRACAS });
         await load();
@@ -2698,6 +2761,7 @@ export function HotelHistoryPage({ user = null }) {
         const response_payload = {
           hotels: prev.hotels,
           agentNotes: prev.agentNotes,
+          confirmedHotels: prev.confirmedHotels,
           confirmedHotel: prev.confirmedHotel,
           confirmedAt: prev.confirmedAt || undefined,
           flights: prev.flights,
@@ -2739,7 +2803,7 @@ export function HotelHistoryPage({ user = null }) {
     async ({ amount, file }) => {
       if (!payRequest?.supabaseId || !supabase || !file) return;
       const prev = normalizeResponsePayload(payRequest.responsePayload);
-      if (!prev.confirmedHotel || !proposalIsReady(prev.confirmedHotel)) {
+      if (getConfirmedHotelsList(prev).length === 0) {
         toast.error("Cette demande n’est pas confirmée.");
         return;
       }
@@ -2814,6 +2878,7 @@ export function HotelHistoryPage({ user = null }) {
         const response_payload = {
           hotels: prev.hotels,
           agentNotes: prev.agentNotes,
+          confirmedHotels: prev.confirmedHotels,
           confirmedHotel: prev.confirmedHotel,
           confirmedAt: prev.confirmedAt || undefined,
           flights: prev.flights,
@@ -2947,6 +3012,7 @@ export function HotelHistoryPage({ user = null }) {
     return {
       hotels: prev.hotels,
       agentNotes: prev.agentNotes,
+      confirmedHotels: prev.confirmedHotels,
       confirmedHotel: prev.confirmedHotel,
       confirmedAt: prev.confirmedAt || undefined,
       flights: prev.flights,
@@ -3304,8 +3370,8 @@ export function HotelHistoryPage({ user = null }) {
 
       <HotelConfirmModal
         request={confirmRequest}
-        selectedKey={confirmSelectedKey}
-        setSelectedKey={setConfirmSelectedKey}
+        selectedKeys={confirmSelectedKeys}
+        setSelectedKeys={setConfirmSelectedKeys}
         flights={confirmFlights}
         setFlights={setConfirmFlights}
         zeroTracas={confirmZeroTracas}
@@ -3313,7 +3379,7 @@ export function HotelHistoryPage({ user = null }) {
         onClose={() => {
           if (!saving) {
             setConfirmRequest(null);
-            setConfirmSelectedKey("");
+            setConfirmSelectedKeys([]);
             setConfirmFlights({ ...EMPTY_FLIGHTS });
             setConfirmZeroTracas({ ...EMPTY_ZERO_TRACAS });
           }

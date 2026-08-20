@@ -131,11 +131,18 @@ export function sumPayments(payment) {
   return roundMoney(entries.reduce((acc, e) => acc + e.amount, 0));
 }
 
-export function computeConfirmedGrandTotal(confirmedHotel, zeroTracas) {
-  const hotel =
-    confirmedHotel?.quote?.total != null && Number.isFinite(Number(confirmedHotel.quote.total))
-      ? roundMoney(Number(confirmedHotel.quote.total))
-      : 0;
+export function computeConfirmedGrandTotal(confirmedHotelsOrOne, zeroTracas) {
+  const hotels = Array.isArray(confirmedHotelsOrOne)
+    ? confirmedHotelsOrOne
+    : confirmedHotelsOrOne
+      ? [confirmedHotelsOrOne]
+      : [];
+  const hotel = roundMoney(
+    hotels.reduce((sum, h) => {
+      const t = h?.quote?.total;
+      return sum + (t != null && Number.isFinite(Number(t)) ? Number(t) : 0);
+    }, 0)
+  );
   const zt =
     zeroTracas?.enabled === true &&
     zeroTracas?.manualTotal != null &&
@@ -150,13 +157,18 @@ export function computeConfirmedGrandTotal(confirmedHotel, zeroTracas) {
  * Après acompte réglé, le solde a pour butoir la date d’arrivée.
  */
 export function getPaymentStatus(request, payload) {
-  const confirmed = payload?.confirmedHotel;
-  if (!confirmed) return null;
+  const confirmedList =
+    Array.isArray(payload?.confirmedHotels) && payload.confirmedHotels.length > 0
+      ? payload.confirmedHotels
+      : payload?.confirmedHotel
+        ? [payload.confirmedHotel]
+        : [];
+  if (confirmedList.length === 0) return null;
   const payment = normalizePayment(payload.payment);
   const grandTotal =
     payment.schedule?.grandTotal != null
       ? payment.schedule.grandTotal
-      : computeConfirmedGrandTotal(confirmed, payload.zeroTracas);
+      : computeConfirmedGrandTotal(confirmedList, payload.zeroTracas);
   if (!(grandTotal > 0)) return null;
 
   const paid = sumPayments(payment);
@@ -178,7 +190,7 @@ export function getPaymentStatus(request, payload) {
   }
 
   return {
-    currency: confirmed?.quote?.currency || "EUR",
+    currency: confirmedList[0]?.quote?.currency || "EUR",
     grandTotal,
     paid,
     remaining,

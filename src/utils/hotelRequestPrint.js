@@ -61,9 +61,13 @@ export function generateHotelRequestHTML(request) {
     request.documentKind === "confirmation" ||
     request.isConfirmation === true ||
     Boolean(
-      request.responsePayload?.confirmedHotel &&
-        typeof request.responsePayload.confirmedHotel === "object" &&
-        String(request.responsePayload.confirmedHotel.hotelName || "").trim()
+      (Array.isArray(request.responsePayload?.confirmedHotels) &&
+        request.responsePayload.confirmedHotels.some(
+          (h) => h && String(h.hotelName || "").trim()
+        )) ||
+        (request.responsePayload?.confirmedHotel &&
+          typeof request.responsePayload.confirmedHotel === "object" &&
+          String(request.responsePayload.confirmedHotel.hotelName || "").trim())
     );
   const docTitle = isConfirmation ? "CONFIRMATION" : "DEVIS";
   const docBadgeLabel = isConfirmation ? "Confirmation hôtel" : "Devis hôtel";
@@ -1220,7 +1224,11 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTi
         .filter(Boolean)
         .join(" · ");
 
-      const optionLabel = isConfirmation ? "Hôtel confirmé" : `Option ${index + 1}`;
+      const optionLabel = isConfirmation
+        ? rows.length > 1
+          ? `Hôtel confirmé ${index + 1}`
+          : "Hôtel confirmé"
+        : `Option ${index + 1}`;
       const hotelCheckIn = formatHotelStayDate(h.stayFrom) !== "—"
         ? formatHotelStayDate(h.stayFrom)
         : checkIn;
@@ -1408,8 +1416,14 @@ function generateHotelPaymentReceiptHTML(request, options = null) {
     request?.responsePayload && typeof request.responsePayload === "object"
       ? request.responsePayload
       : {};
-  const confirmed = payload.confirmedHotel;
-  if (!confirmed || !String(confirmed.hotelName || "").trim()) return "";
+  const confirmedList =
+    Array.isArray(payload.confirmedHotels) && payload.confirmedHotels.length > 0
+      ? payload.confirmedHotels.filter((h) => h && String(h.hotelName || "").trim())
+      : payload.confirmedHotel && String(payload.confirmedHotel.hotelName || "").trim()
+        ? [payload.confirmedHotel]
+        : [];
+  if (confirmedList.length === 0) return "";
+  const confirmed = confirmedList[0];
 
   const payment = payload.payment && typeof payload.payment === "object" ? payload.payment : {};
   const entries = Array.isArray(payment.entries)
@@ -1424,10 +1438,12 @@ function generateHotelPaymentReceiptHTML(request, options = null) {
   if (focusEntries.length === 0) return "";
 
   const currency = confirmed?.quote?.currency || "EUR";
-  const hotelTotal =
-    confirmed?.quote?.total != null && Number.isFinite(Number(confirmed.quote.total))
-      ? Math.round(Number(confirmed.quote.total) * 100) / 100
-      : 0;
+  const hotelTotal = Math.round(
+    confirmedList.reduce((sum, h) => {
+      const t = h?.quote?.total;
+      return sum + (t != null && Number.isFinite(Number(t)) ? Number(t) : 0);
+    }, 0) * 100
+  ) / 100;
   const zt = payload.zeroTracas;
   const ztTotal =
     zt?.enabled === true && zt?.manualTotal != null && Number.isFinite(Number(zt.manualTotal))
@@ -1471,8 +1487,11 @@ function generateHotelPaymentReceiptHTML(request, options = null) {
     month: "long",
     year: "numeric",
   });
-  const hotelName = String(confirmed.hotelName || "").trim();
-  const roomCategory = String(confirmed.roomCategory || "").trim();
+  const hotelName = confirmedList.map((h) => String(h.hotelName || "").trim()).filter(Boolean).join(" + ");
+  const roomCategory = confirmedList
+    .map((h) => String(h.roomCategory || "").trim())
+    .filter(Boolean)
+    .join(" · ");
 
   const linesHtml = focusEntries
     .map((e) => {
