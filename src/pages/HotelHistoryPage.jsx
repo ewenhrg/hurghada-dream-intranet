@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { BedDouble, CheckCircle2, MessageSquareReply } from "lucide-react";
+import { Banknote, BedDouble, CheckCircle2, FileText, MessageSquareReply, Upload } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -21,6 +21,25 @@ import {
   findRoomCategory,
   roomCategoryNames,
 } from "../utils/hotelRoomCategories";
+import {
+  buildPaymentSchedule,
+  computeConfirmedGrandTotal,
+  getPaymentStatus,
+  normalizePayment,
+  serializePayment,
+} from "../utils/hotelRequestPayment";
+import {
+  HOTEL_CLIENT_DOC_TYPES,
+  hotelClientDocTypeLabel,
+  normalizeClientDocuments,
+  serializeClientDocuments,
+} from "../utils/hotelRequestDocuments";
+import { cleanupExpiredHotelRequestDocuments } from "../utils/cleanupExpiredHotelRequestDocuments";
+
+const PAYMENT_PROOF_BUCKET = "documents";
+const PAYMENT_PROOF_FALLBACK_BUCKET = "Catalogue";
+const PAYMENT_PROOF_MAX_BYTES = 10 * 1024 * 1024;
+const CLIENT_DOC_MAX_BYTES = 15 * 1024 * 1024;
 
 const SELECT_COLUMNS =
   "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, adults_count, children_count, child_ages, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, response_payload, created_at, updated_at";
@@ -116,6 +135,8 @@ function normalizeResponsePayload(raw) {
     zeroTracas: normalizeZeroTracas(base.zeroTracas),
     sentToClient: base.sentToClient === true,
     sentAt: base.sentAt || "",
+    payment: normalizePayment(base.payment),
+    clientDocuments: normalizeClientDocuments(base.clientDocuments),
   };
 }
 
@@ -414,7 +435,17 @@ function viewModelToPayload(vm) {
   };
 }
 
-function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit, onMarkSent, markingSent }) {
+function HotelRequestCard({
+  request,
+  onPrint,
+  onReply,
+  onConfirm,
+  onEdit,
+  onMarkSent,
+  markingSent,
+  onPay,
+  onDocuments,
+}) {
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
   const boardLabels = boardLabelsFromViewModel(request);
   const hotels = [
@@ -436,6 +467,8 @@ function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit, onMark
   const refId = String(request.id || request.supabaseId || "").trim();
   const shortRef =
     refId.length > 8 ? refId.slice(0, 8).toUpperCase() : refId.toUpperCase();
+  const paymentStatus = confirmedHotel ? getPaymentStatus(request, payload) : null;
+  const clientDocuments = payload.clientDocuments || [];
 
   return (
     <article className="overflow-hidden rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_12px_40px_-18px_rgba(30,27,75,0.22)] ring-1 ring-slate-200/80">
@@ -485,6 +518,23 @@ function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit, onMark
                 Confirmé · {confirmedHotel.hotelName}
               </span>
             ) : null}
+            {paymentStatus?.isFullyPaid ? (
+              <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
+                <Banknote className="h-3.5 w-3.5" aria-hidden />
+                Payé
+              </span>
+            ) : null}
+            {paymentStatus && !paymentStatus.isFullyPaid ? (
+              <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-rose-950 ring-1 ring-rose-300/70 sm:ml-2">
+                Reste à payer · {formatQuoteMoney(paymentStatus.remaining, paymentStatus.currency)}
+              </span>
+            ) : null}
+            {confirmedHotel && clientDocuments.length > 0 ? (
+              <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
+                <FileText className="h-3.5 w-3.5" aria-hidden />
+                {clientDocuments.length} document{clientDocuments.length > 1 ? "s" : ""}
+              </span>
+            ) : null}
             {payload.zeroTracas?.enabled ? (
               <span className="mt-2 ml-0 inline-block rounded-full bg-indigo-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-indigo-950 ring-1 ring-indigo-300/60 sm:ml-2">
                 Zero Tracas
@@ -524,6 +574,23 @@ function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit, onMark
             <GhostBtn type="button" onClick={() => onPrint(request)}>
               Imprimer
             </GhostBtn>
+            {confirmedHotel && paymentStatus && !paymentStatus.isFullyPaid ? (
+              <PrimaryBtn
+                type="button"
+                className="!min-h-0 !min-w-0 !bg-emerald-600 !text-sm !px-4 !py-2 hover:!bg-emerald-700"
+                onClick={() => onPay?.(request)}
+              >
+                <Banknote className="h-3.5 w-3.5" aria-hidden />
+                Payer
+              </PrimaryBtn>
+            ) : null}
+            {confirmedHotel ? (
+              <GhostBtn type="button" onClick={() => onDocuments?.(request)}>
+                <FileText className="h-3.5 w-3.5" aria-hidden />
+                Document
+                {clientDocuments.length > 0 ? ` (${clientDocuments.length})` : ""}
+              </GhostBtn>
+            ) : null}
             <GhostBtn type="button" onClick={() => onReply(request)}>
               <MessageSquareReply className="h-3.5 w-3.5" aria-hidden />
               Réponse
@@ -548,6 +615,117 @@ function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit, onMark
           </div>
         </div>
       </div>
+
+      {paymentStatus ? (
+        <div
+          className={`border-b px-4 py-4 sm:px-6 ${
+            paymentStatus.isFullyPaid
+              ? "border-emerald-200/90 bg-emerald-50/80"
+              : "border-rose-200/90 bg-rose-50/70"
+          }`}
+        >
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            Paiement
+          </p>
+          <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-white/80 bg-white/90 px-3 py-2.5 shadow-sm">
+              <span className="text-[11px] font-bold uppercase text-slate-500">Total</span>
+              <p className="mt-0.5 font-semibold text-slate-950">
+                {formatQuoteMoney(paymentStatus.grandTotal, paymentStatus.currency)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/80 bg-white/90 px-3 py-2.5 shadow-sm">
+              <span className="text-[11px] font-bold uppercase text-slate-500">Déjà payé</span>
+              <p className="mt-0.5 font-semibold text-slate-950">
+                {formatQuoteMoney(paymentStatus.paid, paymentStatus.currency)}
+              </p>
+            </div>
+            {!paymentStatus.isFullyPaid ? (
+              <>
+                <div className="rounded-xl border border-rose-200 bg-white px-3 py-2.5 shadow-sm ring-1 ring-rose-100">
+                  <span className="text-[11px] font-bold uppercase text-rose-700">Reste à payer</span>
+                  <p className="mt-0.5 text-base font-bold text-rose-950">
+                    {formatQuoteMoney(paymentStatus.remaining, paymentStatus.currency)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-rose-200 bg-white px-3 py-2.5 shadow-sm ring-1 ring-rose-100">
+                  <span className="text-[11px] font-bold uppercase text-rose-700">
+                    Date butoir · {paymentStatus.dueTitle}
+                  </span>
+                  <p className="mt-0.5 text-base font-bold text-rose-950">
+                    {paymentStatus.dueLabel}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2.5 shadow-sm sm:col-span-2">
+                <span className="text-[11px] font-bold uppercase text-emerald-700">Statut</span>
+                <p className="mt-0.5 font-bold text-emerald-950">Solde réglé</p>
+              </div>
+            )}
+          </div>
+          {paymentStatus.entries.length > 0 ? (
+            <ul className="mt-3 space-y-2">
+              {paymentStatus.entries.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-800"
+                >
+                  <span>
+                    {formatQuoteMoney(entry.amount, paymentStatus.currency)}
+                    {entry.paidAt
+                      ? ` · ${new Date(entry.paidAt).toLocaleString("fr-FR")}`
+                      : ""}
+                  </span>
+                  {entry.proofUrl ? (
+                    <a
+                      href={entry.proofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
+                    >
+                      Voir la preuve
+                    </a>
+                  ) : (
+                    <span className="text-slate-500">Preuve expirée</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
+      {confirmedHotel && clientDocuments.length > 0 ? (
+        <div className="border-b border-slate-200/90 bg-indigo-50/50 px-4 py-4 sm:px-6">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            Documents liés
+          </p>
+          <ul className="space-y-2">
+            {clientDocuments.map((doc) => (
+              <li
+                key={doc.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-indigo-200/70 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"
+              >
+                <span>
+                  {hotelClientDocTypeLabel(doc.type, doc.label)}
+                  {doc.fileName ? (
+                    <span className="ml-2 text-xs font-medium text-slate-500">{doc.fileName}</span>
+                  ) : null}
+                </span>
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
+                >
+                  Ouvrir
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="border-b border-slate-200/90 bg-slate-50/95 px-4 py-4 sm:px-6">
         <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">Coordonnées</p>
@@ -1453,6 +1631,364 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
   );
 }
 
+function HotelPaymentModal({ request, onClose, onSave, saving }) {
+  const payload = normalizeResponsePayload(request?.responsePayload);
+  const status = request ? getPaymentStatus(request, payload) : null;
+  const [amount, setAmount] = useState("");
+  const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+
+  useEffect(() => {
+    if (!request) return;
+    const p = normalizeResponsePayload(request.responsePayload);
+    const s = getPaymentStatus(request, p);
+    if (!s) return;
+    const suggested =
+      s.schedule?.mode === "deposit" && s.paid < (s.schedule.dueAmount || 0)
+        ? roundMoney(Math.min(s.remaining, s.schedule.dueAmount - s.paid))
+        : s.remaining;
+    setAmount(suggested > 0 ? String(suggested) : "");
+    setFile(null);
+    setPreviewUrl("");
+  }, [request]);
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl("");
+      return undefined;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  if (!request || !status) return null;
+
+  const parsedAmount = parseMoneyInput(amount);
+  const canSubmit =
+    !saving &&
+    parsedAmount != null &&
+    parsedAmount > 0 &&
+    parsedAmount <= status.remaining + 0.009 &&
+    file;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="hotel-payment-title"
+    >
+      <div className="my-8 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-emerald-700">
+              Paiement
+            </p>
+            <h2 id="hotel-payment-title" className="mt-1 text-lg font-bold text-slate-900">
+              Enregistrer un paiement
+            </h2>
+            <p className="mt-1 text-sm font-medium text-slate-600">
+              {[request.firstName, request.lastName].filter(Boolean).join(" ") || "Client"}
+            </p>
+          </div>
+          <GhostBtn type="button" onClick={onClose} disabled={saving}>
+            Fermer
+          </GhostBtn>
+        </div>
+
+        <div className="mt-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
+          <div className="flex justify-between gap-2">
+            <span className="font-medium text-slate-600">Total confirmation</span>
+            <strong>{formatQuoteMoney(status.grandTotal, status.currency)}</strong>
+          </div>
+          <div className="flex justify-between gap-2">
+            <span className="font-medium text-slate-600">Déjà payé</span>
+            <strong>{formatQuoteMoney(status.paid, status.currency)}</strong>
+          </div>
+          <div className="flex justify-between gap-2 border-t border-slate-200 pt-2">
+            <span className="font-bold text-rose-800">Reste à payer</span>
+            <strong className="text-rose-950">
+              {formatQuoteMoney(status.remaining, status.currency)}
+            </strong>
+          </div>
+          {status.dueLabel ? (
+            <p className="text-xs font-semibold text-slate-600">
+              Date butoir ({status.dueTitle}) : {status.dueLabel}
+            </p>
+          ) : null}
+        </div>
+
+        <label className="mt-5 block">
+          <span className="text-[11px] font-bold uppercase text-slate-500">
+            Montant payé par le client (€)
+          </span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/25"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            disabled={saving}
+            placeholder="ex. 250"
+            aria-label="Montant payé"
+          />
+        </label>
+
+        <div className="mt-4">
+          <span className="text-[11px] font-bold uppercase text-slate-500">
+            Preuve de paiement (image)
+          </span>
+          <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-emerald-400 hover:bg-emerald-50/40">
+            <Upload className="h-5 w-5 text-slate-500" aria-hidden />
+            <span className="text-sm font-semibold text-slate-800">
+              {file ? file.name : "Choisir une image"}
+            </span>
+            <span className="text-[11px] font-medium text-slate-500">JPG, PNG ou WebP · max 10 Mo</span>
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={saving}
+              onChange={(e) => {
+                const next = e.target.files?.[0] || null;
+                if (!next) {
+                  setFile(null);
+                  return;
+                }
+                if (!next.type.startsWith("image/")) {
+                  toast.warning("Le fichier doit être une image.");
+                  e.target.value = "";
+                  return;
+                }
+                if (next.size > PAYMENT_PROOF_MAX_BYTES) {
+                  toast.warning("Image trop lourde (max 10 Mo).");
+                  e.target.value = "";
+                  return;
+                }
+                setFile(next);
+              }}
+            />
+          </label>
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt="Aperçu preuve de paiement"
+              className="mt-3 max-h-48 w-full rounded-xl border border-slate-200 object-contain bg-white"
+            />
+          ) : null}
+        </div>
+
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <GhostBtn type="button" onClick={onClose} disabled={saving}>
+            Annuler
+          </GhostBtn>
+          <PrimaryBtn
+            type="button"
+            className="!bg-emerald-600 hover:!bg-emerald-700"
+            disabled={!canSubmit}
+            onClick={() => onSave?.({ amount: parsedAmount, file })}
+          >
+            {saving ? "Enregistrement…" : "Valider le paiement"}
+          </PrimaryBtn>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function HotelDocumentsModal({ request, onClose, onAdd, onRemove, saving }) {
+  const payload = normalizeResponsePayload(request?.responsePayload);
+  const docs = payload.clientDocuments || [];
+  const [docType, setDocType] = useState("passport");
+  const [customLabel, setCustomLabel] = useState("");
+  const [file, setFile] = useState(null);
+
+  useEffect(() => {
+    setDocType("passport");
+    setCustomLabel("");
+    setFile(null);
+  }, [request?.id]);
+
+  if (!request) return null;
+
+  const canAdd =
+    !saving &&
+    file &&
+    (docType !== "other" || String(customLabel || "").trim());
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="hotel-documents-title"
+    >
+      <div className="my-8 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-indigo-600">
+              Documents
+            </p>
+            <h2 id="hotel-documents-title" className="mt-1 text-lg font-bold text-slate-900">
+              Documents du dossier
+            </h2>
+            <p className="mt-1 text-sm font-medium text-slate-600">
+              {[request.firstName, request.lastName].filter(Boolean).join(" ") || "Client"}
+            </p>
+          </div>
+          <GhostBtn type="button" onClick={onClose} disabled={saving}>
+            Fermer
+          </GhostBtn>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          <label className="block">
+            <span className="text-[11px] font-bold uppercase text-slate-500">Type de document</span>
+            <select
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
+              value={docType}
+              disabled={saving}
+              onChange={(e) => setDocType(e.target.value)}
+            >
+              {HOTEL_CLIENT_DOC_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {docType === "other" ? (
+            <label className="block">
+              <span className="text-[11px] font-bold uppercase text-slate-500">Libellé</span>
+              <input
+                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
+                value={customLabel}
+                onChange={(e) => setCustomLabel(e.target.value)}
+                disabled={saving}
+                placeholder="ex. Assurance voyage"
+              />
+            </label>
+          ) : null}
+
+          <div>
+            <span className="text-[11px] font-bold uppercase text-slate-500">Fichier</span>
+            <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-indigo-400 hover:bg-indigo-50/40">
+              <Upload className="h-5 w-5 text-slate-500" aria-hidden />
+              <span className="text-sm font-semibold text-slate-800">
+                {file ? file.name : "Choisir un fichier"}
+              </span>
+              <span className="text-[11px] font-medium text-slate-500">
+                Image ou PDF · max 15 Mo
+              </span>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="sr-only"
+                disabled={saving}
+                onChange={(e) => {
+                  const next = e.target.files?.[0] || null;
+                  if (!next) {
+                    setFile(null);
+                    return;
+                  }
+                  const okType =
+                    next.type.startsWith("image/") || next.type === "application/pdf";
+                  if (!okType) {
+                    toast.warning("Fichier accepté : image ou PDF.");
+                    e.target.value = "";
+                    return;
+                  }
+                  if (next.size > CLIENT_DOC_MAX_BYTES) {
+                    toast.warning("Fichier trop lourd (max 15 Mo).");
+                    e.target.value = "";
+                    return;
+                  }
+                  setFile(next);
+                }}
+              />
+            </label>
+          </div>
+
+          <div className="flex justify-end">
+            <PrimaryBtn
+              type="button"
+              disabled={!canAdd}
+              onClick={() => {
+                onAdd?.({
+                  type: docType,
+                  label: docType === "other" ? String(customLabel || "").trim() : "",
+                  file,
+                });
+                setFile(null);
+                setCustomLabel("");
+                setDocType("passport");
+              }}
+            >
+              {saving ? "Upload…" : "Ajouter au devis"}
+            </PrimaryBtn>
+          </div>
+        </div>
+
+        <div className="mt-6 border-t border-slate-200 pt-4">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            Déjà liés ({docs.length})
+          </p>
+          {docs.length === 0 ? (
+            <p className="mt-2 text-sm font-medium text-slate-600">
+              Aucun document pour ce devis.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {docs.map((doc) => (
+                <li
+                  key={doc.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900">
+                      {hotelClientDocTypeLabel(doc.type, doc.label)}
+                    </p>
+                    <p className="truncate text-xs font-medium text-slate-500">
+                      {doc.fileName || "Fichier"}
+                      {doc.uploadedAt
+                        ? ` · ${new Date(doc.uploadedAt).toLocaleDateString("fr-FR")}`
+                        : ""}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={doc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50"
+                    >
+                      Ouvrir
+                    </a>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => onRemove?.(doc.id)}
+                      className="rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                    >
+                      Retirer
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export function HotelHistoryPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1469,6 +2005,8 @@ export function HotelHistoryPage() {
   const [confirmSelectedKey, setConfirmSelectedKey] = useState("");
   const [confirmFlights, setConfirmFlights] = useState(EMPTY_FLIGHTS);
   const [confirmZeroTracas, setConfirmZeroTracas] = useState(EMPTY_ZERO_TRACAS);
+  const [payRequest, setPayRequest] = useState(null);
+  const [docsRequest, setDocsRequest] = useState(null);
   const [catalogHotels, setCatalogHotels] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -1503,7 +2041,37 @@ export function HotelHistoryPage() {
         setRows([]);
         return;
       }
-      setRows((data || []).map(rowToHotelRequestViewModel));
+
+      let rowsData = data || [];
+      try {
+        const purged = await cleanupExpiredHotelRequestDocuments({
+          supabase,
+          siteKey: SITE_KEY,
+          rows: rowsData,
+          logger,
+        });
+        if (purged > 0) {
+          const { data: refreshed, error: refreshError } = await supabase
+            .from("public_hotel_requests")
+            .select(SELECT_COLUMNS)
+            .eq("site_key", SITE_KEY)
+            .order("created_at", { ascending: false })
+            .limit(500);
+          if (!refreshError && refreshed) {
+            rowsData = refreshed;
+          }
+          toast.info(
+            purged === 1
+              ? "Documents d’un séjour passé (départ + 2 j) automatiquement supprimés."
+              : `Documents de ${purged} séjours passés (départ + 2 j) automatiquement supprimés.`,
+            4500
+          );
+        }
+      } catch (purgeErr) {
+        logger.warn("HotelHistoryPage docs cleanup:", purgeErr);
+      }
+
+      setRows(rowsData.map(rowToHotelRequestViewModel));
     } catch (e) {
       logger.error("HotelHistoryPage load:", e);
       setError("Erreur inattendue au chargement.");
@@ -1712,6 +2280,8 @@ export function HotelHistoryPage() {
         zeroTracas: prev.zeroTracas,
         sentToClient: prev.sentToClient === true,
         sentAt: prev.sentAt || undefined,
+        payment: serializePayment(prev.payment),
+        clientDocuments: serializeClientDocuments(prev.clientDocuments),
         updatedAt: new Date().toISOString(),
       };
       const { error: updateError } = await supabase
@@ -1793,6 +2363,11 @@ export function HotelHistoryPage() {
       }
       setSaving(true);
       try {
+        const grandTotal = computeConfirmedGrandTotal(chosen, zeroTracas);
+        const existingPayment = normalizePayment(payload.payment);
+        const schedule =
+          existingPayment.schedule ||
+          buildPaymentSchedule(confirmRequest.arrivalDate, grandTotal, new Date());
         const response_payload = {
           hotels: payload.hotels,
           agentNotes: payload.agentNotes,
@@ -1802,6 +2377,11 @@ export function HotelHistoryPage() {
           zeroTracas,
           sentToClient: payload.sentToClient === true,
           sentAt: payload.sentAt || undefined,
+          payment: serializePayment({
+            entries: existingPayment.entries,
+            schedule,
+          }),
+          clientDocuments: serializeClientDocuments(payload.clientDocuments),
           updatedAt: new Date().toISOString(),
         };
         const { error: updateError } = await supabase
@@ -1867,6 +2447,8 @@ export function HotelHistoryPage() {
           zeroTracas: prev.zeroTracas,
           sentToClient: sent === true,
           sentAt: sent ? new Date().toISOString() : undefined,
+          payment: serializePayment(prev.payment),
+          clientDocuments: serializeClientDocuments(prev.clientDocuments),
           updatedAt: new Date().toISOString(),
         };
         const { error: updateError } = await supabase
@@ -1894,6 +2476,287 @@ export function HotelHistoryPage() {
       }
     },
     [load]
+  );
+
+  const handleSavePayment = useCallback(
+    async ({ amount, file }) => {
+      if (!payRequest?.supabaseId || !supabase || !file) return;
+      const prev = normalizeResponsePayload(payRequest.responsePayload);
+      if (!prev.confirmedHotel || !proposalIsReady(prev.confirmedHotel)) {
+        toast.error("Cette demande n’est pas confirmée.");
+        return;
+      }
+      const status = getPaymentStatus(payRequest, prev);
+      if (!status || status.isFullyPaid) {
+        toast.info("Le solde est déjà réglé.");
+        return;
+      }
+      const paidAmount = roundMoney(Number(amount));
+      if (!(paidAmount > 0) || paidAmount > status.remaining + 0.009) {
+        toast.error("Montant invalide.");
+        return;
+      }
+
+      setSaving(true);
+      try {
+        const safeName = String(file.name || "preuve")
+          .replace(/[^\w.-]+/g, "_")
+          .replace(/_+/g, "_");
+        const objectPath = `hotel-payments/${payRequest.supabaseId}/${Date.now()}_${safeName}`;
+        let usedBucket = PAYMENT_PROOF_BUCKET;
+        let { error: uploadError } = await supabase.storage
+          .from(usedBucket)
+          .upload(objectPath, file, { upsert: false, contentType: file.type });
+
+        if (
+          uploadError &&
+          (() => {
+            const msg = String(uploadError.message || "").toLowerCase();
+            return (
+              msg.includes("bucket not found") ||
+              msg.includes("not found") ||
+              msg.includes("does not exist")
+            );
+          })()
+        ) {
+          usedBucket = PAYMENT_PROOF_FALLBACK_BUCKET;
+          const retry = await supabase.storage
+            .from(usedBucket)
+            .upload(objectPath, file, { upsert: false, contentType: file.type });
+          uploadError = retry.error || null;
+        }
+
+        if (uploadError) {
+          logger.error("HotelHistoryPage payment upload:", uploadError);
+          toast.error(uploadError.message || "Échec de l’upload de la preuve.");
+          return;
+        }
+
+        const { data: pub } = supabase.storage.from(usedBucket).getPublicUrl(objectPath);
+        const proofUrl = String(pub?.publicUrl || "").trim();
+        if (!proofUrl) {
+          toast.error("URL de preuve introuvable après upload.");
+          return;
+        }
+
+        const existing = normalizePayment(prev.payment);
+        const schedule =
+          existing.schedule ||
+          buildPaymentSchedule(
+            payRequest.arrivalDate,
+            status.grandTotal,
+            prev.confirmedAt ? new Date(prev.confirmedAt) : new Date()
+          );
+        const entry = {
+          id: `${Date.now()}-${paidAmount}`,
+          amount: paidAmount,
+          paidAt: new Date().toISOString(),
+          proofUrl,
+          proofFileName: file.name || safeName,
+        };
+        const response_payload = {
+          hotels: prev.hotels,
+          agentNotes: prev.agentNotes,
+          confirmedHotel: prev.confirmedHotel,
+          confirmedAt: prev.confirmedAt || undefined,
+          flights: prev.flights,
+          zeroTracas: prev.zeroTracas,
+          sentToClient: prev.sentToClient === true,
+          sentAt: prev.sentAt || undefined,
+          payment: serializePayment({
+            entries: [...existing.entries, entry],
+            schedule,
+          }),
+          clientDocuments: serializeClientDocuments(prev.clientDocuments),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const { error: updateError } = await supabase
+          .from("public_hotel_requests")
+          .update({
+            response_payload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", payRequest.supabaseId)
+          .eq("site_key", SITE_KEY);
+
+        if (updateError) {
+          logger.error("HotelHistoryPage payment save:", updateError);
+          toast.error(updateError.message || "Impossible d’enregistrer le paiement.");
+          return;
+        }
+
+        const nextRemaining = roundMoney(status.remaining - paidAmount);
+        toast.success(
+          nextRemaining <= 0.009
+            ? "Paiement enregistré — solde réglé."
+            : `Paiement enregistré — reste ${formatQuoteMoney(nextRemaining, status.currency)}.`
+        );
+        setPayRequest(null);
+        setStatusFilter("confirmed");
+        await load();
+      } catch (e) {
+        logger.error("HotelHistoryPage payment:", e);
+        toast.error("Erreur inattendue.");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [payRequest, load]
+  );
+
+  const buildResponsePayloadFromPrev = useCallback((prev, overrides = {}) => {
+    return {
+      hotels: prev.hotels,
+      agentNotes: prev.agentNotes,
+      confirmedHotel: prev.confirmedHotel,
+      confirmedAt: prev.confirmedAt || undefined,
+      flights: prev.flights,
+      zeroTracas: prev.zeroTracas,
+      sentToClient: prev.sentToClient === true,
+      sentAt: prev.sentAt || undefined,
+      payment: serializePayment(prev.payment),
+      clientDocuments: serializeClientDocuments(prev.clientDocuments),
+      updatedAt: new Date().toISOString(),
+      ...overrides,
+    };
+  }, []);
+
+  const handleAddClientDocument = useCallback(
+    async ({ type, label, file }) => {
+      if (!docsRequest?.supabaseId || !supabase || !file) return;
+      if (!isHotelRequestConfirmed(docsRequest)) {
+        toast.error("Documents disponibles uniquement sur une confirmation.");
+        return;
+      }
+      setSaving(true);
+      try {
+        const safeName = String(file.name || "document")
+          .replace(/[^\w.-]+/g, "_")
+          .replace(/_+/g, "_");
+        const objectPath = `hotel-client-docs/${docsRequest.supabaseId}/${Date.now()}_${safeName}`;
+        let usedBucket = PAYMENT_PROOF_BUCKET;
+        let { error: uploadError } = await supabase.storage
+          .from(usedBucket)
+          .upload(objectPath, file, { upsert: false, contentType: file.type || undefined });
+
+        if (
+          uploadError &&
+          (() => {
+            const msg = String(uploadError.message || "").toLowerCase();
+            return (
+              msg.includes("bucket not found") ||
+              msg.includes("not found") ||
+              msg.includes("does not exist")
+            );
+          })()
+        ) {
+          usedBucket = PAYMENT_PROOF_FALLBACK_BUCKET;
+          const retry = await supabase.storage
+            .from(usedBucket)
+            .upload(objectPath, file, { upsert: false, contentType: file.type || undefined });
+          uploadError = retry.error || null;
+        }
+
+        if (uploadError) {
+          logger.error("HotelHistoryPage doc upload:", uploadError);
+          toast.error(uploadError.message || "Échec de l’upload du document.");
+          return;
+        }
+
+        const { data: pub } = supabase.storage.from(usedBucket).getPublicUrl(objectPath);
+        const url = String(pub?.publicUrl || "").trim();
+        if (!url) {
+          toast.error("URL du document introuvable après upload.");
+          return;
+        }
+
+        const prev = normalizeResponsePayload(docsRequest.responsePayload);
+        const entry = {
+          id: `${Date.now()}-${safeName}`,
+          type: String(type || "other"),
+          label: String(label || "").trim(),
+          fileName: file.name || safeName,
+          url,
+          mimeType: file.type || "",
+          uploadedAt: new Date().toISOString(),
+        };
+        const nextDocs = [...prev.clientDocuments, entry];
+        const response_payload = buildResponsePayloadFromPrev(prev, {
+          clientDocuments: serializeClientDocuments(nextDocs),
+        });
+
+        const { error: updateError } = await supabase
+          .from("public_hotel_requests")
+          .update({
+            response_payload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", docsRequest.supabaseId)
+          .eq("site_key", SITE_KEY);
+
+        if (updateError) {
+          logger.error("HotelHistoryPage doc save:", updateError);
+          toast.error(updateError.message || "Impossible d’enregistrer le document.");
+          return;
+        }
+
+        toast.success("Document ajouté au devis.");
+        setDocsRequest((r) =>
+          r ? { ...r, responsePayload: normalizeResponsePayload(response_payload) } : null
+        );
+        setStatusFilter("confirmed");
+        await load();
+      } catch (e) {
+        logger.error("HotelHistoryPage doc add:", e);
+        toast.error("Erreur inattendue.");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [docsRequest, load, buildResponsePayloadFromPrev]
+  );
+
+  const handleRemoveClientDocument = useCallback(
+    async (docId) => {
+      if (!docsRequest?.supabaseId || !supabase || !docId) return;
+      const prev = normalizeResponsePayload(docsRequest.responsePayload);
+      const nextDocs = prev.clientDocuments.filter((d) => d.id !== docId);
+      if (nextDocs.length === prev.clientDocuments.length) return;
+
+      setSaving(true);
+      try {
+        const response_payload = buildResponsePayloadFromPrev(prev, {
+          clientDocuments: serializeClientDocuments(nextDocs),
+        });
+        const { error: updateError } = await supabase
+          .from("public_hotel_requests")
+          .update({
+            response_payload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", docsRequest.supabaseId)
+          .eq("site_key", SITE_KEY);
+
+        if (updateError) {
+          logger.error("HotelHistoryPage doc remove:", updateError);
+          toast.error(updateError.message || "Impossible de retirer le document.");
+          return;
+        }
+
+        toast.success("Document retiré du devis.");
+        setDocsRequest((r) =>
+          r ? { ...r, responsePayload: normalizeResponsePayload(response_payload) } : null
+        );
+        await load();
+      } catch (e) {
+        logger.error("HotelHistoryPage doc remove:", e);
+        toast.error("Erreur inattendue.");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [docsRequest, load, buildResponsePayloadFromPrev]
   );
 
   const handleSaveEdit = useCallback(async () => {
@@ -2073,6 +2936,8 @@ export function HotelHistoryPage() {
               onEdit={handleEdit}
               onMarkSent={handleMarkSent}
               markingSent={markingSentId === request.id}
+              onPay={setPayRequest}
+              onDocuments={setDocsRequest}
             />
           ))}
         </div>
@@ -2122,6 +2987,21 @@ export function HotelHistoryPage() {
         setDraft={setEditDraft}
         onClose={() => !saving && setEditDraft(null)}
         onSave={handleSaveEdit}
+        saving={saving}
+      />
+
+      <HotelPaymentModal
+        request={payRequest}
+        onClose={() => !saving && setPayRequest(null)}
+        onSave={handleSavePayment}
+        saving={saving}
+      />
+
+      <HotelDocumentsModal
+        request={docsRequest}
+        onClose={() => !saving && setDocsRequest(null)}
+        onAdd={handleAddClientDocument}
+        onRemove={handleRemoveClientDocument}
         saving={saving}
       />
     </div>
