@@ -1292,3 +1292,258 @@ export function printHotelRequest(request) {
   }, 700);
   return true;
 }
+
+/**
+ * Petit PDF / impression : reçu d’acompte ou de règlement total.
+ * @param {object} request
+ * @param {{ entryId?: string } | null} [options] — si entryId, reçu pour ce paiement seul
+ */
+export function printHotelPaymentReceipt(request, options = null) {
+  const html = generateHotelPaymentReceiptHTML(request, options);
+  if (!html) return false;
+  const win = window.open("", "_blank");
+  if (!win) return false;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => {
+    win.print();
+  }, 500);
+  return true;
+}
+
+function generateHotelPaymentReceiptHTML(request, options = null) {
+  const payload =
+    request?.responsePayload && typeof request.responsePayload === "object"
+      ? request.responsePayload
+      : {};
+  const confirmed = payload.confirmedHotel;
+  if (!confirmed || !String(confirmed.hotelName || "").trim()) return "";
+
+  const payment = payload.payment && typeof payload.payment === "object" ? payload.payment : {};
+  const entries = Array.isArray(payment.entries)
+    ? payment.entries.filter((e) => e && Number.isFinite(Number(e.amount)) && Number(e.amount) > 0)
+    : [];
+  if (entries.length === 0) return "";
+
+  const entryId = options?.entryId ? String(options.entryId) : "";
+  const focusEntries = entryId
+    ? entries.filter((e) => String(e.id) === entryId)
+    : entries;
+  if (focusEntries.length === 0) return "";
+
+  const currency = confirmed?.quote?.currency || "EUR";
+  const hotelTotal =
+    confirmed?.quote?.total != null && Number.isFinite(Number(confirmed.quote.total))
+      ? Math.round(Number(confirmed.quote.total) * 100) / 100
+      : 0;
+  const zt = payload.zeroTracas;
+  const ztTotal =
+    zt?.enabled === true && zt?.manualTotal != null && Number.isFinite(Number(zt.manualTotal))
+      ? Math.round(Number(zt.manualTotal) * 100) / 100
+      : 0;
+  const scheduleGrand =
+    payment.schedule?.grandTotal != null && Number.isFinite(Number(payment.schedule.grandTotal))
+      ? Math.round(Number(payment.schedule.grandTotal) * 100) / 100
+      : null;
+  const grandTotal = scheduleGrand != null ? scheduleGrand : Math.round((hotelTotal + ztTotal) * 100) / 100;
+  const allPaid = Math.round(entries.reduce((a, e) => a + Number(e.amount), 0) * 100) / 100;
+  const receiptPaid = Math.round(focusEntries.reduce((a, e) => a + Number(e.amount), 0) * 100) / 100;
+  const remaining = Math.round(Math.max(0, grandTotal - allPaid) * 100) / 100;
+  const isFullyPaid = remaining <= 0.009;
+  const depositDue =
+    payment.schedule?.mode === "deposit" && payment.schedule?.dueAmount != null
+      ? Math.round(Number(payment.schedule.dueAmount) * 100) / 100
+      : null;
+
+  let kindLabel = "Paiement reçu";
+  let kindDetail = "Nous accusons réception du paiement suivant.";
+  if (isFullyPaid && !entryId) {
+    kindLabel = "Règlement total";
+    kindDetail = "Nous accusons réception du règlement intégral du séjour.";
+  } else if (isFullyPaid && entryId) {
+    kindLabel = remaining <= 0.009 && allPaid >= grandTotal - 0.009 ? "Solde / règlement" : "Paiement reçu";
+    kindDetail = "Nous accusons réception de ce paiement.";
+  } else if (depositDue != null && allPaid + 0.009 >= depositDue) {
+    kindLabel = "Acompte reçu";
+    kindDetail = "Nous accusons réception de l’acompte. Le solde reste dû selon les conditions convenues.";
+  } else {
+    kindLabel = "Paiement partiel reçu";
+    kindDetail = "Nous accusons réception de ce paiement. Un solde reste à régler.";
+  }
+
+  const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "—";
+  const refId = String(request.id || "").trim() || "—";
+  const shortRef = refId.length > 8 ? refId.slice(0, 8).toUpperCase() : refId.toUpperCase();
+  const issuedLabel = new Date().toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const hotelName = String(confirmed.hotelName || "").trim();
+  const roomCategory = String(confirmed.roomCategory || "").trim();
+
+  const linesHtml = focusEntries
+    .map((e) => {
+      const when = e.paidAt
+        ? new Date(e.paidAt).toLocaleString("fr-FR", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "—";
+      return `<tr>
+        <td>${escapeHtml(when)}</td>
+        <td class="amount">${escapeHtml(formatQuoteMoney(e.amount, currency))}</td>
+      </tr>`;
+    })
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Reçu — ${escapeHtml(fullName)}</title>
+  <style>
+    @page { size: A5; margin: 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: #0f172a;
+      background: #fff;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .sheet {
+      max-width: 420px;
+      margin: 0 auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 22px 20px;
+    }
+    .brand {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #0f766e;
+    }
+    h1 {
+      margin: 6px 0 0;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .badge {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: #065f46;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .meta {
+      margin-top: 16px;
+      display: grid;
+      gap: 8px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 6px;
+    }
+    .label { color: #64748b; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .value { font-weight: 700; text-align: right; }
+    .detail {
+      margin-top: 14px;
+      padding: 12px;
+      background: #f8fafc;
+      border-radius: 10px;
+      color: #334155;
+      font-weight: 500;
+    }
+    table {
+      width: 100%;
+      margin-top: 14px;
+      border-collapse: collapse;
+    }
+    th, td {
+      text-align: left;
+      padding: 8px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+    td.amount, th.amount { text-align: right; font-weight: 800; }
+    .total-box {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #ecfdf5, #f0fdfa);
+      border: 1px solid #a7f3d0;
+    }
+    .total-box .big {
+      font-size: 20px;
+      font-weight: 800;
+      color: #065f46;
+    }
+    .remain {
+      margin-top: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #9f1239;
+    }
+    .footer {
+      margin-top: 18px;
+      font-size: 10px;
+      color: #64748b;
+      text-align: center;
+    }
+    @media print {
+      body { background: #fff; }
+      .sheet { border: none; padding: 0; max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="brand">Hurghada Dream · Hdreamco Ltd</div>
+    <h1>Reçu de paiement</h1>
+    <span class="badge">${escapeHtml(kindLabel)}</span>
+    <p class="detail">${escapeHtml(kindDetail)}</p>
+    <div class="meta">
+      <div class="row"><span class="label">Référence</span><span class="value">${escapeHtml(shortRef)}</span></div>
+      <div class="row"><span class="label">Client</span><span class="value">${escapeHtml(fullName)}</span></div>
+      <div class="row"><span class="label">Hôtel</span><span class="value">${escapeHtml(hotelName)}${roomCategory ? ` · ${escapeHtml(roomCategory)}` : ""}</span></div>
+      <div class="row"><span class="label">Émis le</span><span class="value">${escapeHtml(issuedLabel)}</span></div>
+      <div class="row"><span class="label">Total séjour</span><span class="value">${escapeHtml(formatQuoteMoney(grandTotal, currency))}</span></div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Date du paiement</th><th class="amount">Montant</th></tr>
+      </thead>
+      <tbody>${linesHtml}</tbody>
+    </table>
+    <div class="total-box">
+      <div class="label">${entryId ? "Montant de ce reçu" : "Montant total reçu"}</div>
+      <div class="big">${escapeHtml(formatQuoteMoney(receiptPaid, currency))}</div>
+      ${
+        !isFullyPaid
+          ? `<div class="remain">Reste à payer : ${escapeHtml(formatQuoteMoney(remaining, currency))}</div>`
+          : `<div style="margin-top:8px;font-size:11px;font-weight:700;color:#065f46;">Solde réglé</div>`
+      }
+    </div>
+    <p class="footer">Document généré automatiquement — merci de votre confiance.</p>
+  </div>
+</body>
+</html>`;
+}
+

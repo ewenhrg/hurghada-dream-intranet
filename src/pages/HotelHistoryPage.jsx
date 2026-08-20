@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Banknote, BedDouble, CheckCircle2, FileText, MessageSquareReply, Trash2, Upload } from "lucide-react";
+import { Banknote, BedDouble, CheckCircle2, FileText, MessageSquareReply, Receipt, Trash2, Upload } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
 import { GhostBtn, NumberInput, Pill, PrimaryBtn, TextInput } from "../components/ui";
-import { printHotelRequest } from "../utils/hotelRequestPrint";
+import { printHotelRequest, printHotelPaymentReceipt } from "../utils/hotelRequestPrint";
 import { formatHotelStayDate } from "../utils/hotelRequestDates";
 import {
   boardFieldsFromRow,
@@ -462,6 +462,7 @@ function HotelRequestCard({
   markingSent,
   onPay,
   onDocuments,
+  onPrintReceipt,
   canDelete,
   onDelete,
   deleting,
@@ -604,6 +605,20 @@ function HotelRequestCard({
                 Payer
               </PrimaryBtn>
             ) : null}
+            {confirmedHotel && paymentStatus && paymentStatus.paid > 0.009 ? (
+              <GhostBtn
+                type="button"
+                onClick={() => onPrintReceipt?.(request)}
+                title={
+                  paymentStatus.isFullyPaid
+                    ? "Imprimer le reçu du règlement total"
+                    : "Imprimer le reçu d’acompte / paiement"
+                }
+              >
+                <Receipt className="h-3.5 w-3.5" aria-hidden />
+                Reçu
+              </GhostBtn>
+            ) : null}
             {confirmedHotel ? (
               <GhostBtn type="button" onClick={() => onDocuments?.(request)}>
                 <FileText className="h-3.5 w-3.5" aria-hidden />
@@ -721,6 +736,13 @@ function HotelRequestCard({
                   ) : (
                     <span className="text-slate-500">Preuve expirée</span>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => onPrintReceipt?.(request, entry.id)}
+                    className="font-bold text-emerald-800 underline underline-offset-2 hover:text-emerald-950"
+                  >
+                    Reçu
+                  </button>
                 </li>
               ))}
             </ul>
@@ -2334,6 +2356,17 @@ export function HotelHistoryPage({ user = null }) {
       if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer.");
   }, []);
 
+  const handlePrintReceipt = useCallback((request, entryId = null) => {
+    const ok = printHotelPaymentReceipt(
+      {
+        ...request,
+        responsePayload: normalizeResponsePayload(request.responsePayload),
+      },
+      entryId ? { entryId } : null
+    );
+    if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer le reçu.");
+  }, []);
+
   const handleEdit = useCallback((request) => {
     setEditDraft({ ...request });
   }, []);
@@ -2733,6 +2766,16 @@ export function HotelHistoryPage({ user = null }) {
             ? "Paiement enregistré — solde réglé."
             : `Paiement enregistré — reste ${formatQuoteMoney(nextRemaining, status.currency)}.`
         );
+        const receiptOk = printHotelPaymentReceipt(
+          {
+            ...payRequest,
+            responsePayload: normalizeResponsePayload(response_payload),
+          },
+          { entryId: entry.id }
+        );
+        if (!receiptOk) {
+          toast.warning("Paiement enregistré — autorisez les popups pour imprimer le reçu.");
+        }
         setPayRequest(null);
         setStatusFilter("payer");
         await load();
@@ -3163,6 +3206,7 @@ export function HotelHistoryPage({ user = null }) {
               markingSent={markingSentId === request.id}
               onPay={setPayRequest}
               onDocuments={setDocsRequest}
+              onPrintReceipt={handlePrintReceipt}
               canDelete={canDelete}
               onDelete={handleDeleteRequest}
               deleting={deletingId === request.id}
