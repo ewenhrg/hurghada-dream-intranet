@@ -1,5 +1,6 @@
 import { boardLabelsFromViewModel } from "../constants/hotelRequestBoardOptions";
 import { formatHotelStayDate } from "./hotelRequestDates";
+import { formatHotelRequestShortRef } from "./hotelRequestRef";
 import { formatQuoteMoney } from "./hotelQuoteCalc";
 
 function normalizeZeroTracasForPrint(raw) {
@@ -48,7 +49,7 @@ export function generateHotelRequestHTML(request) {
   const boardLabels = boardLabelsFromViewModel(request);
   const boardLabel = boardLabels.length > 0 ? boardLabels.join(" · ") : "All inclusive";
   const refId = String(request.id || "").trim() || "—";
-  const shortRef = refId.length > 8 ? refId.slice(0, 8).toUpperCase() : refId.toUpperCase();
+  const shortRef = formatHotelRequestShortRef(refId) || "H";
 
   const quoteHotels = Array.isArray(request.quoteHotels)
     ? request.quoteHotels
@@ -1464,7 +1465,7 @@ function generateHotelPaymentReceiptHTML(request, options = null) {
 
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "—";
   const refId = String(request.id || "").trim() || "—";
-  const shortRef = refId.length > 8 ? refId.slice(0, 8).toUpperCase() : refId.toUpperCase();
+  const shortRef = formatHotelRequestShortRef(refId) || "H";
   const issuedLabel = new Date().toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "long",

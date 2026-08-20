@@ -10,6 +10,10 @@ import { GhostBtn, NumberInput, Pill, PrimaryBtn, TextInput } from "../component
 import { printHotelRequest, printHotelPaymentReceipt } from "../utils/hotelRequestPrint";
 import { formatHotelStayDate } from "../utils/hotelRequestDates";
 import {
+  formatHotelRequestShortRef,
+  normalizeHotelRequestRefQuery,
+} from "../utils/hotelRequestRef";
+import {
   boardFieldsFromRow,
   boardFieldsToPayload,
   boardLabelsFromViewModel,
@@ -488,8 +492,7 @@ function HotelRequestCard({
     .map((h) => `${h.hotelName}: ${formatQuoteMoney(h.quote.total, h.quote.currency)}`)
     .join(" · ");
   const refId = String(request.id || request.supabaseId || "").trim();
-  const shortRef =
-    refId.length > 8 ? refId.slice(0, 8).toUpperCase() : refId.toUpperCase();
+  const shortRef = formatHotelRequestShortRef(refId);
   const paymentStatus = confirmedHotel ? getPaymentStatus(request, payload) : null;
   const clientDocuments = payload.clientDocuments || [];
 
@@ -780,9 +783,14 @@ function HotelRequestCard({
         <div className="grid gap-3 text-sm text-slate-800 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm sm:col-span-2 lg:col-span-1">
             <span className="text-[11px] font-bold uppercase text-slate-500">Référence</span>
-            <p className="mt-0.5 break-all font-mono text-sm font-semibold text-slate-950">
-              {refId || "—"}
+            <p className="mt-0.5 font-mono text-sm font-semibold text-slate-950">
+              {shortRef || "—"}
             </p>
+            {refId ? (
+              <p className="mt-0.5 break-all text-[10px] font-medium text-slate-500" title={refId}>
+                ID {refId}
+              </p>
+            ) : null}
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
             <span className="text-[11px] font-bold uppercase text-slate-500">Téléphone</span>
@@ -2399,11 +2407,8 @@ export function HotelHistoryPage({ user = null }) {
     const q = debouncedSearch.trim().toLowerCase();
     if (!q) return list;
     const qDigits = digitsOnly(q);
-    // Réf. affichée = 8 premiers car. de l’UUID ; accepter aussi tirets / préfixe « réf »
-    const qRef = q
-      .replace(/^réf\.?\s*/i, "")
-      .replace(/^ref\.?\s*/i, "")
-      .replace(/[-\s]/g, "");
+    // Réf. affichée = H + 7 car. ; accepter tirets / préfixe « réf » / « H »
+    const qRef = normalizeHotelRequestRefQuery(q);
     return list.filter((r) => {
       const name = [r.firstName, r.lastName].join(" ").toLowerCase();
       const email = (r.email || "").toLowerCase();
@@ -2418,7 +2423,8 @@ export function HotelHistoryPage({ user = null }) {
         .join(" ");
       const refRaw = String(r.id || r.supabaseId || "").toLowerCase();
       const refCompact = refRaw.replace(/-/g, "");
-      const shortRef = refCompact.slice(0, 8);
+      const shortRef = formatHotelRequestShortRef(r.id || r.supabaseId).toLowerCase();
+      const shortRefCore = shortRef.replace(/^h/, "");
       if (
         name.includes(q) ||
         email.includes(q) ||
@@ -2429,7 +2435,8 @@ export function HotelHistoryPage({ user = null }) {
           (refRaw.includes(q) ||
             refCompact.includes(qRef) ||
             shortRef.includes(qRef) ||
-            qRef.includes(shortRef)))
+            shortRefCore.includes(qRef) ||
+            qRef.includes(shortRefCore)))
       ) {
         return true;
       }
@@ -2874,7 +2881,7 @@ export function HotelHistoryPage({ user = null }) {
       if (!request?.supabaseId || !supabase) return;
       const fullName =
         [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "ce client";
-      const short = String(request.id || "").slice(0, 8).toUpperCase();
+      const short = formatHotelRequestShortRef(request.id);
       const ok = window.confirm(
         `Supprimer définitivement le devis de ${fullName}${short ? ` (réf. ${short})` : ""} ?\n\nCette action est irréversible.`
       );
