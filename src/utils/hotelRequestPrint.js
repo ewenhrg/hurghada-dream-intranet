@@ -1,33 +1,25 @@
 import { boardLabelsFromViewModel } from "../constants/hotelRequestBoardOptions";
-import { getZeroTracasPrices } from "./activityHelpers";
 import { formatHotelStayDate } from "./hotelRequestDates";
 import { formatQuoteMoney } from "./hotelQuoteCalc";
 
-const ZERO_TRACAS_PRINT_KEYS = [
-  ["transfertVisaSim", "Transfert + Visa + SIM"],
-  ["transfertVisa", "Transfert + Visa"],
-  ["transfertSim", "Transfert + SIM"],
-  ["transfert3Personnes", "Transfert 3 personnes"],
-  ["transfertPlus3Personnes", "Transfert + de 3 personnes"],
-  ["visaSim", "Visa + SIM"],
-  ["visaSeul", "Visa seul"],
-];
-
-function buildZeroTracasPrintRows(raw) {
+function normalizeZeroTracasForPrint(raw) {
   const z = raw && typeof raw === "object" ? raw : null;
-  if (!z || z.enabled !== true) return [];
-  const prices = getZeroTracasPrices();
-  return ZERO_TRACAS_PRINT_KEYS.map(([key, label]) => {
-    const qty = Number(z[key] || 0);
-    if (!Number.isFinite(qty) || qty <= 0) return null;
-    const unit = prices[key];
-    return {
-      label: `${label} (${unit}€)`,
-      qty,
-      unit,
-      lineTotal: Math.round(qty * unit * 100) / 100,
-    };
-  }).filter(Boolean);
+  if (!z || z.enabled !== true) return null;
+  const visaCount = Number(z.visaCount || 0);
+  const simCount = Number(z.simCount || 0);
+  const manualTotal =
+    z.manualTotal != null && Number.isFinite(Number(z.manualTotal))
+      ? Math.round(Number(z.manualTotal) * 100) / 100
+      : null;
+  const hasQty =
+    (Number.isFinite(visaCount) && visaCount > 0) ||
+    (Number.isFinite(simCount) && simCount > 0);
+  if (!hasQty && manualTotal == null) return null;
+  return {
+    visaCount: Number.isFinite(visaCount) && visaCount > 0 ? Math.floor(visaCount) : 0,
+    simCount: Number.isFinite(simCount) && simCount > 0 ? Math.floor(simCount) : 0,
+    manualTotal,
+  };
 }
 
 /**
@@ -123,31 +115,83 @@ export function generateHotelRequestHTML(request) {
       flights.departureFlightNumber ||
       flights.departureTime);
 
-  const zeroTracasRows = buildZeroTracasPrintRows(
+  const zeroTracasPrint = normalizeZeroTracasForPrint(
     request.zeroTracas || request.responsePayload?.zeroTracas
   );
-  const zeroTracasTotal = zeroTracasRows.reduce((sum, row) => sum + row.lineTotal, 0);
-  const zeroTracasHtml =
-    zeroTracasRows.length > 0
-      ? `<section class="section">
+  const zeroTracasTotal = zeroTracasPrint?.manualTotal != null ? zeroTracasPrint.manualTotal : 0;
+  const zeroTracasHtml = zeroTracasPrint
+    ? `<section class="section">
         <div class="section-head">
           <h2 class="section-title">Zero Tracas</h2>
-          <span class="section-aside">${escapeHtml(formatQuoteMoney(zeroTracasTotal, "EUR"))}</span>
+          <span class="section-aside">${escapeHtml(
+            zeroTracasPrint.manualTotal != null
+              ? formatQuoteMoney(zeroTracasPrint.manualTotal, "EUR")
+              : "—"
+          )}</span>
         </div>
         <div class="info-grid">
-          ${zeroTracasRows
-            .map(
-              (row) => `<div class="info-cell">
-            <span class="info-label">${escapeHtml(row.label)}</span>
-            <div class="info-value">${escapeHtml(String(row.qty))} × ${escapeHtml(
-                formatQuoteMoney(row.unit, "EUR")
-              )} = ${escapeHtml(formatQuoteMoney(row.lineTotal, "EUR"))}</div>
-          </div>`
-            )
-            .join("")}
+          <div class="info-cell">
+            <span class="info-label">Visas</span>
+            <div class="info-value">${escapeHtml(String(zeroTracasPrint.visaCount || 0))}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">SIM</span>
+            <div class="info-value">${escapeHtml(String(zeroTracasPrint.simCount || 0))}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Montant</span>
+            <div class="info-value">${escapeHtml(
+              zeroTracasPrint.manualTotal != null
+                ? formatQuoteMoney(zeroTracasPrint.manualTotal, "EUR")
+                : "—"
+            )}</div>
+          </div>
         </div>
       </section>`
-      : "";
+    : "";
+
+  const hotelQuoteRows = Array.isArray(quoteHotels)
+    ? quoteHotels.filter((h) => h?.hotelName && h?.quote?.total != null && Number.isFinite(Number(h.quote.total)))
+    : [];
+  const hotelTotal = hotelQuoteRows.reduce(
+    (sum, h) => sum + Number(h.quote.total),
+    0
+  );
+  const hotelCurrency =
+    hotelQuoteRows.find((h) => h.quote?.currency)?.quote?.currency || "EUR";
+  const showGrandTotal =
+    isConfirmation && (hotelQuoteRows.length > 0 || zeroTracasTotal > 0);
+  const grandTotal = Math.round((hotelTotal + zeroTracasTotal) * 100) / 100;
+  const totalBlockHtml = showGrandTotal
+    ? `<section class="section total-section">
+        <div class="total-block">
+          <div class="total-lines">
+            ${
+              hotelQuoteRows.length > 0
+                ? `<div class="total-line">
+              <span>Hôtel${hotelQuoteRows.length > 1 ? "s" : ""}</span>
+              <strong>${escapeHtml(formatQuoteMoney(hotelTotal, hotelCurrency))}</strong>
+            </div>`
+                : ""
+            }
+            ${
+              zeroTracasTotal > 0
+                ? `<div class="total-line">
+              <span>Zero Tracas</span>
+              <strong>${escapeHtml(formatQuoteMoney(zeroTracasTotal, "EUR"))}</strong>
+            </div>`
+                : ""
+            }
+          </div>
+          <div class="total-grand">
+            <span class="total-grand-label">Montant total</span>
+            <span class="total-grand-value">${escapeHtml(
+              formatQuoteMoney(grandTotal, hotelCurrency)
+            )}</span>
+          </div>
+        </div>
+      </section>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -576,6 +620,53 @@ export function generateHotelRequestHTML(request) {
       min-height: 52px;
     }
 
+    /* Montant total */
+    .total-section { margin-top: 8px; }
+    .total-block {
+      border-radius: 16px;
+      border: 1px solid var(--line-strong);
+      background: linear-gradient(165deg, #f8fafc 0%, #eef6f8 100%);
+      padding: 18px 20px;
+    }
+    .total-lines { display: grid; gap: 8px; margin-bottom: 14px; }
+    .total-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-soft);
+    }
+    .total-line strong {
+      font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .total-grand {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line-strong);
+    }
+    .total-grand-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .total-grand-value {
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
     /* Footer */
     .footer {
       margin-top: 28px;
@@ -789,6 +880,8 @@ export function generateHotelRequestHTML(request) {
         <div class="notes-box">${escapeHtml(agentNotes)}</div>
       </section>`;
       })()}
+
+      ${totalBlockHtml}
     </div>
 
     <footer class="footer">

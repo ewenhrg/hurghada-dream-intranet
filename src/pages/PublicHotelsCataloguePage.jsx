@@ -31,6 +31,7 @@ export function PublicHotelsCataloguePage() {
   const [loading, setLoading] = useState(true);
   const [stayHotel, setStayHotel] = useState(null);
   const [openDrawerSignal, setOpenDrawerSignal] = useState(0);
+  const [openCustomOfferSignal, setOpenCustomOfferSignal] = useState(0);
   const [cartCount, setCartCount] = useState(() => loadPublicHotelsCart().items.length);
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export function PublicHotelsCataloguePage() {
     return () => window.removeEventListener("hd-hotels-cart", sync);
   }, []);
 
-  const goToCustomOffer = () => navigate("/demande-hotel?proposition=1");
+  const goToCustomOffer = () => setOpenCustomOfferSignal((n) => n + 1);
   const openHotel = (id) => navigate(`/hotels/${encodeURIComponent(id)}`);
   const openCart = () => setOpenDrawerSignal((n) => n + 1);
 
@@ -336,6 +337,7 @@ export function PublicHotelsCataloguePage() {
         stayHotel={stayHotel}
         onStayHotelHandled={() => setStayHotel(null)}
         openDrawerSignal={openDrawerSignal}
+        openCustomOfferSignal={openCustomOfferSignal}
         hideFab
       />
     </div>

@@ -90,15 +90,20 @@ export function HotelsDevisCart({
   stayHotel = null,
   onStayHotelHandled,
   openDrawerSignal = 0,
+  openCustomOfferSignal = 0,
   hideFab = false,
 }) {
   const [cart, setCart] = useState(() => loadPublicHotelsCart());
   const [stayDraft, setStayDraft] = useState(() => loadPublicHotelsCart().stay);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [customOfferOpen, setCustomOfferOpen] = useState(false);
+  const [wantsCustomOffer, setWantsCustomOffer] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [client, setClient] = useState(EMPTY_CLIENT);
   const [submitting, setSubmitting] = useState(false);
+
+  const defaultAgePolicy = useMemo(() => normalizeHotelAgePolicy({}), []);
 
   useEffect(() => {
     savePublicHotelsCart(cart);
@@ -106,6 +111,7 @@ export function HotelsDevisCart({
 
   useEffect(() => {
     if (stayHotel) {
+      setCustomOfferOpen(false);
       setStayDraft(normalizeStay(cart.stay));
     }
   }, [stayHotel]); // eslint-disable-line react-hooks/exhaustive-deps -- only when a hotel is offered
@@ -115,39 +121,62 @@ export function HotelsDevisCart({
   }, [openDrawerSignal]);
 
   useEffect(() => {
-    if (!drawerOpen && !checkoutOpen && !successOpen && !stayHotel) return undefined;
+    if (openCustomOfferSignal > 0) {
+      setDrawerOpen(false);
+      setCheckoutOpen(false);
+      setWantsCustomOffer(true);
+      setStayDraft(normalizeStay(loadPublicHotelsCart().stay));
+      setCustomOfferOpen(true);
+    }
+  }, [openCustomOfferSignal]);
+
+  useEffect(() => {
+    if (!drawerOpen && !checkoutOpen && !successOpen && !stayHotel && !customOfferOpen) {
+      return undefined;
+    }
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [drawerOpen, checkoutOpen, successOpen, stayHotel]);
+  }, [drawerOpen, checkoutOpen, successOpen, stayHotel, customOfferOpen]);
 
   const itemCount = cart.items.length;
   const cartAgePolicy = useMemo(
-    () => cart.stay?.agePolicy || (stayHotel ? normalizeHotelAgePolicy(stayHotel) : null),
-    [cart.stay?.agePolicy, stayHotel]
+    () =>
+      cart.stay?.agePolicy ||
+      (stayHotel ? normalizeHotelAgePolicy(stayHotel) : null) ||
+      (wantsCustomOffer || customOfferOpen ? defaultAgePolicy : null),
+    [cart.stay?.agePolicy, stayHotel, wantsCustomOffer, customOfferOpen, defaultAgePolicy]
   );
-  const stayAgePolicy = useMemo(
-    () => (stayHotel ? normalizeHotelAgePolicy(stayHotel) : cartAgePolicy),
-    [stayHotel, cartAgePolicy]
-  );
-  const stayAgeLabel = useMemo(
-    () => (stayHotel ? formatHotelAgePolicyLabel(stayHotel) : ""),
-    [stayHotel]
-  );
+  const stayAgePolicy = useMemo(() => {
+    if (stayHotel) return normalizeHotelAgePolicy(stayHotel);
+    if (customOfferOpen || wantsCustomOffer) return defaultAgePolicy;
+    return cartAgePolicy || defaultAgePolicy;
+  }, [stayHotel, customOfferOpen, wantsCustomOffer, cartAgePolicy, defaultAgePolicy]);
+  const stayAgeLabel = useMemo(() => {
+    if (stayHotel) return formatHotelAgePolicyLabel(stayHotel);
+    if (customOfferOpen || wantsCustomOffer) return formatHotelAgePolicyLabel({});
+    return "";
+  }, [stayHotel, customOfferOpen, wantsCustomOffer]);
   const staySummary = useMemo(
-    () => formatStaySummary(cart.stay, cartAgePolicy),
-    [cart.stay, cartAgePolicy]
+    () => formatStaySummary(cart.stay, cartAgePolicy || defaultAgePolicy),
+    [cart.stay, cartAgePolicy, defaultAgePolicy]
   );
   const stayDraftDerived = useMemo(
     () => deriveMinorsFromBirthDates(stayDraft, stayAgePolicy),
     [stayDraft, stayAgePolicy]
   );
 
+  const stayModalOpen = Boolean(stayHotel) || customOfferOpen;
+
   const closeStayModal = useCallback(() => {
+    if (customOfferOpen) {
+      setCustomOfferOpen(false);
+      setWantsCustomOffer(false);
+    }
     onStayHotelHandled?.();
-  }, [onStayHotelHandled]);
+  }, [customOfferOpen, onStayHotelHandled]);
 
   function updateStayField(field, value) {
     setStayDraft((prev) => {
@@ -216,8 +245,26 @@ export function HotelsDevisCart({
         ],
       };
     });
+    setWantsCustomOffer(false);
     closeStayModal();
     setDrawerOpen(true);
+  }
+
+  function confirmCustomOfferStay() {
+    const policy = defaultAgePolicy;
+    const err = validateHotelStay(stayDraft, policy);
+    if (err) {
+      toast.error(err);
+      return;
+    }
+    const normalized = {
+      ...normalizeStay(stayDraft),
+      agePolicy: policy,
+    };
+    setCart((prev) => ({ ...prev, stay: normalized }));
+    setWantsCustomOffer(true);
+    setCustomOfferOpen(false);
+    setCheckoutOpen(true);
   }
 
   function removeItem(id) {
@@ -237,17 +284,22 @@ export function HotelsDevisCart({
       toast.error(err);
       return;
     }
+    setWantsCustomOffer(false);
     setDrawerOpen(false);
     setCheckoutOpen(true);
   }
 
   async function submitCheckout(e) {
     e.preventDefault();
-    if (cart.items.length === 0) {
+    const isCustom = wantsCustomOffer === true;
+    if (!isCustom && cart.items.length === 0) {
       toast.error("Panier vide.");
       return;
     }
-    const stayErr = validateHotelStay(cart.stay, cart.stay?.agePolicy || cartAgePolicy);
+    const stayErr = validateHotelStay(
+      cart.stay,
+      cart.stay?.agePolicy || cartAgePolicy || defaultAgePolicy
+    );
     if (stayErr) {
       toast.error(stayErr);
       return;
@@ -282,14 +334,15 @@ export function HotelsDevisCart({
       return;
     }
 
-    const hotels = cart.items.map((it) => it.hotelName);
+    const hotels = isCustom ? [] : cart.items.map((it) => it.hotelName);
     const stay = normalizeStay(cart.stay);
-    const policy = stay.agePolicy || cartAgePolicy;
+    const policy = stay.agePolicy || cartAgePolicy || defaultAgePolicy;
     const derived = deriveMinorsFromBirthDates(stay, policy);
     const agesText = formatHotelStayAgesForDb(stay, policy);
     const cartNote = [
+      isCustom ? "Offre personnalisée demandée (sans choix d’hôtel)." : "",
       client.notes.trim(),
-      cart.items.length > 1
+      !isCustom && cart.items.length > 1
         ? `Hôtels demandés : ${cart.items.map((it) => it.hotelName).join(" · ")}`
         : "",
       derived.babiesCount > 0 ? `Bébés (auto) : ${derived.babiesCount}` : "",
@@ -317,7 +370,7 @@ export function HotelsDevisCart({
         hotel_option_1: hotels[0] || "",
         hotel_option_2: hotels[1] || "",
         hotel_option_3: hotels[2] || "",
-        wants_custom_offer: false,
+        wants_custom_offer: isCustom,
         budget: client.budget.trim(),
         ...boardFieldsToPayload(client),
         notes: cartNote,
@@ -334,6 +387,7 @@ export function HotelsDevisCart({
       clearPublicHotelsCart();
       setCart({ stay: loadPublicHotelsCart().stay, items: [] });
       setClient(EMPTY_CLIENT);
+      setWantsCustomOffer(false);
       setCheckoutOpen(false);
       setSuccessOpen(true);
     } catch (err) {
@@ -365,7 +419,7 @@ export function HotelsDevisCart({
       ) : null}
 
       {/* Modal dates & voyageurs */}
-      {stayHotel ? (
+      {stayModalOpen ? (
         <div
           className="fixed inset-0 z-[120] flex items-end justify-center sm:items-center sm:p-4"
           role="dialog"
@@ -382,9 +436,16 @@ export function HotelsDevisCart({
             <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-slate-200 sm:hidden" aria-hidden />
             <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3 sm:px-6 sm:pt-5">
               <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-700">Étape 1 · Séjour</p>
-                <h2 id="hotel-stay-title" className="mt-1 truncate font-catalog-display text-xl font-semibold text-catalog-ink">
-                  {stayHotel.name}
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-700">
+                  {customOfferOpen ? "Proposition · Séjour" : "Étape 1 · Séjour"}
+                </p>
+                <h2
+                  id="hotel-stay-title"
+                  className="mt-1 truncate font-catalog-display text-xl font-semibold text-catalog-ink"
+                >
+                  {customOfferOpen
+                    ? "Je veux une proposition"
+                    : stayHotel?.name || "Séjour"}
                 </h2>
               </div>
               <button
@@ -441,7 +502,7 @@ export function HotelsDevisCart({
 
               {stayAgeLabel ? (
                 <p className="mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold leading-snug text-violet-900">
-                  Grille hôtel : {stayAgeLabel}
+                  {customOfferOpen ? "Grille d’âges (indicatif)" : "Grille hôtel"} : {stayAgeLabel}
                   <span className="mt-1 block font-medium text-violet-700/90">
                     Indiquez la date de naissance : bébé ou enfant est calculé automatiquement à
                     l’arrivée.
@@ -504,10 +565,10 @@ export function HotelsDevisCart({
             <div className="shrink-0 border-t border-violet-100 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
               <button
                 type="button"
-                onClick={confirmAddToCart}
+                onClick={customOfferOpen ? confirmCustomOfferStay : confirmAddToCart}
                 className="inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 text-base font-bold text-white shadow-md active:scale-[0.99]"
               >
-                Ajouter au panier
+                {customOfferOpen ? "Continuer ma demande" : "Ajouter au panier"}
               </button>
             </div>
           </div>
@@ -605,7 +666,10 @@ export function HotelsDevisCart({
             type="button"
             className="absolute inset-0 bg-slate-950/60"
             aria-label="Fermer"
-            onClick={() => setCheckoutOpen(false)}
+            onClick={() => {
+              setCheckoutOpen(false);
+              setWantsCustomOffer(false);
+            }}
           />
           <form
             onSubmit={(e) => void submitCheckout(e)}
@@ -614,12 +678,19 @@ export function HotelsDevisCart({
             <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-slate-200 sm:hidden" aria-hidden />
             <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-3 sm:px-6 sm:pt-5">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-700">Étape 2 · Contact</p>
-                <h2 className="mt-1 font-catalog-display text-xl font-semibold text-catalog-ink">Vos coordonnées</h2>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-700">
+                  {wantsCustomOffer ? "Proposition · Contact" : "Étape 2 · Contact"}
+                </p>
+                <h2 className="mt-1 font-catalog-display text-xl font-semibold text-catalog-ink">
+                  Vos coordonnées
+                </h2>
               </div>
               <button
                 type="button"
-                onClick={() => setCheckoutOpen(false)}
+                onClick={() => {
+                  setCheckoutOpen(false);
+                  setWantsCustomOffer(false);
+                }}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100"
                 aria-label="Fermer"
               >
@@ -633,14 +704,20 @@ export function HotelsDevisCart({
                   {staySummary}
                 </p>
               ) : null}
-              <ul className="mb-4 space-y-1 text-sm font-semibold text-catalog-body">
-                {cart.items.map((it) => (
-                  <li key={it.id} className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-violet-500" aria-hidden />
-                    {it.hotelName}
-                  </li>
-                ))}
-              </ul>
+              {wantsCustomOffer ? (
+                <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-950">
+                  Offre personnalisée — sans hôtel préchoisi. Nous vous proposons une adresse adaptée.
+                </p>
+              ) : (
+                <ul className="mb-4 space-y-1 text-sm font-semibold text-catalog-body">
+                  {cart.items.map((it) => (
+                    <li key={it.id} className="flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-violet-500" aria-hidden />
+                      {it.hotelName}
+                    </li>
+                  ))}
+                </ul>
+              )}
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block text-sm font-semibold text-catalog-ink">

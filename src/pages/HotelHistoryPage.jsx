@@ -16,7 +16,6 @@ import {
 } from "../constants/hotelRequestBoardOptions";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
 import { countHotelNights, formatQuoteMoney } from "../utils/hotelQuoteCalc";
-import { getZeroTracasPrices } from "../utils/activityHelpers";
 import {
   formatRoomOccupancyLabel,
   findRoomCategory,
@@ -135,25 +134,11 @@ const EMPTY_FLIGHTS = {
   departureTime: "",
 };
 
-const ZERO_TRACAS_QTY_KEYS = [
-  "transfertVisaSim",
-  "transfertVisa",
-  "transfertSim",
-  "transfert3Personnes",
-  "transfertPlus3Personnes",
-  "visaSim",
-  "visaSeul",
-];
-
 const EMPTY_ZERO_TRACAS = {
   enabled: false,
-  transfertVisaSim: "",
-  transfertVisa: "",
-  transfertSim: "",
-  transfert3Personnes: "",
-  transfertPlus3Personnes: "",
-  visaSim: "",
-  visaSeul: "",
+  visaCount: "",
+  simCount: "",
+  manualTotal: null,
 };
 
 function parseQtyInput(raw) {
@@ -164,45 +149,31 @@ function parseQtyInput(raw) {
 
 function normalizeZeroTracas(raw) {
   const z = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
-  const out = { enabled: z.enabled === true };
-  for (const key of ZERO_TRACAS_QTY_KEYS) {
-    const n = parseQtyInput(z[key]);
-    out[key] = n > 0 ? String(n) : "";
-  }
-  return out;
+  const visaCount = parseQtyInput(z.visaCount);
+  const simCount = parseQtyInput(z.simCount);
+  const manual =
+    z.manualTotal != null && Number.isFinite(Number(z.manualTotal))
+      ? roundMoney(Number(z.manualTotal))
+      : null;
+  return {
+    enabled: z.enabled === true,
+    visaCount: visaCount > 0 ? String(visaCount) : "",
+    simCount: simCount > 0 ? String(simCount) : "",
+    manualTotal: manual,
+  };
 }
 
-function getZeroTracasServiceRows(zeroTracas) {
+function isZeroTracasComplete(zeroTracas) {
   const z = normalizeZeroTracas(zeroTracas);
-  if (!z.enabled) return [];
-  const prices = getZeroTracasPrices();
-  const labels = {
-    transfertVisaSim: `Transfert + Visa + SIM (${prices.transfertVisaSim}€)`,
-    transfertVisa: `Transfert + Visa (${prices.transfertVisa}€)`,
-    transfertSim: `Transfert + SIM (${prices.transfertSim}€)`,
-    transfert3Personnes: `Transfert 3 personnes (${prices.transfert3Personnes}€)`,
-    transfertPlus3Personnes: `Transfert + de 3 personnes (${prices.transfertPlus3Personnes}€)`,
-    visaSim: `Visa + SIM (${prices.visaSim}€)`,
-    visaSeul: `Visa seul (${prices.visaSeul}€)`,
-  };
-  return ZERO_TRACAS_QTY_KEYS.map((key) => {
-    const qty = parseQtyInput(z[key]);
-    if (qty <= 0) return null;
-    const unit = prices[key];
-    return {
-      key,
-      label: labels[key],
-      qty,
-      unit,
-      lineTotal: roundMoney(qty * unit),
-    };
-  }).filter(Boolean);
+  if (!z.enabled) return true;
+  const hasQty = parseQtyInput(z.visaCount) > 0 || parseQtyInput(z.simCount) > 0;
+  return hasQty && z.manualTotal != null && z.manualTotal >= 0;
 }
 
 function computeZeroTracasTotal(zeroTracas) {
-  return roundMoney(
-    getZeroTracasServiceRows(zeroTracas).reduce((sum, row) => sum + row.lineTotal, 0)
-  );
+  const z = normalizeZeroTracas(zeroTracas);
+  if (!z.enabled || z.manualTotal == null) return 0;
+  return z.manualTotal;
 }
 
 function flightsAreComplete(flights) {
@@ -966,7 +937,6 @@ function HotelConfirmModal({
     (options[0] ? hotelProposalKey(options[0], 0) : "");
   const flightValues = flights || EMPTY_FLIGHTS;
   const zt = zeroTracas || EMPTY_ZERO_TRACAS;
-  const ztPrices = getZeroTracasPrices();
   const ztTotal = computeZeroTracasTotal(zt);
 
   const updateFlight = (key, value) => {
@@ -979,19 +949,6 @@ function HotelConfirmModal({
 
   const fieldClass =
     "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20";
-
-  const ztFields = [
-    { key: "transfertVisaSim", label: `Transfert + Visa + SIM (${ztPrices.transfertVisaSim}€)` },
-    { key: "transfertVisa", label: `Transfert + Visa (${ztPrices.transfertVisa}€)` },
-    { key: "transfertSim", label: `Transfert + SIM (${ztPrices.transfertSim}€)` },
-    { key: "transfert3Personnes", label: `Transfert 3 personnes (${ztPrices.transfert3Personnes}€)` },
-    {
-      key: "transfertPlus3Personnes",
-      label: `Transfert + de 3 personnes (${ztPrices.transfertPlus3Personnes}€)`,
-    },
-    { key: "visaSim", label: `Visa + SIM (${ztPrices.visaSim}€)` },
-    { key: "visaSeul", label: `Visa seul (${ztPrices.visaSeul}€)` },
-  ];
 
   return createPortal(
     <div
@@ -1131,34 +1088,61 @@ function HotelConfirmModal({
             <span className="min-w-0">
               <span className="block text-sm font-bold text-indigo-950">Zero Tracas</span>
               <span className="mt-0.5 block text-xs font-medium text-indigo-800/80">
-                Même grille que sur le devis : transferts, visa et SIM.
+                Nombre de visas, de SIM, et montant total saisi à la main.
               </span>
             </span>
           </label>
 
           {zt.enabled ? (
             <div className="mt-4 border-t border-indigo-200/70 pt-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-indigo-900">
-                Types de services ZERO TRACAS
-              </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {ztFields.map((field) => (
-                  <label key={field.key} className="block text-xs font-bold text-slate-800">
-                    {field.label}
-                    <NumberInput
-                      value={zt[field.key] ?? ""}
-                      onChange={(e) =>
-                        updateZeroTracas({
-                          [field.key]: e.target.value === "" ? "" : e.target.value,
-                        })
-                      }
-                      placeholder="0"
-                      min={0}
-                      className="mt-1.5 text-sm"
-                      disabled={saving}
-                    />
-                  </label>
-                ))}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label className="block text-xs font-bold text-slate-800">
+                  Nombre de visas
+                  <NumberInput
+                    value={zt.visaCount ?? ""}
+                    onChange={(e) =>
+                      updateZeroTracas({
+                        visaCount: e.target.value === "" ? "" : e.target.value,
+                      })
+                    }
+                    placeholder="0"
+                    min={0}
+                    className="mt-1.5 text-sm"
+                    disabled={saving}
+                  />
+                </label>
+                <label className="block text-xs font-bold text-slate-800">
+                  Nombre de SIM
+                  <NumberInput
+                    value={zt.simCount ?? ""}
+                    onChange={(e) =>
+                      updateZeroTracas({
+                        simCount: e.target.value === "" ? "" : e.target.value,
+                      })
+                    }
+                    placeholder="0"
+                    min={0}
+                    className="mt-1.5 text-sm"
+                    disabled={saving}
+                  />
+                </label>
+                <label className="block text-xs font-bold text-slate-800">
+                  Montant total (€) <span className="text-teal-600">*</span>
+                  <NumberInput
+                    value={zt.manualTotal ?? ""}
+                    onChange={(e) => {
+                      const parsed = parseMoneyInput(e.target.value);
+                      updateZeroTracas({
+                        manualTotal: e.target.value === "" ? null : parsed,
+                      });
+                    }}
+                    placeholder="ex. 120"
+                    min={0}
+                    step="0.01"
+                    className="mt-1.5 text-sm"
+                    disabled={saving}
+                  />
+                </label>
               </div>
               {ztTotal > 0 ? (
                 <p className="mt-4 text-right text-sm font-bold text-indigo-950">
@@ -1166,7 +1150,7 @@ function HotelConfirmModal({
                 </p>
               ) : (
                 <p className="mt-4 text-xs font-semibold text-indigo-800/80">
-                  Indiquez au moins une quantité pour enregistrer Zero Tracas.
+                  Indiquez au moins 1 visa ou 1 SIM, puis le montant.
                 </p>
               )}
             </div>
@@ -1673,12 +1657,18 @@ export function HotelHistoryPage() {
         return;
       }
       const zeroTracas = normalizeZeroTracas(zeroTracasInput || confirmZeroTracas);
-      if (zeroTracas.enabled && getZeroTracasServiceRows(zeroTracas).length === 0) {
-        toast.error("Zero Tracas : indiquez au moins une quantité de service.");
+      if (zeroTracas.enabled && !isZeroTracasComplete(zeroTracas)) {
+        if (parseQtyInput(zeroTracas.visaCount) <= 0 && parseQtyInput(zeroTracas.simCount) <= 0) {
+          toast.error("Zero Tracas : indiquez le nombre de visas et/ou de SIM.");
+          return;
+        }
+        toast.error("Zero Tracas : indiquez le montant total.");
         return;
       }
       if (!zeroTracas.enabled) {
-        for (const key of ZERO_TRACAS_QTY_KEYS) zeroTracas[key] = "";
+        zeroTracas.visaCount = "";
+        zeroTracas.simCount = "";
+        zeroTracas.manualTotal = null;
       }
       setSaving(true);
       try {
