@@ -288,6 +288,36 @@ export function generateHotelRequestHTML(request) {
       </section>`
     : "";
 
+  const bankDetailsHtml = isConfirmation
+    ? `<section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Coordonnées bancaires</h2>
+          <span class="section-aside">EUR · Hdreamco Ltd</span>
+        </div>
+        <div class="bank-box">
+          <p class="bank-intro">Coordonnées bancaires en EUR de Hdreamco Ltd :</p>
+          <div class="bank-rows">
+            <div class="bank-row">
+              <span class="bank-label">Propriétaire du compte</span>
+              <span class="bank-value">Hdreamco Ltd</span>
+            </div>
+            <div class="bank-row">
+              <span class="bank-label">BIC</span>
+              <span class="bank-value bank-mono">TRWIBEB1XXX</span>
+            </div>
+            <div class="bank-row">
+              <span class="bank-label">IBAN</span>
+              <span class="bank-value bank-mono">BE80 9676 1729 9777</span>
+            </div>
+            <div class="bank-row">
+              <span class="bank-label">Banque</span>
+              <span class="bank-value">Wise, Rue du Trône 100, 3rd floor, Brussels, 1050, Belgium</span>
+            </div>
+          </div>
+        </div>
+      </section>`
+    : "";
+
   const staySectionHtml = `<section class="section">
         <div class="section-head">
           <h2 class="section-title">Séjour</h2>
@@ -964,6 +994,46 @@ export function generateHotelRequestHTML(request) {
       color: var(--accent);
     }
 
+    .bank-box {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--wash);
+      padding: 16px 18px;
+    }
+    .bank-intro {
+      margin: 0 0 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink-soft);
+    }
+    .bank-rows { display: grid; gap: 10px; }
+    .bank-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 160px) 1fr;
+      gap: 10px 14px;
+      align-items: start;
+    }
+    .bank-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-top: 2px;
+    }
+    .bank-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    .bank-mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12.5px;
+      letter-spacing: 0.02em;
+      font-weight: 700;
+    }
+
     /* Footer */
     .footer {
       margin-top: 28px;
@@ -1034,6 +1104,7 @@ export function generateHotelRequestHTML(request) {
       .quote-meta-item { border-right: none; padding: 0; }
       .footer { flex-direction: column; align-items: flex-start; }
       .footer-stamp { text-align: left; }
+      .bank-row { grid-template-columns: 1fr; gap: 2px; }
     }
   </style>
 </head>
@@ -1066,7 +1137,8 @@ export function generateHotelRequestHTML(request) {
       ${zeroTracasHtml}
       ${notesSectionHtml}
       ${agentNotesSectionHtml}
-      ${totalBlockHtml}`
+      ${totalBlockHtml}
+      ${bankDetailsHtml}`
           : `${staySectionHtml}
       ${flightsSectionHtml}
       ${zeroTracasHtml}
