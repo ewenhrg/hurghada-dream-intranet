@@ -7,12 +7,12 @@ import { allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, formatTurtleF
 import { formatDivingVisitorLabel } from "../utils/divingSafety.js";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
-import { PrimaryBtn } from "../components/ui";
+import { PrimaryBtn, Pill } from "../components/ui";
 import {
   buildQuoteDraftFromPublicViewModel,
   HD_PUBLIC_QUOTE_TO_DRAFT_EVENT,
 } from "../utils/publicQuoteToDraft";
-import { markPublicQuoteTreated, PUBLIC_QUOTE_TTL_MS } from "../utils/publicQuoteInbox";
+import { markPublicQuoteTreated, PUBLIC_QUOTE_TTL_MS, isPublicQuotePending } from "../utils/publicQuoteInbox";
 const PUBLIC_QUOTES_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 
 function parseItems(rawItems) {
@@ -163,16 +163,26 @@ export function PublicDevisPage({ user }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [phoneFilter, setPhoneFilter] = useState("");
+  const [pendingOnly, setPendingOnly] = useState(false);
 
   const phoneSearchDigits = useMemo(() => digitsOnly(phoneFilter), [phoneFilter]);
 
+  const pendingCount = useMemo(
+    () => rows.filter((q) => isPublicQuotePending(q)).length,
+    [rows]
+  );
+
   const filteredRows = useMemo(() => {
-    if (!phoneSearchDigits) return rows;
-    return rows.filter((q) => {
+    let list = rows;
+    if (pendingOnly) {
+      list = list.filter((q) => isPublicQuotePending(q));
+    }
+    if (!phoneSearchDigits) return list;
+    return list.filter((q) => {
       const p = digitsOnly(q.client?.phone);
       return p.includes(phoneSearchDigits);
     });
-  }, [rows, phoneSearchDigits]);
+  }, [rows, phoneSearchDigits, pendingOnly]);
 
   const load = useCallback(async () => {
     if (!supabase) {
@@ -337,7 +347,7 @@ export function PublicDevisPage({ user }) {
     );
   }
 
-  const showNoPhoneMatch = filteredRows.length === 0;
+  const showNoFilterMatch = filteredRows.length === 0;
 
   return (
     <div className="space-y-5">
@@ -347,41 +357,73 @@ export function PublicDevisPage({ user }) {
       </p>
 
       {rows.length > 0 && (
-        <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/40 px-4 py-3 shadow-sm sm:px-5 sm:py-4">
-          <label htmlFor="public-devis-phone-search" className="block text-xs font-bold uppercase tracking-wide text-indigo-950">
-            Rechercher par numéro de téléphone
-          </label>
-          <input
-            id="public-devis-phone-search"
-            type="search"
-            value={phoneFilter}
-            onChange={(e) => setPhoneFilter(e.target.value)}
-            placeholder="Ex. 06 12 34 56 78 ou partie du numéro"
-            autoComplete="off"
-            className="mt-2 w-full rounded-xl border-2 border-indigo-200/90 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-          />
-          <p className="mt-2 text-[11px] font-medium text-indigo-900/80">
-            {phoneSearchDigits ? (
-              <>
-                {filteredRows.length} demande{filteredRows.length > 1 ? "s" : ""} correspondant au filtre ·{" "}
-                <button
-                  type="button"
-                  className="font-bold text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
-                  onClick={() => setPhoneFilter("")}
-                >
-                  Réinitialiser
-                </button>
-              </>
-            ) : (
-              `${rows.length} demande${rows.length > 1 ? "s" : ""} affichée${rows.length > 1 ? "s" : ""}`
-            )}
-          </p>
+        <div className="space-y-3 rounded-2xl border border-indigo-200/80 bg-indigo-50/40 px-4 py-3 shadow-sm sm:px-5 sm:py-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Pill
+              type="button"
+              tone="light"
+              active={!pendingOnly}
+              onClick={() => setPendingOnly(false)}
+              className="!text-xs !px-3.5 !py-2"
+            >
+              Tous ({rows.length})
+            </Pill>
+            <Pill
+              type="button"
+              tone="light"
+              active={pendingOnly}
+              onClick={() => setPendingOnly(true)}
+              className="!text-xs !px-3.5 !py-2"
+            >
+              En attente ({pendingCount})
+            </Pill>
+          </div>
+
+          <div>
+            <label htmlFor="public-devis-phone-search" className="block text-xs font-bold uppercase tracking-wide text-indigo-950">
+              Rechercher par numéro de téléphone
+            </label>
+            <input
+              id="public-devis-phone-search"
+              type="search"
+              value={phoneFilter}
+              onChange={(e) => setPhoneFilter(e.target.value)}
+              placeholder="Ex. 06 12 34 56 78 ou partie du numéro"
+              autoComplete="off"
+              className="mt-2 w-full rounded-xl border-2 border-indigo-200/90 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+            />
+            <p className="mt-2 text-[11px] font-medium text-indigo-900/80">
+              {phoneSearchDigits || pendingOnly ? (
+                <>
+                  {filteredRows.length} demande{filteredRows.length > 1 ? "s" : ""} affichée
+                  {filteredRows.length > 1 ? "s" : ""}
+                  {pendingOnly ? " · filtre en attente" : ""}
+                  {phoneSearchDigits ? " · filtre téléphone" : ""}
+                  {" · "}
+                  <button
+                    type="button"
+                    className="font-bold text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
+                    onClick={() => {
+                      setPhoneFilter("");
+                      setPendingOnly(false);
+                    }}
+                  >
+                    Réinitialiser
+                  </button>
+                </>
+              ) : (
+                `${rows.length} demande${rows.length > 1 ? "s" : ""} affichée${rows.length > 1 ? "s" : ""}`
+              )}
+            </p>
+          </div>
         </div>
       )}
 
-      {showNoPhoneMatch && (
+      {showNoFilterMatch && (
         <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-950">
-          Aucune demande ne correspond à ce numéro. Vérifie les chiffres saisis ou efface la recherche.
+          {pendingOnly && !phoneSearchDigits
+            ? "Aucune demande en attente pour le moment."
+            : "Aucune demande ne correspond à ce filtre. Vérifie les critères ou réinitialise."}
         </div>
       )}
 
