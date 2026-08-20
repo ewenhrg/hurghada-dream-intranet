@@ -556,14 +556,6 @@ function HotelRequestCard({
                 {clientDocuments.length} document{clientDocuments.length > 1 ? "s" : ""}
               </span>
             ) : null}
-            {payload.zeroTracas?.enabled ? (
-              <span className="mt-2 ml-0 inline-block rounded-full bg-indigo-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-indigo-950 ring-1 ring-indigo-300/60 sm:ml-2">
-                Zero Tracas
-                {computeZeroTracasTotal(payload.zeroTracas) > 0
-                  ? ` · ${formatQuoteMoney(computeZeroTracasTotal(payload.zeroTracas), "EUR")}`
-                  : ""}
-              </span>
-            ) : null}
             {responseTotals ? (
               <p className="mt-2 text-xs font-semibold text-emerald-900">{responseTotals}</p>
             ) : null}
