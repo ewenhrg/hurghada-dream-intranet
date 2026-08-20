@@ -119,6 +119,18 @@ export function generateHotelRequestHTML(request) {
     request.zeroTracas || request.responsePayload?.zeroTracas
   );
   const zeroTracasTotal = zeroTracasPrint?.manualTotal != null ? zeroTracasPrint.manualTotal : 0;
+  const zeroTracasDetailParts = [];
+  if (zeroTracasPrint?.visaCount > 0) {
+    zeroTracasDetailParts.push(
+      `${zeroTracasPrint.visaCount} visa${zeroTracasPrint.visaCount > 1 ? "s" : ""}`
+    );
+  }
+  if (zeroTracasPrint?.simCount > 0) {
+    zeroTracasDetailParts.push(
+      `${zeroTracasPrint.simCount} SIM${zeroTracasPrint.simCount > 1 ? "s" : ""}`
+    );
+  }
+  const zeroTracasDetailLabel = zeroTracasDetailParts.join(" · ");
   const zeroTracasHtml = zeroTracasPrint
     ? `<section class="section">
         <div class="section-head">
@@ -129,22 +141,30 @@ export function generateHotelRequestHTML(request) {
               : "—"
           )}</span>
         </div>
-        <div class="info-grid">
-          <div class="info-cell">
-            <span class="info-label">Visas</span>
-            <div class="info-value">${escapeHtml(String(zeroTracasPrint.visaCount || 0))}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">SIM</span>
-            <div class="info-value">${escapeHtml(String(zeroTracasPrint.simCount || 0))}</div>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Montant</span>
-            <div class="info-value">${escapeHtml(
+        <div class="zt-detail">
+          ${
+            zeroTracasPrint.visaCount > 0
+              ? `<div class="zt-detail-row">
+            <span class="zt-detail-label">Nombre de visas</span>
+            <span class="zt-detail-value">${escapeHtml(String(zeroTracasPrint.visaCount))}</span>
+          </div>`
+              : ""
+          }
+          ${
+            zeroTracasPrint.simCount > 0
+              ? `<div class="zt-detail-row">
+            <span class="zt-detail-label">Nombre de SIM</span>
+            <span class="zt-detail-value">${escapeHtml(String(zeroTracasPrint.simCount))}</span>
+          </div>`
+              : ""
+          }
+          <div class="zt-detail-row zt-detail-total">
+            <span class="zt-detail-label">Montant Zero Tracas</span>
+            <span class="zt-detail-value">${escapeHtml(
               zeroTracasPrint.manualTotal != null
                 ? formatQuoteMoney(zeroTracasPrint.manualTotal, "EUR")
                 : "—"
-            )}</div>
+            )}</span>
           </div>
         </div>
       </section>`
@@ -216,7 +236,11 @@ export function generateHotelRequestHTML(request) {
             ${
               zeroTracasTotal > 0
                 ? `<div class="total-line">
-              <span>Zero Tracas</span>
+              <span>Zero Tracas${
+                zeroTracasDetailLabel
+                  ? ` <span class="total-line-sub">(${escapeHtml(zeroTracasDetailLabel)})</span>`
+                  : ""
+              }</span>
               <strong>${escapeHtml(formatQuoteMoney(zeroTracasTotal, "EUR"))}</strong>
             </div>`
                 : ""
@@ -816,6 +840,44 @@ export function generateHotelRequestHTML(request) {
       color: var(--ink);
       font-variant-numeric: tabular-nums;
     }
+    .total-line-sub {
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .zt-detail {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--wash);
+      overflow: hidden;
+    }
+    .zt-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .zt-detail-row:last-child { border-bottom: none; }
+    .zt-detail-label {
+      font-weight: 600;
+      color: var(--ink-soft);
+    }
+    .zt-detail-value {
+      font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .zt-detail-total {
+      background: #fff;
+    }
+    .zt-detail-total .zt-detail-label,
+    .zt-detail-total .zt-detail-value {
+      font-size: 14px;
+      color: var(--ink);
+    }
+
     .total-grand {
       display: flex;
       justify-content: space-between;
