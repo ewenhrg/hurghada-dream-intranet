@@ -66,9 +66,13 @@ export function generateHotelRequestHTML(request) {
     );
   const docTitle = isConfirmation ? "CONFIRMATION" : "DEVIS";
   const docBadgeLabel = isConfirmation ? "Confirmation hôtel" : "Devis hôtel";
-  const pageTitle = isConfirmation
-    ? `Confirmation hôtel — ${fullName}`
-    : `Devis hôtel — ${fullName}`;
+  // Chrome « Enregistrer en PDF » utilise <title> comme nom de fichier
+  const pageTitle =
+    shortRef && shortRef !== "—"
+      ? `hotel-${shortRef}`
+      : isConfirmation
+        ? `hotel-confirmation`
+        : `hotel-devis`;
   const footerNote = isConfirmation
     ? "Confirmation de séjour. Merci de votre confiance."
     : "Devis indicatif, sous réserve de disponibilité et de confirmation définitive.";
@@ -1285,11 +1289,49 @@ function escapeHtml(value) {
 }
 
 /**
- * Impression sans popup (iframe cachée) — évite le bloqueur Chrome.
+ * Impression : préfère un nouvel onglet (aperçu + Annuler = devis visible),
+ * sinon iframe cachée si Chrome bloque la popup.
  * @returns {boolean}
  */
 function printHtmlDocument(html, delayMs = 500) {
   if (!html || typeof document === "undefined") return false;
+
+  // 1) Nouvel onglet — reste ouvert après Annuler pour lire le devis
+  let win = null;
+  try {
+    win = window.open("", "_blank");
+  } catch {
+    win = null;
+  }
+
+  if (win && !win.closed) {
+    try {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      try {
+        win.focus();
+      } catch {
+        // ignore
+      }
+      setTimeout(() => {
+        try {
+          win.print();
+        } catch {
+          // ignore — l’onglet reste ouvert pour consultation
+        }
+      }, Math.max(0, Number(delayMs) || 0));
+      return true;
+    } catch {
+      try {
+        win.close();
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  // 2) Secours sans popup (bloqueur Chrome)
   try {
     const iframe = document.createElement("iframe");
     iframe.setAttribute("title", "Impression document");
@@ -1298,9 +1340,9 @@ function printHtmlDocument(html, delayMs = 500) {
       "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;";
     document.body.appendChild(iframe);
 
-    const win = iframe.contentWindow;
-    const doc = win?.document || iframe.contentDocument;
-    if (!win || !doc) {
+    const iframeWin = iframe.contentWindow;
+    const doc = iframeWin?.document || iframe.contentDocument;
+    if (!iframeWin || !doc) {
       iframe.remove();
       return false;
     }
@@ -1322,18 +1364,17 @@ function printHtmlDocument(html, delayMs = 500) {
 
     const runPrint = () => {
       try {
-        win.focus();
-        win.print();
+        iframeWin.focus();
+        iframeWin.print();
       } catch {
         cleanup();
         return;
       }
       try {
-        win.addEventListener("afterprint", cleanup, { once: true });
+        iframeWin.addEventListener("afterprint", cleanup, { once: true });
       } catch {
         // ignore
       }
-      // Filet de sécurité si afterprint n’est pas déclenché
       setTimeout(cleanup, 90_000);
     };
 
@@ -1344,7 +1385,7 @@ function printHtmlDocument(html, delayMs = 500) {
   }
 }
 
-/** Ouvre le dialogue d’impression navigateur (sans fenêtre popup). */
+/** Ouvre le devis/confirmation dans un onglet puis le dialogue d’impression. */
 export function printHotelRequest(request) {
   const html = generateHotelRequestHTML(request);
   return printHtmlDocument(html, 600);
@@ -1454,7 +1495,7 @@ function generateHotelPaymentReceiptHTML(request, options = null) {
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Reçu — ${escapeHtml(fullName)}</title>
+  <title>hotel-${escapeHtml(shortRef)}-recu</title>
   <style>
     @page { size: A5; margin: 14mm; }
     * { box-sizing: border-box; }
