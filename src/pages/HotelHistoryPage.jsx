@@ -3231,21 +3231,6 @@ export function HotelHistoryPage({ user = null }) {
                     ? " envoyée" + (filteredRows.length > 1 ? "s" : "")
                     : ""}
             {debouncedSearch.trim() ? " · recherche" : ""}
-            {statusFilter !== "all" || debouncedSearch.trim() ? (
-              <>
-                {" · "}
-                <button
-                  type="button"
-                  className="font-bold text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
-                  onClick={() => {
-                    setSearch("");
-                    setStatusFilter("all");
-                  }}
-                >
-                  Réinitialiser
-                </button>
-              </>
-            ) : null}
           </p>
         </div>
       </div>
