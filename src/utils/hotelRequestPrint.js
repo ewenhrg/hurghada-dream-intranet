@@ -1,6 +1,34 @@
 import { boardLabelsFromViewModel } from "../constants/hotelRequestBoardOptions";
+import { getZeroTracasPrices } from "./activityHelpers";
 import { formatHotelStayDate } from "./hotelRequestDates";
 import { formatQuoteMoney } from "./hotelQuoteCalc";
+
+const ZERO_TRACAS_PRINT_KEYS = [
+  ["transfertVisaSim", "Transfert + Visa + SIM"],
+  ["transfertVisa", "Transfert + Visa"],
+  ["transfertSim", "Transfert + SIM"],
+  ["transfert3Personnes", "Transfert 3 personnes"],
+  ["transfertPlus3Personnes", "Transfert + de 3 personnes"],
+  ["visaSim", "Visa + SIM"],
+  ["visaSeul", "Visa seul"],
+];
+
+function buildZeroTracasPrintRows(raw) {
+  const z = raw && typeof raw === "object" ? raw : null;
+  if (!z || z.enabled !== true) return [];
+  const prices = getZeroTracasPrices();
+  return ZERO_TRACAS_PRINT_KEYS.map(([key, label]) => {
+    const qty = Number(z[key] || 0);
+    if (!Number.isFinite(qty) || qty <= 0) return null;
+    const unit = prices[key];
+    return {
+      label: `${label} (${unit}€)`,
+      qty,
+      unit,
+      lineTotal: Math.round(qty * unit * 100) / 100,
+    };
+  }).filter(Boolean);
+}
 
 /**
  * HTML imprimable : devis hôtel premium (client + propositions tarifaires).
@@ -94,6 +122,32 @@ export function generateHotelRequestHTML(request) {
       flights.arrivalTime ||
       flights.departureFlightNumber ||
       flights.departureTime);
+
+  const zeroTracasRows = buildZeroTracasPrintRows(
+    request.zeroTracas || request.responsePayload?.zeroTracas
+  );
+  const zeroTracasTotal = zeroTracasRows.reduce((sum, row) => sum + row.lineTotal, 0);
+  const zeroTracasHtml =
+    zeroTracasRows.length > 0
+      ? `<section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Zero Tracas</h2>
+          <span class="section-aside">${escapeHtml(formatQuoteMoney(zeroTracasTotal, "EUR"))}</span>
+        </div>
+        <div class="info-grid">
+          ${zeroTracasRows
+            .map(
+              (row) => `<div class="info-cell">
+            <span class="info-label">${escapeHtml(row.label)}</span>
+            <div class="info-value">${escapeHtml(String(row.qty))} × ${escapeHtml(
+                formatQuoteMoney(row.unit, "EUR")
+              )} = ${escapeHtml(formatQuoteMoney(row.lineTotal, "EUR"))}</div>
+          </div>`
+            )
+            .join("")}
+        </div>
+      </section>`
+      : "";
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -664,6 +718,8 @@ export function generateHotelRequestHTML(request) {
       </section>`
           : ""
       }
+
+      ${zeroTracasHtml}
 
       <section class="section">
         <div class="section-head">

@@ -6,7 +6,7 @@ import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
-import { GhostBtn, Pill, PrimaryBtn, TextInput } from "../components/ui";
+import { GhostBtn, NumberInput, Pill, PrimaryBtn, TextInput } from "../components/ui";
 import { printHotelRequest } from "../utils/hotelRequestPrint";
 import { formatHotelStayDate } from "../utils/hotelRequestDates";
 import {
@@ -16,6 +16,7 @@ import {
 } from "../constants/hotelRequestBoardOptions";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
 import { countHotelNights, formatQuoteMoney } from "../utils/hotelQuoteCalc";
+import { getZeroTracasPrices } from "../utils/activityHelpers";
 import {
   formatRoomOccupancyLabel,
   findRoomCategory,
@@ -113,6 +114,7 @@ function normalizeResponsePayload(raw) {
     confirmedHotel,
     confirmedAt: base.confirmedAt || "",
     flights: normalizeFlights(base.flights),
+    zeroTracas: normalizeZeroTracas(base.zeroTracas),
   };
 }
 
@@ -132,6 +134,76 @@ const EMPTY_FLIGHTS = {
   departureFlightNumber: "",
   departureTime: "",
 };
+
+const ZERO_TRACAS_QTY_KEYS = [
+  "transfertVisaSim",
+  "transfertVisa",
+  "transfertSim",
+  "transfert3Personnes",
+  "transfertPlus3Personnes",
+  "visaSim",
+  "visaSeul",
+];
+
+const EMPTY_ZERO_TRACAS = {
+  enabled: false,
+  transfertVisaSim: "",
+  transfertVisa: "",
+  transfertSim: "",
+  transfert3Personnes: "",
+  transfertPlus3Personnes: "",
+  visaSim: "",
+  visaSeul: "",
+};
+
+function parseQtyInput(raw) {
+  if (raw == null || raw === "") return 0;
+  const n = Number(String(raw).trim());
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+function normalizeZeroTracas(raw) {
+  const z = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const out = { enabled: z.enabled === true };
+  for (const key of ZERO_TRACAS_QTY_KEYS) {
+    const n = parseQtyInput(z[key]);
+    out[key] = n > 0 ? String(n) : "";
+  }
+  return out;
+}
+
+function getZeroTracasServiceRows(zeroTracas) {
+  const z = normalizeZeroTracas(zeroTracas);
+  if (!z.enabled) return [];
+  const prices = getZeroTracasPrices();
+  const labels = {
+    transfertVisaSim: `Transfert + Visa + SIM (${prices.transfertVisaSim}€)`,
+    transfertVisa: `Transfert + Visa (${prices.transfertVisa}€)`,
+    transfertSim: `Transfert + SIM (${prices.transfertSim}€)`,
+    transfert3Personnes: `Transfert 3 personnes (${prices.transfert3Personnes}€)`,
+    transfertPlus3Personnes: `Transfert + de 3 personnes (${prices.transfertPlus3Personnes}€)`,
+    visaSim: `Visa + SIM (${prices.visaSim}€)`,
+    visaSeul: `Visa seul (${prices.visaSeul}€)`,
+  };
+  return ZERO_TRACAS_QTY_KEYS.map((key) => {
+    const qty = parseQtyInput(z[key]);
+    if (qty <= 0) return null;
+    const unit = prices[key];
+    return {
+      key,
+      label: labels[key],
+      qty,
+      unit,
+      lineTotal: roundMoney(qty * unit),
+    };
+  }).filter(Boolean);
+}
+
+function computeZeroTracasTotal(zeroTracas) {
+  return roundMoney(
+    getZeroTracasServiceRows(zeroTracas).reduce((sum, row) => sum + row.lineTotal, 0)
+  );
+}
 
 function flightsAreComplete(flights) {
   const f = normalizeFlights(flights);
@@ -253,7 +325,7 @@ function computeQuotesForDraft(request, hotelsDraft) {
   return hotelsDraft.map((item, index) => {
     const hotelName = String(item.hotelName || "").trim();
     const quote = applyQuoteAdjustments(nights, {
-      includeTransfer: item.includeTransfer === true,
+      includeTransfer: false,
       manualTotal: item.manualTotal,
     });
     return {
@@ -261,7 +333,7 @@ function computeQuotesForDraft(request, hotelsDraft) {
       hotelName,
       roomCategory: String(item.roomCategory || "").trim(),
       catalogSlug: item.catalogSlug || "",
-      includeTransfer: item.includeTransfer === true,
+      includeTransfer: false,
       manualTotal: item.manualTotal ?? null,
       quote: serializeQuote(quote),
     };
@@ -378,6 +450,14 @@ function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit }) {
               <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-teal-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
                 <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
                 Confirmé · {confirmedHotel.hotelName}
+              </span>
+            ) : null}
+            {payload.zeroTracas?.enabled ? (
+              <span className="mt-2 ml-0 inline-block rounded-full bg-indigo-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-indigo-950 ring-1 ring-indigo-300/60 sm:ml-2">
+                Zero Tracas
+                {computeZeroTracasTotal(payload.zeroTracas) > 0
+                  ? ` · ${formatQuoteMoney(computeZeroTracasTotal(payload.zeroTracas), "EUR")}`
+                  : ""}
               </span>
             ) : null}
             {responseTotals ? (
@@ -794,19 +874,7 @@ function HotelResponseModal({
                       </label>
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 pt-3">
-                      <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-800">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
-                          checked={item.includeTransfer === true}
-                          onChange={(e) =>
-                            updateProposal(index, { includeTransfer: e.target.checked })
-                          }
-                          disabled={saving}
-                        />
-                        Transfert (+{HOTEL_TRANSFER_FEE_EUR} €)
-                      </label>
+                    <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 pt-3">
                       {proposalIsReady(quoted) ? (
                         <p className="text-sm font-bold text-violet-950">
                           Total : {formatQuoteMoney(quote.total, quote.currency)}
@@ -880,6 +948,8 @@ function HotelConfirmModal({
   setSelectedKey,
   flights,
   setFlights,
+  zeroTracas,
+  setZeroTracas,
   onClose,
   onConfirm,
   saving,
@@ -895,13 +965,33 @@ function HotelConfirmModal({
     (payload.confirmedHotel ? hotelProposalKey(payload.confirmedHotel) : "") ||
     (options[0] ? hotelProposalKey(options[0], 0) : "");
   const flightValues = flights || EMPTY_FLIGHTS;
+  const zt = zeroTracas || EMPTY_ZERO_TRACAS;
+  const ztPrices = getZeroTracasPrices();
+  const ztTotal = computeZeroTracasTotal(zt);
 
   const updateFlight = (key, value) => {
     setFlights((prev) => ({ ...(prev || EMPTY_FLIGHTS), [key]: value }));
   };
 
+  const updateZeroTracas = (patch) => {
+    setZeroTracas((prev) => ({ ...(prev || EMPTY_ZERO_TRACAS), ...patch }));
+  };
+
   const fieldClass =
     "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20";
+
+  const ztFields = [
+    { key: "transfertVisaSim", label: `Transfert + Visa + SIM (${ztPrices.transfertVisaSim}€)` },
+    { key: "transfertVisa", label: `Transfert + Visa (${ztPrices.transfertVisa}€)` },
+    { key: "transfertSim", label: `Transfert + SIM (${ztPrices.transfertSim}€)` },
+    { key: "transfert3Personnes", label: `Transfert 3 personnes (${ztPrices.transfert3Personnes}€)` },
+    {
+      key: "transfertPlus3Personnes",
+      label: `Transfert + de 3 personnes (${ztPrices.transfertPlus3Personnes}€)`,
+    },
+    { key: "visaSim", label: `Visa + SIM (${ztPrices.visaSim}€)` },
+    { key: "visaSeul", label: `Visa seul (${ztPrices.visaSeul}€)` },
+  ];
 
   return createPortal(
     <div
@@ -910,7 +1000,7 @@ function HotelConfirmModal({
       aria-modal="true"
       aria-labelledby="hotel-confirm-title"
     >
-      <div className="my-8 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+      <div className="my-8 w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-teal-700">
@@ -961,7 +1051,6 @@ function HotelConfirmModal({
                       <span className="mt-0.5 block text-xs font-medium text-slate-600">
                         {hotel.roomCategory ? `${hotel.roomCategory} · ` : ""}
                         {formatQuoteMoney(hotel.quote?.total, hotel.quote?.currency)}
-                        {hotel.includeTransfer ? " · transfert inclus" : ""}
                       </span>
                     </span>
                   </label>
@@ -1030,13 +1119,67 @@ function HotelConfirmModal({
           </div>
         </div>
 
+        <div className="mt-6 rounded-2xl border-2 border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 to-violet-50/70 p-4 shadow-sm">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+              checked={zt.enabled === true}
+              onChange={(e) => updateZeroTracas({ enabled: e.target.checked })}
+              disabled={saving}
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-indigo-950">Zero Tracas</span>
+              <span className="mt-0.5 block text-xs font-medium text-indigo-800/80">
+                Même grille que sur le devis : transferts, visa et SIM.
+              </span>
+            </span>
+          </label>
+
+          {zt.enabled ? (
+            <div className="mt-4 border-t border-indigo-200/70 pt-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-indigo-900">
+                Types de services ZERO TRACAS
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {ztFields.map((field) => (
+                  <label key={field.key} className="block text-xs font-bold text-slate-800">
+                    {field.label}
+                    <NumberInput
+                      value={zt[field.key] ?? ""}
+                      onChange={(e) =>
+                        updateZeroTracas({
+                          [field.key]: e.target.value === "" ? "" : e.target.value,
+                        })
+                      }
+                      placeholder="0"
+                      min={0}
+                      className="mt-1.5 text-sm"
+                      disabled={saving}
+                    />
+                  </label>
+                ))}
+              </div>
+              {ztTotal > 0 ? (
+                <p className="mt-4 text-right text-sm font-bold text-indigo-950">
+                  Total Zero Tracas : {formatQuoteMoney(ztTotal, "EUR")}
+                </p>
+              ) : (
+                <p className="mt-4 text-xs font-semibold text-indigo-800/80">
+                  Indiquez au moins une quantité pour enregistrer Zero Tracas.
+                </p>
+              )}
+            </div>
+          ) : null}
+        </div>
+
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
             Annuler
           </GhostBtn>
           <PrimaryBtn
             type="button"
-            onClick={() => onConfirm?.(currentKey, flightValues)}
+            onClick={() => onConfirm?.(currentKey, flightValues, zt)}
             disabled={saving || !currentKey || options.length === 0}
             className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 border-0"
           >
@@ -1254,6 +1397,7 @@ export function HotelHistoryPage() {
   const [confirmRequest, setConfirmRequest] = useState(null);
   const [confirmSelectedKey, setConfirmSelectedKey] = useState("");
   const [confirmFlights, setConfirmFlights] = useState(EMPTY_FLIGHTS);
+  const [confirmZeroTracas, setConfirmZeroTracas] = useState(EMPTY_ZERO_TRACAS);
   const [catalogHotels, setCatalogHotels] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -1386,6 +1530,7 @@ export function HotelHistoryPage() {
       quoteHotels,
       agentNotes: payload.agentNotes,
       flights: payload.flights,
+      zeroTracas: payload.zeroTracas,
       documentKind: isConfirmed ? "confirmation" : "devis",
     });
     if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer.");
@@ -1417,6 +1562,7 @@ export function HotelHistoryPage() {
     setConfirmRequest(request);
     setConfirmSelectedKey(initialKey);
     setConfirmFlights(payload.flights || { ...EMPTY_FLIGHTS });
+    setConfirmZeroTracas(payload.zeroTracas || { ...EMPTY_ZERO_TRACAS });
   }, []);
 
   const handlePrintDevisFromModal = useCallback(
@@ -1461,6 +1607,7 @@ export function HotelHistoryPage() {
         confirmedHotel,
         confirmedAt: confirmedAt || undefined,
         flights: prev.flights,
+        zeroTracas: prev.zeroTracas,
         updatedAt: new Date().toISOString(),
       };
       const { error: updateError } = await supabase
@@ -1498,7 +1645,7 @@ export function HotelHistoryPage() {
   }, [replyRequest, replyHotelsDraft, replyAgentNotes, load]);
 
   const handleConfirmSave = useCallback(
-    async (selectedKey, flightsInput) => {
+    async (selectedKey, flightsInput, zeroTracasInput) => {
       if (!confirmRequest || !supabase) return;
       const payload = normalizeResponsePayload(confirmRequest.responsePayload);
       const options = payload.hotels.filter((h) => proposalIsReady(h));
@@ -1525,6 +1672,14 @@ export function HotelHistoryPage() {
         toast.error("Indiquez l’heure de départ du vol.");
         return;
       }
+      const zeroTracas = normalizeZeroTracas(zeroTracasInput || confirmZeroTracas);
+      if (zeroTracas.enabled && getZeroTracasServiceRows(zeroTracas).length === 0) {
+        toast.error("Zero Tracas : indiquez au moins une quantité de service.");
+        return;
+      }
+      if (!zeroTracas.enabled) {
+        for (const key of ZERO_TRACAS_QTY_KEYS) zeroTracas[key] = "";
+      }
       setSaving(true);
       try {
         const response_payload = {
@@ -1533,6 +1688,7 @@ export function HotelHistoryPage() {
           confirmedHotel: chosen,
           confirmedAt: new Date().toISOString(),
           flights,
+          zeroTracas,
           updatedAt: new Date().toISOString(),
         };
         const { error: updateError } = await supabase
@@ -1555,6 +1711,7 @@ export function HotelHistoryPage() {
           quoteHotels: [chosen],
           agentNotes: payload.agentNotes,
           flights,
+          zeroTracas,
           documentKind: "confirmation",
           responsePayload: response_payload,
         });
@@ -1566,6 +1723,7 @@ export function HotelHistoryPage() {
         setConfirmRequest(null);
         setConfirmSelectedKey("");
         setConfirmFlights({ ...EMPTY_FLIGHTS });
+        setConfirmZeroTracas({ ...EMPTY_ZERO_TRACAS });
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage confirm save:", e);
@@ -1574,7 +1732,7 @@ export function HotelHistoryPage() {
         setSaving(false);
       }
     },
-    [confirmRequest, confirmFlights, load]
+    [confirmRequest, confirmFlights, confirmZeroTracas, load]
   );
 
   const handleSaveEdit = useCallback(async () => {
@@ -1741,11 +1899,14 @@ export function HotelHistoryPage() {
         setSelectedKey={setConfirmSelectedKey}
         flights={confirmFlights}
         setFlights={setConfirmFlights}
+        zeroTracas={confirmZeroTracas}
+        setZeroTracas={setConfirmZeroTracas}
         onClose={() => {
           if (!saving) {
             setConfirmRequest(null);
             setConfirmSelectedKey("");
             setConfirmFlights({ ...EMPTY_FLIGHTS });
+            setConfirmZeroTracas({ ...EMPTY_ZERO_TRACAS });
           }
         }}
         onConfirm={handleConfirmSave}
