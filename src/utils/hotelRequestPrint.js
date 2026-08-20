@@ -183,7 +183,7 @@ export function generateHotelRequestHTML(request) {
     isConfirmation && (hotelQuoteRows.length > 0 || zeroTracasTotal > 0);
   const grandTotal = Math.round((hotelTotal + zeroTracasTotal) * 100) / 100;
 
-  const depositInfo = (() => {
+  const paymentInfo = (() => {
     if (!isConfirmation || !(grandTotal > 0)) return null;
     const arrivalIso = String(request.arrivalDate || "").trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(arrivalIso)) return null;
@@ -194,29 +194,60 @@ export function generateHotelRequestHTML(request) {
     if (Number.isNaN(arrival.getTime())) return null;
     const msPerDay = 24 * 60 * 60 * 1000;
     const daysUntilArrival = Math.round((arrival.getTime() - today.getTime()) / msPerDay);
-    if (daysUntilArrival <= 7) return null;
+    if (daysUntilArrival < 0) return null;
+
+    const formatDue = (date) =>
+      date.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+    if (daysUntilArrival > 7) {
+      const due = new Date(today);
+      due.setDate(due.getDate() + 7);
+      return {
+        mode: "deposit",
+        title: "Acompte",
+        dueLabel: formatDue(due),
+        amount: Math.round(grandTotal * 0.3 * 100) / 100,
+      };
+    }
+
     const due = new Date(today);
-    due.setDate(due.getDate() + 7);
-    const dueLabel = due.toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-    const depositAmount = Math.round(grandTotal * 0.3 * 100) / 100;
-    return { dueLabel, depositAmount };
+    due.setDate(due.getDate() + 1);
+    return {
+      mode: "full",
+      title: "Règlement",
+      dueLabel: formatDue(due),
+      amount: grandTotal,
+    };
   })();
 
-  const depositBlockHtml = depositInfo
-    ? `<div class="deposit-block">
-          <p class="deposit-title">Acompte</p>
+  const depositBlockHtml = paymentInfo
+    ? paymentInfo.mode === "deposit"
+      ? `<div class="deposit-block">
+          <p class="deposit-title">${escapeHtml(paymentInfo.title)}</p>
           <p class="deposit-text">
             Arrivée dans plus d’une semaine : vous disposez de <strong>7 jours</strong> pour régler un
             acompte de <strong>30&nbsp;%</strong>, soit
-            <strong>${escapeHtml(formatQuoteMoney(depositInfo.depositAmount, hotelCurrency))}</strong>.
+            <strong>${escapeHtml(formatQuoteMoney(paymentInfo.amount, hotelCurrency))}</strong>.
           </p>
           <p class="deposit-deadline">
             Date butoir de l’acompte :
-            <strong>${escapeHtml(depositInfo.dueLabel)}</strong>
+            <strong>${escapeHtml(paymentInfo.dueLabel)}</strong>
+          </p>
+        </div>`
+      : `<div class="deposit-block">
+          <p class="deposit-title">${escapeHtml(paymentInfo.title)}</p>
+          <p class="deposit-text">
+            Arrivée dans moins d’une semaine : vous disposez de <strong>24&nbsp;h</strong> pour régler
+            la somme totale, soit
+            <strong>${escapeHtml(formatQuoteMoney(paymentInfo.amount, hotelCurrency))}</strong>.
+          </p>
+          <p class="deposit-deadline">
+            Date butoir du règlement :
+            <strong>${escapeHtml(paymentInfo.dueLabel)}</strong>
           </p>
         </div>`
     : "";
