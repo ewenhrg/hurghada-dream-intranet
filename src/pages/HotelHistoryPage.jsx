@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { BedDouble, MessageSquareReply } from "lucide-react";
+import { BedDouble, CheckCircle2, MessageSquareReply } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -69,22 +69,54 @@ function serializeQuote(quote) {
 function normalizeResponsePayload(raw) {
   const base = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const hotels = Array.isArray(base.hotels) ? base.hotels : [];
-  return {
-    hotels: hotels
-      .map((h) => ({
-        slot: Number(h?.slot) || 0,
-        hotelName: String(h?.hotelName || "").trim(),
-        roomCategory: String(h?.roomCategory || "").trim(),
-        catalogSlug: String(h?.catalogSlug || "").trim(),
-        includeTransfer: h?.includeTransfer === true,
+  const normalizedHotels = hotels
+    .map((h) => ({
+      slot: Number(h?.slot) || 0,
+      hotelName: String(h?.hotelName || "").trim(),
+      roomCategory: String(h?.roomCategory || "").trim(),
+      catalogSlug: String(h?.catalogSlug || "").trim(),
+      includeTransfer: h?.includeTransfer === true,
+      manualTotal:
+        h?.manualTotal != null && Number.isFinite(Number(h.manualTotal))
+          ? roundMoney(Number(h.manualTotal))
+          : null,
+      quote: h?.quote && typeof h.quote === "object" ? serializeQuote(h.quote) : null,
+    }))
+    .filter((h) => h.hotelName);
+
+  let confirmedHotel = null;
+  if (base.confirmedHotel && typeof base.confirmedHotel === "object") {
+    const name = String(base.confirmedHotel.hotelName || "").trim();
+    if (name) {
+      confirmedHotel = {
+        slot: Number(base.confirmedHotel.slot) || 0,
+        hotelName: name,
+        roomCategory: String(base.confirmedHotel.roomCategory || "").trim(),
+        catalogSlug: String(base.confirmedHotel.catalogSlug || "").trim(),
+        includeTransfer: base.confirmedHotel.includeTransfer === true,
         manualTotal:
-          h?.manualTotal != null && Number.isFinite(Number(h.manualTotal))
-            ? roundMoney(Number(h.manualTotal))
+          base.confirmedHotel.manualTotal != null &&
+          Number.isFinite(Number(base.confirmedHotel.manualTotal))
+            ? roundMoney(Number(base.confirmedHotel.manualTotal))
             : null,
-        quote: h?.quote && typeof h.quote === "object" ? serializeQuote(h.quote) : null,
-      }))
-      .filter((h) => h.hotelName),
+        quote:
+          base.confirmedHotel.quote && typeof base.confirmedHotel.quote === "object"
+            ? serializeQuote(base.confirmedHotel.quote)
+            : null,
+      };
+    }
+  }
+
+  return {
+    agentNotes: String(base.agentNotes || base.notes || "").trim(),
+    hotels: normalizedHotels,
+    confirmedHotel,
+    confirmedAt: base.confirmedAt || "",
   };
+}
+
+function hotelProposalKey(hotel, index = 0) {
+  return `${hotel?.slot || index + 1}::${String(hotel?.catalogSlug || "").trim()}::${String(hotel?.hotelName || "").trim()}`;
 }
 
 function requestHotelsList(request) {
@@ -271,7 +303,7 @@ function viewModelToPayload(vm) {
   };
 }
 
-function HotelRequestCard({ request, onPrint, onReply, onEdit }) {
+function HotelRequestCard({ request, onPrint, onReply, onConfirm, onEdit }) {
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
   const boardLabels = boardLabelsFromViewModel(request);
   const hotels = [
@@ -279,10 +311,14 @@ function HotelRequestCard({ request, onPrint, onReply, onEdit }) {
     { label: "Choix 2", value: request.hotelOption2 },
     { label: "Choix 3", value: request.hotelOption3 },
   ].filter((h) => String(h.value || "").trim());
-  const responseHotels = normalizeResponsePayload(request.responsePayload).hotels;
-  const hasResponse = responseHotels.some((h) => proposalIsReady(h));
-  const responseTotals = responseHotels
-    .filter((h) => proposalIsReady(h))
+  const payload = normalizeResponsePayload(request.responsePayload);
+  const responseHotels = payload.hotels;
+  const readyHotels = responseHotels.filter((h) => proposalIsReady(h));
+  const hasResponse = readyHotels.length > 0;
+  const confirmedHotel = payload.confirmedHotel && proposalIsReady(payload.confirmedHotel)
+    ? payload.confirmedHotel
+    : null;
+  const responseTotals = readyHotels
     .map((h) => `${h.hotelName}: ${formatQuoteMoney(h.quote.total, h.quote.currency)}`)
     .join(" · ");
 
@@ -300,9 +336,15 @@ function HotelRequestCard({ request, onPrint, onReply, onEdit }) {
                 Offre personnalisée demandée
               </span>
             ) : null}
-            {hasResponse ? (
+            {hasResponse && !confirmedHotel ? (
               <span className="mt-2 ml-0 inline-block rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-950 ring-1 ring-emerald-400/50 sm:ml-2">
                 Réponse préparée
+              </span>
+            ) : null}
+            {confirmedHotel ? (
+              <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-teal-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                Confirmé · {confirmedHotel.hotelName}
               </span>
             ) : null}
             {responseTotals ? (
@@ -321,6 +363,20 @@ function HotelRequestCard({ request, onPrint, onReply, onEdit }) {
             <GhostBtn type="button" onClick={() => onReply(request)}>
               <MessageSquareReply className="h-3.5 w-3.5" aria-hidden />
               Réponse
+            </GhostBtn>
+            <GhostBtn
+              type="button"
+              onClick={() => onConfirm(request)}
+              disabled={!hasResponse}
+              title={
+                hasResponse
+                  ? "Valider l’hôtel choisi par le client"
+                  : "Préparez d’abord une réponse avec des hôtels proposés"
+              }
+              className="disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+              Confirmer
             </GhostBtn>
             <PrimaryBtn type="button" className="!min-h-0 !min-w-0 !text-sm !px-4 !py-2" onClick={() => onEdit(request)}>
               Modifier
@@ -427,6 +483,8 @@ function HotelResponseModal({
   hotelsDraft,
   setHotelsDraft,
   catalogHotels = [],
+  agentNotes = "",
+  setAgentNotes,
   onClose,
   onSave,
   onPrintDevis,
@@ -577,7 +635,7 @@ function HotelResponseModal({
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <BedDouble className="h-4 w-4 text-violet-700" aria-hidden />
-              <h3 className="text-sm font-bold text-slate-900">Vos propositions</h3>
+              <h3 className="text-sm font-bold text-slate-900">DEVIS</h3>
             </div>
             <GhostBtn
               type="button"
@@ -738,13 +796,33 @@ function HotelResponseModal({
           )}
         </div>
 
+        <div className="mt-5">
+          <label htmlFor="hotel-response-agent-notes" className="block text-sm font-bold text-slate-900">
+            Note pour le devis
+          </label>
+          <p className="mt-1 text-xs font-medium text-slate-600">
+            Optionnel — affichée sur le devis imprimé (ex. conditions, disponibilité, précisions).
+          </p>
+          <textarea
+            id="hotel-response-agent-notes"
+            rows={3}
+            value={agentNotes}
+            onChange={(e) => setAgentNotes?.(e.target.value)}
+            disabled={saving}
+            placeholder="Ex. Prix valables 48 h, sous réserve de disponibilité…"
+            className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/25"
+          />
+        </div>
+
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
             Annuler
           </GhostBtn>
           <GhostBtn
             type="button"
-            onClick={() => onPrintDevis?.(quotedHotels.filter((h) => proposalIsReady(h)))}
+            onClick={() =>
+              onPrintDevis?.(quotedHotels.filter((h) => proposalIsReady(h)), agentNotes)
+            }
             disabled={saving || readyCount === 0}
           >
             Imprimer le devis
@@ -755,6 +833,105 @@ function HotelResponseModal({
             disabled={saving || readyCount === 0 || sortedCatalog.length === 0}
           >
             {saving ? "Enregistrement…" : "Enregistrer la réponse"}
+          </PrimaryBtn>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function HotelConfirmModal({ request, selectedKey, setSelectedKey, onClose, onConfirm, saving }) {
+  if (!request) return null;
+
+  const payload = normalizeResponsePayload(request.responsePayload);
+  const options = payload.hotels.filter((h) => proposalIsReady(h));
+  const fullName =
+    [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
+  const currentKey =
+    selectedKey ||
+    (payload.confirmedHotel ? hotelProposalKey(payload.confirmedHotel) : "") ||
+    (options[0] ? hotelProposalKey(options[0], 0) : "");
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="hotel-confirm-title"
+    >
+      <div className="my-8 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-teal-700">
+              Confirmation client
+            </p>
+            <h2 id="hotel-confirm-title" className="mt-1 text-lg font-bold text-slate-900">
+              {fullName}
+            </h2>
+          </div>
+          <GhostBtn type="button" onClick={onClose} disabled={saving}>
+            Fermer
+          </GhostBtn>
+        </div>
+
+        <p className="mt-4 text-sm font-medium text-slate-700">
+          Quel hôtel le client a-t-il choisi parmi vos propositions ? Le devis final n’affichera que
+          cette option.
+        </p>
+
+        {options.length === 0 ? (
+          <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
+            Aucune proposition enregistrée. Préparez d’abord une réponse.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {options.map((hotel, index) => {
+              const key = hotelProposalKey(hotel, index);
+              const selected = currentKey === key;
+              return (
+                <li key={key}>
+                  <label
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 px-4 py-3 transition ${
+                      selected
+                        ? "border-teal-500 bg-teal-50/80 ring-1 ring-teal-400/40"
+                        : "border-slate-200 bg-slate-50/80 hover:border-teal-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="hotel-confirm-choice"
+                      className="mt-1 h-4 w-4 border-slate-300 text-teal-600 focus:ring-teal-500"
+                      checked={selected}
+                      onChange={() => setSelectedKey(key)}
+                      disabled={saving}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold text-slate-950">{hotel.hotelName}</span>
+                      <span className="mt-0.5 block text-xs font-medium text-slate-600">
+                        {hotel.roomCategory ? `${hotel.roomCategory} · ` : ""}
+                        {formatQuoteMoney(hotel.quote?.total, hotel.quote?.currency)}
+                        {hotel.includeTransfer ? " · transfert inclus" : ""}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <GhostBtn type="button" onClick={onClose} disabled={saving}>
+            Annuler
+          </GhostBtn>
+          <PrimaryBtn
+            type="button"
+            onClick={() => onConfirm?.(currentKey)}
+            disabled={saving || !currentKey || options.length === 0}
+            className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 border-0"
+          >
+            {saving ? "Validation…" : "Valider et imprimer"}
           </PrimaryBtn>
         </div>
       </div>
@@ -963,6 +1140,9 @@ export function HotelHistoryPage() {
   const [editDraft, setEditDraft] = useState(null);
   const [replyRequest, setReplyRequest] = useState(null);
   const [replyHotelsDraft, setReplyHotelsDraft] = useState([]);
+  const [replyAgentNotes, setReplyAgentNotes] = useState("");
+  const [confirmRequest, setConfirmRequest] = useState(null);
+  const [confirmSelectedKey, setConfirmSelectedKey] = useState("");
   const [catalogHotels, setCatalogHotels] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -1065,11 +1245,15 @@ export function HotelHistoryPage() {
   }, [rows, debouncedSearch]);
 
   const handlePrint = useCallback((request) => {
-    const saved = normalizeResponsePayload(request.responsePayload).hotels;
-    const quoteHotels = saved.filter((h) => proposalIsReady(h));
+    const payload = normalizeResponsePayload(request.responsePayload);
+    const quoteHotels =
+      payload.confirmedHotel && proposalIsReady(payload.confirmedHotel)
+        ? [payload.confirmedHotel]
+        : payload.hotels.filter((h) => proposalIsReady(h));
     const ok = printHotelRequest({
       ...request,
       quoteHotels,
+      agentNotes: payload.agentNotes,
     });
     if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer.");
   }, []);
@@ -1082,16 +1266,32 @@ export function HotelHistoryPage() {
     (request) => {
       setReplyRequest(request);
       setReplyHotelsDraft(buildResponseHotelsDraft(request, catalogHotels));
+      setReplyAgentNotes(normalizeResponsePayload(request.responsePayload).agentNotes || "");
     },
     [catalogHotels]
   );
 
+  const handleConfirmOpen = useCallback((request) => {
+    const payload = normalizeResponsePayload(request.responsePayload);
+    const options = payload.hotels.filter((h) => proposalIsReady(h));
+    if (options.length === 0) {
+      toast.warning("Préparez d’abord une réponse avec au moins un hôtel et un prix.");
+      return;
+    }
+    const initialKey = payload.confirmedHotel
+      ? hotelProposalKey(payload.confirmedHotel)
+      : hotelProposalKey(options[0], 0);
+    setConfirmRequest(request);
+    setConfirmSelectedKey(initialKey);
+  }, []);
+
   const handlePrintDevisFromModal = useCallback(
-    (quotedHotels) => {
+    (quotedHotels, agentNotes = "") => {
       if (!replyRequest) return;
       const ok = printHotelRequest({
         ...replyRequest,
         quoteHotels: quotedHotels || [],
+        agentNotes: String(agentNotes || "").trim(),
       });
       if (!ok) toast.error("Autorisez les fenêtres popup pour imprimer.");
     },
@@ -1107,10 +1307,25 @@ export function HotelHistoryPage() {
       toast.error("Ajoutez au moins un hôtel avec un prix.");
       return;
     }
+    const prev = normalizeResponsePayload(replyRequest.responsePayload);
+    let confirmedHotel = prev.confirmedHotel;
+    let confirmedAt = prev.confirmedAt || "";
+    if (confirmedHotel) {
+      const stillThere = hotels.some(
+        (h, i) => hotelProposalKey(h, i) === hotelProposalKey(confirmedHotel)
+      );
+      if (!stillThere) {
+        confirmedHotel = null;
+        confirmedAt = "";
+      }
+    }
     setSaving(true);
     try {
       const response_payload = {
         hotels,
+        agentNotes: String(replyAgentNotes || "").trim(),
+        confirmedHotel,
+        confirmedAt: confirmedAt || undefined,
         updatedAt: new Date().toISOString(),
       };
       const { error: updateError } = await supabase
@@ -1137,6 +1352,7 @@ export function HotelHistoryPage() {
       toast.success("Réponse enregistrée.");
       setReplyRequest(null);
       setReplyHotelsDraft([]);
+      setReplyAgentNotes("");
       await load();
     } catch (e) {
       logger.error("HotelHistoryPage reply save:", e);
@@ -1144,7 +1360,65 @@ export function HotelHistoryPage() {
     } finally {
       setSaving(false);
     }
-  }, [replyRequest, replyHotelsDraft, load]);
+  }, [replyRequest, replyHotelsDraft, replyAgentNotes, load]);
+
+  const handleConfirmSave = useCallback(
+    async (selectedKey) => {
+      if (!confirmRequest || !supabase) return;
+      const payload = normalizeResponsePayload(confirmRequest.responsePayload);
+      const options = payload.hotels.filter((h) => proposalIsReady(h));
+      const chosen =
+        options.find((h, i) => hotelProposalKey(h, i) === selectedKey) || null;
+      if (!chosen) {
+        toast.error("Sélectionnez l’hôtel choisi par le client.");
+        return;
+      }
+      setSaving(true);
+      try {
+        const response_payload = {
+          hotels: payload.hotels,
+          agentNotes: payload.agentNotes,
+          confirmedHotel: chosen,
+          confirmedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        const { error: updateError } = await supabase
+          .from("public_hotel_requests")
+          .update({
+            response_payload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", confirmRequest.supabaseId)
+          .eq("site_key", SITE_KEY);
+
+        if (updateError) {
+          logger.error("HotelHistoryPage confirm:", updateError);
+          toast.error(updateError.message || "Échec de la confirmation.");
+          return;
+        }
+
+        const ok = printHotelRequest({
+          ...confirmRequest,
+          quoteHotels: [chosen],
+          agentNotes: payload.agentNotes,
+        });
+        if (!ok) {
+          toast.warning("Confirmation enregistrée, mais autorisez les popups pour imprimer.");
+        } else {
+          toast.success(`Confirmé : ${chosen.hotelName}`);
+        }
+        setConfirmRequest(null);
+        setConfirmSelectedKey("");
+        await load();
+      } catch (e) {
+        logger.error("HotelHistoryPage confirm save:", e);
+        toast.error("Erreur inattendue.");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [confirmRequest, load]
+  );
 
   const handleSaveEdit = useCallback(async () => {
     if (!editDraft || !supabase) return;
@@ -1234,6 +1508,7 @@ export function HotelHistoryPage() {
               request={request}
               onPrint={handlePrint}
               onReply={handleReply}
+              onConfirm={handleConfirmOpen}
               onEdit={handleEdit}
             />
           ))}
@@ -1245,14 +1520,31 @@ export function HotelHistoryPage() {
         hotelsDraft={replyHotelsDraft}
         setHotelsDraft={setReplyHotelsDraft}
         catalogHotels={catalogHotels}
+        agentNotes={replyAgentNotes}
+        setAgentNotes={setReplyAgentNotes}
         onClose={() => {
           if (!saving) {
             setReplyRequest(null);
             setReplyHotelsDraft([]);
+            setReplyAgentNotes("");
           }
         }}
         onSave={handleSaveReply}
         onPrintDevis={handlePrintDevisFromModal}
+        saving={saving}
+      />
+
+      <HotelConfirmModal
+        request={confirmRequest}
+        selectedKey={confirmSelectedKey}
+        setSelectedKey={setConfirmSelectedKey}
+        onClose={() => {
+          if (!saving) {
+            setConfirmRequest(null);
+            setConfirmSelectedKey("");
+          }
+        }}
+        onConfirm={handleConfirmSave}
         saving={saving}
       />
 

@@ -575,7 +575,7 @@ export function generateHotelRequestHTML(request) {
           </div>
         </div>
       </div>
-      <h1 class="hero-title">Votre proposition</h1>
+      <h1 class="hero-title">DEVIS</h1>
       <p class="hero-sub">Préparé pour ${escapeHtml(fullName)} · Demande du ${escapeHtml(createdLabel)}</p>
     </header>
 
@@ -656,6 +656,19 @@ export function generateHotelRequestHTML(request) {
         </div>
         <div class="notes-box">${escapeHtml(request.notes?.trim() ? request.notes : "Aucune note.")}</div>
       </section>
+
+      ${(() => {
+        const agentNotes = String(
+          request.agentNotes || request.responsePayload?.agentNotes || ""
+        ).trim();
+        if (!agentNotes) return "";
+        return `<section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Note</h2>
+        </div>
+        <div class="notes-box">${escapeHtml(agentNotes)}</div>
+      </section>`;
+      })()}
     </div>
 
     <footer class="footer">
@@ -674,7 +687,7 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel }) {
   const rows = Array.isArray(quoteHotels) ? quoteHotels.filter((h) => h?.hotelName) : [];
   if (!rows.length) {
     return `<section class="section">
-      <div class="section-head"><h2 class="section-title">Proposition</h2></div>
+      <div class="section-head"><h2 class="section-title">DEVIS</h2></div>
       <p class="empty-quote">Aucune proposition tarifaire pour le moment.</p>
     </section>`;
   }
@@ -744,7 +757,7 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel }) {
 
   return `<section class="section">
     <div class="section-head">
-      <h2 class="section-title">Proposition</h2>
+      <h2 class="section-title">DEVIS</h2>
       <span class="section-aside">${rows.length} option${rows.length > 1 ? "s" : ""}</span>
     </div>
     <div class="quote-list">${cards}</div>
