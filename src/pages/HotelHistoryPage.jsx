@@ -149,16 +149,20 @@ function normalizeFlights(raw) {
   return {
     arrivalFlightNumber: String(f.arrivalFlightNumber || "").trim(),
     arrivalTime: String(f.arrivalTime || "").trim(),
+    arrivalDate: String(f.arrivalDate || "").trim(),
     departureFlightNumber: String(f.departureFlightNumber || "").trim(),
     departureTime: String(f.departureTime || "").trim(),
+    departureDate: String(f.departureDate || "").trim(),
   };
 }
 
 const EMPTY_FLIGHTS = {
   arrivalFlightNumber: "",
   arrivalTime: "",
+  arrivalDate: "",
   departureFlightNumber: "",
   departureTime: "",
+  departureDate: "",
 };
 
 const EMPTY_ZERO_TRACAS = {
@@ -208,8 +212,10 @@ function flightsAreComplete(flights) {
   return Boolean(
     f.arrivalFlightNumber &&
       f.arrivalTime &&
+      f.arrivalDate &&
       f.departureFlightNumber &&
-      f.departureTime
+      f.departureTime &&
+      f.departureDate
   );
 }
 
@@ -771,11 +777,11 @@ function HotelRequestCard({
             <p className="mt-0.5 break-all font-semibold text-slate-950">{request.email || "—"}</p>
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
-            <span className="text-[11px] font-bold uppercase text-slate-500">Arrivée</span>
+            <span className="text-[11px] font-bold uppercase text-slate-500">Check-in</span>
             <p className="mt-0.5 font-semibold text-slate-950">{formatHotelStayDate(request.arrivalDate)}</p>
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
-            <span className="text-[11px] font-bold uppercase text-slate-500">Départ</span>
+            <span className="text-[11px] font-bold uppercase text-slate-500">Check-out</span>
             <p className="mt-0.5 font-semibold text-slate-950">{formatHotelStayDate(request.departureDate)}</p>
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
@@ -1374,9 +1380,32 @@ function HotelConfirmModal({
             Vols
           </p>
           <p className="mt-1 text-sm font-medium text-slate-600">
-            Numéros et horaires pour les transferts aéroport.
+            Dates, numéros et horaires pour les transferts aéroport.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-bold text-slate-600">
+              Date d&apos;arrivée <span className="text-teal-600">*</span>
+              <input
+                type="date"
+                value={flightValues.arrivalDate || ""}
+                onChange={(e) => updateFlight("arrivalDate", e.target.value)}
+                className={fieldClass}
+                disabled={saving}
+                required
+              />
+            </label>
+            <label className="block text-xs font-bold text-slate-600">
+              Date de départ <span className="text-teal-600">*</span>
+              <input
+                type="date"
+                value={flightValues.departureDate || ""}
+                min={flightValues.arrivalDate || undefined}
+                onChange={(e) => updateFlight("departureDate", e.target.value)}
+                className={fieldClass}
+                disabled={saving}
+                required
+              />
+            </label>
             <label className="block text-xs font-bold text-slate-600">
               N° vol arrivée <span className="text-teal-600">*</span>
               <input
@@ -1425,8 +1454,8 @@ function HotelConfirmModal({
                 required
               />
             </label>
-                          </div>
-                      </div>
+          </div>
+        </div>
 
         <div className="mt-6 rounded-2xl border-2 border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 to-violet-50/70 p-4 shadow-sm">
           <label className="flex cursor-pointer items-start gap-3">
@@ -1580,7 +1609,7 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-bold text-slate-600">
-              Date d&apos;arrivée
+              Check-in
               <input
                 type="date"
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
@@ -1589,7 +1618,7 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              Date de départ
+              Check-out
               <input
                 type="date"
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
@@ -2330,7 +2359,12 @@ export function HotelHistoryPage({ user = null }) {
       : hotelProposalKey(options[0], 0);
     setConfirmRequest(request);
     setConfirmSelectedKey(initialKey);
-    setConfirmFlights(payload.flights || { ...EMPTY_FLIGHTS });
+    const existingFlights = normalizeFlights(payload.flights);
+    setConfirmFlights({
+      ...existingFlights,
+      arrivalDate: existingFlights.arrivalDate || request.arrivalDate || "",
+      departureDate: existingFlights.departureDate || request.departureDate || "",
+    });
     setConfirmZeroTracas(payload.zeroTracas || { ...EMPTY_ZERO_TRACAS });
   }, []);
 
@@ -2431,6 +2465,14 @@ export function HotelHistoryPage({ user = null }) {
       }
       const flights = normalizeFlights(flightsInput || confirmFlights);
       if (!flightsAreComplete(flights)) {
+        if (!flights.arrivalDate) {
+          toast.error("Indiquez la date d’arrivée du vol.");
+          return;
+        }
+        if (!flights.departureDate) {
+          toast.error("Indiquez la date de départ du vol.");
+          return;
+        }
         if (!flights.arrivalFlightNumber) {
           toast.error("Indiquez le numéro de vol d’arrivée.");
           return;

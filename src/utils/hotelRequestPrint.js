@@ -104,16 +104,20 @@ export function generateHotelRequestHTML(request) {
       ? {
           arrivalFlightNumber: String(flightsRaw.arrivalFlightNumber || "").trim(),
           arrivalTime: String(flightsRaw.arrivalTime || "").trim(),
+          arrivalDate: String(flightsRaw.arrivalDate || "").trim(),
           departureFlightNumber: String(flightsRaw.departureFlightNumber || "").trim(),
           departureTime: String(flightsRaw.departureTime || "").trim(),
+          departureDate: String(flightsRaw.departureDate || "").trim(),
         }
       : null;
   const hasFlights =
     flights &&
     (flights.arrivalFlightNumber ||
       flights.arrivalTime ||
+      flights.arrivalDate ||
       flights.departureFlightNumber ||
-      flights.departureTime);
+      flights.departureTime ||
+      flights.departureDate);
 
   const zeroTracasPrint = normalizeZeroTracasForPrint(
     request.zeroTracas || request.responsePayload?.zeroTracas
@@ -325,7 +329,7 @@ export function generateHotelRequestHTML(request) {
         </div>
         <div class="stay-ribbon">
           <div class="stay-point">
-            <span class="stay-label">Arrivée</span>
+            <span class="stay-label">Check-in</span>
             <div class="stay-date">${escapeHtml(checkIn)}</div>
           </div>
           <div class="stay-arrow">
@@ -333,7 +337,7 @@ export function generateHotelRequestHTML(request) {
             <span class="stay-arrow-line" aria-hidden="true"></span>
           </div>
           <div class="stay-point out">
-            <span class="stay-label">Départ</span>
+            <span class="stay-label">Check-out</span>
             <div class="stay-date">${escapeHtml(checkOut)}</div>
           </div>
         </div>
@@ -345,6 +349,14 @@ export function generateHotelRequestHTML(request) {
           <h2 class="section-title">Vols</h2>
         </div>
         <div class="info-grid">
+          <div class="info-cell">
+            <span class="info-label">Date d’arrivée</span>
+            <div class="info-value">${escapeHtml(formatHotelStayDate(flights.arrivalDate) || "—")}</div>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Date de départ</span>
+            <div class="info-value">${escapeHtml(formatHotelStayDate(flights.departureDate) || "—")}</div>
+          </div>
           <div class="info-cell">
             <span class="info-label">Vol arrivée</span>
             <div class="info-value">${escapeHtml(flights.arrivalFlightNumber || "—")}</div>
@@ -389,11 +401,11 @@ export function generateHotelRequestHTML(request) {
           ${
             isConfirmation
               ? `<div class="info-cell">
-            <span class="info-label">Arrivée</span>
+            <span class="info-label">Check-in</span>
             <div class="info-value">${escapeHtml(checkIn)}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Départ</span>
+            <span class="info-label">Check-out</span>
             <div class="info-value">${escapeHtml(checkOut)}</div>
           </div>`
               : ""
