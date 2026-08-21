@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateTicketsHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
+import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateTicketsHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge, isQuoteFullyPaid, quoteHasAnyTicket } from "../utils";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
@@ -47,6 +47,8 @@ import {
   normalizeClientDocuments,
   serializeClientDocuments,
 } from "../utils/hotelRequestDocuments";
+import { cleanupExpiredQuoteDocuments, isQuoteLastActivityPastRetention } from "../utils/cleanupExpiredQuoteDocuments";
+import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
 
 /** Délai avant suppression auto des devis « non payés » (au moins une ligne sans n° de ticket), à l’ouverture de l’historique. */
 const UNPAID_QUOTE_AUTO_DELETE_DAYS = 20;
@@ -87,12 +89,12 @@ function QuoteCardComponent({
   // Calculer allTicketsFilled si ce n'est pas déjà défini
   const allTicketsFilled = d.allTicketsFilled !== undefined 
     ? d.allTicketsFilled 
-    : (d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false);
+    : isQuoteFullyPaid(d);
   
   // Calculer hasTickets si ce n'est pas déjà défini
   const hasTickets = d.hasTickets !== undefined
     ? d.hasTickets
-    : (d.items?.some((item) => item.ticketNumber && item.ticketNumber.trim()) || false);
+    : quoteHasAnyTicket(d);
   
   const ticketsCount = useMemo(() => 
     d.items?.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length || 0,
@@ -203,32 +205,19 @@ function QuoteCardComponent({
 
       if (supabase) {
         try {
-          const supabaseUpdate = {
-            items: JSON.stringify(updatedItems),
-            updated_at: updatedQuote.updated_at,
-          };
+          const { ok, data, error } = await persistQuoteItemsToSupabase(rawQuote, updatedItems, {
+            updatedAt: updatedQuote.updated_at,
+          });
 
-          let updateQuery = supabase
-            .from("quotes")
-            .update(supabaseUpdate)
-            .eq("site_key", SITE_KEY);
-
-          if (rawQuote.supabase_id) {
-            updateQuery = updateQuery.eq("id", rawQuote.supabase_id);
-          } else {
-            updateQuery = updateQuery
-              .eq("client_phone", rawQuote.client?.phone || "")
-              .eq("created_at", rawQuote.createdAt);
-          }
-
-          const { data, error } = await updateQuery.select();
-
-          if (error) {
+          if (!ok) {
             logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
-            toast.error("Erreur de synchronisation Supabase (tickets).");
+            toast.error(
+              error?.message ||
+                "Les tickets sont enregistrés en local mais pas sur le serveur. Réessayez ou vérifiez la connexion."
+            );
           } else {
-            if (!rawQuote.supabase_id && data?.[0]?.id) {
-              const withId = { ...updatedQuote, supabase_id: data[0].id };
+            if (!rawQuote.supabase_id && data?.id) {
+              const withId = { ...updatedQuote, supabase_id: data.id };
               const finalQuotes = updatedQuotes.map((q) => (q.id === d.id ? withId : q));
               setQuotes(finalQuotes);
               saveLS(LS_KEYS.quotes, finalQuotes);
@@ -240,7 +229,7 @@ function QuoteCardComponent({
           toast.error("Erreur de synchronisation Supabase (tickets).");
         }
       } else {
-        toast.success("Devis payé — tickets enregistrés.");
+        toast.success("Devis payé — tickets enregistrés (local uniquement).");
       }
 
       setShowTicketModal(false);
@@ -922,6 +911,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [docsQuote, setDocsQuote] = useState(null);
   const [docsSaving, setDocsSaving] = useState(false);
+
+  // Toujours repartir sur « Tous » à l’ouverture de l’historique
+  useEffect(() => {
+    setStatusFilter("all");
+    setTodayOnlyFilter(false);
+    setQ("");
+  }, []);
   
   // Pagination pour améliorer les performances
   const [currentPage, setCurrentPage] = useState(1);
@@ -929,6 +925,15 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
   const todayQuotesCount = useMemo(
     () => quotes.filter((d) => isQuoteCreatedToday(d.createdAt)).length,
+    [quotes]
+  );
+
+  const paidQuotesCount = useMemo(
+    () => quotes.filter((d) => isQuoteFullyPaid(d)).length,
+    [quotes]
+  );
+  const pendingQuotesCount = useMemo(
+    () => quotes.filter((d) => !isQuoteFullyPaid(d)).length,
     [quotes]
   );
   
@@ -1137,13 +1142,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     // Filtre par statut (payé / en attente) — calcul rapide sans formatage
     if (statusFilter !== "all") {
       result = result.filter((d) => {
-        const allTicketsFilled = d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false;
-        if (statusFilter === "paid") {
-          return allTicketsFilled;
-        }
-        if (statusFilter === "pending") {
-          return !allTicketsFilled;
-        }
+        const paid = isQuoteFullyPaid(d);
+        if (statusFilter === "paid") return paid;
+        if (statusFilter === "pending") return !paid;
         return true;
       });
     }
@@ -1193,8 +1194,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       }) || [];
       
       // Calculer les statuts une seule fois
-      const allTicketsFilled = d.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false;
-      const hasTickets = d.items?.some((item) => item.ticketNumber && item.ticketNumber.trim()) || false;
+      const allTicketsFilled = isQuoteFullyPaid(d);
+      const hasTickets = quoteHasAnyTicket(d);
       
       return {
         ...d,
@@ -1244,11 +1245,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     
     // Identifier les devis à supprimer
     const quotesToDelete = quotes.filter((quote) => {
-      // Vérifier si le devis est non payé (tous les tickets ne sont pas remplis)
-      const allTicketsFilled = quote.items?.every((item) => item.ticketNumber && item.ticketNumber.trim()) || false;
-      if (allTicketsFilled) {
-        return false; // Le devis est payé, ne pas le supprimer
-      }
+      // Payé (ou sans activités) : ne pas supprimer
+      if (isQuoteFullyPaid(quote)) return false;
+      // Sans ligne d'activité : ne pas supprimer (données à vérifier, pas un « non payé » classique)
+      if (!Array.isArray(quote.items) || quote.items.length === 0) return false;
       
       // Vérifier si le devis a été créé il y a plus de UNPAID_QUOTE_AUTO_DELETE_DAYS jours
       const createdAt = new Date(quote.createdAt);
@@ -1312,7 +1312,44 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     if (!quotes || quotes.length === 0) return;
     cleanupRanRef.current = true;
     void cleanupOldUnpaidQuotes();
-  }, [quotes, cleanupOldUnpaidQuotes]);
+
+    void (async () => {
+      if (!supabase) return;
+      try {
+        const { cleaned, cleanedIds } = await cleanupExpiredQuoteDocuments({
+          supabase,
+          siteKey: SITE_KEY,
+          quotes,
+          logger,
+        });
+        if (cleaned > 0 && cleanedIds.length > 0) {
+          const idSet = new Set(cleanedIds);
+          setQuotes((prev) => {
+            const next = prev.map((q) =>
+              idSet.has(String(q.id))
+                ? { ...q, clientDocuments: [], updated_at: new Date().toISOString() }
+                : q
+            );
+            saveLS(LS_KEYS.quotes, next);
+            return next;
+          });
+          setDocsQuote((prev) =>
+            prev && idSet.has(String(prev.id))
+              ? { ...prev, clientDocuments: [] }
+              : prev
+          );
+          toast.info(
+            cleaned === 1
+              ? "Passeports / documents d’un devis purgés (dernière activité passée)."
+              : `Passeports / documents de ${cleaned} devis purgés (dernière activité passée).`,
+            4500
+          );
+        }
+      } catch (e) {
+        logger.warn("HistoryPage quote docs cleanup:", e);
+      }
+    })();
+  }, [quotes, cleanupOldUnpaidQuotes, setQuotes]);
 
   const applyQuoteDocumentsLocally = useCallback(
     (quoteId, nextDocs) => {
@@ -1379,6 +1416,12 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     async ({ type, label, file }) => {
       if (!docsQuote || !file || !supabase) {
         if (!supabase) toast.error("Supabase non configuré.");
+        return;
+      }
+      if (isQuoteLastActivityPastRetention(docsQuote)) {
+        toast.warning(
+          "La dernière activité de ce devis est passée : les passeports / documents ne peuvent plus être ajoutés."
+        );
         return;
       }
       setDocsSaving(true);
@@ -1501,7 +1544,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
               tone="dark"
                 className="transition-opacity duration-150 hover:opacity-80"
             >
-              📊 Tous
+              📊 Tous{quotes.length > 0 ? ` (${quotes.length})` : ""}
             </Pill>
             <Pill
               active={statusFilter === "paid"}
@@ -1509,7 +1552,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
               tone="dark"
                 className="transition-opacity duration-150 hover:opacity-80"
             >
-              ✅ Payés
+              ✅ Payés{paidQuotesCount > 0 ? ` (${paidQuotesCount})` : ""}
             </Pill>
             <Pill
               active={statusFilter === "pending"}
@@ -1517,7 +1560,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
               tone="dark"
                 className="transition-opacity duration-150 hover:opacity-80"
             >
-              ⏳ En attente
+              ⏳ En attente{pendingQuotesCount > 0 ? ` (${pendingQuotesCount})` : ""}
             </Pill>
             </div>
           </div>

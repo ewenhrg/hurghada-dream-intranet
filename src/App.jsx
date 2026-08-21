@@ -644,12 +644,7 @@ export default function App() {
           setQuotes((prevQuotes) => {
             // Fonction pour convertir un devis Supabase en format local
             const convertSupabaseQuoteToLocal = (row) => {
-              let items = [];
-              try {
-                items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items || [];
-              } catch {
-                items = [];
-              }
+              const items = normalizeQuoteItemsFromDb(row.items);
               
               const createdAt = row.created_at || row.createdAt || new Date().toISOString();
               const updatedAt = row.updated_at || row.updatedAt || createdAt;
@@ -688,7 +683,7 @@ export default function App() {
                 notes: row.notes || "",
                 createdByName: row.created_by_name || "",
                 updatedByName: row.updated_by_name || "",
-                items: normalizeQuoteItemsFromDb(items),
+                items,
                 total: row.total || 0,
                 totalCash: Math.round(row.total || 0),
                 totalCard: calculateCardPrice(row.total || 0),
@@ -801,12 +796,7 @@ export default function App() {
 
     // Fonction pour convertir un devis Supabase en format local
     const convertSupabaseQuoteToLocal = (row) => {
-      let items = [];
-      try {
-        items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items || [];
-      } catch {
-        items = [];
-      }
+      const items = normalizeQuoteItemsFromDb(row.items);
 
       const createdAt = row.created_at || row.createdAt || new Date().toISOString();
       const updatedAt = row.updated_at || row.updatedAt || createdAt;
@@ -843,7 +833,7 @@ export default function App() {
         notes: row.notes || "",
         createdByName: row.created_by_name || "",
         updatedByName: row.updated_by_name || "",
-        items: normalizeQuoteItemsFromDb(items),
+        items,
         total: row.total || 0,
         totalCash: Math.round(row.total || 0),
         totalCard: calculateCardPrice(row.total || 0),

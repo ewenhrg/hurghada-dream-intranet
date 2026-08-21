@@ -144,6 +144,8 @@ export function buildQuoteDraftFromPublicViewModel(vm) {
       neighborhood: "",
       arrivalDate: vm.client?.arrivalDate || "",
       departureDate: vm.client?.departureDate || "",
+      isAirbnb: Boolean(vm.client?.isAirbnb),
+      airbnbMapsUrl: String(vm.client?.airbnbMapsUrl || "").trim(),
     },
     items,
     notes: withMammaMiaSelfTransferNote(

@@ -28,8 +28,24 @@ const SPEED_BOAT_EXTRAS_LOCAL = [
 
 /** Normalise les lignes d'activité lues depuis Supabase (camelCase + compat snake_case). */
 export function normalizeQuoteItemsFromDb(items) {
-  if (!Array.isArray(items)) return [];
-  return items.map((item) => ({
+  let list = items;
+  if (typeof list === "string") {
+    try {
+      list = JSON.parse(list);
+    } catch {
+      return [];
+    }
+  }
+  // Anciennes écritures JSON.stringify dans une colonne JSONB → string encore une fois
+  if (typeof list === "string") {
+    try {
+      list = JSON.parse(list);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  return list.map((item) => ({
     ...item,
     activityId: item.activityId ?? item.activity_id ?? "",
     activityName: item.activityName ?? item.activity_name ?? "",
@@ -49,6 +65,18 @@ export function normalizeQuoteItemsFromDb(items) {
     speedBoatExtra: item.speedBoatExtra ?? item.speed_boat_extra ?? [],
     lineTotal: item.lineTotal ?? item.line_total ?? 0,
   }));
+}
+
+/** Devis payé = au moins 1 activité et chaque ligne a un n° de ticket. */
+export function isQuoteFullyPaid(quote) {
+  const items = Array.isArray(quote?.items) ? quote.items : [];
+  if (items.length === 0) return false;
+  return items.every((item) => String(item?.ticketNumber || "").trim() !== "");
+}
+
+export function quoteHasAnyTicket(quote) {
+  const items = Array.isArray(quote?.items) ? quote.items : [];
+  return items.some((item) => String(item?.ticketNumber || "").trim() !== "");
 }
 
 export function uuid() {

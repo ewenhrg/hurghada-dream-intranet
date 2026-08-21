@@ -145,6 +145,8 @@ function rowToViewModel(row) {
       hotel: row.client_hotel || "",
       arrivalDate: row.client_arrival_date || "",
       departureDate: row.client_departure_date || "",
+      isAirbnb: Boolean(row.client_is_airbnb),
+      airbnbMapsUrl: String(row.client_airbnb_maps_url || "").trim(),
     },
     notes: row.notes || "",
     total: row.total || 0,
@@ -195,7 +197,7 @@ export function PublicDevisPage({ user }) {
       const { data, error: loadError } = await supabase
         .from("public_quotes")
         .select(
-          "id, client_name, client_phone, client_email, client_hotel, client_arrival_date, client_departure_date, notes, total, currency, items, created_at, treated_by_name, treated_at"
+          "id, client_name, client_phone, client_email, client_hotel, client_arrival_date, client_departure_date, client_is_airbnb, client_airbnb_maps_url, notes, total, currency, items, created_at, treated_by_name, treated_at"
         )
         .eq("site_key", SITE_KEY)
         .order("created_at", { ascending: false })
@@ -203,6 +205,20 @@ export function PublicDevisPage({ user }) {
 
       if (loadError) {
         const msg = String(loadError.message || "");
+        if (/client_is_airbnb|client_airbnb_maps_url/i.test(msg)) {
+          const retryAirbnb = await supabase
+            .from("public_quotes")
+            .select(
+              "id, client_name, client_phone, client_email, client_hotel, client_arrival_date, client_departure_date, notes, total, currency, items, created_at, treated_by_name, treated_at"
+            )
+            .eq("site_key", SITE_KEY)
+            .order("created_at", { ascending: false })
+            .limit(500);
+          if (!retryAirbnb.error) {
+            setRows((retryAirbnb.data || []).map(rowToViewModel));
+            return;
+          }
+        }
         if (/treated_by_name|treated_at/i.test(msg) || loadError.code === "PGRST204") {
           const retry = await supabase
             .from("public_quotes")
@@ -489,8 +505,31 @@ export function PublicDevisPage({ user }) {
                   <p className="mt-0.5 break-all font-semibold text-slate-950">{quote.client?.email || "—"}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm sm:col-span-2 lg:col-span-1">
-                  <span className="text-[11px] font-bold uppercase text-slate-500">Hôtel / lieu</span>
-                  <p className="mt-0.5 font-semibold text-slate-950">{quote.client?.hotel || "—"}</p>
+                  <span className="text-[11px] font-bold uppercase text-slate-500">
+                    {quote.client?.isAirbnb ? "Airbnb / lieu" : "Hôtel / lieu"}
+                  </span>
+                  <p className="mt-0.5 font-semibold text-slate-950">
+                    {quote.client?.isAirbnb ? (
+                      <>
+                        <span className="mr-1.5 inline-flex rounded-md bg-rose-100 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-rose-700">
+                          Airbnb
+                        </span>
+                        {quote.client?.hotel || "Logement"}
+                      </>
+                    ) : (
+                      quote.client?.hotel || "—"
+                    )}
+                  </p>
+                  {quote.client?.isAirbnb && quote.client?.airbnbMapsUrl ? (
+                    <a
+                      href={quote.client.airbnbMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-block text-xs font-bold text-indigo-700 hover:underline"
+                    >
+                      Ouvrir Google Maps
+                    </a>
+                  ) : null}
                 </div>
                 <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
                   <span className="text-[11px] font-bold uppercase text-slate-500">Arrivée</span>

@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { supabase } from "../../lib/supabase";
-import { SITE_KEY, LS_KEYS } from "../../constants";
+import { LS_KEYS } from "../../constants";
 import { currency, saveLS } from "../../utils";
+import { persistQuoteItemsToSupabase } from "../../utils/persistQuoteItems";
 import { formatQuoteItemParticipantsSummary } from "../../utils/quoteItemDisplay.js";
 import { TextInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
 import { logger } from "../../utils/logger";
 import { hasFullIntranetAccess } from "../../constants/permissions.js";
+import { supabase } from "../../lib/supabase";
 
 export function PaymentModal({ 
   show, 
@@ -50,6 +51,7 @@ export function PaymentModal({
         ticketNumber: ticketNumbers[idx]?.trim() || "",
         paymentMethod: item.paymentMethod || paymentMethods[idx] || "",
       })),
+      updated_at: new Date().toISOString(),
     };
 
     const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? updatedQuote : q));
@@ -59,29 +61,16 @@ export function PaymentModal({
     // Mettre à jour dans Supabase si configuré
     if (supabase) {
       try {
-        const supabaseUpdate = {
-          items: JSON.stringify(updatedQuote.items),
-          updated_at: new Date().toISOString(),
-        };
+        const { ok, error } = await persistQuoteItemsToSupabase(selectedQuote, updatedQuote.items, {
+          updatedAt: updatedQuote.updated_at,
+        });
 
-        let updateQuery = supabase
-          .from("quotes")
-          .update(supabaseUpdate)
-          .eq("site_key", SITE_KEY);
-
-        if (selectedQuote.supabase_id) {
-          updateQuery = updateQuery.eq("id", selectedQuote.supabase_id);
-        } else {
-          updateQuery = updateQuery
-            .eq("client_phone", selectedQuote.client?.phone || "")
-            .eq("created_at", selectedQuote.createdAt);
-        }
-
-        const { error } = await updateQuery;
-
-        if (error) {
+        if (!ok) {
           logger.error("Erreur lors de la mise à jour Supabase:", error);
-          toast.error("Erreur lors de la synchronisation avec Supabase.");
+          toast.error(
+            error?.message ||
+              "Tickets enregistrés en local mais pas synchronisés. Réessayez."
+          );
         } else {
           toast.success("Numéros de ticket et méthodes de paiement enregistrés avec succès.");
         }

@@ -8,6 +8,10 @@ import {
   hotelClientDocTypeLabel,
   normalizeClientDocuments,
 } from "../../utils/hotelRequestDocuments";
+import {
+  getQuoteLastActivityDate,
+  isQuoteLastActivityPastRetention,
+} from "../../utils/cleanupExpiredQuoteDocuments";
 
 const CLIENT_DOC_MAX_BYTES = 15 * 1024 * 1024;
 
@@ -19,6 +23,8 @@ export function QuoteDocumentsModal({ quote, onClose, onAdd, onRemove, saving })
   const [docType, setDocType] = useState("passport");
   const [customLabel, setCustomLabel] = useState("");
   const [file, setFile] = useState(null);
+  const expired = isQuoteLastActivityPastRetention(quote);
+  const lastActivityDate = getQuoteLastActivityDate(quote);
 
   useEffect(() => {
     setDocType("passport");
@@ -32,7 +38,10 @@ export function QuoteDocumentsModal({ quote, onClose, onAdd, onRemove, saving })
     [quote.client?.name, quote.client?.phone].filter(Boolean).join(" · ") || "Client";
 
   const canAdd =
-    !saving && file && (docType !== "other" || String(customLabel || "").trim());
+    !expired &&
+    !saving &&
+    file &&
+    (docType !== "other" || String(customLabel || "").trim());
 
   return createPortal(
     <div
@@ -62,12 +71,22 @@ export function QuoteDocumentsModal({ quote, onClose, onAdd, onRemove, saving })
         </div>
 
         <div className="mt-5 space-y-3">
+          {expired ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-950">
+              Dernière activité
+              {lastActivityDate
+                ? ` (${new Date(lastActivityDate + "T12:00:00").toLocaleDateString("fr-FR")})`
+                : ""}{" "}
+              passée — les passeports / documents sont purgés automatiquement et ne peuvent plus
+              être ajoutés.
+            </p>
+          ) : null}
           <label className="block">
             <span className="text-[11px] font-bold uppercase text-slate-500">Type de document</span>
             <select
               className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
               value={docType}
-              disabled={saving}
+              disabled={saving || expired}
               onChange={(e) => setDocType(e.target.value)}
             >
               {HOTEL_CLIENT_DOC_TYPES.map((t) => (
@@ -85,7 +104,7 @@ export function QuoteDocumentsModal({ quote, onClose, onAdd, onRemove, saving })
                 className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
                 value={customLabel}
                 onChange={(e) => setCustomLabel(e.target.value)}
-                disabled={saving}
+                disabled={saving || expired}
                 placeholder="ex. Assurance voyage"
               />
             </label>
@@ -93,7 +112,7 @@ export function QuoteDocumentsModal({ quote, onClose, onAdd, onRemove, saving })
 
           <div>
             <span className="text-[11px] font-bold uppercase text-slate-500">Fichier</span>
-            <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-indigo-400 hover:bg-indigo-50/40">
+            <label className={`mt-1.5 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition ${expired ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/40"}`}>
               <Upload className="h-5 w-5 text-slate-500" aria-hidden />
               <span className="text-sm font-semibold text-slate-800">
                 {file ? file.name : "Choisir un fichier"}
@@ -105,7 +124,7 @@ export function QuoteDocumentsModal({ quote, onClose, onAdd, onRemove, saving })
                 type="file"
                 accept="image/*,application/pdf"
                 className="sr-only"
-                disabled={saving}
+                disabled={saving || expired}
                 onChange={(e) => {
                   const next = e.target.files?.[0] || null;
                   if (!next) {

@@ -34,6 +34,14 @@ import {
   formatTurtleFinSizesLabel,
 } from "../utils/activityHelpers";
 import { TurtleFinSizesFields } from "../components/quotes/TurtleFinSizesFields";
+import {
+  createEmptyAirbnb,
+  pickAirbnbFields,
+  buildAirbnbDbFields,
+  isMissingAirbnbColumnError,
+  stripAirbnbColumns,
+} from "../utils/clientAirbnb.js";
+import { isLikelyGoogleMapsUrl } from "../utils/googleMapsUrl.js";
 
 /** `*` : toutes les colonnes présentes en base (évite erreur si `babies_forbidden` n’est pas encore migrée). */
 const ACTIVITY_COLUMNS = "*";
@@ -131,6 +139,7 @@ export function PublicClientDevisPage() {
       phone: "",
       email: "",
       hotel: "",
+      ...createEmptyAirbnb(),
       arrivalDate: s.arrivalDate || "",
       departureDate: s.departureDate || "",
       notes: "",
@@ -486,9 +495,20 @@ export function PublicClientDevisPage() {
       setError("L’adresse e-mail n’est pas valide.");
       return;
     }
-    if (!hotel) {
+    if (!client.isAirbnb && !hotel) {
       setError("L’hôtel ou le lieu de prise en charge est obligatoire.");
       return;
+    }
+    if (client.isAirbnb) {
+      const mapsUrl = String(client.airbnbMapsUrl || "").trim();
+      if (!mapsUrl) {
+        setError("Airbnb : collez le lien Google Maps du logement.");
+        return;
+      }
+      if (!isLikelyGoogleMapsUrl(mapsUrl)) {
+        setError("Airbnb : le lien doit être une URL Google Maps.");
+        return;
+      }
     }
     if (!arrival) {
       setError("La date d’arrivée est obligatoire.");
@@ -654,14 +674,20 @@ export function PublicClientDevisPage() {
       };
     });
 
+    const airbnb = pickAirbnbFields(client);
+    const hotelLabel = airbnb.isAirbnb
+      ? hotel || "Airbnb"
+      : hotel;
+
     const payload = {
       site_key: SITE_KEY,
       client_name: name,
       client_phone: phone,
       client_email: email,
-      client_hotel: hotel,
+      client_hotel: hotelLabel,
       client_arrival_date: arrival,
       client_departure_date: departure,
+      ...buildAirbnbDbFields({ ...client, hotel: hotelLabel }),
       notes: notesWithAges || "",
       total: toNumber(cartTotal),
       currency: "EUR",
@@ -672,7 +698,15 @@ export function PublicClientDevisPage() {
 
     setSubmitLoading(true);
     try {
-      const { error: insertError } = await supabase.from("public_quotes").insert(payload);
+      let { error: insertError } = await supabase.from("public_quotes").insert(payload);
+      if (isMissingAirbnbColumnError(insertError)) {
+        logger.warn(
+          "Colonnes Airbnb absentes sur public_quotes — insert sans ces champs. Exécutez supabase_public_quotes_add_airbnb_maps.sql"
+        );
+        ({ error: insertError } = await supabase
+          .from("public_quotes")
+          .insert(stripAirbnbColumns(payload)));
+      }
       if (insertError) {
         setError(insertError.message || "Impossible d'envoyer votre devis.");
         return;
@@ -687,6 +721,7 @@ export function PublicClientDevisPage() {
         phone: "",
         email: "",
         hotel: "",
+        ...createEmptyAirbnb(),
         arrivalDate: "",
         departureDate: "",
         notes: "",
@@ -1299,13 +1334,60 @@ export function PublicClientDevisPage() {
                 className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
                 autoComplete="email"
               />
-              <input
-                value={client.hotel}
-                onChange={(e) => updateClientField("hotel", e.target.value)}
-                placeholder="Hôtel ou lieu de prise en charge *"
-                required
-                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
-              />
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-catalog-body">
+                    Hôtel / lieu *
+                  </span>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-rose-300/80 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-800">
+                    <input
+                      type="checkbox"
+                      className="size-3.5 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                      checked={Boolean(client.isAirbnb)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setClient((c) => ({
+                          ...c,
+                          isAirbnb: checked,
+                          airbnbMapsUrl: checked ? c.airbnbMapsUrl || "" : "",
+                        }));
+                      }}
+                    />
+                    Airbnb
+                  </label>
+                </div>
+                <input
+                  value={client.hotel}
+                  onChange={(e) => updateClientField("hotel", e.target.value)}
+                  placeholder={
+                    client.isAirbnb
+                      ? "Nom / libellé Airbnb (optionnel)"
+                      : "Hôtel ou lieu de prise en charge *"
+                  }
+                  required={!client.isAirbnb}
+                  className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
+                />
+                {client.isAirbnb ? (
+                  <div className="rounded-2xl border-2 border-rose-200 bg-rose-50/80 p-3 space-y-2">
+                    <label className="block space-y-1">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wide text-rose-800">
+                        Lien Google Maps *
+                      </span>
+                      <input
+                        type="url"
+                        value={client.airbnbMapsUrl || ""}
+                        onChange={(e) => updateClientField("airbnbMapsUrl", e.target.value)}
+                        placeholder="https://maps.google.com/... ou maps.app.goo.gl/..."
+                        required
+                        className="w-full rounded-2xl border-2 border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-rose-400 focus:ring-4 focus:ring-rose-300/30"
+                      />
+                    </label>
+                    <p className="text-[11px] font-medium text-rose-800/80">
+                      Collez le lien Maps du logement pour organiser le transfert.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="block space-y-1">
                   <span className="text-[11px] font-extrabold uppercase tracking-wide text-catalog-body">Date d’arrivée *</span>
