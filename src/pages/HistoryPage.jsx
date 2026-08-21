@@ -1077,6 +1077,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [docsQuote, setDocsQuote] = useState(null);
   const [docsSaving, setDocsSaving] = useState(false);
+  /** Miroir synchrone des docs (évite d’écraser lors d’uploads enchaînés / drag & drop). */
+  const clientDocsDraftRef = useRef({});
 
   // Toujours repartir sur « Tous » à l’ouverture de l’historique
   useEffect(() => {
@@ -1580,16 +1582,18 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
 
   const handleAddQuoteDocument = useCallback(
     async ({ type, label, file }, quoteOverride = null) => {
-      const targetQuote = quoteOverride || docsQuote;
-      if (!targetQuote || !file || !supabase) {
+      const baseQuote = quoteOverride || docsQuote;
+      if (!baseQuote || !file || !supabase) {
         if (!supabase) toast.error("Supabase non configuré.");
-        return;
+        return false;
       }
+      // Toujours repartir de la version la plus récente (multi-upload / drag & drop).
+      const targetQuote = quotes.find((q) => q.id === baseQuote.id) || baseQuote;
       if (isQuoteLastActivityPastRetention(targetQuote)) {
         toast.warning(
           "La dernière activité de ce devis est passée : les passeports / documents ne peuvent plus être ajoutés."
         );
-        return;
+        return false;
       }
       setDocsSaving(true);
       try {
@@ -1624,53 +1628,68 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         if (uploadError) {
           logger.error("HistoryPage doc upload:", uploadError);
           toast.error(uploadError.message || "Échec de l’upload du document.");
-          return;
+          return false;
         }
 
         const { data: pub } = supabase.storage.from(usedBucket).getPublicUrl(objectPath);
         const url = String(pub?.publicUrl || "").trim();
         if (!url) {
           toast.error("URL du document introuvable après upload.");
-          return;
+          return false;
         }
 
+        const docType = String(type || "other").trim() || "other";
         const entry = {
-          id: `${Date.now()}-${safeName}`,
-          type: String(type || "other"),
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`,
+          type: docType,
           label: String(label || "").trim(),
           fileName: file.name || safeName,
           url,
           mimeType: file.type || "",
           uploadedAt: new Date().toISOString(),
         };
-        const prevDocs = normalizeClientDocuments(targetQuote.clientDocuments);
-        // Un seul fichier par type requis Zero Tracas (remplace l’ancien).
-        const nextDocs = [
-          ...prevDocs.filter((doc) => String(doc.type || "") !== String(type || "")),
-          entry,
-        ];
+        const quoteId = String(targetQuote.id);
+        const prevDocs =
+          clientDocsDraftRef.current[quoteId] ||
+          normalizeClientDocuments(
+            (quotes.find((q) => q.id === targetQuote.id) || targetQuote).clientDocuments
+          );
+        // Zero Tracas : un seul fichier par type requis. Sinon : ajout libre (plusieurs « other » OK).
+        const isZtRequired = ZERO_TRACAS_REQUIRED_DOC_TYPES.some((t) => t.value === docType);
+        const nextDocs = isZtRequired
+          ? [...prevDocs.filter((doc) => String(doc.type || "") !== docType), entry]
+          : [...prevDocs, entry];
+        clientDocsDraftRef.current[quoteId] = nextDocs;
         const ok = await persistQuoteDocuments(targetQuote, nextDocs);
         if (ok) toast.success("Document ajouté au devis.");
+        else delete clientDocsDraftRef.current[quoteId];
+        return ok;
       } catch (e) {
         logger.error("HistoryPage doc add:", e);
         toast.error("Erreur inattendue.");
+        return false;
       } finally {
         setDocsSaving(false);
       }
     },
-    [docsQuote, persistQuoteDocuments]
+    [docsQuote, quotes, persistQuoteDocuments]
   );
 
   const handleRemoveQuoteDocument = useCallback(
     async (docId) => {
       if (!docsQuote) return;
-      const prevDocs = normalizeClientDocuments(docsQuote.clientDocuments);
+      const quoteId = String(docsQuote.id);
+      const prevDocs =
+        clientDocsDraftRef.current[quoteId] ||
+        normalizeClientDocuments(docsQuote.clientDocuments);
       const nextDocs = prevDocs.filter((d) => d.id !== docId);
       if (nextDocs.length === prevDocs.length) return;
       setDocsSaving(true);
       try {
+        clientDocsDraftRef.current[quoteId] = nextDocs;
         const ok = await persistQuoteDocuments(docsQuote, nextDocs);
         if (ok) toast.success("Document retiré du devis.");
+        else delete clientDocsDraftRef.current[quoteId];
       } catch (e) {
         logger.error("HistoryPage doc remove:", e);
         toast.error("Erreur inattendue.");
