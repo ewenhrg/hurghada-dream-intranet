@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateTicketsHTML, generateTicketNumber, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
+import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateTicketsHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge } from "../utils";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
@@ -24,8 +24,17 @@ import {
   isMissingSecondHotelColumnError,
   stripSecondHotelColumns,
 } from "../utils/clientSecondHotel.js";
+import {
+  buildAirbnbDbFields,
+  isMissingAirbnbColumnError,
+  stripAirbnbColumns,
+  pickAirbnbFields,
+  createEmptyAirbnb,
+} from "../utils/clientAirbnb.js";
+import { isLikelyGoogleMapsUrl } from "../utils/googleMapsUrl.js";
 import { PrivateTransferButtons } from "../components/quotes/PrivateTransferButtons";
 import { TurtleFinSizesFields } from "../components/quotes/TurtleFinSizesFields";
+import { QuoteDocumentsModal } from "../components/quotes/QuoteDocumentsModal";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import {
   isDivingActivityName,
@@ -33,9 +42,16 @@ import {
   formatDivingVisitorLabel,
   computeDivingVisitorSurcharge,
 } from "../utils/divingSafety.js";
+import {
+  hotelClientDocTypeLabel,
+  normalizeClientDocuments,
+  serializeClientDocuments,
+} from "../utils/hotelRequestDocuments";
 
 /** Délai avant suppression auto des devis « non payés » (au moins une ligne sans n° de ticket), à l’ouverture de l’historique. */
 const UNPAID_QUOTE_AUTO_DELETE_DAYS = 20;
+const QUOTE_DOC_BUCKET = "documents";
+const QUOTE_DOC_FALLBACK_BUCKET = "Catalogue";
 
 // Composant de carte de devis mémorisé pour améliorer les performances
 // Déclarer comme fonction normale pour le hoisting, puis mémoriser
@@ -48,12 +64,14 @@ function QuoteCardComponent({
   setEditClient, 
   setEditItems, 
   setEditNotes, 
-  setShowEditModal 
+  setShowEditModal,
+  onDocuments,
 }) {
   // NOTE: ne pas télécharger la fiche info côté navigateur (payload trop gros pour Edge Functions).
   // On enverra l'URL à l'Edge Function, qui téléchargera le fichier côté serveur.
 
-  const [showTicketConfirm, setShowTicketConfirm] = useState(false);
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [ticketDrafts, setTicketDrafts] = useState({});
   const [ticketGenerating, setTicketGenerating] = useState(false);
 
   const extractBase64FromDataUrl = useCallback((raw) => {
@@ -79,6 +97,11 @@ function QuoteCardComponent({
   const ticketsCount = useMemo(() => 
     d.items?.filter((item) => item.ticketNumber && item.ticketNumber.trim()).length || 0,
     [d.items]
+  );
+
+  const clientDocuments = useMemo(
+    () => normalizeClientDocuments(d.clientDocuments),
+    [d.clientDocuments]
   );
 
   const handlePrintClick = useCallback(() => {
@@ -108,77 +131,124 @@ function QuoteCardComponent({
     }
   }, []);
 
-  const handleConfirmTickets = useCallback(async () => {
-    setShowTicketConfirm(false);
-    setTicketGenerating(true);
-
-    // Ensemble des numéros déjà utilisés (tous devis confondus) pour garantir l'unicité
-    const usedNumbers = new Set();
-    quotes.forEach((qq) =>
-      qq.items?.forEach((it) => {
-        if (it.ticketNumber && String(it.ticketNumber).trim()) {
-          usedNumbers.add(String(it.ticketNumber).trim());
-        }
-      })
-    );
-
-    // Travailler sur le devis « brut » (sans champs calculés) pour ne pas polluer le stockage
+  const openTicketModal = useCallback(() => {
     const rawQuote = quotes.find((q) => q.id === d.id) || d;
-    const updatedItems = (rawQuote.items || []).map((item) => {
-      if (item.ticketNumber && String(item.ticketNumber).trim()) return item;
-      const num = generateTicketNumber(usedNumbers);
-      usedNumbers.add(num);
-      return { ...item, ticketNumber: num };
+    const initial = {};
+    (rawQuote.items || []).forEach((item, idx) => {
+      initial[idx] = String(item.ticketNumber || "").trim();
     });
+    setTicketDrafts(initial);
+    setShowTicketModal(true);
+  }, [d, quotes]);
 
-    const updatedQuote = { ...rawQuote, items: updatedItems, updated_at: new Date().toISOString() };
-    const updatedQuotes = quotes.map((q) => (q.id === d.id ? updatedQuote : q));
-    setQuotes(updatedQuotes);
-    saveLS(LS_KEYS.quotes, updatedQuotes);
+  const handleConfirmTickets = useCallback(async () => {
+    const rawQuote = quotes.find((q) => q.id === d.id) || d;
+    const items = rawQuote.items || [];
+    if (items.length === 0) {
+      toast.warning("Aucune activité sur ce devis.");
+      return;
+    }
 
-    if (supabase) {
-      try {
-        const supabaseUpdate = {
-          items: JSON.stringify(updatedItems),
-          updated_at: updatedQuote.updated_at,
-        };
-
-        let updateQuery = supabase
-          .from("quotes")
-          .update(supabaseUpdate)
-          .eq("site_key", SITE_KEY);
-
-        if (rawQuote.supabase_id) {
-          updateQuery = updateQuery.eq("id", rawQuote.supabase_id);
-        } else {
-          updateQuery = updateQuery
-            .eq("client_phone", rawQuote.client?.phone || "")
-            .eq("created_at", rawQuote.createdAt);
-        }
-
-        const { data, error } = await updateQuery.select();
-
-        if (error) {
-          logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
-          toast.error("Erreur de synchronisation Supabase (tickets).");
-        } else {
-          if (!rawQuote.supabase_id && data?.[0]?.id) {
-            const withId = { ...updatedQuote, supabase_id: data[0].id };
-            const finalQuotes = updatedQuotes.map((q) => (q.id === d.id ? withId : q));
-            setQuotes(finalQuotes);
-            saveLS(LS_KEYS.quotes, finalQuotes);
-          }
-          toast.success("Numéros de ticket générés.");
-        }
-      } catch (error) {
-        logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
-        toast.error("Erreur de synchronisation Supabase (tickets).");
+    const normalized = items.map((_, idx) => String(ticketDrafts[idx] || "").trim());
+    for (let i = 0; i < items.length; i++) {
+      if (!normalized[i]) {
+        toast.warning(
+          `Renseignez le numéro de ticket pour « ${items[i].activityName || `Activité ${i + 1}`} ».`
+        );
+        return;
       }
     }
 
-    setTicketGenerating(false);
-    openTicketsWindow(updatedQuote);
-  }, [d, quotes, setQuotes, openTicketsWindow]);
+    const seenInForm = new Set();
+    for (let i = 0; i < normalized.length; i++) {
+      const num = normalized[i];
+      const key = num.toLowerCase();
+      if (seenInForm.has(key)) {
+        toast.warning(`Numéro de ticket en double dans le devis : ${num}`);
+        return;
+      }
+      seenInForm.add(key);
+    }
+
+    const usedElsewhere = new Set();
+    quotes.forEach((qq) => {
+      if (qq.id === d.id) return;
+      qq.items?.forEach((it) => {
+        const n = String(it.ticketNumber || "").trim();
+        if (n) usedElsewhere.add(n.toLowerCase());
+      });
+    });
+    for (const num of normalized) {
+      if (usedElsewhere.has(num.toLowerCase())) {
+        toast.warning(`Ce numéro de ticket est déjà utilisé : ${num}`);
+        return;
+      }
+    }
+
+    setTicketGenerating(true);
+    try {
+      const updatedItems = items.map((item, idx) => ({
+        ...item,
+        ticketNumber: normalized[idx],
+      }));
+
+      const updatedQuote = {
+        ...rawQuote,
+        items: updatedItems,
+        updated_at: new Date().toISOString(),
+      };
+      const updatedQuotes = quotes.map((q) => (q.id === d.id ? updatedQuote : q));
+      setQuotes(updatedQuotes);
+      saveLS(LS_KEYS.quotes, updatedQuotes);
+
+      if (supabase) {
+        try {
+          const supabaseUpdate = {
+            items: JSON.stringify(updatedItems),
+            updated_at: updatedQuote.updated_at,
+          };
+
+          let updateQuery = supabase
+            .from("quotes")
+            .update(supabaseUpdate)
+            .eq("site_key", SITE_KEY);
+
+          if (rawQuote.supabase_id) {
+            updateQuery = updateQuery.eq("id", rawQuote.supabase_id);
+          } else {
+            updateQuery = updateQuery
+              .eq("client_phone", rawQuote.client?.phone || "")
+              .eq("created_at", rawQuote.createdAt);
+          }
+
+          const { data, error } = await updateQuery.select();
+
+          if (error) {
+            logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
+            toast.error("Erreur de synchronisation Supabase (tickets).");
+          } else {
+            if (!rawQuote.supabase_id && data?.[0]?.id) {
+              const withId = { ...updatedQuote, supabase_id: data[0].id };
+              const finalQuotes = updatedQuotes.map((q) => (q.id === d.id ? withId : q));
+              setQuotes(finalQuotes);
+              saveLS(LS_KEYS.quotes, finalQuotes);
+            }
+            toast.success("Devis payé — tickets enregistrés.");
+          }
+        } catch (error) {
+          logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
+          toast.error("Erreur de synchronisation Supabase (tickets).");
+        }
+      } else {
+        toast.success("Devis payé — tickets enregistrés.");
+      }
+
+      setShowTicketModal(false);
+      openTicketsWindow(updatedQuote);
+    } finally {
+      setTicketGenerating(false);
+    }
+  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts]);
 
   const handleInvoiceClick = useCallback(() => {
     const htmlContent = generateQuoteHTML(d, { variant: "facture" });
@@ -349,6 +419,8 @@ function QuoteCardComponent({
       neighborhood: d.client?.neighborhood || "",
       arrivalDate: d.client?.arrivalDate || d.clientArrivalDate || "",
       departureDate: d.client?.departureDate || d.clientDepartureDate || "",
+      isAirbnb: Boolean(d.client?.isAirbnb),
+      airbnbMapsUrl: d.client?.airbnbMapsUrl || "",
     };
     
     // Transformer les items de manière optimisée (éviter les vérifications répétées)
@@ -488,6 +560,11 @@ function QuoteCardComponent({
                 🎫 Tickets : {ticketsCount}/{d.items.length}
               </span>
             )}
+            {clientDocuments.length > 0 ? (
+              <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-slate-700 to-slate-900 text-white border-slate-800 shadow-slate-200/50">
+                📎 {clientDocuments.length} document{clientDocuments.length > 1 ? "s" : ""}
+              </span>
+            ) : null}
           </div>
           <p className="text-xs md:text-sm text-slate-500 font-medium">
             📅 {d.formattedCreatedAt}
@@ -518,9 +595,31 @@ function QuoteCardComponent({
                   {d.client?.phone || "Tél ?"}
                 </p>
                 <p className="text-slate-700 font-semibold break-words flex items-center gap-2">
-                  <span className="text-lg">🏨</span>
-                  {d.client?.hotel || "Hôtel ?"}
-                  {d.client?.room && <span className="text-slate-600 font-normal">(Chambre {d.client.room})</span>}
+                  <span className="text-lg">{d.client?.isAirbnb ? "🏡" : "🏨"}</span>
+                  {d.client?.isAirbnb ? (
+                    <span className="min-w-0">
+                      <span className="mr-1.5 inline-flex rounded-md bg-rose-100 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-rose-700">
+                        Airbnb
+                      </span>
+                      {d.client?.hotel || "Logement"}
+                      {d.client?.airbnbMapsUrl ? (
+                        <a
+                          href={d.client.airbnbMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 text-xs font-bold text-indigo-600 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Maps
+                        </a>
+                      ) : null}
+                    </span>
+                  ) : (
+                    <>
+                      {d.client?.hotel || "Hôtel ?"}
+                      {d.client?.room && <span className="text-slate-600 font-normal">(Chambre {d.client.room})</span>}
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -604,6 +703,33 @@ function QuoteCardComponent({
                 </p>
               </div>
             )}
+            {clientDocuments.length > 0 ? (
+              <div className="rounded-xl border border-violet-200/80 bg-violet-50/60 px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-violet-800">
+                  Documents liés
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {clientDocuments.map((doc) => (
+                    <li key={doc.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <span className="font-semibold text-slate-800">
+                        {hotelClientDocTypeLabel(doc.type, doc.label)}
+                        {doc.fileName ? (
+                          <span className="ml-1 font-medium text-slate-500">· {doc.fileName}</span>
+                        ) : null}
+                      </span>
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-indigo-700 hover:underline"
+                      >
+                        Ouvrir
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
           
           {/* Colonne totaux : largeur bornée pour laisser toute la place au texte des activités à gauche */}
@@ -643,10 +769,18 @@ function QuoteCardComponent({
               </button>
               <button
                 type="button"
-                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-teal-500 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
-                onClick={() => setShowTicketConfirm(true)}
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-violet-500 bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                onClick={() => onDocuments?.(d)}
               >
-                🎟️ Ticket
+                📎 Document
+                {clientDocuments.length > 0 ? ` (${clientDocuments.length})` : ""}
+              </button>
+              <button
+                type="button"
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-teal-500 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                onClick={openTicketModal}
+              >
+                💳 Payer
               </button>
               {!allTicketsFilled && (
                 <button
@@ -671,26 +805,81 @@ function QuoteCardComponent({
         </div>
       </div>
 
-      {showTicketConfirm && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowTicketConfirm(false)}>
+      {showTicketModal && createPortal(
+        <div
+          className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => !ticketGenerating && setShowTicketModal(false)}
+        >
           <div
-            className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 p-6 md:p-7"
+            className="my-8 w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 p-6 md:p-7"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="history-pay-tickets-title"
           >
             <div className="flex items-start gap-3">
-              <span className="text-3xl">🎟️</span>
+              <span className="text-3xl" aria-hidden>
+                💳
+              </span>
               <div className="min-w-0">
-                <h3 className="text-lg font-bold text-slate-900">Êtes-vous sûr de vouloir valider ?</h3>
+                <h3 id="history-pay-tickets-title" className="text-lg font-bold text-slate-900">
+                  Payer — numéros de ticket
+                </h3>
                 <p className="text-sm text-slate-600 mt-1">
-                  Un numéro de ticket unique sera généré automatiquement pour chaque activité sans numéro, puis le PDF des tickets s'ouvrira. Le devis passera en « Payé ».
+                  Saisissez un numéro de ticket pour chaque activité, puis validez pour ouvrir les
+                  tickets. Le devis passera en « Payé ».
                 </p>
               </div>
             </div>
+
+            <ul className="mt-5 space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+              {(quotes.find((q) => q.id === d.id)?.items || d.items || []).map((item, idx) => (
+                <li
+                  key={`${item.activityId || "act"}-${item.date || idx}-${idx}`}
+                  className="rounded-xl border border-teal-100 bg-teal-50/50 px-4 py-3"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-900">
+                        {item.activityName || `Activité ${idx + 1}`}
+                      </p>
+                      <p className="text-xs font-medium text-slate-500 mt-0.5">
+                        {item.date
+                          ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")
+                          : "—"}
+                        {" · "}
+                        {formatQuoteItemParticipantsSummary(item)}
+                      </p>
+                    </div>
+                    <p className="text-sm font-bold tabular-nums text-teal-800">
+                      {currencyNoCents(Math.round(item.lineTotal || 0), d.currency || "EUR")}
+                    </p>
+                  </div>
+                  <label className="mt-3 block">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                      N° ticket
+                    </span>
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      value={ticketDrafts[idx] ?? ""}
+                      onChange={(e) =>
+                        setTicketDrafts((prev) => ({ ...prev, [idx]: e.target.value }))
+                      }
+                      placeholder="Ex. T-12345"
+                      disabled={ticketGenerating}
+                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 disabled:opacity-60"
+                    />
+                  </label>
+                </li>
+              ))}
+            </ul>
+
             <div className="flex flex-col sm:flex-row gap-3 justify-end mt-6">
               <button
                 type="button"
                 className="w-full sm:w-auto rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 border-2 border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                onClick={() => setShowTicketConfirm(false)}
+                onClick={() => setShowTicketModal(false)}
                 disabled={ticketGenerating}
               >
                 Annuler
@@ -701,7 +890,7 @@ function QuoteCardComponent({
                 onClick={() => void handleConfirmTickets()}
                 disabled={ticketGenerating}
               >
-                {ticketGenerating ? "Génération..." : "✅ Valider"}
+                {ticketGenerating ? "Enregistrement…" : "✅ Valider et imprimer les tickets"}
               </button>
             </div>
           </div>
@@ -731,6 +920,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [todayOnlyFilter, setTodayOnlyFilter] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
+  const [docsQuote, setDocsQuote] = useState(null);
+  const [docsSaving, setDocsSaving] = useState(false);
   
   // Pagination pour améliorer les performances
   const [currentPage, setCurrentPage] = useState(1);
@@ -1123,6 +1314,158 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     void cleanupOldUnpaidQuotes();
   }, [quotes, cleanupOldUnpaidQuotes]);
 
+  const applyQuoteDocumentsLocally = useCallback(
+    (quoteId, nextDocs) => {
+      const serialized = serializeClientDocuments(nextDocs);
+      const updatedAt = new Date().toISOString();
+      setQuotes((prev) => {
+        const next = prev.map((q) =>
+          q.id === quoteId ? { ...q, clientDocuments: serialized, updated_at: updatedAt } : q
+        );
+        saveLS(LS_KEYS.quotes, next);
+        return next;
+      });
+      setDocsQuote((prev) =>
+        prev && prev.id === quoteId
+          ? { ...prev, clientDocuments: serialized, updated_at: updatedAt }
+          : prev
+      );
+    },
+    [setQuotes]
+  );
+
+  const persistQuoteDocuments = useCallback(
+    async (quote, nextDocs) => {
+      const serialized = serializeClientDocuments(nextDocs);
+      applyQuoteDocumentsLocally(quote.id, serialized);
+
+      if (!supabase) {
+        toast.warning("Document enregistré en local uniquement (Supabase non configuré).");
+        return true;
+      }
+
+      const payload = {
+        client_documents: serialized,
+        updated_at: new Date().toISOString(),
+      };
+
+      let updateQuery = supabase.from("quotes").update(payload).eq("site_key", SITE_KEY);
+      if (quote.supabase_id) {
+        updateQuery = updateQuery.eq("id", quote.supabase_id);
+      } else {
+        updateQuery = updateQuery
+          .eq("client_phone", quote.client?.phone || "")
+          .eq("created_at", quote.createdAt);
+      }
+
+      const { error } = await updateQuery;
+      if (error) {
+        if (/client_documents/i.test(error.message || "")) {
+          toast.error(
+            "Colonne client_documents absente : exécutez supabase_quotes_add_client_documents.sql",
+            7000
+          );
+        } else {
+          toast.error(error.message || "Impossible d’enregistrer les documents.");
+        }
+        return false;
+      }
+      return true;
+    },
+    [applyQuoteDocumentsLocally]
+  );
+
+  const handleAddQuoteDocument = useCallback(
+    async ({ type, label, file }) => {
+      if (!docsQuote || !file || !supabase) {
+        if (!supabase) toast.error("Supabase non configuré.");
+        return;
+      }
+      setDocsSaving(true);
+      try {
+        const quoteKey = docsQuote.supabase_id || docsQuote.id;
+        const safeName = String(file.name || "document")
+          .replace(/[^\w.-]+/g, "_")
+          .replace(/_+/g, "_");
+        const objectPath = `quote-client-docs/${quoteKey}/${Date.now()}_${safeName}`;
+        let usedBucket = QUOTE_DOC_BUCKET;
+        let { error: uploadError } = await supabase.storage
+          .from(usedBucket)
+          .upload(objectPath, file, { upsert: false, contentType: file.type || undefined });
+
+        if (
+          uploadError &&
+          (() => {
+            const msg = String(uploadError.message || "").toLowerCase();
+            return (
+              msg.includes("bucket not found") ||
+              msg.includes("not found") ||
+              msg.includes("does not exist")
+            );
+          })()
+        ) {
+          usedBucket = QUOTE_DOC_FALLBACK_BUCKET;
+          const retry = await supabase.storage
+            .from(usedBucket)
+            .upload(objectPath, file, { upsert: false, contentType: file.type || undefined });
+          uploadError = retry.error || null;
+        }
+
+        if (uploadError) {
+          logger.error("HistoryPage doc upload:", uploadError);
+          toast.error(uploadError.message || "Échec de l’upload du document.");
+          return;
+        }
+
+        const { data: pub } = supabase.storage.from(usedBucket).getPublicUrl(objectPath);
+        const url = String(pub?.publicUrl || "").trim();
+        if (!url) {
+          toast.error("URL du document introuvable après upload.");
+          return;
+        }
+
+        const entry = {
+          id: `${Date.now()}-${safeName}`,
+          type: String(type || "other"),
+          label: String(label || "").trim(),
+          fileName: file.name || safeName,
+          url,
+          mimeType: file.type || "",
+          uploadedAt: new Date().toISOString(),
+        };
+        const nextDocs = [...normalizeClientDocuments(docsQuote.clientDocuments), entry];
+        const ok = await persistQuoteDocuments(docsQuote, nextDocs);
+        if (ok) toast.success("Document ajouté au devis.");
+      } catch (e) {
+        logger.error("HistoryPage doc add:", e);
+        toast.error("Erreur inattendue.");
+      } finally {
+        setDocsSaving(false);
+      }
+    },
+    [docsQuote, persistQuoteDocuments]
+  );
+
+  const handleRemoveQuoteDocument = useCallback(
+    async (docId) => {
+      if (!docsQuote) return;
+      const prevDocs = normalizeClientDocuments(docsQuote.clientDocuments);
+      const nextDocs = prevDocs.filter((d) => d.id !== docId);
+      if (nextDocs.length === prevDocs.length) return;
+      setDocsSaving(true);
+      try {
+        const ok = await persistQuoteDocuments(docsQuote, nextDocs);
+        if (ok) toast.success("Document retiré du devis.");
+      } catch (e) {
+        logger.error("HistoryPage doc remove:", e);
+        toast.error("Erreur inattendue.");
+      } finally {
+        setDocsSaving(false);
+      }
+    },
+    [docsQuote, persistQuoteDocuments]
+  );
+
   return (
     <div className="space-y-6 md:space-y-8">
       {/* Header amélioré */}
@@ -1221,6 +1564,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             setEditItems={setEditItems}
             setEditNotes={setEditNotes}
             setShowEditModal={setShowEditModal}
+            onDocuments={setDocsQuote}
           />
         ))}
         {filtered.length === 0 && (
@@ -1324,6 +1668,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   client_arrival_date: finalUpdatedQuote.client.arrivalDate || null,
                   client_departure_date: finalUpdatedQuote.client.departureDate || null,
                   ...buildSecondHotelDbFields(finalUpdatedQuote.client),
+                  ...buildAirbnbDbFields(finalUpdatedQuote.client),
                   notes: finalUpdatedQuote.notes || "",
                   total: finalUpdatedQuote.total,
                   currency: finalUpdatedQuote.currency,
@@ -1364,6 +1709,15 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   ));
                 }
 
+                if (isMissingAirbnbColumnError(updateError)) {
+                  logger.warn(
+                    "Colonnes Airbnb absentes — mise à jour sans ces champs. Exécutez supabase_quotes_add_airbnb_maps.sql"
+                  );
+                  ({ data, error: updateError } = await runUpdate(
+                    stripAirbnbColumns(stripSecondHotelColumns(supabaseUpdate))
+                  ));
+                }
+
                 if (updateError) {
                   logger.error("❌ Erreur mise à jour Supabase:", updateError);
                   toast.error(`Erreur lors de la sauvegarde sur Supabase: ${updateError.message || 'Erreur inconnue'}. Les modifications sont sauvegardées localement.`);
@@ -1394,6 +1748,16 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         />,
         document.body
       )}
+
+      {docsQuote ? (
+        <QuoteDocumentsModal
+          quote={docsQuote}
+          onClose={() => !docsSaving && setDocsQuote(null)}
+          onAdd={handleAddQuoteDocument}
+          onRemove={handleRemoveQuoteDocument}
+          saving={docsSaving}
+        />
+      ) : null}
     </div>
   );
 }
@@ -1772,10 +2136,24 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
 
     // Nettoyer le numéro de téléphone avant de sauvegarder
     const cleanedClient = {
+      ...createEmptyAirbnb(),
       ...client,
+      ...pickAirbnbFields(client),
       phone: cleanPhoneNumber(client.phone || ""),
       emergencyPhone: cleanPhoneNumber(client.emergencyPhone || ""),
     };
+
+    if (cleanedClient.isAirbnb) {
+      const mapsUrl = String(cleanedClient.airbnbMapsUrl || "").trim();
+      if (!mapsUrl) {
+        toast.warning("Airbnb : collez le lien Google Maps du logement.");
+        return;
+      }
+      if (!isLikelyGoogleMapsUrl(mapsUrl)) {
+        toast.warning("Airbnb : le lien doit être une URL Google Maps.");
+        return;
+      }
+    }
 
     const updatedQuote = {
       ...quote,
@@ -1982,12 +2360,47 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 />
               </div>
               <div>
-                <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">🏨 Hôtel</label>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <label className="block text-sm md:text-base font-bold text-slate-800">🏨 Hôtel</label>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-800">
+                    <input
+                      type="checkbox"
+                      className="size-3.5 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                      checked={Boolean(client.isAirbnb)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setClient((c) => ({
+                          ...c,
+                          isAirbnb: checked,
+                          airbnbMapsUrl: checked ? c.airbnbMapsUrl || "" : "",
+                        }));
+                      }}
+                    />
+                    Airbnb
+                  </label>
+                </div>
                 <TextInput 
                   value={client.hotel || ""} 
                   onChange={(e) => setClient((c) => ({ ...c, hotel: e.target.value }))} 
                   className="text-base md:text-lg py-3"
+                  placeholder={client.isAirbnb ? "Nom / libellé Airbnb (optionnel)" : "Nom de l'hôtel"}
                 />
+                {client.isAirbnb ? (
+                  <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50/80 p-3 space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wide text-rose-800">
+                      Lien Google Maps *
+                    </label>
+                    <TextInput
+                      type="url"
+                      value={client.airbnbMapsUrl || ""}
+                      onChange={(e) =>
+                        setClient((c) => ({ ...c, airbnbMapsUrl: e.target.value }))
+                      }
+                      className="text-sm md:text-base py-2.5"
+                      placeholder="https://maps.google.com/... ou maps.app.goo.gl/..."
+                    />
+                  </div>
+                ) : null}
               </div>
               <div>
                 <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">🚪 Chambre</label>

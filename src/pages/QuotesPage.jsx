@@ -32,6 +32,14 @@ import {
   isMissingSecondHotelColumnError,
   stripSecondHotelColumns,
 } from "../utils/clientSecondHotel.js";
+import {
+  createEmptyAirbnb,
+  pickAirbnbFields,
+  buildAirbnbDbFields,
+  isMissingAirbnbColumnError,
+  stripAirbnbColumns,
+} from "../utils/clientAirbnb.js";
+import { isLikelyGoogleMapsUrl } from "../utils/googleMapsUrl.js";
 import { DoubleHotelModal } from "../components/quotes/DoubleHotelModal.jsx";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import { useDebounce } from "../hooks/useDebounce";
@@ -202,10 +210,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     arrivalDate: "",
     departureDate: "",
     ...createEmptySecondHotel(),
+    ...createEmptyAirbnb(),
   };
   
   const [client, setClient] = useState(() => ({
     ...createEmptySecondHotel(),
+    ...createEmptyAirbnb(),
     ...defaultClient,
   }));
   
@@ -371,6 +381,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       arrivalDate: "",
       departureDate: "",
       ...createEmptySecondHotel(),
+      ...createEmptyAirbnb(),
     };
     setClient(emptyClient);
     setItems([blankItemMemo()]);
@@ -882,6 +893,20 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
+    if (client.isAirbnb) {
+      const mapsUrl = String(client.airbnbMapsUrl || "").trim();
+      if (!mapsUrl) {
+        toast.warning("Airbnb : collez le lien Google Maps du logement.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!isLikelyGoogleMapsUrl(mapsUrl)) {
+        toast.warning("Airbnb : le lien doit être une URL Google Maps.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     // Vérifier que chaque activité a au moins 1 participant (adultes, enfants ou bébés)
     const activitiesWithoutParticipants = validComputed.filter((c) => {
       // Pour les activités de type "transfert" (Hurghada - Le Caire, Soma Bay - Aéroport, etc.),
@@ -1038,6 +1063,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     const cleanedClient = {
       ...client,
       ...pickSecondHotelFields(client),
+      ...pickAirbnbFields(client),
       phone: cleanPhoneNumber(client.phone || ""),
       emergencyPhone: cleanPhoneNumber(client.emergencyPhone || ""),
     };
@@ -1175,6 +1201,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           client_arrival_date: arrivalDate || null, // Convertir chaîne vide en null
           client_departure_date: departureDate || null, // Convertir chaîne vide en null
           ...buildSecondHotelDbFields(q.client),
+          ...buildAirbnbDbFields(q.client),
           notes: q.notes || "",
           total: q.total,
           currency: q.currency,
@@ -1194,6 +1221,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           ({ data, error } = await supabase
             .from("quotes")
             .insert(stripSecondHotelColumns(supabaseData))
+            .select()
+            .single());
+        }
+
+        if (isMissingAirbnbColumnError(error)) {
+          logger.warn(
+            "Colonnes Airbnb absentes — insert sans ces champs. Exécutez supabase_quotes_add_airbnb_maps.sql"
+          );
+          ({ data, error } = await supabase
+            .from("quotes")
+            .insert(stripAirbnbColumns(stripSecondHotelColumns(supabaseData)))
             .select()
             .single());
         }
@@ -1391,10 +1429,28 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               />
             </div>
             <div className="space-y-2 animate-fade-in" style={{ animationDelay: '200ms' }}>
-              <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.9)]"></span>
-                Hôtel
-              </label>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="block text-[0.78rem] md:text-xs font-semibold tracking-[0.18em] uppercase text-slate-200 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.9)]"></span>
+                  Hôtel
+                </label>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-rose-400/50 bg-rose-500/15 px-2.5 py-1 text-xs font-bold text-rose-100 transition hover:bg-rose-500/25">
+                  <input
+                    type="checkbox"
+                    className="size-3.5 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                    checked={Boolean(client.isAirbnb)}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setClient((c) => ({
+                        ...c,
+                        isAirbnb: checked,
+                        airbnbMapsUrl: checked ? c.airbnbMapsUrl || "" : "",
+                      }));
+                    }}
+                  />
+                  Airbnb
+                </label>
+              </div>
               <div className="flex gap-2">
                 <TextInput 
                   value={client.hotel} 
@@ -1410,13 +1466,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       detectHotelNeighborhood(hotelName);
                     }
                   }}
-                  placeholder="Nom de l'hôtel"
+                  placeholder={client.isAirbnb ? "Nom / libellé Airbnb (optionnel)" : "Nom de l'hôtel"}
                   className="flex-1"
                 />
-                {client.hotel && (
+                {(client.hotel || (client.isAirbnb && client.airbnbMapsUrl)) && (
                   <button
                     type="button"
                     onClick={() => {
+                      if (client.isAirbnb && String(client.airbnbMapsUrl || "").trim()) {
+                        window.open(String(client.airbnbMapsUrl).trim(), "_blank", "noopener,noreferrer");
+                        return;
+                      }
                       const hotelName = encodeURIComponent(client.hotel);
                       const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${hotelName}+Hurghada+Egypt`;
                       window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
@@ -1429,6 +1489,25 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </button>
                 )}
               </div>
+              {client.isAirbnb ? (
+                <div className="rounded-xl border border-rose-400/40 bg-rose-500/10 p-3 space-y-2">
+                  <label className="block text-[0.7rem] font-bold uppercase tracking-wide text-rose-100">
+                    Lien Google Maps <span className="text-rose-300">*</span>
+                  </label>
+                  <TextInput
+                    type="url"
+                    value={client.airbnbMapsUrl || ""}
+                    onChange={(e) =>
+                      setClient((c) => ({ ...c, airbnbMapsUrl: e.target.value }))
+                    }
+                    placeholder="https://maps.google.com/... ou maps.app.goo.gl/..."
+                    className="w-full"
+                  />
+                  <p className="text-[11px] font-medium text-rose-100/80">
+                    Collez le lien Maps du logement pour le transfert / le pick-up.
+                  </p>
+                </div>
+              ) : null}
               {client.hotel && hotels.some((h) => h.name.toLowerCase().trim() === client.hotel.toLowerCase().trim()) && (
                 <div className="flex items-center gap-2 mt-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-400/80 rounded-lg">
                   <span className="text-emerald-300">✓</span>

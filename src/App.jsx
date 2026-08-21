@@ -11,6 +11,8 @@ import {
 } from "./constants";
 import { canAccessHotelsPage, canAccessHotelHistoryPage, hasFullIntranetAccess } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS, normalizeQuoteItemsFromDb } from "./utils";
+import { normalizeClientDocuments } from "./utils/hotelRequestDocuments";
+import { airbnbFieldsFromRow } from "./utils/clientAirbnb";
 import { loadUserFromSession } from "./utils/userPermissions";
 import {
   ActivitiesPage,
@@ -580,10 +582,10 @@ export default function App() {
         // Sélection spécifique pour réduire la taille des données transférées.
         // Pagination : le plafond max-rows Supabase (souvent 1000) ignore un .limit() plus élevé.
         const quoteSiteKeys = getQuoteSiteKeysForSync();
-        const QUOTES_SYNC_LIMIT = 3000;
+        const QUOTES_SYNC_LIMIT = 6000;
         const QUOTES_PAGE_SIZE = 1000;
         const quoteSelectBase =
-          "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, items, total, currency, paid_stripe, paid_cash";
+          "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, items, total, currency, paid_stripe, paid_cash, client_documents, client_is_airbnb, client_airbnb_maps_url";
         const quoteSelectWithSecondHotel =
           quoteSelectBase.replace(
             "client_departure_date,",
@@ -603,13 +605,30 @@ export default function App() {
             .range(from, to);
 
           if (pageError) {
-            // Colonnes double hôtel absentes → retomber sur le select de base
             const msg = String(pageError.message || pageError.details || "");
+            // Colonnes double hôtel absentes → retomber sur le select de base
             if (
               quoteSelect === quoteSelectWithSecondHotel &&
               /client_second_|client_has_second_hotel/i.test(msg)
             ) {
               quoteSelect = quoteSelectBase;
+              from -= QUOTES_PAGE_SIZE;
+              continue;
+            }
+            // Colonne documents absente → retirer client_documents du select
+            if (/client_documents/i.test(msg) && /client_documents/.test(quoteSelect)) {
+              quoteSelect = quoteSelect.replace(/,\s*client_documents/gi, "");
+              from -= QUOTES_PAGE_SIZE;
+              continue;
+            }
+            // Colonnes Airbnb absentes
+            if (
+              /client_is_airbnb|client_airbnb_maps_url/i.test(msg) &&
+              /client_is_airbnb|client_airbnb_maps_url/.test(quoteSelect)
+            ) {
+              quoteSelect = quoteSelect
+                .replace(/,\s*client_is_airbnb/gi, "")
+                .replace(/,\s*client_airbnb_maps_url/gi, "");
               from -= QUOTES_PAGE_SIZE;
               continue;
             }
@@ -662,6 +681,7 @@ export default function App() {
                   secondNeighborhood: row.client_second_neighborhood || "",
                   secondArrivalDate: row.client_second_arrival_date || "",
                   secondDepartureDate: row.client_second_departure_date || "",
+                  ...airbnbFieldsFromRow(row),
                 },
                 clientArrivalDate: row.client_arrival_date || "",
                 clientDepartureDate: row.client_departure_date || "",
@@ -676,6 +696,7 @@ export default function App() {
                 isModified: hasQuoteModifications || false,
                 paidStripe: Number(row.paid_stripe) || 0,
                 paidCash: Number(row.paid_cash) || 0,
+                clientDocuments: normalizeClientDocuments(row.client_documents),
               };
             };
 
@@ -815,6 +836,7 @@ export default function App() {
           secondNeighborhood: row.client_second_neighborhood || "",
           secondArrivalDate: row.client_second_arrival_date || "",
           secondDepartureDate: row.client_second_departure_date || "",
+          ...airbnbFieldsFromRow(row),
         },
         clientArrivalDate: row.client_arrival_date || "",
         clientDepartureDate: row.client_departure_date || "",
@@ -829,6 +851,7 @@ export default function App() {
         isModified: hasQuoteModifications || false,
         paidStripe: Number(row.paid_stripe) || 0,
         paidCash: Number(row.paid_cash) || 0,
+        clientDocuments: normalizeClientDocuments(row.client_documents),
       };
     };
 

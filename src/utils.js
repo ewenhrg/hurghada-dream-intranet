@@ -673,7 +673,16 @@ export function generateQuoteHTML(quote, options = {}) {
           <p><strong>Téléphone:</strong> ${quote.client?.phone || "—"}</p>
           ${quote.client?.emergencyPhone ? `<p><strong>Numéro d'urgence:</strong> ${quote.client.emergencyPhone}</p>` : ""}
           ${quote.client?.email ? `<p><strong>Email:</strong> ${quote.client.email}</p>` : ""}
-          <p><strong>Hôtel:</strong> ${quote.client?.hotel || "—"}</p>
+          <p><strong>Hôtel:</strong> ${
+            quote.client?.isAirbnb
+              ? `Airbnb${quote.client?.hotel ? ` — ${quote.client.hotel}` : ""}`
+              : quote.client?.hotel || "—"
+          }</p>
+          ${
+            quote.client?.isAirbnb && quote.client?.airbnbMapsUrl
+              ? `<p><strong>Lien Maps:</strong> <a href="${String(quote.client.airbnbMapsUrl).replace(/"/g, "&quot;")}" target="_blank" rel="noopener noreferrer">${String(quote.client.airbnbMapsUrl).replace(/</g, "&lt;")}</a></p>`
+              : ""
+          }
           <p><strong>Chambre:</strong> ${quote.client?.room || "—"}</p>
           <p><strong>Quartier:</strong> ${quote.client?.neighborhood ? quote.client.neighborhood.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) : "—"}</p>
           ${quote.client?.arrivalDate ? `<p><strong>Date d'arrivée:</strong> ${new Date(quote.client.arrivalDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}</p>` : ""}
@@ -770,8 +779,15 @@ export function generateTicketsHTML(quote) {
   const client = quote.client || {};
   const clientName = esc(client.name || "—");
   const clientPhone = esc(client.phone || "—");
-  const clientHotel = esc(client.hotel || "—");
+  const clientHotel = esc(
+    client.isAirbnb
+      ? `Airbnb${client.hotel ? ` — ${client.hotel}` : ""}`
+      : client.hotel || "—"
+  );
   const clientRoom = esc(client.room || "—");
+  const clientAirbnbMaps = client.isAirbnb && client.airbnbMapsUrl
+    ? esc(String(client.airbnbMapsUrl))
+    : "";
 
   const sortedItems = [...(quote.items || [])].sort((a, b) => {
     const dateA = a.date ? new Date(a.date + "T12:00:00").getTime() : 0;
@@ -823,6 +839,7 @@ export function generateTicketsHTML(quote) {
             <div class="tf"><span class="tf-l">👤 Nom</span><span class="tf-v">${clientName}</span></div>
             <div class="tf"><span class="tf-l">📞 Téléphone</span><span class="tf-v">${clientPhone}</span></div>
             <div class="tf"><span class="tf-l">🏨 Hôtel</span><span class="tf-v">${clientHotel}</span></div>
+            ${clientAirbnbMaps ? `<div class="tf"><span class="tf-l">📍 Maps</span><span class="tf-v"><a href="${clientAirbnbMaps}" target="_blank" rel="noopener noreferrer">${clientAirbnbMaps}</a></span></div>` : ""}
             <div class="tf"><span class="tf-l">🚪 Chambre</span><span class="tf-v">${clientRoom}</span></div>
             <div class="tf"><span class="tf-l">📅 Date</span><span class="tf-v">${esc(itemDate)}</span></div>
             <div class="tf"><span class="tf-l">⏰ Prise en charge</span><span class="tf-v">${pickup}</span></div>

@@ -1,4 +1,4 @@
-/** Documents client liés à une confirmation hôtel (response_payload.clientDocuments). */
+/** Documents client (hôtel ou devis activités) — métadonnées + URL Storage. */
 
 export const HOTEL_CLIENT_DOC_TYPES = [
   { value: "passport", label: "Passeport" },
