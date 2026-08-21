@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateTicketsHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge, isQuoteFullyPaid, quoteHasAnyTicket } from "../utils";
+import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateTicketsHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge, isQuoteFullyPaid, quoteHasAnyTicket, normalizeTicketsPaymentMethods } from "../utils";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
@@ -74,6 +74,8 @@ function QuoteCardComponent({
 
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [ticketDrafts, setTicketDrafts] = useState({});
+  const [payCash, setPayCash] = useState(false);
+  const [payStripe, setPayStripe] = useState(false);
   const [ticketGenerating, setTicketGenerating] = useState(false);
 
   const extractBase64FromDataUrl = useCallback((raw) => {
@@ -140,6 +142,9 @@ function QuoteCardComponent({
       initial[idx] = String(item.ticketNumber || "").trim();
     });
     setTicketDrafts(initial);
+    const methods = normalizeTicketsPaymentMethods(rawQuote);
+    setPayCash(methods.cash);
+    setPayStripe(methods.stripe);
     setShowTicketModal(true);
   }, [d, quotes]);
 
@@ -148,6 +153,11 @@ function QuoteCardComponent({
     const items = rawQuote.items || [];
     if (items.length === 0) {
       toast.warning("Aucune activité sur ce devis.");
+      return;
+    }
+
+    if (!payCash && !payStripe) {
+      toast.warning("Cochez au moins un mode de paiement : Cash et/ou Stripe.");
       return;
     }
 
@@ -190,10 +200,17 @@ function QuoteCardComponent({
     setTicketGenerating(true);
     try {
       const agentName = String(user?.name || user?.fullName || user?.email || "").trim();
+      const paymentMethodLabel = [
+        payCash ? "cash" : null,
+        payStripe ? "stripe" : null,
+      ]
+        .filter(Boolean)
+        .join("+");
       const updatedItems = items.map((item, idx) => ({
         ...item,
         ticketNumber: normalized[idx],
         ticketEnteredByName: agentName || item.ticketEnteredByName || "",
+        paymentMethod: paymentMethodLabel || item.paymentMethod || "",
       }));
 
       const updatedQuote = {
@@ -201,6 +218,8 @@ function QuoteCardComponent({
         items: updatedItems,
         ticketsEnteredByName: agentName || rawQuote.ticketsEnteredByName || "",
         ticketsEnteredAt: new Date().toISOString(),
+        ticketsPaymentCash: payCash === true,
+        ticketsPaymentStripe: payStripe === true,
         updated_at: new Date().toISOString(),
       };
       const updatedQuotes = quotes.map((q) => (q.id === d.id ? updatedQuote : q));
@@ -241,7 +260,7 @@ function QuoteCardComponent({
     } finally {
       setTicketGenerating(false);
     }
-  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, user]);
+  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, user, payCash, payStripe]);
 
   const handleInvoiceClick = useCallback(() => {
     const htmlContent = generateQuoteHTML(d, { variant: "facture" });
@@ -867,6 +886,37 @@ function QuoteCardComponent({
                 </li>
               ))}
             </ul>
+
+            <fieldset className="mt-5 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3.5">
+              <legend className="px-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                Mode de paiement
+              </legend>
+              <p className="text-xs font-medium text-slate-500 mb-3">
+                Vous pouvez cocher les deux si le client paie en partie cash et en partie Stripe.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-xl border border-emerald-200 bg-white px-3.5 py-2.5 text-sm font-bold text-emerald-900 shadow-sm has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
+                  <input
+                    type="checkbox"
+                    checked={payCash}
+                    onChange={(e) => setPayCash(e.target.checked)}
+                    disabled={ticketGenerating}
+                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  Cash
+                </label>
+                <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-xl border border-indigo-200 bg-white px-3.5 py-2.5 text-sm font-bold text-indigo-900 shadow-sm has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
+                  <input
+                    type="checkbox"
+                    checked={payStripe}
+                    onChange={(e) => setPayStripe(e.target.checked)}
+                    disabled={ticketGenerating}
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  Stripe
+                </label>
+              </div>
+            </fieldset>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-end mt-6">
               <button

@@ -82,6 +82,32 @@ export function quoteHasAnyTicket(quote) {
   return items.some((item) => String(item?.ticketNumber || "").trim() !== "");
 }
 
+/** Modes de paiement tickets (Cash / Stripe) — les deux peuvent être cochés. */
+export function normalizeTicketsPaymentMethods(quote) {
+  if (quote?.ticketsPaymentCash === true || quote?.ticketsPaymentStripe === true) {
+    return {
+      cash: quote.ticketsPaymentCash === true,
+      stripe: quote.ticketsPaymentStripe === true,
+    };
+  }
+  let cash = false;
+  let stripe = false;
+  (quote?.items || []).forEach((it) => {
+    const m = String(it?.paymentMethod || "").toLowerCase();
+    if (m.includes("cash") || m.includes("espece") || m.includes("espèce")) cash = true;
+    if (m.includes("stripe") || m.includes("card") || m.includes("carte")) stripe = true;
+  });
+  return { cash, stripe };
+}
+
+export function formatTicketsPaymentMethodsLabel(quote) {
+  const { cash, stripe } = normalizeTicketsPaymentMethods(quote);
+  const parts = [];
+  if (cash) parts.push("Cash");
+  if (stripe) parts.push("Stripe");
+  return parts.join(" + ");
+}
+
 export function uuid() {
   return "hd-" + Math.random().toString(36).slice(2) + "-" + Date.now().toString(36);
 }
@@ -952,6 +978,29 @@ export function generateTicketsHTML(quote) {
     })
     .join("");
 
+  const ticketCount = sortedItems.length;
+  const totalPrice = sortedItems.reduce(
+    (sum, item) => sum + Math.round(Number(item.lineTotal) || 0),
+    0
+  );
+  const paymentLabel = formatTicketsPaymentMethodsLabel(quote);
+  const summaryHTML = `
+    <div class="tickets-summary">
+      <div class="tickets-summary-row">
+        <span class="tickets-summary-label">Mode de paiement</span>
+        <span class="tickets-summary-value">${esc(paymentLabel || "—")}</span>
+      </div>
+      <div class="tickets-summary-row">
+        <span class="tickets-summary-label">Nombre total de tickets</span>
+        <span class="tickets-summary-value">${ticketCount}</span>
+      </div>
+      <div class="tickets-summary-row tickets-summary-total">
+        <span class="tickets-summary-label">Prix total</span>
+        <span class="tickets-summary-value">${esc(currencyNoCents(totalPrice, quote.currency))}</span>
+      </div>
+    </div>
+  `;
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -1061,6 +1110,42 @@ export function generateTicketsHTML(quote) {
       flex-shrink: 0;
       padding-bottom: 4px;
     }
+    .tickets-summary {
+      margin-top: 8px;
+      margin-bottom: 8px;
+      background: #fff;
+      border: 2px solid #4338ca;
+      border-radius: 14px;
+      padding: 16px 20px;
+      box-shadow: 0 6px 18px rgba(30, 41, 59, 0.08);
+      page-break-inside: avoid;
+    }
+    .tickets-summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 16px;
+      padding: 8px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .tickets-summary-row:last-child { border-bottom: none; }
+    .tickets-summary-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #64748b;
+    }
+    .tickets-summary-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      text-align: right;
+    }
+    .tickets-summary-total .tickets-summary-value {
+      font-size: 22px;
+      color: #0e7490;
+    }
     .print-btn {
       display: block;
       margin: 0 auto 20px;
@@ -1078,6 +1163,7 @@ export function generateTicketsHTML(quote) {
       body { background: #fff; padding: 0; }
       .print-btn { display: none; }
       .ticket { box-shadow: none; }
+      .tickets-summary { box-shadow: none; }
     }
   </style>
 </head>
@@ -1085,6 +1171,7 @@ export function generateTicketsHTML(quote) {
   <div class="tickets-wrap">
     <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
     ${ticketsHTML || '<p style="text-align:center;color:#64748b;">Aucune activité dans ce devis.</p>'}
+    ${ticketCount > 0 ? summaryHTML : ""}
   </div>
 </body>
 </html>
