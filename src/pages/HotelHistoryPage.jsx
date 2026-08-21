@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Banknote, BedDouble, CheckCircle2, FileText, MessageSquareReply, Receipt, Trash2, Upload } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -222,6 +222,7 @@ function getConfirmedHotelsList(payload) {
 }
 
 function isHotelRequestConfirmed(request) {
+  if (typeof request?.isConfirmed === "boolean") return request.isConfirmed;
   const payload = normalizeResponsePayload(request?.responsePayload);
   return getConfirmedHotelsList(payload).length > 0;
 }
@@ -238,6 +239,7 @@ function requestCreatedOnOrAfterToday(request) {
 
 /** Nouvelle demande sans réponse (à partir d’aujourd’hui). */
 function isHotelRequestPending(request) {
+  if (typeof request?.isPending === "boolean") return request.isPending;
   if (isHotelRequestConfirmed(request)) return false;
   if (!requestCreatedOnOrAfterToday(request)) return false;
   const payload = normalizeResponsePayload(request?.responsePayload);
@@ -246,6 +248,7 @@ function isHotelRequestPending(request) {
 
 /** Réponse préparée, pas encore envoyée ni confirmée. */
 function isHotelRequestReadyToSend(request) {
+  if (typeof request?.isReadyToSend === "boolean") return request.isReadyToSend;
   if (isHotelRequestConfirmed(request)) return false;
   const payload = normalizeResponsePayload(request?.responsePayload);
   if (payload.sentToClient) return false;
@@ -254,6 +257,7 @@ function isHotelRequestReadyToSend(request) {
 
 /** Devis marqué comme envoyé au client (pas encore confirmé). */
 function isHotelRequestSent(request) {
+  if (typeof request?.isSent === "boolean") return request.isSent;
   if (isHotelRequestConfirmed(request)) return false;
   const payload = normalizeResponsePayload(request?.responsePayload);
   return payload.sentToClient === true && payload.hotels.some((h) => proposalIsReady(h));
@@ -261,6 +265,7 @@ function isHotelRequestSent(request) {
 
 /** Confirmation avec au moins un paiement enregistré (partiel ou total) — reste aussi dans Confirmations. */
 function isHotelRequestInPayerList(request) {
+  if (typeof request?.isInPayerList === "boolean") return request.isInPayerList;
   if (!isHotelRequestConfirmed(request)) return false;
   const payload = normalizeResponsePayload(request?.responsePayload);
   return normalizePayment(payload.payment).entries.length > 0;
@@ -417,7 +422,7 @@ function digitsOnly(s) {
 }
 
 export function rowToHotelRequestViewModel(row) {
-  return {
+  const base = {
     id: String(row.id),
     supabaseId: row.id,
     firstName: row.first_name || "",
@@ -443,6 +448,52 @@ export function rowToHotelRequestViewModel(row) {
     responsePayload: normalizeResponsePayload(row.response_payload),
     createdAt: row.created_at || "",
     updatedAt: row.updated_at || "",
+  };
+  return enrichHotelRequestViewModel(base);
+}
+
+/** Précalcule flags de filtre + haystack recherche (évite de re-normaliser à chaque render). */
+function enrichHotelRequestViewModel(vm) {
+  const payload =
+    vm.responsePayload && typeof vm.responsePayload === "object"
+      ? vm.responsePayload
+      : normalizeResponsePayload(vm.responsePayload);
+  const confirmedHotels = getConfirmedHotelsList(payload);
+  const isConfirmed = confirmedHotels.length > 0;
+  const hasReadyHotels = (payload.hotels || []).some((h) => proposalIsReady(h));
+  const sentToClient = payload.sentToClient === true;
+  const hasPayment = normalizePayment(payload.payment).entries.length > 0;
+  const createdToday = requestCreatedOnOrAfterToday(vm);
+
+  const shortRef = formatHotelRequestShortRef(vm.id || vm.supabaseId).toLowerCase();
+  const searchHaystack = [
+    vm.firstName,
+    vm.lastName,
+    vm.email,
+    vm.phone,
+    vm.hotelOption1,
+    vm.hotelOption2,
+    vm.hotelOption3,
+    ...confirmedHotels.map((h) => h.hotelName),
+    ...(payload.hotels || []).map((h) => h.hotelName),
+    shortRef,
+    String(vm.id || ""),
+    String(vm.supabaseId || ""),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return {
+    ...vm,
+    responsePayload: payload,
+    isConfirmed,
+    isPending: !isConfirmed && createdToday && !hasReadyHotels,
+    isReadyToSend: !isConfirmed && !sentToClient && hasReadyHotels,
+    isSent: !isConfirmed && sentToClient && hasReadyHotels,
+    isInPayerList: isConfirmed && hasPayment,
+    searchHaystack,
+    searchPhoneDigits: digitsOnly(vm.phone),
+    shortRef,
   };
 }
 
@@ -474,7 +525,7 @@ function viewModelToPayload(vm) {
   };
 }
 
-function HotelRequestCard({
+const HotelRequestCard = memo(function HotelRequestCard({
   request,
   onPrint,
   onReply,
@@ -496,7 +547,10 @@ function HotelRequestCard({
     { label: "Choix 2", value: request.hotelOption2 },
     { label: "Choix 3", value: request.hotelOption3 },
   ].filter((h) => String(h.value || "").trim());
-  const payload = normalizeResponsePayload(request.responsePayload);
+  const payload =
+    request.responsePayload && typeof request.responsePayload === "object"
+      ? request.responsePayload
+      : normalizeResponsePayload(request.responsePayload);
   const responseHotels = payload.hotels;
   const readyHotels = responseHotels.filter((h) => proposalIsReady(h));
   const hasResponse = readyHotels.length > 0;
@@ -508,7 +562,7 @@ function HotelRequestCard({
     .map((h) => `${h.hotelName}: ${formatQuoteMoney(h.quote.total, h.quote.currency)}`)
     .join(" · ");
   const refId = String(request.id || request.supabaseId || "").trim();
-  const shortRef = formatHotelRequestShortRef(refId);
+  const shortRef = request.shortRef || formatHotelRequestShortRef(refId);
   const paymentStatus = isConfirmed ? getPaymentStatus(request, payload) : null;
   const clientDocuments = payload.clientDocuments || [];
   const confirmedLabel =
@@ -980,7 +1034,7 @@ function HotelRequestCard({
       </div>
     </article>
   );
-}
+});
 
 function HotelResponseModal({
   request,
@@ -2293,14 +2347,18 @@ export function HotelHistoryPage({ user = null }) {
   const [docsRequest, setDocsRequest] = useState(null);
   const [catalogHotels, setCatalogHotels] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(40);
+  const docsCleanupDoneRef = useRef(false);
+  const realtimeReloadTimerRef = useRef(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts = {}) => {
+    const { silent = false, skipCleanup = false } = opts;
     if (!supabase) {
       setLoading(false);
       setError("Supabase non configuré.");
       return;
     }
-    setError("");
+    if (!silent) setError("");
     try {
       const { data, error: loadError } = await supabase
         .from("public_hotel_requests")
@@ -2327,38 +2385,42 @@ export function HotelHistoryPage({ user = null }) {
       }
 
       let rowsData = data || [];
-      try {
-        const purged = await cleanupExpiredHotelRequestDocuments({
-          supabase,
-          siteKey: SITE_KEY,
-          rows: rowsData,
-          logger,
-        });
-        if (purged > 0) {
-          const { data: refreshed, error: refreshError } = await supabase
-            .from("public_hotel_requests")
-            .select(SELECT_COLUMNS)
-            .eq("site_key", SITE_KEY)
-            .order("created_at", { ascending: false })
-            .limit(500);
-          if (!refreshError && refreshed) {
-            rowsData = refreshed;
+      if (!skipCleanup && !docsCleanupDoneRef.current) {
+        try {
+          const purged = await cleanupExpiredHotelRequestDocuments({
+            supabase,
+            siteKey: SITE_KEY,
+            rows: rowsData,
+            logger,
+          });
+          docsCleanupDoneRef.current = true;
+          if (purged > 0) {
+            const { data: refreshed, error: refreshError } = await supabase
+              .from("public_hotel_requests")
+              .select(SELECT_COLUMNS)
+              .eq("site_key", SITE_KEY)
+              .order("created_at", { ascending: false })
+              .limit(500);
+            if (!refreshError && refreshed) {
+              rowsData = refreshed;
+            }
+            toast.info(
+              purged === 1
+                ? "Documents d’un séjour passé (départ + 2 j) automatiquement supprimés."
+                : `Documents de ${purged} séjours passés (départ + 2 j) automatiquement supprimés.`,
+              4500
+            );
           }
-          toast.info(
-            purged === 1
-              ? "Documents d’un séjour passé (départ + 2 j) automatiquement supprimés."
-              : `Documents de ${purged} séjours passés (départ + 2 j) automatiquement supprimés.`,
-            4500
-          );
+        } catch (purgeErr) {
+          logger.warn("HotelHistoryPage docs cleanup:", purgeErr);
+          docsCleanupDoneRef.current = true;
         }
-      } catch (purgeErr) {
-        logger.warn("HotelHistoryPage docs cleanup:", purgeErr);
       }
 
       setRows(rowsData.map(rowToHotelRequestViewModel));
     } catch (e) {
       logger.error("HotelHistoryPage load:", e);
-      setError("Erreur inattendue au chargement.");
+      if (!silent) setError("Erreur inattendue au chargement.");
       setRows([]);
     } finally {
       setLoading(false);
@@ -2374,7 +2436,14 @@ export function HotelHistoryPage({ user = null }) {
     (async () => {
       const catalog = await loadPublicHotelsCatalog({ publishedOnly: false });
       if (cancelled) return;
-      setCatalogHotels(catalog.hotels || []);
+      // Catalogue allégé pour les selects de réponse (pas besoin des galeries).
+      setCatalogHotels(
+        (catalog.hotels || []).map((h) => ({
+          name: h.name,
+          slug: h.slug || h.id,
+          roomCategories: Array.isArray(h.roomCategories) ? h.roomCategories : [],
+        }))
+      );
     })();
     return () => {
       cancelled = true;
@@ -2395,92 +2464,91 @@ export function HotelHistoryPage({ user = null }) {
           filter: `site_key=eq.${SITE_KEY}`,
         },
         () => {
-          void load();
+          if (realtimeReloadTimerRef.current) {
+            clearTimeout(realtimeReloadTimerRef.current);
+          }
+          realtimeReloadTimerRef.current = setTimeout(() => {
+            void load({ silent: true, skipCleanup: true });
+          }, 700);
         }
       )
       .subscribe();
 
     return () => {
+      if (realtimeReloadTimerRef.current) {
+        clearTimeout(realtimeReloadTimerRef.current);
+      }
       supabase.removeChannel(channel);
     };
   }, [load]);
 
-  const confirmedCount = useMemo(
-    () => rows.filter((r) => isHotelRequestConfirmed(r)).length,
-    [rows]
+  const modalOpen = Boolean(
+    editDraft || replyRequest || confirmRequest || payRequest || docsRequest
   );
-  const pendingCount = useMemo(
-    () => rows.filter((r) => isHotelRequestPending(r)).length,
-    [rows]
-  );
-  const toSendCount = useMemo(
-    () => rows.filter((r) => isHotelRequestReadyToSend(r)).length,
-    [rows]
-  );
-  const sentCount = useMemo(
-    () => rows.filter((r) => isHotelRequestSent(r)).length,
-    [rows]
-  );
-  const payerCount = useMemo(
-    () => rows.filter((r) => isHotelRequestInPayerList(r)).length,
-    [rows]
-  );
+
+  useEffect(() => {
+    if (!modalOpen) return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [modalOpen]);
+
+  useEffect(() => {
+    setVisibleCount(40);
+  }, [statusFilter, debouncedSearch]);
+
+  const confirmedCount = useMemo(() => rows.filter((r) => r.isConfirmed).length, [rows]);
+  const pendingCount = useMemo(() => rows.filter((r) => r.isPending).length, [rows]);
+  const toSendCount = useMemo(() => rows.filter((r) => r.isReadyToSend).length, [rows]);
+  const sentCount = useMemo(() => rows.filter((r) => r.isSent).length, [rows]);
+  const payerCount = useMemo(() => rows.filter((r) => r.isInPayerList).length, [rows]);
 
   const filteredRows = useMemo(() => {
     let list = rows;
     if (statusFilter === "confirmed") {
-      list = list.filter((r) => isHotelRequestConfirmed(r));
+      list = list.filter((r) => r.isConfirmed);
     } else if (statusFilter === "payer") {
-      list = list.filter((r) => isHotelRequestInPayerList(r));
+      list = list.filter((r) => r.isInPayerList);
     } else if (statusFilter === "pending") {
-      list = list.filter((r) => isHotelRequestPending(r));
+      list = list.filter((r) => r.isPending);
     } else if (statusFilter === "to_send") {
-      list = list.filter((r) => isHotelRequestReadyToSend(r));
+      list = list.filter((r) => r.isReadyToSend);
     } else if (statusFilter === "sent") {
-      list = list.filter((r) => isHotelRequestSent(r));
+      list = list.filter((r) => r.isSent);
     }
     const q = debouncedSearch.trim().toLowerCase();
     if (!q) return list;
     const qDigits = digitsOnly(q);
-    // Réf. affichée = H + 7 car. ; accepter tirets / préfixe « réf » / « H »
     const qRef = normalizeHotelRequestRefQuery(q);
     return list.filter((r) => {
-      const name = [r.firstName, r.lastName].join(" ").toLowerCase();
-      const email = (r.email || "").toLowerCase();
-      const phone = digitsOnly(r.phone);
-      const hotels = [r.hotelOption1, r.hotelOption2, r.hotelOption3]
-        .join(" ")
-        .toLowerCase();
-      const payload = normalizeResponsePayload(r.responsePayload);
-      const confirmedName = getConfirmedHotelsList(payload)
-        .map((h) => String(h.hotelName || "").toLowerCase())
-        .join(" ");
-      const responseNames = (payload.hotels || [])
-        .map((h) => String(h.hotelName || "").toLowerCase())
-        .join(" ");
-      const refRaw = String(r.id || r.supabaseId || "").toLowerCase();
-      const refCompact = refRaw.replace(/-/g, "");
-      const shortRef = formatHotelRequestShortRef(r.id || r.supabaseId).toLowerCase();
-      const shortRefCore = shortRef.replace(/^h/, "");
-      if (
-        name.includes(q) ||
-        email.includes(q) ||
-        hotels.includes(q) ||
-        confirmedName.includes(q) ||
-        responseNames.includes(q) ||
-        (qRef &&
-          (refRaw.includes(q) ||
-            refCompact.includes(qRef) ||
-            shortRef.includes(qRef) ||
-            shortRefCore.includes(qRef) ||
-            qRef.includes(shortRefCore)))
-      ) {
-        return true;
+      const haystack = r.searchHaystack || "";
+      if (haystack.includes(q)) return true;
+      if (qDigits && (r.searchPhoneDigits || "").includes(qDigits)) return true;
+      if (qRef) {
+        const refRaw = String(r.id || r.supabaseId || "").toLowerCase();
+        const refCompact = refRaw.replace(/-/g, "");
+        const shortRef = String(r.shortRef || "").toLowerCase();
+        const shortRefCore = shortRef.replace(/^h/, "");
+        if (
+          refRaw.includes(q) ||
+          refCompact.includes(qRef) ||
+          shortRef.includes(qRef) ||
+          shortRefCore.includes(qRef) ||
+          qRef.includes(shortRefCore)
+        ) {
+          return true;
+        }
       }
-      if (qDigits && phone.includes(qDigits)) return true;
       return false;
     });
   }, [rows, debouncedSearch, statusFilter]);
+
+  const visibleRows = useMemo(
+    () => filteredRows.slice(0, visibleCount),
+    [filteredRows, visibleCount]
+  );
 
   const handlePrint = useCallback((request) => {
     const payload = normalizeResponsePayload(request.responsePayload);
@@ -3328,7 +3396,7 @@ export function HotelHistoryPage({ user = null }) {
         </div>
       ) : (
         <div className="space-y-8">
-          {filteredRows.map((request) => (
+          {visibleRows.map((request) => (
             <HotelRequestCard
               key={request.id}
               request={request}
@@ -3346,6 +3414,17 @@ export function HotelHistoryPage({ user = null }) {
               deleting={deletingId === request.id}
             />
           ))}
+          {filteredRows.length > visibleCount ? (
+            <div className="flex justify-center pt-2">
+              <GhostBtn
+                type="button"
+                onClick={() => setVisibleCount((n) => n + 40)}
+                className="!px-5 !py-2.5"
+              >
+                Afficher plus ({filteredRows.length - visibleCount} restantes)
+              </GhostBtn>
+            </div>
+          ) : null}
         </div>
       )}
 

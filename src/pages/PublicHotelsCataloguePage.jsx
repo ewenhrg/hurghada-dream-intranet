@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Check, ShoppingBag, Sparkles } from "lucide-react";
@@ -23,6 +23,99 @@ function HotelCardSkeleton() {
     </div>
   );
 }
+
+const PublicHotelCatalogueCard = memo(function PublicHotelCatalogueCard({
+  hotel,
+  index,
+  reduceMotion,
+  onOpen,
+  onAddToCart,
+}) {
+  return (
+    <MotionArticle
+      initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-32px" }}
+      transition={{
+        duration: 0.4,
+        delay: Math.min(index * 0.06, 0.24),
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-violet-200/80 bg-white shadow-catalog-premium transition duration-300 ease-out sm:rounded-[1.75rem] hover:-translate-y-1 hover:border-violet-300 hover:shadow-catalog-premium-hover"
+    >
+      <button
+        type="button"
+        onClick={() => onOpen(hotel.slug || hotel.id)}
+        className="relative block aspect-[16/11] w-full overflow-hidden bg-slate-100 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 sm:aspect-[5/4]"
+        aria-label={`Découvrir ${hotel.name}`}
+      >
+        <div className="absolute inset-0 transition duration-700 ease-out group-hover:scale-[1.04]">
+          <HotelCover hotel={hotel} />
+        </div>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/20 to-transparent" />
+        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-800 shadow-sm">
+          All inclusive
+        </span>
+        <div className="absolute inset-x-3 bottom-3 text-white sm:inset-x-4 sm:bottom-4">
+          <StarRow count={hotel.stars} />
+          <h2 className="mt-1 font-catalog-display text-xl font-bold leading-tight tracking-tight !text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)] sm:text-2xl">
+            {hotel.name}
+          </h2>
+        </div>
+      </button>
+
+      <div className="flex grow flex-col p-4 sm:p-5">
+        <HotelAgePolicyBadge hotel={hotel} className="mb-3" />
+        {hotel.highlights?.length ? (
+          <ul className="space-y-1.5">
+            {hotel.highlights.slice(0, 2).map((h) => (
+              <li key={h} className="flex items-start gap-2 text-sm font-semibold text-catalog-body sm:hidden">
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
+                <span className="leading-snug">{h}</span>
+              </li>
+            ))}
+            {hotel.highlights.slice(0, 3).map((h) => (
+              <li key={`d-${h}`} className="hidden items-start gap-2 text-sm font-semibold text-catalog-body sm:flex">
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
+                <span className="leading-snug">{h}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="line-clamp-2 text-sm leading-relaxed text-catalog-muted sm:line-clamp-3">
+            {hotel.description}
+          </p>
+        )}
+
+        {(hotel.amenities || []).length > 0 ? (
+          <div className="mt-3 hidden flex-wrap gap-1.5 sm:mt-4 sm:flex">
+            {(hotel.amenities || []).slice(0, 3).map((a) => (
+              <AmenityChip key={a} amenity={a} />
+            ))}
+          </div>
+        ) : null}
+
+        <div className="mt-auto grid gap-2 pt-4 sm:pt-5">
+          <button
+            type="button"
+            onClick={() => onAddToCart(hotel)}
+            className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 text-sm font-bold text-white shadow-md shadow-violet-900/20 transition hover:brightness-110 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700"
+          >
+            Ajouter au panier
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpen(hotel.slug || hotel.id)}
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-white px-4 text-sm font-bold text-violet-800 transition hover:border-violet-400 hover:bg-violet-50 active:scale-[0.99]"
+          >
+            Voir la fiche
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+      </div>
+    </MotionArticle>
+  );
+});
 
 export function PublicHotelsCataloguePage() {
   const navigate = useNavigate();
@@ -58,7 +151,10 @@ export function PublicHotelsCataloguePage() {
   }, []);
 
   const goToCustomOffer = () => setOpenCustomOfferSignal((n) => n + 1);
-  const openHotel = (id) => navigate(`/hotels/${encodeURIComponent(id)}`);
+  const openHotel = useCallback(
+    (id) => navigate(`/hotels/${encodeURIComponent(id)}`),
+    [navigate]
+  );
   const openCart = () => setOpenDrawerSignal((n) => n + 1);
 
   return (
@@ -184,89 +280,14 @@ export function PublicHotelsCataloguePage() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7">
             {hotels.map((hotel, index) => (
-              <MotionArticle
+              <PublicHotelCatalogueCard
                 key={hotel.dbId || hotel.slug || hotel.id}
-                initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-32px" }}
-                transition={{
-                  duration: 0.4,
-                  delay: Math.min(index * 0.06, 0.24),
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-                className="group flex h-full flex-col overflow-hidden rounded-2xl border border-violet-200/80 bg-white shadow-catalog-premium transition duration-300 ease-out sm:rounded-[1.75rem] hover:-translate-y-1 hover:border-violet-300 hover:shadow-catalog-premium-hover"
-              >
-                <button
-                  type="button"
-                  onClick={() => openHotel(hotel.slug || hotel.id)}
-                  className="relative block aspect-[16/11] w-full overflow-hidden bg-slate-100 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 sm:aspect-[5/4]"
-                  aria-label={`Découvrir ${hotel.name}`}
-                >
-                  <div className="absolute inset-0 transition duration-700 ease-out group-hover:scale-[1.04]">
-                    <HotelCover hotel={hotel} />
-                  </div>
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/20 to-transparent" />
-                  <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-800 shadow-sm">
-                    All inclusive
-                  </span>
-                  <div className="absolute inset-x-3 bottom-3 text-white sm:inset-x-4 sm:bottom-4">
-                    <StarRow count={hotel.stars} />
-                    <h2 className="mt-1 font-catalog-display text-xl font-bold leading-tight tracking-tight !text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)] sm:text-2xl">
-                      {hotel.name}
-                    </h2>
-                  </div>
-                </button>
-
-                <div className="flex grow flex-col p-4 sm:p-5">
-                  <HotelAgePolicyBadge hotel={hotel} className="mb-3" />
-                  {hotel.highlights?.length ? (
-                    <ul className="space-y-1.5">
-                      {hotel.highlights.slice(0, 2).map((h) => (
-                        <li key={h} className="flex items-start gap-2 text-sm font-semibold text-catalog-body sm:hidden">
-                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
-                          <span className="leading-snug">{h}</span>
-                        </li>
-                      ))}
-                      {hotel.highlights.slice(0, 3).map((h) => (
-                        <li key={`d-${h}`} className="hidden items-start gap-2 text-sm font-semibold text-catalog-body sm:flex">
-                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
-                          <span className="leading-snug">{h}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="line-clamp-2 text-sm leading-relaxed text-catalog-muted sm:line-clamp-3">
-                      {hotel.description}
-                    </p>
-                  )}
-
-                  {(hotel.amenities || []).length > 0 ? (
-                    <div className="mt-3 hidden flex-wrap gap-1.5 sm:mt-4 sm:flex">
-                      {(hotel.amenities || []).slice(0, 3).map((a) => (
-                        <AmenityChip key={a} amenity={a} />
-                      ))}
-                    </div>
-                  ) : null}
-
-                  <div className="mt-auto grid gap-2 pt-4 sm:pt-5">
-                    <button
-                      type="button"
-                      onClick={() => setStayHotel(hotel)}
-                      className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 text-sm font-bold text-white shadow-md shadow-violet-900/20 transition hover:brightness-110 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700"
-                    >
-                      Ajouter au panier
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openHotel(hotel.slug || hotel.id)}
-                      className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-white px-4 text-sm font-bold text-violet-800 transition hover:border-violet-400 hover:bg-violet-50 active:scale-[0.99]"
-                    >
-                      Voir la fiche
-                      <ArrowRight className="h-4 w-4" aria-hidden />
-                    </button>
-                  </div>
-                </div>
-              </MotionArticle>
+                hotel={hotel}
+                index={index}
+                reduceMotion={reduceMotion}
+                onOpen={openHotel}
+                onAddToCart={setStayHotel}
+              />
             ))}
           </div>
         )}
