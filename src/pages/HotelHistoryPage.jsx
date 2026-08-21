@@ -2347,7 +2347,8 @@ export function HotelHistoryPage({ user = null }) {
   const [docsRequest, setDocsRequest] = useState(null);
   const [catalogHotels, setCatalogHotels] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(40);
+  const HOTEL_REQUESTS_PAGE_SIZE = 40;
+  const [requestsPage, setRequestsPage] = useState(1);
   const docsCleanupDoneRef = useRef(false);
   const realtimeReloadTimerRef = useRef(null);
 
@@ -2496,7 +2497,7 @@ export function HotelHistoryPage({ user = null }) {
   }, [modalOpen]);
 
   useEffect(() => {
-    setVisibleCount(40);
+    setRequestsPage(1);
   }, [statusFilter, debouncedSearch]);
 
   const confirmedCount = useMemo(() => rows.filter((r) => r.isConfirmed).length, [rows]);
@@ -2545,10 +2546,13 @@ export function HotelHistoryPage({ user = null }) {
     });
   }, [rows, debouncedSearch, statusFilter]);
 
-  const visibleRows = useMemo(
-    () => filteredRows.slice(0, visibleCount),
-    [filteredRows, visibleCount]
-  );
+  const requestsTotalPages = Math.max(1, Math.ceil(filteredRows.length / HOTEL_REQUESTS_PAGE_SIZE));
+  const requestsCurrentPage = Math.min(requestsPage, requestsTotalPages);
+
+  const visibleRows = useMemo(() => {
+    const start = (requestsCurrentPage - 1) * HOTEL_REQUESTS_PAGE_SIZE;
+    return filteredRows.slice(start, start + HOTEL_REQUESTS_PAGE_SIZE);
+  }, [filteredRows, requestsCurrentPage]);
 
   const handlePrint = useCallback((request) => {
     const payload = normalizeResponsePayload(request.responsePayload);
@@ -3414,14 +3418,26 @@ export function HotelHistoryPage({ user = null }) {
               deleting={deletingId === request.id}
             />
           ))}
-          {filteredRows.length > visibleCount ? (
-            <div className="flex justify-center pt-2">
+          {requestsTotalPages > 1 ? (
+            <div className="flex items-center justify-center gap-2 pt-2">
               <GhostBtn
                 type="button"
-                onClick={() => setVisibleCount((n) => n + 40)}
-                className="!px-5 !py-2.5"
+                onClick={() => setRequestsPage((p) => Math.max(1, p - 1))}
+                disabled={requestsCurrentPage === 1}
+                className="!px-4 !py-2"
               >
-                Afficher plus ({filteredRows.length - visibleCount} restantes)
+                ← Précédent
+              </GhostBtn>
+              <span className="px-3 text-sm font-semibold text-slate-600">
+                Page {requestsCurrentPage} sur {requestsTotalPages}
+              </span>
+              <GhostBtn
+                type="button"
+                onClick={() => setRequestsPage((p) => Math.min(requestsTotalPages, p + 1))}
+                disabled={requestsCurrentPage === requestsTotalPages}
+                className="!px-4 !py-2"
+              >
+                Suivant →
               </GhostBtn>
             </div>
           ) : null}

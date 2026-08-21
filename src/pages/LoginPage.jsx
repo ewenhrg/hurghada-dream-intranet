@@ -31,12 +31,14 @@ function applyEmergencySession() {
   sessionStorage.setItem("hd_user", JSON.stringify(user));
 }
 
-const PARTICLES = 64;
-const PARTICLES_UP = 32;
-const STARS = 40;
-const FALLING_LINES = 18;
+/* Comptes réduits (perf) : ~170 éléments animés en continu (particules, étoiles, formes...)
+   faisaient ramer les PC bas de gamme dès l'écran de connexion, avant même toute interaction. */
+const PARTICLES = 22;
+const PARTICLES_UP = 12;
+const STARS = 16;
+const FALLING_LINES = 8;
 const COMETS = 4;
-const SHAPES = 12;
+const SHAPES = 6;
 const TITLE_LETTERS = "Portail interne".split("");
 const FEATURES = [
   { label: "Sync temps réel", icon: "⚡" },

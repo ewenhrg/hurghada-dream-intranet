@@ -1265,7 +1265,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-transparent overflow-x-hidden">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6" style={{ background: 'linear-gradient(180deg, rgba(13,10,40,0.92) 0%, rgba(9,10,32,0.78) 70%, rgba(9,10,32,0) 100%)', backdropFilter: 'blur(14px) saturate(150%)', WebkitBackdropFilter: 'blur(14px) saturate(150%)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
+      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6" style={{ background: 'linear-gradient(180deg, rgba(13,10,40,0.92) 0%, rgba(9,10,32,0.78) 70%, rgba(9,10,32,0) 100%)', backdropFilter: 'blur(8px) saturate(140%)', WebkitBackdropFilter: 'blur(8px) saturate(140%)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
         <div className={headerNavClassName}>
           <div className="flex w-full min-w-0 flex-col gap-3">
             {/* Ligne 1 : identité + langue + déconnexion (ne mange pas la largeur des onglets) */}
