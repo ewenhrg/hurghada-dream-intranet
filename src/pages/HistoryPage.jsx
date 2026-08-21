@@ -46,6 +46,9 @@ import {
   hotelClientDocTypeLabel,
   normalizeClientDocuments,
   serializeClientDocuments,
+  ZERO_TRACAS_REQUIRED_DOC_TYPES,
+  getMissingZeroTracasDocuments,
+  hasAllZeroTracasRequiredDocuments,
 } from "../utils/hotelRequestDocuments";
 import { cleanupExpiredQuoteDocuments, isQuoteLastActivityPastRetention } from "../utils/cleanupExpiredQuoteDocuments";
 import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
@@ -68,6 +71,7 @@ function QuoteCardComponent({
   setEditNotes, 
   setShowEditModal,
   onDocuments,
+  onAddDocument,
 }) {
   // NOTE: ne pas télécharger la fiche info côté navigateur (payload trop gros pour Edge Functions).
   // On enverra l'URL à l'Edge Function, qui téléchargera le fichier côté serveur.
@@ -77,6 +81,7 @@ function QuoteCardComponent({
   const [payCash, setPayCash] = useState(false);
   const [payStripe, setPayStripe] = useState(false);
   const [ticketGenerating, setTicketGenerating] = useState(false);
+  const [ztUploadingType, setZtUploadingType] = useState(null);
 
   const extractBase64FromDataUrl = useCallback((raw) => {
     const s = String(raw || "");
@@ -106,6 +111,20 @@ function QuoteCardComponent({
   const clientDocuments = useMemo(
     () => normalizeClientDocuments(d.clientDocuments),
     [d.clientDocuments]
+  );
+
+  const needsZeroTracasDocs = useMemo(
+    () =>
+      (d.items || []).some(
+        (it) =>
+          isZeroTracasActivity(it.activityName) || isZeroTracasHorsZoneActivity(it.activityName)
+      ),
+    [d.items]
+  );
+
+  const missingZeroTracasDocs = useMemo(
+    () => (needsZeroTracasDocs ? getMissingZeroTracasDocuments(d) : []),
+    [needsZeroTracasDocs, d]
   );
 
   const handlePrintClick = useCallback(() => {
@@ -158,6 +177,16 @@ function QuoteCardComponent({
 
     if (!payCash && !payStripe) {
       toast.warning("Cochez au moins un mode de paiement : Cash et/ou Stripe.");
+      return;
+    }
+
+    if (needsZeroTracasDocs && !hasAllZeroTracasRequiredDocuments(rawQuote)) {
+      const missing = getMissingZeroTracasDocuments(rawQuote)
+        .map((x) => x.label)
+        .join(", ");
+      toast.warning(
+        `Zero Tracas : joignez obligatoirement ${missing || "passeport, réservation d’hôtel et réservation de vol"}.`
+      );
       return;
     }
 
@@ -260,7 +289,21 @@ function QuoteCardComponent({
     } finally {
       setTicketGenerating(false);
     }
-  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, user, payCash, payStripe]);
+  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, user, payCash, payStripe, needsZeroTracasDocs]);
+
+  const handleZeroTracasDocPick = useCallback(
+    async (docType, file) => {
+      if (!file || !onAddDocument) return;
+      setZtUploadingType(docType);
+      try {
+        const rawQuote = quotes.find((q) => q.id === d.id) || d;
+        await onAddDocument({ type: docType, label: "", file }, rawQuote);
+      } finally {
+        setZtUploadingType(null);
+      }
+    },
+    [d, quotes, onAddDocument]
+  );
 
   const handleInvoiceClick = useCallback(() => {
     const htmlContent = generateQuoteHTML(d, { variant: "facture" });
@@ -840,6 +883,9 @@ function QuoteCardComponent({
                 <p className="text-sm text-slate-600 mt-1">
                   Saisissez un numéro de ticket pour chaque activité, puis validez pour ouvrir les
                   tickets. Le devis passera en « Payé ».
+                  {needsZeroTracasDocs
+                    ? " Pour Zero Tracas, joignez aussi passeport, réservation d’hôtel et réservation de vol."
+                    : ""}
                 </p>
               </div>
             </div>
@@ -887,6 +933,64 @@ function QuoteCardComponent({
               ))}
             </ul>
 
+            {needsZeroTracasDocs ? (
+              <fieldset className="mt-5 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3.5">
+                <legend className="px-1 text-[11px] font-bold uppercase tracking-wide text-amber-800">
+                  Documents Zero Tracas obligatoires
+                </legend>
+                <p className="text-xs font-medium text-amber-900/80 mb-3">
+                  Passeport, réservation d’hôtel et réservation de vol doivent être joints avant de
+                  valider le paiement.
+                </p>
+                <ul className="space-y-2.5">
+                  {ZERO_TRACAS_REQUIRED_DOC_TYPES.map((req) => {
+                    const attached = clientDocuments.find((doc) => doc.type === req.value);
+                    const uploading = ztUploadingType === req.value;
+                    return (
+                      <li
+                        key={req.value}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-100 bg-white px-3 py-2.5"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-900">{req.label}</p>
+                          {attached ? (
+                            <p className="text-xs font-medium text-emerald-700 truncate">
+                              ✓ {attached.fileName || "Document joint"}
+                            </p>
+                          ) : (
+                            <p className="text-xs font-medium text-rose-600">Manquant</p>
+                          )}
+                        </div>
+                        <label className="inline-flex min-h-[40px] cursor-pointer items-center rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-950 hover:bg-amber-100 disabled:opacity-60">
+                          <input
+                            type="file"
+                            accept="application/pdf,image/*"
+                            className="sr-only"
+                            disabled={ticketGenerating || uploading || Boolean(ztUploadingType)}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              e.target.value = "";
+                              if (file) void handleZeroTracasDocPick(req.value, file);
+                            }}
+                          />
+                          {uploading ? "Envoi…" : attached ? "Remplacer" : "Joindre"}
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {missingZeroTracasDocs.length > 0 ? (
+                  <p className="mt-3 text-[11px] font-semibold text-rose-700">
+                    Encore manquant : {missingZeroTracasDocs.map((x) => x.label).join(", ")}
+                  </p>
+                ) : (
+                  <p className="mt-3 text-[11px] font-semibold text-emerald-700">
+                    Tous les documents Zero Tracas sont joints.
+                  </p>
+                )}
+              </fieldset>
+            ) : null}
+
             <fieldset className="mt-5 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3.5">
               <legend className="px-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">
                 Mode de paiement
@@ -931,9 +1035,17 @@ function QuoteCardComponent({
                 type="button"
                 className="w-full sm:w-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white border-2 border-teal-500 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-lg transition-opacity disabled:opacity-60"
                 onClick={() => void handleConfirmTickets()}
-                disabled={ticketGenerating}
+                disabled={
+                  ticketGenerating ||
+                  Boolean(ztUploadingType) ||
+                  (needsZeroTracasDocs && missingZeroTracasDocs.length > 0)
+                }
               >
-                {ticketGenerating ? "Enregistrement…" : "✅ Valider et imprimer les tickets"}
+                {ticketGenerating
+                  ? "Enregistrement…"
+                  : needsZeroTracasDocs && missingZeroTracasDocs.length > 0
+                    ? "Joignez les documents Zero Tracas"
+                    : "✅ Valider et imprimer les tickets"}
               </button>
             </div>
           </div>
@@ -1467,12 +1579,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   );
 
   const handleAddQuoteDocument = useCallback(
-    async ({ type, label, file }) => {
-      if (!docsQuote || !file || !supabase) {
+    async ({ type, label, file }, quoteOverride = null) => {
+      const targetQuote = quoteOverride || docsQuote;
+      if (!targetQuote || !file || !supabase) {
         if (!supabase) toast.error("Supabase non configuré.");
         return;
       }
-      if (isQuoteLastActivityPastRetention(docsQuote)) {
+      if (isQuoteLastActivityPastRetention(targetQuote)) {
         toast.warning(
           "La dernière activité de ce devis est passée : les passeports / documents ne peuvent plus être ajoutés."
         );
@@ -1480,7 +1593,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
       }
       setDocsSaving(true);
       try {
-        const quoteKey = docsQuote.supabase_id || docsQuote.id;
+        const quoteKey = targetQuote.supabase_id || targetQuote.id;
         const safeName = String(file.name || "document")
           .replace(/[^\w.-]+/g, "_")
           .replace(/_+/g, "_");
@@ -1530,8 +1643,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
           mimeType: file.type || "",
           uploadedAt: new Date().toISOString(),
         };
-        const nextDocs = [...normalizeClientDocuments(docsQuote.clientDocuments), entry];
-        const ok = await persistQuoteDocuments(docsQuote, nextDocs);
+        const prevDocs = normalizeClientDocuments(targetQuote.clientDocuments);
+        // Un seul fichier par type requis Zero Tracas (remplace l’ancien).
+        const nextDocs = [
+          ...prevDocs.filter((doc) => String(doc.type || "") !== String(type || "")),
+          entry,
+        ];
+        const ok = await persistQuoteDocuments(targetQuote, nextDocs);
         if (ok) toast.success("Document ajouté au devis.");
       } catch (e) {
         logger.error("HistoryPage doc add:", e);
@@ -1662,6 +1780,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             setEditNotes={setEditNotes}
             setShowEditModal={setShowEditModal}
             onDocuments={setDocsQuote}
+            onAddDocument={handleAddQuoteDocument}
           />
         ))}
         {filtered.length === 0 && (
