@@ -44,13 +44,17 @@ export function PaymentModal({
     }
 
     // Mettre à jour le devis avec les numéros de ticket et les méthodes de paiement
+    const agentName = String(user?.name || user?.fullName || user?.email || "").trim();
     const updatedQuote = {
       ...selectedQuote,
       items: selectedQuote.items.map((item, idx) => ({
         ...item,
         ticketNumber: ticketNumbers[idx]?.trim() || "",
         paymentMethod: item.paymentMethod || paymentMethods[idx] || "",
+        ticketEnteredByName: agentName || item.ticketEnteredByName || "",
       })),
+      ticketsEnteredByName: agentName || selectedQuote.ticketsEnteredByName || "",
+      ticketsEnteredAt: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 

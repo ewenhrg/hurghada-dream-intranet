@@ -189,14 +189,18 @@ function QuoteCardComponent({
 
     setTicketGenerating(true);
     try {
+      const agentName = String(user?.name || user?.fullName || user?.email || "").trim();
       const updatedItems = items.map((item, idx) => ({
         ...item,
         ticketNumber: normalized[idx],
+        ticketEnteredByName: agentName || item.ticketEnteredByName || "",
       }));
 
       const updatedQuote = {
         ...rawQuote,
         items: updatedItems,
+        ticketsEnteredByName: agentName || rawQuote.ticketsEnteredByName || "",
+        ticketsEnteredAt: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
       const updatedQuotes = quotes.map((q) => (q.id === d.id ? updatedQuote : q));
@@ -237,7 +241,7 @@ function QuoteCardComponent({
     } finally {
       setTicketGenerating(false);
     }
-  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts]);
+  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, user]);
 
   const handleInvoiceClick = useCallback(() => {
     const htmlContent = generateQuoteHTML(d, { variant: "facture" });

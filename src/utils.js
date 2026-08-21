@@ -50,6 +50,9 @@ export function normalizeQuoteItemsFromDb(items) {
     activityId: item.activityId ?? item.activity_id ?? "",
     activityName: item.activityName ?? item.activity_name ?? "",
     ticketNumber: String(item.ticketNumber ?? item.ticket_number ?? "").trim(),
+    ticketEnteredByName: String(
+      item.ticketEnteredByName ?? item.ticket_entered_by_name ?? ""
+    ).trim(),
     paymentMethod: item.paymentMethod ?? item.payment_method ?? "",
     pickupTime: item.pickupTime ?? item.pickup_time ?? "",
     extraLabel: item.extraLabel ?? item.extra_label ?? "",
@@ -804,6 +807,61 @@ export function generateTicketsHTML(quote) {
           ? "Soir"
           : "";
 
+  const formatTicketExtraLines = (item) => {
+    const lines = [];
+    const isSpeedBoat = item.activityName && isSpeedBoatActivity(item.activityName);
+
+    if (isSpeedBoat) {
+      if (allowsSpeedBoatDolphinExtra(item.activityName) && item.extraDolphin) {
+        lines.push("Extra dauphin (+20€)");
+      }
+      if (allowsSpeedBoatIslandExtras(item.activityName) && item.speedBoatExtra) {
+        const extrasArray = Array.isArray(item.speedBoatExtra)
+          ? item.speedBoatExtra
+          : typeof item.speedBoatExtra === "string" && item.speedBoatExtra !== ""
+            ? [item.speedBoatExtra]
+            : [];
+        extrasArray.forEach((extraId) => {
+          if (!extraId) return;
+          const selectedExtra = SPEED_BOAT_EXTRAS.find((e) => e.id === extraId);
+          if (selectedExtra && selectedExtra.id !== "") {
+            lines.push(
+              `${selectedExtra.label} (+${selectedExtra.priceAdult}€/adt + ${selectedExtra.priceChild}€/enfant)`
+            );
+          }
+        });
+      }
+    }
+
+    const transferStandardAmount = calculateStandardTransferSurchargeFromItem(item);
+    const transferPrivateAmount = calculatePrivateTransferSurchargeFromItem(item);
+    if (transferStandardAmount > 0) {
+      lines.push(`Transfert: ${currencyNoCents(transferStandardAmount, quote.currency)}`);
+    }
+    if (transferPrivateAmount > 0) {
+      const label = getPrivateTransferLabel(item.privateTransferTier) || "Transfert privé";
+      lines.push(`${label}: ${currencyNoCents(transferPrivateAmount, quote.currency)}`);
+    }
+
+    const extraLabelText = item.extraLabel != null ? String(item.extraLabel).trim() : "";
+    const extraAmountRaw = item.extraAmount != null ? String(item.extraAmount).trim() : "";
+    const extraAmountValue = extraAmountRaw === "" ? 0 : Number(extraAmountRaw);
+    const hasExtraAmount = Number.isFinite(extraAmountValue) && extraAmountValue !== 0;
+    if (extraLabelText || hasExtraAmount) {
+      const isDiscount = hasExtraAmount && extraAmountValue < 0;
+      const label =
+        extraLabelText ||
+        (isDiscount ? "Réduction" : "Extra / ajustement");
+      const amountPart = hasExtraAmount
+        ? `: ${currencyNoCents(extraAmountValue, quote.currency)}`
+        : "";
+      lines.push(`${label}${amountPart}`);
+    }
+
+    getQuoteItemDetailLines(item).forEach((line) => lines.push(line));
+    return lines;
+  };
+
   const client = quote.client || {};
   const clientName = esc(client.name || "—");
   const clientPhone = esc(client.phone || "—");
@@ -816,6 +874,7 @@ export function generateTicketsHTML(quote) {
   const clientAirbnbMaps = client.isAirbnb && client.airbnbMapsUrl
     ? esc(String(client.airbnbMapsUrl))
     : "";
+  const quoteTicketsBy = String(quote.ticketsEnteredByName || "").trim();
 
   const sortedItems = [...(quote.items || [])].sort((a, b) => {
     const dateA = a.date ? new Date(a.date + "T12:00:00").getTime() : 0;
@@ -847,6 +906,14 @@ export function generateTicketsHTML(quote) {
         : slotLabel(item.slot) || "—";
 
       const priceText = esc(currencyNoCents(Math.round(item.lineTotal || 0), quote.currency));
+      const extraLines = formatTicketExtraLines(item);
+      const extrasHTML =
+        extraLines.length > 0
+          ? `<div class="ticket-extras">${extraLines
+              .map((line) => `<div class="ticket-extra-line">${esc(line)}</div>`)
+              .join("")}</div>`
+          : "";
+      const enteredBy = String(item.ticketEnteredByName || quoteTicketsBy || "").trim();
 
       return `
       <div class="ticket">
@@ -862,7 +929,7 @@ export function generateTicketsHTML(quote) {
               <span class="ticket-price-value">${priceText}</span>
             </div>
           </div>
-          <div class="ticket-activity">${esc(item.activityName || "—")}${formatDivingVisitorLabel(item) ? `<div class="ticket-visitor">${esc(formatDivingVisitorLabel(item))}</div>` : ""}${formatTurtleFinSizesLabel(item) ? `<div class="ticket-visitor">${esc(formatTurtleFinSizesLabel(item))}</div>` : ""}</div>
+          <div class="ticket-activity">${esc(item.activityName || "—")}${formatDivingVisitorLabel(item) ? `<div class="ticket-visitor">${esc(formatDivingVisitorLabel(item))}</div>` : ""}${formatTurtleFinSizesLabel(item) ? `<div class="ticket-visitor">${esc(formatTurtleFinSizesLabel(item))}</div>` : ""}${extrasHTML}</div>
           <div class="ticket-grid">
             <div class="tf"><span class="tf-l">👤 Nom</span><span class="tf-v">${clientName}</span></div>
             <div class="tf"><span class="tf-l">📞 Téléphone</span><span class="tf-v">${clientPhone}</span></div>
@@ -873,6 +940,12 @@ export function generateTicketsHTML(quote) {
             <div class="tf"><span class="tf-l">⏰ Prise en charge</span><span class="tf-v">${pickup}</span></div>
             <div class="tf"><span class="tf-l">👥 Personnes</span><span class="tf-v">${esc(paxText)}${paxTotal > 0 ? ` (total ${paxTotal})` : ""}</span></div>
             ${item.ticketNumber ? `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">${esc(item.ticketNumber)}</span></div>` : `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">—</span></div>`}
+            ${enteredBy ? `<div class="tf"><span class="tf-l">✍️ Tickets saisis par</span><span class="tf-v">${esc(enteredBy)}</span></div>` : ""}
+          </div>
+          <div class="ticket-balance">
+            <span class="ticket-balance-label">Reste à payer</span>
+            <span class="ticket-balance-write" aria-hidden="true"></span>
+            <span class="ticket-balance-hint">à remplir à la main</span>
           </div>
         </div>
       </div>`;
@@ -939,6 +1012,16 @@ export function generateTicketsHTML(quote) {
       text-transform: none;
       color: #0e7490;
     }
+    .ticket-extras {
+      margin-top: 8px;
+      text-transform: none;
+    }
+    .ticket-extra-line {
+      font-size: 12px;
+      font-weight: 600;
+      color: #2563eb;
+      line-height: 1.35;
+    }
     .ticket-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -947,6 +1030,37 @@ export function generateTicketsHTML(quote) {
     .tf { display: flex; flex-direction: column; gap: 2px; }
     .tf-l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; font-weight: 600; }
     .tf-v { font-size: 15px; font-weight: 600; color: #0f172a; }
+    .ticket-balance {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed #cbd5e1;
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .ticket-balance-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: #b45309;
+      flex-shrink: 0;
+      padding-bottom: 4px;
+    }
+    .ticket-balance-write {
+      flex: 1;
+      min-width: 140px;
+      min-height: 28px;
+      border-bottom: 2px solid #334155;
+    }
+    .ticket-balance-hint {
+      font-size: 10px;
+      font-weight: 600;
+      color: #94a3b8;
+      flex-shrink: 0;
+      padding-bottom: 4px;
+    }
     .print-btn {
       display: block;
       margin: 0 auto 20px;
