@@ -826,6 +826,13 @@ export function generateTicketsHTML(quote) {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
 
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? String(window.location.origin).replace(/\/$/, "")
+      : "";
+  const logoSrc = esc(origin ? `${origin}/logo-ticket.jpg` : "/logo-ticket.jpg");
+  const baseHref = esc(origin ? `${origin}/` : "/");
+
   const slotLabel = (slot) =>
     slot === "morning"
       ? "Matin"
@@ -945,8 +952,7 @@ export function generateTicketsHTML(quote) {
       <div class="zt-receipt">
         <div class="zt-head">
           <div class="zt-logo">
-            <div class="zt-logo-mark">HD</div>
-            <div class="zt-logo-text">Hurghada<br/>DREAM TOURS</div>
+            <img src="${logoSrc}" alt="Hurghada Dream" class="zt-logo-img" />
           </div>
           <div class="zt-titles">
             <div class="zt-brand">Fayed Travel</div>
@@ -1036,8 +1042,11 @@ export function generateTicketsHTML(quote) {
         <div class="ticket-body">
           <div class="ticket-head">
             <div class="ticket-brand">
-              <span class="ticket-brand-name">HURGHADA DREAM</span>
-              <span class="ticket-brand-sub">Bon d'excursion</span>
+              <img src="${logoSrc}" alt="Hurghada Dream" class="ticket-logo" />
+              <div class="ticket-brand-text">
+                <span class="ticket-brand-name">HURGHADA DREAM</span>
+                <span class="ticket-brand-sub">Bon d'excursion</span>
+              </div>
             </div>
             <div class="ticket-price">
               <span class="ticket-price-label">Prix</span>
@@ -1096,6 +1105,7 @@ export function generateTicketsHTML(quote) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="${baseHref}">
   <title>Tickets - ${clientName}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1103,286 +1113,258 @@ export function generateTicketsHTML(quote) {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       color: #1e293b;
       background: #eef2ff;
-      padding: 20px;
+      padding: 12px;
     }
-    .tickets-wrap { max-width: 800px; margin: 0 auto; }
+    .tickets-wrap { max-width: 420px; margin: 0 auto; }
     .ticket {
       display: flex;
       background: #fff;
-      border: 2px dashed #6366f1;
-      border-radius: 14px;
+      border: 1.5px dashed #6366f1;
+      border-radius: 10px;
       overflow: hidden;
-      margin-bottom: 18px;
-      box-shadow: 0 6px 18px rgba(30, 41, 59, 0.08);
+      margin-bottom: 10px;
+      box-shadow: 0 4px 12px rgba(30, 41, 59, 0.07);
       page-break-inside: avoid;
     }
     .ticket-accent {
-      width: 10px;
+      width: 6px;
       background: linear-gradient(180deg, #6366f1, #06b6d4);
       flex-shrink: 0;
     }
-    .ticket-body { flex: 1; padding: 18px 22px; }
+    .ticket-body { flex: 1; padding: 10px 12px; }
     .ticket-head {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
+      gap: 8px;
       border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 10px;
-      margin-bottom: 12px;
+      padding-bottom: 6px;
+      margin-bottom: 6px;
     }
-    .ticket-brand { display: flex; flex-direction: column; }
-    .ticket-brand-name { font-size: 18px; font-weight: 800; color: #4338ca; letter-spacing: 0.5px; }
-    .ticket-brand-sub { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; }
-    .ticket-price { text-align: right; display: flex; flex-direction: column; }
-    .ticket-price-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
-    .ticket-price-value { font-size: 22px; font-weight: 800; color: #0e7490; }
+    .ticket-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .ticket-logo {
+      height: 42px;
+      width: auto;
+      max-width: 72px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .ticket-brand-text { display: flex; flex-direction: column; min-width: 0; }
+    .ticket-brand-name { font-size: 12px; font-weight: 800; color: #4338ca; letter-spacing: 0.3px; line-height: 1.15; }
+    .ticket-brand-sub { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
+    .ticket-price { text-align: right; display: flex; flex-direction: column; flex-shrink: 0; }
+    .ticket-price-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; }
+    .ticket-price-value { font-size: 15px; font-weight: 800; color: #0e7490; line-height: 1.1; }
     .ticket-activity {
-      font-size: 20px;
+      font-size: 13px;
       font-weight: 800;
       color: #1e293b;
       text-transform: uppercase;
-      margin-bottom: 14px;
+      margin-bottom: 6px;
+      line-height: 1.2;
     }
     .ticket-visitor {
-      margin-top: 4px;
-      font-size: 13px;
+      margin-top: 2px;
+      font-size: 10px;
       font-weight: 600;
       text-transform: none;
       color: #0e7490;
     }
-    .ticket-extras {
-      margin-top: 8px;
-      text-transform: none;
-    }
+    .ticket-extras { margin-top: 4px; text-transform: none; }
     .ticket-extra-line {
-      font-size: 12px;
+      font-size: 9px;
       font-weight: 600;
       color: #2563eb;
-      line-height: 1.35;
+      line-height: 1.25;
     }
     .ticket-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px 22px;
+      gap: 5px 10px;
     }
-    .tf { display: flex; flex-direction: column; gap: 2px; }
-    .tf-l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; font-weight: 600; }
-    .tf-v { font-size: 15px; font-weight: 600; color: #0f172a; }
+    .tf { display: flex; flex-direction: column; gap: 0; }
+    .tf-l { font-size: 8px; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; font-weight: 600; }
+    .tf-v { font-size: 11px; font-weight: 600; color: #0f172a; line-height: 1.25; word-break: break-word; }
     .ticket-balance {
-      margin-top: 14px;
-      padding-top: 12px;
+      margin-top: 8px;
+      padding-top: 6px;
       border-top: 1px dashed #cbd5e1;
       display: flex;
       align-items: flex-end;
-      gap: 12px;
+      gap: 8px;
       flex-wrap: wrap;
     }
     .ticket-balance-label {
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.9px;
+      letter-spacing: 0.7px;
       color: #b45309;
       flex-shrink: 0;
-      padding-bottom: 4px;
+      padding-bottom: 2px;
     }
     .ticket-balance-write {
       flex: 1;
-      min-width: 140px;
-      min-height: 28px;
-      border-bottom: 2px solid #334155;
+      min-width: 90px;
+      min-height: 18px;
+      border-bottom: 1.5px solid #334155;
     }
     .ticket-balance-hint {
-      font-size: 10px;
+      font-size: 8px;
       font-weight: 600;
       color: #94a3b8;
       flex-shrink: 0;
-      padding-bottom: 4px;
+      padding-bottom: 2px;
     }
     .tickets-summary {
-      margin-top: 8px;
-      margin-bottom: 8px;
+      margin-top: 6px;
+      margin-bottom: 6px;
       background: #fff;
-      border: 2px solid #4338ca;
-      border-radius: 14px;
-      padding: 16px 20px;
-      box-shadow: 0 6px 18px rgba(30, 41, 59, 0.08);
+      border: 1.5px solid #4338ca;
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 4px 12px rgba(30, 41, 59, 0.07);
       page-break-inside: avoid;
     }
     .tickets-summary-row {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      gap: 16px;
-      padding: 8px 0;
+      gap: 10px;
+      padding: 4px 0;
       border-bottom: 1px solid #e2e8f0;
     }
     .tickets-summary-row:last-child { border-bottom: none; }
     .tickets-summary-label {
-      font-size: 12px;
+      font-size: 9px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
+      letter-spacing: 0.6px;
       color: #64748b;
     }
     .tickets-summary-value {
-      font-size: 16px;
+      font-size: 12px;
       font-weight: 800;
       color: #0f172a;
       text-align: right;
     }
     .tickets-summary-total .tickets-summary-value {
-      font-size: 22px;
+      font-size: 15px;
       color: #0e7490;
     }
-    /* Reçu Zero Tracas (style papier) */
     .zt-receipt {
       background: #d7eef8;
       border: 1.5px solid #334155;
       border-radius: 6px;
-      padding: 14px 16px 12px;
-      margin-bottom: 18px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
       color: #0f172a;
       font-family: Georgia, 'Times New Roman', Times, serif;
       page-break-inside: avoid;
+      max-width: 420px;
     }
     .zt-head {
       display: grid;
-      grid-template-columns: 88px 1fr auto;
-      gap: 10px;
+      grid-template-columns: 64px 1fr auto;
+      gap: 6px;
       align-items: start;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
-    .zt-logo {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      gap: 4px;
+    .zt-logo { display: flex; align-items: center; justify-content: center; }
+    .zt-logo-img {
+      width: 58px;
+      height: auto;
+      max-height: 58px;
+      object-fit: contain;
     }
-    .zt-logo-mark {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      border: 2px solid #0f766e;
-      background: radial-gradient(circle at 35% 30%, #ecfeff, #99f6e4 55%, #0d9488);
-      color: #134e4a;
-      font-family: 'Segoe UI', sans-serif;
-      font-weight: 900;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .zt-logo-text {
-      font-size: 8px;
-      font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: #134e4a;
-      font-family: 'Segoe UI', sans-serif;
-    }
-    .zt-titles { text-align: center; padding-top: 2px; }
+    .zt-titles { text-align: center; }
     .zt-brand {
-      font-size: 22px;
+      font-size: 15px;
       font-weight: 800;
       text-decoration: underline;
-      text-underline-offset: 3px;
-      letter-spacing: 0.02em;
+      text-underline-offset: 2px;
+      line-height: 1.1;
     }
-    .zt-sub {
-      margin-top: 2px;
-      font-size: 13px;
-      font-weight: 600;
-    }
+    .zt-sub { margin-top: 1px; font-size: 10px; font-weight: 600; }
     .zt-receipt-title {
-      margin-top: 6px;
-      font-size: 15px;
+      margin-top: 3px;
+      font-size: 11px;
       font-weight: 700;
       text-decoration: underline;
-      text-underline-offset: 3px;
+      text-underline-offset: 2px;
+      line-height: 1.2;
     }
-    .zt-meta { text-align: right; min-width: 140px; padding-top: 2px; }
-    .zt-no { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
-    .zt-no-value {
-      color: #b91c1c;
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-    }
+    .zt-meta { text-align: right; min-width: 110px; }
+    .zt-no { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+    .zt-no-value { color: #b91c1c; font-size: 13px; font-weight: 800; }
     .zt-date-line {
-      font-size: 13px;
+      font-size: 10px;
       font-weight: 600;
       display: inline-flex;
       align-items: flex-end;
-      gap: 4px;
+      gap: 3px;
       justify-content: flex-end;
     }
-    .zt-rows { display: flex; flex-direction: column; gap: 10px; }
-    .zt-row { display: flex; gap: 16px; align-items: flex-end; }
-    .zt-field {
-      display: flex;
-      align-items: flex-end;
-      gap: 6px;
-      min-width: 0;
-    }
+    .zt-rows { display: flex; flex-direction: column; gap: 6px; }
+    .zt-row { display: flex; gap: 10px; align-items: flex-end; }
+    .zt-field { display: flex; align-items: flex-end; gap: 4px; min-width: 0; }
     .zt-grow { flex: 1; }
     .zt-full { flex: 1 1 100%; }
     .zt-third { flex: 1; }
     .zt-lab {
       flex-shrink: 0;
-      font-size: 13px;
+      font-size: 10px;
       font-weight: 700;
-      padding-bottom: 2px;
+      padding-bottom: 1px;
       white-space: nowrap;
     }
     .zt-write {
       flex: 1;
-      min-width: 48px;
-      min-height: 22px;
+      min-width: 36px;
+      min-height: 16px;
       border-bottom: 1.5px dotted #334155;
       font-family: 'Segoe UI', sans-serif;
-      font-size: 13px;
+      font-size: 10px;
       font-weight: 600;
-      line-height: 1.3;
-      padding: 0 2px 2px;
+      line-height: 1.2;
+      padding: 0 1px 1px;
     }
-    .zt-write-sm { display: inline-block; width: 28px; min-width: 28px; flex: 0 0 28px; }
-    .zt-write-xs { display: inline-block; width: 22px; min-width: 22px; flex: 0 0 22px; }
+    .zt-write-sm { display: inline-block; width: 22px; min-width: 22px; flex: 0 0 22px; }
+    .zt-write-xs { display: inline-block; width: 18px; min-width: 18px; flex: 0 0 18px; }
     .zt-footer {
-      margin-top: 14px;
+      margin-top: 8px;
       border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 8px 12px;
+      border-radius: 6px;
+      padding: 5px 8px;
       display: flex;
       justify-content: space-between;
-      gap: 12px;
+      gap: 8px;
       font-family: 'Segoe UI', sans-serif;
-      font-size: 11px;
+      font-size: 8px;
       font-weight: 600;
-      line-height: 1.45;
+      line-height: 1.35;
     }
     .zt-footer-right { text-align: right; }
     .print-btn {
       display: block;
-      margin: 0 auto 20px;
-      padding: 10px 22px;
+      margin: 0 auto 12px;
+      padding: 8px 16px;
       background: linear-gradient(135deg, #4338ca, #06b6d4);
       color: #fff;
       border: none;
-      border-radius: 10px;
-      font-size: 14px;
+      border-radius: 8px;
+      font-size: 12px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 8px 18px rgba(67, 56, 202, 0.35);
+      box-shadow: 0 6px 14px rgba(67, 56, 202, 0.3);
     }
     @media print {
       body { background: #fff; padding: 0; }
       .print-btn { display: none; }
-      .ticket { box-shadow: none; }
+      .ticket { box-shadow: none; margin-bottom: 8px; }
       .tickets-summary { box-shadow: none; }
-      .zt-receipt { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .zt-receipt { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin-bottom: 8px; }
+      .ticket-logo, .zt-logo-img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
 </head>
