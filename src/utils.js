@@ -941,6 +941,13 @@ export function generateTicketsHTML(quote, options = {}) {
     ? esc(String(client.airbnbMapsUrl))
     : "";
   const quoteTicketsBy = String(quote.ticketsEnteredByName || "").trim();
+  const paymentMethods = normalizeTicketsPaymentMethods(quote);
+  // Stripe seul = paiement carte → prix devis « carte » (+3 %). Cash (seul ou mixte) = prix espèces.
+  const useCardPricing = paymentMethods.stripe === true && paymentMethods.cash !== true;
+  const ticketDisplayPrice = (lineTotal) => {
+    const cash = Math.round(Number(lineTotal) || 0);
+    return useCardPricing ? calculateCardPrice(cash) : cash;
+  };
 
   const sortedItems = [...(quote.items || [])].sort((a, b) => {
     const na = String(a?.ticketNumber || "").trim();
@@ -985,7 +992,7 @@ export function generateTicketsHTML(quote, options = {}) {
           : client.hotel || "";
         const priceHint =
           item.lineTotal != null && Number.isFinite(Number(item.lineTotal))
-            ? currencyNoCents(Math.round(Number(item.lineTotal)), quote.currency)
+            ? currencyNoCents(ticketDisplayPrice(item.lineTotal), quote.currency)
             : "";
 
         // Formulaire type reçu papier : valeurs connues préremplies, le reste = lignes à écrire à la main.
@@ -1067,7 +1074,7 @@ export function generateTicketsHTML(quote, options = {}) {
         ? esc(item.pickupTime)
         : slotLabel(item.slot) || "—";
 
-      const priceText = esc(currencyNoCents(Math.round(item.lineTotal || 0), quote.currency));
+      const priceText = esc(currencyNoCents(ticketDisplayPrice(item.lineTotal), quote.currency));
       const extraLines = formatTicketExtraLines(item);
       const extrasHTML =
         extraLines.length > 0
@@ -1118,10 +1125,17 @@ export function generateTicketsHTML(quote, options = {}) {
     .join("");
 
   const ticketCount = sortedItems.length;
-  const totalPrice = sortedItems.reduce(
+  const totalCashFromItems = sortedItems.reduce(
     (sum, item) => sum + Math.round(Number(item.lineTotal) || 0),
     0
   );
+  const quoteCashTotal = Math.round(Number(quote.totalCash ?? quote.total) || 0);
+  const quoteCardTotal = Math.round(
+    Number(quote.totalCard) || calculateCardPrice(quoteCashTotal || totalCashFromItems)
+  );
+  const totalPrice = useCardPricing
+    ? quoteCardTotal || calculateCardPrice(totalCashFromItems)
+    : quoteCashTotal || totalCashFromItems;
   const paymentLabel = formatTicketsPaymentMethodsLabel(quote);
   const summaryHTML = `
     <div class="tickets-summary">
@@ -1134,7 +1148,7 @@ export function generateTicketsHTML(quote, options = {}) {
         <span class="tickets-summary-value">${ticketCount}</span>
       </div>
       <div class="tickets-summary-row tickets-summary-total">
-        <span class="tickets-summary-label">Prix total</span>
+        <span class="tickets-summary-label">Prix total${useCardPricing ? " (carte)" : ""}</span>
         <span class="tickets-summary-value">${esc(currencyNoCents(totalPrice, quote.currency))}</span>
       </div>
     </div>
