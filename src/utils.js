@@ -5,6 +5,8 @@ import {
   allowsSpeedBoatIslandExtras,
   allowsSpeedBoatDolphinExtra,
   formatTurtleFinSizesLabel,
+  isZeroTracasActivity,
+  isZeroTracasHorsZoneActivity,
 } from "./utils/activityHelpers";
 import { SPEED_BOAT_EXTRAS } from "./constants/activityExtras";
 import { logger } from "./utils/logger";
@@ -910,6 +912,93 @@ export function generateTicketsHTML(quote) {
 
   const ticketsHTML = sortedItems
     .map((item) => {
+      const isZeroTracas =
+        isZeroTracasActivity(item.activityName) ||
+        isZeroTracasHorsZoneActivity(item.activityName);
+
+      if (isZeroTracas) {
+        const isHorsZone = isZeroTracasHorsZoneActivity(item.activityName);
+        const receiptTitle = isHorsZone
+          ? "Recu de paiement de zero Tracas Hors zone"
+          : "Recu de paiement de zero Tracas";
+        const ticketNo = String(item.ticketNumber || "").trim();
+        const cells = getQuoteItemParticipantCells(item);
+        const paxParts = [];
+        if (cells.adults > 0) paxParts.push(`${cells.adults} adulte${cells.adults > 1 ? "s" : ""}`);
+        if (cells.children > 0)
+          paxParts.push(`${cells.children} enfant${cells.children > 1 ? "s" : ""}`);
+        if (cells.babies > 0) paxParts.push(`${cells.babies} bébé${cells.babies > 1 ? "s" : ""}`);
+        const paxText = paxParts.length > 0 ? paxParts.join(" · ") : "";
+        const arrivalDate = item.date
+          ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")
+          : "";
+        const hotelText = client.isAirbnb
+          ? `Airbnb${client.hotel ? ` — ${client.hotel}` : ""}`
+          : client.hotel || "";
+        const priceHint =
+          item.lineTotal != null && Number.isFinite(Number(item.lineTotal))
+            ? currencyNoCents(Math.round(Number(item.lineTotal)), quote.currency)
+            : "";
+
+        // Formulaire type reçu papier : valeurs connues préremplies, le reste = lignes à écrire à la main.
+        return `
+      <div class="zt-receipt">
+        <div class="zt-head">
+          <div class="zt-logo">
+            <div class="zt-logo-mark">HD</div>
+            <div class="zt-logo-text">Hurghada<br/>DREAM TOURS</div>
+          </div>
+          <div class="zt-titles">
+            <div class="zt-brand">Fayed Travel</div>
+            <div class="zt-sub">( Hurghada Dream Tour )</div>
+            <div class="zt-receipt-title">${esc(receiptTitle)}</div>
+          </div>
+          <div class="zt-meta">
+            <div class="zt-no">Nº <span class="zt-no-value">${esc(ticketNo || "…………")}</span></div>
+            <div class="zt-date-line">Date : <span class="zt-write zt-write-sm"></span> / <span class="zt-write zt-write-sm"></span> / 20<span class="zt-write zt-write-xs"></span></div>
+          </div>
+        </div>
+
+        <div class="zt-rows">
+          <div class="zt-row">
+            <div class="zt-field zt-grow"><span class="zt-lab">Nom :</span><span class="zt-write">${esc(client.name || "")}</span></div>
+            <div class="zt-field zt-grow"><span class="zt-lab">Ph.Numero :</span><span class="zt-write">${esc(client.phone || "")}</span></div>
+          </div>
+          <div class="zt-row">
+            <div class="zt-field zt-grow"><span class="zt-lab">Hotel :</span><span class="zt-write">${esc(hotelText)}</span></div>
+            <div class="zt-field zt-grow"><span class="zt-lab">Date d'arrivee :</span><span class="zt-write">${esc(arrivalDate)}</span></div>
+          </div>
+          <div class="zt-row">
+            <div class="zt-field zt-grow"><span class="zt-lab">Pax :</span><span class="zt-write">${esc(paxText)}</span></div>
+            <div class="zt-field zt-grow"><span class="zt-lab">Heure d'arrivee :</span><span class="zt-write"></span></div>
+          </div>
+          <div class="zt-row">
+            <div class="zt-field zt-grow"><span class="zt-lab">Special request :</span><span class="zt-write"></span></div>
+            <div class="zt-field zt-grow"><span class="zt-lab">Numero de vol :</span><span class="zt-write"></span></div>
+          </div>
+          <div class="zt-row zt-row-money">
+            <div class="zt-field zt-third"><span class="zt-lab">Price :</span><span class="zt-write">${esc(priceHint)}</span></div>
+            <div class="zt-field zt-third"><span class="zt-lab">Paid :</span><span class="zt-write"></span></div>
+            <div class="zt-field zt-third"><span class="zt-lab">Rest :</span><span class="zt-write"></span></div>
+          </div>
+          <div class="zt-row">
+            <div class="zt-field zt-full"><span class="zt-lab">Receiver :</span><span class="zt-write"></span></div>
+          </div>
+        </div>
+
+        <div class="zt-footer">
+          <div class="zt-footer-col">
+            <div>Agence : +201062002850</div>
+            <div>Hotel : +201271756017</div>
+          </div>
+          <div class="zt-footer-col zt-footer-right">
+            <div>✉ Hurghadadreamtour.fr@gmail.com</div>
+            <div>Hurghada Dream Tours</div>
+          </div>
+        </div>
+      </div>`;
+      }
+
       const itemDate = item.date
         ? new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR", {
             weekday: "long",
@@ -1146,6 +1235,135 @@ export function generateTicketsHTML(quote) {
       font-size: 22px;
       color: #0e7490;
     }
+    /* Reçu Zero Tracas (style papier) */
+    .zt-receipt {
+      background: #d7eef8;
+      border: 1.5px solid #334155;
+      border-radius: 6px;
+      padding: 14px 16px 12px;
+      margin-bottom: 18px;
+      color: #0f172a;
+      font-family: Georgia, 'Times New Roman', Times, serif;
+      page-break-inside: avoid;
+    }
+    .zt-head {
+      display: grid;
+      grid-template-columns: 88px 1fr auto;
+      gap: 10px;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+    .zt-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 4px;
+    }
+    .zt-logo-mark {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid #0f766e;
+      background: radial-gradient(circle at 35% 30%, #ecfeff, #99f6e4 55%, #0d9488);
+      color: #134e4a;
+      font-family: 'Segoe UI', sans-serif;
+      font-weight: 900;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .zt-logo-text {
+      font-size: 8px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #134e4a;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .zt-titles { text-align: center; padding-top: 2px; }
+    .zt-brand {
+      font-size: 22px;
+      font-weight: 800;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      letter-spacing: 0.02em;
+    }
+    .zt-sub {
+      margin-top: 2px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .zt-receipt-title {
+      margin-top: 6px;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .zt-meta { text-align: right; min-width: 140px; padding-top: 2px; }
+    .zt-no { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .zt-no-value {
+      color: #b91c1c;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+    .zt-date-line {
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 4px;
+      justify-content: flex-end;
+    }
+    .zt-rows { display: flex; flex-direction: column; gap: 10px; }
+    .zt-row { display: flex; gap: 16px; align-items: flex-end; }
+    .zt-field {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      min-width: 0;
+    }
+    .zt-grow { flex: 1; }
+    .zt-full { flex: 1 1 100%; }
+    .zt-third { flex: 1; }
+    .zt-lab {
+      flex-shrink: 0;
+      font-size: 13px;
+      font-weight: 700;
+      padding-bottom: 2px;
+      white-space: nowrap;
+    }
+    .zt-write {
+      flex: 1;
+      min-width: 48px;
+      min-height: 22px;
+      border-bottom: 1.5px dotted #334155;
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.3;
+      padding: 0 2px 2px;
+    }
+    .zt-write-sm { display: inline-block; width: 28px; min-width: 28px; flex: 0 0 28px; }
+    .zt-write-xs { display: inline-block; width: 22px; min-width: 22px; flex: 0 0 22px; }
+    .zt-footer {
+      margin-top: 14px;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+    .zt-footer-right { text-align: right; }
     .print-btn {
       display: block;
       margin: 0 auto 20px;
@@ -1164,6 +1382,7 @@ export function generateTicketsHTML(quote) {
       .print-btn { display: none; }
       .ticket { box-shadow: none; }
       .tickets-summary { box-shadow: none; }
+      .zt-receipt { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
 </head>
