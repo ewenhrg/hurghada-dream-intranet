@@ -912,6 +912,16 @@ export function generateTicketsHTML(quote) {
   const quoteTicketsBy = String(quote.ticketsEnteredByName || "").trim();
 
   const sortedItems = [...(quote.items || [])].sort((a, b) => {
+    const na = String(a?.ticketNumber || "").trim();
+    const nb = String(b?.ticketNumber || "").trim();
+    if (na && nb) {
+      const byTicket = na.localeCompare(nb, "fr", { numeric: true, sensitivity: "base" });
+      if (byTicket !== 0) return byTicket;
+    } else if (na && !nb) {
+      return -1;
+    } else if (!na && nb) {
+      return 1;
+    }
     const dateA = a.date ? new Date(a.date + "T12:00:00").getTime() : 0;
     const dateB = b.date ? new Date(b.date + "T12:00:00").getTime() : 0;
     return dateA - dateB;

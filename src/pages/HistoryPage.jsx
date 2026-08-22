@@ -127,6 +127,21 @@ function QuoteCardComponent({
     [needsZeroTracasDocs, d]
   );
 
+  /** Modal Payer : activités triées par date (saisie des n° qui se suivent). */
+  const payModalItems = useMemo(() => {
+    const items = quotes.find((q) => q.id === d.id)?.items || d.items || [];
+    return items
+      .map((item, originalIndex) => ({ item, originalIndex }))
+      .sort((a, b) => {
+        const da = String(a.item?.date || "").trim();
+        const db = String(b.item?.date || "").trim();
+        if (da && db && da !== db) return da.localeCompare(db);
+        if (da && !db) return -1;
+        if (!da && db) return 1;
+        return a.originalIndex - b.originalIndex;
+      });
+  }, [quotes, d]);
+
   const handlePrintClick = useCallback(() => {
     const htmlContent = generateQuoteHTML(d);
     const clientPhone = d.client?.phone || "";
@@ -881,8 +896,8 @@ function QuoteCardComponent({
                   Payer — numéros de ticket
                 </h3>
                 <p className="text-sm text-slate-600 mt-1">
-                  Saisissez un numéro de ticket pour chaque activité, puis validez pour ouvrir les
-                  tickets. Le devis passera en « Payé ».
+                  Activités classées par date — saisissez les numéros de ticket à la suite, puis
+                  validez pour imprimer (ordre des n° de ticket). Le devis passera en « Payé ».
                   {needsZeroTracasDocs
                     ? " Pour Zero Tracas, joignez aussi passeport, réservation d’hôtel et réservation de vol."
                     : ""}
@@ -891,15 +906,15 @@ function QuoteCardComponent({
             </div>
 
             <ul className="mt-5 space-y-3 max-h-[50vh] overflow-y-auto pr-1">
-              {(quotes.find((q) => q.id === d.id)?.items || d.items || []).map((item, idx) => (
+              {payModalItems.map(({ item, originalIndex }) => (
                 <li
-                  key={`${item.activityId || "act"}-${item.date || idx}-${idx}`}
+                  key={`${item.activityId || "act"}-${item.date || originalIndex}-${originalIndex}`}
                   className="rounded-xl border border-teal-100 bg-teal-50/50 px-4 py-3"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-900">
-                        {item.activityName || `Activité ${idx + 1}`}
+                        {item.activityName || `Activité ${originalIndex + 1}`}
                       </p>
                       <p className="text-xs font-medium text-slate-500 mt-0.5">
                         {item.date
@@ -920,9 +935,12 @@ function QuoteCardComponent({
                     <input
                       type="text"
                       autoComplete="off"
-                      value={ticketDrafts[idx] ?? ""}
+                      value={ticketDrafts[originalIndex] ?? ""}
                       onChange={(e) =>
-                        setTicketDrafts((prev) => ({ ...prev, [idx]: e.target.value }))
+                        setTicketDrafts((prev) => ({
+                          ...prev,
+                          [originalIndex]: e.target.value,
+                        }))
                       }
                       placeholder="Ex. T-12345"
                       disabled={ticketGenerating}
