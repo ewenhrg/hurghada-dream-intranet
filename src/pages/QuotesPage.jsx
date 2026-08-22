@@ -1090,6 +1090,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       items: validComputed.map((c) => ({
         activityId: c.act.id,
         activityName: c.act.name || "",
+        activityNameEn: String(c.act.nameEn || "").trim(),
         date: c.raw.date,
         adults: isBoatPartyActivity(c.act?.name)
           ? Number(c.raw.boatPartyMen || 0) + Number(c.raw.boatPartyWomen || 0)

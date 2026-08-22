@@ -143,7 +143,7 @@ function colLetter(n) {
 /**
  * Registre des tickets — colonnes alignées Excel pour copier/coller direct.
  */
-export function TicketsPage({ quotes = [], setQuotes }) {
+export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -498,10 +498,13 @@ export function TicketsPage({ quotes = [], setQuotes }) {
         return;
       }
 
-      const htmlContent = generateTicketsHTML({
-        ...quote,
-        items: [item],
-      });
+      const htmlContent = generateTicketsHTML(
+        {
+          ...quote,
+          items: [item],
+        },
+        { activities }
+      );
       const fileName = `Ticket - ${row.ticketNumber}`;
       const newWindow = window.open();
       if (!newWindow) {
@@ -512,7 +515,7 @@ export function TicketsPage({ quotes = [], setQuotes }) {
       newWindow.document.title = fileName;
       newWindow.document.close();
     },
-    [quotes]
+    [quotes, activities]
   );
 
   const handleCopyAll = useCallback(async () => {

@@ -75,6 +75,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   const savedForm = !isPageReload ? loadLS(LS_KEYS.activityForm, null) : null;
   const defaultForm = savedForm ? {
     name: savedForm.name || "",
+    nameEn: savedForm.nameEn || "",
     category: savedForm.category || "desert",
     priceAdult: savedForm.priceAdult || "",
     priceChild: savedForm.priceChild || "",
@@ -88,6 +89,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     transfers: savedForm.transfers || emptyTransfers(),
   } : {
     name: "",
+    nameEn: "",
     category: "desert",
     priceAdult: "",
     priceChild: "",
@@ -254,6 +256,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }
     setForm({
       name: activity.name || "",
+      nameEn: activity.nameEn || "",
       category: activity.category || "desert",
       priceAdult: activity.priceAdult || "",
       priceChild: activity.priceChild || "",
@@ -361,6 +364,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     const activityData = {
       id: isEditing ? editingId : uuid(),
       name: form.name.trim(),
+      nameEn: String(form.nameEn || "").trim(),
       category: form.category,
       popular: existingActivity?.popular === true,
       catalogPaused: existingActivity?.catalogPaused === true,
@@ -416,6 +420,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         let supabaseData = {
           site_key: SITE_KEY,
           name: activityData.name,
+          name_en: activityData.nameEn || "",
         };
 
         // Ajouter les colonnes optionnelles seulement si elles ont des valeurs
@@ -446,6 +451,40 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           const msg = String(err.message || err.details || "").toLowerCase();
           return err.code === "PGRST204" || msg.includes("babies_forbidden") || msg.includes("babies forbidden");
         };
+        const shouldRetryWithoutNameEn = (err) => {
+          if (!err) return false;
+          const msg = String(err.message || err.details || "").toLowerCase();
+          return err.code === "PGRST204" || msg.includes("name_en") || msg.includes("name en");
+        };
+
+        const runWithOptionalColumnFallbacks = async (run) => {
+          let result = await run(supabaseData);
+          if (shouldRetryWithoutNameEn(result.error)) {
+            const { name_en: _ne, ...withoutNameEn } = supabaseData;
+            logger.warn("⚠️ Colonne name_en non supportée, retry sans le champ. Exécutez supabase_activities_add_name_en.sql");
+            toast.warning(
+              "Colonne name_en absente : exécutez supabase/supabase_activities_add_name_en.sql. Nom anglais sauvegardé en local.",
+              7000
+            );
+            result = await run(withoutNameEn);
+            if (shouldRetryWithoutBabiesForbidden(result.error)) {
+              const { babies_forbidden: _bf, ...fallbackData } = withoutNameEn;
+              logger.warn("⚠️ Colonne babies_forbidden non supportée, retry sans le champ.");
+              result = await run(fallbackData);
+            }
+            return result;
+          }
+          if (shouldRetryWithoutBabiesForbidden(result.error)) {
+            const { babies_forbidden: _bf, ...fallbackData } = supabaseData;
+            logger.warn("⚠️ Colonne babies_forbidden non supportée, retry sans le champ.");
+            result = await run(fallbackData);
+            if (shouldRetryWithoutNameEn(result.error)) {
+              const { name_en: _ne, ...withoutNameEn } = fallbackData;
+              result = await run(withoutNameEn);
+            }
+          }
+          return result;
+        };
 
         let data, error;
         
@@ -462,17 +501,11 @@ export function ActivitiesPage({ activities, setActivities, user }) {
             return;
           }
           
-          let result = await supabase.from("activities").update(supabaseData).eq("id", supabaseId);
+          let result = await runWithOptionalColumnFallbacks((payload) =>
+            supabase.from("activities").update(payload).eq("id", supabaseId)
+          );
           data = result.data;
           error = result.error;
-
-          if (shouldRetryWithoutBabiesForbidden(error)) {
-            const { babies_forbidden: _bf, ...fallbackData } = supabaseData;
-            logger.warn("⚠️ Colonne babies_forbidden non supportée, retry sans le champ.");
-            result = await supabase.from("activities").update(fallbackData).eq("id", supabaseId);
-            data = result.data;
-            error = result.error;
-          }
           
           // Après la mise à jour Supabase, s'assurer que la sauvegarde locale est toujours à jour
           if (!error) {
@@ -520,17 +553,11 @@ export function ActivitiesPage({ activities, setActivities, user }) {
           } else {
             // Pas d'activité similaire, créer une nouvelle
             logger.log("🔄 Création dans Supabase:", supabaseData);
-            let result = await supabase.from("activities").insert(supabaseData).select("id").single();
+            let result = await runWithOptionalColumnFallbacks((payload) =>
+              supabase.from("activities").insert(payload).select("id").single()
+            );
             data = result.data;
             error = result.error;
-
-            if (shouldRetryWithoutBabiesForbidden(error)) {
-              const { babies_forbidden: _bf, ...fallbackData } = supabaseData;
-              logger.warn("⚠️ Colonne babies_forbidden non supportée, retry sans le champ.");
-              result = await supabase.from("activities").insert(fallbackData).select("id").single();
-              data = result.data;
-              error = result.error;
-            }
             
             // Si création réussie, sauvegarder l'ID Supabase retourné (.select requis sinon data est null)
             if (!error && data && data.id != null) {
@@ -605,6 +632,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
     setForm({
       name: "",
+      nameEn: "",
       category: "desert",
       priceAdult: "",
       priceChild: "",
@@ -1191,6 +1219,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     if (showForm) {
       setForm({
         name: "",
+        nameEn: "",
         category: "desert",
         priceAdult: "",
         priceChild: "",
@@ -1612,6 +1641,20 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     className="text-sm rounded-lg"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Nom en anglais
+                  </label>
+                  <TextInput
+                    placeholder="Ex: Snorkeling trip"
+                    value={form.nameEn}
+                    onChange={(e) => setForm((f) => ({ ...f, nameEn: e.target.value }))}
+                    className="text-sm rounded-lg"
+                  />
+                  <p className="mt-1 text-[11px] font-medium text-slate-500">
+                    Affiché sur les tickets imprimés. Si vide, le nom français est utilisé.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Catégorie *</label>

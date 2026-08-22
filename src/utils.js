@@ -51,6 +51,7 @@ export function normalizeQuoteItemsFromDb(items) {
     ...item,
     activityId: item.activityId ?? item.activity_id ?? "",
     activityName: item.activityName ?? item.activity_name ?? "",
+    activityNameEn: String(item.activityNameEn ?? item.activity_name_en ?? "").trim(),
     ticketNumber: String(item.ticketNumber ?? item.ticket_number ?? "").trim(),
     ticketEnteredByName: String(
       item.ticketEnteredByName ?? item.ticket_entered_by_name ?? ""
@@ -82,6 +83,32 @@ export function isQuoteFullyPaid(quote) {
 export function quoteHasAnyTicket(quote) {
   const items = Array.isArray(quote?.items) ? quote.items : [];
   return items.some((item) => String(item?.ticketNumber || "").trim() !== "");
+}
+
+/** Nom affiché sur les tickets : anglais si renseigné, sinon français. */
+export function resolveTicketActivityName(item, activitiesById = null) {
+  const fromItem = String(item?.activityNameEn || "").trim();
+  if (fromItem) return fromItem;
+  const rawId = item?.activityId ?? item?.activity_id;
+  if (rawId != null && activitiesById) {
+    const act =
+      activitiesById.get(String(rawId)) ||
+      activitiesById.get(rawId) ||
+      null;
+    const fromAct = String(act?.nameEn || "").trim();
+    if (fromAct) return fromAct;
+  }
+  return String(item?.activityName || "").trim() || "—";
+}
+
+export function buildActivitiesByIdMap(activities = []) {
+  const map = new Map();
+  (activities || []).forEach((a) => {
+    if (!a) return;
+    if (a.id != null) map.set(String(a.id), a);
+    if (a.supabase_id != null) map.set(String(a.supabase_id), a);
+  });
+  return map;
 }
 
 /** Modes de paiement tickets (Cash / Stripe) — les deux peuvent être cochés. */
@@ -818,13 +845,17 @@ export function generateQuoteHTML(quote, options = {}) {
  * Chaque ticket affiche : prénom/nom, téléphone, hôtel, chambre, activité, date, nombre de personnes,
  * heure de prise en charge (pick up) et prix.
  */
-export function generateTicketsHTML(quote) {
+export function generateTicketsHTML(quote, options = {}) {
   const esc = (v) =>
     String(v == null ? "" : v)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+
+  const activitiesById =
+    options.activitiesById ||
+    (Array.isArray(options.activities) ? buildActivitiesByIdMap(options.activities) : null);
 
   const origin =
     typeof window !== "undefined" && window.location?.origin
@@ -1063,7 +1094,7 @@ export function generateTicketsHTML(quote) {
               <span class="ticket-price-value">${priceText}</span>
             </div>
           </div>
-          <div class="ticket-activity">${esc(item.activityName || "—")}${formatDivingVisitorLabel(item) ? `<div class="ticket-visitor">${esc(formatDivingVisitorLabel(item))}</div>` : ""}${formatTurtleFinSizesLabel(item) ? `<div class="ticket-visitor">${esc(formatTurtleFinSizesLabel(item))}</div>` : ""}${extrasHTML}</div>
+          <div class="ticket-activity">${esc(resolveTicketActivityName(item, activitiesById))}${formatDivingVisitorLabel(item) ? `<div class="ticket-visitor">${esc(formatDivingVisitorLabel(item))}</div>` : ""}${formatTurtleFinSizesLabel(item) ? `<div class="ticket-visitor">${esc(formatTurtleFinSizesLabel(item))}</div>` : ""}${extrasHTML}</div>
           <div class="ticket-grid">
             <div class="tf"><span class="tf-l">👤 Nom</span><span class="tf-v">${clientName}</span></div>
             <div class="tf"><span class="tf-l">📞 Téléphone</span><span class="tf-v">${clientPhone}</span></div>

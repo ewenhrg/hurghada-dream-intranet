@@ -469,6 +469,7 @@ export default function App() {
             id: localId,
             supabase_id: supabaseId,
             name: row.name,
+            nameEn: row.name_en || "",
             category: row.category || "desert",
             popular: row.popular === true,
             catalogPaused: row.catalog_paused === true,
@@ -982,6 +983,7 @@ export default function App() {
         id: row.id?.toString() || uuid(),
         supabase_id: row.id,
         name: row.name || "",
+        nameEn: row.name_en || "",
         category: row.category || "desert",
         popular: row.popular === true,
         catalogPaused: row.catalog_paused === true,
@@ -1623,7 +1625,7 @@ export default function App() {
             subtitle="Vue compacte — toutes les colonnes visibles. Copie directe vers Excel."
             bare
           >
-            <TicketsPage quotes={quotes} setQuotes={setQuotes} />
+            <TicketsPage quotes={quotes} setQuotes={setQuotes} activities={activities} />
           </Section>
         )}
 

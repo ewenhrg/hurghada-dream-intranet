@@ -72,6 +72,7 @@ function QuoteCardComponent({
   setShowEditModal,
   onDocuments,
   onAddDocument,
+  activities = [],
 }) {
   // NOTE: ne pas télécharger la fiche info côté navigateur (payload trop gros pour Edge Functions).
   // On enverra l'URL à l'Edge Function, qui téléchargera le fichier côté serveur.
@@ -158,7 +159,7 @@ function QuoteCardComponent({
   }, [d]);
 
   const openTicketsWindow = useCallback((quoteForTickets) => {
-    const htmlContent = generateTicketsHTML(quoteForTickets);
+    const htmlContent = generateTicketsHTML(quoteForTickets, { activities });
     const clientPhone = quoteForTickets.client?.phone || "";
     const fileName = `Tickets - ${clientPhone}`;
     const newWindow = window.open();
@@ -167,7 +168,7 @@ function QuoteCardComponent({
       newWindow.document.title = fileName;
       newWindow.document.close();
     }
-  }, []);
+  }, [activities]);
 
   const openTicketModal = useCallback(() => {
     const rawQuote = quotes.find((q) => q.id === d.id) || d;
@@ -1818,6 +1819,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             setShowEditModal={setShowEditModal}
             onDocuments={setDocsQuote}
             onAddDocument={handleAddQuoteDocument}
+            activities={activities}
           />
         ))}
         {filtered.length === 0 && (
@@ -2451,6 +2453,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         return ({
           activityId: c.act.id,
           activityName: c.act.name || "",
+          activityNameEn: String(c.act.nameEn || "").trim(),
           date: c.raw.date,
           adults: finalAdults,
           children: finalChildren,
