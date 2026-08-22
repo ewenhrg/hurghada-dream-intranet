@@ -20,7 +20,7 @@ import {
   Pencil,
   Printer,
 } from "lucide-react";
-import { currencyNoCents, saveLS, loadLS, generateTicketsHTML } from "../utils";
+import { currencyNoCents, saveLS, loadLS, generateTicketsHTML, resolveTicketActivityName, buildActivitiesByIdMap } from "../utils";
 import { LS_KEYS } from "../constants";
 import {
   formatActivityWithExtras,
@@ -113,8 +113,8 @@ const PAGER_ICON_BTN =
 const paymentShort = (method) =>
   method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
 
-function activitySortKeyFromItem(item) {
-  return String(item?.activityName || "")
+function activitySortKeyFromName(name) {
+  return String(name || "")
     .trim()
     .toLowerCase()
     .normalize("NFD")
@@ -179,6 +179,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
 
   const rows = useMemo(() => {
     const list = [];
+    const activitiesById = buildActivitiesByIdMap(activities);
     (quotes || []).forEach((quote) => {
       const client = quote.client || {};
       const note = String(quote.notes || "").trim();
@@ -197,6 +198,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
             : slotLabel(item.slot);
 
         const boatParty = isBoatPartyActivity(item.activityName);
+        const activityDisplayName = resolveTicketActivityName(item, activitiesById);
+        const itemForDisplay = { ...item, activityName: activityDisplayName };
         list.push({
           key: `${quote.id || "q"}-${idx}-${ticketNumber}`,
           quoteId: quote.id,
@@ -213,9 +216,10 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
           babies: pax.babies,
           boatPartyMen: boatParty ? Number(item.boatPartyMen || 0) : 0,
           boatPartyWomen: boatParty ? Number(item.boatPartyWomen || 0) : 0,
-          activity: formatActivityWithExtras(item),
-          activitySortKey: activitySortKeyFromItem(item),
-          activityBaseName: String(item.activityName || "").trim() || "—",
+          activity: formatActivityWithExtras(itemForDisplay),
+          activitySortKey: activitySortKeyFromName(activityDisplayName),
+          activityBaseName: activityDisplayName || "—",
+          activityNameFr: String(item.activityName || "").trim(),
           pickup: pickup || "",
           note,
           priceValue,
@@ -242,7 +246,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
       return String(a.ticketNumber).localeCompare(String(b.ticketNumber), "fr", { numeric: true });
     });
     return list;
-  }, [quotes]);
+  }, [quotes, activities]);
 
   const newCount = useMemo(
     () => rows.filter((r) => !copied.has(r.ticketNumber)).length,
@@ -260,6 +264,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
         r.ticketNumber,
         r.activity,
         r.activityBaseName,
+        r.activityNameFr,
         r.clientCell,
         r.clientName,
         r.phone,
