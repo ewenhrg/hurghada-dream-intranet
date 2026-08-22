@@ -18,8 +18,9 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Pencil,
+  Printer,
 } from "lucide-react";
-import { currencyNoCents, saveLS, loadLS } from "../utils";
+import { currencyNoCents, saveLS, loadLS, generateTicketsHTML } from "../utils";
 import { LS_KEYS } from "../constants";
 import {
   formatActivityWithExtras,
@@ -472,6 +473,46 @@ export function TicketsPage({ quotes = [], setQuotes }) {
       }
     },
     [copyRowsToClipboard, markCopied]
+  );
+
+  const handlePrintTicket = useCallback(
+    (row) => {
+      const quote = (quotes || []).find((q) => q.id === row.quoteId);
+      if (!quote) {
+        toast.error("Devis introuvable pour ce ticket.");
+        return;
+      }
+      const items = Array.isArray(quote.items) ? quote.items : [];
+      let item = items[row.itemIndex];
+      const wanted = String(row.ticketNumber || "").trim().toLowerCase();
+      if (
+        !item ||
+        String(item.ticketNumber || "").trim().toLowerCase() !== wanted
+      ) {
+        item = items.find(
+          (it) => String(it.ticketNumber || "").trim().toLowerCase() === wanted
+        );
+      }
+      if (!item) {
+        toast.error("Ligne ticket introuvable sur le devis.");
+        return;
+      }
+
+      const htmlContent = generateTicketsHTML({
+        ...quote,
+        items: [item],
+      });
+      const fileName = `Ticket - ${row.ticketNumber}`;
+      const newWindow = window.open();
+      if (!newWindow) {
+        toast.error("Impossible d’ouvrir la fenêtre d’impression (popup bloquée).");
+        return;
+      }
+      newWindow.document.write(htmlContent);
+      newWindow.document.title = fileName;
+      newWindow.document.close();
+    },
+    [quotes]
   );
 
   const handleCopyAll = useCallback(async () => {
@@ -976,6 +1017,15 @@ export function TicketsPage({ quotes = [], setQuotes }) {
                             title="Copier la ligne"
                           >
                             <Copy className="size-2.5" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePrintTicket(r)}
+                            aria-label={`Imprimer ${r.ticketNumber}`}
+                            className="grid size-5 place-items-center rounded bg-violet-600 text-white hover:bg-violet-700"
+                            title="Imprimer ce ticket"
+                          >
+                            <Printer className="size-2.5" aria-hidden="true" />
                           </button>
                           <button
                             type="button"
