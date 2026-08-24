@@ -110,10 +110,10 @@ function normalizeHotelProposal(h) {
     stayFrom: normalizeStayDate(h.stayFrom),
     stayTo: normalizeStayDate(h.stayTo),
     includeTransfer: h.includeTransfer === true,
-    manualTotal:
+        manualTotal:
       h.manualTotal != null && Number.isFinite(Number(h.manualTotal))
-        ? roundMoney(Number(h.manualTotal))
-        : null,
+            ? roundMoney(Number(h.manualTotal))
+            : null,
     quote: h.quote && typeof h.quote === "object" ? serializeQuote(h.quote) : null,
   };
 }
@@ -322,7 +322,7 @@ function applyQuoteAdjustments(nights, { includeTransfer = false, manualTotal = 
 }
 
 function createEmptyProposal(slot = 1, stayDefaults = {}) {
-  return {
+    return {
     slot,
     hotelName: "",
     roomCategory: "",
@@ -351,7 +351,7 @@ function draftFromSavedHotel(prev, catalog, fallbackSlot, request) {
           ? roundMoney(Number(prev.quote.total) - Number(prev.quote.transferFee || 0))
           : prev.quote?.total != null
             ? Number(prev.quote.total)
-            : null;
+      : null;
   const cats = roomCategoryNames(catalogHotel?.roomCategories);
   const roomCategory = String(prev.roomCategory || "").trim();
   return {
@@ -463,6 +463,14 @@ function enrichHotelRequestViewModel(vm) {
   const hasReadyHotels = (payload.hotels || []).some((h) => proposalIsReady(h));
   const sentToClient = payload.sentToClient === true;
   const hasPayment = normalizePayment(payload.payment).entries.length > 0;
+  const paymentStatus = isConfirmed ? getPaymentStatus(vm, payload) : null;
+  const confirmationPaidAmount = paymentStatus
+    ? Number(paymentStatus.paid) || 0
+    : hasPayment
+      ? 1
+      : 0;
+  const isConfirmationPaidOrPartial = isConfirmed && confirmationPaidAmount > 0.009;
+  const isConfirmationUnpaid = isConfirmed && !isConfirmationPaidOrPartial;
   const createdToday = requestCreatedOnOrAfterToday(vm);
 
   const shortRef = formatHotelRequestShortRef(vm.id || vm.supabaseId).toLowerCase();
@@ -491,6 +499,8 @@ function enrichHotelRequestViewModel(vm) {
     isReadyToSend: !isConfirmed && !sentToClient && hasReadyHotels,
     isSent: !isConfirmed && sentToClient && hasReadyHotels,
     isInPayerList: isConfirmed && hasPayment,
+    isConfirmationPaidOrPartial,
+    isConfirmationUnpaid,
     searchHaystack,
     searchPhoneDigits: digitsOnly(vm.phone),
     shortRef,
@@ -1003,24 +1013,24 @@ const HotelRequestCard = memo(function HotelRequestCard({
             <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
               Hôtels souhaités
             </p>
-            {request.wantsCustomOffer ? (
-              <p className="rounded-xl border border-amber-200/90 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-950">
-                {HOTEL_CUSTOM_OFFER_LABEL}
-              </p>
-            ) : hotels.length === 0 ? (
-              <p className="text-sm text-slate-600">—</p>
-            ) : (
-              <ul className="space-y-2">
-                {hotels.map((h) => (
-                  <li
-                    key={h.label}
-                    className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm"
-                  >
-                    <span className="text-[11px] font-bold uppercase text-indigo-700">{h.label}</span>
-                    <p className="mt-0.5">{h.value}</p>
-                  </li>
-                ))}
-              </ul>
+        {request.wantsCustomOffer ? (
+          <p className="rounded-xl border border-amber-200/90 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-950">
+            {HOTEL_CUSTOM_OFFER_LABEL}
+          </p>
+        ) : hotels.length === 0 ? (
+          <p className="text-sm text-slate-600">—</p>
+        ) : (
+          <ul className="space-y-2">
+            {hotels.map((h) => (
+              <li
+                key={h.label}
+                className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm"
+              >
+                <span className="text-[11px] font-bold uppercase text-indigo-700">{h.label}</span>
+                <p className="mt-0.5">{h.value}</p>
+              </li>
+            ))}
+          </ul>
             )}
           </>
         )}
@@ -1368,21 +1378,21 @@ function HotelResponseModal({
                                   disabled={saving || !item.catalogSlug}
                                   aria-label={`Catégorie manuelle option ${index + 1}`}
                                 />
-                              ) : null}
+                      ) : null}
                               {item.roomCategory && item.catalogHotel && !isManual
                                 ? (() => {
-                                    const occ = formatRoomOccupancyLabel(
+                          const occ = formatRoomOccupancyLabel(
                                       findRoomCategory(
                                         item.catalogHotel.roomCategories,
                                         item.roomCategory
                                       )
-                                    );
-                                    return occ ? (
+                          );
+                          return occ ? (
                                       <span className="mt-1 block text-[11px] font-semibold text-slate-600">
                                         {occ}
                                       </span>
-                                    ) : null;
-                                  })()
+                          ) : null;
+                        })()
                                 : null}
                               {isManual ? (
                                 <span className="mt-1 block text-[11px] font-medium text-violet-700">
@@ -1392,7 +1402,7 @@ function HotelResponseModal({
                             </>
                           );
                         })()}
-                      </label>
+                              </label>
 
                       <label className="block">
                         <span className="text-[11px] font-bold uppercase text-slate-500">
@@ -1546,8 +1556,8 @@ function HotelConfirmModal({
           </div>
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
             Fermer
-          </GhostBtn>
-        </div>
+                                </GhostBtn>
+                              </div>
 
         <p className="mt-4 text-sm font-medium text-slate-700">
           Cochez le ou les hôtels confirmés par le client (un ou deux). Le document final affichera
@@ -1669,8 +1679,8 @@ function HotelConfirmModal({
                 disabled={saving}
               />
             </label>
-          </div>
-        </div>
+                          </div>
+                      </div>
 
         <div className="mt-6 rounded-2xl border-2 border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 to-violet-50/70 p-4 shadow-sm">
           <label className="flex cursor-pointer items-start gap-3">
@@ -2333,6 +2343,7 @@ export function HotelHistoryPage({ user = null }) {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState("all"); // all | pending | to_send | sent | confirmed | payer
+  const [confirmationPayFilter, setConfirmationPayFilter] = useState("all"); // all | paid | unpaid
   const [markingSentId, setMarkingSentId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
@@ -2498,18 +2509,35 @@ export function HotelHistoryPage({ user = null }) {
 
   useEffect(() => {
     setRequestsPage(1);
-  }, [statusFilter, debouncedSearch]);
+  }, [statusFilter, debouncedSearch, confirmationPayFilter]);
+
+  useEffect(() => {
+    if (statusFilter !== "confirmed") setConfirmationPayFilter("all");
+  }, [statusFilter]);
 
   const confirmedCount = useMemo(() => rows.filter((r) => r.isConfirmed).length, [rows]);
   const pendingCount = useMemo(() => rows.filter((r) => r.isPending).length, [rows]);
   const toSendCount = useMemo(() => rows.filter((r) => r.isReadyToSend).length, [rows]);
   const sentCount = useMemo(() => rows.filter((r) => r.isSent).length, [rows]);
   const payerCount = useMemo(() => rows.filter((r) => r.isInPayerList).length, [rows]);
+  const confirmedPaidCount = useMemo(
+    () => rows.filter((r) => r.isConfirmationPaidOrPartial).length,
+    [rows]
+  );
+  const confirmedUnpaidCount = useMemo(
+    () => rows.filter((r) => r.isConfirmationUnpaid).length,
+    [rows]
+  );
 
   const filteredRows = useMemo(() => {
     let list = rows;
     if (statusFilter === "confirmed") {
       list = list.filter((r) => r.isConfirmed);
+      if (confirmationPayFilter === "paid") {
+        list = list.filter((r) => r.isConfirmationPaidOrPartial);
+      } else if (confirmationPayFilter === "unpaid") {
+        list = list.filter((r) => r.isConfirmationUnpaid);
+      }
     } else if (statusFilter === "payer") {
       list = list.filter((r) => r.isInPayerList);
     } else if (statusFilter === "pending") {
@@ -2544,15 +2572,30 @@ export function HotelHistoryPage({ user = null }) {
       }
       return false;
     });
-  }, [rows, debouncedSearch, statusFilter]);
+  }, [rows, debouncedSearch, statusFilter, confirmationPayFilter]);
 
-  const requestsTotalPages = Math.max(1, Math.ceil(filteredRows.length / HOTEL_REQUESTS_PAGE_SIZE));
+  const confirmationGrouped =
+    statusFilter === "confirmed" && confirmationPayFilter === "all";
+
+  const confirmedPaidRows = useMemo(
+    () => (confirmationGrouped ? filteredRows.filter((r) => r.isConfirmationPaidOrPartial) : []),
+    [confirmationGrouped, filteredRows]
+  );
+  const confirmedUnpaidRows = useMemo(
+    () => (confirmationGrouped ? filteredRows.filter((r) => r.isConfirmationUnpaid) : []),
+    [confirmationGrouped, filteredRows]
+  );
+
+  const requestsTotalPages = confirmationGrouped
+    ? 1
+    : Math.max(1, Math.ceil(filteredRows.length / HOTEL_REQUESTS_PAGE_SIZE));
   const requestsCurrentPage = Math.min(requestsPage, requestsTotalPages);
 
   const visibleRows = useMemo(() => {
+    if (confirmationGrouped) return filteredRows;
     const start = (requestsCurrentPage - 1) * HOTEL_REQUESTS_PAGE_SIZE;
     return filteredRows.slice(start, start + HOTEL_REQUESTS_PAGE_SIZE);
-  }, [filteredRows, requestsCurrentPage]);
+  }, [filteredRows, requestsCurrentPage, confirmationGrouped]);
 
   const handlePrint = useCallback((request) => {
     const payload = normalizeResponsePayload(request.responsePayload);
@@ -2561,9 +2604,9 @@ export function HotelHistoryPage({ user = null }) {
     const quoteHotels = isConfirmed
       ? confirmedHotels
       : payload.hotels.filter((h) => proposalIsReady(h));
-    const ok = printHotelRequest({
-      ...request,
-      quoteHotels,
+      const ok = printHotelRequest({
+        ...request,
+        quoteHotels,
       agentNotes: payload.agentNotes,
       flights: payload.flights,
       zeroTracas: payload.zeroTracas,
@@ -3348,6 +3391,41 @@ export function HotelHistoryPage({ user = null }) {
           </Pill>
         </div>
 
+        {statusFilter === "confirmed" ? (
+          <div className="flex flex-wrap items-center gap-2 border-t border-indigo-200/70 pt-3">
+            <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-indigo-900/70">
+              Paiement
+            </span>
+            <Pill
+              type="button"
+              tone="light"
+              active={confirmationPayFilter === "all"}
+              onClick={() => setConfirmationPayFilter("all")}
+              className="!px-3 !py-1.5 !text-[11px]"
+            >
+              Toutes ({confirmedCount})
+            </Pill>
+            <Pill
+              type="button"
+              tone="light"
+              active={confirmationPayFilter === "paid"}
+              onClick={() => setConfirmationPayFilter("paid")}
+              className="!px-3 !py-1.5 !text-[11px]"
+            >
+              Payé / partiel ({confirmedPaidCount})
+            </Pill>
+            <Pill
+              type="button"
+              tone="light"
+              active={confirmationPayFilter === "unpaid"}
+              onClick={() => setConfirmationPayFilter("unpaid")}
+              className="!px-3 !py-1.5 !text-[11px]"
+            >
+              Non payé ({confirmedUnpaidCount})
+            </Pill>
+          </div>
+        ) : null}
+
         <div>
           <label
             htmlFor="hotel-history-search"
@@ -3365,7 +3443,11 @@ export function HotelHistoryPage({ user = null }) {
         <p className="mt-2 text-[11px] font-medium text-indigo-900/80">
           {filteredRows.length} demande{filteredRows.length > 1 ? "s" : ""}
             {statusFilter === "confirmed"
-              ? " confirmée" + (filteredRows.length > 1 ? "s" : "")
+              ? confirmationPayFilter === "paid"
+                ? " payée" + (filteredRows.length > 1 ? "s" : "") + " (payé / partiel)"
+                : confirmationPayFilter === "unpaid"
+                  ? " non payée" + (filteredRows.length > 1 ? "s" : "")
+                  : " confirmée" + (filteredRows.length > 1 ? "s" : "")
               : statusFilter === "payer"
                 ? " avec paiement"
                 : statusFilter === "pending"
@@ -3387,7 +3469,11 @@ export function HotelHistoryPage({ user = null }) {
       ) : filteredRows.length === 0 ? (
         <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-950">
           {statusFilter === "confirmed"
-            ? "Aucune confirmation pour le moment."
+            ? confirmationPayFilter === "paid"
+              ? "Aucune confirmation payée ou partielle."
+              : confirmationPayFilter === "unpaid"
+                ? "Aucune confirmation non payée."
+                : "Aucune confirmation pour le moment."
             : statusFilter === "payer"
               ? "Aucun paiement enregistré pour le moment. Enregistrez un paiement depuis une confirmation."
               : statusFilter === "pending"
@@ -3397,6 +3483,98 @@ export function HotelHistoryPage({ user = null }) {
                 : statusFilter === "sent"
                   ? "Aucun devis marqué comme envoyé pour le moment."
                   : "Aucune demande ne correspond à la recherche."}
+        </div>
+      ) : confirmationGrouped ? (
+        <div className="space-y-10">
+          <section aria-labelledby="hotel-conf-paid-heading" className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-2 border-b border-emerald-200/80 pb-2">
+              <div>
+                <h3
+                  id="hotel-conf-paid-heading"
+                  className="text-sm font-bold tracking-tight text-emerald-950"
+                >
+                  Payé ou partiellement payé
+                </h3>
+                <p className="mt-0.5 text-xs text-emerald-800/80">
+                  Au moins un paiement enregistré sur la confirmation.
+                </p>
+              </div>
+              <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold tabular-nums text-emerald-900 ring-1 ring-emerald-300/60">
+                {confirmedPaidRows.length}
+              </span>
+            </div>
+            {confirmedPaidRows.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50/50 px-4 py-5 text-center text-sm font-medium text-emerald-900/80">
+                Aucune confirmation payée ou partielle.
+              </p>
+            ) : (
+              <div className="space-y-8">
+                {confirmedPaidRows.map((request) => (
+                  <HotelRequestCard
+                    key={request.id}
+                    request={request}
+                    onPrint={handlePrint}
+                    onReply={handleReply}
+                    onConfirm={handleConfirmOpen}
+                    onEdit={handleEdit}
+                    onMarkSent={handleMarkSent}
+                    markingSent={markingSentId === request.id}
+                    onPay={setPayRequest}
+                    onDocuments={setDocsRequest}
+                    onPrintReceipt={handlePrintReceipt}
+                    canDelete={canDelete}
+                    onDelete={handleDeleteRequest}
+                    deleting={deletingId === request.id}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section aria-labelledby="hotel-conf-unpaid-heading" className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-2 border-b border-amber-200/80 pb-2">
+              <div>
+                <h3
+                  id="hotel-conf-unpaid-heading"
+                  className="text-sm font-bold tracking-tight text-amber-950"
+                >
+                  Non payé
+                </h3>
+                <p className="mt-0.5 text-xs text-amber-800/80">
+                  Confirmations sans aucun paiement enregistré.
+                </p>
+              </div>
+              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold tabular-nums text-amber-950 ring-1 ring-amber-300/60">
+                {confirmedUnpaidRows.length}
+              </span>
+            </div>
+            {confirmedUnpaidRows.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-amber-200 bg-amber-50/50 px-4 py-5 text-center text-sm font-medium text-amber-900/80">
+                Aucune confirmation non payée.
+              </p>
+            ) : (
+              <div className="space-y-8">
+                {confirmedUnpaidRows.map((request) => (
+                  <HotelRequestCard
+                    key={request.id}
+                    request={request}
+                    onPrint={handlePrint}
+                    onReply={handleReply}
+                    onConfirm={handleConfirmOpen}
+                    onEdit={handleEdit}
+                    onMarkSent={handleMarkSent}
+                    markingSent={markingSentId === request.id}
+                    onPay={setPayRequest}
+                    onDocuments={setDocsRequest}
+                    onPrintReceipt={handlePrintReceipt}
+                    canDelete={canDelete}
+                    onDelete={handleDeleteRequest}
+                    deleting={deletingId === request.id}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       ) : (
         <div className="space-y-8">
@@ -3418,7 +3596,7 @@ export function HotelHistoryPage({ user = null }) {
               deleting={deletingId === request.id}
             />
           ))}
-          {requestsTotalPages > 1 ? (
+          {!confirmationGrouped && requestsTotalPages > 1 ? (
             <div className="flex items-center justify-center gap-2 pt-2">
               <GhostBtn
                 type="button"
