@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Banknote, BedDouble, CheckCircle2, FileText, MessageSquareReply, Receipt, Trash2, Upload } from "lucide-react";
+import { Banknote, BedDouble, CheckCircle2, FileText, MessageSquareReply, Receipt, Trash2, Upload, Ban } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -144,6 +144,8 @@ function normalizeResponsePayload(raw) {
     sentAt: base.sentAt || "",
     payment: normalizePayment(base.payment),
     clientDocuments: normalizeClientDocuments(base.clientDocuments),
+    cancelled: base.cancelled === true,
+    cancelledAt: base.cancelledAt || "",
   };
 }
 
@@ -463,14 +465,17 @@ function enrichHotelRequestViewModel(vm) {
   const hasReadyHotels = (payload.hotels || []).some((h) => proposalIsReady(h));
   const sentToClient = payload.sentToClient === true;
   const hasPayment = normalizePayment(payload.payment).entries.length > 0;
+  const isCancelled = payload.cancelled === true || Boolean(payload.cancelledAt);
   const paymentStatus = isConfirmed ? getPaymentStatus(vm, payload) : null;
   const confirmationPaidAmount = paymentStatus
     ? Number(paymentStatus.paid) || 0
     : hasPayment
       ? 1
       : 0;
-  const isConfirmationPaidOrPartial = isConfirmed && confirmationPaidAmount > 0.009;
-  const isConfirmationUnpaid = isConfirmed && !isConfirmationPaidOrPartial;
+  const isConfirmationCancelled = isConfirmed && isCancelled;
+  const isConfirmationPaidOrPartial =
+    isConfirmed && !isCancelled && confirmationPaidAmount > 0.009;
+  const isConfirmationUnpaid = isConfirmed && !isCancelled && !isConfirmationPaidOrPartial;
   const createdToday = requestCreatedOnOrAfterToday(vm);
 
   const shortRef = formatHotelRequestShortRef(vm.id || vm.supabaseId).toLowerCase();
@@ -498,9 +503,10 @@ function enrichHotelRequestViewModel(vm) {
     isPending: !isConfirmed && createdToday && !hasReadyHotels,
     isReadyToSend: !isConfirmed && !sentToClient && hasReadyHotels,
     isSent: !isConfirmed && sentToClient && hasReadyHotels,
-    isInPayerList: isConfirmed && hasPayment,
+    isInPayerList: isConfirmed && !isCancelled && hasPayment,
     isConfirmationPaidOrPartial,
     isConfirmationUnpaid,
+    isConfirmationCancelled,
     searchHaystack,
     searchPhoneDigits: digitsOnly(vm.phone),
     shortRef,
@@ -546,6 +552,8 @@ const HotelRequestCard = memo(function HotelRequestCard({
   onPay,
   onDocuments,
   onPrintReceipt,
+  onCancelConfirmation,
+  cancelling,
   canDelete,
   onDelete,
   deleting,
@@ -574,6 +582,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
   const refId = String(request.id || request.supabaseId || "").trim();
   const shortRef = request.shortRef || formatHotelRequestShortRef(refId);
   const paymentStatus = isConfirmed ? getPaymentStatus(request, payload) : null;
+  const isCancelled = payload.cancelled === true || Boolean(payload.cancelledAt);
   const clientDocuments = payload.clientDocuments || [];
   const confirmedLabel =
     confirmedHotels.length > 1
@@ -622,19 +631,28 @@ const HotelRequestCard = memo(function HotelRequestCard({
                   : ""}
               </span>
             ) : null}
-            {isConfirmed ? (
+            {isConfirmed && !isCancelled ? (
               <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-teal-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
                 <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
                 Confirmé · {confirmedLabel}
               </span>
             ) : null}
-            {paymentStatus?.isFullyPaid ? (
+            {isConfirmed && isCancelled ? (
+              <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-slate-700 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
+                <Ban className="h-3.5 w-3.5" aria-hidden />
+                Annulé · {confirmedLabel}
+                {payload.cancelledAt
+                  ? ` · ${new Date(payload.cancelledAt).toLocaleDateString("fr-FR")}`
+                  : ""}
+              </span>
+            ) : null}
+            {paymentStatus?.isFullyPaid && !isCancelled ? (
               <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
                 <Banknote className="h-3.5 w-3.5" aria-hidden />
                 Payé
               </span>
             ) : null}
-            {paymentStatus && !paymentStatus.isFullyPaid ? (
+            {paymentStatus && !paymentStatus.isFullyPaid && !isCancelled ? (
               <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-rose-950 ring-1 ring-rose-300/70 sm:ml-2">
                 Reste à payer · {formatQuoteMoney(paymentStatus.remaining, paymentStatus.currency)}
               </span>
@@ -676,7 +694,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
             <GhostBtn type="button" onClick={() => onPrint(request)}>
               Imprimer
             </GhostBtn>
-            {isConfirmed && paymentStatus && !paymentStatus.isFullyPaid ? (
+            {isConfirmed && !isCancelled && paymentStatus && !paymentStatus.isFullyPaid ? (
               <PrimaryBtn
                 type="button"
                 className="!min-h-0 !min-w-0 !bg-emerald-600 !text-sm !px-4 !py-2 hover:!bg-emerald-700"
@@ -686,7 +704,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
                 Payer
               </PrimaryBtn>
             ) : null}
-            {isConfirmed && paymentStatus && paymentStatus.paid > 0.009 ? (
+            {isConfirmed && !isCancelled && paymentStatus && paymentStatus.paid > 0.009 ? (
               <GhostBtn
                 type="button"
                 onClick={() => onPrintReceipt?.(request)}
@@ -705,6 +723,18 @@ const HotelRequestCard = memo(function HotelRequestCard({
                 <FileText className="h-3.5 w-3.5" aria-hidden />
                 Document
                 {clientDocuments.length > 0 ? ` (${clientDocuments.length})` : ""}
+              </GhostBtn>
+            ) : null}
+            {isConfirmed && !isCancelled ? (
+              <GhostBtn
+                type="button"
+                onClick={() => onCancelConfirmation?.(request)}
+                disabled={cancelling}
+                className="!border-slate-400 !text-slate-800 hover:!bg-slate-100 disabled:opacity-50"
+                title="Marquer cette confirmation comme annulée"
+              >
+                <Ban className="h-3.5 w-3.5" aria-hidden />
+                {cancelling ? "Annulation…" : "Annulé"}
               </GhostBtn>
             ) : null}
             <GhostBtn type="button" onClick={() => onReply(request)}>
@@ -2342,10 +2372,11 @@ export function HotelHistoryPage({ user = null }) {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
-  const [statusFilter, setStatusFilter] = useState("all"); // all | pending | to_send | sent | confirmed | payer
-  const [confirmationPayFilter, setConfirmationPayFilter] = useState("all"); // all | paid | unpaid
+  const [statusFilter, setStatusFilter] = useState("all"); // all | pending | to_send | sent | confirmed
+  const [confirmationPayFilter, setConfirmationPayFilter] = useState("all"); // all | paid | unpaid | cancelled
   const [markingSentId, setMarkingSentId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [replyRequest, setReplyRequest] = useState(null);
   const [replyHotelsDraft, setReplyHotelsDraft] = useState([]);
@@ -2519,13 +2550,16 @@ export function HotelHistoryPage({ user = null }) {
   const pendingCount = useMemo(() => rows.filter((r) => r.isPending).length, [rows]);
   const toSendCount = useMemo(() => rows.filter((r) => r.isReadyToSend).length, [rows]);
   const sentCount = useMemo(() => rows.filter((r) => r.isSent).length, [rows]);
-  const payerCount = useMemo(() => rows.filter((r) => r.isInPayerList).length, [rows]);
   const confirmedPaidCount = useMemo(
     () => rows.filter((r) => r.isConfirmationPaidOrPartial).length,
     [rows]
   );
   const confirmedUnpaidCount = useMemo(
     () => rows.filter((r) => r.isConfirmationUnpaid).length,
+    [rows]
+  );
+  const confirmedCancelledCount = useMemo(
+    () => rows.filter((r) => r.isConfirmationCancelled).length,
     [rows]
   );
 
@@ -2537,9 +2571,9 @@ export function HotelHistoryPage({ user = null }) {
         list = list.filter((r) => r.isConfirmationPaidOrPartial);
       } else if (confirmationPayFilter === "unpaid") {
         list = list.filter((r) => r.isConfirmationUnpaid);
+      } else if (confirmationPayFilter === "cancelled") {
+        list = list.filter((r) => r.isConfirmationCancelled);
       }
-    } else if (statusFilter === "payer") {
-      list = list.filter((r) => r.isInPayerList);
     } else if (statusFilter === "pending") {
       list = list.filter((r) => r.isPending);
     } else if (statusFilter === "to_send") {
@@ -2583,6 +2617,10 @@ export function HotelHistoryPage({ user = null }) {
   );
   const confirmedUnpaidRows = useMemo(
     () => (confirmationGrouped ? filteredRows.filter((r) => r.isConfirmationUnpaid) : []),
+    [confirmationGrouped, filteredRows]
+  );
+  const confirmedCancelledRows = useMemo(
+    () => (confirmationGrouped ? filteredRows.filter((r) => r.isConfirmationCancelled) : []),
     [confirmationGrouped, filteredRows]
   );
 
@@ -3040,7 +3078,8 @@ export function HotelHistoryPage({ user = null }) {
           toast.warning("Paiement enregistré — l’impression du reçu n’a pas pu s’ouvrir. Utilisez le bouton Reçu.");
         }
         setPayRequest(null);
-        setStatusFilter("payer");
+        setStatusFilter("confirmed");
+        setConfirmationPayFilter("paid");
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage payment:", e);
@@ -3136,10 +3175,67 @@ export function HotelHistoryPage({ user = null }) {
       sentAt: prev.sentAt || undefined,
       payment: serializePayment(prev.payment),
       clientDocuments: serializeClientDocuments(prev.clientDocuments),
+      cancelled: prev.cancelled === true,
+      cancelledAt: prev.cancelledAt || undefined,
       updatedAt: new Date().toISOString(),
       ...overrides,
     };
   }, []);
+
+  const handleCancelConfirmation = useCallback(
+    async (request) => {
+      if (!request?.supabaseId || !supabase) return;
+      if (!isHotelRequestConfirmed(request)) {
+        toast.error("Seules les confirmations peuvent être annulées.");
+        return;
+      }
+      const payload = normalizeResponsePayload(request.responsePayload);
+      if (payload.cancelled === true || payload.cancelledAt) {
+        toast.warning("Cette confirmation est déjà annulée.");
+        return;
+      }
+      const fullName =
+        [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "ce client";
+      const short = formatHotelRequestShortRef(request.id);
+      const ok = window.confirm(
+        `Annuler la confirmation de ${fullName}${short ? ` (réf. ${short})` : ""} ?\n\nElle apparaîtra dans la sous-liste « Annulé ».`
+      );
+      if (!ok) return;
+
+      setCancellingId(request.id);
+      try {
+        const response_payload = buildResponsePayloadFromPrev(payload, {
+          cancelled: true,
+          cancelledAt: new Date().toISOString(),
+        });
+        const { error: updateError } = await supabase
+          .from("public_hotel_requests")
+          .update({
+            response_payload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", request.supabaseId)
+          .eq("site_key", SITE_KEY);
+
+        if (updateError) {
+          logger.error("HotelHistoryPage cancel confirmation:", updateError);
+          toast.error(updateError.message || "Impossible d’annuler la confirmation.");
+          return;
+        }
+
+        toast.success("Confirmation marquée comme annulée.");
+        setStatusFilter("confirmed");
+        setConfirmationPayFilter("cancelled");
+        await load();
+      } catch (e) {
+        logger.error("HotelHistoryPage cancel confirmation:", e);
+        toast.error("Erreur inattendue.");
+      } finally {
+        setCancellingId(null);
+      }
+    },
+    [load, buildResponsePayloadFromPrev]
+  );
 
   const handleAddClientDocument = useCallback(
     async ({ type, label, file }) => {
@@ -3380,15 +3476,6 @@ export function HotelHistoryPage({ user = null }) {
           >
             Confirmations ({confirmedCount})
           </Pill>
-          <Pill
-            type="button"
-            tone="light"
-            active={statusFilter === "payer"}
-            onClick={() => setStatusFilter("payer")}
-            className="!px-3.5 !py-2 !text-xs"
-          >
-            Payer ({payerCount})
-          </Pill>
         </div>
 
         {statusFilter === "confirmed" ? (
@@ -3423,6 +3510,15 @@ export function HotelHistoryPage({ user = null }) {
             >
               Non payé ({confirmedUnpaidCount})
             </Pill>
+            <Pill
+              type="button"
+              tone="light"
+              active={confirmationPayFilter === "cancelled"}
+              onClick={() => setConfirmationPayFilter("cancelled")}
+              className="!px-3 !py-1.5 !text-[11px]"
+            >
+              Annulé ({confirmedCancelledCount})
+            </Pill>
           </div>
         ) : null}
 
@@ -3447,10 +3543,10 @@ export function HotelHistoryPage({ user = null }) {
                 ? " payée" + (filteredRows.length > 1 ? "s" : "") + " (payé / partiel)"
                 : confirmationPayFilter === "unpaid"
                   ? " non payée" + (filteredRows.length > 1 ? "s" : "")
-                  : " confirmée" + (filteredRows.length > 1 ? "s" : "")
-              : statusFilter === "payer"
-                ? " avec paiement"
-                : statusFilter === "pending"
+                  : confirmationPayFilter === "cancelled"
+                    ? " annulée" + (filteredRows.length > 1 ? "s" : "")
+                    : " confirmée" + (filteredRows.length > 1 ? "s" : "")
+              : statusFilter === "pending"
                 ? " en attente"
                 : statusFilter === "to_send"
                   ? " à envoyer"
@@ -3473,10 +3569,10 @@ export function HotelHistoryPage({ user = null }) {
               ? "Aucune confirmation payée ou partielle."
               : confirmationPayFilter === "unpaid"
                 ? "Aucune confirmation non payée."
-                : "Aucune confirmation pour le moment."
-            : statusFilter === "payer"
-              ? "Aucun paiement enregistré pour le moment. Enregistrez un paiement depuis une confirmation."
-              : statusFilter === "pending"
+                : confirmationPayFilter === "cancelled"
+                  ? "Aucune confirmation annulée."
+                  : "Aucune confirmation pour le moment."
+            : statusFilter === "pending"
               ? "Aucune nouvelle demande en attente aujourd’hui."
               : statusFilter === "to_send"
                 ? "Aucun devis à envoyer pour le moment. Préparez d’abord une réponse."
@@ -3522,6 +3618,8 @@ export function HotelHistoryPage({ user = null }) {
                     onPay={setPayRequest}
                     onDocuments={setDocsRequest}
                     onPrintReceipt={handlePrintReceipt}
+                    onCancelConfirmation={handleCancelConfirmation}
+                    cancelling={cancellingId === request.id}
                     canDelete={canDelete}
                     onDelete={handleDeleteRequest}
                     deleting={deletingId === request.id}
@@ -3567,6 +3665,55 @@ export function HotelHistoryPage({ user = null }) {
                     onPay={setPayRequest}
                     onDocuments={setDocsRequest}
                     onPrintReceipt={handlePrintReceipt}
+                    onCancelConfirmation={handleCancelConfirmation}
+                    cancelling={cancellingId === request.id}
+                    canDelete={canDelete}
+                    onDelete={handleDeleteRequest}
+                    deleting={deletingId === request.id}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section aria-labelledby="hotel-conf-cancelled-heading" className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-2 border-b border-slate-300/80 pb-2">
+              <div>
+                <h3
+                  id="hotel-conf-cancelled-heading"
+                  className="text-sm font-bold tracking-tight text-slate-900"
+                >
+                  Annulé
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-600">
+                  Confirmations marquées comme annulées.
+                </p>
+              </div>
+              <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-bold tabular-nums text-slate-800 ring-1 ring-slate-300/70">
+                {confirmedCancelledRows.length}
+              </span>
+            </div>
+            {confirmedCancelledRows.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-5 text-center text-sm font-medium text-slate-600">
+                Aucune confirmation annulée.
+              </p>
+            ) : (
+              <div className="space-y-8">
+                {confirmedCancelledRows.map((request) => (
+                  <HotelRequestCard
+                    key={request.id}
+                    request={request}
+                    onPrint={handlePrint}
+                    onReply={handleReply}
+                    onConfirm={handleConfirmOpen}
+                    onEdit={handleEdit}
+                    onMarkSent={handleMarkSent}
+                    markingSent={markingSentId === request.id}
+                    onPay={setPayRequest}
+                    onDocuments={setDocsRequest}
+                    onPrintReceipt={handlePrintReceipt}
+                    onCancelConfirmation={handleCancelConfirmation}
+                    cancelling={cancellingId === request.id}
                     canDelete={canDelete}
                     onDelete={handleDeleteRequest}
                     deleting={deletingId === request.id}
@@ -3591,6 +3738,8 @@ export function HotelHistoryPage({ user = null }) {
               onPay={setPayRequest}
               onDocuments={setDocsRequest}
               onPrintReceipt={handlePrintReceipt}
+              onCancelConfirmation={handleCancelConfirmation}
+              cancelling={cancellingId === request.id}
               canDelete={canDelete}
               onDelete={handleDeleteRequest}
               deleting={deletingId === request.id}
