@@ -90,22 +90,27 @@ function buildPageItems(current, total) {
   return items;
 }
 
-/** Teintes intranet + Excel (rgb sans #) par bloc d’activité. */
+/** Teintes légères par bloc d’activité (lisibilité du texte prioritaire). */
 const ACTIVITY_PALETTE = [
-  { row: "bg-sky-50", accent: "border-l-sky-400", excel: "E0F2FE", excelStrong: "7DD3FC" },
-  { row: "bg-emerald-50", accent: "border-l-emerald-400", excel: "D1FAE5", excelStrong: "6EE7B7" },
-  { row: "bg-amber-50", accent: "border-l-amber-400", excel: "FEF3C7", excelStrong: "FCD34D" },
-  { row: "bg-violet-50", accent: "border-l-violet-400", excel: "EDE9FE", excelStrong: "C4B5FD" },
-  { row: "bg-rose-50", accent: "border-l-rose-400", excel: "FFE4E6", excelStrong: "FDA4AF" },
-  { row: "bg-teal-50", accent: "border-l-teal-400", excel: "CCFBF1", excelStrong: "5EEAD4" },
-  { row: "bg-orange-50", accent: "border-l-orange-400", excel: "FFEDD5", excelStrong: "FDBA74" },
-  { row: "bg-indigo-50", accent: "border-l-indigo-400", excel: "E0E7FF", excelStrong: "A5B4FC" },
+  { row: "bg-sky-50/70", accent: "border-l-sky-500", excel: "F0F9FF", excelStrong: "7DD3FC" },
+  { row: "bg-emerald-50/70", accent: "border-l-emerald-500", excel: "ECFDF5", excelStrong: "6EE7B7" },
+  { row: "bg-amber-50/70", accent: "border-l-amber-500", excel: "FFFBEB", excelStrong: "FCD34D" },
+  { row: "bg-violet-50/70", accent: "border-l-violet-500", excel: "F5F3FF", excelStrong: "C4B5FD" },
+  { row: "bg-rose-50/70", accent: "border-l-rose-500", excel: "FFF1F2", excelStrong: "FDA4AF" },
+  { row: "bg-teal-50/70", accent: "border-l-teal-500", excel: "F0FDFA", excelStrong: "5EEAD4" },
+  { row: "bg-orange-50/70", accent: "border-l-orange-500", excel: "FFF7ED", excelStrong: "FDBA74" },
+  { row: "bg-indigo-50/70", accent: "border-l-indigo-500", excel: "EEF2FF", excelStrong: "A5B4FC" },
 ];
 
 const TH_BASE =
   "border border-slate-300/90 px-0.5 py-1.5 text-center text-[9px] font-bold uppercase tracking-wide leading-tight text-white";
 const TD =
-  "border border-slate-200/90 px-0.5 py-1 align-middle text-[10px] leading-tight overflow-hidden text-ellipsis";
+  "border border-slate-200/90 px-0.5 py-1 align-middle text-[10px] leading-tight overflow-hidden text-ellipsis text-slate-900";
+/** Colonnes texte long (client / hôtel / chambre) — fond clair + contraste fort. */
+const TD_READ =
+  "border border-slate-200/90 px-1 py-1 align-middle text-[11px] leading-snug overflow-hidden text-ellipsis bg-white font-semibold text-slate-950";
+const TD_READ_MUTED =
+  "border border-slate-200/90 px-1 py-1 align-middle text-[11px] leading-snug overflow-hidden text-ellipsis bg-slate-50 font-semibold text-slate-700";
 
 const PAGER_ICON_BTN =
   "grid size-8 place-items-center rounded-lg border border-slate-300 bg-white text-slate-600 transition-all hover:border-slate-400 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/50 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-300 disabled:hover:text-slate-600";
@@ -918,13 +923,13 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
                   <th scope="col" className={TH_BASE} title="Date">
                     Date
                   </th>
-                  <th scope="col" className={TH_BASE} title="3 lettres + téléphone">
+                  <th scope="col" className={`${TH_BASE} !bg-slate-800`} title="3 lettres + téléphone">
                     Client
                   </th>
-                  <th scope="col" className={TH_BASE} title="Hôtel">
+                  <th scope="col" className={`${TH_BASE} !bg-stone-700`} title="Hôtel">
                     Hôtel
                   </th>
-                  <th scope="col" className={TH_BASE} title="Chambre">
+                  <th scope="col" className={`${TH_BASE} !bg-stone-600`} title="Chambre">
                     Ch
                   </th>
                   <th scope="col" className={`${TH_BASE} !bg-emerald-600`} title="Adultes">
@@ -992,9 +997,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
 
                   const r = block.row;
                   const isCopied = copied.has(r.ticketNumber);
-                  const rowBg = isCopied
-                    ? "bg-slate-100 text-slate-400"
-                    : block.toneClass;
+                  const rowBg = isCopied ? "bg-slate-100" : block.toneClass;
+                  const tdRead = isCopied ? TD_READ_MUTED : TD_READ;
                   const pay = paymentShort(r.paymentMethod);
 
                   return (
@@ -1066,13 +1070,13 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
                       <td className={`${TD} text-center tabular-nums font-semibold text-indigo-900`} title={formatDateDisplay(r.date)}>
                         {formatDateDisplay(r.date)}
                       </td>
-                      <td className={`${TD} truncate font-medium`} title={r.clientCell}>
+                      <td className={`${tdRead} truncate`} title={r.clientCell}>
                         {r.clientCell || ""}
                       </td>
-                      <td className={`${TD} truncate`} title={r.hotel}>
+                      <td className={`${tdRead} truncate`} title={r.hotel}>
                         {r.hotel || ""}
                       </td>
-                      <td className={`${TD} truncate text-center font-semibold`} title={r.room}>
+                      <td className={`${tdRead} truncate text-center`} title={r.room}>
                         {r.room || ""}
                       </td>
                       <td className={`${TD} text-center tabular-nums font-bold text-emerald-800`}>{r.adults || ""}</td>
