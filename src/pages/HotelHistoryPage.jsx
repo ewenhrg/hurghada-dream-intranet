@@ -2609,12 +2609,10 @@ export function HotelHistoryPage({ user = null }) {
       list = list.filter((r) => r.isSent);
     }
 
-    // Liste Envoyé : derniers devis avec réponse / envoi en premier
-    if (statusFilter === "sent") {
-      list = [...list].sort(
-        (a, b) => hotelRequestResponseActivityMs(b) - hotelRequestResponseActivityMs(a)
-      );
-    }
+    // Toutes les listes : dernières modifications en premier
+    list = [...list].sort(
+      (a, b) => hotelRequestResponseActivityMs(b) - hotelRequestResponseActivityMs(a)
+    );
 
     const q = debouncedSearch.trim().toLowerCase();
     if (!q) return list;
