@@ -13,6 +13,7 @@ import { logger } from "./utils/logger";
 import {
   getQuoteItemDetailLines,
   getQuoteItemParticipantCells,
+  getZeroTracasServiceCounts,
 } from "./utils/quoteItemDisplay.js";
 import { formatDivingVisitorLabel } from "./utils/divingSafety.js";
 import { calculateTransferSurchargeFromItem, calculateStandardTransferSurchargeFromItem, calculatePrivateTransferSurchargeFromItem, getPrivateTransferLabel } from "./utils/transferPricing.js";
@@ -73,6 +74,20 @@ export function normalizeQuoteItemsFromDb(items) {
         : [],
     speedBoatExtra: item.speedBoatExtra ?? item.speed_boat_extra ?? [],
     lineTotal: item.lineTotal ?? item.line_total ?? 0,
+    zeroTracasTransfertVisaSim:
+      item.zeroTracasTransfertVisaSim ?? item.zero_tracas_transfert_visa_sim ?? 0,
+    zeroTracasTransfertVisa:
+      item.zeroTracasTransfertVisa ?? item.zero_tracas_transfert_visa ?? 0,
+    zeroTracasTransfertSim:
+      item.zeroTracasTransfertSim ?? item.zero_tracas_transfert_sim ?? 0,
+    zeroTracasTransfert3Personnes:
+      item.zeroTracasTransfert3Personnes ?? item.zero_tracas_transfert_3_personnes ?? 0,
+    zeroTracasTransfertPlus3Personnes:
+      item.zeroTracasTransfertPlus3Personnes ??
+      item.zero_tracas_transfert_plus_3_personnes ??
+      0,
+    zeroTracasVisaSim: item.zeroTracasVisaSim ?? item.zero_tracas_visa_sim ?? 0,
+    zeroTracasVisaSeul: item.zeroTracasVisaSeul ?? item.zero_tracas_visa_seul ?? 0,
   }));
 }
 
@@ -952,10 +967,15 @@ export function generateTicketsHTML(quote, options = {}) {
     : "";
   const quoteTicketsBy = String(quote.ticketsEnteredByName || "").trim();
   const paymentMethods = normalizeTicketsPaymentMethods(quote);
-  // Stripe seul = paiement carte → prix devis « carte » (+3 %). Cash (seul ou mixte) = prix espèces.
+  // Stripe seul = paiement carte → prix « carte » (+3 %). Cash / mixte = espèces.
+  // Zero Tracas : toujours le prix espèces (sans +3 %), même en Stripe.
   const useCardPricing = paymentMethods.stripe === true && paymentMethods.cash !== true;
-  const ticketDisplayPrice = (lineTotal) => {
-    const cash = Math.round(Number(lineTotal) || 0);
+  const isZeroTracasItem = (item) =>
+    isZeroTracasActivity(item?.activityName) ||
+    isZeroTracasHorsZoneActivity(item?.activityName);
+  const ticketDisplayPrice = (item) => {
+    const cash = Math.round(Number(item?.lineTotal) || 0);
+    if (isZeroTracasItem(item)) return cash;
     return useCardPricing ? calculateCardPrice(cash) : cash;
   };
 
@@ -1002,8 +1022,15 @@ export function generateTicketsHTML(quote, options = {}) {
           : client.hotel || "";
         const priceHint =
           item.lineTotal != null && Number.isFinite(Number(item.lineTotal))
-            ? currencyNoCents(ticketDisplayPrice(item.lineTotal), quote.currency)
+            ? currencyNoCents(ticketDisplayPrice(item), quote.currency)
             : "";
+        const ztCounts = getZeroTracasServiceCounts(item);
+        // Toujours 3 cases distinctes : Transfert / Visa / SIM
+        const ztServicesRow = `<div class="zt-row zt-row-services">
+            <div class="zt-field zt-third"><span class="zt-lab">Transfert :</span><span class="zt-write zt-write-qty">${esc(String(ztCounts.transfers))}</span></div>
+            <div class="zt-field zt-third"><span class="zt-lab">Visa :</span><span class="zt-write zt-write-qty">${esc(String(ztCounts.visas))}</span></div>
+            <div class="zt-field zt-third"><span class="zt-lab">SIM :</span><span class="zt-write zt-write-qty">${esc(String(ztCounts.sims))}</span></div>
+          </div>`;
 
         // Formulaire type reçu papier : valeurs connues préremplies, le reste = lignes à écrire à la main.
         return `
@@ -1036,6 +1063,7 @@ export function generateTicketsHTML(quote, options = {}) {
             <div class="zt-field zt-grow"><span class="zt-lab">Pax :</span><span class="zt-write">${esc(paxText)}</span></div>
             <div class="zt-field zt-grow"><span class="zt-lab">Heure d'arrivee :</span><span class="zt-write"></span></div>
           </div>
+          ${ztServicesRow}
           <div class="zt-row">
             <div class="zt-field zt-grow"><span class="zt-lab">Special request :</span><span class="zt-write"></span></div>
             <div class="zt-field zt-grow"><span class="zt-lab">Numero de vol :</span><span class="zt-write"></span></div>
@@ -1084,7 +1112,7 @@ export function generateTicketsHTML(quote, options = {}) {
         ? esc(item.pickupTime)
         : slotLabel(item.slot) || "—";
 
-      const priceText = esc(currencyNoCents(ticketDisplayPrice(item.lineTotal), quote.currency));
+      const priceText = esc(currencyNoCents(ticketDisplayPrice(item), quote.currency));
       const extraLines = formatTicketExtraLines(item);
       const extrasHTML =
         extraLines.length > 0
@@ -1135,30 +1163,28 @@ export function generateTicketsHTML(quote, options = {}) {
     .join("");
 
   const ticketCount = sortedItems.length;
-  const totalCashFromItems = sortedItems.reduce(
-    (sum, item) => sum + Math.round(Number(item.lineTotal) || 0),
-    0
-  );
-  const quoteCashTotal = Math.round(Number(quote.totalCash ?? quote.total) || 0);
-  const quoteCardTotal = Math.round(
-    Number(quote.totalCard) || calculateCardPrice(quoteCashTotal || totalCashFromItems)
-  );
-  const totalPrice = useCardPricing
-    ? quoteCardTotal || calculateCardPrice(totalCashFromItems)
-    : quoteCashTotal || totalCashFromItems;
+  // Toujours la somme des tickets imprimés (pas le total du devis entier)
+  const totalPrice = sortedItems.reduce((sum, item) => sum + ticketDisplayPrice(item), 0);
   const paymentLabel = formatTicketsPaymentMethodsLabel(quote);
+  const isSingleTicket = ticketCount === 1;
+  const summaryShowsCard =
+    useCardPricing && sortedItems.some((it) => !isZeroTracasItem(it));
   const summaryHTML = `
     <div class="tickets-summary">
       <div class="tickets-summary-row">
         <span class="tickets-summary-label">Mode de paiement</span>
         <span class="tickets-summary-value">${esc(paymentLabel || "—")}</span>
       </div>
-      <div class="tickets-summary-row">
+      ${
+        isSingleTicket
+          ? ""
+          : `<div class="tickets-summary-row">
         <span class="tickets-summary-label">Nombre total de tickets</span>
         <span class="tickets-summary-value">${ticketCount}</span>
-      </div>
+      </div>`
+      }
       <div class="tickets-summary-row tickets-summary-total">
-        <span class="tickets-summary-label">Prix total${useCardPricing ? " (carte)" : ""}</span>
+        <span class="tickets-summary-label">${isSingleTicket ? "Prix du ticket" : "Prix total"}${summaryShowsCard ? " (carte)" : ""}</span>
         <span class="tickets-summary-value">${esc(currencyNoCents(totalPrice, quote.currency))}</span>
       </div>
     </div>
@@ -1376,6 +1402,15 @@ export function generateTicketsHTML(quote, options = {}) {
     .zt-grow { flex: 1; }
     .zt-full { flex: 1 1 100%; }
     .zt-third { flex: 1; }
+    .zt-write-qty {
+      font-weight: 800;
+      color: #0f172a;
+      min-width: 1.5rem;
+      text-align: center;
+    }
+    .zt-row-services .zt-write {
+      border-bottom-color: #334155;
+    }
     .zt-lab {
       flex-shrink: 0;
       font-size: 10px;

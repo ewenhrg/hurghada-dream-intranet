@@ -185,6 +185,41 @@ export function getQuoteItemExtraLabels(item) {
 }
 
 /**
+ * Quantités Zero Tracas / Hors zone déduites des forfaits choisis.
+ * Ex. « Transfert+Visa+SIM ×2 » → 2 transferts, 2 visas, 2 SIM.
+ */
+export function getZeroTracasServiceCounts(item) {
+  const n = (v) => {
+    const x = Number(v);
+    return Number.isFinite(x) && x > 0 ? Math.floor(x) : 0;
+  };
+  const transfertVisaSim = n(
+    item?.zeroTracasTransfertVisaSim ?? item?.zero_tracas_transfert_visa_sim
+  );
+  const transfertVisa = n(
+    item?.zeroTracasTransfertVisa ?? item?.zero_tracas_transfert_visa
+  );
+  const transfertSim = n(
+    item?.zeroTracasTransfertSim ?? item?.zero_tracas_transfert_sim
+  );
+  const transfert3 = n(
+    item?.zeroTracasTransfert3Personnes ?? item?.zero_tracas_transfert_3_personnes
+  );
+  const transfertPlus3 = n(
+    item?.zeroTracasTransfertPlus3Personnes ??
+      item?.zero_tracas_transfert_plus_3_personnes
+  );
+  const visaSim = n(item?.zeroTracasVisaSim ?? item?.zero_tracas_visa_sim);
+  const visaSeul = n(item?.zeroTracasVisaSeul ?? item?.zero_tracas_visa_seul);
+
+  return {
+    transfers: transfertVisaSim + transfertVisa + transfertSim + transfert3 + transfertPlus3,
+    visas: transfertVisaSim + transfertVisa + visaSim + visaSeul,
+    sims: transfertVisaSim + transfertSim + visaSim,
+  };
+}
+
+/**
  * Activité + extras (colonne Excel).
  * Speed Boat avec île : on privilégie le nom d’île (comme sur ton tableau : « Eden Island », « Orange bay »).
  */
