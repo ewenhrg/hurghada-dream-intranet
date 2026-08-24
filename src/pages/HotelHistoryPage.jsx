@@ -8,7 +8,7 @@ import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
 import { GhostBtn, NumberInput, Pill, PrimaryBtn, TextInput } from "../components/ui";
 import { printHotelRequest, printHotelPaymentReceipt } from "../utils/hotelRequestPrint";
-import { formatHotelStayDate } from "../utils/hotelRequestDates";
+import { formatHotelStayDate, normalizeStayDate } from "../utils/hotelRequestDates";
 import {
   formatHotelRequestShortRef,
   normalizeHotelRequestRefQuery,
@@ -91,11 +91,6 @@ function serializeQuote(quote) {
     transferFee: quote.transferFee ?? 0,
     priceManual: quote.priceManual === true,
   };
-}
-
-function normalizeStayDate(raw) {
-  const s = String(raw || "").trim();
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
 }
 
 function normalizeHotelProposal(h) {
@@ -351,9 +346,10 @@ function applyQuoteAdjustments(nights, { includeTransfer = false, manualTotal = 
 }
 
 function createEmptyProposal(slot = 1, stayDefaults = {}) {
-    return {
+  return {
     slot,
     hotelName: "",
+    hotelManual: false,
     roomCategory: "",
     roomCategoryManual: false,
     catalogSlug: "",
@@ -383,12 +379,14 @@ function draftFromSavedHotel(prev, catalog, fallbackSlot, request) {
       : null;
   const cats = roomCategoryNames(catalogHotel?.roomCategories);
   const roomCategory = String(prev.roomCategory || "").trim();
+  const hotelName = prev.hotelName || catalogHotel?.name || "";
   return {
     slot: prev.slot || fallbackSlot,
-    hotelName: prev.hotelName || catalogHotel?.name || "",
+    hotelName,
+    hotelManual: !catalogHotel && Boolean(String(hotelName).trim()),
     roomCategory,
     roomCategoryManual: Boolean(roomCategory && !cats.includes(roomCategory)),
-    catalogSlug: catalogHotel?.slug || catalogHotel?.id || prev.catalogSlug || "",
+    catalogSlug: catalogHotel?.slug || catalogHotel?.id || "",
     roomCategories: cats,
     catalogHotel: catalogHotel || null,
     stayFrom:
@@ -458,8 +456,8 @@ export function rowToHotelRequestViewModel(row) {
     lastName: row.last_name || "",
     phone: row.client_phone || "",
     email: row.client_email || "",
-    arrivalDate: row.arrival_date || "",
-    departureDate: row.departure_date || "",
+    arrivalDate: normalizeStayDate(row.arrival_date),
+    departureDate: normalizeStayDate(row.departure_date),
     adultsCount:
       row.adults_count != null && row.adults_count !== "" ? Number(row.adults_count) : null,
     childrenCount:
@@ -1145,11 +1143,24 @@ function HotelResponseModal({
       sortedCatalog.find((h) => String(h.slug || h.id) === String(slugOrId)) || null;
     updateProposal(index, {
       hotelName: hotel?.name || "",
+      hotelManual: false,
       catalogSlug: hotel ? String(hotel.slug || hotel.id || "") : "",
       catalogHotel: hotel,
       roomCategories: roomCategoryNames(hotel?.roomCategories),
       roomCategory: "",
       roomCategoryManual: false,
+    });
+  };
+
+  const selectManualHotel = (index) => {
+    updateProposal(index, {
+      hotelManual: true,
+      catalogSlug: "",
+      catalogHotel: null,
+      roomCategories: [],
+      roomCategory: "",
+      roomCategoryManual: true,
+      hotelName: "",
     });
   };
 
@@ -1193,6 +1204,14 @@ function HotelResponseModal({
             <h2 id="hotel-response-title" className="mt-1 text-lg font-bold text-slate-900">
               {fullName}
             </h2>
+            {nightsCount > 0 ? (
+              <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-violet-600 px-3.5 py-1.5 text-sm font-extrabold text-white shadow-sm">
+                {nightsCount} nuit{nightsCount > 1 ? "s" : ""}
+                <span className="text-xs font-semibold text-violet-100">
+                  {formatHotelStayDate(request.arrivalDate)} → {formatHotelStayDate(request.departureDate)}
+                </span>
+              </p>
+            ) : null}
           </div>
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
             Fermer
@@ -1209,10 +1228,16 @@ function HotelResponseModal({
               <dd className="font-semibold text-slate-950">
                 {formatHotelStayDate(request.arrivalDate)} → {formatHotelStayDate(request.departureDate)}
                 {nightsCount > 0 ? (
-                  <span className="mt-0.5 block text-sm font-bold text-violet-800">
-                    {nightsCount} nuit{nightsCount > 1 ? "s" : ""}
+                  <span className="mt-1.5 flex">
+                    <span className="rounded-lg bg-violet-100 px-2.5 py-1 text-sm font-extrabold text-violet-900 ring-1 ring-violet-200">
+                      {nightsCount} nuit{nightsCount > 1 ? "s" : ""}
+                    </span>
                   </span>
-                ) : null}
+                ) : (
+                  <span className="mt-1 block text-xs font-semibold text-amber-800">
+                    Dates manquantes — le nombre de nuits ne peut pas être calculé
+                  </span>
+                )}
               </dd>
             </div>
             <div>
@@ -1290,222 +1315,264 @@ function HotelResponseModal({
             </GhostBtn>
           </div>
           <p className="mb-3 text-xs font-medium text-slate-600">
-            Choisissez les hôtels à proposer, les dates (du / au) pour chaque séjour, puis le prix.
-            Utile si le client change d’hôtel en cours de séjour.
+            Choisissez les hôtels à proposer (catalogue ou saisie libre), les dates (du / au) pour
+            chaque séjour, puis le prix. Utile si le client change d’hôtel en cours de séjour.
           </p>
 
-          {sortedCatalog.length === 0 ? (
-            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
-              Catalogue hôtels vide — ajoutez des hôtels dans Catalogue hôtels pour pouvoir répondre.
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {hotelsDraft.map((item, index) => {
-                const quoted = quotedHotels[index];
-                const quote = quoted?.quote;
-                return (
-                  <li
-                    key={`proposal-${item.slot}-${index}`}
-                    className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3"
-                  >
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                        Option {index + 1}
-                      </p>
-                      <GhostBtn
-                        type="button"
-                        className="!min-h-0 !px-2.5 !py-1 !text-xs"
-                        onClick={() => removeProposal(index)}
+          <ul className="space-y-3">
+            {hotelsDraft.map((item, index) => {
+              const quoted = quotedHotels[index];
+              const quote = quoted?.quote;
+              const isManualHotel =
+                item.hotelManual === true ||
+                (Boolean(String(item.hotelName || "").trim()) && !item.catalogSlug);
+              const hotelChosen = Boolean(item.catalogSlug) || isManualHotel;
+              return (
+                <li
+                  key={`proposal-${item.slot}-${index}`}
+                  className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                      Option {index + 1}
+                    </p>
+                    <GhostBtn
+                      type="button"
+                      className="!min-h-0 !px-2.5 !py-1 !text-xs"
+                      onClick={() => removeProposal(index)}
+                      disabled={saving}
+                    >
+                      Retirer
+                    </GhostBtn>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block sm:col-span-2">
+                      <span className="text-[11px] font-bold uppercase text-slate-500">Hôtel</span>
+                      <select
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                        value={isManualHotel ? "__manual__" : item.catalogSlug || ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === "__manual__") {
+                            selectManualHotel(index);
+                          } else {
+                            selectCatalogHotel(index, v);
+                          }
+                        }}
                         disabled={saving}
                       >
-                        Retirer
-                      </GhostBtn>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <label className="block sm:col-span-2">
-                        <span className="text-[11px] font-bold uppercase text-slate-500">Hôtel</span>
-                        <select
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
-                          value={item.catalogSlug || ""}
-                          onChange={(e) => selectCatalogHotel(index, e.target.value)}
-                          disabled={saving}
-                        >
-                          <option value="">— Choisir un hôtel —</option>
-                          {sortedCatalog.map((h) => {
-                            const value = String(h.slug || h.id || "");
-                            return (
-                              <option key={value || h.name} value={value}>
-                                {h.name}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </label>
-
-                      <label className="block">
-                        <span className="text-[11px] font-bold uppercase text-slate-500">
-                          Du (check-in)
-                        </span>
-                        <input
-                          type="date"
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
-                          value={item.stayFrom || ""}
-                          min={request.arrivalDate || undefined}
-                          max={item.stayTo || request.departureDate || undefined}
-                          onChange={(e) => updateProposal(index, { stayFrom: e.target.value })}
-                          disabled={saving || !item.catalogSlug}
-                          aria-label={`Date début option ${index + 1}`}
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="text-[11px] font-bold uppercase text-slate-500">
-                          Au (check-out)
-                        </span>
-                        <input
-                          type="date"
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
-                          value={item.stayTo || ""}
-                          min={item.stayFrom || request.arrivalDate || undefined}
-                          max={request.departureDate || undefined}
-                          onChange={(e) => updateProposal(index, { stayTo: e.target.value })}
-                          disabled={saving || !item.catalogSlug}
-                          aria-label={`Date fin option ${index + 1}`}
-                        />
-                      </label>
-                      {(() => {
-                        const n = countHotelNights(item.stayFrom, item.stayTo);
-                        return n > 0 ? (
-                          <p className="sm:col-span-2 text-xs font-bold text-violet-800">
-                            {n} nuit{n > 1 ? "s" : ""} pour cet hôtel
-                          </p>
-                        ) : null;
-                      })()}
-
-                      <label className="block">
-                        <span className="text-[11px] font-bold uppercase text-slate-500">
-                          Catégorie (optionnel)
-                        </span>
-                        {(() => {
-                          const isManual =
-                            item.roomCategoryManual === true ||
-                            (Boolean(item.roomCategory) &&
-                              !(item.roomCategories || []).includes(item.roomCategory));
+                        <option value="">— Choisir un hôtel —</option>
+                        {sortedCatalog.map((h) => {
+                          const value = String(h.slug || h.id || "");
                           return (
-                            <>
-                              <select
-                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
-                                value={isManual ? "__manual__" : item.roomCategory || ""}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  if (v === "__manual__") {
-                                    updateProposal(index, {
-                                      roomCategoryManual: true,
-                                      roomCategory: isManual ? item.roomCategory : "",
-                                    });
-                                  } else {
-                                    updateProposal(index, {
-                                      roomCategoryManual: false,
-                                      roomCategory: v,
-                                    });
-                                  }
-                                }}
-                                disabled={saving || !item.catalogSlug}
-                              >
-                                <option value="">— Sans catégorie —</option>
-                                {(item.roomCategories || []).map((cat) => (
-                                  <option key={cat} value={cat}>
-                                    {cat}
-                                  </option>
-                                ))}
-                                <option value="__manual__">Autre (saisie manuelle)</option>
-                              </select>
-                              {isManual ? (
-                                <input
-                                  type="text"
-                                  className="mt-2 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/25"
-                                  value={item.roomCategory || ""}
-                                  onChange={(e) =>
-                                    updateProposal(index, {
-                                      roomCategory: e.target.value,
-                                      roomCategoryManual: true,
-                                    })
-                                  }
-                                  placeholder="Ex. Deluxe Sea View"
-                                  disabled={saving || !item.catalogSlug}
-                                  aria-label={`Catégorie manuelle option ${index + 1}`}
-                                />
-                      ) : null}
-                              {item.roomCategory && item.catalogHotel && !isManual
-                                ? (() => {
-                          const occ = formatRoomOccupancyLabel(
-                                      findRoomCategory(
-                                        item.catalogHotel.roomCategories,
-                                        item.roomCategory
-                                      )
+                            <option key={value || h.name} value={value}>
+                              {h.name}
+                            </option>
                           );
-                          return occ ? (
-                                      <span className="mt-1 block text-[11px] font-semibold text-slate-600">
-                                        {occ}
-                                      </span>
-                          ) : null;
-                        })()
-                                : null}
-                              {isManual ? (
-                                <span className="mt-1 block text-[11px] font-medium text-violet-700">
-                                  Catégorie saisie à la main (hors catalogue).
-                                </span>
-                              ) : null}
-                            </>
-                          );
-                        })()}
-                              </label>
-
-                      <label className="block">
-                        <span className="text-[11px] font-bold uppercase text-slate-500">
-                                    Prix séjour (€)
-                                  </span>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    inputMode="decimal"
-                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
-                          value={item.manualTotal ?? ""}
-                                    onChange={(e) => {
-                            const parsed = parseMoneyInput(e.target.value);
+                        })}
+                        <option value="__manual__">Autre (saisie manuelle)</option>
+                      </select>
+                      {isManualHotel ? (
+                        <input
+                          type="text"
+                          className="mt-2 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/25"
+                          value={item.hotelName || ""}
+                          onChange={(e) =>
                             updateProposal(index, {
-                              manualTotal: e.target.value === "" ? null : parsed,
-                            });
-                          }}
-                          placeholder="ex. 850"
-                          disabled={saving || !item.hotelName}
-                          aria-label={`Prix séjour option ${index + 1}`}
-                                  />
-                                </label>
-                    </div>
+                              hotelName: e.target.value,
+                              hotelManual: true,
+                              catalogSlug: "",
+                              catalogHotel: null,
+                            })
+                          }
+                          placeholder="Nom de l’hôtel (hors catalogue)"
+                          disabled={saving}
+                          aria-label={`Hôtel manuel option ${index + 1}`}
+                        />
+                      ) : null}
+                      {isManualHotel ? (
+                        <span className="mt-1 block text-[11px] font-medium text-violet-700">
+                          Hôtel saisi à la main (hors catalogue).
+                        </span>
+                      ) : null}
+                      {sortedCatalog.length === 0 && !isManualHotel ? (
+                        <span className="mt-1 block text-[11px] font-medium text-amber-800">
+                          Catalogue vide — choisissez « Autre (saisie manuelle) ».
+                        </span>
+                      ) : null}
+                    </label>
 
-                    <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 pt-3">
-                      {proposalIsReady(quoted) ? (
-                        <p className="text-sm font-bold text-violet-950">
-                          Total : {formatQuoteMoney(quote.total, quote.currency)}
-                          {quote.nights ? (
-                            <span className="ml-1 text-xs font-semibold text-slate-500">
-                              · {quote.nights} nuit{quote.nights > 1 ? "s" : ""}
-                            </span>
-                          ) : null}
+                    <label className="block">
+                      <span className="text-[11px] font-bold uppercase text-slate-500">
+                        Du (check-in)
+                      </span>
+                      <input
+                        type="date"
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                        value={item.stayFrom || ""}
+                        min={request.arrivalDate || undefined}
+                        max={item.stayTo || request.departureDate || undefined}
+                        onChange={(e) => updateProposal(index, { stayFrom: e.target.value })}
+                        disabled={saving || !hotelChosen}
+                        aria-label={`Date début option ${index + 1}`}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-[11px] font-bold uppercase text-slate-500">
+                        Au (check-out)
+                      </span>
+                      <input
+                        type="date"
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                        value={item.stayTo || ""}
+                        min={item.stayFrom || request.arrivalDate || undefined}
+                        max={request.departureDate || undefined}
+                        onChange={(e) => updateProposal(index, { stayTo: e.target.value })}
+                        disabled={saving || !hotelChosen}
+                        aria-label={`Date fin option ${index + 1}`}
+                      />
+                    </label>
+                    {(() => {
+                      const n = countHotelNights(
+                        item.stayFrom || request.arrivalDate,
+                        item.stayTo || request.departureDate
+                      );
+                      return n > 0 ? (
+                        <p className="sm:col-span-2">
+                          <span className="inline-flex items-center rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-extrabold text-white shadow-sm">
+                            {n} nuit{n > 1 ? "s" : ""}
+                          </span>
+                          <span className="ml-2 text-xs font-semibold text-slate-600">
+                            pour cet hôtel
+                          </span>
                         </p>
-                      ) : (
-                        <p className="text-xs font-semibold text-slate-500">
-                          Choisissez un hôtel et un prix
-                        </p>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                      ) : null;
+                    })()}
+
+                    <label className="block">
+                      <span className="text-[11px] font-bold uppercase text-slate-500">
+                        Catégorie (optionnel)
+                      </span>
+                      {(() => {
+                        const isManual =
+                          item.roomCategoryManual === true ||
+                          (Boolean(item.roomCategory) &&
+                            !(item.roomCategories || []).includes(item.roomCategory));
+                        return (
+                          <>
+                            <select
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                              value={isManual ? "__manual__" : item.roomCategory || ""}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                if (v === "__manual__") {
+                                  updateProposal(index, {
+                                    roomCategoryManual: true,
+                                    roomCategory: isManual ? item.roomCategory : "",
+                                  });
+                                } else {
+                                  updateProposal(index, {
+                                    roomCategoryManual: false,
+                                    roomCategory: v,
+                                  });
+                                }
+                              }}
+                              disabled={saving || !hotelChosen}
+                            >
+                              <option value="">— Sans catégorie —</option>
+                              {(item.roomCategories || []).map((cat) => (
+                                <option key={cat} value={cat}>
+                                  {cat}
+                                </option>
+                              ))}
+                              <option value="__manual__">Autre (saisie manuelle)</option>
+                            </select>
+                            {isManual ? (
+                              <input
+                                type="text"
+                                className="mt-2 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/25"
+                                value={item.roomCategory || ""}
+                                onChange={(e) =>
+                                  updateProposal(index, {
+                                    roomCategory: e.target.value,
+                                    roomCategoryManual: true,
+                                  })
+                                }
+                                placeholder="Ex. Deluxe Sea View"
+                                disabled={saving || !hotelChosen}
+                                aria-label={`Catégorie manuelle option ${index + 1}`}
+                              />
+                            ) : null}
+                            {item.roomCategory && item.catalogHotel && !isManual
+                              ? (() => {
+                                  const occ = formatRoomOccupancyLabel(
+                                    findRoomCategory(
+                                      item.catalogHotel.roomCategories,
+                                      item.roomCategory
+                                    )
+                                  );
+                                  return occ ? (
+                                    <span className="mt-1 block text-[11px] font-semibold text-slate-600">
+                                      {occ}
+                                    </span>
+                                  ) : null;
+                                })()
+                              : null}
+                            {isManual ? (
+                              <span className="mt-1 block text-[11px] font-medium text-violet-700">
+                                Catégorie saisie à la main (hors catalogue).
+                              </span>
+                            ) : null}
+                          </>
+                        );
+                      })()}
+                    </label>
+
+                    <label className="block">
+                      <span className="text-[11px] font-bold uppercase text-slate-500">
+                        Prix séjour (€)
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                        value={item.manualTotal ?? ""}
+                        onChange={(e) => {
+                          const parsed = parseMoneyInput(e.target.value);
+                          updateProposal(index, {
+                            manualTotal: e.target.value === "" ? null : parsed,
+                          });
+                        }}
+                        placeholder="ex. 850"
+                        disabled={saving || !item.hotelName}
+                        aria-label={`Prix séjour option ${index + 1}`}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 pt-3">
+                    {proposalIsReady(quoted) ? (
+                      <p className="text-sm font-bold text-violet-950">
+                        Total : {formatQuoteMoney(quote.total, quote.currency)}
+                        {quote.nights ? (
+                          <span className="ml-1 text-xs font-semibold text-slate-500">
+                            · {quote.nights} nuit{quote.nights > 1 ? "s" : ""}
+                          </span>
+                        ) : null}
+                      </p>
+                    ) : (
+                      <p className="text-xs font-semibold text-slate-500">
+                        Choisissez un hôtel et un prix
+                      </p>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         </div>
 
         <div className="mt-5">
@@ -1529,24 +1596,24 @@ function HotelResponseModal({
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
             Annuler
-                                </GhostBtn>
-                                <GhostBtn
-                                  type="button"
+          </GhostBtn>
+          <GhostBtn
+            type="button"
             onClick={() =>
               onPrintDevis?.(quotedHotels.filter((h) => proposalIsReady(h)), agentNotes)
             }
             disabled={saving || readyCount === 0}
           >
             Imprimer le devis
-                                </GhostBtn>
+          </GhostBtn>
           <PrimaryBtn
-                                    type="button"
+            type="button"
             onClick={onSave}
-            disabled={saving || readyCount === 0 || sortedCatalog.length === 0}
+            disabled={saving || readyCount === 0}
           >
             {saving ? "Enregistrement…" : "Enregistrer la réponse"}
           </PrimaryBtn>
-                              </div>
+        </div>
       </div>
     </div>,
     document.body

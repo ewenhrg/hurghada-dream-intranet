@@ -10,10 +10,12 @@ import {
   resolveRoomsNeededForAdults,
 } from "./hotelRoomCategories";
 
+import { normalizeStayDate } from "./hotelRequestDates";
+
 /** Nuits d’hôtel : [arrivée, départ) — départ non facturé. */
 export function countHotelNights(arrivalDate, departureDate) {
-  const from = String(arrivalDate || "").trim();
-  const to = String(departureDate || "").trim();
+  const from = normalizeStayDate(arrivalDate);
+  const to = normalizeStayDate(departureDate);
   if (!from || !to || to <= from) return 0;
   const a = new Date(`${from}T12:00:00`);
   const b = new Date(`${to}T12:00:00`);
@@ -24,7 +26,7 @@ export function countHotelNights(arrivalDate, departureDate) {
 /** Liste ISO des nuits [arrivée … veille du départ]. */
 export function listHotelNightDates(arrivalDate, departureDate) {
   const nights = countHotelNights(arrivalDate, departureDate);
-  const from = String(arrivalDate || "").trim();
+  const from = normalizeStayDate(arrivalDate);
   if (!nights || !from) return [];
   const start = new Date(`${from}T12:00:00`);
   if (Number.isNaN(start.getTime())) return [];
