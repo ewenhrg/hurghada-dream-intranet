@@ -273,6 +273,33 @@ function isHotelRequestInPayerList(request) {
   return normalizePayment(payload.payment).entries.length > 0;
 }
 
+/** Instant d’activité (réponse, envoi, MAJ) — plus récent en haut dans toutes les listes. */
+function hotelRequestResponseActivityMs(request) {
+  const payload =
+    request?.responsePayload && typeof request.responsePayload === "object"
+      ? request.responsePayload
+      : {};
+  const candidates = [
+    payload.cancelledAt,
+    payload.confirmedAt,
+    payload.sentAt,
+    payload.updatedAt,
+    request?.updatedAt,
+    request?.createdAt,
+  ];
+  // Dernier paiement enregistré
+  const entries = Array.isArray(payload.payment?.entries) ? payload.payment.entries : [];
+  for (const e of entries) {
+    if (e?.paidAt) candidates.push(e.paidAt);
+  }
+  let best = 0;
+  for (const c of candidates) {
+    const t = Date.parse(String(c || "").trim());
+    if (Number.isFinite(t) && t > best) best = t;
+  }
+  return best;
+}
+
 function hotelProposalKey(hotel, index = 0) {
   return `${hotel?.slot || index + 1}::${String(hotel?.catalogSlug || "").trim()}::${String(hotel?.hotelName || "").trim()}`;
 }
@@ -2581,6 +2608,14 @@ export function HotelHistoryPage({ user = null }) {
     } else if (statusFilter === "sent") {
       list = list.filter((r) => r.isSent);
     }
+
+    // Liste Envoyé : derniers devis avec réponse / envoi en premier
+    if (statusFilter === "sent") {
+      list = [...list].sort(
+        (a, b) => hotelRequestResponseActivityMs(b) - hotelRequestResponseActivityMs(a)
+      );
+    }
+
     const q = debouncedSearch.trim().toLowerCase();
     if (!q) return list;
     const qDigits = digitsOnly(q);
