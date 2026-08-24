@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Banknote, BedDouble, CheckCircle2, FileText, MessageSquareReply, Receipt, Trash2, Upload, Ban } from "lucide-react";
+import { Banknote, BedDouble, Building2, CheckCircle2, FileText, MessageSquareReply, Receipt, Trash2, Upload, Ban } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -137,6 +137,8 @@ function normalizeResponsePayload(raw) {
     zeroTracas: normalizeZeroTracas(base.zeroTracas),
     sentToClient: base.sentToClient === true,
     sentAt: base.sentAt || "",
+    confirmedByHotel: base.confirmedByHotel === true,
+    confirmedByHotelAt: base.confirmedByHotelAt || "",
     payment: normalizePayment(base.payment),
     clientDocuments: normalizeClientDocuments(base.clientDocuments),
     cancelled: base.cancelled === true,
@@ -276,6 +278,7 @@ function hotelRequestResponseActivityMs(request) {
       : {};
   const candidates = [
     payload.cancelledAt,
+    payload.confirmedByHotelAt,
     payload.confirmedAt,
     payload.sentAt,
     payload.updatedAt,
@@ -574,6 +577,8 @@ const HotelRequestCard = memo(function HotelRequestCard({
   onEdit,
   onMarkSent,
   markingSent,
+  onMarkConfirmedByHotel,
+  markingConfirmedByHotel,
   onPay,
   onDocuments,
   onPrintReceipt,
@@ -601,6 +606,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
   const confirmedHotel = confirmedHotels[0] || null;
   const isConfirmed = confirmedHotels.length > 0;
   const sentToClient = payload.sentToClient === true;
+  const confirmedByHotel = payload.confirmedByHotel === true;
   const responseTotals = (isConfirmed ? confirmedHotels : readyHotels)
     .map((h) => `${h.hotelName}: ${formatQuoteMoney(h.quote.total, h.quote.currency)}`)
     .join(" · ");
@@ -662,6 +668,15 @@ const HotelRequestCard = memo(function HotelRequestCard({
                 Confirmed · {confirmedLabel}
               </span>
             ) : null}
+            {isConfirmed && confirmedByHotel && !isCancelled ? (
+              <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-violet-700 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
+                <Building2 className="h-3.5 w-3.5" aria-hidden />
+                Confirmed by hotel
+                {payload.confirmedByHotelAt
+                  ? ` · ${new Date(payload.confirmedByHotelAt).toLocaleDateString("en-GB")}`
+                  : ""}
+              </span>
+            ) : null}
             {isConfirmed && isCancelled ? (
               <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-slate-700 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
                 <Ban className="h-3.5 w-3.5" aria-hidden />
@@ -714,6 +729,24 @@ const HotelRequestCard = memo(function HotelRequestCard({
                   onChange={(e) => onMarkSent?.(request, e.target.checked)}
                 />
                 Sent
+              </label>
+            ) : null}
+            {isConfirmed && !isCancelled ? (
+              <label
+                className={`inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-bold transition ${
+                  confirmedByHotel
+                    ? "border-violet-500 bg-violet-50 text-violet-950"
+                    : "border-slate-300 bg-white text-slate-800 hover:border-violet-300"
+                } ${markingConfirmedByHotel ? "opacity-60" : ""}`}
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  checked={confirmedByHotel}
+                  disabled={markingConfirmedByHotel}
+                  onChange={(e) => onMarkConfirmedByHotel?.(request, e.target.checked)}
+                />
+                Confirmed by hotel
               </label>
             ) : null}
             <GhostBtn type="button" onClick={() => onPrint(request)}>
@@ -2469,6 +2502,7 @@ export function HotelHistoryPage({ user = null }) {
   const [statusFilter, setStatusFilter] = useState("all"); // all | pending | to_send | sent | confirmed
   const [confirmationPayFilter, setConfirmationPayFilter] = useState("all"); // all | paid | unpaid | cancelled
   const [markingSentId, setMarkingSentId] = useState(null);
+  const [markingConfirmedByHotelId, setMarkingConfirmedByHotelId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
@@ -2863,8 +2897,12 @@ export function HotelHistoryPage({ user = null }) {
         zeroTracas: prev.zeroTracas,
         sentToClient: prev.sentToClient === true,
         sentAt: prev.sentAt || undefined,
+        confirmedByHotel: prev.confirmedByHotel === true,
+        confirmedByHotelAt: prev.confirmedByHotelAt || undefined,
         payment: serializePayment(prev.payment),
         clientDocuments: serializeClientDocuments(prev.clientDocuments),
+        cancelled: prev.cancelled === true,
+        cancelledAt: prev.cancelledAt || undefined,
         updatedAt: new Date().toISOString(),
       };
       const { error: updateError } = await supabase
@@ -2950,11 +2988,15 @@ export function HotelHistoryPage({ user = null }) {
           zeroTracas,
           sentToClient: payload.sentToClient === true,
           sentAt: payload.sentAt || undefined,
+          confirmedByHotel: payload.confirmedByHotel === true,
+          confirmedByHotelAt: payload.confirmedByHotelAt || undefined,
           payment: serializePayment({
             entries: existingPayment.entries,
             schedule,
           }),
           clientDocuments: serializeClientDocuments(payload.clientDocuments),
+          cancelled: payload.cancelled === true,
+          cancelledAt: payload.cancelledAt || undefined,
           updatedAt: new Date().toISOString(),
         };
         const { error: updateError } = await supabase
@@ -3022,8 +3064,12 @@ export function HotelHistoryPage({ user = null }) {
           zeroTracas: prev.zeroTracas,
           sentToClient: sent === true,
           sentAt: sent ? new Date().toISOString() : undefined,
+          confirmedByHotel: prev.confirmedByHotel === true,
+          confirmedByHotelAt: prev.confirmedByHotelAt || undefined,
           payment: serializePayment(prev.payment),
           clientDocuments: serializeClientDocuments(prev.clientDocuments),
+          cancelled: prev.cancelled === true,
+          cancelledAt: prev.cancelledAt || undefined,
           updatedAt: new Date().toISOString(),
         };
         const { error: updateError } = await supabase
@@ -3139,11 +3185,15 @@ export function HotelHistoryPage({ user = null }) {
           zeroTracas: prev.zeroTracas,
           sentToClient: prev.sentToClient === true,
           sentAt: prev.sentAt || undefined,
+          confirmedByHotel: prev.confirmedByHotel === true,
+          confirmedByHotelAt: prev.confirmedByHotelAt || undefined,
           payment: serializePayment({
             entries: [...existing.entries, entry],
             schedule,
           }),
           clientDocuments: serializeClientDocuments(prev.clientDocuments),
+          cancelled: prev.cancelled === true,
+          cancelledAt: prev.cancelledAt || undefined,
           updatedAt: new Date().toISOString(),
         };
 
@@ -3271,6 +3321,8 @@ export function HotelHistoryPage({ user = null }) {
       zeroTracas: prev.zeroTracas,
       sentToClient: prev.sentToClient === true,
       sentAt: prev.sentAt || undefined,
+      confirmedByHotel: prev.confirmedByHotel === true,
+      confirmedByHotelAt: prev.confirmedByHotelAt || undefined,
       payment: serializePayment(prev.payment),
       clientDocuments: serializeClientDocuments(prev.clientDocuments),
       cancelled: prev.cancelled === true,
@@ -3279,6 +3331,60 @@ export function HotelHistoryPage({ user = null }) {
       ...overrides,
     };
   }, []);
+
+  const handleMarkConfirmedByHotel = useCallback(
+    async (request, checked) => {
+      if (!request?.supabaseId || !supabase) return;
+      if (!isHotelRequestConfirmed(request)) {
+        toast.error("Only confirmations can be marked as confirmed by the hotel.");
+        return;
+      }
+      const payload = normalizeResponsePayload(request.responsePayload);
+      if (payload.cancelled === true || payload.cancelledAt) {
+        toast.warning("This confirmation is cancelled.");
+        return;
+      }
+      setMarkingConfirmedByHotelId(request.id);
+      try {
+        const response_payload = buildResponsePayloadFromPrev(payload, {
+          confirmedByHotel: checked === true,
+          confirmedByHotelAt: checked ? new Date().toISOString() : undefined,
+        });
+        const { error: updateError } = await supabase
+          .from("public_hotel_requests")
+          .update({
+            response_payload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", request.supabaseId)
+          .eq("site_key", SITE_KEY);
+
+        if (updateError) {
+          logger.error("HotelHistoryPage mark confirmed by hotel:", updateError);
+          toast.error(updateError.message || "Unable to update status.");
+          return;
+        }
+        toast.success(
+          checked ? "Marked as confirmed by hotel." : "Hotel confirmation unchecked."
+        );
+        // Optimistic local update
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === request.id
+              ? { ...r, responsePayload: normalizeResponsePayload(response_payload) }
+              : r
+          )
+        );
+        await load({ silent: true, skipCleanup: true });
+      } catch (e) {
+        logger.error("HotelHistoryPage mark confirmed by hotel:", e);
+        toast.error("Unexpected error.");
+      } finally {
+        setMarkingConfirmedByHotelId(null);
+      }
+    },
+    [load, buildResponsePayloadFromPrev]
+  );
 
   const handleCancelConfirmation = useCallback(
     async (request) => {
@@ -3713,6 +3819,8 @@ export function HotelHistoryPage({ user = null }) {
                     onEdit={handleEdit}
                     onMarkSent={handleMarkSent}
                     markingSent={markingSentId === request.id}
+                    onMarkConfirmedByHotel={handleMarkConfirmedByHotel}
+                    markingConfirmedByHotel={markingConfirmedByHotelId === request.id}
                     onPay={setPayRequest}
                     onDocuments={setDocsRequest}
                     onPrintReceipt={handlePrintReceipt}
@@ -3760,6 +3868,8 @@ export function HotelHistoryPage({ user = null }) {
                     onEdit={handleEdit}
                     onMarkSent={handleMarkSent}
                     markingSent={markingSentId === request.id}
+                    onMarkConfirmedByHotel={handleMarkConfirmedByHotel}
+                    markingConfirmedByHotel={markingConfirmedByHotelId === request.id}
                     onPay={setPayRequest}
                     onDocuments={setDocsRequest}
                     onPrintReceipt={handlePrintReceipt}
@@ -3807,6 +3917,8 @@ export function HotelHistoryPage({ user = null }) {
                     onEdit={handleEdit}
                     onMarkSent={handleMarkSent}
                     markingSent={markingSentId === request.id}
+                    onMarkConfirmedByHotel={handleMarkConfirmedByHotel}
+                    markingConfirmedByHotel={markingConfirmedByHotelId === request.id}
                     onPay={setPayRequest}
                     onDocuments={setDocsRequest}
                     onPrintReceipt={handlePrintReceipt}
@@ -3833,6 +3945,8 @@ export function HotelHistoryPage({ user = null }) {
               onEdit={handleEdit}
               onMarkSent={handleMarkSent}
               markingSent={markingSentId === request.id}
+              onMarkConfirmedByHotel={handleMarkConfirmedByHotel}
+              markingConfirmedByHotel={markingConfirmedByHotelId === request.id}
               onPay={setPayRequest}
               onDocuments={setDocsRequest}
               onPrintReceipt={handlePrintReceipt}
