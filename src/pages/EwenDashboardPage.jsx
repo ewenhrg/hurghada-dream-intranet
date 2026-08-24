@@ -10,8 +10,10 @@ import {
 } from "lucide-react";
 import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
 import { UserActivityDetailModal } from "../components/dashboard/UserActivityDetailModal";
+import { TicketCollectionsSection } from "../components/dashboard/TicketCollectionsSection";
 import { loadLS } from "../utils";
 import { LS_KEYS } from "../constants";
+import { canViewTicketCollections } from "../constants/permissions";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import {
   buildConnectionActivityByUser,
@@ -405,6 +407,11 @@ export function EwenDashboardPage({
           Après le SQL, chaque collègue doit se reconnecter une fois. Les devis s’affichent déjà
           ci-dessous s’ils sont en base.
         </SyncBanner>
+      ) : null}
+
+      {/* Encaissements — Ewen & Karim uniquement */}
+      {canViewTicketCollections(user) ? (
+        <TicketCollectionsSection quotes={quotes} />
       ) : null}
 
       {/* En ligne — compact */}

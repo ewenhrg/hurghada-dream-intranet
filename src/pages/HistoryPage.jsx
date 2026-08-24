@@ -251,21 +251,40 @@ function QuoteCardComponent({
       ]
         .filter(Boolean)
         .join("+");
+      const enteredAt = new Date().toISOString();
+      const cashTotal = Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0);
+      const cardTotal = Math.round(
+        Number(rawQuote.totalCard) || calculateCardPrice(cashTotal)
+      );
+      // Cash seul → paid_cash ; Stripe seul → paid_stripe (prix carte) ; mixte → paid_cash (base) + 0 stripe
+      let paidCashAmount = 0;
+      let paidStripeAmount = 0;
+      if (payCash && payStripe) {
+        paidCashAmount = cashTotal;
+        paidStripeAmount = 0;
+      } else if (payStripe) {
+        paidStripeAmount = cardTotal;
+      } else if (payCash) {
+        paidCashAmount = cashTotal;
+      }
       const updatedItems = items.map((item, idx) => ({
         ...item,
         ticketNumber: normalized[idx],
         ticketEnteredByName: agentName || item.ticketEnteredByName || "",
         paymentMethod: paymentMethodLabel || item.paymentMethod || "",
+        ticketsEnteredAt: enteredAt,
       }));
 
       const updatedQuote = {
         ...rawQuote,
         items: updatedItems,
         ticketsEnteredByName: agentName || rawQuote.ticketsEnteredByName || "",
-        ticketsEnteredAt: new Date().toISOString(),
+        ticketsEnteredAt: enteredAt,
         ticketsPaymentCash: payCash === true,
         ticketsPaymentStripe: payStripe === true,
-        updated_at: new Date().toISOString(),
+        paidCash: paidCashAmount,
+        paidStripe: paidStripeAmount,
+        updated_at: enteredAt,
       };
       const updatedQuotes = quotes.map((q) => (q.id === d.id ? updatedQuote : q));
       setQuotes(updatedQuotes);
@@ -275,6 +294,8 @@ function QuoteCardComponent({
         try {
           const { ok, data, error } = await persistQuoteItemsToSupabase(rawQuote, updatedItems, {
             updatedAt: updatedQuote.updated_at,
+            paidCash: paidCashAmount,
+            paidStripe: paidStripeAmount,
           });
 
           if (!ok) {

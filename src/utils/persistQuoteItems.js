@@ -24,7 +24,11 @@ export function parseQuoteItemsColumn(raw) {
  * - match par id sans se limiter à un seul site_key
  * - vérifie qu’au moins une ligne a été modifiée
  */
-export async function persistQuoteItemsToSupabase(quote, items, { updatedAt } = {}) {
+export async function persistQuoteItemsToSupabase(
+  quote,
+  items,
+  { updatedAt, paidCash, paidStripe } = {}
+) {
   if (!supabase || !quote) {
     return { ok: false, error: new Error("Supabase ou devis manquant") };
   }
@@ -33,6 +37,12 @@ export async function persistQuoteItemsToSupabase(quote, items, { updatedAt } = 
     items: Array.isArray(items) ? items : [],
     updated_at: updatedAt || new Date().toISOString(),
   };
+  if (paidCash != null && Number.isFinite(Number(paidCash))) {
+    payload.paid_cash = Math.round(Number(paidCash));
+  }
+  if (paidStripe != null && Number.isFinite(Number(paidStripe))) {
+    payload.paid_stripe = Math.round(Number(paidStripe));
+  }
 
   const siteKeys = getQuoteSiteKeysForSync();
 

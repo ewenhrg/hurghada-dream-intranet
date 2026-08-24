@@ -165,6 +165,12 @@ export function canDeleteHotelRequest(user) {
   return n === "ewen" || n === "karim";
 }
 
+/** Suivi encaissements cash / Stripe (tableau de bord) — Ewen et Karim uniquement. */
+export function canViewTicketCollections(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "ewen" || n === "karim";
+}
+
 export function dbUserToSessionUser(dbUser) {
   if (!dbUser) return null;
   const session = {

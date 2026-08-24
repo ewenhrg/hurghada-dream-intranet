@@ -11,6 +11,7 @@ import {
 } from "./constants";
 import { canAccessHotelsPage, canAccessHotelHistoryPage, hasFullIntranetAccess } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS, normalizeQuoteItemsFromDb } from "./utils";
+import { attachTicketPaymentMetaFromItems } from "./utils/ticketCollections";
 import { normalizeClientDocuments } from "./utils/hotelRequestDocuments";
 import { airbnbFieldsFromRow } from "./utils/clientAirbnb";
 import { loadUserFromSession } from "./utils/userPermissions";
@@ -656,7 +657,7 @@ export default function App() {
                 item.modifications && Array.isArray(item.modifications) && item.modifications.length > 0
               );
               
-              return {
+              return attachTicketPaymentMetaFromItems({
                 id: row.id?.toString() || uuid(),
                 supabase_id: row.id,
                 createdAt: createdAt,
@@ -693,7 +694,7 @@ export default function App() {
                 paidStripe: Number(row.paid_stripe) || 0,
                 paidCash: Number(row.paid_cash) || 0,
                 clientDocuments: normalizeClientDocuments(row.client_documents),
-              };
+              });
             };
 
             // Créer un Set des clés uniques des devis Supabase (pour détection doublons)
@@ -806,7 +807,7 @@ export default function App() {
         (item) => item.modifications && Array.isArray(item.modifications) && item.modifications.length > 0
       );
 
-      return {
+      return attachTicketPaymentMetaFromItems({
         id: row.id?.toString() || uuid(),
         supabase_id: row.id,
         createdAt: createdAt,
@@ -843,7 +844,7 @@ export default function App() {
         paidStripe: Number(row.paid_stripe) || 0,
         paidCash: Number(row.paid_cash) || 0,
         clientDocuments: normalizeClientDocuments(row.client_documents),
-      };
+      });
     };
 
     const quotesSiteKeyRealtimeFilter = getQuotesRealtimeSiteKeyFilter();

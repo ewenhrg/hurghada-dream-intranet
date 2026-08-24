@@ -56,6 +56,9 @@ export function normalizeQuoteItemsFromDb(items) {
     ticketEnteredByName: String(
       item.ticketEnteredByName ?? item.ticket_entered_by_name ?? ""
     ).trim(),
+    ticketsEnteredAt: String(
+      item.ticketsEnteredAt ?? item.tickets_entered_at ?? ""
+    ).trim(),
     paymentMethod: item.paymentMethod ?? item.payment_method ?? "",
     pickupTime: item.pickupTime ?? item.pickup_time ?? "",
     extraLabel: item.extraLabel ?? item.extra_label ?? "",
