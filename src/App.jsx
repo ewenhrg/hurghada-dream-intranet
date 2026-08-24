@@ -1458,7 +1458,7 @@ export default function App() {
                 )}
                 {canAccessHotelHistoryPage(user) && (
                 <Pill active={tab === "historique-hotel"} onClick={() => setTab("historique-hotel")}>
-                  {t("nav.hotelHistory")}
+                  Hotel history
                 </Pill>
                 )}
                 {/* Page Modifications désactivée temporairement */}
@@ -1637,7 +1637,7 @@ export default function App() {
         )}
 
         {tab === "historique-hotel" && canAccessHotelHistoryPage(user) && (
-          <Section title={t("page.hotelHistory.title")} subtitle={t("page.hotelHistory.subtitle")}>
+          <Section title="Hotel history" subtitle="Requests from the public form (contact details, hotels, budget).">
             <HotelHistoryPage user={user} />
           </Section>
         )}

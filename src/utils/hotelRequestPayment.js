@@ -52,7 +52,7 @@ export function buildPaymentSchedule(arrivalDate, grandTotal, asOf = new Date())
   if (daysUntilArrival < 0) {
     return {
       mode: "full",
-      title: "Règlement",
+      title: "Payment",
       dueDate: toIsoDateOnly(today),
       dueAmount: total,
       grandTotal: total,
@@ -63,7 +63,7 @@ export function buildPaymentSchedule(arrivalDate, grandTotal, asOf = new Date())
     due.setDate(due.getDate() + 7);
     return {
       mode: "deposit",
-      title: "Acompte",
+      title: "Deposit",
       dueDate: toIsoDateOnly(due),
       dueAmount: roundMoney(total * 0.3),
       grandTotal: total,
@@ -73,7 +73,7 @@ export function buildPaymentSchedule(arrivalDate, grandTotal, asOf = new Date())
   due.setDate(due.getDate() + 1);
   return {
     mode: "full",
-    title: "Règlement",
+    title: "Payment",
     dueDate: toIsoDateOnly(due),
     dueAmount: total,
     grandTotal: total,
@@ -115,7 +115,7 @@ export function normalizePayment(raw) {
     if (dueDate && dueAmount != null && grandTotal != null) {
       schedule = {
         mode: base.schedule.mode === "deposit" ? "deposit" : "full",
-        title: String(base.schedule.title || "").trim() || (base.schedule.mode === "deposit" ? "Acompte" : "Règlement"),
+        title: String(base.schedule.title || "").trim() || (base.schedule.mode === "deposit" ? "Deposit" : "Payment"),
         dueDate,
         dueAmount,
         grandTotal,
@@ -182,11 +182,11 @@ export function getPaymentStatus(request, payload) {
     );
 
   let dueDate = schedule?.dueDate || "";
-  let dueTitle = schedule?.title || "Règlement";
+  let dueTitle = schedule?.title || "Payment";
 
   if (remaining > 0 && schedule?.mode === "deposit" && paid + 0.009 >= (schedule.dueAmount || 0)) {
     dueDate = String(request?.arrivalDate || "").trim() || dueDate;
-    dueTitle = "Solde";
+    dueTitle = "Balance";
   }
 
   return {

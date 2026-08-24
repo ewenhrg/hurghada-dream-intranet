@@ -243,7 +243,7 @@ function isHotelRequestPending(request) {
   return !payload.hotels.some((h) => proposalIsReady(h));
 }
 
-/** Réponse préparée, pas encore envoyée ni confirmée. */
+/** Reply préparée, pas encore envoyée ni confirmée. */
 function isHotelRequestReadyToSend(request) {
   if (typeof request?.isReadyToSend === "boolean") return request.isReadyToSend;
   if (isHotelRequestConfirmed(request)) return false;
@@ -442,7 +442,7 @@ function proposalIsReady(quoted) {
   return Boolean(quoted?.hotelName && quoted?.quote?.total != null);
 }
 
-export const HOTEL_CUSTOM_OFFER_LABEL = "Je n'ai pas de choix d'hôtel — faites-moi une offre";
+export const HOTEL_CUSTOM_OFFER_LABEL = "I don't have a hotel preference — please make me an offer";
 
 function digitsOnly(s) {
   return String(s ?? "").replace(/\D/g, "");
@@ -586,9 +586,9 @@ const HotelRequestCard = memo(function HotelRequestCard({
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
   const boardLabels = boardLabelsFromViewModel(request);
   const hotels = [
-    { label: "Choix 1", value: request.hotelOption1 },
-    { label: "Choix 2", value: request.hotelOption2 },
-    { label: "Choix 3", value: request.hotelOption3 },
+    { label: "Choice 1", value: request.hotelOption1 },
+    { label: "Choice 2", value: request.hotelOption2 },
+    { label: "Choice 3", value: request.hotelOption3 },
   ].filter((h) => String(h.value || "").trim());
   const payload =
     request.responsePayload && typeof request.responsePayload === "object"
@@ -621,65 +621,65 @@ const HotelRequestCard = memo(function HotelRequestCard({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-indigo-600">
-              Demande hôtel
+              Hotel request
             </p>
               {shortRef ? (
                 <span
                   className="inline-flex items-center rounded-full bg-white/90 px-2.5 py-0.5 font-mono text-[11px] font-bold tracking-wide text-indigo-900 ring-1 ring-indigo-200"
-                  title={refId ? `Référence complète : ${refId}` : undefined}
+                  title={refId ? `Full reference: ${refId}` : undefined}
                 >
-                  Réf. {shortRef}
+                  Ref. {shortRef}
                 </span>
               ) : null}
             </div>
             <h3 className="mt-1 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">{fullName}</h3>
             {request.wantsCustomOffer ? (
               <span className="mt-2 inline-block rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-950 ring-1 ring-amber-400/50">
-                Offre personnalisée demandée
+                Custom offer requested
               </span>
             ) : null}
             {!hasResponse && !isConfirmed ? (
               <span className="mt-2 ml-0 inline-block rounded-full bg-slate-200 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-800 ring-1 ring-slate-300/70 sm:ml-2">
-                En attente
+                Pending
               </span>
             ) : null}
             {hasResponse && !isConfirmed && !sentToClient ? (
               <span className="mt-2 ml-0 inline-block rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-950 ring-1 ring-amber-400/50 sm:ml-2">
-                À envoyer au client
+                Ready to send to client
               </span>
             ) : null}
             {hasResponse && !isConfirmed && sentToClient ? (
               <span className="mt-2 ml-0 inline-block rounded-full bg-sky-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-950 ring-1 ring-sky-400/50 sm:ml-2">
-                Envoyé
+                Sent
                 {payload.sentAt
-                  ? ` · ${new Date(payload.sentAt).toLocaleDateString("fr-FR")}`
+                  ? ` · ${new Date(payload.sentAt).toLocaleDateString("en-GB")}`
                   : ""}
               </span>
             ) : null}
             {isConfirmed && !isCancelled ? (
               <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-teal-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
                 <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-                Confirmé · {confirmedLabel}
+                Confirmed · {confirmedLabel}
               </span>
             ) : null}
             {isConfirmed && isCancelled ? (
               <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-slate-700 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
                 <Ban className="h-3.5 w-3.5" aria-hidden />
-                Annulé · {confirmedLabel}
+                Cancelled · {confirmedLabel}
                 {payload.cancelledAt
-                  ? ` · ${new Date(payload.cancelledAt).toLocaleDateString("fr-FR")}`
+                  ? ` · ${new Date(payload.cancelledAt).toLocaleDateString("en-GB")}`
                   : ""}
               </span>
             ) : null}
             {paymentStatus?.isFullyPaid && !isCancelled ? (
               <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
                 <Banknote className="h-3.5 w-3.5" aria-hidden />
-                Payé
+                Paid
               </span>
             ) : null}
             {paymentStatus && !paymentStatus.isFullyPaid && !isCancelled ? (
               <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-rose-950 ring-1 ring-rose-300/70 sm:ml-2">
-                Reste à payer · {formatQuoteMoney(paymentStatus.remaining, paymentStatus.currency)}
+                Balance due · {formatQuoteMoney(paymentStatus.remaining, paymentStatus.currency)}
               </span>
             ) : null}
             {isConfirmed && clientDocuments.length > 0 ? (
@@ -693,7 +693,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
             ) : null}
             <p className="mt-1 text-xs font-medium text-slate-600">
               {request.createdAt
-                ? new Date(request.createdAt).toLocaleString("fr-FR")
+                ? new Date(request.createdAt).toLocaleString("en-GB")
                 : "—"}
             </p>
           </div>
@@ -713,11 +713,11 @@ const HotelRequestCard = memo(function HotelRequestCard({
                   disabled={markingSent}
                   onChange={(e) => onMarkSent?.(request, e.target.checked)}
                 />
-                Envoyé
+                Sent
               </label>
             ) : null}
             <GhostBtn type="button" onClick={() => onPrint(request)}>
-              Imprimer
+              Print
             </GhostBtn>
             {isConfirmed && !isCancelled && paymentStatus && !paymentStatus.isFullyPaid ? (
               <PrimaryBtn
@@ -726,7 +726,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
                 onClick={() => onPay?.(request)}
               >
                 <Banknote className="h-3.5 w-3.5" aria-hidden />
-                Payer
+                Pay
               </PrimaryBtn>
             ) : null}
             {isConfirmed && !isCancelled && paymentStatus && paymentStatus.paid > 0.009 ? (
@@ -735,12 +735,12 @@ const HotelRequestCard = memo(function HotelRequestCard({
                 onClick={() => onPrintReceipt?.(request)}
                 title={
                   paymentStatus.isFullyPaid
-                    ? "Imprimer le reçu du règlement total"
-                    : "Imprimer le reçu d’acompte / paiement"
+                    ? "Print full payment receipt"
+                    : "Print deposit / payment receipt"
                 }
               >
                 <Receipt className="h-3.5 w-3.5" aria-hidden />
-                Reçu
+                Receipt
               </GhostBtn>
             ) : null}
             {isConfirmed ? (
@@ -756,15 +756,15 @@ const HotelRequestCard = memo(function HotelRequestCard({
                 onClick={() => onCancelConfirmation?.(request)}
                 disabled={cancelling}
                 className="!border-slate-400 !text-slate-800 hover:!bg-slate-100 disabled:opacity-50"
-                title="Marquer cette confirmation comme annulée"
+                title="Mark this confirmation as cancelled"
               >
                 <Ban className="h-3.5 w-3.5" aria-hidden />
-                {cancelling ? "Annulation…" : "Annulé"}
+                {cancelling ? "Cancelling…" : "Cancel"}
               </GhostBtn>
             ) : null}
             <GhostBtn type="button" onClick={() => onReply(request)}>
               <MessageSquareReply className="h-3.5 w-3.5" aria-hidden />
-              Réponse
+              Reply
             </GhostBtn>
             <GhostBtn
               type="button"
@@ -772,8 +772,8 @@ const HotelRequestCard = memo(function HotelRequestCard({
               disabled={!hasResponse}
               title={
                 hasResponse
-                  ? "Valider l’hôtel choisi par le client"
-                  : "Préparez d’abord une réponse avec des hôtels proposés"
+                  ? "Confirm the hotel chosen by the client"
+                  : "Prepare a reply with proposed hotels first"
               }
               className="disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -789,10 +789,10 @@ const HotelRequestCard = memo(function HotelRequestCard({
                 onClick={() => onDelete?.(request)}
                 disabled={deleting}
                 className="!border-rose-300 !text-rose-800 hover:!bg-rose-50 disabled:opacity-50"
-                title="Supprimer ce devis (Ewen / Karim)"
+                title="Delete this quote (Ewen / Karim)"
               >
                 <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                {deleting ? "Suppression…" : "Supprimer"}
+                {deleting ? "Deleting…" : "Delete"}
               </GhostBtn>
             ) : null}
           </div>
@@ -808,7 +808,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
           }`}
         >
           <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-            Paiement
+            Payment
           </p>
           <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-white/80 bg-white/90 px-3 py-2.5 shadow-sm">
@@ -818,7 +818,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
               </p>
             </div>
             <div className="rounded-xl border border-white/80 bg-white/90 px-3 py-2.5 shadow-sm">
-              <span className="text-[11px] font-bold uppercase text-slate-500">Déjà payé</span>
+              <span className="text-[11px] font-bold uppercase text-slate-500">Already paid</span>
               <p className="mt-0.5 font-semibold text-slate-950">
                 {formatQuoteMoney(paymentStatus.paid, paymentStatus.currency)}
               </p>
@@ -826,7 +826,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
             {!paymentStatus.isFullyPaid ? (
               <>
                 <div className="rounded-xl border border-rose-200 bg-white px-3 py-2.5 shadow-sm ring-1 ring-rose-100">
-                  <span className="text-[11px] font-bold uppercase text-rose-700">Reste à payer</span>
+                  <span className="text-[11px] font-bold uppercase text-rose-700">Balance due</span>
                   <p className="mt-0.5 text-base font-bold text-rose-950">
                     {formatQuoteMoney(paymentStatus.remaining, paymentStatus.currency)}
                   </p>
@@ -843,7 +843,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
             ) : (
               <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2.5 shadow-sm sm:col-span-2">
                 <span className="text-[11px] font-bold uppercase text-emerald-700">Statut</span>
-                <p className="mt-0.5 font-bold text-emerald-950">Solde réglé</p>
+                <p className="mt-0.5 font-bold text-emerald-950">Balance settled</p>
               </div>
             )}
           </div>
@@ -857,7 +857,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
                   <span>
                     {formatQuoteMoney(entry.amount, paymentStatus.currency)}
                     {entry.paidAt
-                      ? ` · ${new Date(entry.paidAt).toLocaleString("fr-FR")}`
+                      ? ` · ${new Date(entry.paidAt).toLocaleString("en-GB")}`
                       : ""}
                   </span>
                   {entry.proofUrl ? (
@@ -870,14 +870,14 @@ const HotelRequestCard = memo(function HotelRequestCard({
                       Voir la preuve
                     </a>
                   ) : (
-                    <span className="text-slate-500">Preuve expirée</span>
+                    <span className="text-slate-500">Proof expired</span>
                   )}
                   <button
                     type="button"
                     onClick={() => onPrintReceipt?.(request, entry.id)}
                     className="font-bold text-emerald-800 underline underline-offset-2 hover:text-emerald-950"
                   >
-                    Reçu
+                    Receipt
                   </button>
                 </li>
               ))}
@@ -889,7 +889,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
       {isConfirmed && clientDocuments.length > 0 ? (
         <div className="border-b border-slate-200/90 bg-indigo-50/50 px-4 py-4 sm:px-6">
           <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-            Documents liés
+            Linked documents
           </p>
           <ul className="space-y-2">
             {clientDocuments.map((doc) => (
@@ -918,10 +918,10 @@ const HotelRequestCard = memo(function HotelRequestCard({
       ) : null}
 
       <div className="border-b border-slate-200/90 bg-slate-50/95 px-4 py-4 sm:px-6">
-        <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">Coordonnées</p>
+        <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">Contact details</p>
         <div className="grid gap-3 text-sm text-slate-800 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm sm:col-span-2 lg:col-span-1">
-            <span className="text-[11px] font-bold uppercase text-slate-500">Référence</span>
+            <span className="text-[11px] font-bold uppercase text-slate-500">Reference</span>
             <p className="mt-0.5 font-mono text-sm font-semibold text-slate-950">
               {shortRef || "—"}
             </p>
@@ -932,7 +932,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
             ) : null}
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
-            <span className="text-[11px] font-bold uppercase text-slate-500">Téléphone</span>
+            <span className="text-[11px] font-bold uppercase text-slate-500">Phone</span>
             <p className="mt-0.5 font-semibold text-slate-950">{request.phone || "—"}</p>
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
@@ -962,7 +962,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
             </p>
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
-            <span className="text-[11px] font-bold uppercase text-slate-500">Âge(s) enfants</span>
+            <span className="text-[11px] font-bold uppercase text-slate-500">Child age(s)</span>
             <p className="mt-0.5 font-semibold text-slate-950">
               {request.childAges?.trim() ? request.childAges : "—"}
             </p>
@@ -975,7 +975,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
       </div>
 
       <div className="border-b border-slate-200/90 px-4 py-4 sm:px-6">
-        <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">Formule</p>
+        <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">Board basis</p>
         <div className="flex flex-wrap gap-2">
           {boardLabels.map((label) => (
             <span
@@ -994,9 +994,9 @@ const HotelRequestCard = memo(function HotelRequestCard({
             <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
               {isConfirmed
                 ? confirmedHotels.length > 1
-                  ? "Hôtels confirmés"
-                  : "Hôtel de la confirmation"
-                : "Hôtels de la réponse"}
+                  ? "Confirmed hotels"
+                  : "Confirmed hotel"
+                : "Quoted hotels"}
             </p>
             <ul className="space-y-2">
               {(isConfirmed ? confirmedHotels : readyHotels).map((h, index) => (
@@ -1011,8 +1011,8 @@ const HotelRequestCard = memo(function HotelRequestCard({
                   <span className="text-[11px] font-bold uppercase text-emerald-800">
                     {isConfirmed
                       ? confirmedHotels.length > 1
-                        ? `Confirmé ${index + 1}`
-                        : "Confirmé"
+                        ? `Confirmed ${index + 1}`
+                        : "Confirmed"
                       : `Option ${index + 1}`}
                   </span>
                   <p className="mt-0.5 font-semibold text-slate-950">{h.hotelName}</p>
@@ -1025,7 +1025,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
                       {formatHotelStayDate(h.stayTo || request.departureDate)}
                       {countHotelNights(h.stayFrom || request.arrivalDate, h.stayTo || request.departureDate) >
                       0
-                        ? ` · ${countHotelNights(h.stayFrom || request.arrivalDate, h.stayTo || request.departureDate)} nuit${countHotelNights(h.stayFrom || request.arrivalDate, h.stayTo || request.departureDate) > 1 ? "s" : ""}`
+                        ? ` · ${countHotelNights(h.stayFrom || request.arrivalDate, h.stayTo || request.departureDate)} night${countHotelNights(h.stayFrom || request.arrivalDate, h.stayTo || request.departureDate) > 1 ? "s" : ""}`
                         : ""}
                     </p>
                   ) : null}
@@ -1039,7 +1039,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
             </ul>
             {!isConfirmed && readyHotels.length > 1 ? (
               <p className="mt-2 text-[11px] font-medium text-slate-500">
-                Propositions envoyées / à envoyer au client (réponse).
+                Proposals sent / ready to send to the client (reply).
               </p>
             ) : null}
             {hotels.length > 0 ? (
@@ -1066,7 +1066,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
         ) : (
           <>
             <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-              Hôtels souhaités
+              Preferred hotels
             </p>
         {request.wantsCustomOffer ? (
           <p className="rounded-xl border border-amber-200/90 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-950">
@@ -1122,7 +1122,7 @@ function HotelResponseModal({
   const sortedCatalog = useMemo(
     () =>
       [...(catalogHotels || [])].sort((a, b) =>
-        String(a.name || "").localeCompare(String(b.name || ""), "fr", { sensitivity: "base" })
+        String(a.name || "").localeCompare(String(b.name || ""), "en", { sensitivity: "base" })
       ),
     [catalogHotels]
   );
@@ -1199,14 +1199,14 @@ function HotelResponseModal({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-violet-600">
-              Réponse devis
+              Quote reply
             </p>
             <h2 id="hotel-response-title" className="mt-1 text-lg font-bold text-slate-900">
               {fullName}
             </h2>
             {nightsCount > 0 ? (
               <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-violet-600 px-3.5 py-1.5 text-sm font-extrabold text-white shadow-sm">
-                {nightsCount} nuit{nightsCount > 1 ? "s" : ""}
+                {nightsCount} night{nightsCount > 1 ? "s" : ""}
                 <span className="text-xs font-semibold text-violet-100">
                   {formatHotelStayDate(request.arrivalDate)} → {formatHotelStayDate(request.departureDate)}
                 </span>
@@ -1214,7 +1214,7 @@ function HotelResponseModal({
             ) : null}
           </div>
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
-            Fermer
+            Close
           </GhostBtn>
         </div>
 
@@ -1224,18 +1224,18 @@ function HotelResponseModal({
           </p>
           <dl className="mt-2 grid gap-2 sm:grid-cols-2">
             <div>
-              <dt className="text-[11px] font-bold uppercase text-slate-500">Séjour</dt>
+              <dt className="text-[11px] font-bold uppercase text-slate-500">Stay</dt>
               <dd className="font-semibold text-slate-950">
                 {formatHotelStayDate(request.arrivalDate)} → {formatHotelStayDate(request.departureDate)}
                 {nightsCount > 0 ? (
                   <span className="mt-1.5 flex">
                     <span className="rounded-lg bg-violet-100 px-2.5 py-1 text-sm font-extrabold text-violet-900 ring-1 ring-violet-200">
-                      {nightsCount} nuit{nightsCount > 1 ? "s" : ""}
+                      {nightsCount} night{nightsCount > 1 ? "s" : ""}
                     </span>
                   </span>
                 ) : (
                   <span className="mt-1 block text-xs font-semibold text-amber-800">
-                    Dates manquantes — le nombre de nuits ne peut pas être calculé
+                    Missing dates — nights cannot be calculated
                   </span>
                 )}
               </dd>
@@ -1243,14 +1243,14 @@ function HotelResponseModal({
             <div>
               <dt className="text-[11px] font-bold uppercase text-slate-500">Voyageurs</dt>
               <dd className="font-semibold text-slate-950">
-                {request.adultsCount != null ? `${request.adultsCount} adulte(s)` : "—"}
+                {request.adultsCount != null ? `${request.adultsCount} adult(s)` : "—"}
                 {request.childrenCount != null && request.childrenCount > 0
-                  ? ` · ${request.childrenCount} enfant(s)`
+                  ? ` · ${request.childrenCount} child(ren)`
                   : ""}
               </dd>
             </div>
             <div>
-              <dt className="text-[11px] font-bold uppercase text-slate-500">Âges</dt>
+              <dt className="text-[11px] font-bold uppercase text-slate-500">Ages</dt>
               <dd className="font-semibold text-slate-950">
                 {request.childAges?.trim() ? request.childAges : "—"}
               </dd>
@@ -1262,17 +1262,17 @@ function HotelResponseModal({
               </dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-[11px] font-bold uppercase text-slate-500">Formule</dt>
+              <dt className="text-[11px] font-bold uppercase text-slate-500">Board basis</dt>
               <dd className="font-semibold text-slate-950">
                 {boardLabels.length ? boardLabels.join(" · ") : "All inclusive"}
               </dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-[11px] font-bold uppercase text-slate-500">Hôtels souhaités</dt>
+              <dt className="text-[11px] font-bold uppercase text-slate-500">Preferred hotels</dt>
               <dd className="mt-1 font-semibold text-slate-950">
                 {request.wantsCustomOffer ? (
                   <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-950">
-                    Offre personnalisée
+                    Custom offer
                   </span>
                 ) : clientWishes.length > 0 ? (
                   <ul className="flex flex-wrap gap-1.5">
@@ -1311,12 +1311,12 @@ function HotelResponseModal({
               onClick={addProposal}
               disabled={saving}
             >
-              + Ajouter un hôtel
+              + Add a hotel
             </GhostBtn>
           </div>
           <p className="mb-3 text-xs font-medium text-slate-600">
-            Choisissez les hôtels à proposer (catalogue ou saisie libre), les dates (du / au) pour
-            chaque séjour, puis le prix. Utile si le client change d’hôtel en cours de séjour.
+            Choose hotels to propose (catalog or free text), dates (from / to) for
+            each stay, then the price. Useful if the client changes hotels mid-stay.
           </p>
 
           <ul className="space-y-3">
@@ -1348,7 +1348,7 @@ function HotelResponseModal({
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="block sm:col-span-2">
-                      <span className="text-[11px] font-bold uppercase text-slate-500">Hôtel</span>
+                      <span className="text-[11px] font-bold uppercase text-slate-500">Hotel</span>
                       <select
                         className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
                         value={isManualHotel ? "__manual__" : item.catalogSlug || ""}
@@ -1362,7 +1362,7 @@ function HotelResponseModal({
                         }}
                         disabled={saving}
                       >
-                        <option value="">— Choisir un hôtel —</option>
+                        <option value="">— Choose a hotel —</option>
                         {sortedCatalog.map((h) => {
                           const value = String(h.slug || h.id || "");
                           return (
@@ -1386,19 +1386,19 @@ function HotelResponseModal({
                               catalogHotel: null,
                             })
                           }
-                          placeholder="Nom de l’hôtel (hors catalogue)"
+                          placeholder="Hotel name (not in catalog)"
                           disabled={saving}
-                          aria-label={`Hôtel manuel option ${index + 1}`}
+                          aria-label={`Manual hotel option ${index + 1}`}
                         />
                       ) : null}
                       {isManualHotel ? (
                         <span className="mt-1 block text-[11px] font-medium text-violet-700">
-                          Hôtel saisi à la main (hors catalogue).
+                          Hotel entered manually (not in catalog).
                         </span>
                       ) : null}
                       {sortedCatalog.length === 0 && !isManualHotel ? (
                         <span className="mt-1 block text-[11px] font-medium text-amber-800">
-                          Catalogue vide — choisissez « Autre (saisie manuelle) ».
+                          Catalog empty — choose “Other (manual entry)”.
                         </span>
                       ) : null}
                     </label>
@@ -1415,7 +1415,7 @@ function HotelResponseModal({
                         max={item.stayTo || request.departureDate || undefined}
                         onChange={(e) => updateProposal(index, { stayFrom: e.target.value })}
                         disabled={saving || !hotelChosen}
-                        aria-label={`Date début option ${index + 1}`}
+                        aria-label={`Start date option ${index + 1}`}
                       />
                     </label>
                     <label className="block">
@@ -1430,7 +1430,7 @@ function HotelResponseModal({
                         max={request.departureDate || undefined}
                         onChange={(e) => updateProposal(index, { stayTo: e.target.value })}
                         disabled={saving || !hotelChosen}
-                        aria-label={`Date fin option ${index + 1}`}
+                        aria-label={`End date option ${index + 1}`}
                       />
                     </label>
                     {(() => {
@@ -1441,10 +1441,10 @@ function HotelResponseModal({
                       return n > 0 ? (
                         <p className="sm:col-span-2">
                           <span className="inline-flex items-center rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-extrabold text-white shadow-sm">
-                            {n} nuit{n > 1 ? "s" : ""}
+                            {n} night{n > 1 ? "s" : ""}
                           </span>
                           <span className="ml-2 text-xs font-semibold text-slate-600">
-                            pour cet hôtel
+                            for this hotel
                           </span>
                         </p>
                       ) : null;
@@ -1452,7 +1452,7 @@ function HotelResponseModal({
 
                     <label className="block">
                       <span className="text-[11px] font-bold uppercase text-slate-500">
-                        Catégorie (optionnel)
+                        Category (optional)
                       </span>
                       {(() => {
                         const isManual =
@@ -1480,7 +1480,7 @@ function HotelResponseModal({
                               }}
                               disabled={saving || !hotelChosen}
                             >
-                              <option value="">— Sans catégorie —</option>
+                              <option value="">— No category —</option>
                               {(item.roomCategories || []).map((cat) => (
                                 <option key={cat} value={cat}>
                                   {cat}
@@ -1501,7 +1501,7 @@ function HotelResponseModal({
                                 }
                                 placeholder="Ex. Deluxe Sea View"
                                 disabled={saving || !hotelChosen}
-                                aria-label={`Catégorie manuelle option ${index + 1}`}
+                                aria-label={`Manual category option ${index + 1}`}
                               />
                             ) : null}
                             {item.roomCategory && item.catalogHotel && !isManual
@@ -1521,7 +1521,7 @@ function HotelResponseModal({
                               : null}
                             {isManual ? (
                               <span className="mt-1 block text-[11px] font-medium text-violet-700">
-                                Catégorie saisie à la main (hors catalogue).
+                                Category entered manually (not in catalog).
                               </span>
                             ) : null}
                           </>
@@ -1531,7 +1531,7 @@ function HotelResponseModal({
 
                     <label className="block">
                       <span className="text-[11px] font-bold uppercase text-slate-500">
-                        Prix séjour (€)
+                        Stay price (€)
                       </span>
                       <input
                         type="number"
@@ -1546,9 +1546,9 @@ function HotelResponseModal({
                             manualTotal: e.target.value === "" ? null : parsed,
                           });
                         }}
-                        placeholder="ex. 850"
+                        placeholder="e.g. 850"
                         disabled={saving || !item.hotelName}
-                        aria-label={`Prix séjour option ${index + 1}`}
+                        aria-label={`Stay price option ${index + 1}`}
                       />
                     </label>
                   </div>
@@ -1559,13 +1559,13 @@ function HotelResponseModal({
                         Total : {formatQuoteMoney(quote.total, quote.currency)}
                         {quote.nights ? (
                           <span className="ml-1 text-xs font-semibold text-slate-500">
-                            · {quote.nights} nuit{quote.nights > 1 ? "s" : ""}
+                            · {quote.nights} night{quote.nights > 1 ? "s" : ""}
                           </span>
                         ) : null}
                       </p>
                     ) : (
                       <p className="text-xs font-semibold text-slate-500">
-                        Choisissez un hôtel et un prix
+                        Choose a hotel and a price
                       </p>
                     )}
                   </div>
@@ -1580,7 +1580,7 @@ function HotelResponseModal({
             Note pour le devis
           </label>
           <p className="mt-1 text-xs font-medium text-slate-600">
-            Optionnel — affichée sur le devis imprimé (ex. conditions, disponibilité, précisions).
+            Optional — shown on the printed quote (e.g. conditions, availability, details).
           </p>
           <textarea
             id="hotel-response-agent-notes"
@@ -1588,14 +1588,14 @@ function HotelResponseModal({
             value={agentNotes}
             onChange={(e) => setAgentNotes?.(e.target.value)}
             disabled={saving}
-            placeholder="Ex. Prix valables 48 h, sous réserve de disponibilité…"
+            placeholder="e.g. Prices valid 48 hours, subject to availability…"
             className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/25"
           />
         </div>
 
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
-            Annuler
+            Cancel
           </GhostBtn>
           <GhostBtn
             type="button"
@@ -1604,14 +1604,14 @@ function HotelResponseModal({
             }
             disabled={saving || readyCount === 0}
           >
-            Imprimer le devis
+            Print quote
           </GhostBtn>
           <PrimaryBtn
             type="button"
             onClick={onSave}
             disabled={saving || readyCount === 0}
           >
-            {saving ? "Enregistrement…" : "Enregistrer la réponse"}
+            {saving ? "Saving…" : "Save reply"}
           </PrimaryBtn>
         </div>
       </div>
@@ -1672,25 +1672,25 @@ function HotelConfirmModal({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-teal-700">
-              Confirmation client
+              Client confirmation
             </p>
             <h2 id="hotel-confirm-title" className="mt-1 text-lg font-bold text-slate-900">
               {fullName}
             </h2>
           </div>
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
-            Fermer
+            Close
                                 </GhostBtn>
                               </div>
 
         <p className="mt-4 text-sm font-medium text-slate-700">
-          Cochez le ou les hôtels confirmés par le client (un ou deux). Le document final affichera
-          uniquement les options sélectionnées, avec leurs dates respectives.
+          Select the hotel(s) confirmed by the client (one or two). The final document will show
+          only the selected options, with their dates.
         </p>
 
         {options.length === 0 ? (
           <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
-            Aucune proposition enregistrée. Préparez d’abord une réponse.
+            No proposals saved. Prepare a reply first.
           </p>
         ) : (
           <ul className="mt-4 space-y-2">
@@ -1735,11 +1735,11 @@ function HotelConfirmModal({
             Vols
           </p>
           <p className="mt-1 text-sm font-medium text-slate-600">
-            Optionnel — dates, numéros et horaires pour les transferts aéroport.
+            Optional — dates, flight numbers, and times for airport transfers.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-bold text-slate-600">
-              Date d&apos;arrivée
+              Arrival date
               <input
                 type="date"
                 value={flightValues.arrivalDate || ""}
@@ -1749,7 +1749,7 @@ function HotelConfirmModal({
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              Date de départ
+              Departure date
               <input
                 type="date"
                 value={flightValues.departureDate || ""}
@@ -1760,7 +1760,7 @@ function HotelConfirmModal({
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              N° vol arrivée
+              Arrival flight no.
               <input
                 type="text"
                 autoComplete="off"
@@ -1772,7 +1772,7 @@ function HotelConfirmModal({
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              Heure d&apos;arrivée
+              Arrival time
               <input
                 type="time"
                 value={flightValues.arrivalTime}
@@ -1782,7 +1782,7 @@ function HotelConfirmModal({
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              N° vol départ
+              Departure flight no.
               <input
                 type="text"
                 autoComplete="off"
@@ -1794,7 +1794,7 @@ function HotelConfirmModal({
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              Heure de départ
+              Departure time
               <input
                 type="time"
                 value={flightValues.departureTime}
@@ -1818,7 +1818,7 @@ function HotelConfirmModal({
             <span className="min-w-0">
               <span className="block text-sm font-bold text-indigo-950">Zero Tracas</span>
               <span className="mt-0.5 block text-xs font-medium text-indigo-800/80">
-                Nombre de visas, de SIM, et montant total saisi à la main.
+                Number of visas, SIMs, and total amount entered manually.
                         </span>
             </span>
           </label>
@@ -1866,7 +1866,7 @@ function HotelConfirmModal({
                         manualTotal: e.target.value === "" ? null : parsed,
                       });
                     }}
-                    placeholder="ex. 120"
+                    placeholder="e.g. 120"
                     min={0}
                     step="0.01"
                     className="mt-1.5 text-sm"
@@ -1889,7 +1889,7 @@ function HotelConfirmModal({
 
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
-            Annuler
+            Cancel
           </GhostBtn>
           <PrimaryBtn
             type="button"
@@ -1898,10 +1898,10 @@ function HotelConfirmModal({
             className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 border-0"
           >
             {saving
-              ? "Validation…"
+              ? "Confirming…"
               : currentKeys.length > 1
-                ? "Valider les 2 hôtels et imprimer"
-                : "Valider et imprimer"}
+                ? "Confirm both hotels and print"
+                : "Confirm and print"}
           </PrimaryBtn>
         </div>
       </div>
@@ -1922,12 +1922,12 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
     >
       <div className="my-8 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
         <h2 id="edit-hotel-request-title" className="text-lg font-bold text-slate-900">
-          Modifier la demande
+          Edit request
         </h2>
         <div className="mt-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-bold text-slate-600">
-              Prénom
+              First name
               <input
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 value={draft.firstName}
@@ -1944,7 +1944,7 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
             </label>
           </div>
           <label className="block text-xs font-bold text-slate-600">
-            Téléphone
+            Phone
             <input
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
               value={draft.phone}
@@ -1983,7 +1983,7 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-bold text-slate-600">
-              Nombre d&apos;adultes
+              Number of adults
               <input
                 type="number"
                 min={1}
@@ -1999,7 +1999,7 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
-              Nombre d&apos;enfants
+              Number of children
               <input
                 type="number"
                 min={0}
@@ -2016,13 +2016,13 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
             </label>
           </div>
           <label className="block text-xs font-bold text-slate-600">
-            Âge(s) des enfants
+            Child age(s)
             <input
               type="text"
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
               value={draft.childAges || ""}
               onChange={(e) => setDraft((d) => ({ ...d, childAges: e.target.value }))}
-              placeholder="Ex. 5 ans, 8 ans"
+              placeholder="e.g. 5 years, 8 years"
               disabled={
                 !(
                   draft.childrenCount != null &&
@@ -2055,7 +2055,7 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
               key={n}
               className={`block text-xs font-bold text-slate-600 ${draft.wantsCustomOffer ? "opacity-50" : ""}`}
             >
-              Hôtel — choix {n}
+              Hotel — choice {n}
               <input
                 disabled={draft.wantsCustomOffer}
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100"
@@ -2075,7 +2075,7 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
             />
           </label>
           <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900">
-            Formule : All inclusive
+            Board: All inclusive
           </p>
           <label className="block text-xs font-bold text-slate-600">
             Notes
@@ -2089,10 +2089,10 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
         </div>
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
-            Annuler
+            Cancel
           </GhostBtn>
           <PrimaryBtn type="button" onClick={onSave} disabled={saving}>
-            {saving ? "Enregistrement…" : "Enregistrer"}
+            {saving ? "Saving…" : "Save"}
           </PrimaryBtn>
         </div>
       </div>
@@ -2153,17 +2153,17 @@ function HotelPaymentModal({ request, onClose, onSave, saving }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-emerald-700">
-              Paiement
+              Payment
             </p>
             <h2 id="hotel-payment-title" className="mt-1 text-lg font-bold text-slate-900">
-              Enregistrer un paiement
+              Record a payment
             </h2>
             <p className="mt-1 text-sm font-medium text-slate-600">
               {[request.firstName, request.lastName].filter(Boolean).join(" ") || "Client"}
             </p>
           </div>
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
-            Fermer
+            Close
           </GhostBtn>
         </div>
 
@@ -2173,11 +2173,11 @@ function HotelPaymentModal({ request, onClose, onSave, saving }) {
             <strong>{formatQuoteMoney(status.grandTotal, status.currency)}</strong>
           </div>
           <div className="flex justify-between gap-2">
-            <span className="font-medium text-slate-600">Déjà payé</span>
+            <span className="font-medium text-slate-600">Already paid</span>
             <strong>{formatQuoteMoney(status.paid, status.currency)}</strong>
           </div>
           <div className="flex justify-between gap-2 border-t border-slate-200 pt-2">
-            <span className="font-bold text-rose-800">Reste à payer</span>
+            <span className="font-bold text-rose-800">Balance due</span>
             <strong className="text-rose-950">
               {formatQuoteMoney(status.remaining, status.currency)}
             </strong>
@@ -2191,7 +2191,7 @@ function HotelPaymentModal({ request, onClose, onSave, saving }) {
 
         <label className="mt-5 block">
           <span className="text-[11px] font-bold uppercase text-slate-500">
-            Montant payé par le client (€)
+            Amount paid by client (€)
           </span>
           <input
             type="number"
@@ -2203,7 +2203,7 @@ function HotelPaymentModal({ request, onClose, onSave, saving }) {
             onChange={(e) => setAmount(e.target.value)}
             disabled={saving}
             placeholder="ex. 250"
-            aria-label="Montant payé"
+            aria-label="Amount paid"
           />
         </label>
 
@@ -2214,7 +2214,7 @@ function HotelPaymentModal({ request, onClose, onSave, saving }) {
           <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-emerald-400 hover:bg-emerald-50/40">
             <Upload className="h-5 w-5 text-slate-500" aria-hidden />
             <span className="text-sm font-semibold text-slate-800">
-              {file ? file.name : "Choisir une image"}
+              {file ? file.name : "Choose an image"}
             </span>
             <span className="text-[11px] font-medium text-slate-500">JPG, PNG ou WebP · max 10 Mo</span>
             <input
@@ -2229,12 +2229,12 @@ function HotelPaymentModal({ request, onClose, onSave, saving }) {
                   return;
                 }
                 if (!next.type.startsWith("image/")) {
-                  toast.warning("Le fichier doit être une image.");
+                  toast.warning("The file must be an image.");
                   e.target.value = "";
                   return;
                 }
                 if (next.size > PAYMENT_PROOF_MAX_BYTES) {
-                  toast.warning("Image trop lourde (max 10 Mo).");
+                  toast.warning("Image too large (max 10 MB).");
                   e.target.value = "";
                   return;
                 }
@@ -2245,7 +2245,7 @@ function HotelPaymentModal({ request, onClose, onSave, saving }) {
           {previewUrl ? (
             <img
               src={previewUrl}
-              alt="Aperçu preuve de paiement"
+              alt="Payment proof preview"
               className="mt-3 max-h-48 w-full rounded-xl border border-slate-200 object-contain bg-white"
             />
           ) : null}
@@ -2253,7 +2253,7 @@ function HotelPaymentModal({ request, onClose, onSave, saving }) {
 
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
-            Annuler
+            Cancel
           </GhostBtn>
           <PrimaryBtn
             type="button"
@@ -2261,7 +2261,7 @@ function HotelPaymentModal({ request, onClose, onSave, saving }) {
             disabled={!canSubmit}
             onClick={() => onSave?.({ amount: parsedAmount, file })}
           >
-            {saving ? "Enregistrement…" : "Valider le paiement"}
+            {saving ? "Saving…" : "Confirm payment"}
           </PrimaryBtn>
         </div>
       </div>
@@ -2311,7 +2311,7 @@ function HotelDocumentsModal({ request, onClose, onAdd, onRemove, saving }) {
             </p>
           </div>
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
-            Fermer
+            Close
           </GhostBtn>
         </div>
 
@@ -2334,13 +2334,13 @@ function HotelDocumentsModal({ request, onClose, onAdd, onRemove, saving }) {
 
           {docType === "other" ? (
             <label className="block">
-              <span className="text-[11px] font-bold uppercase text-slate-500">Libellé</span>
+              <span className="text-[11px] font-bold uppercase text-slate-500">Label</span>
               <input
                 className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
                 value={customLabel}
                 onChange={(e) => setCustomLabel(e.target.value)}
                 disabled={saving}
-                placeholder="ex. Assurance voyage"
+                placeholder="e.g. Travel insurance"
               />
             </label>
           ) : null}
@@ -2350,7 +2350,7 @@ function HotelDocumentsModal({ request, onClose, onAdd, onRemove, saving }) {
             <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-indigo-400 hover:bg-indigo-50/40">
               <Upload className="h-5 w-5 text-slate-500" aria-hidden />
               <span className="text-sm font-semibold text-slate-800">
-                {file ? file.name : "Choisir un fichier"}
+                {file ? file.name : "Choose a file"}
               </span>
               <span className="text-[11px] font-medium text-slate-500">
                 Image ou PDF · max 15 Mo
@@ -2369,12 +2369,12 @@ function HotelDocumentsModal({ request, onClose, onAdd, onRemove, saving }) {
                   const okType =
                     next.type.startsWith("image/") || next.type === "application/pdf";
                   if (!okType) {
-                    toast.warning("Fichier accepté : image ou PDF.");
+                    toast.warning("Accepted file: image or PDF.");
                     e.target.value = "";
                     return;
                   }
                   if (next.size > CLIENT_DOC_MAX_BYTES) {
-                    toast.warning("Fichier trop lourd (max 15 Mo).");
+                    toast.warning("File too large (max 15 MB).");
                     e.target.value = "";
                     return;
                   }
@@ -2399,18 +2399,18 @@ function HotelDocumentsModal({ request, onClose, onAdd, onRemove, saving }) {
                 setDocType("passport");
               }}
             >
-              {saving ? "Upload…" : "Ajouter au devis"}
+              {saving ? "Uploading…" : "Add to quote"}
             </PrimaryBtn>
           </div>
         </div>
 
         <div className="mt-6 border-t border-slate-200 pt-4">
           <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-            Déjà liés ({docs.length})
+            Already linked ({docs.length})
           </p>
           {docs.length === 0 ? (
             <p className="mt-2 text-sm font-medium text-slate-600">
-              Aucun document pour ce devis.
+              No documents for this quote.
             </p>
           ) : (
             <ul className="mt-3 space-y-2">
@@ -2424,9 +2424,9 @@ function HotelDocumentsModal({ request, onClose, onAdd, onRemove, saving }) {
                       {hotelClientDocTypeLabel(doc.type, doc.label)}
                     </p>
                     <p className="truncate text-xs font-medium text-slate-500">
-                      {doc.fileName || "Fichier"}
+                      {doc.fileName || "File"}
                       {doc.uploadedAt
-                        ? ` · ${new Date(doc.uploadedAt).toLocaleDateString("fr-FR")}`
+                        ? ` · ${new Date(doc.uploadedAt).toLocaleDateString("en-GB")}`
                         : ""}
                     </p>
                   </div>
@@ -2492,7 +2492,7 @@ export function HotelHistoryPage({ user = null }) {
     const { silent = false, skipCleanup = false } = opts;
     if (!supabase) {
       setLoading(false);
-      setError("Supabase non configuré.");
+      setError("Supabase is not configured.");
       return;
     }
     if (!silent) setError("");
@@ -2508,14 +2508,14 @@ export function HotelHistoryPage({ user = null }) {
         logger.error("HotelHistoryPage load:", loadError);
         if (loadError.code === "42P01" || loadError.message?.includes("public_hotel_requests")) {
           setError(
-            "Table public_hotel_requests absente. Exécutez supabase/supabase_public_hotel_requests_table.sql sur Supabase."
+            "Table public_hotel_requests is missing. Run supabase/supabase_public_hotel_requests_table.sql on Supabase."
           );
         } else if (/response_payload/i.test(loadError.message || "")) {
           setError(
-            "Colonne response_payload absente. Exécutez supabase/supabase_public_hotel_requests_add_response_payload.sql sur Supabase."
+            "Column response_payload is missing. Run supabase/supabase_public_hotel_requests_add_response_payload.sql on Supabase."
           );
         } else {
-          setError(loadError.message || "Impossible de charger les demandes.");
+          setError(loadError.message || "Unable to load requests.");
         }
         setRows([]);
         return;
@@ -2543,8 +2543,8 @@ export function HotelHistoryPage({ user = null }) {
             }
             toast.info(
               purged === 1
-                ? "Documents d’un séjour passé (départ + 2 j) automatiquement supprimés."
-                : `Documents de ${purged} séjours passés (départ + 2 j) automatiquement supprimés.`,
+                ? "Documents from a past stay (departure + 2 days) were automatically deleted."
+                : `Documents from ${purged} past stays (departure + 2 days) were automatically deleted.`,
               4500
             );
           }
@@ -2557,7 +2557,7 @@ export function HotelHistoryPage({ user = null }) {
       setRows(rowsData.map(rowToHotelRequestViewModel));
     } catch (e) {
       logger.error("HotelHistoryPage load:", e);
-      if (!silent) setError("Erreur inattendue au chargement.");
+      if (!silent) setError("Unexpected error while loading.");
       setRows([]);
     } finally {
       setLoading(false);
@@ -2752,7 +2752,7 @@ export function HotelHistoryPage({ user = null }) {
       documentKind: isConfirmed ? "confirmation" : "devis",
       responsePayload: payload,
     });
-    if (!ok) toast.error("Impossible d’ouvrir l’impression. Réessayez.");
+    if (!ok) toast.error("Unable to open print. Try again.");
   }, []);
 
   const handlePrintReceipt = useCallback((request, entryId = null) => {
@@ -2763,7 +2763,7 @@ export function HotelHistoryPage({ user = null }) {
       },
       entryId ? { entryId } : null
     );
-    if (!ok) toast.error("Impossible d’ouvrir l’impression du reçu. Réessayez.");
+    if (!ok) toast.error("Unable to open receipt print. Try again.");
   }, []);
 
   const handleEdit = useCallback((request) => {
@@ -2783,7 +2783,7 @@ export function HotelHistoryPage({ user = null }) {
     const payload = normalizeResponsePayload(request.responsePayload);
     const options = payload.hotels.filter((h) => proposalIsReady(h));
     if (options.length === 0) {
-      toast.warning("Préparez d’abord une réponse avec au moins un hôtel et un prix.");
+      toast.warning("Prepare a reply with at least one hotel and a price first.");
       return;
     }
     const already = getConfirmedHotelsList(payload);
@@ -2823,7 +2823,7 @@ export function HotelHistoryPage({ user = null }) {
         quoteHotels: quotedHotels || [],
         agentNotes: String(agentNotes || "").trim(),
       });
-      if (!ok) toast.error("Impossible d’ouvrir l’impression. Réessayez.");
+      if (!ok) toast.error("Unable to open print. Try again.");
     },
     [replyRequest]
   );
@@ -2834,7 +2834,7 @@ export function HotelHistoryPage({ user = null }) {
       proposalIsReady(h)
     );
     if (hotels.length === 0) {
-      toast.error("Ajoutez au moins un hôtel avec un prix.");
+      toast.error("Add at least one hotel with a price.");
       return;
     }
     const prev = normalizeResponsePayload(replyRequest.responsePayload);
@@ -2880,15 +2880,15 @@ export function HotelHistoryPage({ user = null }) {
         logger.error("HotelHistoryPage reply:", updateError);
         if (/response_payload/i.test(updateError.message || "")) {
           toast.error(
-            "Colonne response_payload absente : exécutez supabase_public_hotel_requests_add_response_payload.sql",
+            "Column response_payload is missing: run supabase_public_hotel_requests_add_response_payload.sql",
             7000
           );
         } else {
-          toast.error(updateError.message || "Échec de l'enregistrement.");
+          toast.error(updateError.message || "Save failed.");
         }
         return;
       }
-      toast.success("Réponse enregistrée.");
+      toast.success("Reply saved.");
       setReplyRequest(null);
       setReplyHotelsDraft([]);
       setReplyAgentNotes("");
@@ -2896,7 +2896,7 @@ export function HotelHistoryPage({ user = null }) {
       await load();
     } catch (e) {
       logger.error("HotelHistoryPage reply save:", e);
-      toast.error("Erreur inattendue.");
+      toast.error("Unexpected error.");
     } finally {
       setSaving(false);
     }
@@ -2914,17 +2914,17 @@ export function HotelHistoryPage({ user = null }) {
           : [];
       const chosen = options.filter((h, i) => keys.includes(hotelProposalKey(h, i)));
       if (chosen.length === 0) {
-        toast.error("Sélectionnez au moins un hôtel confirmé par le client.");
+        toast.error("Select at least one hotel confirmed by the client.");
         return;
       }
       const flights = normalizeFlights(flightsInput || confirmFlights);
       const zeroTracas = normalizeZeroTracas(zeroTracasInput || confirmZeroTracas);
       if (zeroTracas.enabled && !isZeroTracasComplete(zeroTracas)) {
         if (parseQtyInput(zeroTracas.visaCount) <= 0 && parseQtyInput(zeroTracas.simCount) <= 0) {
-          toast.error("Zero Tracas : indiquez le nombre de visas et/ou de SIM.");
+          toast.error("Zero Tracas: enter the number of visas and/or SIMs.");
           return;
         }
-        toast.error("Zero Tracas : indiquez le montant total.");
+        toast.error("Zero Tracas: enter the total amount.");
         return;
       }
       if (!zeroTracas.enabled) {
@@ -2968,7 +2968,7 @@ export function HotelHistoryPage({ user = null }) {
 
         if (updateError) {
           logger.error("HotelHistoryPage confirm:", updateError);
-          toast.error(updateError.message || "Échec de la confirmation.");
+          toast.error(updateError.message || "Confirmation failed.");
           return;
         }
 
@@ -2983,9 +2983,9 @@ export function HotelHistoryPage({ user = null }) {
         });
         const namesLabel = chosen.map((h) => h.hotelName).join(" + ");
         if (!ok) {
-          toast.warning("Confirmation enregistrée, mais l’impression n’a pas pu s’ouvrir. Réessayez via Imprimer.");
+          toast.warning("Confirmation saved, but print could not open. Try again via Print.");
         } else {
-          toast.success(`Confirmé : ${namesLabel}`);
+          toast.success(`Confirmed: ${namesLabel}`);
         }
         setConfirmRequest(null);
         setConfirmSelectedKeys([]);
@@ -2994,7 +2994,7 @@ export function HotelHistoryPage({ user = null }) {
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage confirm save:", e);
-        toast.error("Erreur inattendue.");
+        toast.error("Unexpected error.");
       } finally {
         setSaving(false);
       }
@@ -3007,7 +3007,7 @@ export function HotelHistoryPage({ user = null }) {
       if (!request?.supabaseId || !supabase) return;
       const prev = normalizeResponsePayload(request.responsePayload);
       if (!prev.hotels.some((h) => proposalIsReady(h))) {
-        toast.warning("Préparez d’abord une réponse avant de marquer comme envoyé.");
+        toast.warning("Prepare a reply before marking as sent.");
         return;
       }
       setMarkingSentId(request.id);
@@ -3037,15 +3037,15 @@ export function HotelHistoryPage({ user = null }) {
 
         if (updateError) {
           logger.error("HotelHistoryPage mark sent:", updateError);
-          toast.error(updateError.message || "Impossible de mettre à jour le statut.");
+          toast.error(updateError.message || "Unable to update status.");
           return;
         }
-        toast.success(sent ? "Devis marqué comme envoyé." : "Devis remis dans « À envoyer ».");
+        toast.success(sent ? "Quote marked as sent." : "Quote moved back to “Ready to send”.");
         if (sent) setStatusFilter("sent");
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage mark sent:", e);
-        toast.error("Erreur inattendue.");
+        toast.error("Unexpected error.");
       } finally {
         setMarkingSentId(null);
       }
@@ -3058,17 +3058,17 @@ export function HotelHistoryPage({ user = null }) {
       if (!payRequest?.supabaseId || !supabase || !file) return;
       const prev = normalizeResponsePayload(payRequest.responsePayload);
       if (getConfirmedHotelsList(prev).length === 0) {
-        toast.error("Cette demande n’est pas confirmée.");
+        toast.error("This request is not confirmed.");
         return;
       }
       const status = getPaymentStatus(payRequest, prev);
       if (!status || status.isFullyPaid) {
-        toast.info("Le solde est déjà réglé.");
+        toast.info("The balance is already settled.");
         return;
       }
       const paidAmount = roundMoney(Number(amount));
       if (!(paidAmount > 0) || paidAmount > status.remaining + 0.009) {
-        toast.error("Montant invalide.");
+        toast.error("Invalid amount.");
         return;
       }
 
@@ -3103,14 +3103,14 @@ export function HotelHistoryPage({ user = null }) {
 
         if (uploadError) {
           logger.error("HotelHistoryPage payment upload:", uploadError);
-          toast.error(uploadError.message || "Échec de l’upload de la preuve.");
+          toast.error(uploadError.message || "Proof upload failed.");
           return;
         }
 
         const { data: pub } = supabase.storage.from(usedBucket).getPublicUrl(objectPath);
         const proofUrl = String(pub?.publicUrl || "").trim();
         if (!proofUrl) {
-          toast.error("URL de preuve introuvable après upload.");
+          toast.error("Proof URL not found after upload.");
           return;
         }
 
@@ -3158,15 +3158,15 @@ export function HotelHistoryPage({ user = null }) {
 
         if (updateError) {
           logger.error("HotelHistoryPage payment save:", updateError);
-          toast.error(updateError.message || "Impossible d’enregistrer le paiement.");
+          toast.error(updateError.message || "Unable to save payment.");
           return;
         }
 
         const nextRemaining = roundMoney(status.remaining - paidAmount);
         toast.success(
           nextRemaining <= 0.009
-            ? "Paiement enregistré — solde réglé."
-            : `Paiement enregistré — reste ${formatQuoteMoney(nextRemaining, status.currency)}.`
+            ? "Payment saved — balance settled."
+            : `Payment saved — remaining ${formatQuoteMoney(nextRemaining, status.currency)}.`
         );
         const receiptOk = printHotelPaymentReceipt(
           {
@@ -3176,7 +3176,7 @@ export function HotelHistoryPage({ user = null }) {
           { entryId: entry.id }
         );
         if (!receiptOk) {
-          toast.warning("Paiement enregistré — l’impression du reçu n’a pas pu s’ouvrir. Utilisez le bouton Reçu.");
+          toast.warning("Payment saved — receipt print could not open. Use the Receipt button.");
         }
         setPayRequest(null);
         setStatusFilter("confirmed");
@@ -3184,7 +3184,7 @@ export function HotelHistoryPage({ user = null }) {
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage payment:", e);
-        toast.error("Erreur inattendue.");
+        toast.error("Unexpected error.");
       } finally {
         setSaving(false);
       }
@@ -3195,12 +3195,12 @@ export function HotelHistoryPage({ user = null }) {
   const handleDeleteRequest = useCallback(
     async (request) => {
       if (!canDeleteHotelRequest(user)) {
-        toast.error("Vous n’avez pas le droit de supprimer ce devis.");
+        toast.error("You are not allowed to delete this quote.");
         return;
       }
       if (!request?.supabaseId || !supabase) return;
       const ok = window.confirm(
-        "Êtes-vous sûr de vouloir supprimer cette réservation ?"
+        "Are you sure you want to delete this booking?"
       );
       if (!ok) return;
 
@@ -3239,11 +3239,11 @@ export function HotelHistoryPage({ user = null }) {
 
         if (deleteError) {
           logger.error("HotelHistoryPage delete:", deleteError);
-          toast.error(deleteError.message || "Impossible de supprimer le devis.");
+          toast.error(deleteError.message || "Unable to delete quote.");
           return;
         }
 
-        toast.success("Devis supprimé.");
+        toast.success("Quote deleted.");
         if (payRequest?.id === request.id) setPayRequest(null);
         if (docsRequest?.id === request.id) setDocsRequest(null);
         if (replyRequest?.id === request.id) setReplyRequest(null);
@@ -3252,7 +3252,7 @@ export function HotelHistoryPage({ user = null }) {
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage delete:", e);
-        toast.error("Erreur inattendue.");
+        toast.error("Unexpected error.");
       } finally {
         setDeletingId(null);
       }
@@ -3284,19 +3284,19 @@ export function HotelHistoryPage({ user = null }) {
     async (request) => {
       if (!request?.supabaseId || !supabase) return;
       if (!isHotelRequestConfirmed(request)) {
-        toast.error("Seules les confirmations peuvent être annulées.");
+        toast.error("Only confirmations can be cancelled.");
         return;
       }
       const payload = normalizeResponsePayload(request.responsePayload);
       if (payload.cancelled === true || payload.cancelledAt) {
-        toast.warning("Cette confirmation est déjà annulée.");
+        toast.warning("This confirmation is already cancelled.");
         return;
       }
       const fullName =
-        [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "ce client";
+        [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "this client";
       const short = formatHotelRequestShortRef(request.id);
       const ok = window.confirm(
-        `Annuler la confirmation de ${fullName}${short ? ` (réf. ${short})` : ""} ?\n\nElle apparaîtra dans la sous-liste « Annulé ».`
+        `Cancel the confirmation for ${fullName}${short ? ` (ref. ${short})` : ""}?\n\nIt will appear in the “Cancelled” sub-list.`
       );
       if (!ok) return;
 
@@ -3317,17 +3317,17 @@ export function HotelHistoryPage({ user = null }) {
 
         if (updateError) {
           logger.error("HotelHistoryPage cancel confirmation:", updateError);
-          toast.error(updateError.message || "Impossible d’annuler la confirmation.");
+          toast.error(updateError.message || "Unable to cancel confirmation.");
           return;
         }
 
-        toast.success("Confirmation marquée comme annulée.");
+        toast.success("Confirmation marked as cancelled.");
         setStatusFilter("confirmed");
         setConfirmationPayFilter("cancelled");
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage cancel confirmation:", e);
-        toast.error("Erreur inattendue.");
+        toast.error("Unexpected error.");
       } finally {
         setCancellingId(null);
       }
@@ -3339,7 +3339,7 @@ export function HotelHistoryPage({ user = null }) {
     async ({ type, label, file }) => {
       if (!docsRequest?.supabaseId || !supabase || !file) return;
       if (!isHotelRequestConfirmed(docsRequest)) {
-        toast.error("Documents disponibles uniquement sur une confirmation.");
+        toast.error("Documents are only available on a confirmation.");
         return;
       }
       setSaving(true);
@@ -3373,14 +3373,14 @@ export function HotelHistoryPage({ user = null }) {
 
         if (uploadError) {
           logger.error("HotelHistoryPage doc upload:", uploadError);
-          toast.error(uploadError.message || "Échec de l’upload du document.");
+          toast.error(uploadError.message || "Document upload failed.");
           return;
         }
 
         const { data: pub } = supabase.storage.from(usedBucket).getPublicUrl(objectPath);
         const url = String(pub?.publicUrl || "").trim();
         if (!url) {
-          toast.error("URL du document introuvable après upload.");
+          toast.error("Document URL not found after upload.");
           return;
         }
 
@@ -3410,11 +3410,11 @@ export function HotelHistoryPage({ user = null }) {
 
         if (updateError) {
           logger.error("HotelHistoryPage doc save:", updateError);
-          toast.error(updateError.message || "Impossible d’enregistrer le document.");
+          toast.error(updateError.message || "Unable to save document.");
           return;
         }
 
-        toast.success("Document ajouté au devis.");
+        toast.success("Document added to quote.");
         setDocsRequest((r) =>
           r ? { ...r, responsePayload: normalizeResponsePayload(response_payload) } : null
         );
@@ -3422,7 +3422,7 @@ export function HotelHistoryPage({ user = null }) {
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage doc add:", e);
-        toast.error("Erreur inattendue.");
+        toast.error("Unexpected error.");
       } finally {
         setSaving(false);
       }
@@ -3453,18 +3453,18 @@ export function HotelHistoryPage({ user = null }) {
 
         if (updateError) {
           logger.error("HotelHistoryPage doc remove:", updateError);
-          toast.error(updateError.message || "Impossible de retirer le document.");
+          toast.error(updateError.message || "Unable to remove document.");
           return;
         }
 
-        toast.success("Document retiré du devis.");
+        toast.success("Document removed from quote.");
         setDocsRequest((r) =>
           r ? { ...r, responsePayload: normalizeResponsePayload(response_payload) } : null
         );
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage doc remove:", e);
-        toast.error("Erreur inattendue.");
+        toast.error("Unexpected error.");
       } finally {
         setSaving(false);
       }
@@ -3475,7 +3475,7 @@ export function HotelHistoryPage({ user = null }) {
   const handleSaveEdit = useCallback(async () => {
     if (!editDraft || !supabase) return;
     if (!editDraft.firstName.trim() || !editDraft.lastName.trim()) {
-      toast.error("Le prénom et le nom sont obligatoires.");
+      toast.error("First and last name are required.");
       return;
     }
     setSaving(true);
@@ -3489,15 +3489,15 @@ export function HotelHistoryPage({ user = null }) {
 
       if (updateError) {
         logger.error("HotelHistoryPage update:", updateError);
-        toast.error(updateError.message || "Échec de l'enregistrement.");
+        toast.error(updateError.message || "Save failed.");
         return;
       }
-      toast.success("Demande mise à jour.");
+      toast.success("Request updated.");
       setEditDraft(null);
       await load();
     } catch (e) {
       logger.error("HotelHistoryPage save:", e);
-      toast.error("Erreur inattendue.");
+      toast.error("Unexpected error.");
     } finally {
       setSaving(false);
     }
@@ -3506,7 +3506,7 @@ export function HotelHistoryPage({ user = null }) {
   if (loading) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm font-semibold text-slate-600">
-        Chargement des demandes hôtel…
+        Loading hotel requests…
       </div>
     );
   }
@@ -3522,9 +3522,9 @@ export function HotelHistoryPage({ user = null }) {
   return (
     <div className="space-y-5">
       <p className="rounded-xl border border-slate-200 bg-slate-50/90 px-4 py-3 text-xs font-medium text-slate-700">
-        Demandes reçues via le formulaire public{" "}
-        <strong className="text-indigo-800">/demande-hotel</strong>. Les données proviennent de
-        Supabase et se mettent à jour en temps réel.
+        Requests received via the public form{" "}
+        <strong className="text-indigo-800">/demande-hotel</strong>. Data comes from
+        Supabase and updates in real time.
       </p>
 
       <div className="space-y-3 rounded-2xl border border-indigo-200/80 bg-indigo-50/40 px-4 py-3 shadow-sm sm:px-5 sm:py-4">
@@ -3536,7 +3536,7 @@ export function HotelHistoryPage({ user = null }) {
             onClick={() => setStatusFilter("all")}
             className="!px-3.5 !py-2 !text-xs"
           >
-            Tous ({rows.length})
+            All ({rows.length})
           </Pill>
           <Pill
             type="button"
@@ -3545,7 +3545,7 @@ export function HotelHistoryPage({ user = null }) {
             onClick={() => setStatusFilter("pending")}
             className="!px-3.5 !py-2 !text-xs"
           >
-            En attente ({pendingCount})
+            Pending ({pendingCount})
           </Pill>
           <Pill
             type="button"
@@ -3554,7 +3554,7 @@ export function HotelHistoryPage({ user = null }) {
             onClick={() => setStatusFilter("to_send")}
             className="!px-3.5 !py-2 !text-xs"
           >
-            À envoyer au client ({toSendCount})
+            Ready to send to client ({toSendCount})
           </Pill>
           <Pill
             type="button"
@@ -3563,7 +3563,7 @@ export function HotelHistoryPage({ user = null }) {
             onClick={() => setStatusFilter("sent")}
             className="!px-3.5 !py-2 !text-xs"
           >
-            Envoyé ({sentCount})
+            Sent ({sentCount})
           </Pill>
           <Pill
             type="button"
@@ -3579,7 +3579,7 @@ export function HotelHistoryPage({ user = null }) {
         {statusFilter === "confirmed" ? (
           <div className="flex flex-wrap items-center gap-2 border-t border-indigo-200/70 pt-3">
             <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-indigo-900/70">
-              Paiement
+              Payment
             </span>
             <Pill
               type="button"
@@ -3588,7 +3588,7 @@ export function HotelHistoryPage({ user = null }) {
               onClick={() => setConfirmationPayFilter("all")}
               className="!px-3 !py-1.5 !text-[11px]"
             >
-              Toutes ({confirmedCount})
+              All ({confirmedCount})
             </Pill>
             <Pill
               type="button"
@@ -3597,7 +3597,7 @@ export function HotelHistoryPage({ user = null }) {
               onClick={() => setConfirmationPayFilter("paid")}
               className="!px-3 !py-1.5 !text-[11px]"
             >
-              Payé / partiel ({confirmedPaidCount})
+              Paid / partial ({confirmedPaidCount})
             </Pill>
             <Pill
               type="button"
@@ -3606,7 +3606,7 @@ export function HotelHistoryPage({ user = null }) {
               onClick={() => setConfirmationPayFilter("unpaid")}
               className="!px-3 !py-1.5 !text-[11px]"
             >
-              Non payé ({confirmedUnpaidCount})
+              Unpaid ({confirmedUnpaidCount})
             </Pill>
             <Pill
               type="button"
@@ -3615,7 +3615,7 @@ export function HotelHistoryPage({ user = null }) {
               onClick={() => setConfirmationPayFilter("cancelled")}
               className="!px-3 !py-1.5 !text-[11px]"
             >
-              Annulé ({confirmedCancelledCount})
+              Cancelled ({confirmedCancelledCount})
             </Pill>
           </div>
         ) : null}
@@ -3625,58 +3625,58 @@ export function HotelHistoryPage({ user = null }) {
             htmlFor="hotel-history-search"
             className="block text-xs font-bold uppercase tracking-wide text-indigo-950"
           >
-          Rechercher
+          Search
         </label>
         <TextInput
           id="hotel-history-search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-            placeholder="Nom, e-mail, téléphone, hôtel ou référence"
+            placeholder="Name, email, phone, hotel, or reference"
           className="mt-2"
         />
         <p className="mt-2 text-[11px] font-medium text-indigo-900/80">
-          {filteredRows.length} demande{filteredRows.length > 1 ? "s" : ""}
+          {filteredRows.length} request{filteredRows.length > 1 ? "s" : ""}
             {statusFilter === "confirmed"
               ? confirmationPayFilter === "paid"
-                ? " payée" + (filteredRows.length > 1 ? "s" : "") + " (payé / partiel)"
+                ? " paid / partial"
                 : confirmationPayFilter === "unpaid"
-                  ? " non payée" + (filteredRows.length > 1 ? "s" : "")
+                  ? " unpaid"
                   : confirmationPayFilter === "cancelled"
-                    ? " annulée" + (filteredRows.length > 1 ? "s" : "")
-                    : " confirmée" + (filteredRows.length > 1 ? "s" : "")
+                    ? " cancelled"
+                    : " confirmed"
               : statusFilter === "pending"
-                ? " en attente"
+                ? " pending"
                 : statusFilter === "to_send"
-                  ? " à envoyer"
+                  ? " to send"
                   : statusFilter === "sent"
-                    ? " envoyée" + (filteredRows.length > 1 ? "s" : "")
+                    ? " sent"
                     : ""}
-            {debouncedSearch.trim() ? " · recherche" : ""}
+            {debouncedSearch.trim() ? " · search" : ""}
           </p>
         </div>
       </div>
 
       {rows.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-700">
-          Aucune demande hôtel pour le moment.
+          No hotel requests yet.
         </div>
       ) : filteredRows.length === 0 ? (
         <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-950">
           {statusFilter === "confirmed"
             ? confirmationPayFilter === "paid"
-              ? "Aucune confirmation payée ou partielle."
+              ? "No paid or partially paid confirmations."
               : confirmationPayFilter === "unpaid"
-                ? "Aucune confirmation non payée."
+                ? "No unpaid confirmations."
                 : confirmationPayFilter === "cancelled"
-                  ? "Aucune confirmation annulée."
-                  : "Aucune confirmation pour le moment."
+                  ? "No cancelled confirmations."
+                  : "No confirmations yet."
             : statusFilter === "pending"
-              ? "Aucune nouvelle demande en attente aujourd’hui."
+              ? "No new pending requests today."
               : statusFilter === "to_send"
-                ? "Aucun devis à envoyer pour le moment. Préparez d’abord une réponse."
+                ? "No quotes ready to send. Prepare a reply first."
                 : statusFilter === "sent"
-                  ? "Aucun devis marqué comme envoyé pour le moment."
-                  : "Aucune demande ne correspond à la recherche."}
+                  ? "No quotes marked as sent yet."
+                  : "No requests match your search."}
         </div>
       ) : confirmationGrouped ? (
         <div className="space-y-10">
@@ -3687,10 +3687,10 @@ export function HotelHistoryPage({ user = null }) {
                   id="hotel-conf-paid-heading"
                   className="text-sm font-bold tracking-tight text-emerald-950"
                 >
-                  Payé ou partiellement payé
+                  Paid or partially paid
                 </h3>
                 <p className="mt-0.5 text-xs text-emerald-800/80">
-                  Au moins un paiement enregistré sur la confirmation.
+                  At least one payment recorded on the confirmation.
                 </p>
               </div>
               <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold tabular-nums text-emerald-900 ring-1 ring-emerald-300/60">
@@ -3699,7 +3699,7 @@ export function HotelHistoryPage({ user = null }) {
             </div>
             {confirmedPaidRows.length === 0 ? (
               <p className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50/50 px-4 py-5 text-center text-sm font-medium text-emerald-900/80">
-                Aucune confirmation payée ou partielle.
+                No paid or partially paid confirmations.
               </p>
             ) : (
               <div className="space-y-8">
@@ -3734,10 +3734,10 @@ export function HotelHistoryPage({ user = null }) {
                   id="hotel-conf-unpaid-heading"
                   className="text-sm font-bold tracking-tight text-amber-950"
                 >
-                  Non payé
+                  Unpaid
                 </h3>
                 <p className="mt-0.5 text-xs text-amber-800/80">
-                  Confirmations sans aucun paiement enregistré.
+                  Confirmations with no payment recorded.
                 </p>
               </div>
               <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold tabular-nums text-amber-950 ring-1 ring-amber-300/60">
@@ -3746,7 +3746,7 @@ export function HotelHistoryPage({ user = null }) {
             </div>
             {confirmedUnpaidRows.length === 0 ? (
               <p className="rounded-xl border border-dashed border-amber-200 bg-amber-50/50 px-4 py-5 text-center text-sm font-medium text-amber-900/80">
-                Aucune confirmation non payée.
+                No unpaid confirmations.
               </p>
             ) : (
               <div className="space-y-8">
@@ -3781,10 +3781,10 @@ export function HotelHistoryPage({ user = null }) {
                   id="hotel-conf-cancelled-heading"
                   className="text-sm font-bold tracking-tight text-slate-900"
                 >
-                  Annulé
+                  Cancelled
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-600">
-                  Confirmations marquées comme annulées.
+                  Confirmations marked as cancelled.
                 </p>
               </div>
               <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-bold tabular-nums text-slate-800 ring-1 ring-slate-300/70">
@@ -3793,7 +3793,7 @@ export function HotelHistoryPage({ user = null }) {
             </div>
             {confirmedCancelledRows.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-5 text-center text-sm font-medium text-slate-600">
-                Aucune confirmation annulée.
+                No cancelled confirmations.
               </p>
             ) : (
               <div className="space-y-8">
@@ -3851,10 +3851,10 @@ export function HotelHistoryPage({ user = null }) {
                 disabled={requestsCurrentPage === 1}
                 className="!px-4 !py-2"
               >
-                ← Précédent
+                ← Previous
               </GhostBtn>
               <span className="px-3 text-sm font-semibold text-slate-600">
-                Page {requestsCurrentPage} sur {requestsTotalPages}
+                Page {requestsCurrentPage} of {requestsTotalPages}
               </span>
               <GhostBtn
                 type="button"
@@ -3862,7 +3862,7 @@ export function HotelHistoryPage({ user = null }) {
                 disabled={requestsCurrentPage === requestsTotalPages}
                 className="!px-4 !py-2"
               >
-                Suivant →
+                Next →
               </GhostBtn>
             </div>
           ) : null}

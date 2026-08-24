@@ -15,7 +15,7 @@ export function formatHotelStayDate(value) {
   }
   const d = new Date(`${s}T12:00:00`);
   if (Number.isNaN(d.getTime())) return s;
-  return d.toLocaleDateString("fr-FR", {
+  return d.toLocaleDateString("en-GB", {
     weekday: "short",
     day: "numeric",
     month: "long",
