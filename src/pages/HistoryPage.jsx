@@ -252,10 +252,10 @@ function QuoteCardComponent({
         .filter(Boolean)
         .join("+");
       const enteredAt = new Date().toISOString();
-      const cashTotal = Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0);
-      const cardTotal = Math.round(
-        Number(rawQuote.totalCard) || calculateCardPrice(cashTotal)
-      );
+      const cashTotal =
+        items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||
+        Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0);
+      const cardTotal = calculateCardPrice(cashTotal);
       // Cash seul → paid_cash ; Stripe seul → paid_stripe (prix carte) ; mixte → paid_cash (base) + 0 stripe
       let paidCashAmount = 0;
       let paidStripeAmount = 0;
@@ -272,18 +272,21 @@ function QuoteCardComponent({
         ticketNumber: normalized[idx],
         ticketEnteredByName: agentName || item.ticketEnteredByName || "",
         paymentMethod: paymentMethodLabel || item.paymentMethod || "",
-        ticketsEnteredAt: enteredAt,
+        // Conserver la 1re date d’encaissement si déjà payé
+        ticketsEnteredAt: item.ticketsEnteredAt || enteredAt,
       }));
 
       const updatedQuote = {
         ...rawQuote,
         items: updatedItems,
         ticketsEnteredByName: agentName || rawQuote.ticketsEnteredByName || "",
-        ticketsEnteredAt: enteredAt,
+        ticketsEnteredAt: rawQuote.ticketsEnteredAt || enteredAt,
         ticketsPaymentCash: payCash === true,
         ticketsPaymentStripe: payStripe === true,
         paidCash: paidCashAmount,
         paidStripe: paidStripeAmount,
+        totalCash: cashTotal,
+        totalCard: cardTotal,
         updated_at: enteredAt,
       };
       const updatedQuotes = quotes.map((q) => (q.id === d.id ? updatedQuote : q));

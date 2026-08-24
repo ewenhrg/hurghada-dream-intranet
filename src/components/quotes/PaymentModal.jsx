@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { LS_KEYS } from "../../constants";
-import { currency, saveLS } from "../../utils";
+import { currency, saveLS, calculateCardPrice } from "../../utils";
 import { persistQuoteItemsToSupabase } from "../../utils/persistQuoteItems";
+import { computePaidColumnsFromItems } from "../../utils/ticketCollections";
 import { formatQuoteItemParticipantsSummary } from "../../utils/quoteItemDisplay.js";
 import { TextInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
@@ -45,17 +46,29 @@ export function PaymentModal({
 
     // Mettre à jour le devis avec les numéros de ticket et les méthodes de paiement
     const agentName = String(user?.name || user?.fullName || user?.email || "").trim();
+    const enteredAt = new Date().toISOString();
+    const updatedItems = selectedQuote.items.map((item, idx) => ({
+      ...item,
+      ticketNumber: ticketNumbers[idx]?.trim() || "",
+      paymentMethod: item.paymentMethod || paymentMethods[idx] || "",
+      ticketEnteredByName: agentName || item.ticketEnteredByName || "",
+      ticketsEnteredAt: item.ticketsEnteredAt || enteredAt,
+    }));
+    const { paidCash, paidStripe } = computePaidColumnsFromItems(updatedItems);
+    const cashTotal = updatedItems.reduce(
+      (sum, it) => sum + Math.round(Number(it.lineTotal) || 0),
+      0
+    );
     const updatedQuote = {
       ...selectedQuote,
-      items: selectedQuote.items.map((item, idx) => ({
-        ...item,
-        ticketNumber: ticketNumbers[idx]?.trim() || "",
-        paymentMethod: item.paymentMethod || paymentMethods[idx] || "",
-        ticketEnteredByName: agentName || item.ticketEnteredByName || "",
-      })),
+      items: updatedItems,
       ticketsEnteredByName: agentName || selectedQuote.ticketsEnteredByName || "",
-      ticketsEnteredAt: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      ticketsEnteredAt: selectedQuote.ticketsEnteredAt || enteredAt,
+      paidCash,
+      paidStripe,
+      totalCash: cashTotal,
+      totalCard: calculateCardPrice(cashTotal),
+      updated_at: enteredAt,
     };
 
     const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? updatedQuote : q));
@@ -67,6 +80,8 @@ export function PaymentModal({
       try {
         const { ok, error } = await persistQuoteItemsToSupabase(selectedQuote, updatedQuote.items, {
           updatedAt: updatedQuote.updated_at,
+          paidCash,
+          paidStripe,
         });
 
         if (!ok) {

@@ -114,22 +114,29 @@ export function buildActivitiesByIdMap(activities = []) {
   return map;
 }
 
-/** Modes de paiement tickets (Cash / Stripe) — les deux peuvent être cochés. */
+/** Modes de paiement tickets (Cash / Stripe) — les deux peuvent être cochés.
+ * Priorité aux paymentMethod des lignes (plus fiables après édition / sync).
+ */
 export function normalizeTicketsPaymentMethods(quote) {
+  const items = Array.isArray(quote?.items) ? quote.items : [];
+  const anyItemMethod = items.some((it) => String(it?.paymentMethod || "").trim() !== "");
+  if (anyItemMethod) {
+    let cash = false;
+    let stripe = false;
+    items.forEach((it) => {
+      const m = String(it?.paymentMethod || "").toLowerCase();
+      if (m.includes("cash") || m.includes("espece") || m.includes("espèce")) cash = true;
+      if (m.includes("stripe") || m.includes("card") || m.includes("carte")) stripe = true;
+    });
+    return { cash, stripe };
+  }
   if (quote?.ticketsPaymentCash === true || quote?.ticketsPaymentStripe === true) {
     return {
       cash: quote.ticketsPaymentCash === true,
       stripe: quote.ticketsPaymentStripe === true,
     };
   }
-  let cash = false;
-  let stripe = false;
-  (quote?.items || []).forEach((it) => {
-    const m = String(it?.paymentMethod || "").toLowerCase();
-    if (m.includes("cash") || m.includes("espece") || m.includes("espèce")) cash = true;
-    if (m.includes("stripe") || m.includes("card") || m.includes("carte")) stripe = true;
-  });
-  return { cash, stripe };
+  return { cash: false, stripe: false };
 }
 
 export function formatTicketsPaymentMethodsLabel(quote) {

@@ -76,7 +76,7 @@ export const TicketCollectionsSection = memo(function TicketCollectionsSection({
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(todayKey);
 
-  const byDay = useMemo(() => buildCollectionsByDay(quotes), [quotes]);
+  const { byDay, undatedPaidQuotes } = useMemo(() => buildCollectionsByDay(quotes), [quotes]);
   const cells = useMemo(
     () => buildMonthCellsMondayFirst(viewYear, viewMonth),
     [viewYear, viewMonth]
@@ -137,9 +137,15 @@ export const TicketCollectionsSection = memo(function TicketCollectionsSection({
             Encaissements
           </h2>
           <p className="mt-0.5 max-w-xl text-xs text-slate-500">
-            Devis payés (n° de tickets renseignés) le jour sélectionné — Cash, Stripe (+3 %) et total.
-            Visible uniquement pour Ewen et Karim.
+            Devis avec n° de tickets — montants ligne par ligne (Stripe = +3 % par activité).
+            Date = moment du paiement (ticketsEnteredAt). Visible Ewen et Karim uniquement.
           </p>
+          {undatedPaidQuotes > 0 ? (
+            <p className="mt-1.5 text-xs font-medium text-amber-700">
+              {undatedPaidQuotes} devis payé{undatedPaidQuotes > 1 ? "s" : ""} sans date
+              d’encaissement précise (anciens tickets) — non inclus dans le calendrier.
+            </p>
+          ) : null}
         </div>
         <MonthNavigator
           viewYear={viewYear}

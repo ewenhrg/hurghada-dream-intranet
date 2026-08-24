@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { SITE_KEY, LS_KEYS } from "../../constants";
-import { saveLS } from "../../utils";
+import { saveLS, calculateCardPrice } from "../../utils";
+import { computePaidColumnsFromItems } from "../../utils/ticketCollections";
 import { isBoatPartyActivity } from "../../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
@@ -100,6 +101,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
     setSaving(true);
     try {
       const originalItem = quote.items[itemIndex];
+      const enteredAt = originalItem.ticketsEnteredAt || new Date().toISOString();
       const patchedItem = {
         ...originalItem,
         ticketNumber: nextTicket,
@@ -107,6 +109,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
         pickupTime: String(pickup || "").trim(),
         paymentMethod: paymentMethod || "",
         lineTotal: nextLineTotal,
+        ticketsEnteredAt: enteredAt,
       };
 
       if (isBoatParty) {
@@ -123,6 +126,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
 
       const nextItems = quote.items.map((it, idx) => (idx === itemIndex ? patchedItem : it));
       const nextTotal = nextItems.reduce((sum, it) => sum + (Math.round(Number(it.lineTotal) || 0)), 0);
+      const { paidCash, paidStripe } = computePaidColumnsFromItems(nextItems);
 
       const updatedQuote = {
         ...quote,
@@ -136,6 +140,11 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
         notes: String(note || "").trim(),
         items: nextItems,
         total: nextTotal,
+        totalCash: nextTotal,
+        totalCard: calculateCardPrice(nextTotal),
+        paidCash,
+        paidStripe,
+        ticketsEnteredAt: quote.ticketsEnteredAt || enteredAt,
         updated_at: new Date().toISOString(),
       };
 
@@ -151,7 +160,9 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
           client_room: updatedQuote.client.room || "",
           notes: updatedQuote.notes || "",
           total: updatedQuote.total,
-          items: JSON.stringify(updatedQuote.items),
+          paid_cash: paidCash,
+          paid_stripe: paidStripe,
+          items: updatedQuote.items,
           updated_at: updatedQuote.updated_at,
         };
 
