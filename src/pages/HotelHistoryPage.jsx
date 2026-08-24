@@ -3098,11 +3098,8 @@ export function HotelHistoryPage({ user = null }) {
         return;
       }
       if (!request?.supabaseId || !supabase) return;
-      const fullName =
-        [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "ce client";
-      const short = formatHotelRequestShortRef(request.id);
       const ok = window.confirm(
-        `Supprimer définitivement le devis de ${fullName}${short ? ` (réf. ${short})` : ""} ?\n\nCette action est irréversible.`
+        "Êtes-vous sûr de vouloir supprimer cette réservation ?"
       );
       if (!ok) return;
 
