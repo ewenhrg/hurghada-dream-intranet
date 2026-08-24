@@ -2571,9 +2571,10 @@ export function HotelHistoryPage({ user = null }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const catalog = await loadPublicHotelsCatalog({ publishedOnly: false });
+      const catalog = await loadPublicHotelsCatalog({ publishedOnly: true });
       if (cancelled) return;
       // Catalogue allégé pour les selects de réponse (pas besoin des galeries).
+      // publishedOnly : hôtels en pause exclus du site et des listes.
       setCatalogHotels(
         (catalog.hotels || []).map((h) => ({
           name: h.name,

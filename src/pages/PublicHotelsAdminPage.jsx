@@ -6,7 +6,9 @@ import {
   ImagePlus,
   Loader2,
   MapPin,
+  Pause,
   Pencil,
+  Play,
   Plus,
   Save,
   Trash2,
@@ -391,6 +393,56 @@ export function PublicHotelsAdminPage() {
     }
   }
 
+  async function handleTogglePause() {
+    const nextPublished = draft.isPublished === false;
+    if (!draft.dbId) {
+      updateField("isPublished", nextPublished);
+      toast.info(
+        nextPublished
+          ? "Hôtel actif — enregistrez pour le publier."
+          : "Hôtel en pause — enregistrez pour le masquer."
+      );
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = {
+        ...draft,
+        isPublished: nextPublished,
+        highlights: textToHighlights(highlightsText),
+        images: normalizeCatalogImageUrlsFromDb(draft.images),
+        roomCategories: normalizeRoomCategories(draft.roomCategories),
+      };
+      const result = await savePublicHotel(payload);
+      if (!result.ok) {
+        toast.error(result.error || "Impossible de changer le statut.");
+        return;
+      }
+      const saved = result.hotel;
+      setDraft((prev) => ({
+        ...prev,
+        ...saved,
+        isPublished: saved?.isPublished !== false,
+        mapsUrl: saved?.mapsUrl || prev.mapsUrl || "",
+        images: normalizeCatalogImageUrlsFromDb(saved?.images ?? prev.images),
+        roomCategories: normalizeRoomCategories(saved?.roomCategories ?? prev.roomCategories),
+      }));
+      setHotels((prev) =>
+        prev.map((h) =>
+          h.dbId === saved?.dbId ? { ...h, ...saved, isPublished: saved?.isPublished !== false } : h
+        )
+      );
+      toast.success(
+        nextPublished
+          ? "Hôtel réactivé — visible sur le site et dans les listes."
+          : "Hôtel en pause — masqué du site et des listes."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleDelete() {
     if (!draft.dbId) {
       startCreate();
@@ -662,9 +714,10 @@ export function PublicHotelsAdminPage() {
                           Bébé {hotel.babyAgeMin}–{hotel.babyAgeMax} · Enfant {hotel.childAgeMin}–
                           {hotel.childAgeMax}
                         </span>
-                        {!hotel.isPublished ? (
-                          <span className="mt-1 inline-block rounded-md bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-200">
-                            Brouillon
+                        {hotel.isPublished === false ? (
+                          <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-200">
+                            <Pause className="h-2.5 w-2.5" aria-hidden />
+                            En pause
                           </span>
                         ) : null}
                       </span>
@@ -697,6 +750,26 @@ export function PublicHotelsAdminPage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <GhostBtn
+                    type="button"
+                    variant="neutral"
+                    size="sm"
+                    onClick={() => void handleTogglePause()}
+                    disabled={saving}
+                    aria-pressed={draft.isPublished === false}
+                    title={
+                      draft.isPublished === false
+                        ? "Réactiver l’hôtel sur le site et dans les listes"
+                        : "Mettre l’hôtel en pause (masqué du site et des listes)"
+                    }
+                  >
+                    {draft.isPublished === false ? (
+                      <Play className="h-3.5 w-3.5" aria-hidden />
+                    ) : (
+                      <Pause className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    {draft.isPublished === false ? "Réactiver" : "Pause"}
+                  </GhostBtn>
                   {!isNew ? (
                     <GhostBtn
                       type="button"
@@ -867,15 +940,43 @@ export function PublicHotelsAdminPage() {
                   </div>
                 </div>
 
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-4 py-3 sm:col-span-2">
-                  <input
-                    type="checkbox"
-                    checked={draft.isPublished !== false}
-                    onChange={(e) => updateField("isPublished", e.target.checked)}
-                    className="h-4 w-4 rounded border-violet-300 text-violet-600"
-                  />
-                  <span className="text-sm font-semibold text-white">Publié sur /hotels</span>
-                </label>
+                <div
+                  className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 sm:col-span-2 ${
+                    draft.isPublished === false
+                      ? "border-amber-400/40 bg-amber-500/15"
+                      : "border-emerald-400/30 bg-emerald-500/10"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white">
+                      {draft.isPublished === false ? "En pause" : "Actif"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-300">
+                      {draft.isPublished === false
+                        ? "Masqué du site public (/hotels) et des listes de réponse devis."
+                        : "Visible sur le site public et dans les listes de réponse devis."}
+                    </p>
+                  </div>
+                  <GhostBtn
+                    type="button"
+                    variant="neutral"
+                    size="sm"
+                    onClick={() => void handleTogglePause()}
+                    disabled={saving}
+                  >
+                    {draft.isPublished === false ? (
+                      <>
+                        <Play className="h-3.5 w-3.5" aria-hidden />
+                        Réactiver
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="h-3.5 w-3.5" aria-hidden />
+                        Pause
+                      </>
+                    )}
+                  </GhostBtn>
+                </div>
               </div>
 
               <label className="block space-y-1.5">
