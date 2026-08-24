@@ -66,8 +66,9 @@ export function getQuoteCardTotal(quote) {
 }
 
 /**
- * Instant d’encaissement (clic Payer) — uniquement ticketsEnteredAt.
- * Pas de fallback sur updated_at (trop imprécis après une modification ultérieure).
+ * Instant d’encaissement :
+ * 1) ticketsEnteredAt (Pay)
+ * 2) sinon updated_at / createdAt si des tickets existent (anciens devis — jour approx.)
  */
 export function resolveQuoteTicketsEnteredAt(quote) {
   const times = [];
@@ -79,16 +80,28 @@ export function resolveQuoteTicketsEnteredAt(quote) {
     if (t && !Number.isNaN(Date.parse(t))) times.push(t);
   }
 
-  if (!times.length) return null;
-  times.sort();
-  // Plus ancienne date = premier enregistrement des tickets (Pay)
-  return times[0];
+  if (times.length) {
+    times.sort();
+    return { at: times[0], approximate: false };
+  }
+
+  // Anciens devis payés avant la date d’encaissement : dernière MAJ / création
+  if (getTicketedItems(quote).length > 0) {
+    const fallback = String(
+      quote?.updated_at || quote?.updatedAt || quote?.createdAt || quote?.created_at || ""
+    ).trim();
+    if (fallback && !Number.isNaN(Date.parse(fallback))) {
+      return { at: fallback, approximate: true };
+    }
+  }
+
+  return { at: null, approximate: false };
 }
 
 /**
  * Répartition cash / stripe / mixte — uniquement les lignes avec n° ticket.
  * Stripe = prix carte ligne par ligne (ceil(+3%)).
- * Mixte (cash+stripe sur la même ligne) = montant espèces (pas de split inventé).
+ * Sans mode de paiement : compté en cash (historique / tickets saisis).
  */
 export function getQuoteCollectionBreakdown(quote) {
   const ticketed = getTicketedItems(quote);
@@ -98,12 +111,16 @@ export function getQuoteCollectionBreakdown(quote) {
   let stripe = 0;
   let mixed = 0;
   let linesWithMethod = 0;
+  let linesWithoutMethodCash = 0;
 
   for (const it of ticketed) {
     const lineCash = Math.round(Number(it.lineTotal) || 0);
     const { cash: isCash, stripe: isStripe } = parseItemPaymentFlags(it.paymentMethod);
 
-    if (!isCash && !isStripe) continue;
+    if (!isCash && !isStripe) {
+      linesWithoutMethodCash += lineCash;
+      continue;
+    }
     linesWithMethod += 1;
 
     if (isCash && isStripe) {
@@ -116,6 +133,38 @@ export function getQuoteCollectionBreakdown(quote) {
   }
 
   if (linesWithMethod > 0) {
+    // Lignes sans mode sur le même devis → cash (reste)
+    cash += linesWithoutMethodCash;
+    // Si tous les lineTotal sont 0, basculer sur le total devis
+    if (cash + stripe + mixed === 0) {
+      const fallback = getQuoteCashTotal(quote);
+      const methods = normalizeTicketsPaymentMethods(quote);
+      if (methods.stripe && !methods.cash) {
+        return {
+          cash: 0,
+          stripe: calculateCardPrice(fallback),
+          mixed: 0,
+          mode: "stripe",
+          ticketedLines: ticketed.length,
+        };
+      }
+      if (methods.cash && methods.stripe) {
+        return {
+          cash: 0,
+          stripe: 0,
+          mixed: fallback,
+          mode: "mixed",
+          ticketedLines: ticketed.length,
+        };
+      }
+      return {
+        cash: fallback,
+        stripe: 0,
+        mixed: 0,
+        mode: "cash",
+        ticketedLines: ticketed.length,
+      };
+    }
     const mode =
       mixed > 0 && cash === 0 && stripe === 0
         ? "mixed"
@@ -127,9 +176,10 @@ export function getQuoteCollectionBreakdown(quote) {
     return { cash, stripe, mixed, mode, ticketedLines: ticketed.length };
   }
 
-  // Aucun paymentMethod sur les lignes → flags devis / colonnes paid_*
+  // Aucun paymentMethod sur les lignes → flags devis / colonnes paid_* / défaut cash
   const methods = normalizeTicketsPaymentMethods(quote);
-  const cashPrice = sumItemsLineCash(ticketed) || getQuoteCashTotal(quote);
+  const cashPrice =
+    sumItemsLineCash(ticketed) > 0 ? sumItemsLineCash(ticketed) : getQuoteCashTotal(quote);
   const cardPrice = calculateCardPrice(cashPrice);
   const paidCash = Math.round(Number(quote?.paidCash) || 0);
   const paidStripe = Math.round(Number(quote?.paidStripe) || 0);
@@ -189,7 +239,17 @@ export function getQuoteCollectionBreakdown(quote) {
     };
   }
 
-  // Tickets sans mode de paiement ni paid_* → exclu (évite de compter du cash « inventé »)
+  // Tickets saisis sans mode → cash (comportement historique)
+  if (cashPrice > 0) {
+    return {
+      cash: cashPrice,
+      stripe: 0,
+      mixed: 0,
+      mode: "cash",
+      ticketedLines: ticketed.length,
+    };
+  }
+
   return null;
 }
 
@@ -233,22 +293,25 @@ function emptyDayBucket() {
 
 /**
  * Agrège les encaissements par jour (Africa/Cairo).
- * @returns {{ byDay: Map, undatedPaidQuotes: number }}
+ * @returns {{ byDay: Map, undatedPaidQuotes: number, approximateDateQuotes: number }}
  */
 export function buildCollectionsByDay(quotes = []) {
   const byDay = new Map();
   let undatedPaidQuotes = 0;
+  let approximateDateQuotes = 0;
 
   for (const quote of quotes || []) {
     const breakdown = getQuoteCollectionBreakdown(quote);
     if (!breakdown) continue;
 
-    const enteredAt = resolveQuoteTicketsEnteredAt(quote);
+    const resolved = resolveQuoteTicketsEnteredAt(quote);
+    const enteredAt = resolved?.at || null;
     const dateKey = toLocalDateKey(enteredAt);
     if (!dateKey) {
       undatedPaidQuotes += 1;
       continue;
     }
+    if (resolved.approximate) approximateDateQuotes += 1;
 
     if (!byDay.has(dateKey)) byDay.set(dateKey, emptyDayBucket());
     const bucket = byDay.get(dateKey);
@@ -263,7 +326,7 @@ export function buildCollectionsByDay(quotes = []) {
     else if (breakdown.mode === "split") bucket.splitCount += 1;
   }
 
-  return { byDay, undatedPaidQuotes };
+  return { byDay, undatedPaidQuotes, approximateDateQuotes };
 }
 
 export function getCollectionsForDay(byDay, dateKey) {

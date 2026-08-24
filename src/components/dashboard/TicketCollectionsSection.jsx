@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useEffect, useRef } from "react";
 import { Banknote, CreditCard, Sigma, CalendarDays } from "lucide-react";
 import { GhostBtn } from "../ui";
 import { currencyNoCents } from "../../utils";
@@ -75,8 +75,33 @@ export const TicketCollectionsSection = memo(function TicketCollectionsSection({
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(todayKey);
+  const didAutoSelectDay = useRef(false);
 
-  const { byDay, undatedPaidQuotes } = useMemo(() => buildCollectionsByDay(quotes), [quotes]);
+  const { byDay, undatedPaidQuotes, approximateDateQuotes } = useMemo(
+    () => buildCollectionsByDay(quotes),
+    [quotes]
+  );
+
+  // Une fois : si aujourd’hui est à 0, ouvrir le dernier jour avec encaissement
+  useEffect(() => {
+    if (didAutoSelectDay.current || !byDay?.size) return;
+    const todayBucket = getCollectionsForDay(byDay, todayKey);
+    if (todayBucket.total > 0) {
+      didAutoSelectDay.current = true;
+      return;
+    }
+    const keys = [...byDay.keys()].sort();
+    const lastKey = keys[keys.length - 1];
+    if (!lastKey) return;
+    didAutoSelectDay.current = true;
+    setSelectedDay(lastKey);
+    const [y, m] = lastKey.split("-").map(Number);
+    if (Number.isFinite(y) && Number.isFinite(m)) {
+      setViewYear(y);
+      setViewMonth(m - 1);
+    }
+  }, [byDay, todayKey]);
+
   const cells = useMemo(
     () => buildMonthCellsMondayFirst(viewYear, viewMonth),
     [viewYear, viewMonth]
@@ -137,13 +162,18 @@ export const TicketCollectionsSection = memo(function TicketCollectionsSection({
             Encaissements
           </h2>
           <p className="mt-0.5 max-w-xl text-xs text-slate-500">
-            Devis avec n° de tickets — montants ligne par ligne (Stripe = +3 % par activité).
-            Date = moment du paiement (ticketsEnteredAt). Visible Ewen et Karim uniquement.
+            Devis avec n° de tickets. Cash / Stripe selon le mode au paiement (sinon cash).
+            Date = Pay ; à défaut dernière mise à jour du devis.
           </p>
-          {undatedPaidQuotes > 0 ? (
+          {approximateDateQuotes > 0 ? (
             <p className="mt-1.5 text-xs font-medium text-amber-700">
-              {undatedPaidQuotes} devis payé{undatedPaidQuotes > 1 ? "s" : ""} sans date
-              d’encaissement précise (anciens tickets) — non inclus dans le calendrier.
+              {approximateDateQuotes} devis avec date approximative (payés avant le suivi
+              d’encaissement).
+            </p>
+          ) : null}
+          {undatedPaidQuotes > 0 ? (
+            <p className="mt-1 text-xs font-medium text-rose-700">
+              {undatedPaidQuotes} devis ticketés sans aucune date utilisable.
             </p>
           ) : null}
         </div>
