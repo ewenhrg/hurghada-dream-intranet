@@ -34,13 +34,13 @@ export function generateHotelRequestHTML(request) {
     : [request.hotelOption1, request.hotelOption2, request.hotelOption3].filter((h) =>
         String(h || "").trim()
       );
-  const issuedLabel = new Date().toLocaleDateString("en-GB", {
+  const issuedLabel = new Date().toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
   const createdLabel = request.createdAt
-    ? new Date(request.createdAt).toLocaleDateString("en-GB", {
+    ? new Date(request.createdAt).toLocaleDateString("fr-FR", {
         day: "numeric",
         month: "long",
         year: "numeric",
@@ -69,8 +69,8 @@ export function generateHotelRequestHTML(request) {
           typeof request.responsePayload.confirmedHotel === "object" &&
           String(request.responsePayload.confirmedHotel.hotelName || "").trim())
     );
-  const docTitle = isConfirmation ? "CONFIRMATION" : "QUOTE";
-  const docBadgeLabel = isConfirmation ? "Hotel confirmation" : "Hotel quote";
+  const docTitle = isConfirmation ? "CONFIRMATION" : "DEVIS";
+  const docBadgeLabel = isConfirmation ? "Confirmation hôtel" : "Devis hôtel";
   // Chrome « Enregistrer en PDF » utilise <title> comme nom de fichier
   const pageTitle =
     shortRef && shortRef !== "—"
@@ -79,11 +79,11 @@ export function generateHotelRequestHTML(request) {
         ? `hotel-confirmation`
         : `hotel-devis`;
   const footerNote = isConfirmation
-    ? "Stay confirmation. Thank you for your trust."
-    : "Indicative quote, subject to availability and final confirmation.";
+    ? "Confirmation de séjour. Merci de votre confiance."
+    : "Devis indicatif, sous réserve de disponibilité et de confirmation définitive.";
 
   const hotelChoicesHtml = wantsOffer
-    ? `<p class="soft-note">Custom offer requested — no pre-selected hotel.</p>`
+    ? `<p class="soft-note">Offre personnalisée demandée — sans choix d’hôtel préétabli.</p>`
     : hotels.length > 0
       ? `<div class="choice-list">${hotels
           .map(
@@ -91,19 +91,19 @@ export function generateHotelRequestHTML(request) {
               `<div class="choice-item"><span class="choice-index">${i + 1}</span><span class="choice-name">${escapeHtml(name)}</span></div>`
           )
           .join("")}</div>`
-      : `<p class="muted">No hotel provided.</p>`;
+      : `<p class="muted">Aucun hôtel renseigné.</p>`;
 
   const adultsLabel =
     request.adultsCount != null && request.adultsCount >= 1
-      ? `${request.adultsCount} adult${request.adultsCount > 1 ? "s" : ""}`
+      ? `${request.adultsCount} adulte${request.adultsCount > 1 ? "s" : ""}`
       : "—";
   const childrenLabel =
     request.childrenCount != null && request.childrenCount > 0
-      ? `${request.childrenCount} child${request.childrenCount > 1 ? "ren" : ""}`
-      : "None";
+      ? `${request.childrenCount} enfant${request.childrenCount > 1 ? "s" : ""}`
+      : "Aucun";
   const childAges = request.childAges?.trim() || "";
-  const checkIn = formatHotelStayDate(request.arrivalDate);
-  const checkOut = formatHotelStayDate(request.departureDate);
+  const checkIn = formatHotelStayDate(request.arrivalDate, "fr-FR");
+  const checkOut = formatHotelStayDate(request.departureDate, "fr-FR");
   const flightsRaw =
     request.flights ||
     request.responsePayload?.flights ||
@@ -172,7 +172,7 @@ export function generateHotelRequestHTML(request) {
               : ""
           }
           <div class="zt-detail-row zt-detail-total">
-            <span class="zt-detail-label">Zero Tracas amount</span>
+            <span class="zt-detail-label">Montant Zero Tracas</span>
             <span class="zt-detail-value">${escapeHtml(
               zeroTracasPrint.manualTotal != null
                 ? formatQuoteMoney(zeroTracasPrint.manualTotal, "EUR")
@@ -210,7 +210,7 @@ export function generateHotelRequestHTML(request) {
     if (daysUntilArrival < 0) return null;
 
     const formatDue = (date) =>
-      date.toLocaleDateString("en-GB", {
+      date.toLocaleDateString("fr-FR", {
         day: "numeric",
         month: "long",
         year: "numeric",
@@ -221,7 +221,7 @@ export function generateHotelRequestHTML(request) {
       due.setDate(due.getDate() + 7);
       return {
         mode: "deposit",
-        title: "Deposit",
+        title: "Acompte",
         dueLabel: formatDue(due),
         amount: Math.round(grandTotal * 0.3 * 100) / 100,
       };
@@ -231,7 +231,7 @@ export function generateHotelRequestHTML(request) {
     due.setDate(due.getDate() + 1);
     return {
       mode: "full",
-      title: "Payment",
+      title: "Règlement",
       dueLabel: formatDue(due),
       amount: grandTotal,
     };
@@ -242,24 +242,24 @@ export function generateHotelRequestHTML(request) {
       ? `<div class="deposit-block">
           <p class="deposit-title">${escapeHtml(paymentInfo.title)}</p>
           <p class="deposit-text">
-            Arrival more than a week away: you have <strong>7 days</strong> to pay a
-            <strong>30&nbsp;%</strong> deposit, i.e.
+            Arrivée dans plus d’une semaine : vous disposez de <strong>7 jours</strong> pour régler un
+            acompte de <strong>30&nbsp;%</strong>, soit
             <strong>${escapeHtml(formatQuoteMoney(paymentInfo.amount, hotelCurrency))}</strong>.
           </p>
           <p class="deposit-deadline">
-            Deposit due date:
+            Date butoir de l’acompte :
             <strong>${escapeHtml(paymentInfo.dueLabel)}</strong>
           </p>
         </div>`
       : `<div class="deposit-block">
           <p class="deposit-title">${escapeHtml(paymentInfo.title)}</p>
           <p class="deposit-text">
-            Arrival within a week: you have <strong>24&nbsp;h</strong> to pay
-            the full amount, i.e.
+            Arrivée dans moins d’une semaine : vous disposez de <strong>24&nbsp;h</strong> pour régler
+            la somme totale, soit
             <strong>${escapeHtml(formatQuoteMoney(paymentInfo.amount, hotelCurrency))}</strong>.
           </p>
           <p class="deposit-deadline">
-            Payment due date:
+            Date butoir du règlement :
             <strong>${escapeHtml(paymentInfo.dueLabel)}</strong>
           </p>
         </div>`
@@ -272,7 +272,7 @@ export function generateHotelRequestHTML(request) {
             ${
               hotelQuoteRows.length > 0
                 ? `<div class="total-line">
-              <span>Hotel${hotelQuoteRows.length > 1 ? "s" : ""}</span>
+              <span>Hôtel${hotelQuoteRows.length > 1 ? "s" : ""}</span>
               <strong>${escapeHtml(formatQuoteMoney(hotelTotal, hotelCurrency))}</strong>
             </div>`
                 : ""
@@ -291,7 +291,7 @@ export function generateHotelRequestHTML(request) {
             }
           </div>
           <div class="total-grand">
-            <span class="total-grand-label">Total amount</span>
+            <span class="total-grand-label">Montant total</span>
             <span class="total-grand-value">${escapeHtml(
               formatQuoteMoney(grandTotal, hotelCurrency)
             )}</span>
@@ -304,14 +304,14 @@ export function generateHotelRequestHTML(request) {
   const bankDetailsHtml = isConfirmation
     ? `<section class="section">
         <div class="section-head">
-          <h2 class="section-title">Bank details</h2>
+          <h2 class="section-title">Coordonnées bancaires</h2>
           <span class="section-aside">EUR · Hdreamco Ltd</span>
         </div>
         <div class="bank-box">
-          <p class="bank-intro">Hdreamco Ltd EUR bank details:</p>
+          <p class="bank-intro">Coordonnées bancaires en EUR de Hdreamco Ltd :</p>
           <div class="bank-rows">
             <div class="bank-row">
-              <span class="bank-label">Account holder</span>
+              <span class="bank-label">Propriétaire du compte</span>
               <span class="bank-value">Hdreamco Ltd</span>
             </div>
             <div class="bank-row">
@@ -323,7 +323,7 @@ export function generateHotelRequestHTML(request) {
               <span class="bank-value bank-mono">BE80 9676 1729 9777</span>
             </div>
             <div class="bank-row">
-              <span class="bank-label">Bank</span>
+              <span class="bank-label">Banque</span>
               <span class="bank-value">Wise, Rue du Trône 100, 3rd floor, Brussels, 1050, Belgium</span>
             </div>
           </div>
@@ -333,7 +333,7 @@ export function generateHotelRequestHTML(request) {
 
   const staySectionHtml = `<section class="section">
         <div class="section-head">
-          <h2 class="section-title">Stay</h2>
+          <h2 class="section-title">Séjour</h2>
           <span class="section-aside">${escapeHtml(boardLabel)}</span>
         </div>
         <div class="stay-ribbon">
@@ -342,7 +342,7 @@ export function generateHotelRequestHTML(request) {
             <div class="stay-date">${escapeHtml(checkIn)}</div>
           </div>
           <div class="stay-arrow">
-            <span>Stay</span>
+            <span>Séjour</span>
             <span class="stay-arrow-line" aria-hidden="true"></span>
           </div>
           <div class="stay-point out">
@@ -355,31 +355,31 @@ export function generateHotelRequestHTML(request) {
   const flightsSectionHtml = hasFlights
     ? `<section class="section">
         <div class="section-head">
-          <h2 class="section-title">Flights</h2>
+          <h2 class="section-title">Vols</h2>
         </div>
         <div class="info-grid">
           <div class="info-cell">
-            <span class="info-label">Arrival date</span>
-            <div class="info-value">${escapeHtml(formatHotelStayDate(flights.arrivalDate) || "—")}</div>
+            <span class="info-label">Date d’arrivée</span>
+            <div class="info-value">${escapeHtml(formatHotelStayDate(flights.arrivalDate, "fr-FR") || "—")}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Departure date</span>
-            <div class="info-value">${escapeHtml(formatHotelStayDate(flights.departureDate) || "—")}</div>
+            <span class="info-label">Date de départ</span>
+            <div class="info-value">${escapeHtml(formatHotelStayDate(flights.departureDate, "fr-FR") || "—")}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Arrival flight</span>
+            <span class="info-label">Vol arrivée</span>
             <div class="info-value">${escapeHtml(flights.arrivalFlightNumber || "—")}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Arrival time</span>
+            <span class="info-label">Heure d’arrivée</span>
             <div class="info-value">${escapeHtml(formatFlightTime(flights.arrivalTime) || "—")}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Departure flight</span>
+            <span class="info-label">Vol départ</span>
             <div class="info-value">${escapeHtml(flights.departureFlightNumber || "—")}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Departure time</span>
+            <span class="info-label">Heure de départ</span>
             <div class="info-value">${escapeHtml(formatFlightTime(flights.departureTime) || "—")}</div>
           </div>
         </div>
@@ -388,7 +388,7 @@ export function generateHotelRequestHTML(request) {
 
   const clientSectionHtml = `<section class="section">
         <div class="section-head">
-          <h2 class="section-title">${isConfirmation ? "Client information" : "Contact & travelers"}</h2>
+          <h2 class="section-title">${isConfirmation ? "Informations client" : "Coordonnées & voyageurs"}</h2>
         </div>
         <div class="info-grid">
           <div class="info-cell">
@@ -396,15 +396,15 @@ export function generateHotelRequestHTML(request) {
             <div class="info-value">${escapeHtml(fullName)}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Phone</span>
+            <span class="info-label">Téléphone</span>
             <div class="info-value">${escapeHtml(request.phone || "—")}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Email</span>
+            <span class="info-label">E-mail</span>
             <div class="info-value">${escapeHtml(request.email || "—")}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Board basis</span>
+            <span class="info-label">Formule</span>
             <div class="info-value">${escapeHtml(boardLabel)}</div>
           </div>
           ${
@@ -420,19 +420,19 @@ export function generateHotelRequestHTML(request) {
               : ""
           }
           <div class="info-cell">
-            <span class="info-label">Adults</span>
+            <span class="info-label">Adultes</span>
             <div class="info-value">${escapeHtml(adultsLabel)}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Children</span>
+            <span class="info-label">Enfants</span>
             <div class="info-value">${escapeHtml(childrenLabel)}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Child age(s)</span>
+            <span class="info-label">Âge(s) enfants</span>
             <div class="info-value ${childAges ? "" : "muted"}">${escapeHtml(childAges || "—")}</div>
           </div>
           <div class="info-cell">
-            <span class="info-label">Reference</span>
+            <span class="info-label">Référence</span>
             <div class="info-value">#${escapeHtml(refId)}</div>
           </div>
         </div>
@@ -440,7 +440,7 @@ export function generateHotelRequestHTML(request) {
 
   const hotelChoicesSectionHtml = `<section class="section">
         <div class="section-head">
-          <h2 class="section-title">Preferred hotels</h2>
+          <h2 class="section-title">Hôtels souhaités</h2>
         </div>
         ${hotelChoicesHtml}
       </section>`;
@@ -455,9 +455,9 @@ export function generateHotelRequestHTML(request) {
 
   const notesSectionHtml = `<section class="section">
         <div class="section-head">
-          <h2 class="section-title">Client notes</h2>
+          <h2 class="section-title">Notes client</h2>
         </div>
-        <div class="notes-box">${escapeHtml(request.notes?.trim() ? request.notes : "No notes.")}</div>
+        <div class="notes-box">${escapeHtml(request.notes?.trim() ? request.notes : "Aucune note.")}</div>
       </section>`;
 
   const agentNotesText = String(
@@ -473,7 +473,7 @@ export function generateHotelRequestHTML(request) {
     : "";
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="utf-8" />
   <title>${escapeHtml(pageTitle)}</title>
@@ -899,7 +899,7 @@ export function generateHotelRequestHTML(request) {
       min-height: 52px;
     }
 
-    /* Total amount */
+    /* Montant total */
     .total-section { margin-top: 8px; }
     .total-block {
       border-radius: 16px;
@@ -1140,13 +1140,13 @@ export function generateHotelRequestHTML(request) {
         <div class="doc-badge">
           <span class="doc-badge-label">${escapeHtml(docBadgeLabel)}</span>
           <div class="doc-ref">
-            <strong>Ref. ${escapeHtml(shortRef)}</strong>
-            Issued on ${escapeHtml(issuedLabel)}
+            <strong>Réf. ${escapeHtml(shortRef)}</strong>
+            Émis le ${escapeHtml(issuedLabel)}
           </div>
         </div>
       </div>
       <h1 class="hero-title">${escapeHtml(docTitle)}</h1>
-      <p class="hero-sub">Prepared for ${escapeHtml(fullName)} · Request of ${escapeHtml(createdLabel)}</p>
+      <p class="hero-sub">Préparé pour ${escapeHtml(fullName)} · Demande du ${escapeHtml(createdLabel)}</p>
     </header>
 
     <div class="body">
@@ -1177,19 +1177,19 @@ export function generateHotelRequestHTML(request) {
         <div class="footer-brand">Hurghada Dream</div>
         <p class="footer-note">${escapeHtml(footerNote)}</p>
       </div>
-      <div class="footer-stamp">Red Sea · Egypt</div>
+      <div class="footer-stamp">Mer Rouge · Égypte</div>
     </footer>
   </div>
 </body>
 </html>`;
 }
 
-function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTitle = "QUOTE", isConfirmation = false }) {
+function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTitle = "DEVIS", isConfirmation = false }) {
   const rows = Array.isArray(quoteHotels) ? quoteHotels.filter((h) => h?.hotelName) : [];
   if (!rows.length) {
     return `<section class="section">
       <div class="section-head"><h2 class="section-title">${escapeHtml(docTitle)}</h2></div>
-      <p class="empty-quote">Nonee proposition tarifaire pour le moment.</p>
+      <p class="empty-quote">Aucune proposition tarifaire pour le moment.</p>
     </section>`;
   }
 
@@ -1200,7 +1200,7 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTi
       const tags = [];
       if (quote.nights != null && quote.nights > 0) {
         tags.push(
-          `<span class="tag">${escapeHtml(String(quote.nights))} night${quote.nights > 1 ? "s" : ""}</span>`
+          `<span class="tag">${escapeHtml(String(quote.nights))} nuit${quote.nights > 1 ? "s" : ""}</span>`
         );
       }
       if (Number(quote.roomsNeeded) > 1) {
@@ -1211,14 +1211,14 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTi
       }
       if (quote.freeChildren > 0) {
         tags.push(
-          `<span class="tag">${escapeHtml(String(quote.freeChildren))} child(ren) gratuit(s)</span>`
+          `<span class="tag">${escapeHtml(String(quote.freeChildren))} enfant(s) gratuit(s)</span>`
         );
       }
       if (quote.transferIncluded) {
         tags.push(`<span class="tag transfer">transfert inclus</span>`);
       }
       const roomLine = [
-        h.roomCategory || "Category to be confirmed",
+        h.roomCategory || "Catégorie à confirmer",
         Number(quote.roomsNeeded) > 1 ? `${Number(quote.roomsNeeded)} chambres` : null,
       ]
         .filter(Boolean)
@@ -1226,14 +1226,14 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTi
 
       const optionLabel = isConfirmation
         ? rows.length > 1
-          ? `Confirmed hotel ${index + 1}`
-          : "Confirmed hotel"
+          ? `Hôtel confirmé ${index + 1}`
+          : "Hôtel confirmé"
         : `Option ${index + 1}`;
-      const hotelCheckIn = formatHotelStayDate(h.stayFrom) !== "—"
-        ? formatHotelStayDate(h.stayFrom)
+      const hotelCheckIn = formatHotelStayDate(h.stayFrom, "fr-FR") !== "—"
+        ? formatHotelStayDate(h.stayFrom, "fr-FR")
         : checkIn;
-      const hotelCheckOut = formatHotelStayDate(h.stayTo) !== "—"
-        ? formatHotelStayDate(h.stayTo)
+      const hotelCheckOut = formatHotelStayDate(h.stayTo, "fr-FR") !== "—"
+        ? formatHotelStayDate(h.stayTo, "fr-FR")
         : checkOut;
 
       return `<article class="quote-card">
@@ -1251,7 +1251,7 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTi
         </div>
         <div class="quote-meta">
           <div class="quote-meta-item">
-            <span class="info-label">Board basis</span>
+            <span class="info-label">Formule</span>
             <div class="info-value">${escapeHtml(boardLabel)}</div>
           </div>
           <div class="quote-meta-item">
@@ -1273,7 +1273,7 @@ function buildQuoteCardsHTML(quoteHotels, { checkIn, checkOut, boardLabel, docTi
       <h2 class="section-title">${escapeHtml(docTitle)}</h2>
       <span class="section-aside">${
         isConfirmation
-          ? "1 hotel"
+          ? "1 hôtel"
           : `${rows.length} option${rows.length > 1 ? "s" : ""}`
       }</span>
     </div>
@@ -1298,14 +1298,14 @@ function escapeHtml(value) {
 }
 
 /**
- * Impression : préfère un nouvel onglet (aperçu + Cancel = devis visible),
+ * Impression : préfère un nouvel onglet (aperçu + Annuler = devis visible),
  * sinon iframe cachée si Chrome bloque la popup.
  * @returns {boolean}
  */
 function printHtmlDocument(html, delayMs = 500) {
   if (!html || typeof document === "undefined") return false;
 
-  // 1) Nouvel onglet — reste ouvert après Cancel pour lire le devis
+  // 1) Nouvel onglet — reste ouvert après Annuler pour lire le devis
   let win = null;
   try {
     win = window.open("", "_blank");
@@ -1463,26 +1463,26 @@ function generateHotelPaymentReceiptHTML(request, options = null) {
       ? Math.round(Number(payment.schedule.dueAmount) * 100) / 100
       : null;
 
-  let kindLabel = "Payment received";
-  let kindDetail = "We acknowledge receipt of the following payment.";
+  let kindLabel = "Paiement reçu";
+  let kindDetail = "Nous accusons réception du paiement suivant.";
   if (isFullyPaid && !entryId) {
-    kindLabel = "Full payment";
-    kindDetail = "We acknowledge receipt of the full payment for your stay.";
+    kindLabel = "Règlement total";
+    kindDetail = "Nous accusons réception du règlement intégral du séjour.";
   } else if (isFullyPaid && entryId) {
-    kindLabel = remaining <= 0.009 && allPaid >= grandTotal - 0.009 ? "Balance / settlement" : "Payment received";
-    kindDetail = "We acknowledge receipt of this payment.";
+    kindLabel = remaining <= 0.009 && allPaid >= grandTotal - 0.009 ? "Solde / règlement" : "Paiement reçu";
+    kindDetail = "Nous accusons réception de ce paiement.";
   } else if (depositDue != null && allPaid + 0.009 >= depositDue) {
-    kindLabel = "Deposit received";
-    kindDetail = "We acknowledge receipt of the deposit. The balance remains due as agreed.";
+    kindLabel = "Acompte reçu";
+    kindDetail = "Nous accusons réception de l’acompte. Le solde reste dû selon les conditions convenues.";
   } else {
-    kindLabel = "Partial payment received";
-    kindDetail = "We acknowledge receipt of this payment. A balance remains due.";
+    kindLabel = "Paiement partiel reçu";
+    kindDetail = "Nous accusons réception de ce paiement. Un solde reste à régler.";
   }
 
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "—";
   const refId = String(request.id || "").trim() || "—";
   const shortRef = formatHotelRequestShortRef(refId) || "H";
-  const issuedLabel = new Date().toLocaleDateString("en-GB", {
+  const issuedLabel = new Date().toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -1496,7 +1496,7 @@ function generateHotelPaymentReceiptHTML(request, options = null) {
   const linesHtml = focusEntries
     .map((e) => {
       const when = e.paidAt
-        ? new Date(e.paidAt).toLocaleString("en-GB", {
+        ? new Date(e.paidAt).toLocaleString("fr-FR", {
             day: "numeric",
             month: "long",
             year: "numeric",
@@ -1512,7 +1512,7 @@ function generateHotelPaymentReceiptHTML(request, options = null) {
     .join("");
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="utf-8" />
   <title>hotel-${escapeHtml(shortRef)}-recu</title>
@@ -1626,15 +1626,15 @@ function generateHotelPaymentReceiptHTML(request, options = null) {
 <body>
   <div class="sheet">
     <div class="brand">Hurghada Dream · Hdreamco Ltd</div>
-    <h1>Payment receipt</h1>
+    <h1>Reçu de paiement</h1>
     <span class="badge">${escapeHtml(kindLabel)}</span>
     <p class="detail">${escapeHtml(kindDetail)}</p>
     <div class="meta">
-      <div class="row"><span class="label">Reference</span><span class="value">${escapeHtml(shortRef)}</span></div>
+      <div class="row"><span class="label">Référence</span><span class="value">${escapeHtml(shortRef)}</span></div>
       <div class="row"><span class="label">Client</span><span class="value">${escapeHtml(fullName)}</span></div>
-      <div class="row"><span class="label">Hotel</span><span class="value">${escapeHtml(hotelName)}${roomCategory ? ` · ${escapeHtml(roomCategory)}` : ""}</span></div>
-      <div class="row"><span class="label">Issued on</span><span class="value">${escapeHtml(issuedLabel)}</span></div>
-      <div class="row"><span class="label">Stay total</span><span class="value">${escapeHtml(formatQuoteMoney(grandTotal, currency))}</span></div>
+      <div class="row"><span class="label">Hôtel</span><span class="value">${escapeHtml(hotelName)}${roomCategory ? ` · ${escapeHtml(roomCategory)}` : ""}</span></div>
+      <div class="row"><span class="label">Émis le</span><span class="value">${escapeHtml(issuedLabel)}</span></div>
+      <div class="row"><span class="label">Total séjour</span><span class="value">${escapeHtml(formatQuoteMoney(grandTotal, currency))}</span></div>
     </div>
     <table>
       <thead>
@@ -1643,15 +1643,15 @@ function generateHotelPaymentReceiptHTML(request, options = null) {
       <tbody>${linesHtml}</tbody>
     </table>
     <div class="total-box">
-      <div class="label">${entryId ? "Amount on this receipt" : "Total amount received"}</div>
+      <div class="label">${entryId ? "Montant de ce reçu" : "Montant total reçu"}</div>
       <div class="big">${escapeHtml(formatQuoteMoney(receiptPaid, currency))}</div>
       ${
         !isFullyPaid
-          ? `<div class="remain">Balance due: ${escapeHtml(formatQuoteMoney(remaining, currency))}</div>`
-          : `<div style="margin-top:8px;font-size:11px;font-weight:700;color:#065f46;">Balance settled</div>`
+          ? `<div class="remain">Reste à payer : ${escapeHtml(formatQuoteMoney(remaining, currency))}</div>`
+          : `<div style="margin-top:8px;font-size:11px;font-weight:700;color:#065f46;">Solde réglé</div>`
       }
     </div>
-    <p class="footer">Automatically generated document — thank you for your trust.</p>
+    <p class="footer">Document généré automatiquement — merci de votre confiance.</p>
   </div>
 </body>
 </html>`;
