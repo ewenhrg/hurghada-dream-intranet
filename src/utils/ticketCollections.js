@@ -185,10 +185,20 @@ export function getQuoteCollectionBreakdown(quote) {
   const paidStripe = Math.round(Number(quote?.paidStripe) || 0);
 
   if (methods.cash && methods.stripe) {
+    // Mixte : utiliser les montants saisis si dispo, sinon fallback total cash en « mixed »
+    if (paidCash > 0 || paidStripe > 0) {
+      return {
+        cash: paidCash,
+        stripe: paidStripe,
+        mixed: 0,
+        mode: "split",
+        ticketedLines: ticketed.length,
+      };
+    }
     return {
       cash: 0,
       stripe: 0,
-      mixed: paidCash > 0 ? paidCash : cashPrice,
+      mixed: cashPrice,
       mode: "mixed",
       ticketedLines: ticketed.length,
     };

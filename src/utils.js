@@ -924,16 +924,6 @@ export function generateTicketsHTML(quote, options = {}) {
       }
     }
 
-    const transferStandardAmount = calculateStandardTransferSurchargeFromItem(item);
-    const transferPrivateAmount = calculatePrivateTransferSurchargeFromItem(item);
-    if (transferStandardAmount > 0) {
-      lines.push(`Transfert: ${currencyNoCents(transferStandardAmount, quote.currency)}`);
-    }
-    if (transferPrivateAmount > 0) {
-      const label = getPrivateTransferLabel(item.privateTransferTier) || "Transfert privé";
-      lines.push(`${label}: ${currencyNoCents(transferPrivateAmount, quote.currency)}`);
-    }
-
     const extraLabelText = item.extraLabel != null ? String(item.extraLabel).trim() : "";
     const extraAmountRaw = item.extraAmount != null ? String(item.extraAmount).trim() : "";
     const extraAmountValue = extraAmountRaw === "" ? 0 : Number(extraAmountRaw);
@@ -966,17 +956,19 @@ export function generateTicketsHTML(quote, options = {}) {
     ? esc(String(client.airbnbMapsUrl))
     : "";
   const quoteTicketsBy = String(quote.ticketsEnteredByName || "").trim();
-  const paymentMethods = normalizeTicketsPaymentMethods(quote);
-  // Stripe seul = paiement carte → prix « carte » (+3 %). Cash / mixte = espèces.
-  // Zero Tracas : toujours le prix espèces (sans +3 %), même en Stripe.
-  const useCardPricing = paymentMethods.stripe === true && paymentMethods.cash !== true;
-  const isZeroTracasItem = (item) =>
-    isZeroTracasActivity(item?.activityName) ||
-    isZeroTracasHorsZoneActivity(item?.activityName);
-  const ticketDisplayPrice = (item) => {
-    const cash = Math.round(Number(item?.lineTotal) || 0);
-    if (isZeroTracasItem(item)) return cash;
-    return useCardPricing ? calculateCardPrice(cash) : cash;
+  // Sur le ticket imprimé : toujours le prix espèces (sans +3 % carte).
+  const ticketCashTotal = (item) => Math.round(Number(item?.lineTotal) || 0);
+  const ticketTransferAmount = (item) =>
+    Math.round(calculateTransferSurchargeFromItem(item) || 0);
+  /** Prix affiché sur le ticket (cash), éventuellement décomposé avec le transfert. */
+  const formatTicketPriceDisplay = (item) => {
+    const total = ticketCashTotal(item);
+    const transfer = ticketTransferAmount(item);
+    if (transfer > 0 && total > 0) {
+      const base = Math.max(0, total - transfer);
+      return `${base}+${transfer}=${total} (transfert)`;
+    }
+    return currencyNoCents(total, quote.currency || "EUR");
   };
 
   const sortedItems = [...(quote.items || [])].sort((a, b) => {
@@ -1022,7 +1014,7 @@ export function generateTicketsHTML(quote, options = {}) {
           : client.hotel || "";
         const priceHint =
           item.lineTotal != null && Number.isFinite(Number(item.lineTotal))
-            ? currencyNoCents(ticketDisplayPrice(item), quote.currency)
+            ? formatTicketPriceDisplay(item)
             : "";
         const ztCounts = getZeroTracasServiceCounts(item);
         // Toujours 3 cases distinctes : Transfert / Visa / SIM
@@ -1112,7 +1104,7 @@ export function generateTicketsHTML(quote, options = {}) {
         ? esc(item.pickupTime)
         : slotLabel(item.slot) || "—";
 
-      const priceText = esc(currencyNoCents(ticketDisplayPrice(item), quote.currency));
+      const priceText = esc(formatTicketPriceDisplay(item));
       const extraLines = formatTicketExtraLines(item);
       const extrasHTML =
         extraLines.length > 0
@@ -1163,12 +1155,10 @@ export function generateTicketsHTML(quote, options = {}) {
     .join("");
 
   const ticketCount = sortedItems.length;
-  // Toujours la somme des tickets imprimés (pas le total du devis entier)
-  const totalPrice = sortedItems.reduce((sum, item) => sum + ticketDisplayPrice(item), 0);
+  // Toujours la somme des tickets imprimés (prix espèces, sans +3 %)
+  const totalPrice = sortedItems.reduce((sum, item) => sum + ticketCashTotal(item), 0);
   const paymentLabel = formatTicketsPaymentMethodsLabel(quote);
   const isSingleTicket = ticketCount === 1;
-  const summaryShowsCard =
-    useCardPricing && sortedItems.some((it) => !isZeroTracasItem(it));
   const summaryHTML = `
     <div class="tickets-summary">
       <div class="tickets-summary-row">
@@ -1184,7 +1174,7 @@ export function generateTicketsHTML(quote, options = {}) {
       </div>`
       }
       <div class="tickets-summary-row tickets-summary-total">
-        <span class="tickets-summary-label">${isSingleTicket ? "Prix du ticket" : "Prix total"}${summaryShowsCard ? " (carte)" : ""}</span>
+        <span class="tickets-summary-label">${isSingleTicket ? "Prix du ticket" : "Prix total"}</span>
         <span class="tickets-summary-value">${esc(currencyNoCents(totalPrice, quote.currency))}</span>
       </div>
     </div>
@@ -1245,7 +1235,7 @@ export function generateTicketsHTML(quote, options = {}) {
     .ticket-brand-sub { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
     .ticket-price { text-align: right; display: flex; flex-direction: column; flex-shrink: 0; }
     .ticket-price-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; }
-    .ticket-price-value { font-size: 15px; font-weight: 800; color: #0e7490; line-height: 1.1; }
+    .ticket-price-value { font-size: 13px; font-weight: 800; color: #0e7490; line-height: 1.15; max-width: 11rem; text-align: right; word-break: break-word; }
     .ticket-activity {
       font-size: 13px;
       font-weight: 800;

@@ -81,6 +81,8 @@ function QuoteCardComponent({
   const [ticketDrafts, setTicketDrafts] = useState({});
   const [payCash, setPayCash] = useState(false);
   const [payStripe, setPayStripe] = useState(false);
+  const [payCashAmount, setPayCashAmount] = useState("");
+  const [payStripeAmount, setPayStripeAmount] = useState("");
   const [ticketGenerating, setTicketGenerating] = useState(false);
   const [ztUploadingType, setZtUploadingType] = useState(null);
 
@@ -180,6 +182,23 @@ function QuoteCardComponent({
     const methods = normalizeTicketsPaymentMethods(rawQuote);
     setPayCash(methods.cash);
     setPayStripe(methods.stripe);
+    const items = rawQuote.items || [];
+    const cashTotal =
+      items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||
+      Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0);
+    const cardTotal = calculateCardPrice(cashTotal);
+    const existingCash = Math.round(Number(rawQuote.paidCash) || 0);
+    const existingStripe = Math.round(Number(rawQuote.paidStripe) || 0);
+    setPayCashAmount(
+      methods.cash
+        ? String(existingCash > 0 ? existingCash : cashTotal)
+        : ""
+    );
+    setPayStripeAmount(
+      methods.stripe
+        ? String(existingStripe > 0 ? existingStripe : cardTotal)
+        : ""
+    );
     setShowTicketModal(true);
   }, [d, quotes]);
 
@@ -194,6 +213,25 @@ function QuoteCardComponent({
     if (!payCash && !payStripe) {
       toast.warning("Cochez au moins un mode de paiement : Cash et/ou Stripe.");
       return;
+    }
+
+    let paidCashAmount = 0;
+    let paidStripeAmount = 0;
+    if (payCash) {
+      const parsed = Math.round(Number(String(payCashAmount).replace(",", ".")) || 0);
+      if (!(parsed > 0)) {
+        toast.warning("Indiquez le montant total payé en Cash.");
+        return;
+      }
+      paidCashAmount = parsed;
+    }
+    if (payStripe) {
+      const parsed = Math.round(Number(String(payStripeAmount).replace(",", ".")) || 0);
+      if (!(parsed > 0)) {
+        toast.warning("Indiquez le montant total payé en Stripe.");
+        return;
+      }
+      paidStripeAmount = parsed;
     }
 
     if (needsZeroTracasDocs && !hasAllZeroTracasRequiredDocuments(rawQuote)) {
@@ -256,17 +294,6 @@ function QuoteCardComponent({
         items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||
         Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0);
       const cardTotal = calculateCardPrice(cashTotal);
-      // Cash seul → paid_cash ; Stripe seul → paid_stripe (prix carte) ; mixte → paid_cash (base) + 0 stripe
-      let paidCashAmount = 0;
-      let paidStripeAmount = 0;
-      if (payCash && payStripe) {
-        paidCashAmount = cashTotal;
-        paidStripeAmount = 0;
-      } else if (payStripe) {
-        paidStripeAmount = cardTotal;
-      } else if (payCash) {
-        paidCashAmount = cashTotal;
-      }
       const updatedItems = items.map((item, idx) => ({
         ...item,
         ticketNumber: normalized[idx],
@@ -329,7 +356,7 @@ function QuoteCardComponent({
     } finally {
       setTicketGenerating(false);
     }
-  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, user, payCash, payStripe, needsZeroTracasDocs]);
+  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, user, payCash, payStripe, payCashAmount, payStripeAmount, needsZeroTracasDocs]);
 
   const handleZeroTracasDocPick = useCallback(
     async (docType, file) => {
@@ -1039,14 +1066,29 @@ function QuoteCardComponent({
                 Mode de paiement
               </legend>
               <p className="text-xs font-medium text-slate-500 mb-3">
-                Vous pouvez cocher les deux si le client paie en partie cash et en partie Stripe.
+                Cochez Cash et/ou Stripe, puis indiquez le montant réellement encaissé pour chaque mode.
               </p>
               <div className="flex flex-wrap gap-3">
                 <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-xl border border-emerald-200 bg-white px-3.5 py-2.5 text-sm font-bold text-emerald-900 shadow-sm has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
                   <input
                     type="checkbox"
                     checked={payCash}
-                    onChange={(e) => setPayCash(e.target.checked)}
+                    onChange={(e) => {
+                      const on = e.target.checked;
+                      setPayCash(on);
+                      if (on) {
+                        const rawQuote = quotes.find((q) => q.id === d.id) || d;
+                        const items = rawQuote.items || [];
+                        const cashTotal =
+                          items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||
+                          Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0);
+                        setPayCashAmount((prev) =>
+                          String(prev || "").trim() ? prev : String(cashTotal)
+                        );
+                      } else {
+                        setPayCashAmount("");
+                      }
+                    }}
                     disabled={ticketGenerating}
                     className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                   />
@@ -1056,13 +1098,73 @@ function QuoteCardComponent({
                   <input
                     type="checkbox"
                     checked={payStripe}
-                    onChange={(e) => setPayStripe(e.target.checked)}
+                    onChange={(e) => {
+                      const on = e.target.checked;
+                      setPayStripe(on);
+                      if (on) {
+                        const rawQuote = quotes.find((q) => q.id === d.id) || d;
+                        const items = rawQuote.items || [];
+                        const cashTotal =
+                          items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||
+                          Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0);
+                        const cardTotal = calculateCardPrice(cashTotal);
+                        setPayStripeAmount((prev) =>
+                          String(prev || "").trim() ? prev : String(cardTotal)
+                        );
+                      } else {
+                        setPayStripeAmount("");
+                      }
+                    }}
                     disabled={ticketGenerating}
                     className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                   Stripe
                 </label>
               </div>
+
+              {payCash || payStripe ? (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {payCash ? (
+                    <label className="block rounded-xl border border-emerald-200 bg-white px-3 py-2.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-emerald-800">
+                        Total payé en Cash (€)
+                      </span>
+                      <NumberInput
+                        className="mt-1.5"
+                        value={payCashAmount}
+                        onChange={(e) => setPayCashAmount(e.target.value)}
+                        inputMode="decimal"
+                        min={0}
+                        step={1}
+                        placeholder="ex. 150"
+                        disabled={ticketGenerating}
+                        aria-label="Montant payé en cash"
+                      />
+                    </label>
+                  ) : null}
+                  {payStripe ? (
+                    <label className="block rounded-xl border border-indigo-200 bg-white px-3 py-2.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-indigo-800">
+                        Total payé en Stripe (€)
+                      </span>
+                      <NumberInput
+                        className="mt-1.5"
+                        value={payStripeAmount}
+                        onChange={(e) => setPayStripeAmount(e.target.value)}
+                        inputMode="decimal"
+                        min={0}
+                        step={1}
+                        placeholder="ex. 155"
+                        disabled={ticketGenerating}
+                        aria-label="Montant payé en Stripe"
+                      />
+                      <span className="mt-1 block text-[11px] font-medium text-indigo-700/80">
+                        Suggestion carte (+3 %) préremplie — modifiez si besoin.
+                      </span>
+                    </label>
+                  ) : null}
+                </div>
+              ) : null}
             </fieldset>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-end mt-6">
