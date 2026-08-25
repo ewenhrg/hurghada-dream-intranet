@@ -1626,7 +1626,7 @@ export default function App() {
             subtitle="Vue compacte — toutes les colonnes visibles. Copie directe vers Excel."
             bare
           >
-            <TicketsPage quotes={quotes} setQuotes={setQuotes} activities={activities} />
+            <TicketsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
           </Section>
         )}
 

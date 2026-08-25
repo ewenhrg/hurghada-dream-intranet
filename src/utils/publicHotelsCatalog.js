@@ -189,12 +189,23 @@ export function stripInternalHotelFields(hotel) {
 
 /**
  * Charge le catalogue (admin = tous ; public = publiés seulement).
+ * @param {object} [opts]
+ * @param {boolean} [opts.publishedOnly=false] — filtre `is_published`
+ * @param {boolean} [opts.includeInternalFields=false] — conserve `roomCategories` même en mode public/intranet
  * @returns {Promise<{ hotels: Array, error: string|null, fromFallback: boolean, tableEmpty?: boolean }>}
  */
-export async function loadPublicHotelsCatalog({ publishedOnly = false } = {}) {
+export async function loadPublicHotelsCatalog({
+  publishedOnly = false,
+  includeInternalFields = false,
+} = {}) {
+  const maybeStrip = (hotel) =>
+    publishedOnly && !includeInternalFields ? stripInternalHotelFields(hotel) : hotel;
+
   if (!__SUPABASE_DEBUG__?.isConfigured || !supabase) {
     return {
-      hotels: PUBLIC_HOTELS.map((h) => ({ ...h, dbId: null, slug: h.id, isPublished: true, sortOrder: 0 })),
+      hotels: PUBLIC_HOTELS.map((h) =>
+        maybeStrip({ ...h, dbId: null, slug: h.id, isPublished: true, sortOrder: 0 })
+      ),
       error: "Supabase non configuré",
       fromFallback: true,
       tableEmpty: false,
@@ -218,13 +229,15 @@ export async function loadPublicHotelsCatalog({ publishedOnly = false } = {}) {
       const msg = error.message || String(error);
       logger.warn("publicHotelsCatalog load:", msg);
       return {
-        hotels: PUBLIC_HOTELS.map((h) => ({
-          ...h,
-          dbId: null,
-          slug: h.id,
-          isPublished: true,
-          sortOrder: 0,
-        })),
+        hotels: PUBLIC_HOTELS.map((h) =>
+          maybeStrip({
+            ...h,
+            dbId: null,
+            slug: h.id,
+            isPublished: true,
+            sortOrder: 0,
+          })
+        ),
         error: msg,
         fromFallback: true,
         tableEmpty: false,
@@ -237,7 +250,7 @@ export async function loadPublicHotelsCatalog({ publishedOnly = false } = {}) {
       if (publishedOnly) {
         return {
           hotels: PUBLIC_HOTELS.map((h) =>
-            stripInternalHotelFields({
+            maybeStrip({
               ...h,
               dbId: null,
               slug: h.id,
@@ -259,7 +272,7 @@ export async function loadPublicHotelsCatalog({ publishedOnly = false } = {}) {
     }
 
     return {
-      hotels: publishedOnly ? hotels.map(stripInternalHotelFields) : hotels,
+      hotels: hotels.map(maybeStrip),
       error: null,
       fromFallback: false,
       tableEmpty: false,
@@ -267,13 +280,15 @@ export async function loadPublicHotelsCatalog({ publishedOnly = false } = {}) {
   } catch (err) {
     logger.error("publicHotelsCatalog load:", err);
     return {
-      hotels: PUBLIC_HOTELS.map((h) => ({
-        ...h,
-        dbId: null,
-        slug: h.id,
-        isPublished: true,
-        sortOrder: 0,
-      })),
+      hotels: PUBLIC_HOTELS.map((h) =>
+        maybeStrip({
+          ...h,
+          dbId: null,
+          slug: h.id,
+          isPublished: true,
+          sortOrder: 0,
+        })
+      ),
       error: err?.message || String(err),
       fromFallback: true,
       tableEmpty: false,

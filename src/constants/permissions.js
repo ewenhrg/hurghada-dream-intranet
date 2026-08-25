@@ -159,6 +159,12 @@ export function canAccessHotelHistoryPage(user) {
   );
 }
 
+/** Modifier / supprimer une ligne ticket (page Tickets) — Ewen, Karim et Léa. */
+export function canManageTicketLines(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "ewen" || n === "karim" || n === "lea";
+}
+
 /** Supprimer une demande / devis hôtel (historique) — Ewen et Karim uniquement. */
 export function canDeleteHotelRequest(user) {
   const n = normalizeIntranetUserName(user?.name);

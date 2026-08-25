@@ -1,12 +1,28 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Banknote, BedDouble, Building2, CheckCircle2, FileText, Inbox, MessageSquareReply, Receipt, Trash2, Upload, Ban } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Banknote,
+  BedDouble,
+  Building2,
+  CalendarRange,
+  CheckCircle2,
+  FileText,
+  Inbox,
+  MessageSquareReply,
+  Receipt,
+  Trash2,
+  Upload,
+  Ban,
+} from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
 import { useDebounce } from "../hooks/useDebounce";
 import { GhostBtn, NumberInput, Pill, PrimaryBtn, TextInput } from "../components/ui";
+import { DateInput } from "../components/DateInput";
 import { printHotelRequest, printHotelPaymentReceipt } from "../utils/hotelRequestPrint";
 import { formatHotelStayDate, normalizeStayDate } from "../utils/hotelRequestDates";
 import {
@@ -223,6 +239,81 @@ function getConfirmedHotelsList(payload) {
   return [];
 }
 
+/** Dates d’arrivée / départ effectives d’une confirmation (séjours hôtels, sinon demande). */
+function getConfirmedStayDateSets(request) {
+  const payload = normalizeResponsePayload(request?.responsePayload);
+  const hotels = getConfirmedHotelsList(payload);
+  const arrivals = new Set();
+  const departures = new Set();
+
+  if (hotels.length > 0) {
+    for (const h of hotels) {
+      const from =
+        normalizeStayDate(h.stayFrom) || normalizeStayDate(request?.arrivalDate);
+      const to =
+        normalizeStayDate(h.stayTo) || normalizeStayDate(request?.departureDate);
+      if (from) arrivals.add(from);
+      if (to) departures.add(to);
+    }
+  } else {
+    const from = normalizeStayDate(request?.arrivalDate);
+    const to = normalizeStayDate(request?.departureDate);
+    if (from) arrivals.add(from);
+    if (to) departures.add(to);
+  }
+
+  return {
+    arrivals: [...arrivals].sort(),
+    departures: [...departures].sort(),
+  };
+}
+
+/** Plage inclusive YYYY-MM-DD (une borne seule autorisée). */
+function isoDateInInclusiveRange(iso, from, to) {
+  if (!iso) return false;
+  if (from && iso < from) return false;
+  if (to && iso > to) return false;
+  return Boolean(from || to);
+}
+
+function normalizeInclusiveDateRange(fromRaw, toRaw) {
+  let from = normalizeStayDate(fromRaw) || "";
+  let to = normalizeStayDate(toRaw) || "";
+  if (from && to && from > to) {
+    const tmp = from;
+    from = to;
+    to = tmp;
+  }
+  return { from, to, active: Boolean(from || to) };
+}
+
+function confirmationMatchesStayFilter(request, { from, to, mode }) {
+  if (!from && !to) return false;
+  const { arrivals, departures } = getConfirmedStayDateSets(request);
+  const arrivalHit = arrivals.some((d) => isoDateInInclusiveRange(d, from, to));
+  const departureHit = departures.some((d) => isoDateInInclusiveRange(d, from, to));
+  if (mode === "arrival") return arrivalHit;
+  if (mode === "departure") return departureHit;
+  return arrivalHit || departureHit;
+}
+
+function earliestMatchingStayDate(request, { from, to, mode }) {
+  const { arrivals, departures } = getConfirmedStayDateSets(request);
+  const candidates = [];
+  if (mode !== "departure") {
+    for (const d of arrivals) {
+      if (isoDateInInclusiveRange(d, from, to)) candidates.push(d);
+    }
+  }
+  if (mode !== "arrival") {
+    for (const d of departures) {
+      if (isoDateInInclusiveRange(d, from, to)) candidates.push(d);
+    }
+  }
+  candidates.sort();
+  return candidates[0] || "";
+}
+
 function isHotelRequestConfirmed(request) {
   if (typeof request?.isConfirmed === "boolean") return request.isConfirmed;
   const payload = normalizeResponsePayload(request?.responsePayload);
@@ -356,7 +447,7 @@ function applyQuoteAdjustments(nights, { includeTransfer = false, manualTotal = 
 }
 
 function createEmptyProposal(slot = 1, stayDefaults = {}) {
-  return {
+    return {
     slot,
     hotelName: "",
     hotelManual: false,
@@ -396,9 +487,9 @@ function draftFromSavedHotel(prev, catalog, fallbackSlot, request) {
     hotelManual: !catalogHotel && Boolean(String(hotelName).trim()),
     roomCategory,
     roomCategoryManual: Boolean(roomCategory && !cats.includes(roomCategory)),
-    catalogSlug: catalogHotel?.slug || catalogHotel?.id || "",
+      catalogSlug: catalogHotel?.slug || catalogHotel?.id || "",
     roomCategories: cats,
-    catalogHotel: catalogHotel || null,
+      catalogHotel: catalogHotel || null,
     stayFrom:
       normalizeStayDate(prev.stayFrom) || normalizeStayDate(request?.arrivalDate) || "",
     stayTo:
@@ -1386,21 +1477,21 @@ function HotelResponseModal({
             each stay, then the price. Useful if the client changes hotels mid-stay.
           </p>
 
-          <ul className="space-y-3">
-            {hotelsDraft.map((item, index) => {
-              const quoted = quotedHotels[index];
-              const quote = quoted?.quote;
+            <ul className="space-y-3">
+              {hotelsDraft.map((item, index) => {
+                const quoted = quotedHotels[index];
+                const quote = quoted?.quote;
               const isManualHotel =
                 item.hotelManual === true ||
                 (Boolean(String(item.hotelName || "").trim()) && !item.catalogSlug);
               const hotelChosen = Boolean(item.catalogSlug) || isManualHotel;
-              return (
-                <li
+                return (
+                  <li
                   key={`proposal-${item.slot}-${index}`}
-                  className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3"
-                >
+                    className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3"
+                  >
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
                       Option {index + 1}
                     </p>
                     <GhostBtn
@@ -1461,20 +1552,20 @@ function HotelResponseModal({
                       {isManualHotel ? (
                         <span className="mt-1 block text-[11px] font-medium text-violet-700">
                           Hotel entered manually (not in catalog).
-                        </span>
-                      ) : null}
+                                </span>
+                              ) : null}
                       {sortedCatalog.length === 0 && !isManualHotel ? (
                         <span className="mt-1 block text-[11px] font-medium text-amber-800">
                           Catalog empty — choose “Other (manual entry)”.
-                        </span>
-                      ) : null}
+                                </span>
+                              ) : null}
                     </label>
 
                     <label className="block">
                       <span className="text-[11px] font-bold uppercase text-slate-500">
                         Du (check-in)
                       </span>
-                      <input
+                                <input
                         type="date"
                         className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
                         value={item.stayFrom || ""}
@@ -1594,20 +1685,20 @@ function HotelResponseModal({
                           </>
                         );
                       })()}
-                    </label>
+                              </label>
 
                     <label className="block">
                       <span className="text-[11px] font-bold uppercase text-slate-500">
                         Stay price (€)
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        inputMode="decimal"
-                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    inputMode="decimal"
+                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
                         value={item.manualTotal ?? ""}
-                        onChange={(e) => {
+                                    onChange={(e) => {
                           const parsed = parseMoneyInput(e.target.value);
                           updateProposal(index, {
                             manualTotal: e.target.value === "" ? null : parsed,
@@ -1616,8 +1707,8 @@ function HotelResponseModal({
                         placeholder="e.g. 850"
                         disabled={saving || !item.hotelName}
                         aria-label={`Stay price option ${index + 1}`}
-                      />
-                    </label>
+                                  />
+                                </label>
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 pt-3">
@@ -1663,24 +1754,24 @@ function HotelResponseModal({
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <GhostBtn type="button" onClick={onClose} disabled={saving}>
             Cancel
-          </GhostBtn>
-          <GhostBtn
-            type="button"
+                                </GhostBtn>
+                                <GhostBtn
+                                  type="button"
             onClick={() =>
               onPrintDevis?.(quotedHotels.filter((h) => proposalIsReady(h)), agentNotes)
             }
             disabled={saving || readyCount === 0}
           >
             Print quote
-          </GhostBtn>
+                                </GhostBtn>
           <PrimaryBtn
-            type="button"
+                                    type="button"
             onClick={onSave}
             disabled={saving || readyCount === 0}
           >
             {saving ? "Saving…" : "Save reply"}
           </PrimaryBtn>
-        </div>
+                              </div>
       </div>
     </div>,
     document.body
@@ -2534,7 +2625,10 @@ export function HotelHistoryPage({ user = null }) {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState("all"); // all | pending | to_send | sent | confirmed
-  const [confirmationPayFilter, setConfirmationPayFilter] = useState("all"); // all | paid | unpaid | cancelled
+  const [confirmationPayFilter, setConfirmationPayFilter] = useState("all"); // all | paid | unpaid | cancelled | arrival_departure
+  const [confirmationStayFrom, setConfirmationStayFrom] = useState("");
+  const [confirmationStayTo, setConfirmationStayTo] = useState("");
+  const [confirmationStayMode, setConfirmationStayMode] = useState("both"); // arrival | departure | both
   const [markingSentId, setMarkingSentId] = useState(null);
   const [markingConfirmedByHotelId, setMarkingConfirmedByHotelId] = useState(null);
   const [movingToPendingId, setMovingToPendingId] = useState(null);
@@ -2640,10 +2734,13 @@ export function HotelHistoryPage({ user = null }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const catalog = await loadPublicHotelsCatalog({ publishedOnly: true });
+      const catalog = await loadPublicHotelsCatalog({
+        publishedOnly: true,
+        includeInternalFields: true,
+      });
       if (cancelled) return;
       // Catalogue allégé pour les selects de réponse (pas besoin des galeries).
-      // publishedOnly : hôtels en pause exclus du site et des listes.
+      // publishedOnly : hôtels en pause exclus ; includeInternalFields : catégories de chambre.
       setCatalogHotels(
         (catalog.hotels || []).map((h) => ({
           name: h.name,
@@ -2704,11 +2801,23 @@ export function HotelHistoryPage({ user = null }) {
 
   useEffect(() => {
     setRequestsPage(1);
-  }, [statusFilter, debouncedSearch, confirmationPayFilter]);
+  }, [
+    statusFilter,
+    debouncedSearch,
+    confirmationPayFilter,
+    confirmationStayFrom,
+    confirmationStayTo,
+    confirmationStayMode,
+  ]);
 
   useEffect(() => {
     if (statusFilter !== "confirmed") setConfirmationPayFilter("all");
   }, [statusFilter]);
+
+  const confirmationStayRange = useMemo(
+    () => normalizeInclusiveDateRange(confirmationStayFrom, confirmationStayTo),
+    [confirmationStayFrom, confirmationStayTo]
+  );
 
   const confirmedCount = useMemo(() => rows.filter((r) => r.isConfirmed).length, [rows]);
   const pendingCount = useMemo(() => rows.filter((r) => r.isPending).length, [rows]);
@@ -2726,6 +2835,23 @@ export function HotelHistoryPage({ user = null }) {
     () => rows.filter((r) => r.isConfirmationCancelled).length,
     [rows]
   );
+  const confirmedArrivalDepartureCount = useMemo(() => {
+    if (!confirmationStayRange.active) return confirmedCount;
+    return rows.filter(
+      (r) =>
+        r.isConfirmed &&
+        confirmationMatchesStayFilter(r, {
+          from: confirmationStayRange.from,
+          to: confirmationStayRange.to,
+          mode: confirmationStayMode,
+        })
+    ).length;
+  }, [
+    rows,
+    confirmedCount,
+    confirmationStayRange,
+    confirmationStayMode,
+  ]);
 
   const filteredRows = useMemo(() => {
     let list = rows;
@@ -2737,6 +2863,32 @@ export function HotelHistoryPage({ user = null }) {
         list = list.filter((r) => r.isConfirmationUnpaid);
       } else if (confirmationPayFilter === "cancelled") {
         list = list.filter((r) => r.isConfirmationCancelled);
+      } else if (confirmationPayFilter === "arrival_departure") {
+        if (!confirmationStayRange.active) {
+          list = [];
+        } else {
+          list = list.filter((r) =>
+            confirmationMatchesStayFilter(r, {
+              from: confirmationStayRange.from,
+              to: confirmationStayRange.to,
+              mode: confirmationStayMode,
+            })
+          );
+          list = [...list].sort((a, b) => {
+            const da = earliestMatchingStayDate(a, {
+              from: confirmationStayRange.from,
+              to: confirmationStayRange.to,
+              mode: confirmationStayMode,
+            });
+            const db = earliestMatchingStayDate(b, {
+              from: confirmationStayRange.from,
+              to: confirmationStayRange.to,
+              mode: confirmationStayMode,
+            });
+            if (da !== db) return da.localeCompare(db);
+            return hotelRequestResponseActivityMs(b) - hotelRequestResponseActivityMs(a);
+          });
+        }
       }
     } else if (statusFilter === "pending") {
       list = list.filter((r) => r.isPending);
@@ -2746,10 +2898,12 @@ export function HotelHistoryPage({ user = null }) {
       list = list.filter((r) => r.isSent);
     }
 
-    // Toutes les listes : dernières modifications en premier
-    list = [...list].sort(
-      (a, b) => hotelRequestResponseActivityMs(b) - hotelRequestResponseActivityMs(a)
-    );
+    // Toutes les listes : dernières modifications en premier (sauf Arrival / Departure déjà trié)
+    if (confirmationPayFilter !== "arrival_departure" || statusFilter !== "confirmed") {
+      list = [...list].sort(
+        (a, b) => hotelRequestResponseActivityMs(b) - hotelRequestResponseActivityMs(a)
+      );
+    }
 
     const q = debouncedSearch.trim().toLowerCase();
     if (!q) return list;
@@ -2776,10 +2930,20 @@ export function HotelHistoryPage({ user = null }) {
       }
       return false;
     });
-  }, [rows, debouncedSearch, statusFilter, confirmationPayFilter]);
+  }, [
+    rows,
+    debouncedSearch,
+    statusFilter,
+    confirmationPayFilter,
+    confirmationStayRange,
+    confirmationStayMode,
+  ]);
 
   const confirmationGrouped =
     statusFilter === "confirmed" && confirmationPayFilter === "all";
+
+  const confirmationArrivalDeparture =
+    statusFilter === "confirmed" && confirmationPayFilter === "arrival_departure";
 
   const confirmedPaidRows = useMemo(
     () => (confirmationGrouped ? filteredRows.filter((r) => r.isConfirmationPaidOrPartial) : []),
@@ -2794,16 +2958,59 @@ export function HotelHistoryPage({ user = null }) {
     [confirmationGrouped, filteredRows]
   );
 
-  const requestsTotalPages = confirmationGrouped
-    ? 1
-    : Math.max(1, Math.ceil(filteredRows.length / HOTEL_REQUESTS_PAGE_SIZE));
+  const confirmedArrivalRows = useMemo(() => {
+    if (!confirmationArrivalDeparture || !confirmationStayRange.active) return [];
+    if (confirmationStayMode === "departure") return [];
+    return filteredRows.filter((r) => {
+      const { arrivals } = getConfirmedStayDateSets(r);
+      return arrivals.some((d) =>
+        isoDateInInclusiveRange(d, confirmationStayRange.from, confirmationStayRange.to)
+      );
+    });
+  }, [
+    confirmationArrivalDeparture,
+    confirmationStayRange,
+    confirmationStayMode,
+    filteredRows,
+  ]);
+
+  const confirmedDepartureRows = useMemo(() => {
+    if (!confirmationArrivalDeparture || !confirmationStayRange.active) return [];
+    if (confirmationStayMode === "arrival") return [];
+    return filteredRows.filter((r) => {
+      const { departures } = getConfirmedStayDateSets(r);
+      return departures.some((d) =>
+        isoDateInInclusiveRange(d, confirmationStayRange.from, confirmationStayRange.to)
+      );
+    });
+  }, [
+    confirmationArrivalDeparture,
+    confirmationStayRange,
+    confirmationStayMode,
+    filteredRows,
+  ]);
+
+  const confirmationStayGrouped =
+    confirmationArrivalDeparture &&
+    confirmationStayMode === "both" &&
+    confirmationStayRange.active;
+
+  const requestsTotalPages =
+    confirmationGrouped || confirmationStayGrouped
+      ? 1
+      : Math.max(1, Math.ceil(filteredRows.length / HOTEL_REQUESTS_PAGE_SIZE));
   const requestsCurrentPage = Math.min(requestsPage, requestsTotalPages);
 
   const visibleRows = useMemo(() => {
-    if (confirmationGrouped) return filteredRows;
+    if (confirmationGrouped || confirmationStayGrouped) return filteredRows;
     const start = (requestsCurrentPage - 1) * HOTEL_REQUESTS_PAGE_SIZE;
     return filteredRows.slice(start, start + HOTEL_REQUESTS_PAGE_SIZE);
-  }, [filteredRows, requestsCurrentPage, confirmationGrouped]);
+  }, [
+    filteredRows,
+    requestsCurrentPage,
+    confirmationGrouped,
+    confirmationStayGrouped,
+  ]);
 
   const handlePrint = useCallback((request) => {
     const payload = normalizeResponsePayload(request.responsePayload);
@@ -3709,6 +3916,50 @@ export function HotelHistoryPage({ user = null }) {
     }
   }, [editDraft, load]);
 
+  const hotelRequestCardProps = useCallback(
+    (request) => ({
+      request,
+      onPrint: handlePrint,
+      onReply: handleReply,
+      onConfirm: handleConfirmOpen,
+      onEdit: handleEdit,
+      onMarkSent: handleMarkSent,
+      markingSent: markingSentId === request.id,
+      onMarkConfirmedByHotel: handleMarkConfirmedByHotel,
+      markingConfirmedByHotel: markingConfirmedByHotelId === request.id,
+      showMoveToPending: statusFilter === "all",
+      onMoveToPending: handleMoveToPending,
+      movingToPending: movingToPendingId === request.id,
+      onPay: setPayRequest,
+      onDocuments: setDocsRequest,
+      onPrintReceipt: handlePrintReceipt,
+      onCancelConfirmation: handleCancelConfirmation,
+      cancelling: cancellingId === request.id,
+      canDelete,
+      onDelete: handleDeleteRequest,
+      deleting: deletingId === request.id,
+    }),
+    [
+      handlePrint,
+      handleReply,
+      handleConfirmOpen,
+      handleEdit,
+      handleMarkSent,
+      markingSentId,
+      handleMarkConfirmedByHotel,
+      markingConfirmedByHotelId,
+      statusFilter,
+      handleMoveToPending,
+      movingToPendingId,
+      handlePrintReceipt,
+      handleCancelConfirmation,
+      cancellingId,
+      canDelete,
+      handleDeleteRequest,
+      deletingId,
+    ]
+  );
+
   if (loading) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm font-semibold text-slate-600">
@@ -3783,46 +4034,143 @@ export function HotelHistoryPage({ user = null }) {
         </div>
 
         {statusFilter === "confirmed" ? (
-          <div className="flex flex-wrap items-center gap-2 border-t border-indigo-200/70 pt-3">
-            <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-indigo-900/70">
-              Payment
-            </span>
-            <Pill
-              type="button"
-              tone="light"
-              active={confirmationPayFilter === "all"}
-              onClick={() => setConfirmationPayFilter("all")}
-              className="!px-3 !py-1.5 !text-[11px]"
-            >
-              All ({confirmedCount})
-            </Pill>
-            <Pill
-              type="button"
-              tone="light"
-              active={confirmationPayFilter === "paid"}
-              onClick={() => setConfirmationPayFilter("paid")}
-              className="!px-3 !py-1.5 !text-[11px]"
-            >
-              Paid / partial ({confirmedPaidCount})
-            </Pill>
-            <Pill
-              type="button"
-              tone="light"
-              active={confirmationPayFilter === "unpaid"}
-              onClick={() => setConfirmationPayFilter("unpaid")}
-              className="!px-3 !py-1.5 !text-[11px]"
-            >
-              Unpaid ({confirmedUnpaidCount})
-            </Pill>
-            <Pill
-              type="button"
-              tone="light"
-              active={confirmationPayFilter === "cancelled"}
-              onClick={() => setConfirmationPayFilter("cancelled")}
-              className="!px-3 !py-1.5 !text-[11px]"
-            >
-              Cancelled ({confirmedCancelledCount})
-            </Pill>
+          <div className="space-y-3 border-t border-indigo-200/70 pt-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-indigo-900/70">
+                Payment
+              </span>
+              <Pill
+                type="button"
+                tone="light"
+                active={confirmationPayFilter === "all"}
+                onClick={() => setConfirmationPayFilter("all")}
+                className="!px-3 !py-1.5 !text-[11px]"
+              >
+                All ({confirmedCount})
+              </Pill>
+              <Pill
+                type="button"
+                tone="light"
+                active={confirmationPayFilter === "paid"}
+                onClick={() => setConfirmationPayFilter("paid")}
+                className="!px-3 !py-1.5 !text-[11px]"
+              >
+                Paid / partial ({confirmedPaidCount})
+              </Pill>
+              <Pill
+                type="button"
+                tone="light"
+                active={confirmationPayFilter === "unpaid"}
+                onClick={() => setConfirmationPayFilter("unpaid")}
+                className="!px-3 !py-1.5 !text-[11px]"
+              >
+                Unpaid ({confirmedUnpaidCount})
+              </Pill>
+              <Pill
+                type="button"
+                tone="light"
+                active={confirmationPayFilter === "cancelled"}
+                onClick={() => setConfirmationPayFilter("cancelled")}
+                className="!px-3 !py-1.5 !text-[11px]"
+              >
+                Cancelled ({confirmedCancelledCount})
+              </Pill>
+              <Pill
+                type="button"
+                tone="light"
+                active={confirmationPayFilter === "arrival_departure"}
+                onClick={() => setConfirmationPayFilter("arrival_departure")}
+                className="!px-3 !py-1.5 !text-[11px]"
+              >
+                <span className="inline-flex items-center gap-1">
+                  <CalendarRange className="h-3 w-3" aria-hidden />
+                  Arrival / Departure
+                  {confirmationStayRange.active
+                    ? ` (${confirmedArrivalDepartureCount})`
+                    : ""}
+                </span>
+              </Pill>
+            </div>
+
+            {confirmationPayFilter === "arrival_departure" ? (
+              <div className="rounded-xl border border-indigo-200/80 bg-white/80 p-3 shadow-sm sm:p-4">
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="min-w-[9.5rem] flex-1 sm:max-w-[11rem]">
+                    <label
+                      className="block text-[10px] font-bold uppercase tracking-wide text-indigo-900/70"
+                    >
+                      From
+                    </label>
+                    <DateInput
+                      value={confirmationStayFrom}
+                      onChange={setConfirmationStayFrom}
+                      className="mt-1.5"
+                      max={confirmationStayTo || undefined}
+                    />
+                  </div>
+                  <div className="min-w-[9.5rem] flex-1 sm:max-w-[11rem]">
+                    <label
+                      className="block text-[10px] font-bold uppercase tracking-wide text-indigo-900/70"
+                    >
+                      To
+                    </label>
+                    <DateInput
+                      value={confirmationStayTo}
+                      onChange={setConfirmationStayTo}
+                      className="mt-1.5"
+                      min={confirmationStayFrom || undefined}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pb-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-indigo-900/70">
+                      Show
+                    </span>
+                    <Pill
+                      type="button"
+                      tone="light"
+                      active={confirmationStayMode === "arrival"}
+                      onClick={() => setConfirmationStayMode("arrival")}
+                      className="!px-3 !py-1.5 !text-[11px]"
+                    >
+                      Arrivals
+                    </Pill>
+                    <Pill
+                      type="button"
+                      tone="light"
+                      active={confirmationStayMode === "departure"}
+                      onClick={() => setConfirmationStayMode("departure")}
+                      className="!px-3 !py-1.5 !text-[11px]"
+                    >
+                      Departures
+                    </Pill>
+                    <Pill
+                      type="button"
+                      tone="light"
+                      active={confirmationStayMode === "both"}
+                      onClick={() => setConfirmationStayMode("both")}
+                      className="!px-3 !py-1.5 !text-[11px]"
+                    >
+                      Both
+                    </Pill>
+                  </div>
+                  {(confirmationStayFrom || confirmationStayTo) ? (
+                    <GhostBtn
+                      type="button"
+                      onClick={() => {
+                        setConfirmationStayFrom("");
+                        setConfirmationStayTo("");
+                      }}
+                      className="!px-3 !py-1.5 !text-[11px]"
+                    >
+                      Clear dates
+                    </GhostBtn>
+                  ) : null}
+                </div>
+                <p className="mt-2.5 text-[11px] font-medium text-indigo-900/75">
+                  Pick a date range to list confirmations whose check-in and/or check-out fall in that period.
+                </p>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -3849,7 +4197,13 @@ export function HotelHistoryPage({ user = null }) {
                   ? " unpaid"
                   : confirmationPayFilter === "cancelled"
                     ? " cancelled"
-                    : " confirmed"
+                    : confirmationPayFilter === "arrival_departure"
+                      ? confirmationStayMode === "arrival"
+                        ? " with arrival in range"
+                        : confirmationStayMode === "departure"
+                          ? " with departure in range"
+                          : " with arrival or departure in range"
+                      : " confirmed"
               : statusFilter === "pending"
                 ? " pending"
                 : statusFilter === "to_send"
@@ -3875,6 +4229,14 @@ export function HotelHistoryPage({ user = null }) {
                 ? "No unpaid confirmations."
                 : confirmationPayFilter === "cancelled"
                   ? "No cancelled confirmations."
+                  : confirmationPayFilter === "arrival_departure"
+                    ? confirmationStayRange.active
+                      ? confirmationStayMode === "arrival"
+                        ? "No arrivals in this date range."
+                        : confirmationStayMode === "departure"
+                          ? "No departures in this date range."
+                          : "No arrivals or departures in this date range."
+                      : "Select a From and/or To date to see arrivals and departures."
                   : "No confirmations yet."
             : statusFilter === "pending"
               ? "No new pending requests today."
@@ -3907,16 +4269,16 @@ export function HotelHistoryPage({ user = null }) {
               <p className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50/50 px-4 py-5 text-center text-sm font-medium text-emerald-900/80">
                 No paid or partially paid confirmations.
               </p>
-            ) : (
-              <div className="space-y-8">
+      ) : (
+        <div className="space-y-8">
                 {confirmedPaidRows.map((request) => (
-                  <HotelRequestCard
-                    key={request.id}
-                    request={request}
-                    onPrint={handlePrint}
-                    onReply={handleReply}
+            <HotelRequestCard
+              key={request.id}
+              request={request}
+              onPrint={handlePrint}
+              onReply={handleReply}
                     onConfirm={handleConfirmOpen}
-                    onEdit={handleEdit}
+              onEdit={handleEdit}
                     onMarkSent={handleMarkSent}
                     markingSent={markingSentId === request.id}
                     onMarkConfirmedByHotel={handleMarkConfirmedByHotel}
@@ -3932,8 +4294,8 @@ export function HotelHistoryPage({ user = null }) {
                     canDelete={canDelete}
                     onDelete={handleDeleteRequest}
                     deleting={deletingId === request.id}
-                  />
-                ))}
+            />
+          ))}
               </div>
             )}
           </section>
@@ -4042,34 +4404,79 @@ export function HotelHistoryPage({ user = null }) {
             )}
           </section>
         </div>
+      ) : confirmationStayGrouped ? (
+        <div className="space-y-10">
+          <section aria-labelledby="hotel-conf-arrivals-heading" className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-2 border-b border-sky-200/80 pb-2">
+              <div>
+                <h3
+                  id="hotel-conf-arrivals-heading"
+                  className="inline-flex items-center gap-2 text-sm font-bold tracking-tight text-sky-950"
+                >
+                  <ArrowDownToLine className="h-4 w-4 text-sky-700" aria-hidden />
+                  Arrivals
+                </h3>
+                <p className="mt-0.5 text-xs text-sky-800/80">
+                  Check-in dates within the selected range.
+                </p>
+              </div>
+              <span className="rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-bold tabular-nums text-sky-950 ring-1 ring-sky-300/60">
+                {confirmedArrivalRows.length}
+              </span>
+            </div>
+            {confirmedArrivalRows.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-sky-200 bg-sky-50/50 px-4 py-5 text-center text-sm font-medium text-sky-900/80">
+                No arrivals in this date range.
+              </p>
+            ) : (
+              <div className="space-y-8">
+                {confirmedArrivalRows.map((request) => (
+                  <HotelRequestCard key={`arr-${request.id}`} {...hotelRequestCardProps(request)} />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section aria-labelledby="hotel-conf-departures-heading" className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-2 border-b border-violet-200/80 pb-2">
+              <div>
+                <h3
+                  id="hotel-conf-departures-heading"
+                  className="inline-flex items-center gap-2 text-sm font-bold tracking-tight text-violet-950"
+                >
+                  <ArrowUpFromLine className="h-4 w-4 text-violet-700" aria-hidden />
+                  Departures
+                </h3>
+                <p className="mt-0.5 text-xs text-violet-800/80">
+                  Check-out dates within the selected range.
+                </p>
+              </div>
+              <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-bold tabular-nums text-violet-950 ring-1 ring-violet-300/60">
+                {confirmedDepartureRows.length}
+              </span>
+            </div>
+            {confirmedDepartureRows.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-violet-200 bg-violet-50/50 px-4 py-5 text-center text-sm font-medium text-violet-900/80">
+                No departures in this date range.
+              </p>
+            ) : (
+              <div className="space-y-8">
+                {confirmedDepartureRows.map((request) => (
+                  <HotelRequestCard key={`dep-${request.id}`} {...hotelRequestCardProps(request)} />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       ) : (
         <div className="space-y-8">
           {visibleRows.map((request) => (
             <HotelRequestCard
               key={request.id}
-              request={request}
-              onPrint={handlePrint}
-              onReply={handleReply}
-              onConfirm={handleConfirmOpen}
-              onEdit={handleEdit}
-              onMarkSent={handleMarkSent}
-              markingSent={markingSentId === request.id}
-              onMarkConfirmedByHotel={handleMarkConfirmedByHotel}
-              markingConfirmedByHotel={markingConfirmedByHotelId === request.id}
-              showMoveToPending={statusFilter === "all"}
-              onMoveToPending={handleMoveToPending}
-              movingToPending={movingToPendingId === request.id}
-              onPay={setPayRequest}
-              onDocuments={setDocsRequest}
-              onPrintReceipt={handlePrintReceipt}
-              onCancelConfirmation={handleCancelConfirmation}
-              cancelling={cancellingId === request.id}
-              canDelete={canDelete}
-              onDelete={handleDeleteRequest}
-              deleting={deletingId === request.id}
+              {...hotelRequestCardProps(request)}
             />
           ))}
-          {!confirmationGrouped && requestsTotalPages > 1 ? (
+          {!confirmationGrouped && !confirmationStayGrouped && requestsTotalPages > 1 ? (
             <div className="flex items-center justify-center gap-2 pt-2">
               <GhostBtn
                 type="button"

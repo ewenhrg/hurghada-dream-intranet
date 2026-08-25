@@ -19,9 +19,10 @@ import {
   ChevronsRight,
   Pencil,
   Printer,
+  Trash2,
 } from "lucide-react";
-import { currencyNoCents, saveLS, loadLS, generateTicketsHTML, resolveTicketActivityName, buildActivitiesByIdMap } from "../utils";
-import { LS_KEYS } from "../constants";
+import { currencyNoCents, saveLS, loadLS, generateTicketsHTML, resolveTicketActivityName, buildActivitiesByIdMap, calculateCardPrice } from "../utils";
+import { LS_KEYS, SITE_KEY } from "../constants";
 import {
   formatActivityWithExtras,
   formatClientShortWithPhone,
@@ -34,6 +35,10 @@ import { isBoatPartyActivity } from "../utils/activityHelpers";
 import { TextInput } from "../components/ui";
 import { EditTicketLineModal } from "../components/tickets/EditTicketLineModal.jsx";
 import { toast } from "../utils/toast.js";
+import { canManageTicketLines } from "../constants/permissions";
+import { supabase } from "../lib/supabase";
+import { computePaidColumnsFromItems } from "../utils/ticketCollections";
+import { logger } from "../utils/logger";
 
 const slotLabel = (slot) =>
   slot === "morning"
@@ -148,18 +153,19 @@ function colLetter(n) {
 /**
  * Registre des tickets — colonnes alignées Excel pour copier/coller direct.
  */
-export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
+export function TicketsPage({ quotes = [], setQuotes, activities = [], user = null }) {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [editingRow, setEditingRow] = useState(null);
+  const [deletingTicket, setDeletingTicket] = useState(null);
   const scrollRef = useRef(null);
   const [copied, setCopied] = useState(() => {
     const stored = loadLS(LS_KEYS.copiedTickets, []);
     return new Set(Array.isArray(stored) ? stored : []);
   });
-  const canEdit = typeof setQuotes === "function";
+  const canManage = canManageTicketLines(user) && typeof setQuotes === "function";
 
   useEffect(() => {
     saveLS(LS_KEYS.copiedTickets, Array.from(copied));
@@ -526,6 +532,121 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
       newWindow.document.close();
     },
     [quotes, activities]
+  );
+
+  /** Retire le n° ticket de la ligne → elle quitte la page Tickets (activité conservée sur le devis). */
+  const handleDeleteTicket = useCallback(
+    async (row) => {
+      if (!canManage || !row) return;
+      const ok = window.confirm(
+        `Supprimer le ticket ${row.ticketNumber} ?\n\nLe numéro de ticket sera retiré de cette ligne ; l’activité reste sur le devis.`
+      );
+      if (!ok) return;
+
+      const quote = (quotes || []).find((q) => q.id === row.quoteId);
+      if (!quote) {
+        toast.error("Devis introuvable pour cette ligne.");
+        return;
+      }
+
+      const itemIndex = row.itemIndex;
+      if (itemIndex == null || !quote.items?.[itemIndex]) {
+        toast.error("Ligne d’activité introuvable.");
+        return;
+      }
+
+      setDeletingTicket(row.ticketNumber);
+      try {
+        const originalItem = quote.items[itemIndex];
+        const patchedItem = {
+          ...originalItem,
+          ticketNumber: "",
+        };
+        delete patchedItem.ticketsEnteredAt;
+
+        const nextItems = quote.items.map((it, idx) =>
+          idx === itemIndex ? patchedItem : it
+        );
+        const nextTotal = nextItems.reduce(
+          (sum, it) => sum + (Math.round(Number(it.lineTotal) || 0)),
+          0
+        );
+        const { paidCash, paidStripe } = computePaidColumnsFromItems(nextItems);
+        const stillHasTickets = nextItems.some(
+          (it) => String(it.ticketNumber || "").trim()
+        );
+
+        const updatedQuote = {
+          ...quote,
+          items: nextItems,
+          total: nextTotal,
+          totalCash: nextTotal,
+          totalCard: calculateCardPrice(nextTotal),
+          paidCash,
+          paidStripe,
+          updated_at: new Date().toISOString(),
+        };
+        if (!stillHasTickets) {
+          delete updatedQuote.ticketsEnteredAt;
+        }
+
+        const updatedQuotes = (quotes || []).map((q) =>
+          q.id === quote.id ? updatedQuote : q
+        );
+        setQuotes(updatedQuotes);
+        saveLS(LS_KEYS.quotes, updatedQuotes);
+
+        setCopied((prev) => {
+          if (!prev.has(row.ticketNumber)) return prev;
+          const next = new Set(prev);
+          next.delete(row.ticketNumber);
+          return next;
+        });
+
+        if (supabase) {
+          const supabaseUpdate = {
+            total: updatedQuote.total,
+            paid_cash: paidCash,
+            paid_stripe: paidStripe,
+            items: updatedQuote.items,
+            updated_at: updatedQuote.updated_at,
+          };
+
+          let updateQuery = supabase
+            .from("quotes")
+            .update(supabaseUpdate)
+            .eq("site_key", SITE_KEY);
+
+          if (quote.supabase_id) {
+            updateQuery = updateQuery.eq("id", quote.supabase_id);
+          } else {
+            updateQuery = updateQuery
+              .eq("client_phone", quote.client?.phone || "")
+              .eq("created_at", quote.createdAt);
+          }
+
+          const { error } = await updateQuery;
+          if (error) {
+            logger.error("Erreur suppression ticket:", error);
+            toast.error("Supprimé en local, mais la sync Supabase a échoué.");
+          } else {
+            toast.success(`Ticket ${row.ticketNumber} supprimé.`);
+          }
+        } else {
+          toast.success(`Ticket ${row.ticketNumber} supprimé.`);
+        }
+
+        if (editingRow?.ticketNumber === row.ticketNumber) {
+          setEditingRow(null);
+        }
+      } catch (err) {
+        logger.error("Erreur suppression ticket:", err);
+        toast.error("Impossible de supprimer le ticket.");
+      } finally {
+        setDeletingTicket(null);
+      }
+    },
+    [canManage, quotes, setQuotes, editingRow]
   );
 
   const handleCopyAll = useCallback(async () => {
@@ -1010,16 +1131,28 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [] }) {
                     >
                       <td className={`${TD} text-center`}>
                         <div className="flex items-center justify-center gap-0.5">
-                          {canEdit ? (
-                            <button
-                              type="button"
-                              onClick={() => setEditingRow(r)}
-                              aria-label={`Modifier ${r.ticketNumber}`}
-                              className="grid size-5 place-items-center rounded bg-indigo-600 text-white hover:bg-indigo-700"
-                              title="Modifier la ligne"
-                            >
-                              <Pencil className="size-2.5" aria-hidden="true" />
-                            </button>
+                          {canManage ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setEditingRow(r)}
+                                aria-label={`Modifier ${r.ticketNumber}`}
+                                className="grid size-5 place-items-center rounded bg-indigo-600 text-white hover:bg-indigo-700"
+                                title="Modifier la ligne"
+                              >
+                                <Pencil className="size-2.5" aria-hidden="true" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteTicket(r)}
+                                disabled={deletingTicket === r.ticketNumber}
+                                aria-label={`Supprimer ${r.ticketNumber}`}
+                                className="grid size-5 place-items-center rounded bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50"
+                                title="Supprimer le ticket"
+                              >
+                                <Trash2 className="size-2.5" aria-hidden="true" />
+                              </button>
+                            </>
                           ) : null}
                           <button
                             type="button"
