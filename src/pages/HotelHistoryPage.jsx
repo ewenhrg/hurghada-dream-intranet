@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Banknote, BedDouble, Building2, CheckCircle2, FileText, MessageSquareReply, Receipt, Trash2, Upload, Ban } from "lucide-react";
+import { Banknote, BedDouble, Building2, CheckCircle2, FileText, Inbox, MessageSquareReply, Receipt, Trash2, Upload, Ban } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -139,6 +139,9 @@ function normalizeResponsePayload(raw) {
     sentAt: base.sentAt || "",
     confirmedByHotel: base.confirmedByHotel === true,
     confirmedByHotelAt: base.confirmedByHotelAt || "",
+    heldInPending: base.heldInPending === true,
+    heldInPendingAt: base.heldInPendingAt || "",
+    heldInPendingNote: String(base.heldInPendingNote || "").trim(),
     payment: normalizePayment(base.payment),
     clientDocuments: normalizeClientDocuments(base.clientDocuments),
     cancelled: base.cancelled === true,
@@ -240,8 +243,9 @@ function requestCreatedOnOrAfterToday(request) {
 function isHotelRequestPending(request) {
   if (typeof request?.isPending === "boolean") return request.isPending;
   if (isHotelRequestConfirmed(request)) return false;
-  if (!requestCreatedOnOrAfterToday(request)) return false;
   const payload = normalizeResponsePayload(request?.responsePayload);
+  if (payload.heldInPending === true) return true;
+  if (!requestCreatedOnOrAfterToday(request)) return false;
   return !payload.hotels.some((h) => proposalIsReady(h));
 }
 
@@ -250,6 +254,7 @@ function isHotelRequestReadyToSend(request) {
   if (typeof request?.isReadyToSend === "boolean") return request.isReadyToSend;
   if (isHotelRequestConfirmed(request)) return false;
   const payload = normalizeResponsePayload(request?.responsePayload);
+  if (payload.heldInPending === true) return false;
   if (payload.sentToClient) return false;
   return payload.hotels.some((h) => proposalIsReady(h));
 }
@@ -259,6 +264,7 @@ function isHotelRequestSent(request) {
   if (typeof request?.isSent === "boolean") return request.isSent;
   if (isHotelRequestConfirmed(request)) return false;
   const payload = normalizeResponsePayload(request?.responsePayload);
+  if (payload.heldInPending === true) return false;
   return payload.sentToClient === true && payload.hotels.some((h) => proposalIsReady(h));
 }
 
@@ -279,6 +285,7 @@ function hotelRequestResponseActivityMs(request) {
   const candidates = [
     payload.cancelledAt,
     payload.confirmedByHotelAt,
+    payload.heldInPendingAt,
     payload.confirmedAt,
     payload.sentAt,
     payload.updatedAt,
@@ -494,6 +501,7 @@ function enrichHotelRequestViewModel(vm) {
   const sentToClient = payload.sentToClient === true;
   const hasPayment = normalizePayment(payload.payment).entries.length > 0;
   const isCancelled = payload.cancelled === true || Boolean(payload.cancelledAt);
+  const heldInPending = payload.heldInPending === true;
   const paymentStatus = isConfirmed ? getPaymentStatus(vm, payload) : null;
   const confirmationPaidAmount = paymentStatus
     ? Number(paymentStatus.paid) || 0
@@ -528,9 +536,9 @@ function enrichHotelRequestViewModel(vm) {
     ...vm,
     responsePayload: payload,
     isConfirmed,
-    isPending: !isConfirmed && createdToday && !hasReadyHotels,
-    isReadyToSend: !isConfirmed && !sentToClient && hasReadyHotels,
-    isSent: !isConfirmed && sentToClient && hasReadyHotels,
+    isPending: !isConfirmed && (heldInPending || (createdToday && !hasReadyHotels)),
+    isReadyToSend: !isConfirmed && !heldInPending && !sentToClient && hasReadyHotels,
+    isSent: !isConfirmed && !heldInPending && sentToClient && hasReadyHotels,
     isInPayerList: isConfirmed && !isCancelled && hasPayment,
     isConfirmationPaidOrPartial,
     isConfirmationUnpaid,
@@ -587,6 +595,9 @@ const HotelRequestCard = memo(function HotelRequestCard({
   canDelete,
   onDelete,
   deleting,
+  showMoveToPending = false,
+  onMoveToPending,
+  movingToPending,
 }) {
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
   const boardLabels = boardLabelsFromViewModel(request);
@@ -607,6 +618,8 @@ const HotelRequestCard = memo(function HotelRequestCard({
   const isConfirmed = confirmedHotels.length > 0;
   const sentToClient = payload.sentToClient === true;
   const confirmedByHotel = payload.confirmedByHotel === true;
+  const heldInPending = payload.heldInPending === true;
+  const isPendingCard = request.isPending === true;
   const responseTotals = (isConfirmed ? confirmedHotels : readyHotels)
     .map((h) => `${h.hotelName}: ${formatQuoteMoney(h.quote.total, h.quote.currency)}`)
     .join(" · ");
@@ -649,12 +662,21 @@ const HotelRequestCard = memo(function HotelRequestCard({
                 Pending
               </span>
             ) : null}
-            {hasResponse && !isConfirmed && !sentToClient ? (
+            {heldInPending && isConfirmed === false ? (
+              <span className="mt-2 ml-0 inline-flex items-center gap-1.5 rounded-full bg-amber-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm sm:ml-2">
+                <Inbox className="h-3.5 w-3.5" aria-hidden />
+                Moved to pending
+                {payload.heldInPendingAt
+                  ? ` · ${new Date(payload.heldInPendingAt).toLocaleDateString("en-GB")}`
+                  : ""}
+              </span>
+            ) : null}
+            {hasResponse && !isConfirmed && !heldInPending && !sentToClient ? (
               <span className="mt-2 ml-0 inline-block rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-950 ring-1 ring-amber-400/50 sm:ml-2">
                 Ready to send to client
               </span>
             ) : null}
-            {hasResponse && !isConfirmed && sentToClient ? (
+            {hasResponse && !isConfirmed && !heldInPending && sentToClient ? (
               <span className="mt-2 ml-0 inline-block rounded-full bg-sky-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-950 ring-1 ring-sky-400/50 sm:ml-2">
                 Sent
                 {payload.sentAt
@@ -713,7 +735,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
             </p>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            {hasResponse && !isConfirmed ? (
+            {hasResponse && !isConfirmed && !heldInPending ? (
               <label
                 className={`inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-bold transition ${
                   sentToClient
@@ -748,6 +770,18 @@ const HotelRequestCard = memo(function HotelRequestCard({
                 />
                 Confirmed by hotel
               </label>
+            ) : null}
+            {showMoveToPending && !isConfirmed && !isPendingCard ? (
+              <GhostBtn
+                type="button"
+                onClick={() => onMoveToPending?.(request)}
+                disabled={movingToPending}
+                className="!border-amber-300 !text-amber-950 hover:!bg-amber-50 disabled:opacity-50"
+                title="Move this request to the Pending list"
+              >
+                <Inbox className="h-3.5 w-3.5" aria-hidden />
+                {movingToPending ? "Moving…" : "To Pending"}
+              </GhostBtn>
             ) : null}
             <GhostBtn type="button" onClick={() => onPrint(request)}>
               Print
@@ -2503,6 +2537,7 @@ export function HotelHistoryPage({ user = null }) {
   const [confirmationPayFilter, setConfirmationPayFilter] = useState("all"); // all | paid | unpaid | cancelled
   const [markingSentId, setMarkingSentId] = useState(null);
   const [markingConfirmedByHotelId, setMarkingConfirmedByHotelId] = useState(null);
+  const [movingToPendingId, setMovingToPendingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
@@ -2899,6 +2934,9 @@ export function HotelHistoryPage({ user = null }) {
         sentAt: prev.sentAt || undefined,
         confirmedByHotel: prev.confirmedByHotel === true,
         confirmedByHotelAt: prev.confirmedByHotelAt || undefined,
+        heldInPending: false,
+        heldInPendingAt: undefined,
+        heldInPendingNote: undefined,
         payment: serializePayment(prev.payment),
         clientDocuments: serializeClientDocuments(prev.clientDocuments),
         cancelled: prev.cancelled === true,
@@ -2990,6 +3028,7 @@ export function HotelHistoryPage({ user = null }) {
           sentAt: payload.sentAt || undefined,
           confirmedByHotel: payload.confirmedByHotel === true,
           confirmedByHotelAt: payload.confirmedByHotelAt || undefined,
+          heldInPending: false,
           payment: serializePayment({
             entries: existingPayment.entries,
             schedule,
@@ -3066,6 +3105,7 @@ export function HotelHistoryPage({ user = null }) {
           sentAt: sent ? new Date().toISOString() : undefined,
           confirmedByHotel: prev.confirmedByHotel === true,
           confirmedByHotelAt: prev.confirmedByHotelAt || undefined,
+          heldInPending: false,
           payment: serializePayment(prev.payment),
           clientDocuments: serializeClientDocuments(prev.clientDocuments),
           cancelled: prev.cancelled === true,
@@ -3323,6 +3363,9 @@ export function HotelHistoryPage({ user = null }) {
       sentAt: prev.sentAt || undefined,
       confirmedByHotel: prev.confirmedByHotel === true,
       confirmedByHotelAt: prev.confirmedByHotelAt || undefined,
+      heldInPending: prev.heldInPending === true,
+      heldInPendingAt: prev.heldInPendingAt || undefined,
+      heldInPendingNote: prev.heldInPendingNote || undefined,
       payment: serializePayment(prev.payment),
       clientDocuments: serializeClientDocuments(prev.clientDocuments),
       cancelled: prev.cancelled === true,
@@ -3331,6 +3374,63 @@ export function HotelHistoryPage({ user = null }) {
       ...overrides,
     };
   }, []);
+
+  const handleMoveToPending = useCallback(
+    async (request) => {
+      if (!request?.supabaseId || !supabase) return;
+      if (isHotelRequestConfirmed(request)) {
+        toast.error("Confirmed bookings cannot be moved to Pending.");
+        return;
+      }
+      if (request.isPending) {
+        toast.info("This request is already in Pending.");
+        return;
+      }
+      const fullName =
+        [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "this client";
+      const ok = window.confirm(
+        `Move ${fullName} to the Pending list?\n\nIt will leave Sent / Ready to send until a new reply is saved.`
+      );
+      if (!ok) return;
+
+      setMovingToPendingId(request.id);
+      try {
+        const payload = normalizeResponsePayload(request.responsePayload);
+        const response_payload = buildResponsePayloadFromPrev(payload, {
+          heldInPending: true,
+          heldInPendingAt: new Date().toISOString(),
+          sentToClient: false,
+          sentAt: undefined,
+        });
+        // Remove sentAt cleanly
+        delete response_payload.sentAt;
+
+        const { error: updateError } = await supabase
+          .from("public_hotel_requests")
+          .update({
+            response_payload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", request.supabaseId)
+          .eq("site_key", SITE_KEY);
+
+        if (updateError) {
+          logger.error("HotelHistoryPage move to pending:", updateError);
+          toast.error(updateError.message || "Unable to move to Pending.");
+          return;
+        }
+        toast.success("Moved to Pending.");
+        setStatusFilter("pending");
+        await load({ silent: true, skipCleanup: true });
+      } catch (e) {
+        logger.error("HotelHistoryPage move to pending:", e);
+        toast.error("Unexpected error.");
+      } finally {
+        setMovingToPendingId(null);
+      }
+    },
+    [load, buildResponsePayloadFromPrev]
+  );
 
   const handleMarkConfirmedByHotel = useCallback(
     async (request, checked) => {
@@ -3821,6 +3921,9 @@ export function HotelHistoryPage({ user = null }) {
                     markingSent={markingSentId === request.id}
                     onMarkConfirmedByHotel={handleMarkConfirmedByHotel}
                     markingConfirmedByHotel={markingConfirmedByHotelId === request.id}
+                    showMoveToPending={statusFilter === "all"}
+                    onMoveToPending={handleMoveToPending}
+                    movingToPending={movingToPendingId === request.id}
                     onPay={setPayRequest}
                     onDocuments={setDocsRequest}
                     onPrintReceipt={handlePrintReceipt}
@@ -3870,6 +3973,9 @@ export function HotelHistoryPage({ user = null }) {
                     markingSent={markingSentId === request.id}
                     onMarkConfirmedByHotel={handleMarkConfirmedByHotel}
                     markingConfirmedByHotel={markingConfirmedByHotelId === request.id}
+                    showMoveToPending={statusFilter === "all"}
+                    onMoveToPending={handleMoveToPending}
+                    movingToPending={movingToPendingId === request.id}
                     onPay={setPayRequest}
                     onDocuments={setDocsRequest}
                     onPrintReceipt={handlePrintReceipt}
@@ -3919,6 +4025,9 @@ export function HotelHistoryPage({ user = null }) {
                     markingSent={markingSentId === request.id}
                     onMarkConfirmedByHotel={handleMarkConfirmedByHotel}
                     markingConfirmedByHotel={markingConfirmedByHotelId === request.id}
+                    showMoveToPending={statusFilter === "all"}
+                    onMoveToPending={handleMoveToPending}
+                    movingToPending={movingToPendingId === request.id}
                     onPay={setPayRequest}
                     onDocuments={setDocsRequest}
                     onPrintReceipt={handlePrintReceipt}
@@ -3947,6 +4056,9 @@ export function HotelHistoryPage({ user = null }) {
               markingSent={markingSentId === request.id}
               onMarkConfirmedByHotel={handleMarkConfirmedByHotel}
               markingConfirmedByHotel={markingConfirmedByHotelId === request.id}
+              showMoveToPending={statusFilter === "all"}
+              onMoveToPending={handleMoveToPending}
+              movingToPending={movingToPendingId === request.id}
               onPay={setPayRequest}
               onDocuments={setDocsRequest}
               onPrintReceipt={handlePrintReceipt}
