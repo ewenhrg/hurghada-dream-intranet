@@ -53,10 +53,13 @@ import {
 import { cleanupExpiredQuoteDocuments, isQuoteLastActivityPastRetention } from "../utils/cleanupExpiredQuoteDocuments";
 import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
 
-/** Délai avant suppression auto des devis « non payés » (au moins une ligne sans n° de ticket), à l’ouverture de l’historique. */
-const UNPAID_QUOTE_AUTO_DELETE_DAYS = 20;
 const QUOTE_DOC_BUCKET = "documents";
 const QUOTE_DOC_FALLBACK_BUCKET = "Catalogue";
+
+/** Visible dans l’historique tant que le jour de la dernière activité n’est pas dépassé (payé ou non). Les tickets restent en base. */
+function isQuoteVisibleInHistory(quote) {
+  return !isQuoteLastActivityPastRetention(quote);
+}
 
 // Composant de carte de devis mémorisé pour améliorer les performances
 // Déclarer comme fonction normale pour le hoisting, puis mémoriser
@@ -1236,18 +1239,23 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20; // Nombre de devis par page
 
-  const todayQuotesCount = useMemo(
-    () => quotes.filter((d) => isQuoteCreatedToday(d.createdAt)).length,
+  const historyQuotes = useMemo(
+    () => (quotes || []).filter(isQuoteVisibleInHistory),
     [quotes]
   );
 
+  const todayQuotesCount = useMemo(
+    () => historyQuotes.filter((d) => isQuoteCreatedToday(d.createdAt)).length,
+    [historyQuotes]
+  );
+
   const paidQuotesCount = useMemo(
-    () => quotes.filter((d) => isQuoteFullyPaid(d)).length,
-    [quotes]
+    () => historyQuotes.filter((d) => isQuoteFullyPaid(d)).length,
+    [historyQuotes]
   );
   const pendingQuotesCount = useMemo(
-    () => quotes.filter((d) => !isQuoteFullyPaid(d)).length,
-    [quotes]
+    () => historyQuotes.filter((d) => !isQuoteFullyPaid(d)).length,
+    [historyQuotes]
   );
   
   /** Lignes d’activités dans un devis (table quotes) — distinct des écritures sur la table activities. */
@@ -1446,7 +1454,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   // Optimisation majeure : Filtrer D'ABORD, puis calculer les statuts uniquement pour les devis filtrés
   // Cela évite de calculer les dates formatées pour TOUS les devis quand on n'affiche que 20
   const filtered = useMemo(() => {
-    let result = quotes;
+    // Masque les devis dont la dernière activité est passée (sans supprimer — Tickets conserve tout).
+    let result = historyQuotes;
 
     if (todayOnlyFilter) {
       result = result.filter((d) => isQuoteCreatedToday(d.createdAt));
@@ -1481,7 +1490,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     }
     
     return result;
-  }, [debouncedQ, quotes, statusFilter, todayOnlyFilter]);
+  }, [debouncedQ, historyQuotes, statusFilter, todayOnlyFilter]);
   
   // Calculer les statuts et formater les dates UNIQUEMENT pour les devis filtrés (pas tous les devis)
   const quotesWithStatus = useMemo(() => {
@@ -1545,86 +1554,12 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     }
   }, [showEditModal]);
 
-  // Suppression automatique des devis non payés au-delà de UNPAID_QUOTE_AUTO_DELETE_DAYS (exécuté au chargement de l’historique)
-  const cleanupOldUnpaidQuotes = useCallback(async () => {
-    // Ne pas exécuter si quotes est vide
-    if (!quotes || quotes.length === 0) {
-      return;
-    }
-    
-    const now = new Date();
-    const msPerDay = 24 * 60 * 60 * 1000;
-    const cutoffDate = new Date(now.getTime() - UNPAID_QUOTE_AUTO_DELETE_DAYS * msPerDay);
-    
-    // Identifier les devis à supprimer
-    const quotesToDelete = quotes.filter((quote) => {
-      // Payé (ou sans activités) : ne pas supprimer
-      if (isQuoteFullyPaid(quote)) return false;
-      // Sans ligne d'activité : ne pas supprimer (données à vérifier, pas un « non payé » classique)
-      if (!Array.isArray(quote.items) || quote.items.length === 0) return false;
-      
-      // Vérifier si le devis a été créé il y a plus de UNPAID_QUOTE_AUTO_DELETE_DAYS jours
-      const createdAt = new Date(quote.createdAt);
-      if (isNaN(createdAt.getTime())) {
-        return false; // Date invalide, ne pas supprimer
-      }
-      
-      return createdAt < cutoffDate;
-    });
-
-    if (quotesToDelete.length > 0) {
-      logger.log(
-        `🗑️ Suppression automatique de ${quotesToDelete.length} devis non payés de plus de ${UNPAID_QUOTE_AUTO_DELETE_DAYS} jours`
-      );
-      
-      // Supprimer de la liste locale
-      const remainingQuotes = quotes.filter((quote) => 
-        !quotesToDelete.some((toDelete) => toDelete.id === quote.id)
-      );
-      setQuotes(remainingQuotes);
-      saveLS(LS_KEYS.quotes, remainingQuotes);
-
-      // Supprimer de Supabase si configuré
-      if (supabase) {
-        for (const quoteToDelete of quotesToDelete) {
-          try {
-            let deleteQuery = supabase
-              .from("quotes")
-              .delete()
-              .eq("site_key", SITE_KEY);
-
-            // Utiliser supabase_id en priorité pour identifier le devis à supprimer
-            if (quoteToDelete.supabase_id) {
-              deleteQuery = deleteQuery.eq("id", quoteToDelete.supabase_id);
-            } else {
-              // Sinon, utiliser client_phone + created_at (pour compatibilité avec les anciens devis)
-              deleteQuery = deleteQuery
-                .eq("client_phone", quoteToDelete.client?.phone || "")
-                .eq("created_at", quoteToDelete.createdAt);
-            }
-            
-            const { error: deleteError } = await deleteQuery;
-            
-            if (deleteError) {
-              logger.warn("⚠️ Erreur suppression Supabase:", deleteError);
-            } else {
-              logger.log(`✅ Devis supprimé de Supabase (ID: ${quoteToDelete.supabase_id || quoteToDelete.id})`);
-            }
-          } catch (deleteErr) {
-            logger.warn("⚠️ Erreur lors de la suppression Supabase:", deleteErr);
-          }
-        }
-      }
-    }
-  }, [quotes, setQuotes]);
-
-  // Nettoyage une fois lorsque les devis sont disponibles (y compris après sync Supabase)
+  // Purge documents (passeports) après dernière activité — ne touche pas aux devis / tickets.
   const cleanupRanRef = useRef(false);
   useEffect(() => {
     if (cleanupRanRef.current) return;
     if (!quotes || quotes.length === 0) return;
     cleanupRanRef.current = true;
-    void cleanupOldUnpaidQuotes();
 
     void (async () => {
       if (!supabase) return;
@@ -1662,7 +1597,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         logger.warn("HistoryPage quote docs cleanup:", e);
       }
     })();
-  }, [quotes, cleanupOldUnpaidQuotes, setQuotes]);
+  }, [quotes, setQuotes]);
 
   const applyQuoteDocumentsLocally = useCallback(
     (quoteId, nextDocs) => {
@@ -1921,9 +1856,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                 {filtered.length} devis{todayOnlyFilter ? " aujourd'hui" : " trouvés"}
               </p>
             )}
-            {quotes.length !== filtered.length && (
+            {historyQuotes.length !== filtered.length && (
               <p className="text-white/60 text-sm font-medium mt-1">
-                sur {quotes.length} total
+                sur {historyQuotes.length} total
               </p>
             )}
           </div>
