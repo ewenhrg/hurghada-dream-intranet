@@ -140,7 +140,8 @@ export function resolveQuoteTicketsEnteredAt(quote) {
 
 /**
  * Répartition cash / stripe / mixte — uniquement les lignes avec n° ticket.
- * Stripe = prix carte ligne par ligne (ceil(+3%)).
+ * Stripe = +3 % une seule fois sur la somme espèces des lignes Stripe
+ * (pas de Math.ceil par ligne, sinon écart vs total devis).
  * Sans mode de paiement : compté en cash (historique / tickets saisis).
  */
 export function getQuoteCollectionBreakdown(quote) {
@@ -148,7 +149,7 @@ export function getQuoteCollectionBreakdown(quote) {
   if (!ticketed.length) return null;
 
   let cash = 0;
-  let stripe = 0;
+  let stripeCashBase = 0;
   let mixed = 0;
   let linesWithMethod = 0;
   let linesWithoutMethodCash = 0;
@@ -166,11 +167,13 @@ export function getQuoteCollectionBreakdown(quote) {
     if (isCash && isStripe) {
       mixed += lineCash;
     } else if (isStripe) {
-      stripe += calculateCardPrice(lineCash);
+      stripeCashBase += lineCash;
     } else {
       cash += lineCash;
     }
   }
+
+  const stripe = stripeCashBase > 0 ? calculateCardPrice(stripeCashBase) : 0;
 
   if (linesWithMethod > 0) {
     // Lignes sans mode sur le même devis → cash (reste)
@@ -305,12 +308,13 @@ export function getQuoteCollectionBreakdown(quote) {
 
 /**
  * Montants paid_cash / paid_stripe à persister d’après les lignes ticketées.
- * Mixte → paid_cash (base espèces) ; Stripe seul → paid_stripe (prix carte).
+ * Mixte → paid_cash (base espèces) ; Stripe seul → paid_stripe = ceil(+3 %) une fois
+ * sur la somme des lignes Stripe (aligné sur le total carte du devis).
  */
 export function computePaidColumnsFromItems(items = []) {
   const ticketed = (items || []).filter((it) => String(it?.ticketNumber || "").trim() !== "");
   let paidCash = 0;
-  let paidStripe = 0;
+  let stripeCashBase = 0;
 
   for (const it of ticketed) {
     const lineCash = Math.round(Number(it.lineTotal) || 0);
@@ -318,13 +322,16 @@ export function computePaidColumnsFromItems(items = []) {
     if (isCash && isStripe) {
       paidCash += lineCash;
     } else if (isStripe) {
-      paidStripe += calculateCardPrice(lineCash);
+      stripeCashBase += lineCash;
     } else if (isCash) {
       paidCash += lineCash;
     }
   }
 
-  return { paidCash, paidStripe };
+  return {
+    paidCash,
+    paidStripe: stripeCashBase > 0 ? calculateCardPrice(stripeCashBase) : 0,
+  };
 }
 
 function emptyDayBucket() {

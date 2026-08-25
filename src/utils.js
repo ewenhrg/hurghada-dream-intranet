@@ -212,9 +212,11 @@ export function currency(n, curr = "EUR") {
   }
 }
 
-// Calculer le prix carte (prix espèces + 3% arrondi à l'euro supérieur)
+// Calculer le prix carte (prix espèces + 3 %, arrondi à l'euro supérieur).
+// Toujours appliquer sur le TOTAL (devis / somme Stripe), jamais ligne par ligne
+// (sinon chaque Math.ceil ajoute des euros en trop).
 export function calculateCardPrice(cashPrice) {
-  const priceWithFees = cashPrice * 1.03;
+  const priceWithFees = Number(cashPrice) * 1.03;
   // Arrondir à l'euro supérieur
   return Math.ceil(priceWithFees);
 }
