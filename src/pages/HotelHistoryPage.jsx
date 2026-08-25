@@ -162,6 +162,7 @@ function normalizeResponsePayload(raw) {
     clientDocuments: normalizeClientDocuments(base.clientDocuments),
     cancelled: base.cancelled === true,
     cancelledAt: base.cancelledAt || "",
+    pickupTime: String(base.pickupTime || base.pickUpTime || "").trim(),
   };
 }
 
@@ -325,7 +326,14 @@ function getStayOpsSummary(request) {
     normalizeStayDate(hotels[0]?.stayFrom) ||
     normalizeStayDate(request?.arrivalDate) ||
     "";
+  const checkOut =
+    normalizeStayDate(hotels[0]?.stayTo) ||
+    normalizeStayDate(request?.departureDate) ||
+    "";
   const flights = payload.flights || EMPTY_FLIGHTS;
+  const zeroTracas = normalizeZeroTracas(payload.zeroTracas);
+  const visaCount = parseQtyInput(zeroTracas.visaCount);
+  const simCount = parseQtyInput(zeroTracas.simCount);
   const adults =
     request?.adultsCount != null && Number.isFinite(Number(request.adultsCount))
       ? Number(request.adultsCount)
@@ -337,15 +345,23 @@ function getStayOpsSummary(request) {
   const agesText = String(request?.childAges || "").toLowerCase();
   const babyMentions = agesText.match(/b[eé]b[eé]/gi);
   const babies = babyMentions ? babyMentions.length : null;
+  const refId = String(request?.id || request?.supabaseId || "").trim();
+  const shortRef =
+    String(request?.shortRef || "").trim() || formatHotelRequestShortRef(refId);
 
   return {
+    ref: shortRef || "—",
     firstName: String(request?.firstName || "").trim() || "—",
     phone: String(request?.phone || "").trim() || "—",
     hotel: hotelNames.length > 0 ? hotelNames.join(" + ") : "—",
     checkIn,
+    checkOut,
     pax: adults,
     child: children,
     baby: babies,
+    visa: visaCount > 0 ? visaCount : null,
+    sim: simCount > 0 ? simCount : null,
+    pickupTime: String(payload.pickupTime || "").trim(),
     departureFlightNumber: flights.departureFlightNumber || "",
     departureDate: flights.departureDate || "",
     departureTime: flights.departureTime || "",
@@ -1303,9 +1319,51 @@ const HotelRequestCard = memo(function HotelRequestCard({
 });
 
 /**
- * Vue compacte Arrival / Departure : prénom, téléphone, hôtel, check-in, pax, vol départ.
+ * Champ pick-up éditable (sauvegarde au blur / Enter).
  */
-function HotelStayOpsList({ requests = [], emptyLabel = "No results." }) {
+function HotelStayOpsPickupCell({ requestId, value = "", onSave, saving = false }) {
+  const [text, setText] = useState(value || "");
+
+  useEffect(() => {
+    setText(value || "");
+  }, [value, requestId]);
+
+  const commit = () => {
+    const next = String(text || "").trim();
+    const prev = String(value || "").trim();
+    if (next === prev) return;
+    onSave?.(next);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      placeholder="e.g. 07:30"
+      value={text}
+      disabled={saving}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.currentTarget.blur();
+        }
+      }}
+      aria-label="Pick-up time"
+      className="w-[5.5rem] rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-center text-xs font-bold tabular-nums text-slate-900 shadow-sm placeholder:font-medium placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 disabled:opacity-60"
+    />
+  );
+}
+
+/**
+ * Vue compacte Arrival / Departure : ref, prénom, téléphone, hôtel, dates, pax, visa/sim, pick-up, vol départ.
+ */
+function HotelStayOpsList({
+  requests = [],
+  emptyLabel = "No results.",
+  onSavePickupTime,
+  savingPickupId = null,
+}) {
   if (!requests.length) {
     return (
       <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-5 text-center text-sm font-medium text-slate-600">
@@ -1321,6 +1379,9 @@ function HotelStayOpsList({ requests = [], emptyLabel = "No results." }) {
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50/90 text-[10px] font-bold uppercase tracking-wide text-slate-500">
               <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                Ref
+              </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
                 First name
               </th>
               <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
@@ -1332,6 +1393,9 @@ function HotelStayOpsList({ requests = [], emptyLabel = "No results." }) {
               <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
                 Check-in
               </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                Check-out
+              </th>
               <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
                 Pax
               </th>
@@ -1340,6 +1404,15 @@ function HotelStayOpsList({ requests = [], emptyLabel = "No results." }) {
               </th>
               <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
                 Baby
+              </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
+                Visa
+              </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
+                SIM
+              </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
+                Pick-up
               </th>
               <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
                 Departure flight
@@ -1354,6 +1427,9 @@ function HotelStayOpsList({ requests = [], emptyLabel = "No results." }) {
                   key={request.id}
                   className="border-b border-slate-100 last:border-b-0 hover:bg-indigo-50/40"
                 >
+                  <td className="whitespace-nowrap px-3 py-3 font-mono text-xs font-bold text-indigo-900 sm:px-4">
+                    {row.ref}
+                  </td>
                   <td className="px-3 py-3 font-semibold text-slate-950 sm:px-4">
                     {row.firstName}
                   </td>
@@ -1366,6 +1442,9 @@ function HotelStayOpsList({ requests = [], emptyLabel = "No results." }) {
                   <td className="whitespace-nowrap px-3 py-3 font-medium text-slate-800 sm:px-4">
                     {formatHotelStayDate(row.checkIn)}
                   </td>
+                  <td className="whitespace-nowrap px-3 py-3 font-medium text-slate-800 sm:px-4">
+                    {formatHotelStayDate(row.checkOut)}
+                  </td>
                   <td className="px-3 py-3 text-center tabular-nums font-bold text-emerald-800 sm:px-4">
                     {formatOpsCount(row.pax)}
                   </td>
@@ -1374,6 +1453,20 @@ function HotelStayOpsList({ requests = [], emptyLabel = "No results." }) {
                   </td>
                   <td className="px-3 py-3 text-center tabular-nums font-bold text-pink-800 sm:px-4">
                     {formatOpsCount(row.baby)}
+                  </td>
+                  <td className="px-3 py-3 text-center tabular-nums font-bold text-violet-800 sm:px-4">
+                    {formatOpsCount(row.visa)}
+                  </td>
+                  <td className="px-3 py-3 text-center tabular-nums font-bold text-cyan-800 sm:px-4">
+                    {formatOpsCount(row.sim)}
+                  </td>
+                  <td className="px-3 py-2.5 text-center sm:px-4">
+                    <HotelStayOpsPickupCell
+                      requestId={request.id}
+                      value={row.pickupTime}
+                      saving={savingPickupId === request.id}
+                      onSave={(next) => onSavePickupTime?.(request, next)}
+                    />
                   </td>
                   <td className="min-w-[11rem] px-3 py-3 text-xs font-semibold text-slate-700 sm:px-4">
                     <div className="space-y-0.5">
@@ -3296,6 +3389,7 @@ export function HotelHistoryPage({ user = null }) {
         clientDocuments: serializeClientDocuments(prev.clientDocuments),
         cancelled: prev.cancelled === true,
         cancelledAt: prev.cancelledAt || undefined,
+        pickupTime: String(prev.pickupTime || "").trim() || undefined,
         updatedAt: new Date().toISOString(),
       };
       const { error: updateError } = await supabase
@@ -3391,6 +3485,7 @@ export function HotelHistoryPage({ user = null }) {
           clientDocuments: serializeClientDocuments(payload.clientDocuments),
           cancelled: payload.cancelled === true,
           cancelledAt: payload.cancelledAt || undefined,
+          pickupTime: String(payload.pickupTime || "").trim() || undefined,
           updatedAt: new Date().toISOString(),
         };
         const { error: updateError } = await supabase
@@ -3465,6 +3560,7 @@ export function HotelHistoryPage({ user = null }) {
           clientDocuments: serializeClientDocuments(prev.clientDocuments),
           cancelled: prev.cancelled === true,
           cancelledAt: prev.cancelledAt || undefined,
+          pickupTime: String(prev.pickupTime || "").trim() || undefined,
           updatedAt: new Date().toISOString(),
         };
         const { error: updateError } = await supabase
@@ -3482,7 +3578,6 @@ export function HotelHistoryPage({ user = null }) {
           return;
         }
         toast.success(sent ? "Quote marked as sent." : "Quote moved back to “Ready to send”.");
-        if (sent) setStatusFilter("sent");
         await load();
       } catch (e) {
         logger.error("HotelHistoryPage mark sent:", e);

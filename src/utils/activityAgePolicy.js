@@ -2,6 +2,7 @@ import { ageInYearsAt } from "./publicHotelsCartStorage.js";
 
 /**
  * Parse une tranche d’âge libre (ex. « 4-9ans », « 0-5 ans », « Minimum 11 ans », « Interdit -6ans »).
+ * « Interdit -6ans » / « interdit aux moins de 6 ans » = interdit en dessous de 6 (6 ans OK).
  * @returns {{ kind: 'range', min: number, max: number }
  *   | { kind: 'min', min: number }
  *   | { kind: 'forbidden_under', under: number }
@@ -20,7 +21,10 @@ export function parseActivityAgeLabel(raw) {
     return { kind: "forbidden" };
   }
 
-  const forbiddenUnder = text.match(/interdit\s*-?\s*(\d+(?:[.,]\d+)?)/);
+  // « Interdit -6ans », « Interdit aux moins de 6 ans », « interdit au moins de 6 »
+  const forbiddenUnder = text.match(
+    /interdit(?:\s+aux?)?(?:\s+moins\s+de)?\s*-?\s*(\d+(?:[.,]\d+)?)/
+  );
   if (forbiddenUnder) {
     const under = Number(String(forbiddenUnder[1]).replace(",", "."));
     if (Number.isFinite(under)) return { kind: "forbidden_under", under };
@@ -76,7 +80,7 @@ export function buildActivityAgePolicy(activity) {
     babyMax = babyParsed.max;
   } else if (babyParsed?.kind === "forbidden_under") {
     babiesForbidden = true;
-    // Sous ce seuil = non accepté en bébé ; l’enfant commence souvent à ce seuil
+    // Sous ce seuil = non accepté ; l’enfant commence à ce seuil (ex. Interdit -6ans → dès 6 ans)
     if (childMin == null) childMin = babyParsed.under;
   }
 
@@ -86,7 +90,11 @@ export function buildActivityAgePolicy(activity) {
   } else if (childParsed?.kind === "min") {
     childMin = childParsed.min;
     childMax = 17;
-  } else if (childParsed?.kind === "forbidden" || childParsed?.kind === "forbidden_under") {
+  } else if (childParsed?.kind === "forbidden_under") {
+    // « Interdit -6ans » sur la grille enfant = âge minimum 6 (pas une interdiction totale)
+    childMin = childParsed.under;
+    childMax = 17;
+  } else if (childParsed?.kind === "forbidden") {
     // Activité interdite aux enfants : pas de grille enfant utilisable
     childMin = null;
     childMax = null;
@@ -100,6 +108,10 @@ export function buildActivityAgePolicy(activity) {
   if (childMin == null && childMax == null && childParsed == null) {
     childMin = babyMax != null ? Math.ceil(babyMax + 0.001) : 4;
     childMax = 12;
+  }
+  // Si un seuil min a été posé sans max (ex. via bébé « Interdit -X »), ouvrir jusqu’à 17 ans
+  if (childMin != null && childMax == null) {
+    childMax = 17;
   }
 
   return {
@@ -129,11 +141,12 @@ export function classifyMinorForActivity(birthDateIso, referenceDateIso, activit
     return "child";
   }
   if (policy.childMax != null && age > policy.childMax) return "adult";
-  if (policy.babiesForbidden && (policy.childMin == null || age < policy.childMin)) {
+  // Trop jeune pour la grille enfant (ex. Interdit -6ans → < 6)
+  if (policy.childMin != null && age < policy.childMin) {
     return "forbidden";
   }
-  if (policy.childMin != null && age < policy.childMin) {
-    return policy.babiesForbidden ? "forbidden" : "unknown";
+  if (policy.babiesForbidden && policy.childMin == null && policy.childMax == null) {
+    return "forbidden";
   }
   return "unknown";
 }
