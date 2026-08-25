@@ -6,7 +6,7 @@ import {
   Banknote,
   BedDouble,
   Building2,
-  CalendarRange,
+  CalendarDays,
   CheckCircle2,
   FileText,
   Inbox,
@@ -273,46 +273,33 @@ function getConfirmedStayDateSets(request) {
   };
 }
 
-/** Plage inclusive YYYY-MM-DD (une borne seule autorisée). */
-function isoDateInInclusiveRange(iso, from, to) {
-  if (!iso) return false;
-  if (from && iso < from) return false;
-  if (to && iso > to) return false;
-  return Boolean(from || to);
+/** Correspondance exacte YYYY-MM-DD. */
+function isoDateEquals(iso, day) {
+  if (!iso || !day) return false;
+  return iso === day;
 }
 
-function normalizeInclusiveDateRange(fromRaw, toRaw) {
-  let from = normalizeStayDate(fromRaw) || "";
-  let to = normalizeStayDate(toRaw) || "";
-  if (from && to && from > to) {
-    const tmp = from;
-    from = to;
-    to = tmp;
-  }
-  return { from, to, active: Boolean(from || to) };
-}
-
-function confirmationMatchesStayFilter(request, { from, to, mode }) {
-  if (!from && !to) return false;
+function confirmationMatchesStayFilter(request, { day, mode }) {
+  if (!day) return false;
   const { arrivals, departures } = getConfirmedStayDateSets(request);
-  const arrivalHit = arrivals.some((d) => isoDateInInclusiveRange(d, from, to));
-  const departureHit = departures.some((d) => isoDateInInclusiveRange(d, from, to));
+  const arrivalHit = arrivals.some((d) => isoDateEquals(d, day));
+  const departureHit = departures.some((d) => isoDateEquals(d, day));
   if (mode === "arrival") return arrivalHit;
   if (mode === "departure") return departureHit;
   return arrivalHit || departureHit;
 }
 
-function earliestMatchingStayDate(request, { from, to, mode }) {
+function earliestMatchingStayDate(request, { day, mode }) {
   const { arrivals, departures } = getConfirmedStayDateSets(request);
   const candidates = [];
   if (mode !== "departure") {
     for (const d of arrivals) {
-      if (isoDateInInclusiveRange(d, from, to)) candidates.push(d);
+      if (isoDateEquals(d, day)) candidates.push(d);
     }
   }
   if (mode !== "arrival") {
     for (const d of departures) {
-      if (isoDateInInclusiveRange(d, from, to)) candidates.push(d);
+      if (isoDateEquals(d, day)) candidates.push(d);
     }
   }
   candidates.sort();
@@ -2993,8 +2980,7 @@ export function HotelHistoryPage({ user = null }) {
   const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState("all"); // all | pending | to_send | sent | confirmed
   const [confirmationPayFilter, setConfirmationPayFilter] = useState("all"); // all | paid | unpaid | cancelled | arrival_departure
-  const [confirmationStayFrom, setConfirmationStayFrom] = useState("");
-  const [confirmationStayTo, setConfirmationStayTo] = useState("");
+  const [confirmationStayDate, setConfirmationStayDate] = useState("");
   const [confirmationStayMode, setConfirmationStayMode] = useState("both"); // arrival | departure | both
   const [savingOpsKey, setSavingOpsKey] = useState(null);
   const [markingSentId, setMarkingSentId] = useState(null);
@@ -3173,8 +3159,7 @@ export function HotelHistoryPage({ user = null }) {
     statusFilter,
     debouncedSearch,
     confirmationPayFilter,
-    confirmationStayFrom,
-    confirmationStayTo,
+    confirmationStayDate,
     confirmationStayMode,
   ]);
 
@@ -3182,10 +3167,11 @@ export function HotelHistoryPage({ user = null }) {
     if (statusFilter !== "confirmed") setConfirmationPayFilter("all");
   }, [statusFilter]);
 
-  const confirmationStayRange = useMemo(
-    () => normalizeInclusiveDateRange(confirmationStayFrom, confirmationStayTo),
-    [confirmationStayFrom, confirmationStayTo]
+  const confirmationStayDay = useMemo(
+    () => normalizeStayDate(confirmationStayDate) || "",
+    [confirmationStayDate]
   );
+  const confirmationStayActive = Boolean(confirmationStayDay);
 
   const confirmedCount = useMemo(() => rows.filter((r) => r.isConfirmed).length, [rows]);
   const pendingCount = useMemo(() => rows.filter((r) => r.isPending).length, [rows]);
@@ -3204,22 +3190,16 @@ export function HotelHistoryPage({ user = null }) {
     [rows]
   );
   const confirmedArrivalDepartureCount = useMemo(() => {
-    if (!confirmationStayRange.active) return confirmedCount;
+    if (!confirmationStayActive) return confirmedCount;
     return rows.filter(
       (r) =>
         r.isConfirmed &&
         confirmationMatchesStayFilter(r, {
-          from: confirmationStayRange.from,
-          to: confirmationStayRange.to,
+          day: confirmationStayDay,
           mode: confirmationStayMode,
         })
     ).length;
-  }, [
-    rows,
-    confirmedCount,
-    confirmationStayRange,
-    confirmationStayMode,
-  ]);
+  }, [rows, confirmedCount, confirmationStayActive, confirmationStayDay, confirmationStayMode]);
 
   const filteredRows = useMemo(() => {
     let list = rows;
@@ -3232,25 +3212,22 @@ export function HotelHistoryPage({ user = null }) {
       } else if (confirmationPayFilter === "cancelled") {
         list = list.filter((r) => r.isConfirmationCancelled);
       } else if (confirmationPayFilter === "arrival_departure") {
-        if (!confirmationStayRange.active) {
+        if (!confirmationStayActive) {
           list = [];
         } else {
           list = list.filter((r) =>
             confirmationMatchesStayFilter(r, {
-              from: confirmationStayRange.from,
-              to: confirmationStayRange.to,
+              day: confirmationStayDay,
               mode: confirmationStayMode,
             })
           );
           list = [...list].sort((a, b) => {
             const da = earliestMatchingStayDate(a, {
-              from: confirmationStayRange.from,
-              to: confirmationStayRange.to,
+              day: confirmationStayDay,
               mode: confirmationStayMode,
             });
             const db = earliestMatchingStayDate(b, {
-              from: confirmationStayRange.from,
-              to: confirmationStayRange.to,
+              day: confirmationStayDay,
               mode: confirmationStayMode,
             });
             if (da !== db) return da.localeCompare(db);
@@ -3303,7 +3280,8 @@ export function HotelHistoryPage({ user = null }) {
     debouncedSearch,
     statusFilter,
     confirmationPayFilter,
-    confirmationStayRange,
+    confirmationStayActive,
+    confirmationStayDay,
     confirmationStayMode,
   ]);
 
@@ -3327,33 +3305,31 @@ export function HotelHistoryPage({ user = null }) {
   );
 
   const confirmedArrivalRows = useMemo(() => {
-    if (!confirmationArrivalDeparture || !confirmationStayRange.active) return [];
+    if (!confirmationArrivalDeparture || !confirmationStayActive) return [];
     if (confirmationStayMode === "departure") return [];
     return filteredRows.filter((r) => {
       const { arrivals } = getConfirmedStayDateSets(r);
-      return arrivals.some((d) =>
-        isoDateInInclusiveRange(d, confirmationStayRange.from, confirmationStayRange.to)
-      );
+      return arrivals.some((d) => isoDateEquals(d, confirmationStayDay));
     });
   }, [
     confirmationArrivalDeparture,
-    confirmationStayRange,
+    confirmationStayActive,
+    confirmationStayDay,
     confirmationStayMode,
     filteredRows,
   ]);
 
   const confirmedDepartureRows = useMemo(() => {
-    if (!confirmationArrivalDeparture || !confirmationStayRange.active) return [];
+    if (!confirmationArrivalDeparture || !confirmationStayActive) return [];
     if (confirmationStayMode === "arrival") return [];
     return filteredRows.filter((r) => {
       const { departures } = getConfirmedStayDateSets(r);
-      return departures.some((d) =>
-        isoDateInInclusiveRange(d, confirmationStayRange.from, confirmationStayRange.to)
-      );
+      return departures.some((d) => isoDateEquals(d, confirmationStayDay));
     });
   }, [
     confirmationArrivalDeparture,
-    confirmationStayRange,
+    confirmationStayActive,
+    confirmationStayDay,
     confirmationStayMode,
     filteredRows,
   ]);
@@ -3361,7 +3337,7 @@ export function HotelHistoryPage({ user = null }) {
   const confirmationStayGrouped =
     confirmationArrivalDeparture &&
     confirmationStayMode === "both" &&
-    confirmationStayRange.active;
+    confirmationStayActive;
 
   const requestsTotalPages =
     confirmationGrouped || confirmationStayGrouped
@@ -4511,11 +4487,9 @@ export function HotelHistoryPage({ user = null }) {
                 className="!px-3 !py-1.5 !text-[11px]"
               >
                 <span className="inline-flex items-center gap-1">
-                  <CalendarRange className="h-3 w-3" aria-hidden />
+                  <CalendarDays className="h-3 w-3" aria-hidden />
                   Arrival / Departure
-                  {confirmationStayRange.active
-                    ? ` (${confirmedArrivalDepartureCount})`
-                    : ""}
+                  {confirmationStayActive ? ` (${confirmedArrivalDepartureCount})` : ""}
                 </span>
               </Pill>
             </div>
@@ -4524,29 +4498,13 @@ export function HotelHistoryPage({ user = null }) {
               <div className="rounded-xl border border-indigo-200/80 bg-white/80 p-3 shadow-sm sm:p-4">
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="min-w-[9.5rem] flex-1 sm:max-w-[11rem]">
-                    <label
-                      className="block text-[10px] font-bold uppercase tracking-wide text-indigo-900/70"
-                    >
-                      From
+                    <label className="block text-[10px] font-bold uppercase tracking-wide text-indigo-900/70">
+                      Date
                     </label>
                     <DateInput
-                      value={confirmationStayFrom}
-                      onChange={setConfirmationStayFrom}
+                      value={confirmationStayDate}
+                      onChange={setConfirmationStayDate}
                       className="mt-1.5"
-                      max={confirmationStayTo || undefined}
-                    />
-                  </div>
-                  <div className="min-w-[9.5rem] flex-1 sm:max-w-[11rem]">
-                    <label
-                      className="block text-[10px] font-bold uppercase tracking-wide text-indigo-900/70"
-                    >
-                      To
-                    </label>
-                    <DateInput
-                      value={confirmationStayTo}
-                      onChange={setConfirmationStayTo}
-                      className="mt-1.5"
-                      min={confirmationStayFrom || undefined}
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-2 pb-0.5">
@@ -4581,21 +4539,18 @@ export function HotelHistoryPage({ user = null }) {
                       Both
                     </Pill>
                   </div>
-                  {(confirmationStayFrom || confirmationStayTo) ? (
+                  {confirmationStayDate ? (
                     <GhostBtn
                       type="button"
-                      onClick={() => {
-                        setConfirmationStayFrom("");
-                        setConfirmationStayTo("");
-                      }}
+                      onClick={() => setConfirmationStayDate("")}
                       className="!px-3 !py-1.5 !text-[11px]"
                     >
-                      Clear dates
+                      Clear date
                     </GhostBtn>
                   ) : null}
                 </div>
                 <p className="mt-2.5 text-[11px] font-medium text-indigo-900/75">
-                  Pick a date range to list confirmations whose check-in and/or check-out fall in that period.
+                  Pick one day to list confirmations with check-in and/or check-out on that date.
                 </p>
               </div>
             ) : null}
@@ -4627,10 +4582,10 @@ export function HotelHistoryPage({ user = null }) {
                     ? " cancelled"
                     : confirmationPayFilter === "arrival_departure"
                       ? confirmationStayMode === "arrival"
-                        ? " with arrival in range"
+                        ? " with arrival on this date"
                         : confirmationStayMode === "departure"
-                          ? " with departure in range"
-                          : " with arrival or departure in range"
+                          ? " with departure on this date"
+                          : " with arrival or departure on this date"
                       : " confirmed"
               : statusFilter === "pending"
                 ? " pending"
@@ -4658,13 +4613,13 @@ export function HotelHistoryPage({ user = null }) {
                 : confirmationPayFilter === "cancelled"
                   ? "No cancelled confirmations."
                   : confirmationPayFilter === "arrival_departure"
-                    ? confirmationStayRange.active
+                    ? confirmationStayActive
                       ? confirmationStayMode === "arrival"
-                        ? "No arrivals in this date range."
+                        ? "No arrivals on this date."
                         : confirmationStayMode === "departure"
-                          ? "No departures in this date range."
-                          : "No arrivals or departures in this date range."
-                      : "Select a From and/or To date to see arrivals and departures."
+                          ? "No departures on this date."
+                          : "No arrivals or departures on this date."
+                      : "Select a date to see arrivals and departures."
                   : "No confirmations yet."
             : statusFilter === "pending"
               ? "No new pending requests today."
@@ -4845,7 +4800,7 @@ export function HotelHistoryPage({ user = null }) {
                   Arrivals
                 </h3>
                 <p className="mt-0.5 text-xs text-sky-800/80">
-                  Check-in dates within the selected range.
+                  Check-in on the selected day.
                 </p>
               </div>
               <span className="rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-bold tabular-nums text-sky-950 ring-1 ring-sky-300/60">
@@ -4854,13 +4809,13 @@ export function HotelHistoryPage({ user = null }) {
             </div>
             {confirmedArrivalRows.length === 0 ? (
               <p className="rounded-xl border border-dashed border-sky-200 bg-sky-50/50 px-4 py-5 text-center text-sm font-medium text-sky-900/80">
-                No arrivals in this date range.
+                No arrivals on this date.
               </p>
             ) : (
               <HotelStayOpsList
                 requests={confirmedArrivalRows}
                 stayKind="arrival"
-                emptyLabel="No arrivals in this date range."
+                emptyLabel="No arrivals on this date."
                 onSaveOpsField={handleSaveOpsField}
                 savingOpsKey={savingOpsKey}
               />
@@ -4878,7 +4833,7 @@ export function HotelHistoryPage({ user = null }) {
                   Departures
                 </h3>
                 <p className="mt-0.5 text-xs text-violet-800/80">
-                  Check-out dates within the selected range.
+                  Check-out on the selected day.
                 </p>
               </div>
               <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-bold tabular-nums text-violet-950 ring-1 ring-violet-300/60">
@@ -4887,20 +4842,20 @@ export function HotelHistoryPage({ user = null }) {
             </div>
             {confirmedDepartureRows.length === 0 ? (
               <p className="rounded-xl border border-dashed border-violet-200 bg-violet-50/50 px-4 py-5 text-center text-sm font-medium text-violet-900/80">
-                No departures in this date range.
+                No departures on this date.
               </p>
             ) : (
               <HotelStayOpsList
                 requests={confirmedDepartureRows}
                 stayKind="departure"
-                emptyLabel="No departures in this date range."
+                emptyLabel="No departures on this date."
                 onSaveOpsField={handleSaveOpsField}
                 savingOpsKey={savingOpsKey}
               />
             )}
           </section>
         </div>
-      ) : confirmationArrivalDeparture && confirmationStayRange.active ? (
+      ) : confirmationArrivalDeparture && confirmationStayActive ? (
         <div className="space-y-4">
           <HotelStayOpsList
             requests={visibleRows}
@@ -4913,10 +4868,10 @@ export function HotelHistoryPage({ user = null }) {
             }
             emptyLabel={
               confirmationStayMode === "arrival"
-                ? "No arrivals in this date range."
+                ? "No arrivals on this date."
                 : confirmationStayMode === "departure"
-                  ? "No departures in this date range."
-                  : "No arrivals or departures in this date range."
+                  ? "No departures on this date."
+                  : "No arrivals or departures on this date."
             }
             onSaveOpsField={handleSaveOpsField}
             savingOpsKey={savingOpsKey}
