@@ -42,7 +42,7 @@ export const PERMISSION_GROUPS = [
         defaultValue: false,
       },
       { formKey: "canAccessHistory", label: "Page Historique", defaultValue: true },
-      { formKey: "canAccessTickets", label: "Page Tickets", defaultValue: true },
+      { formKey: "canAccessTickets", label: "Page Situation", defaultValue: true },
       { formKey: "canAccessModifications", label: "Page Modifications", defaultValue: false },
       { formKey: "canAccessSituation", label: "Page Situation", defaultValue: false },
       { formKey: "canAccessUsers", label: "Page Utilisateurs", defaultValue: false },

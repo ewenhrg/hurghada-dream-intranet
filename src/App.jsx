@@ -1438,7 +1438,7 @@ export default function App() {
                 )}
                 {user?.canAccessHistory !== false && (
                 <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
-                  🎟️ Tickets
+                  {t("nav.tickets")}
                 </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
@@ -1469,7 +1469,7 @@ export default function App() {
                 )} */}
                 {!SITUATION_PAGE_STANDBY && (
                   <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
-                    📱 Transferts
+                    📱 {t("nav.situation")}
                   </Pill>
                 )}
                 {(user?.canAccessSituation || hasFullIntranetAccess(user) || user?.name === "situation") && (
@@ -1622,8 +1622,8 @@ export default function App() {
 
         {tab === "tickets" && user?.canAccessHistory !== false && (
           <Section
-            title="Registre des tickets"
-            subtitle="Vue compacte — toutes les colonnes visibles. Copie directe vers Excel."
+            title={t("page.tickets.title")}
+            subtitle={t("page.tickets.subtitle")}
             bare
           >
             <TicketsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />

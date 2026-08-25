@@ -391,22 +391,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         })
       : "Date non renseignée";
 
-  const matrixFromRows = useCallback((list, withHeaders) => {
+  const matrixFromRows = useCallback((list, { withHeaders = false } = {}) => {
     const body = [];
-    let lastDate = null;
-    let lastAct = null;
     for (const r of list) {
-      // Ligne vide entre chaque date (saut de ligne Excel)
-      if (lastDate !== null && r.date !== lastDate) {
-        body.push(Array(EXPORT_HEADERS.length).fill(""));
-        lastAct = null;
-      }
-      // Ligne vide légère entre blocs d’activité (même date)
-      else if (lastAct !== null && (r.activitySortKey || r.activity) !== lastAct) {
-        body.push(Array(EXPORT_HEADERS.length).fill(""));
-      }
-      lastDate = r.date;
-      lastAct = r.activitySortKey || r.activity;
       body.push([
         r.ticketNumber,
         dateForExport(r.date),
@@ -428,25 +415,35 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     return withHeaders ? [EXPORT_HEADERS, ...body] : body;
   }, []);
 
+  /** TSV ligne à ligne (sans en-tête ni lignes vides) — collage Excel propre. */
   const copyRowsToClipboard = useCallback(
-    async (list, withHeaders) => {
-      const matrix = matrixFromRows(list, withHeaders);
+    async (list) => {
+      const matrix = matrixFromRows(list, { withHeaders: false });
+      if (matrix.length === 0) return false;
       const tsv = matrix
         .map((row) =>
           row
-            .map((cell) => String(cell ?? "").replace(/\t/g, " ").replace(/\r?\n/g, " "))
+            .map((cell) =>
+              String(cell ?? "")
+                .replace(/\t/g, " ")
+                .replace(/\r\n|\r|\n/g, " ")
+                .trim()
+            )
             .join("\t")
         )
-        .join("\r\n");
+        .join("\n");
       try {
         await navigator.clipboard.writeText(tsv);
         return true;
       } catch {
         const ta = document.createElement("textarea");
         ta.value = tsv;
+        ta.setAttribute("readonly", "");
         ta.style.position = "fixed";
-        ta.style.opacity = "0";
+        ta.style.left = "-9999px";
+        ta.style.top = "0";
         document.body.appendChild(ta);
+        ta.focus();
         ta.select();
         let ok = false;
         try {
@@ -467,11 +464,11 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
       toast.warning("Aucune nouvelle ligne à copier (tout est déjà copié).");
       return;
     }
-    const ok = await copyRowsToClipboard(list, true);
+    const ok = await copyRowsToClipboard(list);
     if (ok) {
       markCopied(list.map((r) => r.ticketNumber));
       toast.success(
-        `${list.length} nouvelle(s) ligne(s) copiée(s). Collez avec Ctrl+V dans Excel.`
+        `${list.length} ligne(s) copiée(s). Collez dans Excel (Ctrl+V) — une ligne = une ligne.`
       );
     } else {
       toast.error("Impossible de copier. Utilisez l'export .xlsx.");
@@ -480,7 +477,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
 
   const handleCopyRow = useCallback(
     async (row) => {
-      const ok = await copyRowsToClipboard([row], false);
+      const ok = await copyRowsToClipboard([row]);
       if (ok) {
         markCopied([row.ticketNumber]);
         toast.success(`Ligne ${row.ticketNumber} copiée.`);
@@ -654,10 +651,10 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
       toast.warning("Aucune ligne à copier.");
       return;
     }
-    const ok = await copyRowsToClipboard(filtered, true);
+    const ok = await copyRowsToClipboard(filtered);
     if (ok) {
       markCopied(filtered.map((r) => r.ticketNumber));
-      toast.success(`${filtered.length} ligne(s) copiée(s).`);
+      toast.success(`${filtered.length} ligne(s) copiée(s). Collez dans Excel (Ctrl+V).`);
     } else {
       toast.error("Impossible de copier. Utilisez l'export .xlsx.");
     }
@@ -876,7 +873,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
               onClick={() => void handleCopyNew()}
               disabled={newInFilteredCount === 0}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-3.5 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_-12px_rgba(16,185,129,0.7)] transition-all hover:from-emerald-600 hover:to-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
-              title="Copie les 15 colonnes Excel des lignes non encore copiées"
+              title="Copie uniquement les lignes de données (sans en-tête ni lignes vides) pour coller dans Excel"
             >
               <Copy className="size-4" aria-hidden="true" />
               Copier les nouvelles
