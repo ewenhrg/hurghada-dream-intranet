@@ -1,6 +1,46 @@
 import { calculateCardPrice, normalizeTicketsPaymentMethods } from "../utils";
 import { toLocalDateKey } from "./quoteUserStats";
 
+/**
+ * Incrémente la partie numérique en fin de n° ticket (préfixe + padding conservés).
+ * Ex. "T-1042" + 2 → "T-1044", "0099" + 1 → "0100".
+ * @returns {string|null}
+ */
+export function incrementTicketNumber(base, delta = 1) {
+  const s = String(base || "").trim();
+  if (!s) return null;
+  const match = s.match(/^(.*?)(\d+)$/);
+  if (!match) return null;
+  const [, prefix, digits] = match;
+  const step = Number(delta);
+  if (!Number.isFinite(step)) return null;
+  try {
+    const next = (BigInt(digits) + BigInt(Math.trunc(step))).toString();
+    const padded = next.length >= digits.length ? next : next.padStart(digits.length, "0");
+    return `${prefix}${padded}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Propose les n° suivants à partir d’un premier ticket (longueur = count, index 0 = base).
+ * @returns {string[]}
+ */
+export function suggestSequentialTicketNumbers(base, count) {
+  const n = Math.max(0, Math.floor(Number(count) || 0));
+  if (n === 0) return [];
+  const first = String(base || "").trim();
+  if (!first) return Array(n).fill("");
+  const out = [first];
+  for (let i = 1; i < n; i++) {
+    const next = incrementTicketNumber(first, i);
+    if (!next) return out;
+    out.push(next);
+  }
+  return out;
+}
+
 /** Parse cash / stripe depuis paymentMethod d’une ligne. */
 export function parseItemPaymentFlags(paymentMethod) {
   const m = String(paymentMethod || "").toLowerCase();

@@ -52,6 +52,7 @@ import {
 } from "../utils/hotelRequestDocuments";
 import { cleanupExpiredQuoteDocuments, isQuoteLastActivityPastRetention } from "../utils/cleanupExpiredQuoteDocuments";
 import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
+import { incrementTicketNumber } from "../utils/ticketCollections";
 
 const QUOTE_DOC_BUCKET = "documents";
 const QUOTE_DOC_FALLBACK_BUCKET = "Catalogue";
@@ -147,6 +148,32 @@ function QuoteCardComponent({
         return a.originalIndex - b.originalIndex;
       });
   }, [quotes, d]);
+
+  /**
+   * 1er n° saisi → détecte le chiffre et propose la suite sur les activités suivantes
+   * (ordre date du modal). Édition du 1er champ : écrase la suite. Autres : remplit seulement les vides.
+   */
+  const handleTicketDraftChange = useCallback(
+    (originalIndex, sortedIndex, rawValue) => {
+      setTicketDrafts((prev) => {
+        const next = { ...prev, [originalIndex]: rawValue };
+        const base = String(rawValue || "").trim();
+        if (!base || !incrementTicketNumber(base, 1)) return next;
+
+        const fillFromFirst = sortedIndex === 0;
+        for (let s = sortedIndex + 1; s < payModalItems.length; s++) {
+          const oi = payModalItems[s].originalIndex;
+          const current = String(next[oi] ?? "").trim();
+          if (!fillFromFirst && current) continue;
+          const suggested = incrementTicketNumber(base, s - sortedIndex);
+          if (!suggested) break;
+          next[oi] = suggested;
+        }
+        return next;
+      });
+    },
+    [payModalItems]
+  );
 
   const handlePrintClick = useCallback(() => {
     const htmlContent = generateQuoteHTML(d);
@@ -951,8 +978,9 @@ function QuoteCardComponent({
                   Payer — numéros de ticket
                 </h3>
                 <p className="text-sm text-slate-600 mt-1">
-                  Activités classées par date — saisissez les numéros de ticket à la suite, puis
-                  validez pour imprimer (ordre des n° de ticket). Le devis passera en « Payé ».
+                  Activités classées par date — saisissez le premier n° de ticket : les suivants
+                  se proposent automatiquement. Validez ensuite pour imprimer. Le devis passera
+                  en « Payé ».
                   {needsZeroTracasDocs
                     ? " Pour Zero Tracas, joignez aussi passeport, réservation d’hôtel et réservation de vol."
                     : ""}
@@ -961,7 +989,7 @@ function QuoteCardComponent({
             </div>
 
             <ul className="mt-5 space-y-3 max-h-[50vh] overflow-y-auto pr-1">
-              {payModalItems.map(({ item, originalIndex }) => (
+              {payModalItems.map(({ item, originalIndex }, sortedIndex) => (
                 <li
                   key={`${item.activityId || "act"}-${item.date || originalIndex}-${originalIndex}`}
                   className="rounded-xl border border-teal-100 bg-teal-50/50 px-4 py-3"
@@ -986,18 +1014,20 @@ function QuoteCardComponent({
                   <label className="mt-3 block">
                     <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
                       N° ticket
+                      {sortedIndex === 0 && payModalItems.length > 1 ? (
+                        <span className="ml-1 font-semibold normal-case tracking-normal text-teal-700">
+                          · la suite se remplit auto
+                        </span>
+                      ) : null}
                     </span>
                     <input
                       type="text"
                       autoComplete="off"
                       value={ticketDrafts[originalIndex] ?? ""}
                       onChange={(e) =>
-                        setTicketDrafts((prev) => ({
-                          ...prev,
-                          [originalIndex]: e.target.value,
-                        }))
+                        handleTicketDraftChange(originalIndex, sortedIndex, e.target.value)
                       }
-                      placeholder="Ex. T-12345"
+                      placeholder={sortedIndex === 0 ? "Ex. 1042" : "Auto ou saisie"}
                       disabled={ticketGenerating}
                       className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 disabled:opacity-60"
                     />
