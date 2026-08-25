@@ -314,6 +314,49 @@ function earliestMatchingStayDate(request, { from, to, mode }) {
   return candidates[0] || "";
 }
 
+/** Résumé ops pour la vue Arrival / Departure (colonnes limitées). */
+function getStayOpsSummary(request) {
+  const payload = normalizeResponsePayload(request?.responsePayload);
+  const hotels = getConfirmedHotelsList(payload);
+  const hotelNames = hotels
+    .map((h) => String(h.hotelName || "").trim())
+    .filter(Boolean);
+  const checkIn =
+    normalizeStayDate(hotels[0]?.stayFrom) ||
+    normalizeStayDate(request?.arrivalDate) ||
+    "";
+  const flights = payload.flights || EMPTY_FLIGHTS;
+  const adults =
+    request?.adultsCount != null && Number.isFinite(Number(request.adultsCount))
+      ? Number(request.adultsCount)
+      : null;
+  const children =
+    request?.childrenCount != null && Number.isFinite(Number(request.childrenCount))
+      ? Number(request.childrenCount)
+      : null;
+  const agesText = String(request?.childAges || "").toLowerCase();
+  const babyMentions = agesText.match(/b[eé]b[eé]/gi);
+  const babies = babyMentions ? babyMentions.length : null;
+
+  return {
+    firstName: String(request?.firstName || "").trim() || "—",
+    phone: String(request?.phone || "").trim() || "—",
+    hotel: hotelNames.length > 0 ? hotelNames.join(" + ") : "—",
+    checkIn,
+    pax: adults,
+    child: children,
+    baby: babies,
+    departureFlightNumber: flights.departureFlightNumber || "",
+    departureDate: flights.departureDate || "",
+    departureTime: flights.departureTime || "",
+  };
+}
+
+function formatOpsCount(value) {
+  if (value == null || !Number.isFinite(Number(value))) return "—";
+  return String(Number(value));
+}
+
 function isHotelRequestConfirmed(request) {
   if (typeof request?.isConfirmed === "boolean") return request.isConfirmed;
   const payload = normalizeResponsePayload(request?.responsePayload);
@@ -1258,6 +1301,111 @@ const HotelRequestCard = memo(function HotelRequestCard({
     </article>
   );
 });
+
+/**
+ * Vue compacte Arrival / Departure : prénom, téléphone, hôtel, check-in, pax, vol départ.
+ */
+function HotelStayOpsList({ requests = [], emptyLabel = "No results." }) {
+  if (!requests.length) {
+    return (
+      <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-5 text-center text-sm font-medium text-slate-600">
+        {emptyLabel}
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-x-auto">
+        <table className="min-w-full border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50/90 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                First name
+              </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                Phone
+              </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                Hotel
+              </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                Check-in
+              </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
+                Pax
+              </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
+                Child
+              </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
+                Baby
+              </th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                Departure flight
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {requests.map((request) => {
+              const row = getStayOpsSummary(request);
+              return (
+                <tr
+                  key={request.id}
+                  className="border-b border-slate-100 last:border-b-0 hover:bg-indigo-50/40"
+                >
+                  <td className="px-3 py-3 font-semibold text-slate-950 sm:px-4">
+                    {row.firstName}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 tabular-nums font-medium text-slate-800 sm:px-4">
+                    {row.phone}
+                  </td>
+                  <td className="max-w-[14rem] truncate px-3 py-3 font-medium text-slate-800 sm:px-4" title={row.hotel}>
+                    {row.hotel}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 font-medium text-slate-800 sm:px-4">
+                    {formatHotelStayDate(row.checkIn)}
+                  </td>
+                  <td className="px-3 py-3 text-center tabular-nums font-bold text-emerald-800 sm:px-4">
+                    {formatOpsCount(row.pax)}
+                  </td>
+                  <td className="px-3 py-3 text-center tabular-nums font-bold text-sky-800 sm:px-4">
+                    {formatOpsCount(row.child)}
+                  </td>
+                  <td className="px-3 py-3 text-center tabular-nums font-bold text-pink-800 sm:px-4">
+                    {formatOpsCount(row.baby)}
+                  </td>
+                  <td className="min-w-[11rem] px-3 py-3 text-xs font-semibold text-slate-700 sm:px-4">
+                    <div className="space-y-0.5">
+                      <p>
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Flight{" "}
+                        </span>
+                        {row.departureFlightNumber || "—"}
+                      </p>
+                      <p>
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Date{" "}
+                        </span>
+                        {row.departureDate ? formatHotelStayDate(row.departureDate) : "—"}
+                      </p>
+                      <p>
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Time{" "}
+                        </span>
+                        {row.departureTime || "—"}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 function HotelResponseModal({
   request,
@@ -4429,11 +4577,10 @@ export function HotelHistoryPage({ user = null }) {
                 No arrivals in this date range.
               </p>
             ) : (
-              <div className="space-y-8">
-                {confirmedArrivalRows.map((request) => (
-                  <HotelRequestCard key={`arr-${request.id}`} {...hotelRequestCardProps(request)} />
-                ))}
-              </div>
+              <HotelStayOpsList
+                requests={confirmedArrivalRows}
+                emptyLabel="No arrivals in this date range."
+              />
             )}
           </section>
 
@@ -4460,13 +4607,48 @@ export function HotelHistoryPage({ user = null }) {
                 No departures in this date range.
               </p>
             ) : (
-              <div className="space-y-8">
-                {confirmedDepartureRows.map((request) => (
-                  <HotelRequestCard key={`dep-${request.id}`} {...hotelRequestCardProps(request)} />
-                ))}
-              </div>
+              <HotelStayOpsList
+                requests={confirmedDepartureRows}
+                emptyLabel="No departures in this date range."
+              />
             )}
           </section>
+        </div>
+      ) : confirmationArrivalDeparture && confirmationStayRange.active ? (
+        <div className="space-y-4">
+          <HotelStayOpsList
+            requests={visibleRows}
+            emptyLabel={
+              confirmationStayMode === "arrival"
+                ? "No arrivals in this date range."
+                : confirmationStayMode === "departure"
+                  ? "No departures in this date range."
+                  : "No arrivals or departures in this date range."
+            }
+          />
+          {requestsTotalPages > 1 ? (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <GhostBtn
+                type="button"
+                onClick={() => setRequestsPage((p) => Math.max(1, p - 1))}
+                disabled={requestsCurrentPage === 1}
+                className="!px-4 !py-2"
+              >
+                ← Previous
+              </GhostBtn>
+              <span className="px-3 text-sm font-semibold text-slate-600">
+                Page {requestsCurrentPage} of {requestsTotalPages}
+              </span>
+              <GhostBtn
+                type="button"
+                onClick={() => setRequestsPage((p) => Math.min(requestsTotalPages, p + 1))}
+                disabled={requestsCurrentPage === requestsTotalPages}
+                className="!px-4 !py-2"
+              >
+                Next →
+              </GhostBtn>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="space-y-8">
