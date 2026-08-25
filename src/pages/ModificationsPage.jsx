@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS } from "../constants";
-import { currencyNoCents, saveLS, cleanPhoneNumber, calculateCardPrice } from "../utils";
+import { currencyNoCents, saveQuotesCache, cleanPhoneNumber, calculateCardPrice } from "../utils";
 import { GhostBtn, PrimaryBtn, TextInput, NumberInput } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
@@ -199,7 +199,7 @@ export function ModificationsPage({ quotes, setQuotes, activities, user }) {
     // Mettre à jour la liste des devis
     const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? updatedQuote : q));
     setQuotes(updatedQuotes);
-    saveLS(LS_KEYS.quotes, updatedQuotes);
+    saveQuotesCache(updatedQuotes);
 
     // Mettre à jour dans Supabase si configuré
     if (supabase) {

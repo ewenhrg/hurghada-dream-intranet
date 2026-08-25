@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { LS_KEYS } from "../../constants";
-import { currency, saveLS, calculateCardPrice } from "../../utils";
+import { currency, saveQuotesCache, calculateCardPrice } from "../../utils";
 import { persistQuoteItemsToSupabase } from "../../utils/persistQuoteItems";
 import { computePaidColumnsFromItems } from "../../utils/ticketCollections";
 import { formatQuoteItemParticipantsSummary } from "../../utils/quoteItemDisplay.js";
@@ -73,7 +73,7 @@ export function PaymentModal({
 
     const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? updatedQuote : q));
     setQuotes(updatedQuotes);
-    saveLS(LS_KEYS.quotes, updatedQuotes);
+    saveQuotesCache(updatedQuotes);
 
     // Mettre à jour dans Supabase si configuré
     if (supabase) {

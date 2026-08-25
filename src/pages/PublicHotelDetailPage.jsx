@@ -232,7 +232,7 @@ export function PublicHotelDetailPage({ hotelId }) {
                     aria-label={`Agrandir la photo ${idx + 1}`}
                   >
                     {images[idx] ? (
-                      <img src={images[idx]} alt="" className="h-full w-full object-cover transition hover:opacity-95" />
+                      <img src={images[idx]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition hover:opacity-95" />
                     ) : (
                       <div className="h-full w-full" style={{ background: fallbackCover }} />
                     )}

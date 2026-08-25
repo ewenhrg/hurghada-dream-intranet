@@ -2,9 +2,14 @@ import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+/** Chemins Windows -> POSIX (une seule définition, réutilisée par manualChunks). */
+function toPosixId(id) {
+  return id.replace(/\\/g, "/");
+}
+
 function isReactCoreModule(id) {
   // Ne pas matcher lucide-react / @base-ui/react / etc.
-  const normalized = id.replace(/\\/g, "/");
+  const normalized = toPosixId(id);
   return (
     /\/(react|react-dom|scheduler)(\/|$)/.test(normalized) ||
     normalized.includes("react-router") ||
@@ -30,49 +35,42 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          const normalized = id.replace(/\\/g, "/");
+          const normalized = toPosixId(id);
 
-          if (normalized.includes("node_modules")) {
-            // React DOIT être dans un seul chunk nommé (pas undefined)
-            if (isReactCoreModule(normalized)) {
-              return "react-vendor";
-            }
-            if (
-              normalized.includes("xlsx") ||
-              normalized.includes("@tanstack/react-virtual") ||
-              normalized.includes("react-window") ||
-              normalized.includes("react-virtualized")
-            ) {
-              return "utils-vendor";
-            }
-            if (
-              normalized.includes("framer-motion") ||
-              normalized.includes("lucide-react") ||
-              normalized.includes("@base-ui") ||
-              normalized.includes("class-variance-authority") ||
-              normalized.includes("clsx") ||
-              normalized.includes("tailwind-merge")
-            ) {
-              return "ui-vendor";
-            }
-            if (normalized.includes("@supabase") || normalized.includes("supabase")) {
-              return "supabase";
-            }
-            return "vendor";
+          // Code applicatif : on laisse Rollup découper par route (lazyPages.js).
+          // Les anciens groupes « utils » / « components » / « page-* » forçaient
+          // tout le code partagé dans le graphe statique de l'entrée : le
+          // code-splitting était annulé et ~2 Mo de JS étaient préchargés
+          // avant le premier rendu.
+          if (!normalized.includes("node_modules")) return;
+
+          // React DOIT être dans un seul chunk nommé (pas undefined)
+          if (isReactCoreModule(normalized)) {
+            return "react-vendor";
           }
 
-          if (normalized.includes("/pages/")) {
-            const pageName = normalized.split("/pages/")[1].split(".")[0];
-            return `page-${pageName}`;
+          // Excel : chunks isolés, chargés uniquement à l'import/export réel
+          if (normalized.includes("xlsx-js-style")) {
+            return "xlsx-style-vendor";
+          }
+          if (/\/xlsx\//.test(normalized)) {
+            return "xlsx-vendor";
           }
 
-          if (normalized.includes("/components/")) {
-            return "components";
+          if (
+            normalized.includes("framer-motion") ||
+            normalized.includes("lucide-react") ||
+            normalized.includes("@base-ui") ||
+            normalized.includes("class-variance-authority") ||
+            normalized.includes("clsx") ||
+            normalized.includes("tailwind-merge")
+          ) {
+            return "ui-vendor";
           }
-
-          if (normalized.includes("/utils/") || normalized.endsWith("/utils.js")) {
-            return "utils";
+          if (normalized.includes("@supabase") || normalized.includes("supabase")) {
+            return "supabase";
           }
+          return "vendor";
         },
         chunkFileNames: "assets/[name]-[hash].js",
         entryFileNames: "assets/[name]-[hash].js",

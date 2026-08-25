@@ -10,7 +10,8 @@ import {
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
 import { canAccessHotelsPage, canAccessHotelHistoryPage, hasFullIntranetAccess } from "./constants/permissions";
-import { uuid, mergeTransfers, calculateCardPrice, saveLS, loadLS, normalizeQuoteItemsFromDb } from "./utils";
+import { uuid, mergeTransfers, calculateCardPrice, saveLS, saveQuotesCache, loadLS, normalizeQuoteItemsFromDb } from "./utils";
+import { runWhenIdle } from "./utils/idle";
 import { attachTicketPaymentMetaFromItems } from "./utils/ticketCollections";
 import { normalizeClientDocuments } from "./utils/hotelRequestDocuments";
 import { airbnbFieldsFromRow } from "./utils/clientAirbnb";
@@ -65,8 +66,28 @@ import {
   endPresenceSession,
 } from "./utils/presenceSessions";
 
+/**
+ * Routes visiteur (catalogue, fiches hôtel, demande de devis, tarifs).
+ * Elles chargent leurs propres données : aucune synchro intranet ne doit y tourner.
+ */
+function isPublicClientPath(path) {
+  const p = path || "";
+  return (
+    p === "/tarifs" ||
+    p === "/tarifs/" ||
+    p === "/catalogue" ||
+    p.startsWith("/catalogue/") ||
+    p === "/hotels" ||
+    p.startsWith("/hotels/") ||
+    p === "/demande-hotel" ||
+    p.startsWith("/demande-hotel/") ||
+    p.startsWith("/request")
+  );
+}
+
 export default function App() {
   const location = useLocation();
+  const isPublicClientRoute = isPublicClientPath(location.pathname);
   const [ok, setOk] = useState(false);
   const [tab, setTab] = useState("devis");
   // Source de vérité: Supabase (les données locales servent seulement de cache temporaire d'affichage).
@@ -95,17 +116,8 @@ export default function App() {
 
   // Catalogue / pages client : aucune notif interne (sync Supabase, etc.)
   useEffect(() => {
-    const path = location.pathname || "";
-    const isPublicClient =
-      path === "/catalogue" ||
-      path.startsWith("/catalogue/") ||
-      path === "/hotels" ||
-      path.startsWith("/hotels/") ||
-      path === "/demande-hotel" ||
-      path.startsWith("/demande-hotel/") ||
-      path.startsWith("/request");
-    if (isPublicClient) clearToasts();
-  }, [location.pathname]);
+    if (isPublicClientRoute) clearToasts();
+  }, [isPublicClientRoute, location.pathname]);
 
   /** Maj prix : onglet réservé aux profils avec permission explicite. */
   useEffect(() => {
@@ -537,21 +549,39 @@ export default function App() {
   // NOTE: la conversion d'une demande en devis est désactivée pour l'instant
   // (fonction conservée dans l'historique git si besoin de la réactiver).
 
-  // charger supabase au montage et synchronisation des activités toutes les 10 secondes (optimisé)
+  // charger supabase au montage et synchronisation périodique des activités
   useEffect(() => {
+    // Les pages visiteur chargent leurs propres activités : ne rien synchroniser ici.
+    if (isPublicClientRoute) return;
+
     // Synchronisation immédiate
     syncWithSupabase();
 
-    // Synchronisation des activités toutes les 60 secondes (optimisé: réduit pour moins de charge)
+    // Synchronisation des activités toutes les 60 secondes.
+    // Onglet en arrière-plan : on saute le tour (batterie / data mobile) et on
+    // rattrape dès le retour au premier plan.
     const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
       syncWithSupabase();
     }, 60000);
+
+    // Retour au premier plan : rattrapage, au plus une fois toutes les 30 s
+    // (évite une rafale de requêtes quand on bascule souvent d'onglet).
+    let lastCatchUp = Date.now();
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastCatchUp < 30000) return;
+      lastCatchUp = Date.now();
+      syncWithSupabase();
+    };
+    document.addEventListener("visibilitychange", onVisible);
 
     // Nettoyer l'intervalle au démontage
     return () => {
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [syncWithSupabase]);
+  }, [syncWithSupabase, isPublicClientRoute]);
 
   // Persister le brouillon de devis avec debounce pour éviter trop d'écritures
   const quoteDraftSaveTimeoutRef = useRef(null);
@@ -580,7 +610,7 @@ export default function App() {
 
   // Synchronisation initiale unique des devis depuis Supabase au chargement de la page
   useEffect(() => {
-    if (!remoteEnabled) return;
+    if (!remoteEnabled || isPublicClientRoute) return;
     
     async function syncQuotesOnce() {
       if (!supabase) return;
@@ -770,11 +800,11 @@ export default function App() {
     }
     
     syncQuotesOnce();
-  }, [remoteEnabled]);
+  }, [remoteEnabled, isPublicClientRoute]);
 
   // Synchronisation en temps réel des devis via Supabase Realtime
   useEffect(() => {
-    if (!supabase || !remoteEnabled) return;
+    if (!supabase || !remoteEnabled || isPublicClientRoute) return;
 
     // Fonction pour convertir un devis Supabase en format local
     const convertSupabaseQuoteToLocal = (row) => {
@@ -944,11 +974,11 @@ export default function App() {
       logger.log('🔌 Déconnexion de l\'abonnement Realtime pour les devis');
       supabase.removeChannel(channel);
     };
-  }, [remoteEnabled]);
+  }, [remoteEnabled, isPublicClientRoute]);
 
   // Synchronisation en temps réel des activités via Supabase Realtime
   useEffect(() => {
-    if (!supabase || !remoteEnabled) return;
+    if (!supabase || !remoteEnabled || isPublicClientRoute) return;
 
     logger.log("🔄 Abonnement Realtime aux activités...");
 
@@ -1067,7 +1097,7 @@ export default function App() {
       logger.log('🔌 Déconnexion de l\'abonnement Realtime pour les activités');
       supabase.removeChannel(activitiesChannel);
     };
-  }, [remoteEnabled]);
+  }, [remoteEnabled, isPublicClientRoute]);
 
   // Références pour les timeouts de sauvegarde debounce
   const activitiesSaveTimeoutRef = useRef(null);
@@ -1075,11 +1105,12 @@ export default function App() {
 
   // Persistance locale avec debounce pour éviter trop d'écritures
   useEffect(() => {
+    if (isPublicClientRoute) return;
     if (activitiesSaveTimeoutRef.current) {
       clearTimeout(activitiesSaveTimeoutRef.current);
     }
     activitiesSaveTimeoutRef.current = setTimeout(() => {
-      saveLS(LS_KEYS.activities, activities);
+      runWhenIdle(() => saveLS(LS_KEYS.activities, activities));
     }, 300);
 
     return () => {
@@ -1087,14 +1118,17 @@ export default function App() {
         clearTimeout(activitiesSaveTimeoutRef.current);
       }
     };
-  }, [activities]);
+  }, [activities, isPublicClientRoute]);
 
   useEffect(() => {
+    if (isPublicClientRoute) return;
     if (quotesSaveTimeoutRef.current) {
       clearTimeout(quotesSaveTimeoutRef.current);
     }
     quotesSaveTimeoutRef.current = setTimeout(() => {
-      saveLS(LS_KEYS.quotes, quotes);
+      // JSON.stringify de plusieurs milliers de devis : hors du chemin critique,
+      // et plafonné pour ne pas dépasser le quota localStorage (~5 Mo).
+      runWhenIdle(() => saveQuotesCache(quotes));
     }, 600);
 
     return () => {
@@ -1102,7 +1136,7 @@ export default function App() {
         clearTimeout(quotesSaveTimeoutRef.current);
       }
     };
-  }, [quotes]);
+  }, [quotes, isPublicClientRoute]);
 
   useEffect(() => {
     if (!ok) return;

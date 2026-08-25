@@ -625,7 +625,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
                         canDragThisTile ? "cursor-grab active:cursor-grabbing" : "cursor-default"
                       }`}
                     >
-                      <img src={trimmed} alt="" className="h-full w-full object-cover" draggable={false} />
+                      <img src={trimmed} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" draggable={false} />
                       {canDragThisTile ? (
                         <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent px-1.5 pb-1 pt-5">
                           <span className="text-[9px] font-semibold leading-tight text-white drop-shadow-sm sm:text-[10px]">

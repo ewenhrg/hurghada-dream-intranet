@@ -2,8 +2,9 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { currencyNoCents, calculateCardPrice, generateQuoteHTML, generateTicketsHTML, saveLS, cleanPhoneNumber, calculateTransferSurcharge, isQuoteFullyPaid, quoteHasAnyTicket, normalizeTicketsPaymentMethods } from "../utils";
+import { currencyNoCents, calculateCardPrice, saveQuotesCache, cleanPhoneNumber, calculateTransferSurcharge, isQuoteFullyPaid, quoteHasAnyTicket, normalizeTicketsPaymentMethods } from "../utils";
+import { generateQuoteHTML, generateTicketsHTML } from "../utils/printTemplates";
+import { setVisibilityAwareInterval } from "../utils/idle";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
@@ -348,7 +349,7 @@ function QuoteCardComponent({
       };
       const updatedQuotes = quotes.map((q) => (q.id === d.id ? updatedQuote : q));
       setQuotes(updatedQuotes);
-      saveLS(LS_KEYS.quotes, updatedQuotes);
+      saveQuotesCache(updatedQuotes);
 
       if (supabase) {
         try {
@@ -369,7 +370,7 @@ function QuoteCardComponent({
               const withId = { ...updatedQuote, supabase_id: data.id };
               const finalQuotes = updatedQuotes.map((q) => (q.id === d.id ? withId : q));
               setQuotes(finalQuotes);
-              saveLS(LS_KEYS.quotes, finalQuotes);
+              saveQuotesCache(finalQuotes);
             }
             toast.success("Devis payé — tickets enregistrés.");
           }
@@ -641,7 +642,7 @@ function QuoteCardComponent({
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer le devis de ${clientInfo}${totalInfo} ?\n\nCette action est irréversible et supprimera définitivement le devis.`)) {
       const updatedQuotes = quotes.filter((quote) => quote.id !== d.id);
       setQuotes(updatedQuotes);
-      saveLS(LS_KEYS.quotes, updatedQuotes);
+      saveQuotesCache(updatedQuotes);
 
       if (supabase) {
         try {
@@ -1379,7 +1380,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     
     // Recharger toutes les 2 minutes pour avoir les données à jour (optimisé pour les performances)
     // Le Realtime Supabase gère les mises à jour immédiates
-    const interval = setInterval(loadStopSalesAndPushSales, 120000);
+    // Onglet caché : tour sauté, rattrapage au retour (Realtime couvre l'immédiat)
+    const stopInterval = setVisibilityAwareInterval(loadStopSalesAndPushSales, 120000);
     
     // Écouter les changements en temps réel avec Supabase Realtime
     let stopSalesChannel = null;
@@ -1422,7 +1424,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     }
     
     return () => {
-      clearInterval(interval);
+      stopInterval();
       if (stopSalesChannel) {
         supabase.removeChannel(stopSalesChannel);
       }
@@ -1596,7 +1598,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                 ? { ...q, clientDocuments: [], updated_at: new Date().toISOString() }
                 : q
             );
-            saveLS(LS_KEYS.quotes, next);
+            saveQuotesCache(next);
             return next;
           });
           setDocsQuote((prev) =>
@@ -1625,7 +1627,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
         const next = prev.map((q) =>
           q.id === quoteId ? { ...q, clientDocuments: serialized, updated_at: updatedAt } : q
         );
-        saveLS(LS_KEYS.quotes, next);
+        saveQuotesCache(next);
         return next;
       });
       setDocsQuote((prev) =>
@@ -1986,7 +1988,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             };
             const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? finalUpdatedQuote : q));
             setQuotes(updatedQuotes);
-            saveLS(LS_KEYS.quotes, updatedQuotes);
+            saveQuotesCache(updatedQuotes);
 
             // Mettre à jour dans Supabase si configuré
             if (supabase) {
@@ -2063,7 +2065,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                     const quoteWithSupabaseId = { ...finalUpdatedQuote, supabase_id: updatedData.id };
                     const finalUpdatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? quoteWithSupabaseId : q));
                     setQuotes(finalUpdatedQuotes);
-                    saveLS(LS_KEYS.quotes, finalUpdatedQuotes);
+                    saveQuotesCache(finalUpdatedQuotes);
                   }
                 }
               } catch (updateErr) {
@@ -2219,21 +2221,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     });
   }
 
-  // Cache pour SPEED_BOAT_EXTRAS (évite les recherches répétées)
-  const speedBoatExtrasMapRef = useRef(new Map());
-  useEffect(() => {
-    // Construire le Map une seule fois au montage
-    if (speedBoatExtrasMapRef.current.size === 0) {
-      SPEED_BOAT_EXTRAS.forEach((extra) => {
-        speedBoatExtrasMapRef.current.set(extra.id, extra);
-      });
-    }
-  }, []);
-
   // Calcul des totaux (similaire à QuotesPage) - optimisé avec Map et cache
   const computed = useMemo(() => {
     if (!items || items.length === 0 || !client) return [];
-    const speedBoatExtrasMap = speedBoatExtrasMapRef.current;
     return items.map((it, itemIndex) => {
       let act = activitiesMap.get(it.activityId);
       if (!act && quote?.items?.[itemIndex]?.activityName) {

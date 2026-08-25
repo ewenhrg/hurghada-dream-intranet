@@ -16,6 +16,7 @@ export function CatalogPhotoFrame({
         src={src}
         alt={alt}
         loading={loading}
+        decoding="async"
         draggable={false}
         className={`absolute inset-0 h-full w-full object-cover object-center ${imgClassName}`}
       />

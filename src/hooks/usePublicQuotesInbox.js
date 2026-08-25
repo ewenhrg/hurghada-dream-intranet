@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { setVisibilityAwareInterval } from "../utils/idle";
 import { getQuotesRealtimeSiteKeyFilter } from "../constants";
 import {
   fetchPendingPublicQuotesCount,
@@ -68,7 +69,9 @@ export function usePublicQuotesInbox({ enabled = false } = {}) {
       )
       .subscribe();
 
-    const intervalId = setInterval(() => {
+    // Ce hook vit dans App : il tourne en permanence. Onglet caché, on saute
+    // le tour et on rattrape au retour (le Realtime couvre l'immédiat).
+    const stopInterval = setVisibilityAwareInterval(() => {
       void refresh();
     }, 30_000);
 
@@ -79,7 +82,7 @@ export function usePublicQuotesInbox({ enabled = false } = {}) {
 
     return () => {
       cancelled = true;
-      clearInterval(intervalId);
+      stopInterval();
       window.removeEventListener("hd-public-quote-inbox-changed", onLocalChange);
       supabase.removeChannel(channel);
     };

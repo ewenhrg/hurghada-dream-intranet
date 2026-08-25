@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import * as XLSX from "xlsx-js-style";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Search,
@@ -21,7 +20,8 @@ import {
   Printer,
   Trash2,
 } from "lucide-react";
-import { currencyNoCents, saveLS, loadLS, generateTicketsHTML, resolveTicketActivityName, buildActivitiesByIdMap, calculateCardPrice } from "../utils";
+import { currencyNoCents, saveLS, saveQuotesCache, loadLS, resolveTicketActivityName, buildActivitiesByIdMap, calculateCardPrice } from "../utils";
+import { generateTicketsHTML } from "../utils/printTemplates";
 import { LS_KEYS, SITE_KEY } from "../constants";
 import { useDebounce } from "../hooks/useDebounce";
 import {
@@ -593,7 +593,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           q.id === quote.id ? updatedQuote : q
         );
         setQuotes(updatedQuotes);
-        saveLS(LS_KEYS.quotes, updatedQuotes);
+        saveQuotesCache(updatedQuotes);
 
         setCopied((prev) => {
           if (!prev.has(row.ticketNumber)) return prev;
@@ -662,9 +662,19 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     }
   }, [filtered, copyRowsToClipboard, markCopied]);
 
-  const handleExportXlsx = useCallback(() => {
+  const handleExportXlsx = useCallback(async () => {
     if (filtered.length === 0) {
       toast.warning("Aucun ticket à exporter.");
+      return;
+    }
+
+    // xlsx-js-style (~600 Ko) : chargé uniquement au moment d'un export réel.
+    let XLSX;
+    try {
+      XLSX = await import("xlsx-js-style");
+    } catch (importError) {
+      logger.error("Chargement de la librairie Excel impossible:", importError);
+      toast.error("Impossible de charger le module Excel. Vérifiez votre connexion puis réessayez.");
       return;
     }
 

@@ -1,6 +1,12 @@
-/* Optimisation : Charger les polices de manière optimisée avec display=swap et preconnect */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,500;0,7..72,600;0,7..72,700;0,7..72,800;1,7..72,500&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap");
+/*
+ * Polices :
+ * - Inter est servie en local (paquet @fontsource, aucun aller-retour réseau).
+ * - Outfit / Literata / Plus Jakarta Sans : une seule feuille Google chargée en
+ *   non bloquant depuis index.html.
+ * Les anciens `@import url(...)` distants sont supprimés : un @import CSS est
+ * bloquant ET sérialisé après le téléchargement du CSS (2 aller-retours de plus
+ * avant le premier rendu).
+ */
 @import "@fontsource-variable/inter";
 
 @tailwind base;
@@ -8,8 +14,10 @@
 @tailwind utilities;
 
 :root {
-  --hd-font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --hd-font-display: "Outfit", "Inter", "Segoe UI", sans-serif;
+  /* "Inter Variable" = paquet local @fontsource (déjà dans le bundle) : le texte
+     s'affiche sans attendre le réseau. "Inter" reste en repli. */
+  --hd-font-sans: "Inter Variable", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --hd-font-display: "Outfit", "Inter Variable", "Inter", "Segoe UI", sans-serif;
   --hd-text: #0f172a;
   --hd-muted: #475569;
   --hd-muted-light: #64748b;
@@ -319,7 +327,10 @@ body::before {
     radial-gradient(38% 50% at 6% 84%, rgba(56, 189, 248, 0.36), transparent 64%),
     radial-gradient(44% 54% at 40% 46%, rgba(168, 85, 247, 0.3), transparent 66%);
   z-index: -1;
-  filter: blur(12px);
+  /* `filter: blur(12px)` retiré : les six dégradés radiaux ont déjà un
+     fondu très doux (`transparent 60%`). Le flou obligeait le navigateur à
+     re-flouter une surface de 140 % du viewport à CHAQUE image de
+     l'animation — le poste de dépense CPU/GPU n°1 au repos. */
   animation: hd-aurora 22s ease-in-out infinite alternate;
   /* Pas de will-change pour éviter les problèmes de scroll */
 }
@@ -381,6 +392,16 @@ body.scrolling::after {
   body::before,
   body::after {
     animation: none !important;
+  }
+}
+
+/* Appareils modestes / mobiles : le décor reste identique, mais figé.
+   Une animation plein écran permanente vide la batterie et vole des images
+   au défilement sur téléphone et petit portable. */
+@media (max-width: 900px), (pointer: coarse) {
+  body::before,
+  body::after {
+    animation: none;
   }
 }
 
@@ -871,6 +892,16 @@ button {
   color: transparent;
   text-shadow: none;
   animation: hd-text-flow 9s ease infinite;
+  /* Perf : au repos le dégradé reste visible mais figé.
+     Animer `background-position` sur du texte en `background-clip: text`
+     force un repaint du texte à chaque image, sur le thread principal, en
+     permanence — et ce style habille le titre du header, visible partout.
+     Même principe que .hd-border-gradient : ça repart au survol. */
+  animation-play-state: paused;
+}
+
+.hd-text-gradient:hover {
+  animation-play-state: running;
 }
 
 @keyframes hd-text-flow {

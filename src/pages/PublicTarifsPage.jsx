@@ -232,18 +232,13 @@ async function fetchActivityRowsBestSource(client) {
   let finalRows = Array.isArray(data) ? data : [];
   let primaryError = error;
 
-  const checks = [];
-  const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
-  if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
-    checks.push(
-      client
-        .from("activities")
-        .select(SELECT_COLUMNS)
-        .eq("site_key", fallbackSiteKey)
-        .order("id", { ascending: false })
-    );
-  }
-  checks.push(client.from("activities").select(SELECT_COLUMNS).order("id", { ascending: false }));
+  // Filet de sécurité : lecture sans filtre (surensemble de toutes les valeurs
+  // de site_key). L'ancienne requête `site_key = <URL Supabase>` a été retirée :
+  // `SITE_KEY` ne peut plus valoir une URL (normalizeSiteKey), et cette lecture
+  // sans filtre couvre déjà ces lignes historiques.
+  const checks = [
+    client.from("activities").select(SELECT_COLUMNS).order("id", { ascending: false }),
+  ];
 
   const checkedResults = await Promise.all(checks.map((q) => q));
   checkedResults.forEach((result) => {

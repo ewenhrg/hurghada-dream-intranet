@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef, useEffect, useCallback, Suspense, lazy } from "react";
-import * as XLSX from "xlsx";
 import { PrimaryBtn, GhostBtn, Section } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
@@ -456,13 +455,23 @@ export function SituationPage({ activities = [], user }) {
   };
 
   // Lire le fichier Excel
-  const handleFileUpload = (event) => {
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
     // Vérifier que c'est un fichier Excel
     if (!file.name.match(/\.(xlsx|xls)$/i)) {
       toast.error("Veuillez sélectionner un fichier Excel (.xlsx ou .xls)");
+      return;
+    }
+
+    // La librairie xlsx (~600 Ko) n'est chargée qu'au moment d'un import réel.
+    let XLSX;
+    try {
+      XLSX = await import("xlsx");
+    } catch (importError) {
+      logger.error("Chargement de la librairie Excel impossible:", importError);
+      toast.error("Impossible de charger le module Excel. Vérifiez votre connexion puis réessayez.");
       return;
     }
 

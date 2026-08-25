@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { SITE_KEY, LS_KEYS } from "../../constants";
-import { saveLS, calculateCardPrice } from "../../utils";
+import { saveQuotesCache, calculateCardPrice } from "../../utils";
 import { computePaidColumnsFromItems } from "../../utils/ticketCollections";
 import { isBoatPartyActivity } from "../../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../ui";
@@ -150,7 +150,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
 
       const updatedQuotes = (quotes || []).map((q) => (q.id === quote.id ? updatedQuote : q));
       setQuotes(updatedQuotes);
-      saveLS(LS_KEYS.quotes, updatedQuotes);
+      saveQuotesCache(updatedQuotes);
 
       if (supabase) {
         const supabaseUpdate = {

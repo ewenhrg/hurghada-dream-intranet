@@ -1,7 +1,6 @@
 import { getLocalDateKey } from "./pushSaleExpiry.js";
 import { normalizeAvailableDays } from "./activityAvailableDates.js";
 import { isProgrammaticStopSale } from "./activitySalesBlackouts.js";
-import { isDateSafeForDiving, isDivingActivityName } from "./divingSafety.js";
 
 export { isDivingActivityName, isDateSafeForDiving } from "./divingSafety.js";
 

@@ -15,10 +15,11 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
-        display: ['Outfit', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        /** "Inter Variable" = paquet local @fontsource : rendu immédiat, sans réseau. */
+        sans: ['"Inter Variable"', 'Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+        display: ['Outfit', '"Inter Variable"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         /** Pages catalogue public : Plus Jakarta Sans + Literata (look voyage premium) */
-        'catalog-sans': ['"Plus Jakarta Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        'catalog-sans': ['"Plus Jakarta Sans"', '"Inter Variable"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         'catalog-display': ['Literata', 'Georgia', 'ui-serif', 'serif'],
       },
       colors: {

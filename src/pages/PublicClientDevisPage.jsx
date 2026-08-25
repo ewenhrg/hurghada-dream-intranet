@@ -298,18 +298,14 @@ export function PublicClientDevisPage() {
       let finalRows = Array.isArray(data) ? data : [];
       let finalError = fetchError || null;
 
-      const checks = [];
-      const fallbackSiteKey = __SUPABASE_DEBUG__?.supabaseUrl;
-      if (fallbackSiteKey && fallbackSiteKey !== SITE_KEY) {
-        checks.push(
-          supabase
-            .from("activities")
-            .select(ACTIVITY_COLUMNS)
-            .eq("site_key", fallbackSiteKey)
-            .order("name", { ascending: true })
-        );
-      }
-      checks.push(supabase.from("activities").select(ACTIVITY_COLUMNS).order("name", { ascending: true }));
+      // Filet de sécurité : lecture sans filtre (surensemble de toutes les
+      // valeurs de site_key). L'ancienne requête `site_key = <URL Supabase>` a
+      // été retirée : `SITE_KEY` ne peut plus valoir une URL (normalizeSiteKey),
+      // et cette lecture sans filtre couvre déjà ces lignes historiques.
+      // Une requête réseau de moins à chaque ouverture du catalogue.
+      const checks = [
+        supabase.from("activities").select(ACTIVITY_COLUMNS).order("name", { ascending: true }),
+      ];
 
       const checkedResults = await Promise.all(checks);
       checkedResults.forEach((result) => {

@@ -632,7 +632,8 @@ export function EwenDashboardPage({
             if (e.target === e.currentTarget) closeMessageModal();
           }}
         >
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          {/* max-h + scroll : la modale reste utilisable en paysage sur mobile */}
+          <div className="flex max-h-[90dvh] w-full max-w-md flex-col overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="border-b border-slate-100 px-5 py-4">
               <h2 id="hd-screen-msg-title" className="text-lg font-semibold text-slate-900">
                 Message à l’écran

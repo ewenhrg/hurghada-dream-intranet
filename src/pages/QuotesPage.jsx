@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
-import { uuid, currency, currencyNoCents, calculateCardPrice, saveLS, cleanPhoneNumber, toBoundedInt10, generateQuoteHTML } from "../utils";
+import { uuid, currency, currencyNoCents, calculateCardPrice, saveQuotesCache, cleanPhoneNumber, toBoundedInt10 } from "../utils";
+import { setVisibilityAwareInterval } from "../utils/idle";
+import { generateQuoteHTML } from "../utils/printTemplates";
 import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isArrivalDayServiceActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage } from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
@@ -548,7 +550,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     
     // Recharger toutes les 30 secondes pour avoir les données à jour (optimisé pour les performances)
     // Le Realtime Supabase gère les mises à jour immédiates
-    const interval = setInterval(loadStopSalesAndPushSales, 30000);
+    // Onglet en arrière-plan : on saute le tour, rattrapage au retour (Realtime couvre l'immédiat)
+    const stopInterval = setVisibilityAwareInterval(loadStopSalesAndPushSales, 30000);
     
     // Écouter les changements en temps réel avec Supabase Realtime
     let stopSalesChannel = null;
@@ -591,7 +594,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     }
     
     return () => {
-      clearInterval(interval);
+      stopInterval();
       if (stopSalesChannel) {
         supabase.removeChannel(stopSalesChannel);
       }
@@ -1161,7 +1164,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
     setQuotes((prev) => {
       const updated = [q, ...prev];
-      saveLS(LS_KEYS.quotes, updated);
+      saveQuotesCache(updated);
       return updated;
     });
 
@@ -1264,7 +1267,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 }
                 return quote;
               });
-              saveLS(LS_KEYS.quotes, updated);
+              saveQuotesCache(updated);
               return updated;
             });
             toast.success("Devis créé et synchronisé avec succès !");

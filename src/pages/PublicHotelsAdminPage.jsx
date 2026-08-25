@@ -1211,6 +1211,8 @@ export function PublicHotelsAdminPage() {
                         <img
                           src={url}
                           alt=""
+                          loading="lazy"
+                          decoding="async"
                           className="h-11 w-14 shrink-0 rounded-lg object-cover ring-1 ring-white/20"
                         />
                       ) : null}

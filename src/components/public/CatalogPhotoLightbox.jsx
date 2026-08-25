@@ -218,7 +218,7 @@ export function CatalogPhotoLightbox({
                 aria-label={`Voir la photo ${idx + 1}`}
                 aria-current={idx === safeIndex ? "true" : undefined}
               >
-                <img src={src} alt="" className="h-full w-full object-cover" draggable={false} />
+                <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" draggable={false} />
               </button>
             ))}
           </div>
