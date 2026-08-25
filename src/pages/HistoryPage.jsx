@@ -1269,24 +1269,22 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20; // Nombre de devis par page
 
-  const historyQuotes = useMemo(
-    () => (quotes || []).filter(isQuoteVisibleInHistory),
-    [quotes]
-  );
+  const historyStats = useMemo(() => {
+    const historyQuotes = [];
+    let todayQuotesCount = 0;
+    let paidQuotesCount = 0;
+    let pendingQuotesCount = 0;
+    for (const d of quotes || []) {
+      if (!isQuoteVisibleInHistory(d)) continue;
+      historyQuotes.push(d);
+      if (isQuoteCreatedToday(d.createdAt)) todayQuotesCount += 1;
+      if (isQuoteFullyPaid(d)) paidQuotesCount += 1;
+      else pendingQuotesCount += 1;
+    }
+    return { historyQuotes, todayQuotesCount, paidQuotesCount, pendingQuotesCount };
+  }, [quotes]);
 
-  const todayQuotesCount = useMemo(
-    () => historyQuotes.filter((d) => isQuoteCreatedToday(d.createdAt)).length,
-    [historyQuotes]
-  );
-
-  const paidQuotesCount = useMemo(
-    () => historyQuotes.filter((d) => isQuoteFullyPaid(d)).length,
-    [historyQuotes]
-  );
-  const pendingQuotesCount = useMemo(
-    () => historyQuotes.filter((d) => !isQuoteFullyPaid(d)).length,
-    [historyQuotes]
-  );
+  const { historyQuotes, todayQuotesCount, paidQuotesCount, pendingQuotesCount } = historyStats;
   
   /** Lignes d’activités dans un devis (table quotes) — distinct des écritures sur la table activities. */
   const canModifyActivities = true;
@@ -1522,49 +1520,39 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
     return result;
   }, [debouncedQ, historyQuotes, statusFilter, todayOnlyFilter]);
   
-  // Calculer les statuts et formater les dates UNIQUEMENT pour les devis filtrés (pas tous les devis)
-  const quotesWithStatus = useMemo(() => {
+  // Formater UNIQUEMENT la page courante (20 devis) — pas toute la liste filtrée
+  const paginatedQuotes = useMemo(() => {
     const dateFormatterCache = dateFormatterCacheRef.current;
-    return filtered.map((d) => {
-      // Pré-formater la date de création une seule fois avec cache
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const pageSlice = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    return pageSlice.map((d) => {
       let formattedCreatedAt = dateFormatterCache.get(d.createdAt);
       if (!formattedCreatedAt) {
         const createdAtDate = new Date(d.createdAt);
         formattedCreatedAt = createdAtDate.toLocaleString("fr-FR");
         dateFormatterCache.set(d.createdAt, formattedCreatedAt);
       }
-      
-      // Pré-formater les dates des items avec cache
-      const itemsWithFormattedDates = d.items?.map((item) => {
-        if (!item.date) return { ...item, formattedDate: "Date ?" };
-        let formattedDate = dateFormatterCache.get(item.date);
-        if (!formattedDate) {
-          formattedDate = new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR");
-          dateFormatterCache.set(item.date, formattedDate);
-        }
-        return { ...item, formattedDate };
-      }) || [];
-      
-      // Calculer les statuts une seule fois
-      const allTicketsFilled = isQuoteFullyPaid(d);
-      const hasTickets = quoteHasAnyTicket(d);
-      
+
+      const itemsWithFormattedDates =
+        d.items?.map((item) => {
+          if (!item.date) return { ...item, formattedDate: "Date ?" };
+          let formattedDate = dateFormatterCache.get(item.date);
+          if (!formattedDate) {
+            formattedDate = new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR");
+            dateFormatterCache.set(item.date, formattedDate);
+          }
+          return { ...item, formattedDate };
+        }) || [];
+
       return {
         ...d,
-        allTicketsFilled,
-        hasTickets,
+        allTicketsFilled: isQuoteFullyPaid(d),
+        hasTickets: quoteHasAnyTicket(d),
         formattedCreatedAt,
         itemsWithFormattedDates,
       };
     });
-  }, [filtered]);
-
-  // Pagination : calculer les devis à afficher pour la page courante (utiliser quotesWithStatus qui contient les données formatées)
-  const paginatedQuotes = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return quotesWithStatus.slice(startIndex, endIndex);
-  }, [quotesWithStatus, currentPage]);
+  }, [filtered, currentPage]);
 
   // Calculer le nombre total de pages
   const totalPages = useMemo(() => {

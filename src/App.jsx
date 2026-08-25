@@ -511,9 +511,14 @@ export default function App() {
               `🗑️ ${stats.droppedDeleted} activité(s) retirée(s) du cache (absentes de Supabase).`
             );
           }
-          setActivities(safeMerged);
-          saveLS(LS_KEYS.activities, stripLocalOnlyActivityForStorage(safeMerged));
-          activitiesCache.set(cacheKey, safeMerged);
+          // Évite un re-render + rebuild Tickets toutes les 60s si rien n’a changé
+          const nextStored = stripLocalOnlyActivityForStorage(safeMerged);
+          const prevStored = stripLocalOnlyActivityForStorage(current);
+          if (JSON.stringify(nextStored) !== JSON.stringify(prevStored)) {
+            setActivities(safeMerged);
+            saveLS(LS_KEYS.activities, nextStored);
+            activitiesCache.set(cacheKey, safeMerged);
+          }
         } else {
           logger.warn(
             `📦 Supabase: aucune activité pour site_key=${SITE_KEY}. Conservation des ${current.length} activité(s) actuelles.`
@@ -643,118 +648,94 @@ export default function App() {
         }
 
         if (!quotesError && Array.isArray(quotesData)) {
-          setQuotes((prevQuotes) => {
-            // Fonction pour convertir un devis Supabase en format local
-            const convertSupabaseQuoteToLocal = (row) => {
-              const items = normalizeQuoteItemsFromDb(row.items);
-              
-              const createdAt = row.created_at || row.createdAt || new Date().toISOString();
-              const updatedAt = row.updated_at || row.updatedAt || createdAt;
-              
-              // Calculer isModified à partir de la présence de modifications
-              // Soit dans quote.modifications, soit dans les items (item.modifications)
-              const hasQuoteModifications = items.some(item => 
+          // Conversion hors du setState pour ne pas bloquer React plus longtemps
+          const convertSupabaseQuoteToLocal = (row) => {
+            const items = normalizeQuoteItemsFromDb(row.items);
+
+            const createdAt = row.created_at || row.createdAt || new Date().toISOString();
+            const updatedAt = row.updated_at || row.updatedAt || createdAt;
+
+            const hasQuoteModifications = items.some(
+              (item) =>
                 item.modifications && Array.isArray(item.modifications) && item.modifications.length > 0
-              );
-              
-              return attachTicketPaymentMetaFromItems({
-                id: row.id?.toString() || uuid(),
-                supabase_id: row.id,
-                createdAt: createdAt,
-                updated_at: updatedAt,
-                client: {
-                  name: row.client_name || "",
-                  phone: row.client_phone || "",
-                  emergencyPhone: row.client_emergency_phone || "",
-                  email: row.client_email || "",
-                  hotel: row.client_hotel || "",
-                  room: row.client_room || "",
-                  neighborhood: row.client_neighborhood || "",
-                  arrivalDate: row.client_arrival_date || "",
-                  departureDate: row.client_departure_date || "",
-                  hasSecondHotel: Boolean(row.client_has_second_hotel),
-                  secondHotel: row.client_second_hotel || "",
-                  secondRoom: row.client_second_room || "",
-                  secondNeighborhood: row.client_second_neighborhood || "",
-                  secondArrivalDate: row.client_second_arrival_date || "",
-                  secondDepartureDate: row.client_second_departure_date || "",
-                  ...airbnbFieldsFromRow(row),
-                },
-                clientArrivalDate: row.client_arrival_date || "",
-                clientDepartureDate: row.client_departure_date || "",
-                notes: row.notes || "",
-                createdByName: row.created_by_name || "",
-                updatedByName: row.updated_by_name || "",
-                items,
-                total: row.total || 0,
-                totalCash: Math.round(row.total || 0),
-                totalCard: calculateCardPrice(row.total || 0),
-                currency: row.currency || "EUR",
-                isModified: hasQuoteModifications || false,
-                paidStripe: Number(row.paid_stripe) || 0,
-                paidCash: Number(row.paid_cash) || 0,
-                clientDocuments: normalizeClientDocuments(row.client_documents),
-              });
-            };
+            );
 
-            // Créer un Set des clés uniques des devis Supabase (pour détection doublons)
-            const supabaseKeys = new Set();
-            quotesData.forEach((row) => {
-              const supabaseKey = `${row.client_phone || ''}_${row.created_at}`;
-              if (supabaseKey !== '_') { // Ignorer les clés vides
-                supabaseKeys.add(supabaseKey);
-              }
+            return attachTicketPaymentMetaFromItems({
+              id: row.id?.toString() || uuid(),
+              supabase_id: row.id,
+              createdAt: createdAt,
+              updated_at: updatedAt,
+              client: {
+                name: row.client_name || "",
+                phone: row.client_phone || "",
+                emergencyPhone: row.client_emergency_phone || "",
+                email: row.client_email || "",
+                hotel: row.client_hotel || "",
+                room: row.client_room || "",
+                neighborhood: row.client_neighborhood || "",
+                arrivalDate: row.client_arrival_date || "",
+                departureDate: row.client_departure_date || "",
+                hasSecondHotel: Boolean(row.client_has_second_hotel),
+                secondHotel: row.client_second_hotel || "",
+                secondRoom: row.client_second_room || "",
+                secondNeighborhood: row.client_second_neighborhood || "",
+                secondArrivalDate: row.client_second_arrival_date || "",
+                secondDepartureDate: row.client_second_departure_date || "",
+                ...airbnbFieldsFromRow(row),
+              },
+              clientArrivalDate: row.client_arrival_date || "",
+              clientDepartureDate: row.client_departure_date || "",
+              notes: row.notes || "",
+              createdByName: row.created_by_name || "",
+              updatedByName: row.updated_by_name || "",
+              items,
+              total: row.total || 0,
+              totalCash: Math.round(row.total || 0),
+              totalCard: calculateCardPrice(row.total || 0),
+              currency: row.currency || "EUR",
+              isModified: hasQuoteModifications || false,
+              paidStripe: Number(row.paid_stripe) || 0,
+              paidCash: Number(row.paid_cash) || 0,
+              clientDocuments: normalizeClientDocuments(row.client_documents),
             });
+          };
 
-            // Créer un Map des devis Supabase par leur ID et par leur clé unique
-            const supabaseQuotesMap = new Map();
-            const supabaseQuotesByKey = new Map();
-            quotesData.forEach((row) => {
-              if (row.id) {
-                const converted = convertSupabaseQuoteToLocal(row);
-                supabaseQuotesMap.set(row.id, converted);
-                
-                const supabaseKey = `${row.client_phone || ''}_${row.created_at}`;
-                if (supabaseKey !== '_') {
-                  supabaseQuotesByKey.set(supabaseKey, converted);
-                }
-              }
-            });
+          const supabaseKeys = new Set();
+          const remoteQuotes = [];
+          for (const row of quotesData) {
+            if (!row?.id) continue;
+            remoteQuotes.push(convertSupabaseQuoteToLocal(row));
+            const supabaseKey = `${row.client_phone || ""}_${row.created_at}`;
+            if (supabaseKey !== "_") supabaseKeys.add(supabaseKey);
+          }
 
-            // Fusionner : UNIQUEMENT les devis Supabase (source de vérité absolue)
-            // IGNORER COMPLÈTEMENT les devis locaux obsolètes pour éviter les doublons
-            const merged = [];
+          setQuotes((prevQuotes) => {
+            const merged = remoteQuotes.slice();
 
-            // Ajouter TOUS les devis Supabase (source de vérité absolue)
-            supabaseQuotesMap.forEach((supabaseQuote) => {
-              merged.push(supabaseQuote);
-            });
-
-            // Calculer isModified pour tous les devis Supabase s'ils ne l'ont pas déjà
             merged.forEach((quote) => {
               if (quote.isModified === undefined) {
-                const hasItemModifications = quote.items?.some(item => 
-                  item.modifications && Array.isArray(item.modifications) && item.modifications.length > 0
+                const hasItemModifications = quote.items?.some(
+                  (item) =>
+                    item.modifications &&
+                    Array.isArray(item.modifications) &&
+                    item.modifications.length > 0
                 );
                 quote.isModified = hasItemModifications || false;
               }
             });
 
-            // Devis locaux sans ligne Supabase correspondante : à conserver (brouillon récent OU historique uniquement local).
             const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-            const supabaseKeysSet = new Set(supabaseKeys);
 
             prevQuotes.forEach((localQuote) => {
               if (localQuote.supabase_id) {
                 return;
               }
-              const localKey = `${localQuote.client?.phone || ''}_${localQuote.createdAt}`;
-              if (localKey === "_" || supabaseKeysSet.has(localKey)) {
+              const localKey = `${localQuote.client?.phone || ""}_${localQuote.createdAt}`;
+              if (localKey === "_" || supabaseKeys.has(localKey)) {
                 return;
               }
               const isVeryRecent =
                 localQuote.createdAt && new Date(localQuote.createdAt) > new Date(twoMinutesAgo);
-              // Conserver si pas encore côté Supabase : soit création en cours (< 2 min), soit ancien cache local jamais synchronisé
               if (!isVeryRecent) {
                 merged.push({
                   ...localQuote,
@@ -779,8 +760,7 @@ export default function App() {
             });
 
             merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-            saveLS(LS_KEYS.quotes, merged);
+            // Persistance via useEffect debounce (évite double JSON.stringify)
             return merged;
           });
         }
@@ -904,7 +884,6 @@ export default function App() {
                   // Les données Supabase sont plus récentes ou égales, mettre à jour
                   const updated = [...prevQuotes];
                   updated[existingIndex] = newQuote;
-                  saveLS(LS_KEYS.quotes, updated);
                   return updated;
                 } else {
                   // Les données locales sont plus récentes, garder les données locales
@@ -913,9 +892,7 @@ export default function App() {
                 }
               } else {
                 // Ajouter le nouveau devis seulement s'il n'existe pas déjà
-                const updated = [newQuote, ...prevQuotes];
-                saveLS(LS_KEYS.quotes, updated);
-                return updated;
+                return [newQuote, ...prevQuotes];
               }
             });
           } else if (payload.eventType === 'DELETE') {
@@ -927,7 +904,7 @@ export default function App() {
               const deletedKey = `${deletedPhone}_${deletedCreatedAt}`;
               
               // Filtrer en une seule passe (plus efficace que plusieurs vérifications)
-              const filtered = prevQuotes.filter((q) => {
+              return prevQuotes.filter((q) => {
                 // Vérifier par ID Supabase si disponible
                 if (q.supabase_id === deletedId) {
                   return false;
@@ -941,9 +918,6 @@ export default function App() {
                 }
                 return true;
               });
-              
-              saveLS(LS_KEYS.quotes, filtered);
-              return filtered;
             });
           }
         }
@@ -1120,8 +1094,8 @@ export default function App() {
       clearTimeout(quotesSaveTimeoutRef.current);
     }
     quotesSaveTimeoutRef.current = setTimeout(() => {
-    saveLS(LS_KEYS.quotes, quotes);
-    }, 300);
+      saveLS(LS_KEYS.quotes, quotes);
+    }, 600);
 
     return () => {
       if (quotesSaveTimeoutRef.current) {
@@ -1133,25 +1107,20 @@ export default function App() {
   useEffect(() => {
     if (!ok) return;
 
+    // Précharge légère des pages les plus utilisées (évite de saturer le CPU au login)
     const preload = async () => {
       try {
         await Promise.all([
           import("./pages/QuotesPage"),
-          import("./pages/ActivitiesPage"),
-          import("./pages/ActivityUpdatePage"),
-          import("./pages/ActivityCatalogAdminPage"),
           import("./pages/HistoryPage"),
-          import("./pages/ModificationsPage"),
-          import("./pages/SituationPage"),
-          import("./pages/UsersPage"),
-          import("./pages/EwenDashboardPage"),
+          import("./pages/TicketsPage"),
         ]);
       } catch (error) {
         logger.warn("Préchargement des pages échoué", error);
       }
     };
 
-    const timer = setTimeout(preload, 200);
+    const timer = setTimeout(preload, 2500);
 
     return () => clearTimeout(timer);
   }, [ok]);

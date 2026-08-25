@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { currencyNoCents, saveLS, loadLS, generateTicketsHTML, resolveTicketActivityName, buildActivitiesByIdMap, calculateCardPrice } from "../utils";
 import { LS_KEYS, SITE_KEY } from "../constants";
+import { useDebounce } from "../hooks/useDebounce";
 import {
   formatActivityWithExtras,
   formatClientShortWithPhone,
@@ -155,6 +156,7 @@ function colLetter(n) {
  */
 export function TicketsPage({ quotes = [], setQuotes, activities = [], user = null }) {
   const [q, setQ] = useState("");
+  const debouncedQ = useDebounce(q, 250);
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -266,7 +268,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   const copiedCount = rows.length - newCount;
 
   const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
+    const term = debouncedQ.trim().toLowerCase();
     return rows.filter((r) => {
       if (statusFilter === "new" && copied.has(r.ticketNumber)) return false;
       if (statusFilter === "copied" && !copied.has(r.ticketNumber)) return false;
@@ -285,7 +287,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.createdByName,
       ].some((v) => String(v || "").toLowerCase().includes(term));
     });
-  }, [rows, q, statusFilter, copied]);
+  }, [rows, debouncedQ, statusFilter, copied]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   // Clamp au rendu : la liste peut raccourcir avant que l’effet ne recale `page`
@@ -294,7 +296,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   // Nouvelle recherche / nouveau filtre / autre taille de page : on repart de la page 1
   useEffect(() => {
     setPage(1);
-  }, [q, statusFilter, pageSize]);
+  }, [debouncedQ, statusFilter, pageSize]);
 
   useEffect(() => {
     setPage((p) => Math.min(p, totalPages));
