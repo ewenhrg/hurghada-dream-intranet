@@ -163,6 +163,10 @@ function normalizeResponsePayload(raw) {
     cancelled: base.cancelled === true,
     cancelledAt: base.cancelledAt || "",
     pickupTime: String(base.pickupTime || base.pickUpTime || "").trim(),
+    guideName: String(base.guideName || base.guide || "").trim(),
+    supplierName: String(
+      base.supplierName || base.supplier || base.splitterName || base.splitter || base.splier || ""
+    ).trim(),
   };
 }
 
@@ -313,64 +317,6 @@ function earliestMatchingStayDate(request, { from, to, mode }) {
   }
   candidates.sort();
   return candidates[0] || "";
-}
-
-/** Résumé ops pour la vue Arrival / Departure (colonnes limitées). */
-function getStayOpsSummary(request) {
-  const payload = normalizeResponsePayload(request?.responsePayload);
-  const hotels = getConfirmedHotelsList(payload);
-  const hotelNames = hotels
-    .map((h) => String(h.hotelName || "").trim())
-    .filter(Boolean);
-  const checkIn =
-    normalizeStayDate(hotels[0]?.stayFrom) ||
-    normalizeStayDate(request?.arrivalDate) ||
-    "";
-  const checkOut =
-    normalizeStayDate(hotels[0]?.stayTo) ||
-    normalizeStayDate(request?.departureDate) ||
-    "";
-  const flights = payload.flights || EMPTY_FLIGHTS;
-  const zeroTracas = normalizeZeroTracas(payload.zeroTracas);
-  const visaCount = parseQtyInput(zeroTracas.visaCount);
-  const simCount = parseQtyInput(zeroTracas.simCount);
-  const adults =
-    request?.adultsCount != null && Number.isFinite(Number(request.adultsCount))
-      ? Number(request.adultsCount)
-      : null;
-  const children =
-    request?.childrenCount != null && Number.isFinite(Number(request.childrenCount))
-      ? Number(request.childrenCount)
-      : null;
-  const agesText = String(request?.childAges || "").toLowerCase();
-  const babyMentions = agesText.match(/b[eé]b[eé]/gi);
-  const babies = babyMentions ? babyMentions.length : null;
-  const refId = String(request?.id || request?.supabaseId || "").trim();
-  const shortRef =
-    String(request?.shortRef || "").trim() || formatHotelRequestShortRef(refId);
-
-  return {
-    ref: shortRef || "—",
-    firstName: String(request?.firstName || "").trim() || "—",
-    phone: String(request?.phone || "").trim() || "—",
-    hotel: hotelNames.length > 0 ? hotelNames.join(" + ") : "—",
-    checkIn,
-    checkOut,
-    pax: adults,
-    child: children,
-    baby: babies,
-    visa: visaCount > 0 ? visaCount : null,
-    sim: simCount > 0 ? simCount : null,
-    pickupTime: String(payload.pickupTime || "").trim(),
-    departureFlightNumber: flights.departureFlightNumber || "",
-    departureDate: flights.departureDate || "",
-    departureTime: flights.departureTime || "",
-  };
-}
-
-function formatOpsCount(value) {
-  if (value == null || !Number.isFinite(Number(value))) return "—";
-  return String(Number(value));
 }
 
 function isHotelRequestConfirmed(request) {
@@ -1318,15 +1264,102 @@ const HotelRequestCard = memo(function HotelRequestCard({
   );
 });
 
-/**
- * Champ pick-up éditable (sauvegarde au blur / Enter).
- */
-function HotelStayOpsPickupCell({ requestId, value = "", onSave, saving = false }) {
+/** Résumé ops pour la vue Arrival / Departure (colonnes limitées). */
+function getStayOpsSummary(request) {
+  const payload = normalizeResponsePayload(request?.responsePayload);
+  const hotels = getConfirmedHotelsList(payload);
+  const hotelNames = hotels
+    .map((h) => String(h.hotelName || "").trim())
+    .filter(Boolean);
+  const checkIn =
+    normalizeStayDate(hotels[0]?.stayFrom) ||
+    normalizeStayDate(request?.arrivalDate) ||
+    "";
+  const checkOut =
+    normalizeStayDate(hotels[0]?.stayTo) ||
+    normalizeStayDate(request?.departureDate) ||
+    "";
+  const flights = payload.flights || EMPTY_FLIGHTS;
+  const zeroTracas = normalizeZeroTracas(payload.zeroTracas);
+  const visaCount = parseQtyInput(zeroTracas.visaCount);
+  const simCount = parseQtyInput(zeroTracas.simCount);
+  const adults =
+    request?.adultsCount != null && Number.isFinite(Number(request.adultsCount))
+      ? Number(request.adultsCount)
+      : null;
+  const children =
+    request?.childrenCount != null && Number.isFinite(Number(request.childrenCount))
+      ? Number(request.childrenCount)
+      : null;
+  const agesText = String(request?.childAges || "").toLowerCase();
+  const babyMentions = agesText.match(/b[eé]b[eé]/gi);
+  const babies = babyMentions ? babyMentions.length : null;
+  const refId = String(request?.id || request?.supabaseId || "").trim();
+  const shortRef =
+    String(request?.shortRef || "").trim() || formatHotelRequestShortRef(refId);
+  const paymentStatus = getPaymentStatus(request, payload);
+  const balanceDue =
+    paymentStatus && !paymentStatus.isFullyPaid
+      ? paymentStatus.remaining
+      : paymentStatus?.isFullyPaid
+        ? 0
+        : null;
+
+  return {
+    ref: shortRef || "—",
+    firstName: String(request?.firstName || "").trim() || "—",
+    phone: String(request?.phone || "").trim() || "—",
+    hotel: hotelNames.length > 0 ? hotelNames.join(" + ") : "—",
+    checkIn,
+    checkOut,
+    pax: adults,
+    child: children,
+    baby: babies,
+    visa: visaCount > 0 ? visaCount : null,
+    sim: simCount > 0 ? simCount : null,
+    pickupTime: String(payload.pickupTime || "").trim(),
+    guideName: String(payload.guideName || "").trim(),
+    supplierName: String(payload.supplierName || "").trim(),
+    balanceDue,
+    balanceCurrency: paymentStatus?.currency || "EUR",
+    balanceFullyPaid: paymentStatus?.isFullyPaid === true,
+    arrivalFlightNumber: flights.arrivalFlightNumber || "",
+    arrivalDate: flights.arrivalDate || "",
+    arrivalTime: flights.arrivalTime || "",
+    departureFlightNumber: flights.departureFlightNumber || "",
+    departureDate: flights.departureDate || "",
+    departureTime: flights.departureTime || "",
+  };
+}
+
+function formatOpsCount(value) {
+  if (value == null || !Number.isFinite(Number(value))) return "—";
+  return String(Number(value));
+}
+
+function formatOpsBalance(row) {
+  if (row.balanceDue == null) return "—";
+  if (row.balanceFullyPaid || Number(row.balanceDue) <= 0.009) return "Paid";
+  return formatQuoteMoney(row.balanceDue, row.balanceCurrency);
+}
+
+/** Champ texte ops éditable (pick-up, guide, supplier…). */
+function HotelStayOpsTextCell({
+  requestId,
+  fieldKey,
+  value = "",
+  onSave,
+  saving = false,
+  placeholder = "",
+  ariaLabel,
+  className = "",
+  inputMode,
+}) {
   const [text, setText] = useState(value || "");
 
   useEffect(() => {
     setText(value || "");
-  }, [value, requestId]);
+  }, [value, requestId, fieldKey]);
 
   const commit = () => {
     const next = String(text || "").trim();
@@ -1338,32 +1371,56 @@ function HotelStayOpsPickupCell({ requestId, value = "", onSave, saving = false 
   return (
     <input
       type="text"
-      inputMode="numeric"
-      placeholder="e.g. 07:30"
+      inputMode={inputMode}
+      placeholder={placeholder}
       value={text}
       disabled={saving}
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.currentTarget.blur();
-        }
+        if (e.key === "Enter") e.currentTarget.blur();
       }}
-      aria-label="Pick-up time"
-      className="w-[5.5rem] rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-center text-xs font-bold tabular-nums text-slate-900 shadow-sm placeholder:font-medium placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 disabled:opacity-60"
+      aria-label={ariaLabel || placeholder || fieldKey}
+      className={`rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-900 shadow-sm placeholder:font-medium placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 disabled:opacity-60 ${className}`}
     />
   );
 }
 
+function HotelStayOpsFlightCell({ number, date, time }) {
+  return (
+    <div className="min-w-[10rem] space-y-0.5 text-xs font-semibold text-slate-700">
+      <p>
+        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Flight </span>
+        {number || "—"}
+      </p>
+      <p>
+        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Date </span>
+        {date ? formatHotelStayDate(date) : "—"}
+      </p>
+      <p>
+        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Time </span>
+        {time || "—"}
+      </p>
+    </div>
+  );
+}
+
 /**
- * Vue compacte Arrival / Departure : ref, prénom, téléphone, hôtel, dates, pax, visa/sim, pick-up, vol départ.
+ * Vue compacte Arrival / Departure.
+ * Arrivals: Ref · Visa · SIM · Name · Phone · Hotel · Check-in · Pax · Child · Baby · Flight · Balance · Guide · Supplier
+ * Departures: Ref · Name · Phone · Hotel · Check-out · Pax · Child · Baby · Arrival flight · Pick-up · Guide · Supplier
  */
 function HotelStayOpsList({
   requests = [],
   emptyLabel = "No results.",
-  onSavePickupTime,
-  savingPickupId = null,
+  stayKind = "both",
+  onSaveOpsField,
+  savingOpsKey = null,
 }) {
+  const isArrival = stayKind === "arrival";
+  const isDeparture = stayKind === "departure";
+  const isSaving = (requestId, field) => savingOpsKey === `${requestId}:${field}`;
+
   if (!requests.length) {
     return (
       <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-5 text-center text-sm font-medium text-slate-600">
@@ -1372,124 +1429,193 @@ function HotelStayOpsList({
     );
   }
 
+  const th = "whitespace-nowrap px-3 py-2.5 sm:px-4";
+  const thC = `${th} text-center`;
+  const td = "px-3 py-3 sm:px-4";
+
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50/90 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
-                Ref
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
-                First name
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
-                Phone
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
-                Hotel
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
-                Check-in
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
-                Check-out
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
-                Pax
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
-                Child
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
-                Baby
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
-                Visa
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
-                SIM
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center sm:px-4">
-                Pick-up
-              </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-2.5 sm:px-4">
-                Departure flight
-              </th>
+              {isArrival ? (
+                <>
+                  <th scope="col" className={th}>Ref</th>
+                  <th scope="col" className={thC}>Visa</th>
+                  <th scope="col" className={thC}>SIM</th>
+                  <th scope="col" className={th}>Name</th>
+                  <th scope="col" className={th}>Phone</th>
+                  <th scope="col" className={th}>Hotel</th>
+                  <th scope="col" className={th}>Check-in</th>
+                  <th scope="col" className={thC}>Pax</th>
+                  <th scope="col" className={thC}>Child</th>
+                  <th scope="col" className={thC}>Baby</th>
+                  <th scope="col" className={th}>Arrival flight</th>
+                  <th scope="col" className={th}>Balance due</th>
+                  <th scope="col" className={th}>Guide</th>
+                  <th scope="col" className={th}>Supplier</th>
+                </>
+              ) : isDeparture ? (
+                <>
+                  <th scope="col" className={th}>Ref</th>
+                  <th scope="col" className={th}>Name</th>
+                  <th scope="col" className={th}>Phone</th>
+                  <th scope="col" className={th}>Hotel</th>
+                  <th scope="col" className={th}>Check-out</th>
+                  <th scope="col" className={thC}>Pax</th>
+                  <th scope="col" className={thC}>Child</th>
+                  <th scope="col" className={thC}>Baby</th>
+                  <th scope="col" className={th}>Arrival flight</th>
+                  <th scope="col" className={thC}>Pick-up</th>
+                  <th scope="col" className={th}>Guide</th>
+                  <th scope="col" className={th}>Supplier</th>
+                </>
+              ) : (
+                <>
+                  <th scope="col" className={th}>Ref</th>
+                  <th scope="col" className={th}>Name</th>
+                  <th scope="col" className={th}>Phone</th>
+                  <th scope="col" className={th}>Hotel</th>
+                  <th scope="col" className={th}>Check-in</th>
+                  <th scope="col" className={th}>Check-out</th>
+                  <th scope="col" className={thC}>Pax</th>
+                  <th scope="col" className={thC}>Child</th>
+                  <th scope="col" className={thC}>Baby</th>
+                  <th scope="col" className={th}>Arrival flight</th>
+                  <th scope="col" className={th}>Balance due</th>
+                  <th scope="col" className={thC}>Pick-up</th>
+                  <th scope="col" className={th}>Guide</th>
+                  <th scope="col" className={th}>Supplier</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
             {requests.map((request) => {
               const row = getStayOpsSummary(request);
-              return (
-                <tr
-                  key={request.id}
-                  className="border-b border-slate-100 last:border-b-0 hover:bg-indigo-50/40"
+              const guideCell = (
+                <td className={`${td} text-center`}>
+                  <HotelStayOpsTextCell
+                    requestId={request.id}
+                    fieldKey="guideName"
+                    value={row.guideName}
+                    placeholder="Guide"
+                    ariaLabel="Guide"
+                    saving={isSaving(request.id, "guideName")}
+                    className="w-[7rem]"
+                    onSave={(next) => onSaveOpsField?.(request, "guideName", next)}
+                  />
+                </td>
+              );
+              const supplierCell = (
+                <td className={`${td} text-center`}>
+                  <HotelStayOpsTextCell
+                    requestId={request.id}
+                    fieldKey="supplierName"
+                    value={row.supplierName}
+                    placeholder="Supplier"
+                    ariaLabel="Supplier"
+                    saving={isSaving(request.id, "supplierName")}
+                    className="w-[7rem]"
+                    onSave={(next) => onSaveOpsField?.(request, "supplierName", next)}
+                  />
+                </td>
+              );
+              const pickupCell = (
+                <td className={`${td} text-center`}>
+                  <HotelStayOpsTextCell
+                    requestId={request.id}
+                    fieldKey="pickupTime"
+                    value={row.pickupTime}
+                    placeholder="07:30"
+                    ariaLabel="Pick-up time"
+                    inputMode="numeric"
+                    saving={isSaving(request.id, "pickupTime")}
+                    className="w-[5.5rem] text-center font-bold tabular-nums"
+                    onSave={(next) => onSaveOpsField?.(request, "pickupTime", next)}
+                  />
+                </td>
+              );
+              const arrivalFlightCell = (
+                <td className={td}>
+                  <HotelStayOpsFlightCell
+                    number={row.arrivalFlightNumber}
+                    date={row.arrivalDate}
+                    time={row.arrivalTime}
+                  />
+                </td>
+              );
+              const balanceCell = (
+                <td
+                  className={`${td} whitespace-nowrap font-bold tabular-nums ${
+                    row.balanceFullyPaid || (row.balanceDue != null && row.balanceDue <= 0.009)
+                      ? "text-emerald-800"
+                      : row.balanceDue != null
+                        ? "text-rose-800"
+                        : "text-slate-500"
+                  }`}
                 >
-                  <td className="whitespace-nowrap px-3 py-3 font-mono text-xs font-bold text-indigo-900 sm:px-4">
-                    {row.ref}
-                  </td>
-                  <td className="px-3 py-3 font-semibold text-slate-950 sm:px-4">
-                    {row.firstName}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 tabular-nums font-medium text-slate-800 sm:px-4">
-                    {row.phone}
-                  </td>
-                  <td className="max-w-[14rem] truncate px-3 py-3 font-medium text-slate-800 sm:px-4" title={row.hotel}>
-                    {row.hotel}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 font-medium text-slate-800 sm:px-4">
-                    {formatHotelStayDate(row.checkIn)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 font-medium text-slate-800 sm:px-4">
-                    {formatHotelStayDate(row.checkOut)}
-                  </td>
-                  <td className="px-3 py-3 text-center tabular-nums font-bold text-emerald-800 sm:px-4">
-                    {formatOpsCount(row.pax)}
-                  </td>
-                  <td className="px-3 py-3 text-center tabular-nums font-bold text-sky-800 sm:px-4">
-                    {formatOpsCount(row.child)}
-                  </td>
-                  <td className="px-3 py-3 text-center tabular-nums font-bold text-pink-800 sm:px-4">
-                    {formatOpsCount(row.baby)}
-                  </td>
-                  <td className="px-3 py-3 text-center tabular-nums font-bold text-violet-800 sm:px-4">
-                    {formatOpsCount(row.visa)}
-                  </td>
-                  <td className="px-3 py-3 text-center tabular-nums font-bold text-cyan-800 sm:px-4">
-                    {formatOpsCount(row.sim)}
-                  </td>
-                  <td className="px-3 py-2.5 text-center sm:px-4">
-                    <HotelStayOpsPickupCell
-                      requestId={request.id}
-                      value={row.pickupTime}
-                      saving={savingPickupId === request.id}
-                      onSave={(next) => onSavePickupTime?.(request, next)}
-                    />
-                  </td>
-                  <td className="min-w-[11rem] px-3 py-3 text-xs font-semibold text-slate-700 sm:px-4">
-                    <div className="space-y-0.5">
-                      <p>
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                          Flight{" "}
-                        </span>
-                        {row.departureFlightNumber || "—"}
-                      </p>
-                      <p>
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                          Date{" "}
-                        </span>
-                        {row.departureDate ? formatHotelStayDate(row.departureDate) : "—"}
-                      </p>
-                      <p>
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                          Time{" "}
-                        </span>
-                        {row.departureTime || "—"}
-                      </p>
-                    </div>
-                  </td>
+                  {formatOpsBalance(row)}
+                </td>
+              );
+
+              if (isArrival) {
+                return (
+                  <tr key={request.id} className="border-b border-slate-100 last:border-b-0 hover:bg-indigo-50/40">
+                    <td className={`${td} whitespace-nowrap font-mono text-xs font-bold text-indigo-900`}>{row.ref}</td>
+                    <td className={`${td} text-center tabular-nums font-bold text-violet-800`}>{formatOpsCount(row.visa)}</td>
+                    <td className={`${td} text-center tabular-nums font-bold text-cyan-800`}>{formatOpsCount(row.sim)}</td>
+                    <td className={`${td} font-semibold text-slate-950`}>{row.firstName}</td>
+                    <td className={`${td} whitespace-nowrap tabular-nums font-medium text-slate-800`}>{row.phone}</td>
+                    <td className={`${td} max-w-[14rem] truncate font-medium text-slate-800`} title={row.hotel}>{row.hotel}</td>
+                    <td className={`${td} whitespace-nowrap font-medium text-slate-800`}>{formatHotelStayDate(row.checkIn)}</td>
+                    <td className={`${td} text-center tabular-nums font-bold text-emerald-800`}>{formatOpsCount(row.pax)}</td>
+                    <td className={`${td} text-center tabular-nums font-bold text-sky-800`}>{formatOpsCount(row.child)}</td>
+                    <td className={`${td} text-center tabular-nums font-bold text-pink-800`}>{formatOpsCount(row.baby)}</td>
+                    {arrivalFlightCell}
+                    {balanceCell}
+                    {guideCell}
+                    {supplierCell}
+                  </tr>
+                );
+              }
+
+              if (isDeparture) {
+                return (
+                  <tr key={request.id} className="border-b border-slate-100 last:border-b-0 hover:bg-indigo-50/40">
+                    <td className={`${td} whitespace-nowrap font-mono text-xs font-bold text-indigo-900`}>{row.ref}</td>
+                    <td className={`${td} font-semibold text-slate-950`}>{row.firstName}</td>
+                    <td className={`${td} whitespace-nowrap tabular-nums font-medium text-slate-800`}>{row.phone}</td>
+                    <td className={`${td} max-w-[14rem] truncate font-medium text-slate-800`} title={row.hotel}>{row.hotel}</td>
+                    <td className={`${td} whitespace-nowrap font-medium text-slate-800`}>{formatHotelStayDate(row.checkOut)}</td>
+                    <td className={`${td} text-center tabular-nums font-bold text-emerald-800`}>{formatOpsCount(row.pax)}</td>
+                    <td className={`${td} text-center tabular-nums font-bold text-sky-800`}>{formatOpsCount(row.child)}</td>
+                    <td className={`${td} text-center tabular-nums font-bold text-pink-800`}>{formatOpsCount(row.baby)}</td>
+                    {arrivalFlightCell}
+                    {pickupCell}
+                    {guideCell}
+                    {supplierCell}
+                  </tr>
+                );
+              }
+
+              return (
+                <tr key={request.id} className="border-b border-slate-100 last:border-b-0 hover:bg-indigo-50/40">
+                  <td className={`${td} whitespace-nowrap font-mono text-xs font-bold text-indigo-900`}>{row.ref}</td>
+                  <td className={`${td} font-semibold text-slate-950`}>{row.firstName}</td>
+                  <td className={`${td} whitespace-nowrap tabular-nums font-medium text-slate-800`}>{row.phone}</td>
+                  <td className={`${td} max-w-[14rem] truncate font-medium text-slate-800`} title={row.hotel}>{row.hotel}</td>
+                  <td className={`${td} whitespace-nowrap font-medium text-slate-800`}>{formatHotelStayDate(row.checkIn)}</td>
+                  <td className={`${td} whitespace-nowrap font-medium text-slate-800`}>{formatHotelStayDate(row.checkOut)}</td>
+                  <td className={`${td} text-center tabular-nums font-bold text-emerald-800`}>{formatOpsCount(row.pax)}</td>
+                  <td className={`${td} text-center tabular-nums font-bold text-sky-800`}>{formatOpsCount(row.child)}</td>
+                  <td className={`${td} text-center tabular-nums font-bold text-pink-800`}>{formatOpsCount(row.baby)}</td>
+                  {arrivalFlightCell}
+                  {balanceCell}
+                  {pickupCell}
+                  {guideCell}
+                  {supplierCell}
                 </tr>
               );
             })}
@@ -2870,6 +2996,7 @@ export function HotelHistoryPage({ user = null }) {
   const [confirmationStayFrom, setConfirmationStayFrom] = useState("");
   const [confirmationStayTo, setConfirmationStayTo] = useState("");
   const [confirmationStayMode, setConfirmationStayMode] = useState("both"); // arrival | departure | both
+  const [savingOpsKey, setSavingOpsKey] = useState(null);
   const [markingSentId, setMarkingSentId] = useState(null);
   const [markingConfirmedByHotelId, setMarkingConfirmedByHotelId] = useState(null);
   const [movingToPendingId, setMovingToPendingId] = useState(null);
@@ -3390,6 +3517,8 @@ export function HotelHistoryPage({ user = null }) {
         cancelled: prev.cancelled === true,
         cancelledAt: prev.cancelledAt || undefined,
         pickupTime: String(prev.pickupTime || "").trim() || undefined,
+        guideName: String(prev.guideName || "").trim() || undefined,
+        supplierName: String(prev.supplierName || "").trim() || undefined,
         updatedAt: new Date().toISOString(),
       };
       const { error: updateError } = await supabase
@@ -3486,6 +3615,8 @@ export function HotelHistoryPage({ user = null }) {
           cancelled: payload.cancelled === true,
           cancelledAt: payload.cancelledAt || undefined,
           pickupTime: String(payload.pickupTime || "").trim() || undefined,
+          guideName: String(payload.guideName || "").trim() || undefined,
+          supplierName: String(payload.supplierName || "").trim() || undefined,
           updatedAt: new Date().toISOString(),
         };
         const { error: updateError } = await supabase
@@ -3561,6 +3692,8 @@ export function HotelHistoryPage({ user = null }) {
           cancelled: prev.cancelled === true,
           cancelledAt: prev.cancelledAt || undefined,
           pickupTime: String(prev.pickupTime || "").trim() || undefined,
+          guideName: String(prev.guideName || "").trim() || undefined,
+          supplierName: String(prev.supplierName || "").trim() || undefined,
           updatedAt: new Date().toISOString(),
         };
         const { error: updateError } = await supabase
@@ -3684,6 +3817,9 @@ export function HotelHistoryPage({ user = null }) {
           clientDocuments: serializeClientDocuments(prev.clientDocuments),
           cancelled: prev.cancelled === true,
           cancelledAt: prev.cancelledAt || undefined,
+          pickupTime: String(prev.pickupTime || "").trim() || undefined,
+          guideName: String(prev.guideName || "").trim() || undefined,
+          supplierName: String(prev.supplierName || "").trim() || undefined,
           updatedAt: new Date().toISOString(),
         };
 
@@ -3820,10 +3956,59 @@ export function HotelHistoryPage({ user = null }) {
       clientDocuments: serializeClientDocuments(prev.clientDocuments),
       cancelled: prev.cancelled === true,
       cancelledAt: prev.cancelledAt || undefined,
+      pickupTime: String(prev.pickupTime || "").trim() || undefined,
+      guideName: String(prev.guideName || "").trim() || undefined,
+      supplierName: String(prev.supplierName || "").trim() || undefined,
       updatedAt: new Date().toISOString(),
       ...overrides,
     };
   }, []);
+
+  const handleSaveOpsField = useCallback(
+    async (request, field, value) => {
+      const allowed = new Set(["pickupTime", "guideName", "supplierName"]);
+      if (!allowed.has(field) || !request?.supabaseId || !supabase) return;
+
+      const nextValue = String(value || "").trim();
+      setSavingOpsKey(`${request.id}:${field}`);
+      try {
+        const payload = normalizeResponsePayload(request.responsePayload);
+        const response_payload = buildResponsePayloadFromPrev(payload, {
+          [field]: nextValue || undefined,
+        });
+        if (!nextValue) delete response_payload[field];
+
+        const { error: updateError } = await supabase
+          .from("public_hotel_requests")
+          .update({
+            response_payload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", request.supabaseId)
+          .eq("site_key", SITE_KEY);
+
+        if (updateError) {
+          logger.error("HotelHistoryPage ops field:", updateError);
+          toast.error(updateError.message || "Unable to save.");
+          return;
+        }
+
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === request.id
+              ? { ...r, responsePayload: normalizeResponsePayload(response_payload) }
+              : r
+          )
+        );
+      } catch (e) {
+        logger.error("HotelHistoryPage ops field:", e);
+        toast.error("Unexpected error.");
+      } finally {
+        setSavingOpsKey(null);
+      }
+    },
+    [buildResponsePayloadFromPrev]
+  );
 
   const handleMoveToPending = useCallback(
     async (request) => {
@@ -4674,7 +4859,10 @@ export function HotelHistoryPage({ user = null }) {
             ) : (
               <HotelStayOpsList
                 requests={confirmedArrivalRows}
+                stayKind="arrival"
                 emptyLabel="No arrivals in this date range."
+                onSaveOpsField={handleSaveOpsField}
+                savingOpsKey={savingOpsKey}
               />
             )}
           </section>
@@ -4704,7 +4892,10 @@ export function HotelHistoryPage({ user = null }) {
             ) : (
               <HotelStayOpsList
                 requests={confirmedDepartureRows}
+                stayKind="departure"
                 emptyLabel="No departures in this date range."
+                onSaveOpsField={handleSaveOpsField}
+                savingOpsKey={savingOpsKey}
               />
             )}
           </section>
@@ -4713,6 +4904,13 @@ export function HotelHistoryPage({ user = null }) {
         <div className="space-y-4">
           <HotelStayOpsList
             requests={visibleRows}
+            stayKind={
+              confirmationStayMode === "arrival"
+                ? "arrival"
+                : confirmationStayMode === "departure"
+                  ? "departure"
+                  : "both"
+            }
             emptyLabel={
               confirmationStayMode === "arrival"
                 ? "No arrivals in this date range."
@@ -4720,6 +4918,8 @@ export function HotelHistoryPage({ user = null }) {
                   ? "No departures in this date range."
                   : "No arrivals or departures in this date range."
             }
+            onSaveOpsField={handleSaveOpsField}
+            savingOpsKey={savingOpsKey}
           />
           {requestsTotalPages > 1 ? (
             <div className="flex items-center justify-center gap-2 pt-2">
