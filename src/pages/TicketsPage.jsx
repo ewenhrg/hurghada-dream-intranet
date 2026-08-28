@@ -53,7 +53,7 @@ const slotLabel = (slot) =>
 const paymentText = (method) =>
   method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
 
-/** En-têtes Excel = ordre exact demandé (15 colonnes). */
+/** En-têtes Excel = ordre exact demandé (14 colonnes). */
 const EXPORT_HEADERS = [
   "N° Ticket",
   "Date",
@@ -65,14 +65,13 @@ const EXPORT_HEADERS = [
   "Bébés",
   "Activité + extras",
   "Prise en charge",
-  "Note",
   "Prix",
   "Supp. transfert",
   "Paiement",
   "Vendeur",
 ];
 
-const COL_COUNT = 16;
+const COL_COUNT = 15;
 
 /** Pagination : évite de monter des milliers de lignes d’un coup. */
 const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
@@ -195,7 +194,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     const activitiesById = buildActivitiesByIdMap(activities);
     (quotes || []).forEach((quote) => {
       const client = quote.client || {};
-      const note = String(quote.notes || "").trim();
       (quote.items || []).forEach((item, idx) => {
         const ticketNumber = item.ticketNumber ? String(item.ticketNumber).trim() : "";
         if (!ticketNumber) return;
@@ -234,7 +232,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           activityBaseName: activityDisplayName || "—",
           activityNameFr: String(item.activityName || "").trim(),
           pickup: pickup || "",
-          note,
           priceValue,
           priceLabel: currencyNoCents(priceValue, quote.currency || "EUR"),
           transferValue,
@@ -283,7 +280,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.phone,
         r.hotel,
         r.room,
-        r.note,
         r.createdByName,
       ].some((v) => String(v || "").toLowerCase().includes(term));
     });
@@ -407,7 +403,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.babies || "",
         r.activity,
         r.pickup || "",
-        r.note || "",
         r.priceValue || "",
         r.transferValue > 0 ? r.transferValue : "",
         paymentText(r.paymentMethod),
@@ -745,7 +740,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.babies || "",
         r.activity,
         r.pickup || "",
-        r.note || "",
         r.priceValue || "",
         r.transferValue > 0 ? r.transferValue : "",
         paymentText(r.paymentMethod),
@@ -769,9 +763,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         } else if (m.kind === "activity") {
           ws[addr].s = activityBannerStyle;
         } else if (m.kind === "data") {
-          if (c === 5 || c === 6 || c === 7 || c === 11 || c === 12)
-            ws[addr].s = dataStyle({ center: true, bold: c === 11 });
-          else if (c === 0 || c === 1 || c === 9 || c === 13 || c === 14)
+          if (c === 5 || c === 6 || c === 7 || c === 10 || c === 11)
+            ws[addr].s = dataStyle({ center: true, bold: c === 10 });
+          else if (c === 0 || c === 1 || c === 9 || c === 12 || c === 13)
             ws[addr].s = dataStyle({ center: true });
           else ws[addr].s = dataStyle();
         }
@@ -793,7 +787,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
       { wch: 8 },
       { wch: 34 },
       { wch: 12 },
-      { wch: 28 },
       { wch: 10 },
       { wch: 12 },
       { wch: 10 },
@@ -1077,9 +1070,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                   <th scope="col" className={TH_BASE} title="Prise en charge">
                     Heure
                   </th>
-                  <th scope="col" className={TH_BASE} title="Note">
-                    Note
-                  </th>
                   <th scope="col" className={`${TH_BASE} !bg-teal-600`} title="Prix">
                     Prix
                   </th>
@@ -1229,9 +1219,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                       </td>
                       <td className={`${TD} truncate text-center font-semibold text-violet-800`} title={r.pickup}>
                         {r.pickup || ""}
-                      </td>
-                      <td className={`${TD} truncate`} title={r.note}>
-                        {r.note || ""}
                       </td>
                       <td className={`${TD} text-center tabular-nums font-bold text-teal-800`}>
                         {r.priceValue || ""}

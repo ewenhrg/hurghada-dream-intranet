@@ -3,7 +3,7 @@ import { Pencil, X } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { SITE_KEY, LS_KEYS } from "../../constants";
 import { saveQuotesCache, calculateCardPrice } from "../../utils";
-import { computePaidColumnsFromItems } from "../../utils/ticketCollections";
+import { computePaidColumnsFromItems, findTicketNumberConflict } from "../../utils/ticketCollections";
 import { isBoatPartyActivity } from "../../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
@@ -17,7 +17,7 @@ function toInt(value, fallback = 0) {
 
 /**
  * Édition rapide d’une ligne ticket (champs ops).
- * Hôtel / chambre / note / client : niveau devis (impactent toutes les lignes du même devis).
+ * Hôtel / chambre / client : niveau devis (impactent toutes les lignes du même devis).
  */
 export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
   const [ticketNumber, setTicketNumber] = useState("");
@@ -32,7 +32,6 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
   const [boatPartyMen, setBoatPartyMen] = useState(0);
   const [boatPartyWomen, setBoatPartyWomen] = useState(0);
   const [pickup, setPickup] = useState("");
-  const [note, setNote] = useState("");
   const [priceValue, setPriceValue] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,7 +52,6 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
     setBoatPartyMen(Number(row.boatPartyMen) || 0);
     setBoatPartyWomen(Number(row.boatPartyWomen) || 0);
     setPickup(row.pickup || "");
-    setNote(row.note || "");
     setPriceValue(Number(row.priceValue) || 0);
     setPaymentMethod(row.paymentMethod || "");
     setSaving(false);
@@ -91,6 +89,24 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
     const nextTicket = String(ticketNumber || "").trim();
     if (!nextTicket) {
       toast.warning("Le numéro de ticket est obligatoire.");
+      return;
+    }
+
+    const duplicate = findTicketNumberConflict(quotes, nextTicket, {
+      excludeQuoteId: row.quoteId,
+      excludeItemIndex: itemIndex,
+    });
+    if (duplicate) {
+      toast.warning(`Numéro déjà utilisé : ${nextTicket}`);
+      return;
+    }
+
+    const duplicateInQuote = (quote.items || []).some(
+      (it, idx) =>
+        idx !== itemIndex && String(it.ticketNumber || "").trim().toLowerCase() === nextTicket.toLowerCase()
+    );
+    if (duplicateInQuote) {
+      toast.warning(`Numéro en double dans le devis : ${nextTicket}`);
       return;
     }
 
@@ -137,7 +153,6 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
           hotel: String(hotel || "").trim(),
           room: String(room || "").trim(),
         },
-        notes: String(note || "").trim(),
         items: nextItems,
         total: nextTotal,
         totalCash: nextTotal,
@@ -158,7 +173,6 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
           client_phone: updatedQuote.client.phone || "",
           client_hotel: updatedQuote.client.hotel || "",
           client_room: updatedQuote.client.room || "",
-          notes: updatedQuote.notes || "",
           total: updatedQuote.total,
           paid_cash: paidCash,
           paid_stripe: paidStripe,
@@ -220,7 +234,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
               {row.activityBaseName || row.activity || "Activité"}
             </h3>
             <p className="mt-0.5 text-xs text-slate-500">
-              Hôtel, chambre, client et note s’appliquent à tout le devis.
+              Hôtel, chambre et client s’appliquent à tout le devis.
             </p>
           </div>
           <button
@@ -379,16 +393,6 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
               <option value="cash">Cash</option>
               <option value="stripe">Stripe</option>
             </select>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">Note (devis)</span>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={3}
-              className="w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[var(--hd-surface-input)] px-4 py-3 text-base text-slate-800 outline-none transition-all focus:border-[rgba(79,70,229,0.7)] focus:ring-2 focus:ring-[rgba(79,70,229,0.3)]"
-            />
           </label>
 
           <p className="rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-900">

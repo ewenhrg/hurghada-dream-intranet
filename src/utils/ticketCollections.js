@@ -41,6 +41,110 @@ export function suggestSequentialTicketNumbers(base, count) {
   return out;
 }
 
+/** Clé normalisée pour comparer deux n° de ticket (insensible à la casse). */
+export function normalizeTicketNumberKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+/**
+ * Index des n° déjà utilisés dans les devis.
+ * @param {object[]} quotes
+ * @param {{ excludeQuoteId?: string, excludeItemIndex?: number }} [opts]
+ */
+export function buildUsedTicketNumberMap(quotes, opts = {}) {
+  const map = new Map();
+  for (const quote of quotes || []) {
+    const skipQuote = opts.excludeQuoteId && quote.id === opts.excludeQuoteId;
+    (quote.items || []).forEach((item, itemIndex) => {
+      if (skipQuote) {
+        if (opts.excludeItemIndex == null) return;
+        if (itemIndex === opts.excludeItemIndex) return;
+      }
+      const ticketNumber = String(item?.ticketNumber || "").trim();
+      if (!ticketNumber) return;
+      const key = normalizeTicketNumberKey(ticketNumber);
+      if (!map.has(key)) {
+        map.set(key, { quoteId: quote.id, ticketNumber, activityName: item.activityName || "" });
+      }
+    });
+  }
+  return map;
+}
+
+/**
+ * Conflit pour un seul n° (édition Situation, contrôle à la volée).
+ * @returns {{ ticketNumber: string, quoteId: string, activityName: string } | null}
+ */
+export function findTicketNumberConflict(quotes, ticketNumber, opts = {}) {
+  const trimmed = String(ticketNumber || "").trim();
+  if (!trimmed) return null;
+  const key = normalizeTicketNumberKey(trimmed);
+  const used = buildUsedTicketNumberMap(quotes, opts);
+  const hit = used.get(key);
+  return hit ? { ...hit, ticketNumber: trimmed } : null;
+}
+
+/**
+ * Erreurs par index de ligne (doublons dans le formulaire + n° déjà pris ailleurs).
+ * @param {Record<number, string>|string[]} drafts
+ * @returns {Record<number, string>}
+ */
+export function getTicketNumberFieldErrors(quotes, quoteId, drafts, itemCount) {
+  /** @type {Record<number, string>} */
+  const errors = {};
+  const values = [];
+  for (let i = 0; i < itemCount; i++) {
+    values[i] = String(Array.isArray(drafts) ? drafts[i] : drafts?.[i] ?? "").trim();
+  }
+
+  const usedElsewhere = buildUsedTicketNumberMap(quotes, { excludeQuoteId: quoteId });
+  const seenInForm = new Map();
+
+  for (let i = 0; i < values.length; i++) {
+    const num = values[i];
+    if (!num) continue;
+    const key = normalizeTicketNumberKey(num);
+    if (seenInForm.has(key)) {
+      errors[i] = `Numéro en double dans le devis : ${num}`;
+      continue;
+    }
+    seenInForm.set(key, i);
+    if (usedElsewhere.has(key)) {
+      errors[i] = `Numéro déjà utilisé : ${num}`;
+    }
+  }
+  return errors;
+}
+
+/**
+ * Valide tous les n° d’un devis avant enregistrement.
+ * @returns {{ ok: true } | { ok: false, message: string }}
+ */
+export function validateQuoteTicketNumbers(quotes, quoteId, ticketNumbers) {
+  const list = Array.isArray(ticketNumbers) ? ticketNumbers : [];
+  for (let i = 0; i < list.length; i++) {
+    const num = String(list[i] || "").trim();
+    if (!num) continue;
+    const key = normalizeTicketNumberKey(num);
+    for (let j = i + 1; j < list.length; j++) {
+      const other = String(list[j] || "").trim();
+      if (other && normalizeTicketNumberKey(other) === key) {
+        return { ok: false, message: `Numéro en double dans le devis : ${num}` };
+      }
+    }
+  }
+
+  const usedElsewhere = buildUsedTicketNumberMap(quotes, { excludeQuoteId: quoteId });
+  for (const raw of list) {
+    const num = String(raw || "").trim();
+    if (!num) continue;
+    if (usedElsewhere.has(normalizeTicketNumberKey(num))) {
+      return { ok: false, message: `Numéro déjà utilisé : ${num}` };
+    }
+  }
+  return { ok: true };
+}
+
 /** Parse cash / stripe depuis paymentMethod d’une ligne. */
 export function parseItemPaymentFlags(paymentMethod) {
   const m = String(paymentMethod || "").toLowerCase();

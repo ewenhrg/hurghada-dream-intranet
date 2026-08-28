@@ -53,7 +53,13 @@ import {
 } from "../utils/hotelRequestDocuments";
 import { cleanupExpiredQuoteDocuments, isQuoteLastActivityPastRetention } from "../utils/cleanupExpiredQuoteDocuments";
 import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
-import { incrementTicketNumber } from "../utils/ticketCollections";
+import {
+  incrementTicketNumber,
+  normalizeTicketNumberKey,
+  buildUsedTicketNumberMap,
+  getTicketNumberFieldErrors,
+  validateQuoteTicketNumbers,
+} from "../utils/ticketCollections";
 
 const QUOTE_DOC_BUCKET = "documents";
 const QUOTE_DOC_FALLBACK_BUCKET = "Catalogue";
@@ -154,12 +160,40 @@ function QuoteCardComponent({
    * 1er n° saisi → détecte le chiffre et propose la suite sur les activités suivantes
    * (ordre date du modal). Édition du 1er champ : écrase la suite. Autres : remplit seulement les vides.
    */
+  const payModalItemCount = useMemo(
+    () => (quotes.find((q) => q.id === d.id)?.items || d.items || []).length,
+    [quotes, d]
+  );
+
+  const ticketDraftErrors = useMemo(
+    () => getTicketNumberFieldErrors(quotes, d.id, ticketDrafts, payModalItemCount),
+    [quotes, d.id, ticketDrafts, payModalItemCount]
+  );
+
+  const hasTicketDraftErrors = useMemo(
+    () => Object.keys(ticketDraftErrors).length > 0,
+    [ticketDraftErrors]
+  );
+
   const handleTicketDraftChange = useCallback(
     (originalIndex, sortedIndex, rawValue) => {
       setTicketDrafts((prev) => {
         const next = { ...prev, [originalIndex]: rawValue };
         const base = String(rawValue || "").trim();
         if (!base || !incrementTicketNumber(base, 1)) return next;
+
+        const usedElsewhere = buildUsedTicketNumberMap(quotes, { excludeQuoteId: d.id });
+        const isAvailable = (num, skipOriginalIndex) => {
+          const trimmed = String(num || "").trim();
+          if (!trimmed) return false;
+          const key = normalizeTicketNumberKey(trimmed);
+          if (usedElsewhere.has(key)) return false;
+          for (const [oi, val] of Object.entries(next)) {
+            if (Number(oi) === skipOriginalIndex) continue;
+            if (normalizeTicketNumberKey(val) === key) return false;
+          }
+          return true;
+        };
 
         const fillFromFirst = sortedIndex === 0;
         for (let s = sortedIndex + 1; s < payModalItems.length; s++) {
@@ -168,12 +202,12 @@ function QuoteCardComponent({
           if (!fillFromFirst && current) continue;
           const suggested = incrementTicketNumber(base, s - sortedIndex);
           if (!suggested) break;
-          next[oi] = suggested;
+          if (isAvailable(suggested, oi)) next[oi] = suggested;
         }
         return next;
       });
     },
-    [payModalItems]
+    [payModalItems, quotes, d.id]
   );
 
   const handlePrintClick = useCallback(() => {
@@ -285,30 +319,10 @@ function QuoteCardComponent({
       }
     }
 
-    const seenInForm = new Set();
-    for (let i = 0; i < normalized.length; i++) {
-      const num = normalized[i];
-      const key = num.toLowerCase();
-      if (seenInForm.has(key)) {
-        toast.warning(`Numéro de ticket en double dans le devis : ${num}`);
-        return;
-      }
-      seenInForm.add(key);
-    }
-
-    const usedElsewhere = new Set();
-    quotes.forEach((qq) => {
-      if (qq.id === d.id) return;
-      qq.items?.forEach((it) => {
-        const n = String(it.ticketNumber || "").trim();
-        if (n) usedElsewhere.add(n.toLowerCase());
-      });
-    });
-    for (const num of normalized) {
-      if (usedElsewhere.has(num.toLowerCase())) {
-        toast.warning(`Ce numéro de ticket est déjà utilisé : ${num}`);
-        return;
-      }
+    const ticketValidation = validateQuoteTicketNumbers(quotes, d.id, normalized);
+    if (!ticketValidation.ok) {
+      toast.warning(ticketValidation.message);
+      return;
     }
 
     setTicketGenerating(true);
@@ -1030,8 +1044,18 @@ function QuoteCardComponent({
                       }
                       placeholder={sortedIndex === 0 ? "Ex. 1042" : "Auto ou saisie"}
                       disabled={ticketGenerating}
-                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 disabled:opacity-60"
+                      aria-invalid={ticketDraftErrors[originalIndex] ? true : undefined}
+                      className={`mt-1.5 w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:ring-2 disabled:opacity-60 ${
+                        ticketDraftErrors[originalIndex]
+                          ? "border-rose-400 focus:border-rose-400 focus:ring-rose-500/20"
+                          : "border-slate-200 focus:border-teal-400 focus:ring-teal-500/20"
+                      }`}
                     />
+                    {ticketDraftErrors[originalIndex] ? (
+                      <p className="mt-1.5 text-xs font-semibold text-rose-600" role="alert">
+                        {ticketDraftErrors[originalIndex]}
+                      </p>
+                    ) : null}
                   </label>
                 </li>
               ))}
@@ -1216,6 +1240,7 @@ function QuoteCardComponent({
                 onClick={() => void handleConfirmTickets()}
                 disabled={
                   ticketGenerating ||
+                  hasTicketDraftErrors ||
                   Boolean(ztUploadingType) ||
                   (needsZeroTracasDocs && missingZeroTracasDocs.length > 0)
                 }

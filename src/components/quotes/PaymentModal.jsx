@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LS_KEYS } from "../../constants";
 import { currency, saveQuotesCache, calculateCardPrice } from "../../utils";
 import { persistQuoteItemsToSupabase } from "../../utils/persistQuoteItems";
-import { computePaidColumnsFromItems } from "../../utils/ticketCollections";
+import { computePaidColumnsFromItems, validateQuoteTicketNumbers } from "../../utils/ticketCollections";
 import { formatQuoteItemParticipantsSummary } from "../../utils/quoteItemDisplay.js";
 import { TextInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
@@ -41,6 +41,15 @@ export function PaymentModal({
     });
     if (!allPaymentMethodsSelected) {
       toast.warning("Veuillez sélectionner une méthode de paiement pour chaque activité.");
+      return;
+    }
+
+    const normalizedTickets = selectedQuote.items.map(
+      (_, idx) => String(ticketNumbers[idx] || selectedQuote.items[idx]?.ticketNumber || "").trim()
+    );
+    const ticketValidation = validateQuoteTicketNumbers(quotes, selectedQuote.id, normalizedTickets);
+    if (!ticketValidation.ok) {
+      toast.warning(ticketValidation.message);
       return;
     }
 

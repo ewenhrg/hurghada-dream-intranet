@@ -42,6 +42,19 @@ export function formatDivingVisitorLabel(item, activityName) {
   return `${word} × ${count} (+${total}€)`;
 }
 
+/** Infos visiteur plongée pour affichage ticket (nombre + prix). */
+export function getDivingVisitorTicketInfo(item, activityName) {
+  const count = getDivingVisitorCount(item);
+  if (count <= 0) return null;
+  const name = activityName || item?.activityName || "";
+  if (!isDivingActivityName(name)) return null;
+  return {
+    count,
+    unitPrice: DIVING_VISITOR_UNIT_PRICE,
+    total: count * DIVING_VISITOR_UNIT_PRICE,
+  };
+}
+
 /** Au moins 2 jours calendaires entre l'activité et le départ (sécurité décompression). */
 export function isDateSafeForDiving(dateStr, departureStr) {
   const activityDate = parseYmdLocal(dateStr);

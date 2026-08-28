@@ -21,7 +21,7 @@ import {
   getQuoteItemParticipantCells,
   getZeroTracasServiceCounts,
 } from "./quoteItemDisplay.js";
-import { formatDivingVisitorLabel } from "./divingSafety.js";
+import { getDivingVisitorTicketInfo } from "./divingSafety.js";
 import {
   calculateTransferSurchargeFromItem,
   calculateStandardTransferSurchargeFromItem,
@@ -32,9 +32,11 @@ import {
   currencyNoCents,
   calculateCardPrice,
   formatTicketsPaymentMethodsLabel,
+  normalizeTicketsPaymentMethods,
   resolveTicketActivityName,
   buildActivitiesByIdMap,
 } from "../utils.js";
+import { getQuoteCollectionBreakdown } from "./ticketCollections.js";
 
 /**
  * @param {object} quote
@@ -600,6 +602,33 @@ export function generateTicketsHTML(quote, options = {}) {
     return currencyNoCents(total, quote.currency || "EUR");
   };
 
+  const buildDivingVisitorTicketBlock = (item) => {
+    const info = getDivingVisitorTicketInfo(item);
+    if (!info) return "";
+    const curr = quote.currency || "EUR";
+    const countLabel = info.count > 1 ? "visiteurs" : "visiteur";
+    const totalLabel = currencyNoCents(info.total, curr);
+    const unitLabel = currencyNoCents(info.unitPrice, curr);
+    return `
+          <div class="ticket-diving-visitor" role="note" aria-label="Visiteurs plongée">
+            <div class="ticket-diving-visitor-head">
+              <span class="ticket-diving-visitor-icon" aria-hidden="true">👀</span>
+              <span class="ticket-diving-visitor-title">Visiteur(s) — ne plonge pas</span>
+            </div>
+            <div class="ticket-diving-visitor-stats">
+              <div class="ticket-diving-visitor-stat">
+                <span class="ticket-diving-visitor-num">${esc(String(info.count))}</span>
+                <span class="ticket-diving-visitor-lab">${esc(countLabel)}</span>
+              </div>
+              <div class="ticket-diving-visitor-stat ticket-diving-visitor-stat-price">
+                <span class="ticket-diving-visitor-num">${esc(totalLabel)}</span>
+                <span class="ticket-diving-visitor-lab">supplément</span>
+              </div>
+            </div>
+            <div class="ticket-diving-visitor-detail">${esc(String(info.count))} × ${esc(unitLabel)} / pers.</div>
+          </div>`;
+  };
+
   const sortedItems = [...(quote.items || [])].sort((a, b) => {
     const na = String(a?.ticketNumber || "").trim();
     const nb = String(b?.ticketNumber || "").trim();
@@ -735,6 +764,7 @@ export function generateTicketsHTML(quote, options = {}) {
 
       const priceText = esc(formatTicketPriceDisplay(item));
       const extraLines = formatTicketExtraLines(item);
+      const divingVisitorBlock = buildDivingVisitorTicketBlock(item);
       const extrasHTML =
         extraLines.length > 0
           ? `<div class="ticket-extras">${extraLines
@@ -760,7 +790,8 @@ export function generateTicketsHTML(quote, options = {}) {
               <span class="ticket-price-value">${priceText}</span>
             </div>
           </div>
-          <div class="ticket-activity">${esc(resolveTicketActivityName(item, activitiesById))}${formatDivingVisitorLabel(item) ? `<div class="ticket-visitor">${esc(formatDivingVisitorLabel(item))}</div>` : ""}${formatTurtleFinSizesLabel(item) ? `<div class="ticket-visitor">${esc(formatTurtleFinSizesLabel(item))}</div>` : ""}${extrasHTML}</div>
+          <div class="ticket-activity">${esc(resolveTicketActivityName(item, activitiesById))}${formatTurtleFinSizesLabel(item) ? `<div class="ticket-visitor">${esc(formatTurtleFinSizesLabel(item))}</div>` : ""}${extrasHTML}</div>
+          ${divingVisitorBlock}
           <div class="ticket-grid">
             <div class="tf"><span class="tf-l">👤 Nom</span><span class="tf-v">${clientName}</span></div>
             <div class="tf"><span class="tf-l">📞 Téléphone</span><span class="tf-v">${clientPhone}</span></div>
@@ -787,7 +818,65 @@ export function generateTicketsHTML(quote, options = {}) {
   // Toujours la somme des tickets imprimés (prix espèces, sans +3 %)
   const totalPrice = sortedItems.reduce((sum, item) => sum + ticketCashTotal(item), 0);
   const paymentLabel = formatTicketsPaymentMethodsLabel(quote);
+  const paymentMethods = normalizeTicketsPaymentMethods(quote);
+  const breakdown = getQuoteCollectionBreakdown(quote);
+  const paidCash = Math.round(Number(quote?.paidCash) || 0);
+  const paidStripe = Math.round(Number(quote?.paidStripe) || 0);
   const isSingleTicket = ticketCount === 1;
+
+  const cashAmount =
+    paidCash > 0
+      ? paidCash
+      : breakdown?.cash > 0
+        ? breakdown.cash
+        : paymentMethods.cash && !paymentMethods.stripe
+          ? totalPrice
+          : 0;
+  const stripeAmount =
+    paidStripe > 0
+      ? paidStripe
+      : breakdown?.stripe > 0
+        ? breakdown.stripe
+        : paymentMethods.stripe && !paymentMethods.cash
+          ? calculateCardPrice(totalPrice)
+          : 0;
+
+  const amountSummaryRows = [];
+  if (paymentMethods.cash && paymentMethods.stripe) {
+    if (cashAmount > 0) {
+      amountSummaryRows.push({
+        label: "Total Cash",
+        value: currencyNoCents(cashAmount, quote.currency),
+        tone: "cash",
+      });
+    }
+    if (stripeAmount > 0) {
+      amountSummaryRows.push({
+        label: "Total Stripe",
+        value: currencyNoCents(stripeAmount, quote.currency),
+        tone: "stripe",
+      });
+    }
+  } else if (paymentMethods.stripe) {
+    amountSummaryRows.push({
+      label: isSingleTicket ? "Prix du ticket (Stripe)" : "Total Stripe",
+      value: currencyNoCents(stripeAmount || calculateCardPrice(totalPrice), quote.currency),
+      tone: "stripe",
+    });
+  } else if (paymentMethods.cash) {
+    amountSummaryRows.push({
+      label: isSingleTicket ? "Prix du ticket (Cash)" : "Total Cash",
+      value: currencyNoCents(cashAmount || totalPrice, quote.currency),
+      tone: "cash",
+    });
+  } else {
+    amountSummaryRows.push({
+      label: isSingleTicket ? "Prix du ticket" : "Prix total",
+      value: currencyNoCents(totalPrice, quote.currency),
+      tone: "total",
+    });
+  }
+
   const summaryHTML = `
     <div class="tickets-summary">
       <div class="tickets-summary-row">
@@ -802,10 +891,17 @@ export function generateTicketsHTML(quote, options = {}) {
         <span class="tickets-summary-value">${ticketCount}</span>
       </div>`
       }
-      <div class="tickets-summary-row tickets-summary-total">
-        <span class="tickets-summary-label">${isSingleTicket ? "Prix du ticket" : "Prix total"}</span>
-        <span class="tickets-summary-value">${esc(currencyNoCents(totalPrice, quote.currency))}</span>
-      </div>
+      ${amountSummaryRows
+        .map(
+          (row, idx) => `
+      <div class="tickets-summary-row tickets-summary-amount tickets-summary-${row.tone}${
+        idx === amountSummaryRows.length - 1 ? " tickets-summary-total" : ""
+      }">
+        <span class="tickets-summary-label">${esc(row.label)}</span>
+        <span class="tickets-summary-value">${esc(row.value)}</span>
+      </div>`
+        )
+        .join("")}
     </div>
   `;
 
@@ -879,6 +975,72 @@ export function generateTicketsHTML(quote, options = {}) {
       font-weight: 600;
       text-transform: none;
       color: #0e7490;
+    }
+    .ticket-diving-visitor {
+      margin: 8px 0 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 2px solid #0891b2;
+      background: linear-gradient(135deg, #ecfeff 0%, #cffafe 55%, #a5f3fc 100%);
+      box-shadow: 0 2px 8px rgba(8, 145, 178, 0.18);
+    }
+    .ticket-diving-visitor-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .ticket-diving-visitor-icon { font-size: 18px; line-height: 1; }
+    .ticket-diving-visitor-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #0e7490;
+    }
+    .ticket-diving-visitor-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .ticket-diving-visitor-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 8px 6px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(8, 145, 178, 0.25);
+    }
+    .ticket-diving-visitor-stat-price {
+      background: #fff;
+      border-color: #0891b2;
+    }
+    .ticket-diving-visitor-num {
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+    }
+    .ticket-diving-visitor-stat-price .ticket-diving-visitor-num {
+      color: #0e7490;
+    }
+    .ticket-diving-visitor-lab {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #64748b;
+    }
+    .ticket-diving-visitor-detail {
+      margin-top: 8px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #155e75;
     }
     .ticket-extras { margin-top: 4px; text-transform: none; }
     .ticket-extra-line {
@@ -961,6 +1123,12 @@ export function generateTicketsHTML(quote, options = {}) {
     .tickets-summary-total .tickets-summary-value {
       font-size: 15px;
       color: #0e7490;
+    }
+    .tickets-summary-cash .tickets-summary-value {
+      color: #047857;
+    }
+    .tickets-summary-stripe .tickets-summary-value {
+      color: #4338ca;
     }
     .zt-receipt {
       background: #d7eef8;
@@ -1084,6 +1252,7 @@ export function generateTicketsHTML(quote, options = {}) {
       .tickets-summary { box-shadow: none; }
       .zt-receipt { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin-bottom: 8px; }
       .ticket-logo, .zt-logo-img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .ticket-diving-visitor { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
 </head>
