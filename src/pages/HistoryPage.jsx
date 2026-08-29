@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { Clock } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
 import { currencyNoCents, calculateCardPrice, saveQuotesCache, cleanPhoneNumber, calculateTransferSurcharge, isQuoteFullyPaid, quoteHasAnyTicket, normalizeTicketsPaymentMethods } from "../utils";
@@ -90,6 +91,8 @@ function QuoteCardComponent({
 
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [ticketDrafts, setTicketDrafts] = useState({});
+  const [pickupDrafts, setPickupDrafts] = useState({});
+  const [editPickupTimes, setEditPickupTimes] = useState(false);
   const [payCash, setPayCash] = useState(false);
   const [payStripe, setPayStripe] = useState(false);
   const [payCashAmount, setPayCashAmount] = useState("");
@@ -240,10 +243,14 @@ function QuoteCardComponent({
   const openTicketModal = useCallback(() => {
     const rawQuote = quotes.find((q) => q.id === d.id) || d;
     const initial = {};
+    const initialPickups = {};
     (rawQuote.items || []).forEach((item, idx) => {
       initial[idx] = String(item.ticketNumber || "").trim();
+      initialPickups[idx] = String(item.pickupTime || "").trim();
     });
     setTicketDrafts(initial);
+    setPickupDrafts(initialPickups);
+    setEditPickupTimes(false);
     const methods = normalizeTicketsPaymentMethods(rawQuote);
     setPayCash(methods.cash);
     setPayStripe(methods.stripe);
@@ -342,6 +349,10 @@ function QuoteCardComponent({
       const updatedItems = items.map((item, idx) => ({
         ...item,
         ticketNumber: normalized[idx],
+        pickupTime:
+          pickupDrafts[idx] !== undefined
+            ? String(pickupDrafts[idx] || "").trim()
+            : String(item.pickupTime || "").trim(),
         ticketEnteredByName: agentName || item.ticketEnteredByName || "",
         paymentMethod: paymentMethodLabel || item.paymentMethod || "",
         // Conserver la 1re date d’encaissement si déjà payé
@@ -401,7 +412,7 @@ function QuoteCardComponent({
     } finally {
       setTicketGenerating(false);
     }
-  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, user, payCash, payStripe, payCashAmount, payStripeAmount, needsZeroTracasDocs]);
+  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, pickupDrafts, user, payCash, payStripe, payCashAmount, payStripeAmount, needsZeroTracasDocs]);
 
   const handleZeroTracasDocPick = useCallback(
     async (docType, file) => {
@@ -988,7 +999,7 @@ function QuoteCardComponent({
               <span className="text-3xl" aria-hidden>
                 💳
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h3 id="history-pay-tickets-title" className="text-lg font-bold text-slate-900">
                   Payer — numéros de ticket
                 </h3>
@@ -1000,6 +1011,22 @@ function QuoteCardComponent({
                     ? " Pour Zero Tracas, joignez aussi passeport, réservation d’hôtel et réservation de vol."
                     : ""}
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setEditPickupTimes((v) => !v)}
+                  disabled={ticketGenerating}
+                  aria-pressed={editPickupTimes}
+                  className={`mt-3 inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/30 disabled:opacity-60 ${
+                    editPickupTimes
+                      ? "border-teal-500 bg-teal-50 text-teal-800"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-teal-300 hover:bg-teal-50/60 hover:text-teal-800"
+                  }`}
+                >
+                  <Clock className="size-3.5 shrink-0" aria-hidden />
+                  {editPickupTimes
+                    ? "Masquer les heures de prise en charge"
+                    : "Modifier les heures de prise en charge"}
+                </button>
               </div>
             </div>
 
@@ -1020,6 +1047,15 @@ function QuoteCardComponent({
                           : "—"}
                         {" · "}
                         {formatQuoteItemParticipantsSummary(item)}
+                        {!editPickupTimes &&
+                        String(pickupDrafts[originalIndex] ?? item.pickupTime ?? "").trim() ? (
+                          <>
+                            {" · "}
+                            <span className="text-violet-700">
+                              ⏰ {String(pickupDrafts[originalIndex] ?? item.pickupTime).trim()}
+                            </span>
+                          </>
+                        ) : null}
                       </p>
                     </div>
                     <p className="text-sm font-bold tabular-nums text-teal-800">
@@ -1057,6 +1093,27 @@ function QuoteCardComponent({
                       </p>
                     ) : null}
                   </label>
+                  {editPickupTimes ? (
+                    <label className="mt-3 block">
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        Heure de prise en charge
+                      </span>
+                      <input
+                        type="text"
+                        autoComplete="off"
+                        value={pickupDrafts[originalIndex] ?? ""}
+                        onChange={(e) =>
+                          setPickupDrafts((prev) => ({
+                            ...prev,
+                            [originalIndex]: e.target.value,
+                          }))
+                        }
+                        placeholder="ex. 08:30"
+                        disabled={ticketGenerating}
+                        className="mt-1.5 w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60"
+                      />
+                    </label>
+                  ) : null}
                 </li>
               ))}
             </ul>
