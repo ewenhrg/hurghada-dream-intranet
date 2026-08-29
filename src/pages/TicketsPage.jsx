@@ -53,7 +53,7 @@ const slotLabel = (slot) =>
 const paymentText = (method) =>
   method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
 
-/** En-têtes Excel = ordre exact demandé (14 colonnes). */
+/** En-têtes Excel = ordre exact du fichier ops (15 colonnes, Note vide pour aligner le collage). */
 const EXPORT_HEADERS = [
   "N° Ticket",
   "Date",
@@ -65,6 +65,7 @@ const EXPORT_HEADERS = [
   "Bébés",
   "Activité + extras",
   "Prise en charge",
+  "Note",
   "Prix",
   "Supp. transfert",
   "Paiement",
@@ -403,6 +404,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.babies || "",
         r.activity,
         r.pickup || "",
+        "", // colonne Note volontairement vide (alignement Excel ops)
         r.priceValue || "",
         r.transferValue > 0 ? r.transferValue : "",
         paymentText(r.paymentMethod),
@@ -740,6 +742,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.babies || "",
         r.activity,
         r.pickup || "",
+        "", // colonne Note volontairement vide (alignement Excel ops)
         r.priceValue || "",
         r.transferValue > 0 ? r.transferValue : "",
         paymentText(r.paymentMethod),
@@ -763,9 +766,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         } else if (m.kind === "activity") {
           ws[addr].s = activityBannerStyle;
         } else if (m.kind === "data") {
-          if (c === 5 || c === 6 || c === 7 || c === 10 || c === 11)
-            ws[addr].s = dataStyle({ center: true, bold: c === 10 });
-          else if (c === 0 || c === 1 || c === 9 || c === 12 || c === 13)
+          if (c === 5 || c === 6 || c === 7 || c === 11 || c === 12)
+            ws[addr].s = dataStyle({ center: true, bold: c === 11 });
+          else if (c === 0 || c === 1 || c === 9 || c === 13 || c === 14)
             ws[addr].s = dataStyle({ center: true });
           else ws[addr].s = dataStyle();
         }
@@ -787,6 +790,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
       { wch: 8 },
       { wch: 34 },
       { wch: 12 },
+      { wch: 28 },
       { wch: 10 },
       { wch: 12 },
       { wch: 10 },
