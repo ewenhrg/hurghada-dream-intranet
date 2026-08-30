@@ -12,6 +12,8 @@ import {
   Inbox,
   MessageSquareReply,
   Pencil,
+  Plus,
+  Minus,
   Receipt,
   Trash2,
   Upload,
@@ -708,6 +710,8 @@ const HotelRequestCard = memo(function HotelRequestCard({
   onMoveToPending,
   movingToPending,
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const cardId = String(request.id || request.supabaseId || "hotel-card");
   const fullName = [request.firstName, request.lastName].filter(Boolean).join(" ").trim() || "Client";
   const boardLabels = boardLabelsFromViewModel(request);
   const hotels = [
@@ -742,9 +746,117 @@ const HotelRequestCard = memo(function HotelRequestCard({
       ? confirmedHotels.map((h) => h.hotelName).join(" + ")
       : confirmedHotel?.hotelName || "";
 
+  const summaryHotel =
+    confirmedLabel ||
+    readyHotels.map((h) => h.hotelName).filter(Boolean).join(" · ") ||
+    hotels.map((h) => h.value).filter(Boolean).join(" · ") ||
+    (request.wantsCustomOffer ? HOTEL_CUSTOM_OFFER_LABEL : "—");
+
+  const summaryCheckIn =
+    normalizeStayDate(confirmedHotels[0]?.stayFrom) ||
+    normalizeStayDate(readyHotels[0]?.stayFrom) ||
+    normalizeStayDate(request.arrivalDate) ||
+    "";
+  const summaryCheckOut =
+    normalizeStayDate(confirmedHotels[0]?.stayTo) ||
+    normalizeStayDate(readyHotels[0]?.stayTo) ||
+    normalizeStayDate(request.departureDate) ||
+    "";
+
+  let compactStatus = null;
+  if (isConfirmed && isCancelled) compactStatus = { label: "Cancelled", tone: "slate" };
+  else if (isConfirmed && paymentStatus?.isFullyPaid) compactStatus = { label: "Paid", tone: "emerald" };
+  else if (isConfirmed && paymentStatus && !paymentStatus.isFullyPaid)
+    compactStatus = { label: "Balance due", tone: "rose" };
+  else if (isConfirmed) compactStatus = { label: "Confirmed", tone: "teal" };
+  else if (sentToClient) compactStatus = { label: "Sent", tone: "sky" };
+  else if (hasResponse) compactStatus = { label: "Ready", tone: "amber" };
+  else if (heldInPending) compactStatus = { label: "Pending", tone: "amber" };
+  else compactStatus = { label: "Pending", tone: "slate" };
+
+  const statusToneClass = {
+    teal: "bg-teal-600 text-white",
+    emerald: "bg-emerald-600 text-white",
+    rose: "bg-rose-100 text-rose-950 ring-1 ring-rose-300/70",
+    sky: "bg-sky-100 text-sky-950 ring-1 ring-sky-300/70",
+    amber: "bg-amber-100 text-amber-950 ring-1 ring-amber-300/70",
+    slate: "bg-slate-200 text-slate-800 ring-1 ring-slate-300/70",
+  }[compactStatus.tone];
+
   return (
-    <article className="overflow-hidden rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_12px_40px_-18px_rgba(30,27,75,0.22)] ring-1 ring-slate-200/80">
-      <div className="border-b border-indigo-100 bg-gradient-to-r from-indigo-50/90 to-violet-50/50 px-4 py-4 sm:px-6 sm:py-5">
+    <article
+      className={`overflow-hidden rounded-2xl border-2 transition-all ${
+        expanded
+          ? "border-indigo-400 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_12px_40px_-18px_rgba(30,27,75,0.22)] ring-1 ring-indigo-200/80"
+          : "border-slate-200 bg-white shadow-sm hover:border-indigo-300 hover:shadow-md"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        aria-controls={`hotel-card-details-${cardId}`}
+        id={`hotel-card-header-${cardId}`}
+        className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-400 sm:gap-4 sm:px-5 ${
+          expanded
+            ? "bg-gradient-to-r from-indigo-50 to-violet-50"
+            : "bg-white hover:bg-indigo-50/60"
+        }`}
+      >
+        <span
+          className={`grid size-9 shrink-0 place-items-center rounded-xl text-indigo-700 transition-colors sm:size-10 ${
+            expanded ? "bg-indigo-200" : "bg-indigo-100"
+          }`}
+          aria-hidden
+        >
+          {expanded ? <Minus className="size-4 sm:size-5" /> : <Plus className="size-4 sm:size-5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-base font-bold tracking-tight text-slate-950 sm:text-lg">
+              {fullName}
+            </h3>
+            {shortRef ? (
+              <span className="inline-flex items-center rounded-full bg-white/90 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wide text-indigo-900 ring-1 ring-indigo-200">
+                {shortRef}
+              </span>
+            ) : null}
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${statusToneClass}`}
+            >
+              {compactStatus.label}
+            </span>
+          </div>
+          <p className="mt-1 truncate text-sm font-semibold text-slate-800">
+            <Building2 className="mr-1 inline size-3.5 shrink-0 text-indigo-500" aria-hidden />
+            {summaryHotel}
+          </p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-medium text-slate-600">
+            <span className="inline-flex items-center gap-1">
+              <CalendarDays className="size-3.5 text-teal-600" aria-hidden />
+              <span className="font-semibold text-slate-800">
+                {formatHotelStayDate(summaryCheckIn) || "—"}
+              </span>
+            </span>
+            <span className="text-slate-400" aria-hidden>
+              →
+            </span>
+            <span className="font-semibold text-slate-800">
+              {formatHotelStayDate(summaryCheckOut) || "—"}
+            </span>
+          </p>
+        </div>
+      </button>
+
+      <div
+        id={`hotel-card-details-${cardId}`}
+        role="region"
+        aria-labelledby={`hotel-card-header-${cardId}`}
+        className={`overflow-hidden transition-all duration-200 ease-out ${
+          expanded ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+      <div className="border-t border-indigo-100 bg-gradient-to-r from-indigo-50/90 to-violet-50/50 px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -1285,6 +1397,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
         <p className="mt-1 text-sm font-medium leading-relaxed text-slate-800 whitespace-pre-wrap">
           {request.notes?.trim() ? request.notes : "—"}
         </p>
+      </div>
       </div>
     </article>
   );
@@ -4775,7 +4888,7 @@ export function HotelHistoryPage({ user = null }) {
                 No paid or partially paid confirmations.
               </p>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-3">
                 {confirmedPaidRows.map((request) => (
             <HotelRequestCard
               key={request.id}
@@ -4827,7 +4940,7 @@ export function HotelHistoryPage({ user = null }) {
                 No unpaid confirmations.
               </p>
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-3">
                 {confirmedUnpaidRows.map((request) => (
                   <HotelRequestCard
                     key={request.id}
@@ -4879,7 +4992,7 @@ export function HotelHistoryPage({ user = null }) {
                 No cancelled confirmations.
               </p>
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-3">
                 {confirmedCancelledRows.map((request) => (
                   <HotelRequestCard
                     key={request.id}
@@ -5023,7 +5136,7 @@ export function HotelHistoryPage({ user = null }) {
           ) : null}
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-3">
           {visibleRows.map((request) => (
             <HotelRequestCard
               key={request.id}
