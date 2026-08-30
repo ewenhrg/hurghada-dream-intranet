@@ -25,6 +25,7 @@ import { GhostBtn, NumberInput, Pill, PrimaryBtn, TextInput } from "../component
 import { DateInput } from "../components/DateInput";
 import { printHotelRequest, printHotelPaymentReceipt } from "../utils/hotelRequestPrint";
 import { formatHotelStayDate, normalizeStayDate } from "../utils/hotelRequestDates";
+import { toLocalDateKey } from "../utils/quoteUserStats";
 import {
   formatHotelRequestShortRef,
   normalizeHotelRequestRefQuery,
@@ -386,6 +387,30 @@ function hotelRequestResponseActivityMs(request) {
     if (Number.isFinite(t) && t > best) best = t;
   }
   return best;
+}
+
+/** Date de confirmation client — pour classer Confirmations du plus récent au plus ancien. */
+function hotelRequestConfirmedAtMs(request) {
+  const payload =
+    request?.responsePayload && typeof request.responsePayload === "object"
+      ? request.responsePayload
+      : {};
+  const confirmedAt = Date.parse(String(payload.confirmedAt || "").trim());
+  if (Number.isFinite(confirmedAt) && confirmedAt > 0) return confirmedAt;
+  // Anciennes confirmations sans confirmedAt : repli sur l’activité
+  return hotelRequestResponseActivityMs(request);
+}
+
+/** Jour calendaire (YYYY-MM-DD, fuseau métier) où la confirmation a été faite. */
+function hotelRequestConfirmedDayKey(request) {
+  const payload =
+    request?.responsePayload && typeof request.responsePayload === "object"
+      ? request.responsePayload
+      : {};
+  const fromConfirmed = toLocalDateKey(payload.confirmedAt);
+  if (fromConfirmed) return fromConfirmed;
+  const ms = hotelRequestConfirmedAtMs(request);
+  return ms > 0 ? toLocalDateKey(new Date(ms)) : null;
 }
 
 function hotelProposalKey(hotel, index = 0) {
@@ -2982,6 +3007,7 @@ export function HotelHistoryPage({ user = null }) {
   const [confirmationPayFilter, setConfirmationPayFilter] = useState("all"); // all | paid | unpaid | cancelled | arrival_departure
   const [confirmationStayDate, setConfirmationStayDate] = useState("");
   const [confirmationStayMode, setConfirmationStayMode] = useState("both"); // arrival | departure | both
+  const [confirmationConfirmedDate, setConfirmationConfirmedDate] = useState("");
   const [savingOpsKey, setSavingOpsKey] = useState(null);
   const [markingSentId, setMarkingSentId] = useState(null);
   const [markingConfirmedByHotelId, setMarkingConfirmedByHotelId] = useState(null);
@@ -3161,17 +3187,32 @@ export function HotelHistoryPage({ user = null }) {
     confirmationPayFilter,
     confirmationStayDate,
     confirmationStayMode,
+    confirmationConfirmedDate,
   ]);
 
   useEffect(() => {
-    if (statusFilter !== "confirmed") setConfirmationPayFilter("all");
+    if (statusFilter !== "confirmed") {
+      setConfirmationPayFilter("all");
+      setConfirmationConfirmedDate("");
+    }
   }, [statusFilter]);
+
+  useEffect(() => {
+    if (confirmationPayFilter === "arrival_departure") {
+      setConfirmationConfirmedDate("");
+    }
+  }, [confirmationPayFilter]);
 
   const confirmationStayDay = useMemo(
     () => normalizeStayDate(confirmationStayDate) || "",
     [confirmationStayDate]
   );
   const confirmationStayActive = Boolean(confirmationStayDay);
+  const confirmationConfirmedDay = useMemo(
+    () => normalizeStayDate(confirmationConfirmedDate) || "",
+    [confirmationConfirmedDate]
+  );
+  const confirmationConfirmedDayActive = Boolean(confirmationConfirmedDay);
 
   const confirmedCount = useMemo(() => rows.filter((r) => r.isConfirmed).length, [rows]);
   const pendingCount = useMemo(() => rows.filter((r) => r.isPending).length, [rows]);
@@ -3235,6 +3276,11 @@ export function HotelHistoryPage({ user = null }) {
           });
         }
       }
+
+      // Filtre par jour où la confirmation a été enregistrée (hors Arrival / Departure)
+      if (confirmationConfirmedDayActive && confirmationPayFilter !== "arrival_departure") {
+        list = list.filter((r) => hotelRequestConfirmedDayKey(r) === confirmationConfirmedDay);
+      }
     } else if (statusFilter === "pending") {
       list = list.filter((r) => r.isPending);
     } else if (statusFilter === "to_send") {
@@ -3243,8 +3289,13 @@ export function HotelHistoryPage({ user = null }) {
       list = list.filter((r) => r.isSent);
     }
 
-    // Toutes les listes : dernières modifications en premier (sauf Arrival / Departure déjà trié)
-    if (confirmationPayFilter !== "arrival_departure" || statusFilter !== "confirmed") {
+    // Confirmations : plus récentes en premier (date de confirmation).
+    // Autres listes : dernière activité en premier. Arrival / Departure : déjà trié par séjour.
+    if (statusFilter === "confirmed" && confirmationPayFilter !== "arrival_departure") {
+      list = [...list].sort(
+        (a, b) => hotelRequestConfirmedAtMs(b) - hotelRequestConfirmedAtMs(a)
+      );
+    } else if (confirmationPayFilter !== "arrival_departure" || statusFilter !== "confirmed") {
       list = [...list].sort(
         (a, b) => hotelRequestResponseActivityMs(b) - hotelRequestResponseActivityMs(a)
       );
@@ -3283,6 +3334,8 @@ export function HotelHistoryPage({ user = null }) {
     confirmationStayActive,
     confirmationStayDay,
     confirmationStayMode,
+    confirmationConfirmedDay,
+    confirmationConfirmedDayActive,
   ]);
 
   const confirmationGrouped =
@@ -4553,7 +4606,36 @@ export function HotelHistoryPage({ user = null }) {
                   Pick one day to list confirmations with check-in and/or check-out on that date.
                 </p>
               </div>
-            ) : null}
+            ) : (
+              <div className="rounded-xl border border-teal-200/80 bg-white/80 p-3 shadow-sm sm:p-4">
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="min-w-[9.5rem] flex-1 sm:max-w-[12rem]">
+                    <label className="block text-[10px] font-bold uppercase tracking-wide text-teal-900/70">
+                      Confirmed on
+                    </label>
+                    <DateInput
+                      value={confirmationConfirmedDate}
+                      onChange={setConfirmationConfirmedDate}
+                      className="mt-1.5"
+                    />
+                  </div>
+                  {confirmationConfirmedDate ? (
+                    <GhostBtn
+                      type="button"
+                      onClick={() => setConfirmationConfirmedDate("")}
+                      className="!px-3 !py-1.5 !text-[11px]"
+                    >
+                      Clear date
+                    </GhostBtn>
+                  ) : null}
+                </div>
+                <p className="mt-2.5 text-[11px] font-medium text-teal-900/75">
+                  {confirmationConfirmedDayActive
+                    ? `Showing confirmations registered on ${formatHotelStayDate(confirmationConfirmedDay) || confirmationConfirmedDay}.`
+                    : "Pick a day to see only confirmations registered that day."}
+                </p>
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -4586,7 +4668,9 @@ export function HotelHistoryPage({ user = null }) {
                         : confirmationStayMode === "departure"
                           ? " with departure on this date"
                           : " with arrival or departure on this date"
-                      : " confirmed"
+                      : confirmationConfirmedDayActive
+                        ? " confirmed that day"
+                        : " confirmed"
               : statusFilter === "pending"
                 ? " pending"
                 : statusFilter === "to_send"
@@ -4607,11 +4691,17 @@ export function HotelHistoryPage({ user = null }) {
         <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-950">
           {statusFilter === "confirmed"
             ? confirmationPayFilter === "paid"
-              ? "No paid or partially paid confirmations."
+              ? confirmationConfirmedDayActive
+                ? "No paid or partially paid confirmations on this date."
+                : "No paid or partially paid confirmations."
               : confirmationPayFilter === "unpaid"
-                ? "No unpaid confirmations."
+                ? confirmationConfirmedDayActive
+                  ? "No unpaid confirmations on this date."
+                  : "No unpaid confirmations."
                 : confirmationPayFilter === "cancelled"
-                  ? "No cancelled confirmations."
+                  ? confirmationConfirmedDayActive
+                    ? "No cancelled confirmations on this date."
+                    : "No cancelled confirmations."
                   : confirmationPayFilter === "arrival_departure"
                     ? confirmationStayActive
                       ? confirmationStayMode === "arrival"
@@ -4620,7 +4710,9 @@ export function HotelHistoryPage({ user = null }) {
                           ? "No departures on this date."
                           : "No arrivals or departures on this date."
                       : "Select a date to see arrivals and departures."
-                  : "No confirmations yet."
+                  : confirmationConfirmedDayActive
+                    ? "No confirmations registered on this date."
+                    : "No confirmations yet."
             : statusFilter === "pending"
               ? "No new pending requests today."
               : statusFilter === "to_send"
