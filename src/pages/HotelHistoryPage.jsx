@@ -11,6 +11,7 @@ import {
   FileText,
   Inbox,
   MessageSquareReply,
+  Pencil,
   Receipt,
   Trash2,
   Upload,
@@ -941,20 +942,33 @@ const HotelRequestCard = memo(function HotelRequestCard({
               <MessageSquareReply className="h-3.5 w-3.5" aria-hidden />
               Reply
             </GhostBtn>
-            <GhostBtn
-              type="button"
-              onClick={() => onConfirm(request)}
-              disabled={!hasResponse}
-              title={
-                hasResponse
-                  ? "Confirm the hotel chosen by the client"
-                  : "Prepare a reply with proposed hotels first"
-              }
-              className="disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-              Confirmer
-            </GhostBtn>
+            {isConfirmed ? (
+              <PrimaryBtn
+                type="button"
+                className="!min-h-0 !min-w-0 !bg-teal-600 !text-sm !px-4 !py-2 hover:!bg-teal-700"
+                onClick={() => onConfirm(request)}
+                disabled={!hasResponse}
+                title="Edit hotels, flights and Zero Tracas (same window as Confirm)"
+              >
+                <Pencil className="h-3.5 w-3.5" aria-hidden />
+                Modifier confirmation
+              </PrimaryBtn>
+            ) : (
+              <GhostBtn
+                type="button"
+                onClick={() => onConfirm(request)}
+                disabled={!hasResponse}
+                title={
+                  hasResponse
+                    ? "Confirm the hotel chosen by the client"
+                    : "Prepare a reply with proposed hotels first"
+                }
+                className="disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                Confirmer
+              </GhostBtn>
+            )}
             <PrimaryBtn type="button" className="!min-h-0 !min-w-0 !text-sm !px-4 !py-2" onClick={() => onEdit(request)}>
               Modifier
             </PrimaryBtn>
@@ -2179,6 +2193,7 @@ function HotelConfirmModal({
   const flightValues = flights || EMPTY_FLIGHTS;
   const zt = zeroTracas || EMPTY_ZERO_TRACAS;
   const ztTotal = computeZeroTracasTotal(zt);
+  const alreadyConfirmed = getConfirmedHotelsList(payload).length > 0;
 
   const toggleKey = (key) => {
     setSelectedKeys((prev) => {
@@ -2209,7 +2224,7 @@ function HotelConfirmModal({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-teal-700">
-              Client confirmation
+              {alreadyConfirmed ? "Edit confirmation" : "Client confirmation"}
             </p>
             <h2 id="hotel-confirm-title" className="mt-1 text-lg font-bold text-slate-900">
               {fullName}
@@ -2221,8 +2236,9 @@ function HotelConfirmModal({
                               </div>
 
         <p className="mt-4 text-sm font-medium text-slate-700">
-          Select the hotel(s) confirmed by the client (one or two). The final document will show
-          only the selected options, with their dates.
+          {alreadyConfirmed
+            ? "Update the hotel(s), flight details and Zero Tracas. Changes are saved on the confirmation."
+            : "Select the hotel(s) confirmed by the client (one or two). The final document will show only the selected options, with their dates."}
         </p>
 
         {options.length === 0 ? (
@@ -2435,10 +2451,16 @@ function HotelConfirmModal({
             className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 border-0"
           >
             {saving
-              ? "Confirming…"
-              : currentKeys.length > 1
-                ? "Confirm both hotels and print"
-                : "Confirm and print"}
+              ? alreadyConfirmed
+                ? "Saving…"
+                : "Confirming…"
+              : alreadyConfirmed
+                ? currentKeys.length > 1
+                  ? "Save both hotels"
+                  : "Save changes"
+                : currentKeys.length > 1
+                  ? "Confirm both hotels and print"
+                  : "Confirm and print"}
           </PrimaryBtn>
         </div>
       </div>
@@ -3617,6 +3639,7 @@ export function HotelHistoryPage({ user = null }) {
       }
       setSaving(true);
       try {
+        const wasAlreadyConfirmed = getConfirmedHotelsList(payload).length > 0;
         const grandTotal = computeConfirmedGrandTotal(chosen, zeroTracas);
         const existingPayment = normalizePayment(payload.payment);
         const schedule =
@@ -3628,7 +3651,10 @@ export function HotelHistoryPage({ user = null }) {
           agentNotes: payload.agentNotes,
           confirmedHotels: chosen,
           confirmedHotel: chosen[0],
-          confirmedAt: new Date().toISOString(),
+          // Première confirmation : horodatage du jour. Édition : conserver la date d’origine.
+          confirmedAt: wasAlreadyConfirmed
+            ? payload.confirmedAt || new Date().toISOString()
+            : new Date().toISOString(),
           flights,
           zeroTracas,
           sentToClient: payload.sentToClient === true,
@@ -3663,20 +3689,24 @@ export function HotelHistoryPage({ user = null }) {
           return;
         }
 
-        const ok = printHotelRequest({
-          ...confirmRequest,
-          quoteHotels: chosen,
-          agentNotes: payload.agentNotes,
-          flights,
-          zeroTracas,
-          documentKind: "confirmation",
-          responsePayload: response_payload,
-        });
         const namesLabel = chosen.map((h) => h.hotelName).join(" + ");
-        if (!ok) {
-          toast.warning("Confirmation saved, but print could not open. Try again via Print.");
+        if (wasAlreadyConfirmed) {
+          toast.success(`Confirmation updated: ${namesLabel}`);
         } else {
-          toast.success(`Confirmed: ${namesLabel}`);
+          const ok = printHotelRequest({
+            ...confirmRequest,
+            quoteHotels: chosen,
+            agentNotes: payload.agentNotes,
+            flights,
+            zeroTracas,
+            documentKind: "confirmation",
+            responsePayload: response_payload,
+          });
+          if (!ok) {
+            toast.warning("Confirmation saved, but print could not open. Try again via Print.");
+          } else {
+            toast.success(`Confirmed: ${namesLabel}`);
+          }
         }
         setConfirmRequest(null);
         setConfirmSelectedKeys([]);
