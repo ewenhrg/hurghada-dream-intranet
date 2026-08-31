@@ -60,6 +60,8 @@ import {
 } from "../utils/hotelRequestDocuments";
 import {
   cleanupExpiredHotelRequestDocuments,
+  cleanupExpiredHotelRequests,
+  isCheckoutDatePassed,
   storageRefFromPublicUrl,
 } from "../utils/cleanupExpiredHotelRequestDocuments";
 import { canDeleteHotelRequest } from "../constants/permissions";
@@ -3165,6 +3167,26 @@ export function HotelHistoryPage({ user = null }) {
     }
     if (!silent) setError("");
     try {
+      if (!skipCleanup) {
+        try {
+          const { deletedCount } = await cleanupExpiredHotelRequests({
+            supabase,
+            siteKey: SITE_KEY,
+            logger,
+          });
+          if (deletedCount > 0) {
+            toast.info(
+              deletedCount === 1
+                ? "1 past stay request was automatically deleted (checkout passed)."
+                : `${deletedCount} past stay requests were automatically deleted (checkout passed).`,
+              4500
+            );
+          }
+        } catch (purgeErr) {
+          logger.warn("HotelHistoryPage expired requests cleanup:", purgeErr);
+        }
+      }
+
       const { data, error: loadError } = await supabase
         .from("public_hotel_requests")
         .select(SELECT_COLUMNS)
@@ -3222,7 +3244,11 @@ export function HotelHistoryPage({ user = null }) {
         }
       }
 
-      setRows(rowsData.map(rowToHotelRequestViewModel));
+      setRows(
+        rowsData
+          .filter((row) => !isCheckoutDatePassed(row.departure_date))
+          .map(rowToHotelRequestViewModel)
+      );
     } catch (e) {
       logger.error("HotelHistoryPage load:", e);
       if (!silent) setError("Unexpected error while loading.");

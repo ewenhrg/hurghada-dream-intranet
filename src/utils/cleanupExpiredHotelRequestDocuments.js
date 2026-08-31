@@ -1,8 +1,12 @@
 import { normalizeClientDocuments } from "./hotelRequestDocuments.js";
 import { normalizePayment } from "./hotelRequestPayment.js";
+import { toLocalDateKey } from "./quoteUserStats.js";
 
 /** Supprimer les fichiers 2 jours après la date de départ. */
 export const HOTEL_DOCS_RETENTION_DAYS_AFTER_DEPARTURE = 2;
+
+/** Supprimer la demande entière dès le lendemain du check-out. */
+export const HOTEL_REQUEST_DELETE_DAYS_AFTER_DEPARTURE = 0;
 
 function parseIsoDateOnly(iso) {
   const s = String(iso || "").trim();
@@ -29,6 +33,27 @@ export function isDeparturePastRetention(
   const cutoff = new Date(departure);
   cutoff.setDate(cutoff.getDate() + daysAfter);
   return startOfLocalDay(asOf).getTime() > startOfLocalDay(cutoff).getTime();
+}
+
+/** Check-out dépassé (par défaut : à partir du lendemain de la date de départ). */
+export function isCheckoutDatePassed(
+  departureDate,
+  daysAfter = HOTEL_REQUEST_DELETE_DAYS_AFTER_DEPARTURE,
+  asOf = new Date()
+) {
+  return isDeparturePastRetention(departureDate, daysAfter, asOf);
+}
+
+function parseRowPayload(row) {
+  const rawPayload = row?.response_payload ?? row?.responsePayload;
+  if (typeof rawPayload === "string") {
+    try {
+      return JSON.parse(rawPayload);
+    } catch {
+      return {};
+    }
+  }
+  return rawPayload && typeof rawPayload === "object" ? rawPayload : {};
 }
 
 export function storageRefFromPublicUrl(url) {
@@ -125,19 +150,7 @@ export async function cleanupExpiredHotelRequestDocuments({
     const departure = row.departure_date || row.departureDate || "";
     if (!isDeparturePastRetention(departure)) continue;
 
-    const rawPayload = row.response_payload ?? row.responsePayload;
-    const payload =
-      typeof rawPayload === "string"
-        ? (() => {
-            try {
-              return JSON.parse(rawPayload);
-            } catch {
-              return {};
-            }
-          })()
-        : rawPayload && typeof rawPayload === "object"
-          ? rawPayload
-          : {};
+    const payload = parseRowPayload(row);
 
     if (!payloadHasFilesToPurge(payload)) continue;
 
@@ -164,4 +177,58 @@ export async function cleanupExpiredHotelRequestDocuments({
   }
 
   return cleaned;
+}
+
+/**
+ * Supprime les demandes hôtel dont le check-out est dépassé (toutes listes Hotel History).
+ * Supprime aussi les fichiers Storage liés (documents + preuves de paiement).
+ * @returns {Promise<{ deletedCount: number, deletedIds: string[] }>}
+ */
+export async function cleanupExpiredHotelRequests({
+  supabase,
+  siteKey,
+  logger,
+  daysAfterDeparture = HOTEL_REQUEST_DELETE_DAYS_AFTER_DEPARTURE,
+} = {}) {
+  if (!supabase || !siteKey) return { deletedCount: 0, deletedIds: [] };
+
+  const todayKey = toLocalDateKey(new Date());
+  if (!todayKey) return { deletedCount: 0, deletedIds: [] };
+
+  const { data: expired, error: loadError } = await supabase
+    .from("public_hotel_requests")
+    .select("id, response_payload, departure_date")
+    .eq("site_key", siteKey)
+    .not("departure_date", "is", null)
+    .neq("departure_date", "")
+    .lt("departure_date", todayKey);
+
+  if (loadError) {
+    logger?.error?.("cleanup expired hotel requests load:", loadError);
+    return { deletedCount: 0, deletedIds: [] };
+  }
+
+  const rows = (expired || []).filter((row) =>
+    isCheckoutDatePassed(row.departure_date, daysAfterDeparture)
+  );
+  if (rows.length === 0) return { deletedCount: 0, deletedIds: [] };
+
+  for (const row of rows) {
+    const payload = parseRowPayload(row);
+    await removeStorageRefs(supabase, collectStorageRefsFromPayload(payload), logger);
+  }
+
+  const deletedIds = rows.map((row) => row.id).filter(Boolean);
+  const { error: deleteError } = await supabase
+    .from("public_hotel_requests")
+    .delete()
+    .in("id", deletedIds)
+    .eq("site_key", siteKey);
+
+  if (deleteError) {
+    logger?.error?.("cleanup expired hotel requests delete:", deleteError);
+    return { deletedCount: 0, deletedIds: [] };
+  }
+
+  return { deletedCount: deletedIds.length, deletedIds };
 }
