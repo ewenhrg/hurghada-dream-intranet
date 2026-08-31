@@ -74,6 +74,19 @@ const CLIENT_DOC_MAX_BYTES = 15 * 1024 * 1024;
 const SELECT_COLUMNS =
   "id, first_name, last_name, client_phone, client_email, arrival_date, departure_date, adults_count, children_count, child_ages, hotel_option_1, hotel_option_2, hotel_option_3, budget, wants_custom_offer, board_all_inclusive, board_full_board, board_breakfast, notes, response_payload, created_at, updated_at";
 
+/** Pending : demandes récentes uniquement (< 1 mois). Les plus anciennes vont dans All. */
+const HOTEL_PENDING_MAX_AGE_MONTHS = 1;
+
+function requestCreatedWithinLastMonth(request) {
+  const raw = String(request?.createdAt || request?.created_at || "").trim();
+  if (!raw) return true;
+  const created = new Date(raw);
+  if (Number.isNaN(created.getTime())) return true;
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - HOTEL_PENDING_MAX_AGE_MONTHS);
+  return created.getTime() >= cutoff.getTime();
+}
+
 /** Supplément transfert aéroport (optionnel, ajouté au prix séjour saisi). */
 export const HOTEL_TRANSFER_FEE_EUR = 40;
 
@@ -318,10 +331,11 @@ function isHotelRequestConfirmed(request) {
   return getConfirmedHotelsList(payload).length > 0;
 }
 
-/** Demande sans réponse agent (tant qu’aucun devis n’est prêt ni envoyé). */
+/** Demande sans réponse agent (tant qu’aucun devis n’est prêt ni envoyé), si créée il y a moins d’un mois. */
 function isHotelRequestPending(request) {
   if (typeof request?.isPending === "boolean") return request.isPending;
   if (isHotelRequestConfirmed(request)) return false;
+  if (!requestCreatedWithinLastMonth(request)) return false;
   const payload = normalizeResponsePayload(request?.responsePayload);
   if (payload.heldInPending === true) return true;
   if (payload.sentToClient === true) return false;
@@ -615,6 +629,7 @@ function enrichHotelRequestViewModel(vm) {
   const isConfirmationPaidOrPartial =
     isConfirmed && !isCancelled && confirmationPaidAmount > 0.009;
   const isConfirmationUnpaid = isConfirmed && !isCancelled && !isConfirmationPaidOrPartial;
+  const createdWithinLastMonth = requestCreatedWithinLastMonth(vm);
 
   const shortRef = formatHotelRequestShortRef(vm.id || vm.supabaseId).toLowerCase();
   const searchHaystack = [
@@ -639,7 +654,9 @@ function enrichHotelRequestViewModel(vm) {
     responsePayload: payload,
     isConfirmed,
     isPending:
-      !isConfirmed && (heldInPending || (!hasReadyHotels && !sentToClient)),
+      !isConfirmed &&
+      createdWithinLastMonth &&
+      (heldInPending || (!hasReadyHotels && !sentToClient)),
     isReadyToSend: !isConfirmed && !heldInPending && !sentToClient && hasReadyHotels,
     isSent: !isConfirmed && !heldInPending && sentToClient && hasReadyHotels,
     isInPayerList: isConfirmed && !isCancelled && hasPayment,
