@@ -316,23 +316,13 @@ function isHotelRequestConfirmed(request) {
   return getConfirmedHotelsList(payload).length > 0;
 }
 
-function requestCreatedOnOrAfterToday(request) {
-  const raw = String(request?.createdAt || "").trim();
-  if (!raw) return false;
-  const created = new Date(raw);
-  if (Number.isNaN(created.getTime())) return false;
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  return created.getTime() >= start.getTime();
-}
-
-/** Nouvelle demande sans réponse (à partir d’aujourd’hui). */
+/** Demande sans réponse agent (tant qu’aucun devis n’est prêt ni envoyé). */
 function isHotelRequestPending(request) {
   if (typeof request?.isPending === "boolean") return request.isPending;
   if (isHotelRequestConfirmed(request)) return false;
   const payload = normalizeResponsePayload(request?.responsePayload);
   if (payload.heldInPending === true) return true;
-  if (!requestCreatedOnOrAfterToday(request)) return false;
+  if (payload.sentToClient === true) return false;
   return !payload.hotels.some((h) => proposalIsReady(h));
 }
 
@@ -623,7 +613,6 @@ function enrichHotelRequestViewModel(vm) {
   const isConfirmationPaidOrPartial =
     isConfirmed && !isCancelled && confirmationPaidAmount > 0.009;
   const isConfirmationUnpaid = isConfirmed && !isCancelled && !isConfirmationPaidOrPartial;
-  const createdToday = requestCreatedOnOrAfterToday(vm);
 
   const shortRef = formatHotelRequestShortRef(vm.id || vm.supabaseId).toLowerCase();
   const searchHaystack = [
@@ -647,7 +636,8 @@ function enrichHotelRequestViewModel(vm) {
     ...vm,
     responsePayload: payload,
     isConfirmed,
-    isPending: !isConfirmed && (heldInPending || (createdToday && !hasReadyHotels)),
+    isPending:
+      !isConfirmed && (heldInPending || (!hasReadyHotels && !sentToClient)),
     isReadyToSend: !isConfirmed && !heldInPending && !sentToClient && hasReadyHotels,
     isSent: !isConfirmed && !heldInPending && sentToClient && hasReadyHotels,
     isInPayerList: isConfirmed && !isCancelled && hasPayment,
@@ -3138,7 +3128,7 @@ export function HotelHistoryPage({ user = null }) {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
-  const [statusFilter, setStatusFilter] = useState("all"); // all | pending | to_send | sent | confirmed
+  const [statusFilter, setStatusFilter] = useState("pending"); // all | pending | to_send | sent | confirmed
   const [confirmationPayFilter, setConfirmationPayFilter] = useState("all"); // all | paid | unpaid | cancelled | arrival_departure
   const [confirmationStayDate, setConfirmationStayDate] = useState("");
   const [confirmationStayMode, setConfirmationStayMode] = useState("both"); // arrival | departure | both
@@ -3351,6 +3341,7 @@ export function HotelHistoryPage({ user = null }) {
 
   const confirmedCount = useMemo(() => rows.filter((r) => r.isConfirmed).length, [rows]);
   const pendingCount = useMemo(() => rows.filter((r) => r.isPending).length, [rows]);
+  const allCount = useMemo(() => rows.filter((r) => !r.isPending).length, [rows]);
   const toSendCount = useMemo(() => rows.filter((r) => r.isReadyToSend).length, [rows]);
   const sentCount = useMemo(() => rows.filter((r) => r.isSent).length, [rows]);
   const confirmedPaidCount = useMemo(
@@ -3418,6 +3409,8 @@ export function HotelHistoryPage({ user = null }) {
       }
     } else if (statusFilter === "pending") {
       list = list.filter((r) => r.isPending);
+    } else if (statusFilter === "all") {
+      list = list.filter((r) => !r.isPending);
     } else if (statusFilter === "to_send") {
       list = list.filter((r) => r.isReadyToSend);
     } else if (statusFilter === "sent") {
@@ -4593,7 +4586,7 @@ export function HotelHistoryPage({ user = null }) {
             onClick={() => setStatusFilter("all")}
             className="!px-3.5 !py-2 !text-xs"
           >
-            All ({rows.length})
+            All ({allCount})
           </Pill>
           <Pill
             type="button"
@@ -4857,8 +4850,10 @@ export function HotelHistoryPage({ user = null }) {
                     ? "No confirmations registered on this date."
                     : "No confirmations yet."
             : statusFilter === "pending"
-              ? "No new pending requests today."
-              : statusFilter === "to_send"
+              ? "No pending requests awaiting a quote."
+              : statusFilter === "all"
+                ? "No processed requests yet."
+                : statusFilter === "to_send"
                 ? "No quotes ready to send. Prepare a reply first."
                 : statusFilter === "sent"
                   ? "No quotes marked as sent yet."
