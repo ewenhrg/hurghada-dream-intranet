@@ -60,6 +60,7 @@ import {
   buildUsedTicketNumberMap,
   getTicketNumberFieldErrors,
   validateQuoteTicketNumbers,
+  resolveQuoteById,
 } from "../utils/ticketCollections";
 
 const QUOTE_DOC_BUCKET = "documents";
@@ -146,7 +147,7 @@ function QuoteCardComponent({
 
   /** Modal Payer : activités triées par date (saisie des n° qui se suivent). */
   const payModalItems = useMemo(() => {
-    const items = quotes.find((q) => q.id === d.id)?.items || d.items || [];
+    const items = (resolveQuoteById(quotes, d.id) || d).items || [];
     return items
       .map((item, originalIndex) => ({ item, originalIndex }))
       .sort((a, b) => {
@@ -164,7 +165,7 @@ function QuoteCardComponent({
    * (ordre date du modal). Édition du 1er champ : écrase la suite. Autres : remplit seulement les vides.
    */
   const payModalItemCount = useMemo(
-    () => (quotes.find((q) => q.id === d.id)?.items || d.items || []).length,
+    () => ((resolveQuoteById(quotes, d.id) || d).items || []).length,
     [quotes, d]
   );
 
@@ -186,11 +187,17 @@ function QuoteCardComponent({
         if (!base || !incrementTicketNumber(base, 1)) return next;
 
         const usedElsewhere = buildUsedTicketNumberMap(quotes, { excludeQuoteId: d.id });
+        const rawQuote = resolveQuoteById(quotes, d.id) || d;
+        const ownedOnQuote = new Set(
+          (rawQuote.items || [])
+            .map((item) => normalizeTicketNumberKey(item?.ticketNumber))
+            .filter(Boolean)
+        );
         const isAvailable = (num, skipOriginalIndex) => {
           const trimmed = String(num || "").trim();
           if (!trimmed) return false;
           const key = normalizeTicketNumberKey(trimmed);
-          if (usedElsewhere.has(key)) return false;
+          if (usedElsewhere.has(key) && !ownedOnQuote.has(key)) return false;
           for (const [oi, val] of Object.entries(next)) {
             if (Number(oi) === skipOriginalIndex) continue;
             if (normalizeTicketNumberKey(val) === key) return false;
@@ -241,7 +248,7 @@ function QuoteCardComponent({
   }, [activities]);
 
   const openTicketModal = useCallback(() => {
-    const rawQuote = quotes.find((q) => q.id === d.id) || d;
+    const rawQuote = resolveQuoteById(quotes, d.id) || d;
     const initial = {};
     const initialPickups = {};
     (rawQuote.items || []).forEach((item, idx) => {
@@ -275,7 +282,7 @@ function QuoteCardComponent({
   }, [d, quotes]);
 
   const handleConfirmTickets = useCallback(async () => {
-    const rawQuote = quotes.find((q) => q.id === d.id) || d;
+    const rawQuote = resolveQuoteById(quotes, d.id) || d;
     const items = rawQuote.items || [];
     if (items.length === 0) {
       toast.warning("Aucune activité sur ce devis.");
@@ -419,7 +426,7 @@ function QuoteCardComponent({
       if (!file || !onAddDocument) return;
       setZtUploadingType(docType);
       try {
-        const rawQuote = quotes.find((q) => q.id === d.id) || d;
+        const rawQuote = resolveQuoteById(quotes, d.id) || d;
         await onAddDocument({ type: docType, label: "", file }, rawQuote);
       } finally {
         setZtUploadingType(null);
@@ -1192,7 +1199,7 @@ function QuoteCardComponent({
                       const on = e.target.checked;
                       setPayCash(on);
                       if (on) {
-                        const rawQuote = quotes.find((q) => q.id === d.id) || d;
+                        const rawQuote = resolveQuoteById(quotes, d.id) || d;
                         const items = rawQuote.items || [];
                         const cashTotal =
                           items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||
@@ -1217,7 +1224,7 @@ function QuoteCardComponent({
                       const on = e.target.checked;
                       setPayStripe(on);
                       if (on) {
-                        const rawQuote = quotes.find((q) => q.id === d.id) || d;
+                        const rawQuote = resolveQuoteById(quotes, d.id) || d;
                         const items = rawQuote.items || [];
                         const cashTotal =
                           items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||

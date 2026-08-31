@@ -46,6 +46,87 @@ export function normalizeTicketNumberKey(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+/** Identifiant de devis normalisé (évite les écarts string / number). */
+export function normalizeQuoteId(id) {
+  if (id == null || id === "") return "";
+  return String(id).trim();
+}
+
+/** Clé logique pour regrouper les doublons local / Supabase du même devis. */
+export function getQuoteIdentityKey(quote) {
+  if (!quote) return "";
+  const supabaseId = quote.supabase_id ?? quote.supabaseId;
+  if (supabaseId != null && normalizeQuoteId(supabaseId)) {
+    return `sb:${normalizeQuoteId(supabaseId)}`;
+  }
+  const phone = String(quote.client?.phone || "").trim();
+  const createdAt = String(quote.createdAt || quote.created_at || "").trim();
+  if (phone && createdAt) return `ph:${phone}|${createdAt}`;
+  return `id:${normalizeQuoteId(quote.id)}`;
+}
+
+/** Même devis malgré des ids locaux / Supabase différents. */
+export function isSameQuote(a, b) {
+  if (!a || !b) return false;
+  const idA = normalizeQuoteId(a.id);
+  const idB = normalizeQuoteId(b.id);
+  if (idA && idB && idA === idB) return true;
+
+  const supabaseA = normalizeQuoteId(a.supabase_id ?? a.supabaseId);
+  const supabaseB = normalizeQuoteId(b.supabase_id ?? b.supabaseId);
+  if (supabaseA && supabaseB && supabaseA === supabaseB) return true;
+  if (supabaseA && idB && supabaseA === idB) return true;
+  if (supabaseB && idA && supabaseB === idA) return true;
+
+  const phoneA = String(a.client?.phone || "").trim();
+  const phoneB = String(b.client?.phone || "").trim();
+  const createdA = String(a.createdAt || a.created_at || "").trim();
+  const createdB = String(b.createdAt || b.created_at || "").trim();
+  return Boolean(phoneA && createdA && phoneA === phoneB && createdA === createdB);
+}
+
+function quoteCanonicalScore(quote) {
+  let score = 0;
+  if (quote?.supabase_id ?? quote?.supabaseId) score += 1_000_000;
+  const ticketCount = (quote?.items || []).filter((it) =>
+    String(it?.ticketNumber || "").trim()
+  ).length;
+  score += ticketCount * 1_000;
+  const updated = new Date(quote?.updated_at || quote?.updatedAt || quote?.createdAt || 0).getTime();
+  if (Number.isFinite(updated)) score += updated / 1_000_000_000_000;
+  return score;
+}
+
+/** Un seul exemplaire par devis logique (évite les doublons local + Supabase). */
+function pickCanonicalQuotes(quotes) {
+  const byKey = new Map();
+  for (const quote of quotes || []) {
+    const key = getQuoteIdentityKey(quote);
+    const prev = byKey.get(key);
+    if (!prev || quoteCanonicalScore(quote) > quoteCanonicalScore(prev)) {
+      byKey.set(key, quote);
+    }
+  }
+  return [...byKey.values()];
+}
+
+function findQuoteByAnyId(quotes, quoteId) {
+  const nid = normalizeQuoteId(quoteId);
+  if (!nid) return null;
+  return (
+    (quotes || []).find(
+      (q) =>
+        normalizeQuoteId(q.id) === nid ||
+        normalizeQuoteId(q.supabase_id ?? q.supabaseId) === nid
+    ) || null
+  );
+}
+
+/** Trouve un devis par id local ou Supabase. */
+export function resolveQuoteById(quotes, quoteId) {
+  return findQuoteByAnyId(quotes, quoteId);
+}
+
 /**
  * Index des n° déjà utilisés dans les devis.
  * @param {object[]} quotes
@@ -53,8 +134,11 @@ export function normalizeTicketNumberKey(value) {
  */
 export function buildUsedTicketNumberMap(quotes, opts = {}) {
   const map = new Map();
-  for (const quote of quotes || []) {
-    const skipQuote = opts.excludeQuoteId && quote.id === opts.excludeQuoteId;
+  const excludeQuote = opts.excludeQuoteId ? findQuoteByAnyId(quotes, opts.excludeQuoteId) : null;
+  const canonicalQuotes = pickCanonicalQuotes(quotes);
+
+  for (const quote of canonicalQuotes) {
+    const skipQuote = Boolean(excludeQuote && isSameQuote(quote, excludeQuote));
     (quote.items || []).forEach((item, itemIndex) => {
       if (skipQuote) {
         if (opts.excludeItemIndex == null) return;
@@ -97,6 +181,15 @@ export function getTicketNumberFieldErrors(quotes, quoteId, drafts, itemCount) {
     values[i] = String(Array.isArray(drafts) ? drafts[i] : drafts?.[i] ?? "").trim();
   }
 
+  const currentQuote = findQuoteByAnyId(quotes, quoteId);
+  const ownedOnQuote = new Set();
+  if (currentQuote) {
+    (currentQuote.items || []).forEach((item) => {
+      const num = String(item?.ticketNumber || "").trim();
+      if (num) ownedOnQuote.add(normalizeTicketNumberKey(num));
+    });
+  }
+
   const usedElsewhere = buildUsedTicketNumberMap(quotes, { excludeQuoteId: quoteId });
   const seenInForm = new Map();
 
@@ -109,7 +202,7 @@ export function getTicketNumberFieldErrors(quotes, quoteId, drafts, itemCount) {
       continue;
     }
     seenInForm.set(key, i);
-    if (usedElsewhere.has(key)) {
+    if (usedElsewhere.has(key) && !ownedOnQuote.has(key)) {
       errors[i] = `Numéro déjà utilisé : ${num}`;
     }
   }
@@ -134,11 +227,21 @@ export function validateQuoteTicketNumbers(quotes, quoteId, ticketNumbers) {
     }
   }
 
+  const currentQuote = findQuoteByAnyId(quotes, quoteId);
+  const ownedOnQuote = new Set();
+  if (currentQuote) {
+    (currentQuote.items || []).forEach((item) => {
+      const num = String(item?.ticketNumber || "").trim();
+      if (num) ownedOnQuote.add(normalizeTicketNumberKey(num));
+    });
+  }
+
   const usedElsewhere = buildUsedTicketNumberMap(quotes, { excludeQuoteId: quoteId });
   for (const raw of list) {
     const num = String(raw || "").trim();
     if (!num) continue;
-    if (usedElsewhere.has(normalizeTicketNumberKey(num))) {
+    const key = normalizeTicketNumberKey(num);
+    if (usedElsewhere.has(key) && !ownedOnQuote.has(key)) {
       return { ok: false, message: `Numéro déjà utilisé : ${num}` };
     }
   }

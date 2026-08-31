@@ -3,7 +3,7 @@ import { Pencil, X } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { SITE_KEY, LS_KEYS } from "../../constants";
 import { saveQuotesCache, calculateCardPrice } from "../../utils";
-import { computePaidColumnsFromItems, findTicketNumberConflict } from "../../utils/ticketCollections";
+import { computePaidColumnsFromItems, findTicketNumberConflict, resolveQuoteById } from "../../utils/ticketCollections";
 import { isBoatPartyActivity } from "../../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
@@ -74,7 +74,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
   if (!open || !row) return null;
 
   const handleSave = async () => {
-    const quote = (quotes || []).find((q) => q.id === row.quoteId);
+    const quote = resolveQuoteById(quotes, row.quoteId);
     if (!quote) {
       toast.error("Devis introuvable pour cette ligne.");
       return;
