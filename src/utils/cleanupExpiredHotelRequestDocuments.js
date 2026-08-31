@@ -5,8 +5,16 @@ import { toLocalDateKey } from "./quoteUserStats.js";
 /** Supprimer les fichiers 2 jours après la date de départ. */
 export const HOTEL_DOCS_RETENTION_DAYS_AFTER_DEPARTURE = 2;
 
-/** Supprimer la demande entière dès le lendemain du check-out. */
+/** Supprimer la demande entière dès le lendemain du check-in / check-out. */
 export const HOTEL_REQUEST_DELETE_DAYS_AFTER_DEPARTURE = 0;
+
+function rowArrivalDate(row) {
+  return String(row?.arrival_date ?? row?.arrivalDate ?? "").trim();
+}
+
+function rowDepartureDate(row) {
+  return String(row?.departure_date ?? row?.departureDate ?? "").trim();
+}
 
 function parseIsoDateOnly(iso) {
   const s = String(iso || "").trim();
@@ -42,6 +50,28 @@ export function isCheckoutDatePassed(
   asOf = new Date()
 ) {
   return isDeparturePastRetention(departureDate, daysAfter, asOf);
+}
+
+/** Check-in dépassé (par défaut : à partir du lendemain de la date d’arrivée). */
+export function isCheckinDatePassed(
+  arrivalDate,
+  daysAfter = HOTEL_REQUEST_DELETE_DAYS_AFTER_DEPARTURE,
+  asOf = new Date()
+) {
+  return isDeparturePastRetention(arrivalDate, daysAfter, asOf);
+}
+
+/** Demande à supprimer : check-in ou check-out dépassé. */
+export function isHotelRequestExpiredForCleanup(
+  row,
+  daysAfter = HOTEL_REQUEST_DELETE_DAYS_AFTER_DEPARTURE,
+  asOf = new Date()
+) {
+  const arrival = rowArrivalDate(row);
+  const departure = rowDepartureDate(row);
+  if (departure && isCheckoutDatePassed(departure, daysAfter, asOf)) return true;
+  if (arrival && isCheckinDatePassed(arrival, daysAfter, asOf)) return true;
+  return false;
 }
 
 function parseRowPayload(row) {
@@ -180,7 +210,7 @@ export async function cleanupExpiredHotelRequestDocuments({
 }
 
 /**
- * Supprime les demandes hôtel dont le check-out est dépassé (toutes listes Hotel History).
+ * Supprime les demandes hôtel dont le check-in ou le check-out est dépassé.
  * Supprime aussi les fichiers Storage liés (documents + preuves de paiement).
  * @returns {Promise<{ deletedCount: number, deletedIds: string[] }>}
  */
@@ -197,11 +227,9 @@ export async function cleanupExpiredHotelRequests({
 
   const { data: expired, error: loadError } = await supabase
     .from("public_hotel_requests")
-    .select("id, response_payload, departure_date")
+    .select("id, response_payload, arrival_date, departure_date")
     .eq("site_key", siteKey)
-    .not("departure_date", "is", null)
-    .neq("departure_date", "")
-    .lt("departure_date", todayKey);
+    .or(`departure_date.lt.${todayKey},arrival_date.lt.${todayKey}`);
 
   if (loadError) {
     logger?.error?.("cleanup expired hotel requests load:", loadError);
@@ -209,7 +237,7 @@ export async function cleanupExpiredHotelRequests({
   }
 
   const rows = (expired || []).filter((row) =>
-    isCheckoutDatePassed(row.departure_date, daysAfterDeparture)
+    isHotelRequestExpiredForCleanup(row, daysAfterDeparture)
   );
   if (rows.length === 0) return { deletedCount: 0, deletedIds: [] };
 

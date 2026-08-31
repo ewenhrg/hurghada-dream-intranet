@@ -61,7 +61,7 @@ import {
 import {
   cleanupExpiredHotelRequestDocuments,
   cleanupExpiredHotelRequests,
-  isCheckoutDatePassed,
+  isHotelRequestExpiredForCleanup,
   storageRefFromPublicUrl,
 } from "../utils/cleanupExpiredHotelRequestDocuments";
 import { canDeleteHotelRequest } from "../constants/permissions";
@@ -3177,8 +3177,8 @@ export function HotelHistoryPage({ user = null }) {
           if (deletedCount > 0) {
             toast.info(
               deletedCount === 1
-                ? "1 past stay request was automatically deleted (checkout passed)."
-                : `${deletedCount} past stay requests were automatically deleted (checkout passed).`,
+                ? "1 past stay request was automatically deleted (check-in or check-out passed)."
+                : `${deletedCount} past stay requests were automatically deleted (check-in or check-out passed).`,
               4500
             );
           }
@@ -3246,7 +3246,7 @@ export function HotelHistoryPage({ user = null }) {
 
       setRows(
         rowsData
-          .filter((row) => !isCheckoutDatePassed(row.departure_date))
+          .filter((row) => !isHotelRequestExpiredForCleanup(row))
           .map(rowToHotelRequestViewModel)
       );
     } catch (e) {
