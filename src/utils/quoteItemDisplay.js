@@ -1,5 +1,6 @@
 import {
   isBoatPartyActivity,
+  isSpeedBoatActivity,
   allowsSpeedBoatDolphinExtra,
   allowsSpeedBoatIslandExtras,
   formatTurtleFinSizesLabel,
@@ -117,13 +118,23 @@ function normalizeSpeedBoatExtras(item) {
 export function getQuoteItemExtraLabels(item) {
   if (!item || typeof item !== "object") return [];
   const labels = [];
-  const activityName = item.activityName || "";
+  // Préférer le nom FR pour la détection (le nom EN peut différer sur Situation)
+  const activityName =
+    String(item.activityNameFr || item.activityName || item.activity_name || "").trim();
+  const speedBoatExtras = normalizeSpeedBoatExtras(item);
 
-  if (allowsSpeedBoatDolphinExtra(activityName) && item.extraDolphin) {
+  if (
+    (allowsSpeedBoatDolphinExtra(activityName) ||
+      (item.extraDolphin && speedBoatExtras.length === 0 && isSpeedBoatActivity(activityName))) &&
+    item.extraDolphin
+  ) {
     labels.push("Dauphin");
   }
-  if (allowsSpeedBoatIslandExtras(activityName)) {
-    for (const id of normalizeSpeedBoatExtras(item)) {
+  if (
+    allowsSpeedBoatIslandExtras(activityName) ||
+    (speedBoatExtras.length > 0 && !item.extraDolphin)
+  ) {
+    for (const id of speedBoatExtras) {
       const ex = SPEED_BOAT_EXTRAS.find((e) => e.id === id);
       if (ex?.id) labels.push(ex.label);
       else if (id) labels.push(String(id));
@@ -220,21 +231,25 @@ export function getZeroTracasServiceCounts(item) {
 }
 
 /**
- * Activité + extras (colonne Excel).
- * Speed Boat avec île : on privilégie le nom d’île (comme sur ton tableau : « Eden Island », « Orange bay »).
+ * Activité + extras (colonne Excel / Situation).
+ * Speed Boat avec île : « Speed Boat + OZERIA » (activité + option).
  */
 export function formatActivityWithExtras(item) {
   const name = String(item?.activityName || "").trim() || "—";
+  const nameFr = String(item?.activityNameFr || "").trim();
   const extras = getQuoteItemExtraLabels(item);
   if (!extras.length) return name;
 
   const isSpeedBoat =
-    name.toLowerCase().includes("speed boat") || name.toLowerCase().includes("speedboat");
+    isSpeedBoatActivity(name) ||
+    isSpeedBoatActivity(nameFr) ||
+    normalizeSpeedBoatExtras(item).length > 0;
   if (isSpeedBoat) {
     const islands = extras.filter((e) => e !== "Dauphin" && !String(e).startsWith("Transfert privé"));
     const rest = extras.filter((e) => e === "Dauphin" || String(e).startsWith("Transfert privé"));
     if (islands.length > 0) {
-      return [...islands, ...rest].join(" · ");
+      const withOption = `${name} + ${islands.join(" + ")}`;
+      return rest.length ? `${withOption} · ${rest.join(" · ")}` : withOption;
     }
   }
 

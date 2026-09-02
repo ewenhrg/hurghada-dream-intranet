@@ -211,7 +211,11 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
 
         const boatParty = isBoatPartyActivity(item.activityName);
         const activityDisplayName = resolveTicketActivityName(item, activitiesById);
-        const itemForDisplay = { ...item, activityName: activityDisplayName };
+        const itemForDisplay = {
+          ...item,
+          activityName: activityDisplayName,
+          activityNameFr: String(item.activityName || "").trim(),
+        };
         list.push({
           key: `${quote.id || "q"}-${idx}-${ticketNumber}`,
           quoteId: quote.id,
