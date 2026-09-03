@@ -98,6 +98,8 @@ function QuoteCardComponent({
   const [payStripe, setPayStripe] = useState(false);
   const [payCashAmount, setPayCashAmount] = useState("");
   const [payStripeAmount, setPayStripeAmount] = useState("");
+  const [payRestAmount, setPayRestAmount] = useState("");
+  const [payRestItemIndex, setPayRestItemIndex] = useState("");
   const [ticketGenerating, setTicketGenerating] = useState(false);
   const [ztUploadingType, setZtUploadingType] = useState(null);
 
@@ -278,6 +280,19 @@ function QuoteCardComponent({
         ? String(existingStripe > 0 ? existingStripe : cardTotal)
         : ""
     );
+    const existingRestIdx = items.findIndex((it) => Math.round(Number(it?.restAmount) || 0) > 0);
+    const existingRest =
+      existingRestIdx >= 0
+        ? Math.round(Number(items[existingRestIdx].restAmount) || 0)
+        : Math.round(Number(rawQuote.paymentRestAmount) || 0);
+    setPayRestAmount(existingRest > 0 ? String(existingRest) : "");
+    setPayRestItemIndex(
+      existingRest > 0 && existingRestIdx >= 0
+        ? String(existingRestIdx)
+        : existingRest > 0 && rawQuote.paymentRestItemIndex != null
+          ? String(rawQuote.paymentRestItemIndex)
+          : ""
+    );
     setShowTicketModal(true);
   }, [d, quotes]);
 
@@ -311,6 +326,18 @@ function QuoteCardComponent({
         return;
       }
       paidStripeAmount = parsed;
+    }
+
+    const restParsed = Math.round(Number(String(payRestAmount).replace(",", ".")) || 0);
+    const restItemIndex =
+      payRestItemIndex === "" || payRestItemIndex == null
+        ? -1
+        : Number(payRestItemIndex);
+    if (restParsed > 0) {
+      if (!Number.isInteger(restItemIndex) || restItemIndex < 0 || restItemIndex >= items.length) {
+        toast.warning("Choisissez l’activité concernée par le reste à payer.");
+        return;
+      }
     }
 
     if (needsZeroTracasDocs && !hasAllZeroTracasRequiredDocuments(rawQuote)) {
@@ -364,6 +391,8 @@ function QuoteCardComponent({
         paymentMethod: paymentMethodLabel || item.paymentMethod || "",
         // Conserver la 1re date d’encaissement si déjà payé
         ticketsEnteredAt: item.ticketsEnteredAt || enteredAt,
+        restAmount:
+          restParsed > 0 && idx === restItemIndex ? restParsed : 0,
       }));
 
       const updatedQuote = {
@@ -375,6 +404,8 @@ function QuoteCardComponent({
         ticketsPaymentStripe: payStripe === true,
         paidCash: paidCashAmount,
         paidStripe: paidStripeAmount,
+        paymentRestAmount: restParsed > 0 ? restParsed : 0,
+        paymentRestItemIndex: restParsed > 0 ? restItemIndex : null,
         totalCash: cashTotal,
         totalCard: cardTotal,
         updated_at: enteredAt,
@@ -419,7 +450,7 @@ function QuoteCardComponent({
     } finally {
       setTicketGenerating(false);
     }
-  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, pickupDrafts, user, payCash, payStripe, payCashAmount, payStripeAmount, needsZeroTracasDocs]);
+  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, pickupDrafts, user, payCash, payStripe, payCashAmount, payStripeAmount, payRestAmount, payRestItemIndex, needsZeroTracasDocs]);
 
   const handleZeroTracasDocPick = useCallback(
     async (docType, file) => {
@@ -1069,6 +1100,16 @@ function QuoteCardComponent({
                       {currencyNoCents(Math.round(item.lineTotal || 0), d.currency || "EUR")}
                     </p>
                   </div>
+                  {String(payRestItemIndex) === String(originalIndex) &&
+                  Math.round(Number(String(payRestAmount).replace(",", ".")) || 0) > 0 ? (
+                    <p className="mt-2 rounded-lg bg-amber-100 px-2.5 py-1.5 text-xs font-bold text-amber-900">
+                      Reste à payer :{" "}
+                      {currencyNoCents(
+                        Math.round(Number(String(payRestAmount).replace(",", ".")) || 0),
+                        d.currency || "EUR"
+                      )}
+                    </p>
+                  ) : null}
                   <label className="mt-3 block">
                     <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
                       N° ticket
@@ -1287,6 +1328,68 @@ function QuoteCardComponent({
                   ) : null}
                 </div>
               ) : null}
+            </fieldset>
+
+            <fieldset className="mt-5 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3.5">
+              <legend className="px-1 text-[11px] font-bold uppercase tracking-wide text-amber-800">
+                Reste à payer (optionnel)
+              </legend>
+              <p className="text-xs font-medium text-amber-900/80 mb-3">
+                Si le client n’a pas tout réglé, indiquez le montant restant et l’activité concernée.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block rounded-xl border border-amber-200 bg-white px-3 py-2.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-amber-900">
+                    Montant du reste (€)
+                  </span>
+                  <NumberInput
+                    className="mt-1.5"
+                    value={payRestAmount}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setPayRestAmount(next);
+                      const parsed = Math.round(Number(String(next).replace(",", ".")) || 0);
+                      if (!(parsed > 0)) setPayRestItemIndex("");
+                    }}
+                    inputMode="decimal"
+                    min={0}
+                    step={1}
+                    placeholder="ex. 40"
+                    disabled={ticketGenerating}
+                    aria-label="Montant du reste à payer"
+                  />
+                </label>
+                <label className="block rounded-xl border border-amber-200 bg-white px-3 py-2.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-amber-900">
+                    Activité concernée
+                  </span>
+                  <select
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 disabled:opacity-60"
+                    value={payRestItemIndex}
+                    onChange={(e) => setPayRestItemIndex(e.target.value)}
+                    disabled={
+                      ticketGenerating ||
+                      !(Math.round(Number(String(payRestAmount).replace(",", ".")) || 0) > 0)
+                    }
+                    aria-label="Activité concernée par le reste à payer"
+                  >
+                    <option value="">
+                      {Math.round(Number(String(payRestAmount).replace(",", ".")) || 0) > 0
+                        ? "Choisir une activité…"
+                        : "— Saisir un reste d’abord —"}
+                    </option>
+                    {payModalItems.map(({ item, originalIndex }) => (
+                      <option key={`rest-act-${originalIndex}`} value={String(originalIndex)}>
+                        {item.activityName || `Activité ${originalIndex + 1}`}
+                        {item.date
+                          ? ` · ${new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR")}`
+                          : ""}
+                        {` · ${currencyNoCents(Math.round(item.lineTotal || 0), d.currency || "EUR")}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </fieldset>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-end mt-6">

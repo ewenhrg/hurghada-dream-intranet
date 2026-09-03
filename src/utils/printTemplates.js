@@ -804,10 +804,14 @@ export function generateTicketsHTML(quote, options = {}) {
             ${item.ticketNumber ? `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">${esc(item.ticketNumber)}</span></div>` : `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">—</span></div>`}
             ${enteredBy ? `<div class="tf"><span class="tf-l">✍️ Tickets saisis par</span><span class="tf-v">${esc(enteredBy)}</span></div>` : ""}
           </div>
-          <div class="ticket-balance">
+          <div class="ticket-balance${Math.round(Number(item.restAmount) || 0) > 0 ? " ticket-balance--filled" : ""}">
             <span class="ticket-balance-label">Reste à payer</span>
-            <span class="ticket-balance-write" aria-hidden="true"></span>
-            <span class="ticket-balance-hint">à remplir à la main</span>
+            ${
+              Math.round(Number(item.restAmount) || 0) > 0
+                ? `<span class="ticket-balance-value">${esc(currencyNoCents(Math.round(Number(item.restAmount) || 0), quote.currency))}</span>`
+                : `<span class="ticket-balance-write" aria-hidden="true"></span>
+            <span class="ticket-balance-hint">à remplir à la main</span>`
+            }
           </div>
         </div>
       </div>`;
@@ -1080,6 +1084,15 @@ export function generateTicketsHTML(quote, options = {}) {
       min-width: 90px;
       min-height: 18px;
       border-bottom: 1.5px solid #334155;
+    }
+    .ticket-balance-value {
+      font-size: 13px;
+      font-weight: 800;
+      color: #b45309;
+      letter-spacing: 0.2px;
+    }
+    .ticket-balance--filled .ticket-balance-label {
+      color: #92400e;
     }
     .ticket-balance-hint {
       font-size: 8px;
