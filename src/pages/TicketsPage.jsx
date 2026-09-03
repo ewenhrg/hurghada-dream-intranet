@@ -21,6 +21,10 @@ import {
   Trash2,
 } from "lucide-react";
 import { currencyNoCents, saveLS, saveQuotesCache, loadLS, resolveTicketActivityName, buildActivitiesByIdMap, calculateCardPrice } from "../utils";
+import {
+  calculateTransferSurchargeFromItem,
+  getPrivateTransferLabel,
+} from "../utils/transferPricing";
 import { generateTicketsHTML } from "../utils/printTemplates";
 import { LS_KEYS, SITE_KEY } from "../constants";
 import { useDebounce } from "../hooks/useDebounce";
@@ -29,10 +33,7 @@ import {
   formatClientShortWithPhone,
   getQuoteItemParticipantCells,
 } from "../utils/quoteItemDisplay.js";
-import {
-  calculateTransferSurchargeFromItem,
-} from "../utils/transferPricing.js";
-import { isBoatPartyActivity } from "../utils/activityHelpers";
+import { isBoatPartyActivity, formatTurtleFinSizesLabel } from "../utils/activityHelpers";
 import { TextInput } from "../components/ui";
 import { EditTicketLineModal } from "../components/tickets/EditTicketLineModal.jsx";
 import { toast } from "../utils/toast.js";
@@ -133,11 +134,44 @@ function activitySortKeyFromName(name) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-/** Libellé colonne Comment : uniquement le reste à payer. */
-function formatRestComment(restAmount, currency = "EUR") {
-  const amount = Math.round(Number(restAmount) || 0);
-  if (!(amount > 0)) return "";
-  return `Reste ${currencyNoCents(amount, currency)}`;
+/** Libellés colonne Comment : reste, transfert privé, réductions, pointures palmes. */
+function formatSituationComment(item, currency = "EUR") {
+  const parts = [];
+
+  const restAmount = Math.round(Number(item?.restAmount) || 0);
+  if (restAmount > 0) {
+    parts.push(`Reste ${currencyNoCents(restAmount, currency)}`);
+  }
+
+  const privateLabel = getPrivateTransferLabel(item?.privateTransferTier);
+  if (privateLabel) {
+    parts.push(privateLabel);
+  }
+
+  const extraLabelText = item?.extraLabel != null ? String(item.extraLabel).trim() : "";
+  const extraAmountRaw = item?.extraAmount != null ? String(item.extraAmount).trim() : "";
+  const extraAmountValue = extraAmountRaw === "" ? 0 : Number(extraAmountRaw);
+  if (Number.isFinite(extraAmountValue) && extraAmountValue < 0) {
+    const label = extraLabelText || "Réduction";
+    parts.push(`${label} ${currencyNoCents(extraAmountValue, currency)}`);
+  } else if (
+    extraLabelText &&
+    /transfert\s*priv|private\s*transfer|discount|r[ée]duction/i.test(extraLabelText)
+  ) {
+    // Libellé manuel lié au transfert privé / réduction, même sans montant négatif
+    parts.push(
+      Number.isFinite(extraAmountValue) && extraAmountValue !== 0
+        ? `${extraLabelText} ${currencyNoCents(extraAmountValue, currency)}`
+        : extraLabelText
+    );
+  }
+
+  const finSizesLabel = formatTurtleFinSizesLabel(item);
+  if (finSizesLabel) {
+    parts.push(finSizesLabel);
+  }
+
+  return parts.join(" · ");
 }
 
 function excelBorder(color = "CBD5E1") {
@@ -245,7 +279,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           activityBaseName: activityDisplayName || "—",
           activityNameFr: String(item.activityName || "").trim(),
           pickup: pickup || "",
-          comment: formatRestComment(item.restAmount, quote.currency || "EUR"),
+          comment: formatSituationComment(item, quote.currency || "EUR"),
           restAmount: Math.round(Number(item.restAmount) || 0),
           priceValue,
           priceLabel: currencyNoCents(priceValue, quote.currency || "EUR"),
@@ -1089,7 +1123,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                   <th scope="col" className={TH_BASE} title="Prise en charge">
                     Heure
                   </th>
-                  <th scope="col" className={`${TH_BASE} !bg-amber-600`} title="Reste à payer">
+                  <th scope="col" className={`${TH_BASE} !bg-amber-600`} title="Reste, transfert privé, réductions, pointures palmes">
                     Comment
                   </th>
                   <th scope="col" className={`${TH_BASE} !bg-teal-600`} title="Prix">
