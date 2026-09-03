@@ -53,7 +53,7 @@ const slotLabel = (slot) =>
 const paymentText = (method) =>
   method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
 
-/** En-têtes Excel = ordre exact du fichier ops (15 colonnes, Note vide pour aligner le collage). */
+/** En-têtes Excel = ordre ops (15 colonnes). Comment = reste à payer après prise en charge. */
 const EXPORT_HEADERS = [
   "N° Ticket",
   "Date",
@@ -65,14 +65,15 @@ const EXPORT_HEADERS = [
   "Bébés",
   "Activité + extras",
   "Prise en charge",
-  "Note",
+  "Comment",
   "Prix",
   "Supp. transfert",
   "Paiement",
   "Vendeur",
 ];
 
-const COL_COUNT = 15;
+/** Colonnes tableau Situation (✓ + 15 données). */
+const COL_COUNT = 16;
 
 /** Pagination : évite de monter des milliers de lignes d’un coup. */
 const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
@@ -130,6 +131,13 @@ function activitySortKeyFromName(name) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Libellé colonne Comment : uniquement le reste à payer. */
+function formatRestComment(restAmount, currency = "EUR") {
+  const amount = Math.round(Number(restAmount) || 0);
+  if (!(amount > 0)) return "";
+  return `Reste ${currencyNoCents(amount, currency)}`;
 }
 
 function excelBorder(color = "CBD5E1") {
@@ -237,6 +245,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           activityBaseName: activityDisplayName || "—",
           activityNameFr: String(item.activityName || "").trim(),
           pickup: pickup || "",
+          comment: formatRestComment(item.restAmount, quote.currency || "EUR"),
+          restAmount: Math.round(Number(item.restAmount) || 0),
           priceValue,
           priceLabel: currencyNoCents(priceValue, quote.currency || "EUR"),
           transferValue,
@@ -286,6 +296,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.hotel,
         r.room,
         r.createdByName,
+        r.comment,
       ].some((v) => String(v || "").toLowerCase().includes(term));
     });
   }, [rows, debouncedQ, statusFilter, copied]);
@@ -408,7 +419,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.babies || "",
         r.activity,
         r.pickup || "",
-        "", // colonne Note volontairement vide (alignement Excel ops)
+        r.comment || "",
         r.priceValue || "",
         r.transferValue > 0 ? r.transferValue : "",
         paymentText(r.paymentMethod),
@@ -746,7 +757,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.babies || "",
         r.activity,
         r.pickup || "",
-        "", // colonne Note volontairement vide (alignement Excel ops)
+        r.comment || "",
         r.priceValue || "",
         r.transferValue > 0 ? r.transferValue : "",
         paymentText(r.paymentMethod),
@@ -1037,11 +1048,11 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                 <col style={{ width: "2.5%" }} />
                 <col style={{ width: "14%" }} />
                 <col style={{ width: "5%" }} />
-                <col style={{ width: "7%" }} />
+                <col style={{ width: "7.5%" }} />
+                <col style={{ width: "6%" }} />
                 <col style={{ width: "4%" }} />
                 <col style={{ width: "4%" }} />
-                <col style={{ width: "5%" }} />
-                <col style={{ width: "6.5%" }} />
+                <col style={{ width: "5.5%" }} />
               </colgroup>
               <thead className="sticky top-0 z-10">
                 <tr className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600">
@@ -1077,6 +1088,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                   </th>
                   <th scope="col" className={TH_BASE} title="Prise en charge">
                     Heure
+                  </th>
+                  <th scope="col" className={`${TH_BASE} !bg-amber-600`} title="Reste à payer">
+                    Comment
                   </th>
                   <th scope="col" className={`${TH_BASE} !bg-teal-600`} title="Prix">
                     Prix
@@ -1227,6 +1241,16 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                       </td>
                       <td className={`${TD} truncate text-center font-semibold text-violet-800`} title={r.pickup}>
                         {r.pickup || ""}
+                      </td>
+                      <td
+                        className={`${TD} truncate text-center font-bold text-amber-900`}
+                        title={r.comment || ""}
+                      >
+                        {r.comment ? (
+                          <span className="inline-block rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-950">
+                            {r.comment}
+                          </span>
+                        ) : null}
                       </td>
                       <td className={`${TD} text-center tabular-nums font-bold text-teal-800`}>
                         {r.priceValue || ""}
