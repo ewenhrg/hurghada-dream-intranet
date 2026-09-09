@@ -603,7 +603,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
     if (!activity) return "";
     if (isSpeedBoatActivity(activity.name)) {
       if (isSpeedBoatSunsetActivity(activity.name)) {
-        return `Grille Speed Boat Sunset : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant (sans extra dauphin ni îles).\n${getSpeedBoatMaxParticipantsMessage()}`;
+        return `Grille Speed Boat Sunset : base 125 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant (sans extra dauphin ni îles).\n${getSpeedBoatMaxParticipantsMessage()}`;
       }
       return [
         "Grille Speed Boat : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant.",

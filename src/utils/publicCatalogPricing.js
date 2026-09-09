@@ -5,6 +5,7 @@
 
 import {
   isSpeedBoatActivity,
+  getSpeedBoatBasePrice,
   computeSpeedBoatLineTotal,
   isBuggyActivity,
   getBuggyPrices,
@@ -198,12 +199,12 @@ export function getPublicCatalogListFromPrice(activity) {
   if (isCalecheActivity(name)) {
     return { amount: getCalecheUnitPrice(activity), currency: activity.currency || "EUR" };
   }
+  if (isSpeedBoatActivity(name)) {
+    return { amount: getSpeedBoatBasePrice(name), currency: activity.currency || "EUR" };
+  }
   const db = readDbPrices(activity);
   if (db.adult > 0) {
     return { amount: db.adult, currency: activity.currency || "EUR" };
-  }
-  if (isSpeedBoatActivity(name)) {
-    return { amount: 145, currency: activity.currency || "EUR" };
   }
   if (isBuggyActivity(name)) {
     const p = getBuggyPrices(name);
