@@ -5,6 +5,7 @@ import { TextInput, PrimaryBtn, GhostBtn, Pill } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { generateRequestLink, generateRequestToken } from "../utils/tokenGenerator";
+import { formatPhoneWithPlus } from "../utils";
 // NOTE: cache non utilisé ici pour l'instant
 
 export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteFromRequest }) {
@@ -337,7 +338,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
                           {request.client_name || "Sans nom"}
                         </h3>
                         <p className="text-sm text-gray-600">
-                          📞 {request.client_phone || "Non renseigné"}
+                          📞 {formatPhoneWithPlus(request.client_phone) || "Non renseigné"}
                         </p>
                         {request.client_email && (
                           <p className="text-sm text-gray-600">
@@ -526,7 +527,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
                               {request.client_name || "Sans nom"}
                             </h4>
                             <p className="text-sm text-gray-600">
-                              📞 {request.client_phone || "Non renseigné"}
+                              📞 {formatPhoneWithPlus(request.client_phone) || "Non renseigné"}
                             </p>
                             {request.client_email && (
                               <p className="text-sm text-gray-600">

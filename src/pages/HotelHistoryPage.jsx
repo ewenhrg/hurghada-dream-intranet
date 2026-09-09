@@ -23,6 +23,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
+import { formatPhoneWithPlus } from "../utils";
 import { useDebounce } from "../hooks/useDebounce";
 import { GhostBtn, NumberInput, Pill, PrimaryBtn, TextInput } from "../components/ui";
 import { DateInput } from "../components/DateInput";
@@ -581,7 +582,7 @@ export function rowToHotelRequestViewModel(row) {
     supabaseId: row.id,
     firstName: row.first_name || "",
     lastName: row.last_name || "",
-    phone: row.client_phone || "",
+    phone: formatPhoneWithPlus(row.client_phone || ""),
     email: row.client_email || "",
     arrivalDate: normalizeStayDate(row.arrival_date),
     departureDate: normalizeStayDate(row.departure_date),
@@ -673,7 +674,7 @@ function viewModelToPayload(vm) {
   return {
     first_name: vm.firstName.trim(),
     last_name: vm.lastName.trim(),
-    client_phone: vm.phone.trim(),
+    client_phone: formatPhoneWithPlus(vm.phone),
     client_email: vm.email.trim(),
     arrival_date: vm.arrivalDate || "",
     departure_date: vm.departureDate || "",
@@ -1243,7 +1244,7 @@ const HotelRequestCard = memo(function HotelRequestCard({
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
             <span className="text-[11px] font-bold uppercase text-slate-500">Phone</span>
-            <p className="mt-0.5 font-semibold text-slate-950">{request.phone || "—"}</p>
+            <p className="mt-0.5 font-semibold text-slate-950">{formatPhoneWithPlus(request.phone) || "—"}</p>
           </div>
           <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
             <span className="text-[11px] font-bold uppercase text-slate-500">E-mail</span>
@@ -1456,7 +1457,7 @@ function getStayOpsSummary(request) {
   return {
     ref: shortRef || "—",
     firstName: String(request?.firstName || "").trim() || "—",
-    phone: String(request?.phone || "").trim() || "—",
+    phone: formatPhoneWithPlus(request?.phone) || "—",
     hotel: hotelNames.length > 0 ? hotelNames.join(" + ") : "—",
     checkIn,
     checkOut,
@@ -2629,7 +2630,7 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
             <input
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
               value={draft.phone}
-              onChange={(e) => setDraft((d) => ({ ...d, phone: e.target.value }))}
+              onChange={(e) => setDraft((d) => ({ ...d, phone: formatPhoneWithPlus(e.target.value) }))}
             />
           </label>
           <label className="block text-xs font-bold text-slate-600">

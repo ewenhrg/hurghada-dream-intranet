@@ -1,6 +1,6 @@
 import { TextInput } from "../ui";
 import { NEIGHBORHOODS } from "../../constants";
-import { cleanPhoneNumber } from "../../utils";
+import { formatPhoneWithPlus } from "../../utils";
 
 export function ClientInfoSection({ client, setClient }) {
   return (
@@ -17,9 +17,9 @@ export function ClientInfoSection({ client, setClient }) {
         <div>
           <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-2">Téléphone</label>
           <TextInput 
-            value={client.phone} 
+            value={formatPhoneWithPlus(client.phone)} 
             onChange={(e) => {
-              const cleaned = cleanPhoneNumber(e.target.value);
+              const cleaned = formatPhoneWithPlus(e.target.value);
               setClient((c) => ({ ...c, phone: cleaned }));
             }} 
             placeholder="06 12 34 56 78"

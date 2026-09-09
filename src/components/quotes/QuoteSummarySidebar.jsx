@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { currencyNoCents } from "../../utils";
+import { currencyNoCents, formatPhoneWithPlus } from "../../utils";
 
 /**
  * Composant pour afficher le résumé dynamique du devis dans un panneau sticky
@@ -50,7 +50,7 @@ export const QuoteSummarySidebar = memo(function QuoteSummarySidebar({
               <p className="text-sm text-slate-400 italic">Nom non renseigné</p>
             )}
             {client.phone && (
-              <p className="text-xs text-slate-600">{client.phone}</p>
+              <p className="text-xs text-slate-600">{formatPhoneWithPlus(client.phone)}</p>
             )}
             {client.hotel && (
               <p className="text-xs text-slate-600">🏨 {client.hotel}</p>

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
-import { uuid, currency, currencyNoCents, calculateCardPrice, saveQuotesCache, cleanPhoneNumber, formatPhoneWithPlus, toBoundedInt10 } from "../utils";
+import { uuid, currency, currencyNoCents, calculateCardPrice, saveQuotesCache, formatPhoneWithPlus, toBoundedInt10 } from "../utils";
 import { setVisibilityAwareInterval } from "../utils/idle";
 import { generateQuoteHTML } from "../utils/printTemplates";
 import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isArrivalDayServiceActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage } from "../utils/activityHelpers";
@@ -1395,9 +1395,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 Téléphone *
               </label>
               <TextInput 
-                value={client.phone} 
+                value={formatPhoneWithPlus(client.phone)} 
                 onChange={(e) => {
-                  const cleaned = cleanPhoneNumber(e.target.value);
+                  const cleaned = formatPhoneWithPlus(e.target.value);
                   setClient((c) => ({ ...c, phone: cleaned }));
                 }}
                 placeholder="+33 6 12 34 56 78"
@@ -1410,9 +1410,9 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                 Numéro d&apos;urgence
               </label>
               <TextInput
-                value={client.emergencyPhone || ""}
+                value={formatPhoneWithPlus(client.emergencyPhone || "")}
                 onChange={(e) => {
-                  const cleaned = cleanPhoneNumber(e.target.value);
+                  const cleaned = formatPhoneWithPlus(e.target.value);
                   setClient((c) => ({ ...c, emergencyPhone: cleaned }));
                 }}
                 placeholder="+33 6 12 34 56 78"

@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { TextInput } from "../ui";
+import { formatPhoneWithPlus } from "../../utils";
 
 export const TransferClientsTable = memo(({ rows, data }) => {
   const {
@@ -89,7 +90,7 @@ export const TransferClientsTable = memo(({ rows, data }) => {
                       }`}
                       title="Modifier le téléphone"
                     >
-                      {row.phone || "⚠ manquant"}
+                      {formatPhoneWithPlus(row.phone) || "⚠ manquant"}
                     </button>
                   )}
                 </td>

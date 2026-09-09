@@ -8,6 +8,7 @@ import {
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { getPrivateTransferLabel } from "./transferPricing";
 import { formatDivingVisitorLabel } from "./divingSafety.js";
+import { formatPhoneWithPlus } from "../utils.js";
 
 /** Résumé participants pour cartes / modales (ex. historique). */
 export function formatQuoteItemParticipantsSummary(item) {
@@ -101,7 +102,7 @@ export function getClientFirstNameShort(name, length = 3) {
 /** Cellule Excel : AAA + téléphone. */
 export function formatClientShortWithPhone(name, phone) {
   const short = getClientFirstNameShort(name);
-  const tel = String(phone || "").trim();
+  const tel = formatPhoneWithPlus(phone);
   if (short && tel) return `${short} ${tel}`;
   if (short) return short;
   return tel || "";

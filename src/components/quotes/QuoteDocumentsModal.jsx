@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { FileText, Upload } from "lucide-react";
 import { GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
+import { formatPhoneWithPlus } from "../../utils";
 import { hotelClientDocTypeLabel, normalizeClientDocuments } from "../../utils/hotelRequestDocuments";
 import {
   getQuoteLastActivityDate,
@@ -81,7 +82,7 @@ export function QuoteDocumentsModal({ quote, onClose, onAdd, onRemove, saving })
   if (!quote) return null;
 
   const clientLabel =
-    [quote.client?.name, quote.client?.phone].filter(Boolean).join(" · ") || "Client";
+    [quote.client?.name, formatPhoneWithPlus(quote.client?.phone)].filter(Boolean).join(" · ") || "Client";
 
   const zoneDisabled = expired || uploading;
 

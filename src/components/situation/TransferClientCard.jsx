@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { TextInput } from "../ui";
+import { formatPhoneWithPlus } from "../../utils";
 
 export const TransferClientCard = memo(({ row, data }) => {
   const {
@@ -54,7 +55,7 @@ export const TransferClientCard = memo(({ row, data }) => {
               }`}
               title="Cliquer pour modifier le téléphone"
             >
-              {row.phone || "⚠ Pas de téléphone"}
+              {formatPhoneWithPlus(row.phone) || "⚠ Pas de téléphone"}
             </button>
           )}
 

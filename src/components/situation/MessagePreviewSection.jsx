@@ -1,5 +1,6 @@
 import { memo, useState, useMemo, useEffect } from "react";
 import { GhostBtn, TextInput } from "../ui";
+import { formatPhoneWithPlus } from "../../utils";
 
 export const MessagePreviewSection = memo(({ previewMessages, onMessageChange, onClose }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -89,7 +90,7 @@ export const MessagePreviewSection = memo(({ previewMessages, onMessageChange, o
                       </div>
                       {msg.phone ? (
                         <span className="text-base font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
-                          📞 {msg.phone}
+                          📞 {formatPhoneWithPlus(msg.phone)}
                         </span>
                       ) : (
                         <span className="text-base font-semibold text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">

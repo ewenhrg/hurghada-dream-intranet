@@ -5,6 +5,7 @@ import { SITE_KEY, CATEGORIES } from "../constants";
 import { TextInput, PrimaryBtn } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
+import { formatPhoneWithPlus } from "../utils";
 
 // Composant Tooltip amélioré
 function Tooltip({ text, children, id, position = "top" }) {
@@ -124,7 +125,7 @@ export function RequestPage() {
         if (!error && data) {
           setFormData({
             clientName: data.client_name || "",
-            clientPhone: data.client_phone || "",
+            clientPhone: formatPhoneWithPlus(data.client_phone || ""),
             clientEmail: data.client_email || "",
             clientHotel: data.client_hotel || "",
             arrivalDate: data.arrival_date || "",
@@ -271,7 +272,7 @@ export function RequestPage() {
         site_key: SITE_KEY,
         token: token || crypto.randomUUID(),
         client_name: formData.clientName.trim(),
-        client_phone: formData.clientPhone.trim(),
+        client_phone: formatPhoneWithPlus(formData.clientPhone),
         client_email: formData.clientEmail.trim(),
         client_hotel: formData.clientHotel.trim(),
         client_room: "",
@@ -501,9 +502,9 @@ export function RequestPage() {
                     type="tel"
                     inputMode="tel"
                     disabled={requestSubmitted}
-                    value={formData.clientPhone}
+                    value={formatPhoneWithPlus(formData.clientPhone)}
                     onChange={(e) =>
-                      setFormData({ ...formData, clientPhone: e.target.value })
+                      setFormData({ ...formData, clientPhone: formatPhoneWithPlus(e.target.value) })
                     }
                     placeholder="+33 6 12 34 56 78"
                     aria-required="true"

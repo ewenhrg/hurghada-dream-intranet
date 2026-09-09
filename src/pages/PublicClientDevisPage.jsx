@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
+import { formatPhoneWithPlus } from "../utils";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 import {
   formatCatalogueStaySummary,
@@ -458,7 +459,7 @@ export function PublicClientDevisPage() {
     setSuccess("");
 
     const name = client.name.trim();
-    const phone = client.phone.trim();
+    const phone = formatPhoneWithPlus(client.phone);
     const email = client.email.trim();
     const hotel = client.hotel.trim();
     const arrival = client.arrivalDate?.trim() || "";
@@ -1313,8 +1314,8 @@ export function PublicClientDevisPage() {
                 autoComplete="name"
               />
               <input
-                value={client.phone}
-                onChange={(e) => updateClientField("phone", e.target.value)}
+                value={formatPhoneWithPlus(client.phone)}
+                onChange={(e) => updateClientField("phone", formatPhoneWithPlus(e.target.value))}
                 placeholder="Téléphone WhatsApp *"
                 required
                 inputMode="tel"

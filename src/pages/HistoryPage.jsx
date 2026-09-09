@@ -224,7 +224,7 @@ function QuoteCardComponent({
 
   const handlePrintClick = useCallback(() => {
     const htmlContent = generateQuoteHTML(d);
-    const clientPhone = d.client?.phone || "";
+    const clientPhone = formatPhoneWithPlus(d.client?.phone);
     const fileName = `Devis - ${clientPhone}`;
     const newWindow = window.open();
     if (newWindow) {
@@ -239,7 +239,7 @@ function QuoteCardComponent({
 
   const openTicketsWindow = useCallback((quoteForTickets) => {
     const htmlContent = generateTicketsHTML(quoteForTickets, { activities });
-    const clientPhone = quoteForTickets.client?.phone || "";
+    const clientPhone = formatPhoneWithPlus(quoteForTickets.client?.phone);
     const fileName = `Tickets - ${clientPhone}`;
     const newWindow = window.open();
     if (newWindow) {
@@ -468,7 +468,7 @@ function QuoteCardComponent({
 
   const handleInvoiceClick = useCallback(() => {
     const htmlContent = generateQuoteHTML(d, { variant: "facture" });
-    const clientPhone = d.client?.phone || "";
+    const clientPhone = formatPhoneWithPlus(d.client?.phone);
     const fileName = `Facture - ${clientPhone}`;
     const newWindow = window.open();
     if (newWindow) {
@@ -510,7 +510,7 @@ function QuoteCardComponent({
     toast.info("Génération du PDF…", 2500);
     try {
       const pdfBase64 = await createQuotePdfBase64();
-      const clientLabel = d.client?.name || d.client?.phone || "client";
+      const clientLabel = d.client?.name || formatPhoneWithPlus(d.client?.phone) || "client";
       const fileName = `Devis - ${clientLabel}.pdf`;
       const subject = `Devis + fiche d'information`;
 
@@ -627,8 +627,8 @@ function QuoteCardComponent({
     // Préparer les données de manière optimisée avec valeurs par défaut
     const clientData = {
       name: d.client?.name || "",
-      phone: d.client?.phone || "",
-      emergencyPhone: d.client?.emergencyPhone || "",
+      phone: formatPhoneWithPlus(d.client?.phone || ""),
+      emergencyPhone: formatPhoneWithPlus(d.client?.emergencyPhone || ""),
       email: d.client?.email || "",
       hotel: d.client?.hotel || "",
       room: d.client?.room || "",
@@ -699,7 +699,7 @@ function QuoteCardComponent({
   }, [d, setSelectedQuote, setEditClient, setEditItems, setEditNotes, setShowEditModal]);
 
   const handleDeleteClick = useCallback(async () => {
-    const clientInfo = d.client?.name ? `${d.client.name}${d.client?.phone ? ` (${d.client.phone})` : ''}` : 'ce devis';
+    const clientInfo = d.client?.name ? `${d.client.name}${d.client?.phone ? ` (${formatPhoneWithPlus(d.client.phone)})` : ''}` : 'ce devis';
     const totalInfo = d.total ? ` (Total: ${Math.round(d.total)}€)` : '';
     
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer le devis de ${clientInfo}${totalInfo} ?\n\nCette action est irréversible et supprimera définitivement le devis.`)) {
@@ -808,7 +808,7 @@ function QuoteCardComponent({
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm md:text-base">
                 <p className="text-slate-700 font-semibold break-words flex items-center gap-2">
                   <span className="text-lg">📞</span>
-                  {d.client?.phone || "Tél ?"}
+                  {formatPhoneWithPlus(d.client?.phone) || "Tél ?"}
                 </p>
                 <p className="text-slate-700 font-semibold break-words flex items-center gap-2">
                   <span className="text-lg">{d.client?.isAirbnb ? "🏡" : "🏨"}</span>
@@ -2844,7 +2844,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               <div>
                 <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">📞 Téléphone</label>
                 <TextInput 
-                  value={client.phone || ""} 
+                  value={formatPhoneWithPlus(client.phone || "")} 
                   onChange={(e) => {
                     // Nettoyer automatiquement le numéro de téléphone (supprimer espaces, parenthèses, etc.)
                     const cleaned = cleanPhoneNumber(e.target.value);
@@ -2856,7 +2856,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               <div>
                 <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">🆘 Numéro d&apos;urgence</label>
                 <TextInput
-                  value={client.emergencyPhone || ""}
+                  value={formatPhoneWithPlus(client.emergencyPhone || "")}
                   onChange={(e) => {
                     const cleaned = cleanPhoneNumber(e.target.value);
                     setClient((c) => ({ ...c, emergencyPhone: cleaned }));

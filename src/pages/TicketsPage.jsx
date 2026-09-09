@@ -20,7 +20,7 @@ import {
   Printer,
   Trash2,
 } from "lucide-react";
-import { currencyNoCents, saveLS, saveQuotesCache, loadLS, resolveTicketActivityName, buildActivitiesByIdMap, calculateCardPrice } from "../utils";
+import { currencyNoCents, saveLS, saveQuotesCache, loadLS, resolveTicketActivityName, buildActivitiesByIdMap, calculateCardPrice, formatPhoneWithPlus } from "../utils";
 import {
   calculateTransferSurchargeFromItem,
   getPrivateTransferLabel,
@@ -266,7 +266,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           date: item.date || "",
           clientCell: formatClientShortWithPhone(client.name, client.phone),
           clientName: client.name || "",
-          phone: client.phone || "",
+          phone: formatPhoneWithPlus(client.phone),
           hotel: client.hotel || "",
           room: client.room || "",
           adults: pax.adults,

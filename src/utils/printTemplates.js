@@ -30,6 +30,7 @@ import {
 } from "./transferPricing.js";
 import {
   currencyNoCents,
+  formatPhoneWithPlus,
   calculateCardPrice,
   formatTicketsPaymentMethodsLabel,
   normalizeTicketsPaymentMethods,
@@ -412,8 +413,8 @@ export function generateQuoteHTML(quote, options = {}) {
         <div class="info-box">
           <h3>Informations Client</h3>
           <p><strong>Nom:</strong> ${quote.client?.name || "—"}</p>
-          <p><strong>Téléphone:</strong> ${quote.client?.phone || "—"}</p>
-          ${quote.client?.emergencyPhone ? `<p><strong>Numéro d'urgence:</strong> ${quote.client.emergencyPhone}</p>` : ""}
+          <p><strong>Téléphone:</strong> ${formatPhoneWithPlus(quote.client?.phone) || "—"}</p>
+          ${quote.client?.emergencyPhone ? `<p><strong>Numéro d'urgence:</strong> ${formatPhoneWithPlus(quote.client.emergencyPhone)}</p>` : ""}
           ${quote.client?.email ? `<p><strong>Email:</strong> ${quote.client.email}</p>` : ""}
           <p><strong>Hôtel:</strong> ${
             quote.client?.isAirbnb
@@ -576,7 +577,7 @@ export function generateTicketsHTML(quote, options = {}) {
 
   const client = quote.client || {};
   const clientName = esc(client.name || "—");
-  const clientPhone = esc(client.phone || "—");
+  const clientPhone = esc(formatPhoneWithPlus(client.phone) || "—");
   const clientHotel = esc(
     client.isAirbnb
       ? `Airbnb${client.hotel ? ` — ${client.hotel}` : ""}`
@@ -703,7 +704,7 @@ export function generateTicketsHTML(quote, options = {}) {
         <div class="zt-rows">
           <div class="zt-row">
             <div class="zt-field zt-grow"><span class="zt-lab">Nom :</span><span class="zt-write">${esc(client.name || "")}</span></div>
-            <div class="zt-field zt-grow"><span class="zt-lab">Ph.Numero :</span><span class="zt-write">${esc(client.phone || "")}</span></div>
+            <div class="zt-field zt-grow"><span class="zt-lab">Ph.Numero :</span><span class="zt-write">${esc(formatPhoneWithPlus(client.phone))}</span></div>
           </div>
           <div class="zt-row">
             <div class="zt-field zt-grow"><span class="zt-lab">Hotel :</span><span class="zt-write">${esc(hotelText)}</span></div>

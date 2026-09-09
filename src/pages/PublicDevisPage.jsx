@@ -6,6 +6,7 @@ import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, formatTurtleFinSizesLabel } from "../utils/activityHelpers";
 import { formatDivingVisitorLabel } from "../utils/divingSafety.js";
 import { logger } from "../utils/logger";
+import { formatPhoneWithPlus } from "../utils";
 import { toast } from "../utils/toast.js";
 import { PrimaryBtn, Pill } from "../components/ui";
 import {
@@ -140,7 +141,7 @@ function rowToViewModel(row) {
     createdAt,
     client: {
       name: row.client_name || "",
-      phone: row.client_phone || "",
+      phone: formatPhoneWithPlus(row.client_phone || ""),
       email: row.client_email || "",
       hotel: row.client_hotel || "",
       arrivalDate: row.client_arrival_date || "",
@@ -498,7 +499,7 @@ export function PublicDevisPage({ user }) {
               <div className="grid gap-3 text-sm text-slate-800 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
                   <span className="text-[11px] font-bold uppercase text-slate-500">Téléphone</span>
-                  <p className="mt-0.5 font-semibold text-slate-950">{quote.client?.phone || "—"}</p>
+                  <p className="mt-0.5 font-semibold text-slate-950">{formatPhoneWithPlus(quote.client?.phone) || "—"}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm">
                   <span className="text-[11px] font-bold uppercase text-slate-500">E-mail</span>

@@ -3,7 +3,7 @@ import { PrimaryBtn, GhostBtn, Section } from "../components/ui";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { LS_KEYS, SITE_KEY } from "../constants";
-import { loadLS, saveLS } from "../utils";
+import { loadLS, saveLS, cleanPhoneNumber, formatPhoneWithPlus } from "../utils";
 import { extractPhoneFromName, validatePhoneNumber, extractNameFromField, resolvePhoneFromExcelRow } from "../utils/phoneUtils";
 import { convertExcelValue, findColumn, isIgnoredTransferExcelColumn } from "../utils/excelParser";
 import { generateMessage } from "../utils/messageGenerator";
@@ -31,7 +31,12 @@ const MessageTemplatesModal = lazy(() => import("../components/situation/Message
 const HotelsModal = lazy(() => import("../components/situation/HotelsModal"));
 
 export function SituationPage({ activities = [], user }) {
-  const [excelData, setExcelData] = useState(() => loadLS(LS_KEYS.situationTransferRows, []));
+  const [excelData, setExcelData] = useState(() =>
+    (loadLS(LS_KEYS.situationTransferRows, []) || []).map((row) => ({
+      ...row,
+      phone: formatPhoneWithPlus(row?.phone),
+    }))
+  );
   const [sharedMeta, setSharedMeta] = useState({ fileName: "", importedBy: "", updatedAt: null });
   const [previewMessages, setPreviewMessages] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -137,8 +142,12 @@ export function SituationPage({ activities = [], user }) {
             const p = situationRow.payload;
             if (Array.isArray(p.rows)) {
               skipNextSituationSaveRef.current = true;
-              setExcelData(p.rows);
-              saveLS(LS_KEYS.situationTransferRows, p.rows);
+              const rowsWithPlus = p.rows.map((row) => ({
+                ...row,
+                phone: formatPhoneWithPlus(row?.phone),
+              }));
+              setExcelData(rowsWithPlus);
+              saveLS(LS_KEYS.situationTransferRows, rowsWithPlus);
             }
             if (Array.isArray(p.detectedColumns)) {
               setDetectedColumns(p.detectedColumns);
@@ -347,8 +356,12 @@ export function SituationPage({ activities = [], user }) {
           skipNextSituationSaveRef.current = true;
 
           if (Array.isArray(p.rows)) {
-            setExcelData(p.rows);
-            saveLS(LS_KEYS.situationTransferRows, p.rows);
+            const rowsWithPlus = p.rows.map((row) => ({
+              ...row,
+              phone: formatPhoneWithPlus(row?.phone),
+            }));
+            setExcelData(rowsWithPlus);
+            saveLS(LS_KEYS.situationTransferRows, rowsWithPlus);
           }
           if (Array.isArray(p.detectedColumns)) {
             setDetectedColumns(p.detectedColumns);
@@ -647,7 +660,7 @@ export function SituationPage({ activities = [], user }) {
             invoiceN: "",
             date: String(date || ""),
             name: clientName || "Client",
-            phone: phone || "",
+            phone: formatPhoneWithPlus(phone || ""),
             phoneValid: phoneValidation.valid,
             phoneError: phoneValidation.error,
             hotel: String(hotel || ""),
@@ -848,7 +861,9 @@ export function SituationPage({ activities = [], user }) {
           const updatedRow = { ...row, [field]: value };
           
           if (field === "phone") {
-            const phoneValidation = value ? validatePhoneNumber(value) : { valid: false, error: "Numéro manquant" };
+            const formatted = formatPhoneWithPlus(value);
+            updatedRow.phone = formatted;
+            const phoneValidation = formatted ? validatePhoneNumber(formatted) : { valid: false, error: "Numéro manquant" };
             updatedRow.phoneValid = phoneValidation.valid;
             updatedRow.phoneError = phoneValidation.error;
           }
@@ -858,7 +873,7 @@ export function SituationPage({ activities = [], user }) {
             const phone = extractPhoneFromName(nameStr);
             const clientName = extractNameFromField(nameStr);
             updatedRow.name = clientName || "Client";
-            updatedRow.phone = phone || updatedRow.phone;
+            updatedRow.phone = formatPhoneWithPlus(phone || updatedRow.phone);
             if (updatedRow.phone) {
               const phoneValidation = validatePhoneNumber(updatedRow.phone);
               updatedRow.phoneValid = phoneValidation.valid;
@@ -1101,7 +1116,7 @@ export function SituationPage({ activities = [], user }) {
   // Ouvrir WhatsApp Web avec le numéro et le message pré-rempli (optimisé pour réutiliser la même fenêtre)
   const openWhatsApp = async (phone, message) => {
     // Nettoyer le numéro de téléphone (enlever les espaces, tirets, etc.)
-    const cleanPhone = phone.replace(/[\s-()]/g, "");
+    const cleanPhone = cleanPhoneNumber(phone);
     // Encoder le message pour l'URL
     const encodedMessage = encodeURIComponent(message);
     // Créer l'URL WhatsApp

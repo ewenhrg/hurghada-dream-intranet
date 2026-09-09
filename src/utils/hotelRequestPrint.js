@@ -2,6 +2,7 @@ import { boardLabelsFromViewModel } from "../constants/hotelRequestBoardOptions"
 import { formatHotelStayDate } from "./hotelRequestDates";
 import { formatHotelRequestShortRef } from "./hotelRequestRef";
 import { formatQuoteMoney } from "./hotelQuoteCalc";
+import { formatPhoneWithPlus } from "../utils.js";
 
 function normalizeZeroTracasForPrint(raw) {
   const z = raw && typeof raw === "object" ? raw : null;
@@ -397,7 +398,7 @@ export function generateHotelRequestHTML(request) {
           </div>
           <div class="info-cell">
             <span class="info-label">Téléphone</span>
-            <div class="info-value">${escapeHtml(request.phone || "—")}</div>
+            <div class="info-value">${escapeHtml(formatPhoneWithPlus(request.phone) || "—")}</div>
           </div>
           <div class="info-cell">
             <span class="info-label">E-mail</span>

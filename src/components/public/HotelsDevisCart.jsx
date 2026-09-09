@@ -4,6 +4,7 @@ import { supabase, __SUPABASE_DEBUG__ } from "../../lib/supabase";
 import { SITE_KEY } from "../../constants";
 import { boardFieldsToPayload } from "../../constants/hotelRequestBoardOptions";
 import { toast } from "../../utils/toast.js";
+import { formatPhoneWithPlus } from "../../utils";
 import { logger } from "../../utils/logger";
 import {
   MAX_HOTELS_CART_ITEMS,
@@ -360,7 +361,7 @@ export function HotelsDevisCart({
         site_key: SITE_KEY,
         first_name: client.firstName.trim(),
         last_name: client.lastName.trim(),
-        client_phone: client.phone.trim(),
+        client_phone: formatPhoneWithPlus(client.phone),
         client_email: client.email.trim(),
         arrival_date: stay.arrivalDate,
         departure_date: stay.departureDate,
@@ -747,8 +748,8 @@ export function HotelsDevisCart({
                     type="tel"
                     autoComplete="tel"
                     inputMode="tel"
-                    value={client.phone}
-                    onChange={(e) => setClient((p) => ({ ...p, phone: e.target.value }))}
+                    value={formatPhoneWithPlus(client.phone)}
+                    onChange={(e) => setClient((p) => ({ ...p, phone: formatPhoneWithPlus(e.target.value) }))}
                     className={fieldClass}
                   />
                 </label>

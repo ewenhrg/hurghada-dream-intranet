@@ -4,6 +4,7 @@
  */
 
 import { getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote } from "./activityHelpers";
+import { formatPhoneWithPlus } from "../utils.js";
 
 export const HD_PUBLIC_QUOTE_TO_DRAFT_EVENT = "hd-public-quote-to-draft";
 
@@ -137,7 +138,7 @@ export function buildQuoteDraftFromPublicViewModel(vm) {
   return {
     client: {
       name: vm.client?.name || "",
-      phone: vm.client?.phone || "",
+      phone: formatPhoneWithPlus(vm.client?.phone || ""),
       email: vm.client?.email || "",
       hotel: vm.client?.hotel || "",
       room: "",

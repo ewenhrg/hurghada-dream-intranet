@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { SITE_KEY, LS_KEYS } from "../../constants";
-import { saveQuotesCache, calculateCardPrice } from "../../utils";
+import { saveQuotesCache, calculateCardPrice, formatPhoneWithPlus } from "../../utils";
 import { computePaidColumnsFromItems, findTicketNumberConflict, resolveQuoteById } from "../../utils/ticketCollections";
 import { isBoatPartyActivity } from "../../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../ui";
@@ -43,7 +43,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
     setTicketNumber(row.ticketNumber || "");
     setDate(row.date || "");
     setClientName(row.clientName || "");
-    setPhone(row.phone || "");
+    setPhone(formatPhoneWithPlus(row.phone || ""));
     setHotel(row.hotel || "");
     setRoom(row.room || "");
     setAdults(Number(row.adults) || 0);
@@ -149,7 +149,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
         client: {
           ...(quote.client || {}),
           name: String(clientName || "").trim(),
-          phone: String(phone || "").trim(),
+          phone: formatPhoneWithPlus(phone),
           hotel: String(hotel || "").trim(),
           room: String(room || "").trim(),
         },
@@ -281,7 +281,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
               <span className="text-xs font-semibold text-slate-600">Téléphone</span>
               <TextInput
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(formatPhoneWithPlus(e.target.value))}
                 className="!py-2.5"
               />
             </label>

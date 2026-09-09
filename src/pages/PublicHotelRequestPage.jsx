@@ -4,6 +4,7 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
+import { formatPhoneWithPlus } from "../utils";
 import { boardFieldsToPayload } from "../constants/hotelRequestBoardOptions";
 
 const EMPTY_FORM = {
@@ -156,7 +157,7 @@ export function PublicHotelRequestPage() {
         site_key: SITE_KEY,
         first_name: form.firstName.trim(),
         last_name: form.lastName.trim(),
-        client_phone: form.phone.trim(),
+        client_phone: formatPhoneWithPlus(form.phone),
         client_email: form.email.trim(),
         arrival_date: form.arrivalDate,
         departure_date: form.departureDate,
@@ -296,8 +297,8 @@ export function PublicHotelRequestPage() {
                   id="hd-phone"
                   type="tel"
                   autoComplete="tel"
-                  value={form.phone}
-                  onChange={(e) => updateField("phone", e.target.value)}
+                  value={formatPhoneWithPlus(form.phone)}
+                  onChange={(e) => updateField("phone", formatPhoneWithPlus(e.target.value))}
                   className={inputClass}
                   required
                 />

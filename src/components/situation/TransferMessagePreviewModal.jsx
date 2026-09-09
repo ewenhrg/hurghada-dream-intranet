@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { GhostBtn, PrimaryBtn } from "../ui";
+import { formatPhoneWithPlus } from "../../utils";
 
 export const TransferMessagePreviewModal = memo(
   ({ row, initialMessage, onSave, onReset, onSendWhatsApp, onClose }) => {
@@ -32,7 +33,7 @@ export const TransferMessagePreviewModal = memo(
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-slate-900">{row.name || "Sans nom"}</p>
               <p className="text-xs text-slate-600">
-                {row.trip || "—"} · {row.phone || "pas de tél."}
+                {row.trip || "—"} · {formatPhoneWithPlus(row.phone) || "pas de tél."}
               </p>
             </div>
             <button

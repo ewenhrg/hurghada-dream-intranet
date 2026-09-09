@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { formatPhoneWithPlus } from "../../utils";
 
 export const SendLogSection = memo(({ sendLog }) => {
   if (!sendLog || sendLog.length === 0) return null;
@@ -19,7 +20,7 @@ export const SendLogSection = memo(({ sendLog }) => {
             <div className="flex-1">
               <p className="text-sm font-medium text-slate-900">{log.name}</p>
               <p className="text-xs text-slate-600">
-                {log.phone} • {log.trip} • {log.time}
+                {formatPhoneWithPlus(log.phone)} • {log.trip} • {log.time}
               </p>
             </div>
             <div className="text-right">
