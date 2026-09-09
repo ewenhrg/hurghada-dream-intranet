@@ -5,12 +5,8 @@ import { toLocalDateKey } from "./quoteUserStats.js";
 /** Supprimer les fichiers 2 jours après la date de départ. */
 export const HOTEL_DOCS_RETENTION_DAYS_AFTER_DEPARTURE = 2;
 
-/** Supprimer la demande entière dès le lendemain du check-in / check-out. */
+/** Supprimer la demande entière dès le lendemain du check-out. */
 export const HOTEL_REQUEST_DELETE_DAYS_AFTER_DEPARTURE = 0;
-
-function rowArrivalDate(row) {
-  return String(row?.arrival_date ?? row?.arrivalDate ?? "").trim();
-}
 
 function rowDepartureDate(row) {
   return String(row?.departure_date ?? row?.departureDate ?? "").trim();
@@ -61,17 +57,14 @@ export function isCheckinDatePassed(
   return isDeparturePastRetention(arrivalDate, daysAfter, asOf);
 }
 
-/** Demande à supprimer : check-in ou check-out dépassé. */
+/** Demande à supprimer : check-out dépassé uniquement (pas le check-in). */
 export function isHotelRequestExpiredForCleanup(
   row,
   daysAfter = HOTEL_REQUEST_DELETE_DAYS_AFTER_DEPARTURE,
   asOf = new Date()
 ) {
-  const arrival = rowArrivalDate(row);
   const departure = rowDepartureDate(row);
-  if (departure && isCheckoutDatePassed(departure, daysAfter, asOf)) return true;
-  if (arrival && isCheckinDatePassed(arrival, daysAfter, asOf)) return true;
-  return false;
+  return Boolean(departure && isCheckoutDatePassed(departure, daysAfter, asOf));
 }
 
 function parseRowPayload(row) {
@@ -210,8 +203,8 @@ export async function cleanupExpiredHotelRequestDocuments({
 }
 
 /**
- * Supprime les demandes hôtel dont le check-in ou le check-out est dépassé.
- * Supprime aussi les fichiers Storage liés (documents + preuves de paiement).
+ * Supprime les demandes hôtel dont le check-out est dépassé.
+ * Un check-in passé ne suffit pas. Supprime aussi les fichiers Storage liés.
  * @returns {Promise<{ deletedCount: number, deletedIds: string[] }>}
  */
 export async function cleanupExpiredHotelRequests({
@@ -229,7 +222,7 @@ export async function cleanupExpiredHotelRequests({
     .from("public_hotel_requests")
     .select("id, response_payload, arrival_date, departure_date")
     .eq("site_key", siteKey)
-    .or(`departure_date.lt.${todayKey},arrival_date.lt.${todayKey}`);
+    .lt("departure_date", todayKey);
 
   if (loadError) {
     logger?.error?.("cleanup expired hotel requests load:", loadError);

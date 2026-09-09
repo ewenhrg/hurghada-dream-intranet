@@ -3195,8 +3195,8 @@ export function HotelHistoryPage({ user = null }) {
           if (deletedCount > 0) {
             toast.info(
               deletedCount === 1
-                ? "1 past stay request was automatically deleted (check-in or check-out passed)."
-                : `${deletedCount} past stay requests were automatically deleted (check-in or check-out passed).`,
+                ? "1 past stay request was automatically deleted (check-out passed)."
+                : `${deletedCount} past stay requests were automatically deleted (check-out passed).`,
               4500
             );
           }
