@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync } from "../constants";
-import { uuid, currency, currencyNoCents, calculateCardPrice, saveQuotesCache, cleanPhoneNumber, toBoundedInt10 } from "../utils";
+import { uuid, currency, currencyNoCents, calculateCardPrice, saveQuotesCache, cleanPhoneNumber, formatPhoneWithPlus, toBoundedInt10 } from "../utils";
 import { setVisibilityAwareInterval } from "../utils/idle";
 import { generateQuoteHTML } from "../utils/printTemplates";
 import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isArrivalDayServiceActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage } from "../utils/activityHelpers";
@@ -1067,8 +1067,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       ...client,
       ...pickSecondHotelFields(client),
       ...pickAirbnbFields(client),
-      phone: cleanPhoneNumber(client.phone || ""),
-      emergencyPhone: cleanPhoneNumber(client.emergencyPhone || ""),
+      phone: formatPhoneWithPlus(client.phone || ""),
+      emergencyPhone: formatPhoneWithPlus(client.emergencyPhone || ""),
     };
 
     const doubleHotelNote = formatSecondHotelNotesLine(cleanedClient, neighborhoodsOptions);

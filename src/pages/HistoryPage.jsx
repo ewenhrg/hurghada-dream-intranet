@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Clock } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { currencyNoCents, calculateCardPrice, saveQuotesCache, cleanPhoneNumber, calculateTransferSurcharge, isQuoteFullyPaid, quoteHasAnyTicket, normalizeTicketsPaymentMethods } from "../utils";
+import { currencyNoCents, calculateCardPrice, saveQuotesCache, cleanPhoneNumber, formatPhoneWithPlus, calculateTransferSurcharge, isQuoteFullyPaid, quoteHasAnyTicket, normalizeTicketsPaymentMethods } from "../utils";
 import { generateQuoteHTML, generateTicketsHTML } from "../utils/printTemplates";
 import { setVisibilityAwareInterval } from "../utils/idle";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
@@ -2655,8 +2655,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       ...createEmptyAirbnb(),
       ...client,
       ...pickAirbnbFields(client),
-      phone: cleanPhoneNumber(client.phone || ""),
-      emergencyPhone: cleanPhoneNumber(client.emergencyPhone || ""),
+      phone: formatPhoneWithPlus(client.phone || ""),
+      emergencyPhone: formatPhoneWithPlus(client.emergencyPhone || ""),
     };
 
     if (cleanedClient.isAirbnb) {

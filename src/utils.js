@@ -248,6 +248,13 @@ export function cleanPhoneNumber(phone) {
   return phone.replace(/\D+/g, "");
 }
 
+/** À la validation du devis : préfixe international +, sans le doubler. */
+export function formatPhoneWithPlus(phone) {
+  const digits = cleanPhoneNumber(phone);
+  if (!digits) return "";
+  return `+${digits}`;
+}
+
 // Sanitizer pour protéger contre XSS (échapper les caractères HTML)
 export function sanitizeInput(input) {
   if (typeof input !== 'string') return input;
