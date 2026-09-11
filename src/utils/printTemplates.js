@@ -607,26 +607,25 @@ export function generateTicketsHTML(quote, options = {}) {
     const info = getDivingVisitorTicketInfo(item);
     if (!info) return "";
     const curr = quote.currency || "EUR";
-    const countLabel = info.count > 1 ? "visiteurs" : "visiteur";
     const totalLabel = currencyNoCents(info.total, curr);
     const unitLabel = currencyNoCents(info.unitPrice, curr);
+    const dontLabel =
+      info.count > 1
+        ? `dont ${info.count} visiteurs inclus (ne plongent pas)`
+        : `dont ${info.count} visiteur inclus (ne plonge pas)`;
     return `
-          <div class="ticket-diving-visitor" role="note" aria-label="Visiteurs plongée">
+          <div class="ticket-diving-visitor" role="note" aria-label="Visiteurs plongée inclus">
             <div class="ticket-diving-visitor-head">
               <span class="ticket-diving-visitor-icon" aria-hidden="true">👀</span>
-              <span class="ticket-diving-visitor-title">Visiteur(s) — ne plonge pas</span>
+              <span class="ticket-diving-visitor-title">${esc(dontLabel)}</span>
             </div>
             <div class="ticket-diving-visitor-stats">
-              <div class="ticket-diving-visitor-stat">
-                <span class="ticket-diving-visitor-num">${esc(String(info.count))}</span>
-                <span class="ticket-diving-visitor-lab">${esc(countLabel)}</span>
-              </div>
               <div class="ticket-diving-visitor-stat ticket-diving-visitor-stat-price">
                 <span class="ticket-diving-visitor-num">${esc(totalLabel)}</span>
                 <span class="ticket-diving-visitor-lab">supplément</span>
               </div>
             </div>
-            <div class="ticket-diving-visitor-detail">${esc(String(info.count))} × ${esc(unitLabel)} / pers.</div>
+            <div class="ticket-diving-visitor-detail">${esc(String(info.count))} × ${esc(unitLabel)} / pers. · déjà comptés dans Personnes</div>
           </div>`;
   };
 

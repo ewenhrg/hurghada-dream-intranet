@@ -242,6 +242,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         if (!ticketNumber) return;
 
         const pax = getQuoteItemParticipantCells(item);
+        const paxBase = getQuoteItemParticipantCells(item, { includeDivingVisitors: false });
         const transferValue = Math.round(calculateTransferSurchargeFromItem(item) || 0);
         const lineTotal = Math.round(Number(item.lineTotal) || 0);
         // Prix activité hors supp. transfert (évite le double-compte dans Excel)
@@ -270,6 +271,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           hotel: client.hotel || "",
           room: client.room || "",
           adults: pax.adults,
+          adultsBase: paxBase.adults,
           children: pax.children,
           babies: pax.babies,
           boatPartyMen: boatParty ? Number(item.boatPartyMen || 0) : 0,

@@ -46,7 +46,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
     setPhone(formatPhoneWithPlus(row.phone || ""));
     setHotel(row.hotel || "");
     setRoom(row.room || "");
-    setAdults(Number(row.adults) || 0);
+    setAdults(Number(row.adultsBase ?? row.adults) || 0);
     setChildren(Number(row.children) || 0);
     setBabies(Number(row.babies) || 0);
     setBoatPartyMen(Number(row.boatPartyMen) || 0);

@@ -7,7 +7,7 @@ import {
 } from "./activityHelpers";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { getPrivateTransferLabel } from "./transferPricing";
-import { formatDivingVisitorLabel } from "./divingSafety.js";
+import { formatDivingVisitorLabel, getDivingVisitorCount, isDivingActivityName } from "./divingSafety.js";
 import { formatPhoneWithPlus } from "../utils.js";
 
 /** Résumé participants pour cartes / modales (ex. historique). */
@@ -22,7 +22,8 @@ export function formatQuoteItemParticipantsSummary(item) {
     if (women > 0) parts.push(`${women} fille${women > 1 ? "s" : ""}`);
     return parts.length > 0 ? parts.join(" / ") : "—";
   }
-  return `${item.adults ?? 0} adt / ${item.children ?? 0} enf / ${item.babies ?? 0} bébé(s)`;
+  const cells = getQuoteItemParticipantCells(item);
+  return `${cells.adults ?? 0} adt / ${cells.children ?? 0} enf / ${cells.babies ?? 0} bébé(s)`;
 }
 
 /** Lignes détaillées sous le nom d'activité (devis PDF / impression). */
@@ -68,8 +69,13 @@ export function getQuoteItemDetailLines(item) {
   return lines;
 }
 
-/** Colonnes Adultes / Enfants / Bébés du tableau devis imprimé. */
-export function getQuoteItemParticipantCells(item) {
+/**
+ * Colonnes Adultes / Enfants / Bébés (tickets, impression, Situation).
+ * Pour la plongée, les visiteurs sont inclus dans les adultes (un seul total).
+ * @param {{ includeDivingVisitors?: boolean }} [options]
+ */
+export function getQuoteItemParticipantCells(item, options = {}) {
+  const includeDivingVisitors = options.includeDivingVisitors !== false;
   if (!item) {
     return { adults: 0, children: 0, babies: 0 };
   }
@@ -82,10 +88,20 @@ export function getQuoteItemParticipantCells(item) {
       babies: 0,
     };
   }
+  let adults = Number(item.adults || 0);
+  const children = Number(item.children || 0);
+  const babies = Number(item.babies || 0);
+  if (
+    includeDivingVisitors &&
+    isDivingActivityName(item.activityName) &&
+    getDivingVisitorCount(item) > 0
+  ) {
+    adults += getDivingVisitorCount(item);
+  }
   return {
-    adults: Number(item.adults || 0),
-    children: Number(item.children || 0),
-    babies: Number(item.babies || 0),
+    adults: Number.isFinite(adults) ? adults : 0,
+    children: Number.isFinite(children) ? children : 0,
+    babies: Number.isFinite(babies) ? babies : 0,
   };
 }
 

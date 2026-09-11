@@ -655,6 +655,36 @@ export function SituationPage({ activities = [], user }) {
           // Valider le numéro de téléphone
           const phoneValidation = phone ? validatePhoneNumber(phone) : { valid: false, error: "Numéro manquant" };
 
+          const toPaxCount = (value) => {
+            const n = Number(String(value ?? "").replace(",", ".").trim());
+            return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+          };
+          const adultsRaw = findColumn(row, [
+            "Adultes",
+            "adultes",
+            "Adults",
+            "adults",
+            "Pax",
+            "pax",
+            "PAX",
+          ]);
+          const childrenRaw = findColumn(row, [
+            "Enfants",
+            "enfants",
+            "Children",
+            "children",
+          ]);
+          const infantsRaw = findColumn(row, [
+            "Bébés",
+            "bébés",
+            "Bebes",
+            "bebes",
+            "Babies",
+            "babies",
+            "Infants",
+            "infants",
+          ]);
+
           return {
             id: `row-${index}`,
             invoiceN: "",
@@ -665,9 +695,9 @@ export function SituationPage({ activities = [], user }) {
             phoneError: phoneValidation.error,
             hotel: String(hotel || ""),
             roomNo: String(roomNo || ""),
-            adults: 0,
-            children: 0,
-            infants: 0,
+            adults: toPaxCount(adultsRaw),
+            children: toPaxCount(childrenRaw),
+            infants: toPaxCount(infantsRaw),
             trip: String(trip || "").trim(),
             time: String(pickupTime || "").trim(),
             comment: String(comment || ""),
