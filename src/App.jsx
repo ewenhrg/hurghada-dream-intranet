@@ -1140,6 +1140,8 @@ export default function App() {
 
   useEffect(() => {
     if (!ok) return;
+    // Inutile sur le catalogue client : ces pages intranet ne s'y affichent jamais.
+    if (isPublicClientRoute) return;
 
     // Précharge légère des pages les plus utilisées (évite de saturer le CPU au login)
     const preload = async () => {
@@ -1157,7 +1159,7 @@ export default function App() {
     const timer = setTimeout(preload, 2500);
 
     return () => clearTimeout(timer);
-  }, [ok]);
+  }, [ok, isPublicClientRoute]);
 
   // Page tarifs publique (sans compte)
   if (location.pathname === "/tarifs" || location.pathname === "/tarifs/") {

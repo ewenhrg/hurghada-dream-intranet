@@ -94,6 +94,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       ? base
       : [...base, { key: "autre", label: "Autre" }];
   }, []);
+  /** Noms normalisés : évite de reparcourir toute la liste à chaque frappe dans « hôtel ». */
+  const knownHotelNames = useMemo(() => {
+    const set = new Set();
+    for (const h of hotels) {
+      const name = String(h?.name || "").toLowerCase().trim();
+      if (name) set.add(name);
+    }
+    return set;
+  }, [hotels]);
 
   // Map des activités pour des recherches O(1) au lieu de O(n)
   const activitiesMap = useMemo(() => {
@@ -786,15 +795,34 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [pushSales, activitiesMap]);
 
+  // Seuls ces champs déterminent le quartier effectif. Dépendre de `client` entier
+  // recalculait le prix de toutes les lignes à chaque frappe (nom, téléphone, hôtel…).
+  const neighborhoodSource = useMemo(
+    () => ({
+      neighborhood: client.neighborhood,
+      hasSecondHotel: client.hasSecondHotel,
+      secondNeighborhood: client.secondNeighborhood,
+      secondArrivalDate: client.secondArrivalDate,
+      secondDepartureDate: client.secondDepartureDate,
+    }),
+    [
+      client.neighborhood,
+      client.hasSecondHotel,
+      client.secondNeighborhood,
+      client.secondArrivalDate,
+      client.secondDepartureDate,
+    ]
+  );
+
   // Sélectionner automatiquement le créneau s'il n'y en a qu'un seul disponible
   useEffect(() => {
-    if (!client.neighborhood || items.length === 0) return;
+    if (!neighborhoodSource.neighborhood || items.length === 0) return;
 
     items.forEach((it, idx) => {
       if (!it.activityId || it.slot) return; // Ignorer si pas d'activité ou slot déjà défini
 
       const act = activitiesMap.get(it.activityId);
-      const nb = getEffectiveNeighborhoodForDate(client, it.date);
+      const nb = getEffectiveNeighborhoodForDate(neighborhoodSource, it.date);
       if (!act || !act.transfers || !nb || !act.transfers[nb]) return;
 
       const transferInfo = act.transfers[nb];
@@ -810,11 +838,11 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         setItem(idx, { slot: availableSlots[0] });
       }
     });
-  }, [items, activitiesMap, client, setItem]);
+  }, [items, activitiesMap, neighborhoodSource, setItem]);
 
   const resolveItemNeighborhood = useCallback(
-    (it) => getEffectiveNeighborhoodForDate(client, it?.date),
-    [client]
+    (it) => getEffectiveNeighborhoodForDate(neighborhoodSource, it?.date),
+    [neighborhoodSource]
   );
 
   // Hook pour calculer les prix des activités (quartier selon date si double hôtel)
@@ -1527,7 +1555,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   </p>
                 </div>
               ) : null}
-              {client.hotel && hotels.some((h) => h.name.toLowerCase().trim() === client.hotel.toLowerCase().trim()) && (
+              {client.hotel && knownHotelNames.has(client.hotel.toLowerCase().trim()) && (
                 <div className="flex items-center gap-2 mt-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-400/80 rounded-lg">
                   <span className="text-emerald-300">✓</span>
                   <p className="text-xs font-medium text-emerald-200">

@@ -121,14 +121,20 @@ export function SituationPage({ activities = [], user }) {
   const [messageOverrides, setMessageOverrides] = useState({});
   const [messagePreviewRow, setMessagePreviewRow] = useState(null);
 
-  const situationDates = useMemo(() => {
-    const set = new Set();
+  /** Nombre de clients par date, en une seule passe (les pastilles filtraient la liste entière chacune). */
+  const situationDateCounts = useMemo(() => {
+    const counts = new Map();
     for (const row of excelData) {
       const ymd = situationDateToYmd(row?.date);
-      if (ymd) set.add(ymd);
+      if (ymd) counts.set(ymd, (counts.get(ymd) || 0) + 1);
     }
-    return Array.from(set).sort();
+    return counts;
   }, [excelData]);
+
+  const situationDates = useMemo(
+    () => Array.from(situationDateCounts.keys()).sort(),
+    [situationDateCounts]
+  );
 
   const filteredExcelData = useMemo(() => {
     if (!filterDate) return excelData;
@@ -1825,7 +1831,7 @@ export function SituationPage({ activities = [], user }) {
         <div className="mt-3 flex flex-wrap gap-1.5 border-t border-indigo-100 pt-3">
           {situationDates.map((ymd) => {
             const active = filterDate === ymd;
-            const count = excelData.filter((row) => situationDateToYmd(row?.date) === ymd).length;
+            const count = situationDateCounts.get(ymd) || 0;
             return (
               <button
                 key={ymd}

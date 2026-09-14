@@ -32,6 +32,124 @@ import {
 import { activitiesTableHasBabiesForbiddenColumn } from "../config/supabaseActivitiesSchema";
 import { canAccessHotelsPage, hasFullIntranetAccess } from "../constants/permissions.js";
 
+/**
+ * Ligne de table : style épuré.
+ * Doit rester au niveau module — déclarée dans `ActivitiesPage`, elle formait un
+ * nouveau type de composant à chaque rendu et React remontait toutes les lignes.
+ */
+const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canModify, showCacheOnlyBadge }) => {
+  const hasDescription = !!activity.description;
+  const availableDaysList = useMemo(() => {
+    return WEEKDAYS.filter((d, dayIdx) => activity.availableDays?.[dayIdx]);
+  }, [activity.availableDays]);
+
+  return (
+    <tr className="border-t border-indigo-100 hover:bg-indigo-100/60 transition-colors">
+      <td className="px-4 py-3 font-semibold text-indigo-900 text-sm">
+        <span className="inline-flex items-center gap-2 flex-wrap">
+          {activity.name}
+          {showCacheOnlyBadge && (
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200/80">
+              Cache seulement
+            </span>
+          )}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-emerald-700 text-sm tabular-nums font-medium">{currency(activity.priceAdult, activity.currency)}</td>
+      <td className="px-4 py-3 text-emerald-600 text-sm tabular-nums font-medium">{currency(activity.priceChild, activity.currency)}</td>
+      <td className="px-4 py-3 text-emerald-600 text-sm tabular-nums font-medium">
+        {activity.babiesForbidden ? (
+          <span className="text-xs font-semibold uppercase tracking-wide text-amber-800">Interdit bébés</span>
+        ) : (
+          currency(activity.priceBaby, activity.currency)
+        )}
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex gap-1.5 flex-wrap">
+          {availableDaysList.map((d) => (
+            <span
+              key={d.key}
+              className="px-2.5 py-1 rounded-lg bg-emerald-200 text-emerald-800 text-xs font-bold border border-emerald-300/60"
+            >
+              {d.label}
+            </span>
+          ))}
+        </div>
+      </td>
+      <td className="px-4 py-3 text-slate-600 text-xs max-w-[140px] truncate" title={activity.notes || ""}>
+        {activity.notes || "—"}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <div className="flex gap-2 justify-end flex-wrap">
+          <button
+            type="button"
+            onClick={() => onOpenDescription(activity)}
+            className={`text-xs font-semibold px-3 py-2 rounded-lg transition-colors ${
+              hasDescription
+                ? "bg-emerald-200 text-emerald-800 hover:bg-emerald-300 border border-emerald-300"
+                : "bg-slate-200 text-slate-700 hover:bg-slate-300 border border-slate-300"
+            }`}
+          >
+            📝 Description{hasDescription ? " ✓" : ""}
+          </button>
+          {canModify && (
+            <>
+              <button
+                type="button"
+                onClick={() => onEdit(activity)}
+                className="text-xs font-semibold px-3 py-2 rounded-lg bg-indigo-200 text-indigo-800 hover:bg-indigo-300 border border-indigo-300 transition-colors"
+              >
+                ✏️ Modifier
+              </button>
+              <button
+                type="button"
+                onClick={() => onDelete(activity.id)}
+                className="text-xs font-semibold px-3 py-2 rounded-lg bg-red-200 text-red-800 hover:bg-red-300 border border-red-300 transition-colors"
+              >
+                🗑️ Supprimer
+              </button>
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}, (prevProps, nextProps) => {
+  // Comparaison personnalisée optimisée pour éviter les re-renders inutiles.
+  // Les callbacks sont comparés : sans cela une ligne non modifiée garderait une
+  // closure obsolète (handleDelete capture la map des activités).
+  if (prevProps.onEdit !== nextProps.onEdit) return false;
+  if (prevProps.onDelete !== nextProps.onDelete) return false;
+  if (prevProps.onOpenDescription !== nextProps.onOpenDescription) return false;
+  if (prevProps.activity.id !== nextProps.activity.id) return false;
+  if (prevProps.showCacheOnlyBadge !== nextProps.showCacheOnlyBadge) return false;
+  if (prevProps.activity.supabase_id !== nextProps.activity.supabase_id) return false;
+  if (Boolean(prevProps.activity[LOCAL_ONLY_ACTIVITY_KEY]) !== Boolean(nextProps.activity[LOCAL_ONLY_ACTIVITY_KEY]))
+    return false;
+  if (prevProps.activity.name !== nextProps.activity.name) return false;
+  if (prevProps.activity.priceAdult !== nextProps.activity.priceAdult) return false;
+  if (prevProps.activity.priceChild !== nextProps.activity.priceChild) return false;
+  if (prevProps.activity.priceBaby !== nextProps.activity.priceBaby) return false;
+  if (Boolean(prevProps.activity.babiesForbidden) !== Boolean(nextProps.activity.babiesForbidden))
+    return false;
+  if (prevProps.activity.notes !== nextProps.activity.notes) return false;
+  if (prevProps.activity.description !== nextProps.activity.description) return false;
+  if (prevProps.canModify !== nextProps.canModify) return false;
+
+  // Comparaison optimisée des availableDays sans JSON.stringify
+  const prevDays = prevProps.activity.availableDays;
+  const nextDays = nextProps.activity.availableDays;
+  if (!prevDays && !nextDays) return true;
+  if (!prevDays || !nextDays) return false;
+  if (prevDays.length !== nextDays.length) return false;
+  for (let i = 0; i < prevDays.length; i++) {
+    if (prevDays[i] !== nextDays[i]) return false;
+  }
+
+  return true;
+});
+ActivityRow.displayName = "ActivityRow";
+
 export function ActivitiesPage({ activities, setActivities, user }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDay, setSelectedDay] = useState("");
@@ -1249,114 +1367,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   }, [descriptionModal.isOpen, hasFullAccess]);
 
   // Toutes les catégories sont maintenant toujours visibles pour éviter les carrés blancs
-
-  // Ligne de table : style épuré
-  const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canModify, showCacheOnlyBadge }) => {
-    const hasDescription = !!activity.description;
-    const availableDaysList = useMemo(() => {
-      return WEEKDAYS.filter((d, dayIdx) => activity.availableDays?.[dayIdx]);
-    }, [activity.availableDays]);
-
-    return (
-      <tr className="border-t border-indigo-100 hover:bg-indigo-100/60 transition-colors">
-        <td className="px-4 py-3 font-semibold text-indigo-900 text-sm">
-          <span className="inline-flex items-center gap-2 flex-wrap">
-            {activity.name}
-            {showCacheOnlyBadge && (
-                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200/80">
-                Cache seulement
-              </span>
-            )}
-          </span>
-        </td>
-        <td className="px-4 py-3 text-emerald-700 text-sm tabular-nums font-medium">{currency(activity.priceAdult, activity.currency)}</td>
-        <td className="px-4 py-3 text-emerald-600 text-sm tabular-nums font-medium">{currency(activity.priceChild, activity.currency)}</td>
-        <td className="px-4 py-3 text-emerald-600 text-sm tabular-nums font-medium">
-          {activity.babiesForbidden ? (
-            <span className="text-xs font-semibold uppercase tracking-wide text-amber-800">Interdit bébés</span>
-          ) : (
-            currency(activity.priceBaby, activity.currency)
-          )}
-        </td>
-        <td className="px-4 py-3">
-          <div className="flex gap-1.5 flex-wrap">
-            {availableDaysList.map((d) => (
-              <span
-                key={d.key}
-                className="px-2.5 py-1 rounded-lg bg-emerald-200 text-emerald-800 text-xs font-bold border border-emerald-300/60"
-              >
-                {d.label}
-              </span>
-            ))}
-          </div>
-        </td>
-        <td className="px-4 py-3 text-slate-600 text-xs max-w-[140px] truncate" title={activity.notes || ""}>
-          {activity.notes || "—"}
-        </td>
-        <td className="px-4 py-3 text-right">
-          <div className="flex gap-2 justify-end flex-wrap">
-            <button
-              type="button"
-              onClick={() => onOpenDescription(activity)}
-              className={`text-xs font-semibold px-3 py-2 rounded-lg transition-colors ${
-                hasDescription
-                  ? "bg-emerald-200 text-emerald-800 hover:bg-emerald-300 border border-emerald-300"
-                  : "bg-slate-200 text-slate-700 hover:bg-slate-300 border border-slate-300"
-              }`}
-            >
-              📝 Description{hasDescription ? " ✓" : ""}
-            </button>
-            {canModify && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onEdit(activity)}
-                  className="text-xs font-semibold px-3 py-2 rounded-lg bg-indigo-200 text-indigo-800 hover:bg-indigo-300 border border-indigo-300 transition-colors"
-                >
-                  ✏️ Modifier
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(activity.id)}
-                  className="text-xs font-semibold px-3 py-2 rounded-lg bg-red-200 text-red-800 hover:bg-red-300 border border-red-300 transition-colors"
-                >
-                  🗑️ Supprimer
-                </button>
-              </>
-            )}
-          </div>
-        </td>
-      </tr>
-    );
-  }, (prevProps, nextProps) => {
-    // Comparaison personnalisée optimisée pour éviter les re-renders inutiles
-    if (prevProps.activity.id !== nextProps.activity.id) return false;
-    if (prevProps.showCacheOnlyBadge !== nextProps.showCacheOnlyBadge) return false;
-    if (prevProps.activity.supabase_id !== nextProps.activity.supabase_id) return false;
-    if (Boolean(prevProps.activity[LOCAL_ONLY_ACTIVITY_KEY]) !== Boolean(nextProps.activity[LOCAL_ONLY_ACTIVITY_KEY]))
-      return false;
-    if (prevProps.activity.name !== nextProps.activity.name) return false;
-    if (prevProps.activity.priceAdult !== nextProps.activity.priceAdult) return false;
-    if (prevProps.activity.priceChild !== nextProps.activity.priceChild) return false;
-    if (prevProps.activity.priceBaby !== nextProps.activity.priceBaby) return false;
-    if (Boolean(prevProps.activity.babiesForbidden) !== Boolean(nextProps.activity.babiesForbidden))
-      return false;
-    if (prevProps.activity.notes !== nextProps.activity.notes) return false;
-    if (prevProps.activity.description !== nextProps.activity.description) return false;
-    if (prevProps.canModify !== nextProps.canModify) return false;
-    
-    // Comparaison optimisée des availableDays sans JSON.stringify
-    const prevDays = prevProps.activity.availableDays;
-    const nextDays = nextProps.activity.availableDays;
-    if (!prevDays && !nextDays) return true;
-    if (!prevDays || !nextDays) return false;
-    if (prevDays.length !== nextDays.length) return false;
-    for (let i = 0; i < prevDays.length; i++) {
-      if (prevDays[i] !== nextDays[i]) return false;
-    }
-    
-    return true;
-  });
 
   const totalActivities = activities.length;
 

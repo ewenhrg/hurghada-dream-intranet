@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { createPortal } from "react-dom";
 import { Clock } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -103,16 +103,6 @@ function QuoteCardComponent({
   const [payRestItemIndex, setPayRestItemIndex] = useState("");
   const [ticketGenerating, setTicketGenerating] = useState(false);
   const [ztUploadingType, setZtUploadingType] = useState(null);
-
-  const extractBase64FromDataUrl = useCallback((raw) => {
-    const s = String(raw || "");
-    const marker = "base64,";
-    const idx = s.toLowerCase().indexOf(marker);
-    if (idx >= 0) return s.slice(idx + marker.length).trim();
-    const comma = s.indexOf(",");
-    if (comma >= 0) return s.slice(comma + 1).trim();
-    return "";
-  }, []);
 
   // Calculer allTicketsFilled si ce n'est pas déjà défini
   const allTicketsFilled = d.allTicketsFilled !== undefined 
@@ -621,147 +611,6 @@ function QuoteCardComponent({
     }
   }, [d]);
 
-  const createQuotePdfBase64 = useCallback(async () => {
-    const html = generateQuoteHTML(d);
-    const res = await fetch("/api/render-quote-pdf", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ html }),
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok || !json?.ok || !json?.pdfBase64) {
-      const details = json?.error ? ` (${json.error})` : "";
-      throw new Error(`PDF serveur impossible${details}`);
-    }
-    return String(json.pdfBase64);
-  }, [d]);
-
-  const handleMailClick = useCallback(async () => {
-    const to = String(d.client?.email || "").trim();
-    if (!to) {
-      toast.error("Aucun e-mail client sur ce devis.");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
-      toast.error("L’e-mail client n’est pas valide.");
-      return;
-    }
-
-    toast.info("Génération du PDF…", 2500);
-    try {
-      const pdfBase64 = await createQuotePdfBase64();
-      const clientLabel = d.client?.name || formatPhoneWithPlus(d.client?.phone) || "client";
-      const fileName = `Devis - ${clientLabel}.pdf`;
-      const subject = `Devis + fiche d'information`;
-
-      // Ajouter la « fiche d'information » (Documents) si disponible.
-      let infoPdfUrl = "";
-      try {
-        const { data: docs, error: docsError } = await supabase
-          .from("documents")
-          .select("title, file_url, link")
-          .eq("site_key", SITE_KEY)
-          .order("created_at", { ascending: false })
-          .limit(50);
-        if (!docsError && Array.isArray(docs)) {
-          const match = docs.find((x) => {
-            const t = String(x?.title || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
-            return t.includes("fiche") && t.includes("information");
-          });
-          const rawUrl = String(match?.file_url || match?.link || "").trim();
-
-          // Certains anciens enregistrements ont un file_url mal formé du type:
-          // .../object/public/documents/https://<project>.supabase.co/<timestamp>_FILE.pdf
-          // On reconstruit une URL publique valide dans ce cas.
-          const fixMalformedStoragePublicUrl = (u) => {
-            const s = String(u || "").trim();
-            const marker = "/storage/v1/object/public/documents/";
-            const idx = s.indexOf(marker);
-            if (idx === -1) return s;
-            const after = s.slice(idx + marker.length);
-            if (!/^https?:\/\//i.test(after)) return s;
-            // after contient une URL complète => garder uniquement le nom de fichier
-            const fileName = after.split("/").pop() || "";
-            if (!fileName) return s;
-            const base = s.slice(0, idx + marker.length);
-            return base + encodeURIComponent(decodeURIComponent(fileName));
-          };
-
-          infoPdfUrl = fixMalformedStoragePublicUrl(rawUrl);
-          // Important: certains "liens" peuvent être des data: URLs (base64) -> payload énorme -> 546
-          // On ne garde que des URLs http(s) "raisonnables".
-          if (infoPdfUrl && (!/^https?:\/\//i.test(infoPdfUrl) || infoPdfUrl.length > 2000)) {
-            infoPdfUrl = "";
-          }
-        }
-      } catch {
-        // ignore
-      }
-
-      const sendOne = async (atts) => {
-        return await supabase.functions.invoke("send-quote-email", {
-          body: {
-            to,
-            subject,
-            clientName: d.client?.name || "",
-            attachments: atts,
-          },
-        });
-      };
-
-      const getInvokeErrorDetails = async (err) => {
-        try {
-          const anyErr = err;
-          if (anyErr?.context?.json) {
-            const body = await anyErr.context.json();
-            if (body?.details) return String(body.details);
-            if (body?.error) return String(body.error);
-            return JSON.stringify(body);
-          }
-          if (anyErr?.message) return String(anyErr.message);
-        } catch {
-          // ignore
-        }
-        return "";
-      };
-
-      const showCopyableError = (title, details) => {
-        const msg = details ? `${title}: ${details}` : title;
-        // Toast plus long pour laisser le temps de lire
-        try {
-          toast.error(msg, 20000);
-        } catch {
-          toast.error(msg);
-        }
-        // Et une fenêtre copiable si besoin (la notif peut être trop rapide)
-        try {
-          // eslint-disable-next-line no-alert
-          window.prompt("Copie/colle l’erreur ci-dessous :", msg);
-        } catch {
-          // ignore
-        }
-      };
-
-      const atts = [{ filename: fileName, mimeType: "application/pdf", contentBase64: pdfBase64 }];
-      if (infoPdfUrl) {
-        atts.push({ filename: "Fiche d'information.pdf", mimeType: "application/pdf", url: infoPdfUrl });
-      }
-
-      const first = await sendOne(atts);
-      if (first.error || !first.data?.ok) {
-        logger.error("send-quote-email error:", first.error || first.data);
-        const details = first.error ? await getInvokeErrorDetails(first.error) : String(first.data?.error || "");
-        showCopyableError("Erreur lors de l’envoi du mail", details);
-        return;
-      }
-
-      toast.success("Mail envoyé au client (devis + fiche d'information).");
-    } catch (err) {
-      console.error("send-quote-email exception:", err);
-      toast.error("Impossible de générer le PDF.");
-    }
-  }, [createQuotePdfBase64, d, extractBase64FromDataUrl]);
-
   // Optimisation : Utiliser useCallback avec une fonction optimisée qui évite les transformations lourdes
   const handleEditClick = useCallback(() => {
     // Préparer les données de manière optimisée avec valeurs par défaut
@@ -1108,13 +957,6 @@ function QuoteCardComponent({
                 type="button"
               >
                 🖨️ Imprimer
-              </button>
-              <button
-                type="button"
-                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-sky-500 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
-                onClick={() => void handleMailClick()}
-              >
-                📧 Mail
               </button>
               <button
                 type="button"
@@ -1670,8 +1512,10 @@ function QuoteCardComponent({
   );
 }
 
-// QuoteCard exporté directement (la pagination et les autres optimisations suffisent pour les performances)
-const QuoteCard = QuoteCardComponent;
+// Mémoïsé : sans cela, chaque frappe dans la recherche, chaque scroll et chaque
+// ouverture de modale re-rendait les 20 cartes de la page.
+const QuoteCard = memo(QuoteCardComponent);
+QuoteCard.displayName = "QuoteCard";
 
 /** Date de création du devis = aujourd'hui (fuseau local). */
 function isQuoteCreatedToday(createdAt) {
