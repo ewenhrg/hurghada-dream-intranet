@@ -312,15 +312,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     return list;
   }, [quotes, activities]);
 
-  const availableDates = useMemo(() => {
-    const set = new Set();
-    for (const r of rows) {
-      const d = String(r.date || "").trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) set.add(d);
-    }
-    return Array.from(set).sort();
-  }, [rows]);
-
   const filtered = useMemo(() => {
     const term = debouncedQ.trim().toLowerCase();
     return rows.filter((r) => {
@@ -1036,32 +1027,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
               </button>
             </div>
           </div>
-          {availableDates.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-1.5 border-t border-indigo-100 pt-3">
-              {availableDates.map((ymd) => {
-                const active = filterDate === ymd;
-                const count = rows.filter((r) => String(r.date || "").trim() === ymd).length;
-                return (
-                  <button
-                    key={ymd}
-                    type="button"
-                    onClick={() => setFilterDate(ymd)}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-bold tabular-nums transition ${
-                      active
-                        ? "border-indigo-700 bg-indigo-600 text-white"
-                        : "border-indigo-200 bg-indigo-50 text-indigo-900 hover:border-indigo-400"
-                    }`}
-                    title={`${count} ticket${count > 1 ? "s" : ""}`}
-                  >
-                    {dateForExport(ymd)}
-                    <span className={active ? "ml-1 opacity-80" : "ml-1 text-indigo-600/70"}>
-                      ({count})
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
