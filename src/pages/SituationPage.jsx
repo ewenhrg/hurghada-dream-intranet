@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback, Suspense, lazy } from "react";
 import { PrimaryBtn, GhostBtn, Section } from "../components/ui";
-import { DateInput } from "../components/DateInput";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { LS_KEYS, SITE_KEY } from "../constants";
@@ -37,12 +36,25 @@ function situationDateToYmd(raw) {
   const s = String(raw || "").trim();
   if (!s) return "";
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  const fr = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})/);
+
+  // JJ/MM/AAAA ou JJ-MM-AAAA (éventuellement suivi d’une heure)
+  const fr = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})(?:\s|$|T)/);
   if (fr) {
     const day = fr[1].padStart(2, "0");
     const month = fr[2].padStart(2, "0");
     return `${fr[3]}-${month}-${day}`;
   }
+
+  // JJ/MM/AA
+  const frShort = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2})(?:\s|$)/);
+  if (frShort) {
+    const day = frShort[1].padStart(2, "0");
+    const month = frShort[2].padStart(2, "0");
+    const yy = Number(frShort[3]);
+    const year = yy >= 70 ? 1900 + yy : 2000 + yy;
+    return `${year}-${month}-${day}`;
+  }
+
   const parsed = Date.parse(s);
   if (!Number.isNaN(parsed)) {
     const d = new Date(parsed);
@@ -1754,46 +1766,91 @@ export function SituationPage({ activities = [], user }) {
   );
 
   const dateFilterBar = hasWorkData ? (
-    <div className="flex flex-col gap-2 rounded-xl border border-indigo-200/80 bg-gradient-to-r from-indigo-50/90 to-sky-50/70 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-800">
-          Date de la situation
-        </p>
-        <p className="mt-0.5 text-xs font-medium text-slate-600">
-          {filterDate
-            ? `Affichage du ${formatSituationYmdDisplay(filterDate)} — ${filteredExcelData.length} client${filteredExcelData.length > 1 ? "s" : ""}`
-            : `Toutes les dates — ${excelData.length} client${excelData.length > 1 ? "s" : ""}`}
-          {situationDates.length > 1 ? ` · ${situationDates.length} jours dans le fichier` : ""}
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="w-[min(100%,11.5rem)]">
-          <DateInput
-            value={filterDate}
-            onChange={(next) => setFilterDate(String(next || "").trim())}
-            className="text-sm"
-          />
+    <div className="rounded-2xl border-2 border-indigo-300 bg-white px-4 py-3 shadow-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-indigo-950">
+            📅 Choisir la date de la situation
+          </p>
+          <p className="mt-0.5 text-xs font-medium text-slate-600">
+            {filterDate
+              ? `Jour affiché : ${formatSituationYmdDisplay(filterDate)} — ${filteredExcelData.length} client${filteredExcelData.length > 1 ? "s" : ""}`
+              : `Toutes les dates — ${excelData.length} client${excelData.length > 1 ? "s" : ""}`}
+          </p>
         </div>
-        <GhostBtn
-          type="button"
-          onClick={() => setFilterDate("")}
-          disabled={!filterDate}
-          className="!min-h-0 px-3 py-2 text-xs"
-        >
-          Toutes
-        </GhostBtn>
-        {situationDates.includes(getLocalDateKey()) ? (
-          <GhostBtn
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <label className="inline-flex items-center gap-2 rounded-xl border-2 border-indigo-400 bg-indigo-50 px-3 py-2 shadow-sm">
+            <span className="text-xs font-bold uppercase tracking-wide text-indigo-900">
+              Calendrier
+            </span>
+            <input
+              type="date"
+              value={filterDate || ""}
+              onChange={(e) => setFilterDate(String(e.target.value || "").trim())}
+              className="min-h-[40px] min-w-[10.5rem] cursor-pointer rounded-lg border border-indigo-200 bg-white px-2 py-1.5 text-sm font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25"
+              aria-label="Choisir une date de situation"
+            />
+          </label>
+
+          <button
             type="button"
-            onClick={() => setFilterDate(getLocalDateKey())}
-            disabled={filterDate === getLocalDateKey()}
-            variant="info"
-            className="!min-h-0 px-3 py-2 text-xs"
+            onClick={() => setFilterDate("")}
+            className={`min-h-[40px] rounded-xl border px-3 py-2 text-xs font-bold transition ${
+              !filterDate
+                ? "border-slate-800 bg-slate-800 text-white"
+                : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+            }`}
           >
-            Aujourd’hui
-          </GhostBtn>
-        ) : null}
+            Toutes
+          </button>
+
+          {situationDates.includes(getLocalDateKey()) ? (
+            <button
+              type="button"
+              onClick={() => setFilterDate(getLocalDateKey())}
+              className={`min-h-[40px] rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                filterDate === getLocalDateKey()
+                  ? "border-emerald-700 bg-emerald-600 text-white"
+                  : "border-emerald-300 bg-emerald-50 text-emerald-900 hover:border-emerald-400"
+              }`}
+            >
+              Aujourd’hui
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {situationDates.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-1.5 border-t border-indigo-100 pt-3">
+          {situationDates.map((ymd) => {
+            const active = filterDate === ymd;
+            const count = excelData.filter((row) => situationDateToYmd(row?.date) === ymd).length;
+            return (
+              <button
+                key={ymd}
+                type="button"
+                onClick={() => setFilterDate(ymd)}
+                className={`rounded-full border px-2.5 py-1 text-[11px] font-bold tabular-nums transition ${
+                  active
+                    ? "border-indigo-700 bg-indigo-600 text-white"
+                    : "border-indigo-200 bg-indigo-50 text-indigo-900 hover:border-indigo-400"
+                }`}
+                title={`${count} client${count > 1 ? "s" : ""}`}
+              >
+                {formatSituationYmdDisplay(ymd)}
+                <span className={active ? "ml-1 opacity-80" : "ml-1 text-indigo-600/70"}>
+                  ({count})
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="mt-3 border-t border-amber-100 pt-3 text-xs font-semibold text-amber-800">
+          Aucune date détectée dans le fichier — utilisez le calendrier ci-dessus pour filtrer.
+        </p>
+      )}
     </div>
   ) : null;
 
@@ -1952,7 +2009,7 @@ export function SituationPage({ activities = [], user }) {
         )}
 
         {hasWorkData && (
-          <div className="transfer-content space-y-2">
+          <div className="transfer-content space-y-3">
             {dateFilterBar}
             {statsBar}
             {clientList}
