@@ -3,7 +3,7 @@
  * d’une demande catalogue (table `public_quotes` ou modèle d’affichage équivalent).
  */
 
-import { getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote } from "./activityHelpers";
+import { getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, clearZeroTracasSimQuantities } from "./activityHelpers";
 import { formatPhoneWithPlus } from "../utils.js";
 
 export const HD_PUBLIC_QUOTE_TO_DRAFT_EVENT = "hd-public-quote-to-draft";
@@ -115,6 +115,8 @@ export function mergePublicSavedLineIntoQuoteItem(line) {
     line.zeroTracasTransfertPlus3Personnes != null ? String(line.zeroTracasTransfertPlus3Personnes) : "";
   base.zeroTracasVisaSim = line.zeroTracasVisaSim != null ? String(line.zeroTracasVisaSim) : "";
   base.zeroTracasVisaSeul = line.zeroTracasVisaSeul != null ? String(line.zeroTracasVisaSeul) : "";
+
+  Object.assign(base, clearZeroTracasSimQuantities(base));
 
   return base;
 }

@@ -55,6 +55,9 @@ import {
   isTurtleActivity,
   hasAllTurtleFinSizes,
   getTurtleFinSizesMissingMessage,
+  isZeroTracasSimOptionKey,
+  clearZeroTracasSimQuantities,
+  ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE,
 } from "../utils/activityHelpers";
 import {
   computePublicCatalogLineTotal,
@@ -628,7 +631,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       return "Choisissez la taille du groupe (4, 5 ou 6 personnes) — prix forfaitaire.";
     }
     if (isZeroTracasHorsZoneActivity(activity.name) || isZeroTracasActivity(activity.name)) {
-      return "Indiquez le nombre de chaque prestation (même grille que sur le devis intranet). Les tarifs adulte/enfant ci-dessus ne s’appliquent pas à cette fiche.\nLa date est automatiquement fixée au jour d’arrivée.";
+      return `Indiquez le nombre de chaque prestation (même grille que sur le devis intranet). Les tarifs adulte/enfant ci-dessus ne s’appliquent pas à cette fiche.\nLa date est automatiquement fixée au jour d’arrivée.\n${ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE}`;
     }
     if (isPublicCatalogAirportStyleLine(activity)) {
       return "Forfait par trajet : choisissez aller simple ou aller-retour (comme sur le devis intranet). Les tarifs adulte/enfant en base ne s’appliquent pas.";
@@ -960,30 +963,45 @@ export function PublicCatalogueActivityPage({ activityId }) {
           <p className="text-xs font-bold uppercase tracking-wide text-slate-800">
             {isZeroTracasHorsZoneActivity(name) ? "Zero Tracas Hors zone" : "Zero Tracas"} — quantités
           </p>
+          <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
+            {ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE}
+          </p>
           <div className="space-y-2">
-            {rows.map(({ key, label, unit }) => (
-              <div
-                key={key}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2 sm:flex-nowrap"
-              >
-                <span className="min-w-0 flex-1 text-xs font-semibold leading-snug text-slate-800">{label}</span>
-                <span className="shrink-0 text-[10px] font-medium text-slate-600">{unit} € / u.</span>
-                <select
-                  className="w-16 shrink-0 rounded border border-slate-300 bg-white py-1.5 text-center text-sm font-semibold"
-                  value={special[key]}
-                  onChange={(e) =>
-                    setSpecial((s) => ({ ...s, [key]: Math.max(0, Math.min(20, toNumber(e.target.value))) }))
-                  }
-                  aria-label={`Quantité ${label}`}
+            {rows.map(({ key, label, unit }) => {
+              const simBlocked = isZeroTracasSimOptionKey(key);
+              return (
+                <div
+                  key={key}
+                  className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2 sm:flex-nowrap ${
+                    simBlocked ? "opacity-55" : ""
+                  }`}
                 >
-                  {Array.from({ length: 21 }, (_, n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
+                  <span className="min-w-0 flex-1 text-xs font-semibold leading-snug text-slate-800">
+                    {label}
+                    {simBlocked ? " — indisponible" : ""}
+                  </span>
+                  <span className="shrink-0 text-[10px] font-medium text-slate-600">{unit} € / u.</span>
+                  <select
+                    className={`w-16 shrink-0 rounded border border-slate-300 py-1.5 text-center text-sm font-semibold ${
+                      simBlocked ? "cursor-not-allowed bg-slate-100" : "bg-white"
+                    }`}
+                    value={simBlocked ? 0 : special[key]}
+                    disabled={simBlocked}
+                    onChange={(e) => {
+                      if (simBlocked) return;
+                      setSpecial((s) => ({ ...s, [key]: Math.max(0, Math.min(20, toNumber(e.target.value))) }));
+                    }}
+                    aria-label={`Quantité ${label}`}
+                  >
+                    {Array.from({ length: 21 }, (_, n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
           </div>
         </div>
       );
@@ -1061,12 +1079,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
     if (isZeroTracasHorsZoneActivity(name) || isZeroTracasActivity(name)) {
       const zt =
-        toNumber(special.zeroTracasTransfertVisaSim) +
         toNumber(special.zeroTracasTransfertVisa) +
-        toNumber(special.zeroTracasTransfertSim) +
         toNumber(special.zeroTracasTransfert3Personnes) +
         toNumber(special.zeroTracasTransfertPlus3Personnes) +
-        toNumber(special.zeroTracasVisaSim) +
         toNumber(special.zeroTracasVisaSeul);
       return zt === 0;
     }
@@ -1416,7 +1431,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       // Provisoire jusqu’à classification au checkout
       children: minors,
       babies: 0,
-      ...special,
+      ...clearZeroTracasSimQuantities(special),
     };
     savePublicCatalogueCart([...prev, line]);
     navigate("/catalogue");

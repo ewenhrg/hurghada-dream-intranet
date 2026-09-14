@@ -464,6 +464,34 @@ export function isArrivalDayServiceActivity(activityName) {
   return isZeroTracasActivity(activityName) || isZeroTracasHorsZoneActivity(activityName);
 }
 
+/** Options Zero Tracas incluant une carte SIM (indisponibles pour le moment). */
+export const ZERO_TRACAS_SIM_OPTION_KEYS = [
+  "zeroTracasTransfertVisaSim",
+  "zeroTracasTransfertSim",
+  "zeroTracasVisaSim",
+];
+
+export const ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE =
+  "Les cartes SIM ne sont plus disponibles pour le moment.";
+
+export function isZeroTracasSimOptionKey(key) {
+  return ZERO_TRACAS_SIM_OPTION_KEYS.includes(String(key || ""));
+}
+
+/** Remet à 0 toutes les quantités d’options SIM Zero Tracas. */
+export function clearZeroTracasSimQuantities(fields = {}) {
+  const next = { ...fields };
+  for (const key of ZERO_TRACAS_SIM_OPTION_KEYS) {
+    next[key] = typeof fields[key] === "string" ? "" : 0;
+  }
+  return next;
+}
+
+export function zeroTracasItemHasBlockedSimQuantity(item) {
+  if (!item) return false;
+  return ZERO_TRACAS_SIM_OPTION_KEYS.some((key) => Number(item[key] || 0) > 0);
+}
+
 // Helper pour obtenir les prix ZERO TRACAS HORS ZONE (+5€ sur chaque option visa)
 export function getZeroTracasHorsZonePrices() {
   return {
@@ -585,13 +613,11 @@ export function getActivityTarifListLines(activityLike) {
     const p = getZeroTracasHorsZonePrices();
     return [
       "Grille Zero Tracas Hors zone (prix unitaire) :",
-      `Transfert + visa + SIM : ${p.transfertVisaSim} €`,
       `Transfert + visa : ${p.transfertVisa} €`,
-      `Transfert + SIM : ${p.transfertSim} €`,
       `Transfert 3 pers. : ${p.transfert3Personnes} €`,
       `Transfert +3 pers. : ${p.transfertPlus3Personnes} €`,
-      `Visa + SIM : ${p.visaSim} €`,
       `Visa seul : ${p.visaSeul} €`,
+      ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE,
     ];
   }
 
@@ -599,13 +625,11 @@ export function getActivityTarifListLines(activityLike) {
     const p = getZeroTracasPrices();
     return [
       "Grille Zero Tracas (prix unitaire) :",
-      `Transfert + visa + SIM : ${p.transfertVisaSim} €`,
       `Transfert + visa : ${p.transfertVisa} €`,
-      `Transfert + SIM : ${p.transfertSim} €`,
       `Transfert 3 pers. : ${p.transfert3Personnes} €`,
       `Transfert +3 pers. : ${p.transfertPlus3Personnes} €`,
-      `Visa + SIM : ${p.visaSim} €`,
       `Visa seul : ${p.visaSeul} €`,
+      ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE,
     ];
   }
 

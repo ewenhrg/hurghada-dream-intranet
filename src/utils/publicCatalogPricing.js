@@ -103,27 +103,22 @@ function getAirportStyleTransferListAmount(activityName) {
 }
 
 function computeZeroTracasStyleLineTotal(activityName, line) {
+  // SIM indisponibles : quantités ignorées dans le tarif
   if (isZeroTracasHorsZoneActivity(activityName)) {
     const p = getZeroTracasHorsZonePrices();
     return (
-      num(line?.zeroTracasTransfertVisaSim) * p.transfertVisaSim +
       num(line?.zeroTracasTransfertVisa) * p.transfertVisa +
-      num(line?.zeroTracasTransfertSim) * p.transfertSim +
       num(line?.zeroTracasTransfert3Personnes) * p.transfert3Personnes +
       num(line?.zeroTracasTransfertPlus3Personnes) * p.transfertPlus3Personnes +
-      num(line?.zeroTracasVisaSim) * p.visaSim +
       num(line?.zeroTracasVisaSeul) * p.visaSeul
     );
   }
   if (isZeroTracasActivity(activityName)) {
     const p = getZeroTracasPrices();
     return (
-      num(line?.zeroTracasTransfertVisaSim) * p.transfertVisaSim +
       num(line?.zeroTracasTransfertVisa) * p.transfertVisa +
-      num(line?.zeroTracasTransfertSim) * p.transfertSim +
       num(line?.zeroTracasTransfert3Personnes) * p.transfert3Personnes +
       num(line?.zeroTracasTransfertPlus3Personnes) * p.transfertPlus3Personnes +
-      num(line?.zeroTracasVisaSim) * p.visaSim +
       num(line?.zeroTracasVisaSeul) * p.visaSeul
     );
   }

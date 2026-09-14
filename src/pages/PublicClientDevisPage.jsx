@@ -661,12 +661,12 @@ export function PublicClientDevisPage() {
         louxorPrivatif6pax: Boolean(line.louxorPrivatif6pax),
         allerSimple: Boolean(line.allerSimple),
         allerRetour: Boolean(line.allerRetour),
-        zeroTracasTransfertVisaSim: line.zeroTracasTransfertVisaSim ?? "",
+        zeroTracasTransfertVisaSim: 0,
         zeroTracasTransfertVisa: line.zeroTracasTransfertVisa ?? "",
-        zeroTracasTransfertSim: line.zeroTracasTransfertSim ?? "",
+        zeroTracasTransfertSim: 0,
         zeroTracasTransfert3Personnes: line.zeroTracasTransfert3Personnes ?? "",
         zeroTracasTransfertPlus3Personnes: line.zeroTracasTransfertPlus3Personnes ?? "",
-        zeroTracasVisaSim: line.zeroTracasVisaSim ?? "",
+        zeroTracasVisaSim: 0,
         zeroTracasVisaSeul: line.zeroTracasVisaSeul ?? "",
       };
     });
