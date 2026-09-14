@@ -826,6 +826,10 @@ export function generateTicketsHTML(quote, options = {}) {
   const breakdown = getQuoteCollectionBreakdown(quote);
   const paidCash = Math.round(Number(quote?.paidCash) || 0);
   const paidStripe = Math.round(Number(quote?.paidStripe) || 0);
+  const restTotal =
+    Math.round(Number(quote?.paymentRestAmount) || 0) > 0
+      ? Math.round(Number(quote.paymentRestAmount) || 0)
+      : sortedItems.reduce((sum, item) => sum + Math.round(Number(item?.restAmount) || 0), 0);
   const isSingleTicket = ticketCount === 1;
 
   const cashAmount =
@@ -878,6 +882,13 @@ export function generateTicketsHTML(quote, options = {}) {
       label: isSingleTicket ? "Prix du ticket" : "Prix total",
       value: currencyNoCents(totalPrice, quote.currency),
       tone: "total",
+    });
+  }
+  if (restTotal > 0) {
+    amountSummaryRows.push({
+      label: "Reste à payer",
+      value: currencyNoCents(restTotal, quote.currency),
+      tone: "rest",
     });
   }
 
@@ -1142,6 +1153,9 @@ export function generateTicketsHTML(quote, options = {}) {
     }
     .tickets-summary-stripe .tickets-summary-value {
       color: #4338ca;
+    }
+    .tickets-summary-rest .tickets-summary-value {
+      color: #b45309;
     }
     .zt-receipt {
       background: #d7eef8;

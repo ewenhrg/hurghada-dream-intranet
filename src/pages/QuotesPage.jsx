@@ -16,7 +16,7 @@ import { QuoteSummary } from "../components/quotes/QuoteSummary";
 import { PrivateTransferButtons } from "../components/quotes/PrivateTransferButtons";
 import { TurtleFinSizesFields } from "../components/quotes/TurtleFinSizesFields";
 import { NotesSection } from "../components/quotes/NotesSection";
-import { getTransferSurchargeFieldsForQuoteItem, isMarsaAlamCategory } from "../utils/transferPricing";
+import { getTransferSurchargeFieldsForQuoteItem, isMarsaAlamCategory, requiresPickupTimeChoice } from "../utils/transferPricing";
 import { useActivityPriceCalculator } from "../hooks/useActivityPriceCalculator";
 import {
   isActivityBlockedForNeighborhood,
@@ -887,6 +887,21 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
+    const missingPickupSlot = validComputed.filter((c) => {
+      if (!requiresPickupTimeChoice(c.transferInfo)) return false;
+      return !String(c.raw.slot || "").trim();
+    });
+    if (missingPickupSlot.length > 0) {
+      const names = missingPickupSlot
+        .map((c) => c.act?.name || "activité")
+        .join(", ");
+      toast.warning(
+        `Choisissez un créneau / heure de prise en charge pour : ${names}.`
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
     if (client.hasSecondHotel && !isSecondHotelConfigured(client)) {
       toast.warning(
         "Double hôtel activé : renseignez les dates et le quartier du 2e hôtel (ouvrez la fiche Double hôtel)."
@@ -974,7 +989,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       return;
     }
 
-    // Minimum 2 personnes (adultes + enfants) pour Karting, Combo aquatique, Jeux aquatique
+    // Minimum 2 personnes (adultes + enfants) : Karting, Combo/Jeux aquatique, Caire/Louxor Overnight
     const activitiesBelowMinTwo = validComputed.filter((c) => {
       if (!requiresMinimumTwoParticipants(c.act?.name)) return false;
       return !hasEnoughParticipantsForActivity(c.act?.name, {
@@ -1932,7 +1947,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Créneau</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Créneau
+                      {requiresPickupTimeChoice(c.transferInfo) ? (
+                        <span className="ml-1 text-rose-600">*</span>
+                      ) : null}
+                    </label>
                     <select
                       value={c.raw.slot}
                       onChange={(e) => {
@@ -1946,8 +1966,13 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         }
                         setItem(idx, patch);
                       }}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-normal text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:bg-slate-100 disabled:text-slate-400"
+                      className={`w-full rounded-lg border bg-white px-4 py-2.5 text-sm font-normal text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:bg-slate-100 disabled:text-slate-400 ${
+                        requiresPickupTimeChoice(c.transferInfo) && !String(c.raw.slot || "").trim()
+                          ? "border-rose-400"
+                          : "border-slate-300"
+                      }`}
                       disabled={!c.transferInfo || (!c.transferInfo.morningEnabled && !c.transferInfo.afternoonEnabled && !c.transferInfo.eveningEnabled)}
+                      aria-required={requiresPickupTimeChoice(c.transferInfo) ? true : undefined}
                     >
                       <option value="">— Choisir un créneau —</option>
                       {c.transferInfo?.morningEnabled && (

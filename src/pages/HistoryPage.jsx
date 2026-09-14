@@ -3,10 +3,10 @@ import { createPortal } from "react-dom";
 import { Clock } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { currencyNoCents, calculateCardPrice, saveQuotesCache, cleanPhoneNumber, formatPhoneWithPlus, calculateTransferSurcharge, isQuoteFullyPaid, quoteHasAnyTicket, normalizeTicketsPaymentMethods } from "../utils";
+import { currencyNoCents, calculateCardPrice, getTicketPaymentCoverage, saveQuotesCache, cleanPhoneNumber, formatPhoneWithPlus, calculateTransferSurcharge, isQuoteFullyPaid, quoteHasAnyTicket, normalizeTicketsPaymentMethods } from "../utils";
 import { generateQuoteHTML, generateTicketsHTML } from "../utils/printTemplates";
 import { setVisibilityAwareInterval } from "../utils/idle";
-import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem } from "../utils/transferPricing";
+import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem, getActivityPickupOptions, requiresPickupTimeChoice, pickupTimeFromOptionValue, resolveActivityFromList } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
@@ -25,6 +25,7 @@ import {
   buildSecondHotelDbFields,
   isMissingSecondHotelColumnError,
   stripSecondHotelColumns,
+  getEffectiveNeighborhoodForDate,
 } from "../utils/clientSecondHotel.js";
 import {
   buildAirbnbDbFields,
@@ -162,6 +163,28 @@ function QuoteCardComponent({
       });
   }, [quotes, d]);
 
+  const resolvePayItemPickupOptions = useCallback(
+    (item) => {
+      const rawQuote = resolveQuoteById(quotes, d.id) || d;
+      const act = resolveActivityFromList(item, activities);
+      const neighborhood =
+        String(item?.neighborhood || "").trim() ||
+        getEffectiveNeighborhoodForDate(rawQuote.client, item?.date) ||
+        String(rawQuote.client?.neighborhood || "").trim();
+      return getActivityPickupOptions(act, neighborhood);
+    },
+    [quotes, d, activities]
+  );
+
+  const payItemsNeedingPickupChoice = useMemo(() => {
+    return payModalItems.filter(({ item, originalIndex }) => {
+      const options = resolvePayItemPickupOptions(item);
+      if (!requiresPickupTimeChoice(options)) return false;
+      const current = String(pickupDrafts[originalIndex] ?? item.pickupTime ?? "").trim();
+      return !current;
+    });
+  }, [payModalItems, pickupDrafts, resolvePayItemPickupOptions]);
+
   /**
    * 1er n° saisi → détecte le chiffre et propose la suite sur les activités suivantes
    * (ordre date du modal). Édition du 1er champ : écrase la suite. Autres : remplit seulement les vides.
@@ -180,6 +203,41 @@ function QuoteCardComponent({
     () => Object.keys(ticketDraftErrors).length > 0,
     [ticketDraftErrors]
   );
+
+  const payModalCashTotal = useMemo(() => {
+    const rawQuote = resolveQuoteById(quotes, d.id) || d;
+    const items = rawQuote.items || [];
+    return (
+      items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||
+      Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0)
+    );
+  }, [quotes, d]);
+
+  const payCoverage = useMemo(() => {
+    if (!payCash && !payStripe) {
+      return getTicketPaymentCoverage({
+        cashTotal: payModalCashTotal,
+        payCash: false,
+        payStripe: false,
+        restAmount: Math.round(Number(String(payRestAmount).replace(",", ".")) || 0),
+      });
+    }
+    return getTicketPaymentCoverage({
+      cashTotal: payModalCashTotal,
+      payCash,
+      payStripe,
+      paidCash: Math.round(Number(String(payCashAmount).replace(",", ".")) || 0),
+      paidStripe: Math.round(Number(String(payStripeAmount).replace(",", ".")) || 0),
+      restAmount: Math.round(Number(String(payRestAmount).replace(",", ".")) || 0),
+    });
+  }, [
+    payModalCashTotal,
+    payCash,
+    payStripe,
+    payCashAmount,
+    payStripeAmount,
+    payRestAmount,
+  ]);
 
   const handleTicketDraftChange = useCallback(
     (originalIndex, sortedIndex, rawValue) => {
@@ -255,11 +313,34 @@ function QuoteCardComponent({
     const initialPickups = {};
     (rawQuote.items || []).forEach((item, idx) => {
       initial[idx] = String(item.ticketNumber || "").trim();
-      initialPickups[idx] = String(item.pickupTime || "").trim();
+      const act = resolveActivityFromList(item, activities);
+      const neighborhood =
+        String(item?.neighborhood || "").trim() ||
+        getEffectiveNeighborhoodForDate(rawQuote.client, item?.date) ||
+        String(rawQuote.client?.neighborhood || "").trim();
+      const pickupOptions = getActivityPickupOptions(act, neighborhood);
+      let pickup = String(item.pickupTime || "").trim();
+      if (!pickup && item.slot) {
+        const bySlot = pickupOptions.find((o) => o.slot === item.slot);
+        if (bySlot) pickup = bySlot.time || bySlot.value;
+      }
+      if (!pickup && pickupOptions.length === 1) {
+        pickup = pickupOptions[0].time || pickupOptions[0].value;
+      }
+      initialPickups[idx] = pickup;
     });
     setTicketDrafts(initial);
     setPickupDrafts(initialPickups);
-    setEditPickupTimes(false);
+    setEditPickupTimes(
+      (rawQuote.items || []).some((item) => {
+        const act = resolveActivityFromList(item, activities);
+        const neighborhood =
+          String(item?.neighborhood || "").trim() ||
+          getEffectiveNeighborhoodForDate(rawQuote.client, item?.date) ||
+          String(rawQuote.client?.neighborhood || "").trim();
+        return requiresPickupTimeChoice(getActivityPickupOptions(act, neighborhood));
+      })
+    );
     const methods = normalizeTicketsPaymentMethods(rawQuote);
     setPayCash(methods.cash);
     setPayStripe(methods.stripe);
@@ -294,7 +375,7 @@ function QuoteCardComponent({
           : ""
     );
     setShowTicketModal(true);
-  }, [d, quotes]);
+  }, [d, quotes, activities]);
 
   const handleConfirmTickets = useCallback(async () => {
     const rawQuote = resolveQuoteById(quotes, d.id) || d;
@@ -302,6 +383,26 @@ function QuoteCardComponent({
     if (items.length === 0) {
       toast.warning("Aucune activité sur ce devis.");
       return;
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const pickupOptions = (() => {
+        const act = resolveActivityFromList(item, activities);
+        const neighborhood =
+          String(item?.neighborhood || "").trim() ||
+          getEffectiveNeighborhoodForDate(rawQuote.client, item?.date) ||
+          String(rawQuote.client?.neighborhood || "").trim();
+        return getActivityPickupOptions(act, neighborhood);
+      })();
+      if (!requiresPickupTimeChoice(pickupOptions)) continue;
+      const pickup = String(pickupDrafts[i] ?? item.pickupTime ?? "").trim();
+      if (!pickup) {
+        toast.warning(
+          `Choisissez l’heure de prise en charge pour « ${item.activityName || `Activité ${i + 1}`} ».`
+        );
+        return;
+      }
     }
 
     if (!payCash && !payStripe) {
@@ -333,6 +434,32 @@ function QuoteCardComponent({
       payRestItemIndex === "" || payRestItemIndex == null
         ? -1
         : Number(payRestItemIndex);
+
+    const cashTotal =
+      items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||
+      Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0);
+    const coverage = getTicketPaymentCoverage({
+      cashTotal,
+      payCash,
+      payStripe,
+      paidCash: paidCashAmount,
+      paidStripe: paidStripeAmount,
+      restAmount: restParsed,
+    });
+    if (coverage.gap !== 0) {
+      if (coverage.gap > 0) {
+        toast.warning(
+          `Il manque ${currencyNoCents(coverage.gap, rawQuote.currency || "EUR")} : ` +
+            `ajustez Cash/Stripe ou indiquez ce reste à payer (avec l’activité concernée).`
+        );
+      } else {
+        toast.warning(
+          `Trop payé de ${currencyNoCents(Math.abs(coverage.gap), rawQuote.currency || "EUR")} : ` +
+            `réduisez Cash, Stripe ou le reste pour égaler le total.`
+        );
+      }
+      return;
+    }
     if (restParsed > 0) {
       if (!Number.isInteger(restItemIndex) || restItemIndex < 0 || restItemIndex >= items.length) {
         toast.warning("Choisissez l’activité concernée par le reste à payer.");
@@ -376,24 +503,37 @@ function QuoteCardComponent({
         .filter(Boolean)
         .join("+");
       const enteredAt = new Date().toISOString();
-      const cashTotal =
-        items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||
-        Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0);
       const cardTotal = calculateCardPrice(cashTotal);
-      const updatedItems = items.map((item, idx) => ({
-        ...item,
-        ticketNumber: normalized[idx],
-        pickupTime:
+      const updatedItems = items.map((item, idx) => {
+        const pickupOptions = (() => {
+          const act = resolveActivityFromList(item, activities);
+          const neighborhood =
+            String(item?.neighborhood || "").trim() ||
+            getEffectiveNeighborhoodForDate(rawQuote.client, item?.date) ||
+            String(rawQuote.client?.neighborhood || "").trim();
+          return getActivityPickupOptions(act, neighborhood);
+        })();
+        const rawPickup =
           pickupDrafts[idx] !== undefined
             ? String(pickupDrafts[idx] || "").trim()
-            : String(item.pickupTime || "").trim(),
-        ticketEnteredByName: agentName || item.ticketEnteredByName || "",
-        paymentMethod: paymentMethodLabel || item.paymentMethod || "",
-        // Conserver la 1re date d’encaissement si déjà payé
-        ticketsEnteredAt: item.ticketsEnteredAt || enteredAt,
-        restAmount:
-          restParsed > 0 && idx === restItemIndex ? restParsed : 0,
-      }));
+            : String(item.pickupTime || "").trim();
+        const nextPickup = pickupTimeFromOptionValue(pickupOptions, rawPickup) || rawPickup;
+        const matched = pickupOptions.find(
+          (o) => o.value === rawPickup || o.time === rawPickup || o.time === nextPickup || o.slot === rawPickup
+        );
+        return {
+          ...item,
+          ticketNumber: normalized[idx],
+          pickupTime: nextPickup,
+          slot: matched?.slot || item.slot || "",
+          ticketEnteredByName: agentName || item.ticketEnteredByName || "",
+          paymentMethod: paymentMethodLabel || item.paymentMethod || "",
+          // Conserver la 1re date d’encaissement si déjà payé
+          ticketsEnteredAt: item.ticketsEnteredAt || enteredAt,
+          restAmount:
+            restParsed > 0 && idx === restItemIndex ? restParsed : 0,
+        };
+      });
 
       const updatedQuote = {
         ...rawQuote,
@@ -450,7 +590,7 @@ function QuoteCardComponent({
     } finally {
       setTicketGenerating(false);
     }
-  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, pickupDrafts, user, payCash, payStripe, payCashAmount, payStripeAmount, payRestAmount, payRestItemIndex, needsZeroTracasDocs]);
+  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, pickupDrafts, user, payCash, payStripe, payCashAmount, payStripeAmount, payRestAmount, payRestItemIndex, needsZeroTracasDocs, activities]);
 
   const handleZeroTracasDocPick = useCallback(
     async (docType, file) => {
@@ -1141,27 +1281,83 @@ function QuoteCardComponent({
                       </p>
                     ) : null}
                   </label>
-                  {editPickupTimes ? (
-                    <label className="mt-3 block">
-                      <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                        Heure de prise en charge
-                      </span>
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        value={pickupDrafts[originalIndex] ?? ""}
-                        onChange={(e) =>
-                          setPickupDrafts((prev) => ({
-                            ...prev,
-                            [originalIndex]: e.target.value,
-                          }))
-                        }
-                        placeholder="ex. 08:30"
-                        disabled={ticketGenerating}
-                        className="mt-1.5 w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60"
-                      />
-                    </label>
-                  ) : null}
+                  {(() => {
+                    const pickupOptions = resolvePayItemPickupOptions(item);
+                    const needsChoice = requiresPickupTimeChoice(pickupOptions);
+                    const currentPickup = String(
+                      pickupDrafts[originalIndex] ?? item.pickupTime ?? ""
+                    ).trim();
+                    const selectValue =
+                      pickupOptions.find(
+                        (o) =>
+                          o.value === currentPickup ||
+                          o.time === currentPickup ||
+                          o.slot === currentPickup
+                      )?.value || "";
+
+                    if (needsChoice) {
+                      return (
+                        <label className="mt-3 block">
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-violet-700">
+                            Heure de prise en charge{" "}
+                            <span className="text-rose-600">*</span>
+                          </span>
+                          <select
+                            value={selectValue}
+                            onChange={(e) =>
+                              setPickupDrafts((prev) => ({
+                                ...prev,
+                                [originalIndex]: e.target.value,
+                              }))
+                            }
+                            disabled={ticketGenerating}
+                            aria-required="true"
+                            className={`mt-1.5 w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:ring-2 disabled:opacity-60 ${
+                              !currentPickup
+                                ? "border-rose-400 focus:border-rose-400 focus:ring-rose-500/20"
+                                : "border-violet-200 focus:border-violet-400 focus:ring-violet-500/20"
+                            }`}
+                          >
+                            <option value="">— Choisir une heure —</option>
+                            {pickupOptions.map((opt) => (
+                              <option key={opt.slot} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                          {!currentPickup ? (
+                            <p className="mt-1.5 text-xs font-semibold text-rose-600" role="alert">
+                              Obligatoire : plusieurs horaires possibles.
+                            </p>
+                          ) : null}
+                        </label>
+                      );
+                    }
+
+                    if (!editPickupTimes) return null;
+
+                    return (
+                      <label className="mt-3 block">
+                        <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                          Heure de prise en charge
+                        </span>
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          value={pickupDrafts[originalIndex] ?? ""}
+                          onChange={(e) =>
+                            setPickupDrafts((prev) => ({
+                              ...prev,
+                              [originalIndex]: e.target.value,
+                            }))
+                          }
+                          placeholder="ex. 08:30"
+                          disabled={ticketGenerating}
+                          className="mt-1.5 w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60"
+                        />
+                      </label>
+                    );
+                  })()}
                 </li>
               ))}
             </ul>
@@ -1330,12 +1526,45 @@ function QuoteCardComponent({
               ) : null}
             </fieldset>
 
+            {(payCash || payStripe) && payCoverage.gap !== 0 ? (
+              <div
+                className={`mt-3 rounded-xl border px-3.5 py-3 text-sm font-semibold ${
+                  payCoverage.gap > 0
+                    ? "border-amber-300 bg-amber-50 text-amber-950"
+                    : "border-rose-300 bg-rose-50 text-rose-950"
+                }`}
+                role="status"
+              >
+                {payCoverage.gap > 0 ? (
+                  <>
+                    Il manque{" "}
+                    <span className="tabular-nums font-bold">
+                      {currencyNoCents(payCoverage.gap, d.currency || "EUR")}
+                    </span>{" "}
+                    pour atteindre le total (
+                    {currencyNoCents(payModalCashTotal, d.currency || "EUR")}
+                    ). Indiquez ce montant dans « Reste à payer » ou ajustez Cash/Stripe.
+                  </>
+                ) : (
+                  <>
+                    Trop payé de{" "}
+                    <span className="tabular-nums font-bold">
+                      {currencyNoCents(Math.abs(payCoverage.gap), d.currency || "EUR")}
+                    </span>
+                    . Réduisez Cash, Stripe ou le reste.
+                  </>
+                )}
+              </div>
+            ) : null}
+
             <fieldset className="mt-5 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3.5">
               <legend className="px-1 text-[11px] font-bold uppercase tracking-wide text-amber-800">
-                Reste à payer (optionnel)
+                Reste à payer
+                {payCoverage.gap > 0 ? " (obligatoire)" : " (si solde)"}
               </legend>
               <p className="text-xs font-medium text-amber-900/80 mb-3">
-                Si le client n’a pas tout réglé, indiquez le montant restant et l’activité concernée.
+                Cash + Stripe + reste doivent égaler le total. S’il manque de l’argent,
+                saisissez le reste et l’activité concernée.
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block rounded-xl border border-amber-200 bg-white px-3 py-2.5">
@@ -1354,7 +1583,11 @@ function QuoteCardComponent({
                     inputMode="decimal"
                     min={0}
                     step={1}
-                    placeholder="ex. 40"
+                    placeholder={
+                      payCoverage.gap > 0
+                        ? `ex. ${payCoverage.gap}`
+                        : "ex. 40"
+                    }
                     disabled={ticketGenerating}
                     aria-label="Montant du reste à payer"
                   />
@@ -1409,14 +1642,24 @@ function QuoteCardComponent({
                   ticketGenerating ||
                   hasTicketDraftErrors ||
                   Boolean(ztUploadingType) ||
-                  (needsZeroTracasDocs && missingZeroTracasDocs.length > 0)
+                  (needsZeroTracasDocs && missingZeroTracasDocs.length > 0) ||
+                  ((payCash || payStripe) && payCoverage.gap !== 0) ||
+                  (Math.round(Number(String(payRestAmount).replace(",", ".")) || 0) > 0 &&
+                    String(payRestItemIndex).trim() === "") ||
+                  payItemsNeedingPickupChoice.length > 0
                 }
               >
                 {ticketGenerating
                   ? "Enregistrement…"
                   : needsZeroTracasDocs && missingZeroTracasDocs.length > 0
                     ? "Joignez les documents Zero Tracas"
-                    : "✅ Valider et imprimer les tickets"}
+                    : payItemsNeedingPickupChoice.length > 0
+                      ? "Choisissez les heures de prise en charge"
+                    : (payCash || payStripe) && payCoverage.gap !== 0
+                      ? payCoverage.gap > 0
+                        ? `Reste ${payCoverage.gap} € manquant`
+                        : "Ajustez les montants"
+                      : "✅ Valider et imprimer les tickets"}
               </button>
             </div>
           </div>
@@ -2589,6 +2832,18 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       return;
     }
 
+    const missingPickupSlot = validComputed.filter((c) => {
+      if (!requiresPickupTimeChoice(c.transferInfo)) return false;
+      return !String(c.raw.slot || "").trim();
+    });
+    if (missingPickupSlot.length > 0) {
+      const activityNames = missingPickupSlot.map((c) => c.act?.name || "activité").join(", ");
+      toast.warning(
+        `Choisissez un créneau / heure de prise en charge pour : ${activityNames}.`
+      );
+      return;
+    }
+
     const activitiesBelowMinTwo = validComputed.filter((c) => {
       if (!requiresMinimumTwoParticipants(c.act?.name)) return false;
       if (isBoatPartyActivity(c.act?.name)) {
@@ -3445,7 +3700,12 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 {/* Créneau de transfert */}
                 {c.transferInfo && (
                   <div className="max-w-md">
-                    <p className="text-sm md:text-base font-bold text-slate-800 mb-3">⏰ Créneau de transfert</p>
+                    <p className="text-sm md:text-base font-bold text-slate-800 mb-3">
+                      ⏰ Créneau de transfert
+                      {requiresPickupTimeChoice(c.transferInfo) ? (
+                        <span className="ml-1 text-rose-600">*</span>
+                      ) : null}
+                    </p>
                     <select
                       value={c.raw.slot || ""}
                       onChange={(e) => {
@@ -3464,7 +3724,12 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         }
                         setItem(idx, patch);
                       }}
-                      className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
+                      aria-required={requiresPickupTimeChoice(c.transferInfo) ? true : undefined}
+                      className={`w-full rounded-xl border-2 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all ${
+                        requiresPickupTimeChoice(c.transferInfo) && !String(c.raw.slot || "").trim()
+                          ? "border-rose-400"
+                          : "border-blue-300/70"
+                      }`}
                     >
                       <option value="">— Choisir un créneau —</option>
                       {c.transferInfo.morningEnabled && <option value="morning">🌅 Matin ({c.transferInfo.morningTime})</option>}

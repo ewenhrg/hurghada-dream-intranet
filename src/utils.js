@@ -209,6 +209,112 @@ export function calculateCardPrice(cashPrice) {
   return Math.ceil(priceWithFees);
 }
 
+/**
+ * Inverse de calculateCardPrice quand le montant carte colle au +3 %.
+ * Sinon le montant est traité comme une base espèces (saisie mixte sans frais).
+ */
+export function cashBaseFromCardPrice(cardPrice) {
+  const card = Math.round(Number(cardPrice) || 0);
+  if (!(card > 0)) return 0;
+  const approx = Math.round(card / 1.03);
+  for (let d = 0; d <= 3; d++) {
+    const candidates = d === 0 ? [approx] : [approx - d, approx + d];
+    for (const cash of candidates) {
+      if (cash >= 0 && calculateCardPrice(cash) === card) return cash;
+    }
+  }
+  return card;
+}
+
+/**
+ * Vérifie que Cash + Stripe + reste couvrent exactement le total espèces du devis.
+ * - Cash seul / mixte : comparaison en base espèces (Stripe mixte = montant saisi).
+ * - Stripe seul : accepte montant carte (+3 %) ou base espèces.
+ */
+export function getTicketPaymentCoverage({
+  cashTotal,
+  payCash = false,
+  payStripe = false,
+  paidCash = 0,
+  paidStripe = 0,
+  restAmount = 0,
+} = {}) {
+  const total = Math.round(Number(cashTotal) || 0);
+  const cash = payCash ? Math.round(Number(paidCash) || 0) : 0;
+  const stripeRaw = payStripe ? Math.round(Number(paidStripe) || 0) : 0;
+  const rest = Math.round(Number(restAmount) || 0);
+
+  if (payStripe && !payCash) {
+    const asCash = stripeRaw + rest;
+    if (asCash === total) {
+      return {
+        total,
+        covered: asCash,
+        gap: 0,
+        mode: "stripe",
+        cash,
+        stripeCash: stripeRaw,
+        stripeRaw,
+        rest,
+      };
+    }
+    const stripeCash = cashBaseFromCardPrice(stripeRaw);
+    const asCashFromCard = stripeCash + rest;
+    if (asCashFromCard === total && calculateCardPrice(stripeCash) === stripeRaw) {
+      return {
+        total,
+        covered: asCashFromCard,
+        gap: 0,
+        mode: "stripe",
+        cash,
+        stripeCash,
+        stripeRaw,
+        rest,
+      };
+    }
+    const cardTotal = calculateCardPrice(total);
+    const restCard = rest > 0 ? calculateCardPrice(rest) : 0;
+    const asCard = stripeRaw + restCard;
+    if (asCard === cardTotal) {
+      return {
+        total: cardTotal,
+        covered: asCard,
+        gap: 0,
+        mode: "stripe",
+        cash,
+        stripeCash,
+        stripeRaw,
+        rest,
+      };
+    }
+    // Écart affiché en base espèces (ex. Stripe 200 sur total 500 → manque 300)
+    return {
+      total,
+      covered: asCash,
+      gap: total - asCash,
+      mode: "stripe",
+      cash,
+      stripeCash: stripeRaw,
+      stripeRaw,
+      rest,
+    };
+  }
+
+  // Cash seul ou Cash + Stripe : tout en base espèces (ex. 200 + 200 + reste 100 = 500)
+  const stripeCash = payStripe ? stripeRaw : 0;
+  const covered = cash + stripeCash + rest;
+  return {
+    total,
+    covered,
+    gap: total - covered,
+    mode: payCash && payStripe ? "split" : payCash ? "cash" : "none",
+    cash,
+    stripeCash,
+    stripeRaw,
+    rest,
+  };
+}
+
 // Cache pour les formatters de nombres (évite de recréer les formatters)
 const numberFormatterCache = new Map();
 

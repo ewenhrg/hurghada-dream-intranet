@@ -879,6 +879,11 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     [filtered, copied]
   );
 
+  const filteredRestTotal = useMemo(
+    () => filtered.reduce((sum, r) => sum + Math.round(Number(r.restAmount) || 0), 0),
+    [filtered]
+  );
+
   const reduceMotion = useReducedMotion();
   const fade = {
     initial: reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 },
@@ -1318,6 +1323,19 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
               </tbody>
             </table>
             </div>
+
+            {filtered.length > 0 ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-amber-200/80 bg-amber-50/90 px-3 py-2.5">
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-900">
+                  Reste à payer (filtre)
+                </p>
+                <p className="text-sm font-bold tabular-nums text-amber-950">
+                  {filteredRestTotal > 0
+                    ? currencyNoCents(filteredRestTotal, "EUR")
+                    : "—"}
+                </p>
+              </div>
+            ) : null}
 
             {totalPages > 1 ? (
               <nav

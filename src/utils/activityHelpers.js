@@ -191,7 +191,7 @@ export function isElGounaActivity(activityName) {
 
 /**
  * Activités réservables uniquement à partir de 2 personnes (adultes + enfants).
- * Couvre Karting, Combo aquatique, Jeux aquatique.
+ * Couvre Karting, Combo aquatique, Jeux aquatique, Caire Overnight, Louxor Overnight.
  * El Gouna : alerte seulement (voir warnsRecommendedTwoParticipants).
  * Le parachute est autorisé dès 1 personne.
  */
@@ -202,6 +202,10 @@ export function requiresMinimumTwoParticipants(activityName) {
   if (name.includes("karting")) return true;
   if (name.includes("combo") && name.includes("aquatique")) return true;
   if (name.includes("jeux aquatique")) return true;
+  if (name.includes("overnight") && name.includes("caire")) return true;
+  if (name.includes("overnight") && (name.includes("louxor") || name.includes("luxor"))) {
+    return true;
+  }
   return false;
 }
 

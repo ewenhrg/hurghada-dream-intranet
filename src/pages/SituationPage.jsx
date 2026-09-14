@@ -1,9 +1,11 @@
 import { useState, useMemo, useRef, useEffect, useCallback, Suspense, lazy } from "react";
 import { PrimaryBtn, GhostBtn, Section } from "../components/ui";
+import { DateInput } from "../components/DateInput";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { LS_KEYS, SITE_KEY } from "../constants";
 import { loadLS, saveLS, cleanPhoneNumber, formatPhoneWithPlus } from "../utils";
+import { getLocalDateKey } from "../utils/pushSaleExpiry.js";
 import { extractPhoneFromName, validatePhoneNumber, extractNameFromField, resolvePhoneFromExcelRow } from "../utils/phoneUtils";
 import { convertExcelValue, findColumn, isIgnoredTransferExcelColumn } from "../utils/excelParser";
 import { generateMessage } from "../utils/messageGenerator";
@@ -30,6 +32,31 @@ import { SendLogSection } from "../components/situation/SendLogSection";
 const MessageTemplatesModal = lazy(() => import("../components/situation/MessageTemplatesModal"));
 const HotelsModal = lazy(() => import("../components/situation/HotelsModal"));
 
+/** Normalise une date situation (Excel FR, ISO, etc.) en YYYY-MM-DD. */
+function situationDateToYmd(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const fr = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})/);
+  if (fr) {
+    const day = fr[1].padStart(2, "0");
+    const month = fr[2].padStart(2, "0");
+    return `${fr[3]}-${month}-${day}`;
+  }
+  const parsed = Date.parse(s);
+  if (!Number.isNaN(parsed)) {
+    const d = new Date(parsed);
+    if (!Number.isNaN(d.getTime())) return getLocalDateKey(d);
+  }
+  return "";
+}
+
+function formatSituationYmdDisplay(ymd) {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd || "";
+  const [y, m, d] = ymd.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 export function SituationPage({ activities = [], user }) {
   const [excelData, setExcelData] = useState(() =>
     (loadLS(LS_KEYS.situationTransferRows, []) || []).map((row) => ({
@@ -37,6 +64,8 @@ export function SituationPage({ activities = [], user }) {
       phone: formatPhoneWithPlus(row?.phone),
     }))
   );
+  /** YYYY-MM-DD — filtre la « page » situation du jour choisi (vide = toutes les dates). */
+  const [filterDate, setFilterDate] = useState("");
   const [sharedMeta, setSharedMeta] = useState({ fileName: "", importedBy: "", updatedAt: null });
   const [previewMessages, setPreviewMessages] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -79,6 +108,35 @@ export function SituationPage({ activities = [], user }) {
   const [editingCell, setEditingCell] = useState(null); // { rowId: string, field: string }
   const [messageOverrides, setMessageOverrides] = useState({});
   const [messagePreviewRow, setMessagePreviewRow] = useState(null);
+
+  const situationDates = useMemo(() => {
+    const set = new Set();
+    for (const row of excelData) {
+      const ymd = situationDateToYmd(row?.date);
+      if (ymd) set.add(ymd);
+    }
+    return Array.from(set).sort();
+  }, [excelData]);
+
+  const filteredExcelData = useMemo(() => {
+    if (!filterDate) return excelData;
+    return excelData.filter((row) => situationDateToYmd(row?.date) === filterDate);
+  }, [excelData, filterDate]);
+
+  // À chaque import / sync : privilégier aujourd’hui s’il est dans le fichier, sinon 1re date, sinon tout.
+  useEffect(() => {
+    if (excelData.length === 0) {
+      setFilterDate("");
+      return;
+    }
+    setFilterDate((prev) => {
+      if (prev && situationDates.includes(prev)) return prev;
+      const today = getLocalDateKey();
+      if (situationDates.includes(today)) return today;
+      if (situationDates.length === 1) return situationDates[0];
+      return prev && situationDates.includes(prev) ? prev : situationDates[0] || "";
+    });
+  }, [excelData, situationDates]);
 
   const handleNewHotelChange = useCallback(
     (value) => {
@@ -986,12 +1044,16 @@ export function SituationPage({ activities = [], user }) {
 
   // Prévisualiser les messages
   const handlePreviewMessages = () => {
-    if (excelData.length === 0) {
-      toast.warning("Aucune donnée à prévisualiser. Veuillez d'abord charger un fichier Excel.");
+    if (filteredExcelData.length === 0) {
+      toast.warning(
+        filterDate
+          ? "Aucun client pour cette date. Choisissez une autre date ou « Toutes »."
+          : "Aucune donnée à prévisualiser. Veuillez d'abord charger un fichier Excel."
+      );
       return;
     }
 
-    const messages = excelData.map((data) => ({
+    const messages = filteredExcelData.map((data) => ({
       ...data,
       message: getMessageForRow(data),
     }));
@@ -1381,14 +1443,18 @@ export function SituationPage({ activities = [], user }) {
 
   // Démarrer l'envoi automatique des messages
   const handleAutoSendMessages = async () => {
-    if (excelData.length === 0) {
-      toast.warning("Aucune donnée à envoyer. Veuillez d'abord charger un fichier Excel.");
+    if (filteredExcelData.length === 0) {
+      toast.warning(
+        filterDate
+          ? "Aucun client pour cette date. Choisissez une autre date ou « Toutes »."
+          : "Aucune donnée à envoyer. Veuillez d'abord charger un fichier Excel."
+      );
       return;
     }
 
     // Vérifier les numéros de téléphone (valides seulement)
-    const dataWithPhone = excelData.filter((data) => data.phone && data.phoneValid && !data.messageSent);
-    const dataWithoutPhone = excelData.filter((data) => !data.phone || !data.phoneValid);
+    const dataWithPhone = filteredExcelData.filter((data) => data.phone && data.phoneValid && !data.messageSent);
+    const dataWithoutPhone = filteredExcelData.filter((data) => !data.phone || !data.phoneValid);
 
     if (dataWithoutPhone.length > 0) {
       const confirm = window.confirm(
@@ -1573,14 +1639,18 @@ export function SituationPage({ activities = [], user }) {
 
   // Ancienne fonction pour l'envoi manuel (simulation)
   const handleSendMessages = async () => {
-    if (excelData.length === 0) {
-      toast.warning("Aucune donnée à envoyer. Veuillez d'abord charger un fichier Excel.");
+    if (filteredExcelData.length === 0) {
+      toast.warning(
+        filterDate
+          ? "Aucun client pour cette date. Choisissez une autre date ou « Toutes »."
+          : "Aucune donnée à envoyer. Veuillez d'abord charger un fichier Excel."
+      );
       return;
     }
 
     // Vérifier les numéros de téléphone (valides seulement)
-    const dataWithPhone = excelData.filter((data) => data.phone && data.phoneValid);
-    const dataWithoutPhone = excelData.filter((data) => !data.phone || !data.phoneValid);
+    const dataWithPhone = filteredExcelData.filter((data) => data.phone && data.phoneValid);
+    const dataWithoutPhone = filteredExcelData.filter((data) => !data.phone || !data.phoneValid);
 
     if (dataWithoutPhone.length > 0) {
       const confirm = window.confirm(
@@ -1654,16 +1724,16 @@ export function SituationPage({ activities = [], user }) {
     toast.success(`${successCount} message(s) envoyé(s) avec succès${errorCount > 0 ? `. ${errorCount} erreur(s).` : ""}`);
   };
 
-  // Statistiques
+  // Statistiques (sur la date filtrée)
   const stats = useMemo(() => {
-    const total = excelData.length;
-    const withPhone = excelData.filter((d) => d.phone && d.phoneValid).length;
-    const withoutPhone = excelData.filter((d) => !d.phone || !d.phoneValid).length;
-    const invalidPhones = excelData.filter((d) => d.phone && !d.phoneValid).length;
-    const sent = excelData.filter((d) => d.messageSent).length;
+    const total = filteredExcelData.length;
+    const withPhone = filteredExcelData.filter((d) => d.phone && d.phoneValid).length;
+    const withoutPhone = filteredExcelData.filter((d) => !d.phone || !d.phoneValid).length;
+    const invalidPhones = filteredExcelData.filter((d) => d.phone && !d.phoneValid).length;
+    const sent = filteredExcelData.filter((d) => d.messageSent).length;
     
     return { total, withPhone, withoutPhone, invalidPhones, sent };
-  }, [excelData]);
+  }, [filteredExcelData]);
 
   const hasWorkData = excelData.length > 0;
 
@@ -1682,6 +1752,50 @@ export function SituationPage({ activities = [], user }) {
       </GhostBtn>
     </div>
   );
+
+  const dateFilterBar = hasWorkData ? (
+    <div className="flex flex-col gap-2 rounded-xl border border-indigo-200/80 bg-gradient-to-r from-indigo-50/90 to-sky-50/70 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-800">
+          Date de la situation
+        </p>
+        <p className="mt-0.5 text-xs font-medium text-slate-600">
+          {filterDate
+            ? `Affichage du ${formatSituationYmdDisplay(filterDate)} — ${filteredExcelData.length} client${filteredExcelData.length > 1 ? "s" : ""}`
+            : `Toutes les dates — ${excelData.length} client${excelData.length > 1 ? "s" : ""}`}
+          {situationDates.length > 1 ? ` · ${situationDates.length} jours dans le fichier` : ""}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="w-[min(100%,11.5rem)]">
+          <DateInput
+            value={filterDate}
+            onChange={(next) => setFilterDate(String(next || "").trim())}
+            className="text-sm"
+          />
+        </div>
+        <GhostBtn
+          type="button"
+          onClick={() => setFilterDate("")}
+          disabled={!filterDate}
+          className="!min-h-0 px-3 py-2 text-xs"
+        >
+          Toutes
+        </GhostBtn>
+        {situationDates.includes(getLocalDateKey()) ? (
+          <GhostBtn
+            type="button"
+            onClick={() => setFilterDate(getLocalDateKey())}
+            disabled={filterDate === getLocalDateKey()}
+            variant="info"
+            className="!min-h-0 px-3 py-2 text-xs"
+          >
+            Aujourd’hui
+          </GhostBtn>
+        ) : null}
+      </div>
+    </div>
+  ) : null;
 
   const statsBar = hasWorkData ? (
     <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -1706,7 +1820,14 @@ export function SituationPage({ activities = [], user }) {
 
   const clientList = hasWorkData ? (
     <>
-      <TransferClientsTable rows={excelData} data={listItemData} />
+      {filteredExcelData.length > 0 ? (
+        <TransferClientsTable rows={filteredExcelData} data={listItemData} />
+      ) : (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm font-medium text-slate-600">
+          Aucun client pour le {formatSituationYmdDisplay(filterDate)}.
+          Choisissez une autre date ou cliquez sur « Toutes ».
+        </div>
+      )}
       {Object.keys(messageOverrides).length > 0 && (
         <p className="text-[11px] text-slate-500">* = message modifié manuellement</p>
       )}
@@ -1817,7 +1938,9 @@ export function SituationPage({ activities = [], user }) {
         title="Transferts WhatsApp"
         subtitle={
           hasWorkData
-            ? `${sharedMeta.fileName || "Fichier du jour"} — ${stats.total} client${stats.total > 1 ? "s" : ""}`
+            ? `${sharedMeta.fileName || "Fichier du jour"}${
+                filterDate ? ` · ${formatSituationYmdDisplay(filterDate)}` : ""
+              } — ${stats.total} client${stats.total > 1 ? "s" : ""}`
             : "Importez le fichier Excel du jour pour envoyer les messages de prise en charge."
         }
         right={headerButtons}
@@ -1830,6 +1953,7 @@ export function SituationPage({ activities = [], user }) {
 
         {hasWorkData && (
           <div className="transfer-content space-y-2">
+            {dateFilterBar}
             {statsBar}
             {clientList}
             {autoSending && (
