@@ -42,16 +42,37 @@ export function formatDivingVisitorLabel(item, activityName) {
   return `${word} × ${count} (+${total}€)`;
 }
 
+/** Infos plongée pour affichage ticket (plongeurs tarif normal + visiteurs). */
+export function getDivingTicketBreakdown(item, activityName) {
+  const name =
+    activityName ||
+    item?.activityName ||
+    item?.activityNameFr ||
+    item?.activityNameEn ||
+    "";
+  if (!isDivingActivityName(name)) return null;
+  const visitors = getDivingVisitorCount(item);
+  const divers =
+    Math.max(0, Math.round(Number(item?.adults) || 0)) +
+    Math.max(0, Math.round(Number(item?.children) || 0)) +
+    Math.max(0, Math.round(Number(item?.babies) || 0));
+  return {
+    divers,
+    visitors,
+    unitPrice: DIVING_VISITOR_UNIT_PRICE,
+    visitorTotal: visitors * DIVING_VISITOR_UNIT_PRICE,
+  };
+}
+
 /** Infos visiteur plongée pour affichage ticket (nombre + prix). */
 export function getDivingVisitorTicketInfo(item, activityName) {
-  const count = getDivingVisitorCount(item);
-  if (count <= 0) return null;
-  const name = activityName || item?.activityName || "";
-  if (!isDivingActivityName(name)) return null;
+  const breakdown = getDivingTicketBreakdown(item, activityName);
+  if (!breakdown || breakdown.visitors <= 0) return null;
   return {
-    count,
-    unitPrice: DIVING_VISITOR_UNIT_PRICE,
-    total: count * DIVING_VISITOR_UNIT_PRICE,
+    count: breakdown.visitors,
+    unitPrice: breakdown.unitPrice,
+    total: breakdown.visitorTotal,
+    divers: breakdown.divers,
   };
 }
 

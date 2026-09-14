@@ -21,7 +21,7 @@ import {
   getQuoteItemParticipantCells,
   getZeroTracasServiceCounts,
 } from "./quoteItemDisplay.js";
-import { getDivingVisitorTicketInfo } from "./divingSafety.js";
+import { getDivingTicketBreakdown } from "./divingSafety.js";
 import {
   calculateTransferSurchargeFromItem,
   calculateStandardTransferSurchargeFromItem,
@@ -604,28 +604,44 @@ export function generateTicketsHTML(quote, options = {}) {
   };
 
   const buildDivingVisitorTicketBlock = (item) => {
-    const info = getDivingVisitorTicketInfo(item);
-    if (!info) return "";
+    const breakdown = getDivingTicketBreakdown(item);
+    if (!breakdown) return "";
     const curr = quote.currency || "EUR";
-    const totalLabel = currencyNoCents(info.total, curr);
-    const unitLabel = currencyNoCents(info.unitPrice, curr);
-    const dontLabel =
-      info.count > 1
-        ? `dont ${info.count} visiteurs inclus (ne plongent pas)`
-        : `dont ${info.count} visiteur inclus (ne plonge pas)`;
+    const diversWord =
+      breakdown.divers <= 1 ? "Client tarif normal (plongeur)" : "Clients tarif normal (plongeurs)";
+    const visitorsWord =
+      breakdown.visitors <= 1 ? "Visiteur (ne plonge pas)" : "Visiteurs (ne plongent pas)";
+    const visitorPriceRow =
+      breakdown.visitors > 0
+        ? `<div class="ticket-diving-visitor-stat ticket-diving-visitor-stat-price">
+                <span class="ticket-diving-visitor-num">${esc(
+                  currencyNoCents(breakdown.visitorTotal, curr)
+                )}</span>
+                <span class="ticket-diving-visitor-lab">suppl. visiteurs (${esc(
+                  String(breakdown.visitors)
+                )} × ${esc(currencyNoCents(breakdown.unitPrice, curr))})</span>
+              </div>`
+        : "";
+
     return `
-          <div class="ticket-diving-visitor" role="note" aria-label="Visiteurs plongée inclus">
+          <div class="ticket-diving-visitor" role="note" aria-label="Répartition plongée">
             <div class="ticket-diving-visitor-head">
-              <span class="ticket-diving-visitor-icon" aria-hidden="true">👀</span>
-              <span class="ticket-diving-visitor-title">${esc(dontLabel)}</span>
+              <span class="ticket-diving-visitor-icon" aria-hidden="true">🤿</span>
+              <span class="ticket-diving-visitor-title">Répartition plongée</span>
             </div>
-            <div class="ticket-diving-visitor-stats">
-              <div class="ticket-diving-visitor-stat ticket-diving-visitor-stat-price">
-                <span class="ticket-diving-visitor-num">${esc(totalLabel)}</span>
-                <span class="ticket-diving-visitor-lab">supplément</span>
+            <div class="ticket-diving-visitor-stats${
+              breakdown.visitors > 0 ? " ticket-diving-visitor-stats--3" : ""
+            }">
+              <div class="ticket-diving-visitor-stat">
+                <span class="ticket-diving-visitor-num">${esc(String(breakdown.divers))}</span>
+                <span class="ticket-diving-visitor-lab">${esc(diversWord)}</span>
               </div>
+              <div class="ticket-diving-visitor-stat">
+                <span class="ticket-diving-visitor-num">${esc(String(breakdown.visitors))}</span>
+                <span class="ticket-diving-visitor-lab">${esc(visitorsWord)}</span>
+              </div>
+              ${visitorPriceRow}
             </div>
-            <div class="ticket-diving-visitor-detail">${esc(String(info.count))} × ${esc(unitLabel)} / pers. · déjà comptés dans Personnes</div>
           </div>`;
   };
 
@@ -755,7 +771,27 @@ export function generateTicketsHTML(quote, options = {}) {
       if (cells.adults > 0) paxParts.push(`${cells.adults} adulte${cells.adults > 1 ? "s" : ""}`);
       if (cells.children > 0) paxParts.push(`${cells.children} enfant${cells.children > 1 ? "s" : ""}`);
       if (cells.babies > 0) paxParts.push(`${cells.babies} bébé${cells.babies > 1 ? "s" : ""}`);
-      const paxText = paxParts.length > 0 ? paxParts.join(" · ") : "—";
+      const divingBreakdown = getDivingTicketBreakdown(item);
+      let paxText = paxParts.length > 0 ? paxParts.join(" · ") : "—";
+      if (divingBreakdown) {
+        const diversParts = [];
+        const diverAdults = Math.max(0, Math.round(Number(item.adults) || 0));
+        const diverChildren = Math.max(0, Math.round(Number(item.children) || 0));
+        const diverBabies = Math.max(0, Math.round(Number(item.babies) || 0));
+        if (diverAdults > 0) diversParts.push(`${diverAdults} adulte${diverAdults > 1 ? "s" : ""}`);
+        if (diverChildren > 0)
+          diversParts.push(`${diverChildren} enfant${diverChildren > 1 ? "s" : ""}`);
+        if (diverBabies > 0) diversParts.push(`${diverBabies} bébé${diverBabies > 1 ? "s" : ""}`);
+        const diversText =
+          diversParts.length > 0
+            ? diversParts.join(" · ")
+            : `${divingBreakdown.divers} plongeur${divingBreakdown.divers > 1 ? "s" : ""}`;
+        const visitorsText =
+          divingBreakdown.visitors > 0
+            ? ` · ${divingBreakdown.visitors} visiteur${divingBreakdown.visitors > 1 ? "s" : ""}`
+            : "";
+        paxText = `${diversText} (tarif normal)${visitorsText}`;
+      }
       const paxTotal = (cells.adults || 0) + (cells.children || 0) + (cells.babies || 0);
 
       const pickup = item.pickupTime && String(item.pickupTime).trim()
@@ -1017,6 +1053,9 @@ export function generateTicketsHTML(quote, options = {}) {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
+    }
+    .ticket-diving-visitor-stats--3 {
+      grid-template-columns: 1fr 1fr 1fr;
     }
     .ticket-diving-visitor-stat {
       display: flex;

@@ -34,6 +34,7 @@ import {
   getQuoteItemParticipantCells,
 } from "../utils/quoteItemDisplay.js";
 import { isBoatPartyActivity, formatTurtleFinSizesLabel } from "../utils/activityHelpers";
+import { getLocalDateKey } from "../utils/pushSaleExpiry.js";
 import { TextInput } from "../components/ui";
 import { EditTicketLineModal } from "../components/tickets/EditTicketLineModal.jsx";
 import { toast } from "../utils/toast.js";
@@ -200,6 +201,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 250);
   const [statusFilter, setStatusFilter] = useState("all");
+  /** YYYY-MM-DD — filtre la Situation du jour (vide = toutes les dates). */
+  const [filterDate, setFilterDate] = useState(() => getLocalDateKey());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [editingRow, setEditingRow] = useState(null);
@@ -309,15 +312,19 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     return list;
   }, [quotes, activities]);
 
-  const newCount = useMemo(
-    () => rows.filter((r) => !copied.has(r.ticketNumber)).length,
-    [rows, copied]
-  );
-  const copiedCount = rows.length - newCount;
+  const availableDates = useMemo(() => {
+    const set = new Set();
+    for (const r of rows) {
+      const d = String(r.date || "").trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) set.add(d);
+    }
+    return Array.from(set).sort();
+  }, [rows]);
 
   const filtered = useMemo(() => {
     const term = debouncedQ.trim().toLowerCase();
     return rows.filter((r) => {
+      if (filterDate && String(r.date || "").trim() !== filterDate) return false;
       if (statusFilter === "new" && copied.has(r.ticketNumber)) return false;
       if (statusFilter === "copied" && !copied.has(r.ticketNumber)) return false;
       if (!term) return true;
@@ -335,7 +342,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.comment,
       ].some((v) => String(v || "").toLowerCase().includes(term));
     });
-  }, [rows, debouncedQ, statusFilter, copied]);
+  }, [rows, debouncedQ, statusFilter, copied, filterDate]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   // Clamp au rendu : la liste peut raccourcir avant que l’effet ne recale `page`
@@ -344,7 +351,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   // Nouvelle recherche / nouveau filtre / autre taille de page : on repart de la page 1
   useEffect(() => {
     setPage(1);
-  }, [debouncedQ, statusFilter, pageSize]);
+  }, [debouncedQ, statusFilter, pageSize, filterDate]);
 
   useEffect(() => {
     setPage((p) => Math.min(p, totalPages));
@@ -892,10 +899,21 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
   };
 
+  const rowsForDate = useMemo(() => {
+    if (!filterDate) return rows;
+    return rows.filter((r) => String(r.date || "").trim() === filterDate);
+  }, [rows, filterDate]);
+
+  const newCountForDate = useMemo(
+    () => rowsForDate.filter((r) => !copied.has(r.ticketNumber)).length,
+    [rowsForDate, copied]
+  );
+  const copiedCountForDate = rowsForDate.length - newCountForDate;
+
   const FILTERS = [
-    { value: "all", label: "Toutes", icon: ListChecks, count: rows.length },
-    { value: "new", label: "Nouvelles", icon: Sparkles, count: newCount },
-    { value: "copied", label: "Copiées", icon: CheckCircle2, count: copiedCount },
+    { value: "all", label: "Toutes", icon: ListChecks, count: rowsForDate.length },
+    { value: "new", label: "Nouvelles", icon: Sparkles, count: newCountForDate },
+    { value: "copied", label: "Copiées", icon: CheckCircle2, count: copiedCountForDate },
   ];
 
   return (
@@ -967,6 +985,83 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
               Exporter .xlsx
             </button>
           </div>
+        </div>
+
+        <div className="rounded-2xl border-2 border-indigo-300 bg-white px-4 py-3 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-indigo-950">
+                📅 Date de la Situation
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-slate-600">
+                {filterDate
+                  ? `Jour affiché : ${dateForExport(filterDate)} — ${filtered.length} ticket${filtered.length > 1 ? "s" : ""}`
+                  : `Toutes les dates — ${filtered.length} ticket${filtered.length > 1 ? "s" : ""}`}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <label className="inline-flex items-center gap-2 rounded-xl border-2 border-indigo-400 bg-indigo-50 px-3 py-2 shadow-sm">
+                <span className="text-xs font-bold uppercase tracking-wide text-indigo-900">
+                  Calendrier
+                </span>
+                <input
+                  type="date"
+                  value={filterDate || ""}
+                  onChange={(e) => setFilterDate(String(e.target.value || "").trim())}
+                  className="min-h-[40px] min-w-[10.5rem] cursor-pointer rounded-lg border border-indigo-200 bg-white px-2 py-1.5 text-sm font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25"
+                  aria-label="Choisir la date de la Situation"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setFilterDate("")}
+                className={`min-h-[40px] rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                  !filterDate
+                    ? "border-slate-800 bg-slate-800 text-white"
+                    : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                }`}
+              >
+                Toutes
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterDate(getLocalDateKey())}
+                className={`min-h-[40px] rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                  filterDate === getLocalDateKey()
+                    ? "border-emerald-700 bg-emerald-600 text-white"
+                    : "border-emerald-300 bg-emerald-50 text-emerald-900 hover:border-emerald-400"
+                }`}
+              >
+                Aujourd’hui
+              </button>
+            </div>
+          </div>
+          {availableDates.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5 border-t border-indigo-100 pt-3">
+              {availableDates.map((ymd) => {
+                const active = filterDate === ymd;
+                const count = rows.filter((r) => String(r.date || "").trim() === ymd).length;
+                return (
+                  <button
+                    key={ymd}
+                    type="button"
+                    onClick={() => setFilterDate(ymd)}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] font-bold tabular-nums transition ${
+                      active
+                        ? "border-indigo-700 bg-indigo-600 text-white"
+                        : "border-indigo-200 bg-indigo-50 text-indigo-900 hover:border-indigo-400"
+                    }`}
+                    title={`${count} ticket${count > 1 ? "s" : ""}`}
+                  >
+                    {dateForExport(ymd)}
+                    <span className={active ? "ml-1 opacity-80" : "ml-1 text-indigo-600/70"}>
+                      ({count})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -1058,6 +1153,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             <p className="font-semibold text-slate-600">
               {rows.length === 0
                 ? "Aucun ticket pour le moment. Générez des tickets depuis l'Historique (bouton « Ticket »)."
+                : filterDate && filtered.length === 0 && !debouncedQ.trim() && statusFilter === "all"
+                  ? `Aucun ticket pour le ${dateForExport(filterDate)}. Choisissez une autre date ou « Toutes ».`
                 : statusFilter === "new"
                   ? "Aucune nouvelle ligne : tout a déjà été copié."
                   : "Aucun ticket ne correspond à votre recherche."}
