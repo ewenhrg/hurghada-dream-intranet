@@ -114,6 +114,8 @@ export const LS_KEYS = {
   copiedTickets: "hd_copied_tickets", // N° de tickets déjà copiés/exportés vers Excel
   /** Miroir local des sessions de présence (tableau de bord Ewen). */
   presenceSessions: "hd_presence_sessions",
+  /** IDs d’activités affichées dans l’onglet Planning (cases cochées). */
+  planningVisibleActivityIds: "hd_planning_visible_activity_ids",
 };
 
 export const WEEKDAYS = [
