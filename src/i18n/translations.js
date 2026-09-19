@@ -4,6 +4,7 @@ export const translations = {
     // Navigation
     "nav.devis": "Devis",
     "nav.activities": "Activités",
+    "nav.planning": "Planning",
     "nav.activityUpdate": "Maj prix",
     "nav.catalogAdmin": "Catalogue public",
     "nav.history": "Historique",
@@ -37,6 +38,8 @@ export const translations = {
     "page.devis.subtitle": "Supplément transfert = (par adulte/enfant) × (nombre d'adultes + enfants). Bébés gratuits. Alerte si jour hors-dispo, mais le devis peut être créé.",
     "page.activities.title": "Gestion des activités",
     "page.activities.subtitle": "Ajoutez, modifiez les prix, jours, transferts par quartier.",
+    "page.planning.title": "Planning des activités",
+    "page.planning.subtitle": "Vue semaine : quelles activités sont ouvertes chaque jour (selon les jours cochés).",
     "page.activityUpdate.title": "Mise à jour des prix et notes",
     "page.activityUpdate.subtitle": "Tableau par catégorie — les mêmes données que l’onglet Activités (cache + Supabase).",
     "page.catalogAdmin.title": "Contenu catalogue (public)",
@@ -92,6 +95,7 @@ export const translations = {
     // Navigation
     "nav.devis": "Quotes",
     "nav.activities": "Activities",
+    "nav.planning": "Schedule",
     "nav.activityUpdate": "Price update",
     "nav.catalogAdmin": "Public catalogue",
     "nav.history": "History",
@@ -125,6 +129,8 @@ export const translations = {
     "page.devis.subtitle": "Transfer surcharge = (per adult/child) × (number of adults + children). Babies free. Alert if day unavailable, but quote can be created.",
     "page.activities.title": "Activities management",
     "page.activities.subtitle": "Add, edit prices, days, transfers by neighborhood.",
+    "page.planning.title": "Activities schedule",
+    "page.planning.subtitle": "Week view: which activities are open each day (from checked weekdays).",
     "page.activityUpdate.title": "Prices & notes update",
     "page.activityUpdate.subtitle": "Table by category — same data as the Activities tab (cache + Supabase).",
     "page.catalogAdmin.title": "Public catalogue content",

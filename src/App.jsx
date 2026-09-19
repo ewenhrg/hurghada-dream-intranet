@@ -18,6 +18,7 @@ import { airbnbFieldsFromRow } from "./utils/clientAirbnb";
 import { loadUserFromSession } from "./utils/userPermissions";
 import {
   ActivitiesPage,
+  PlanningPage,
   ActivityUpdatePage,
   ActivityCatalogAdminPage,
   QuotesPage,
@@ -1425,6 +1426,11 @@ export default function App() {
                   {t("nav.activities")}
                 </Pill>
                 )}
+                {user?.canAccessActivities !== false && (
+                <Pill active={tab === "planning"} onClick={() => setTab("planning")}>
+                  {t("nav.planning")}
+                </Pill>
+                )}
                 {user?.canAccessActivities !== false && user?.canAccessActivityPrices === true && (
                 <Pill active={tab === "activity-update"} onClick={() => setTab("activity-update")}>
                   {t("nav.activityUpdate")}
@@ -1585,6 +1591,12 @@ export default function App() {
             }
           >
             <ActivitiesPage activities={activities} setActivities={setActivities} user={user} />
+          </Section>
+        )}
+
+        {tab === "planning" && user?.canAccessActivities !== false && (
+          <Section title={t("page.planning.title")} subtitle={t("page.planning.subtitle")}>
+            <PlanningPage activities={activities} />
           </Section>
         )}
 

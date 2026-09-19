@@ -6,6 +6,9 @@ export const SITUATION_PAGE_STANDBY = false;
 export const ActivitiesPage = lazyWithRetry(() =>
   import("../pages/ActivitiesPage").then((module) => ({ default: module.ActivitiesPage }))
 );
+export const PlanningPage = lazyWithRetry(() =>
+  import("../pages/PlanningPage").then((module) => ({ default: module.PlanningPage }))
+);
 export const ActivityUpdatePage = lazyWithRetry(() =>
   import("../pages/ActivityUpdatePage").then((module) => ({ default: module.ActivityUpdatePage }))
 );
