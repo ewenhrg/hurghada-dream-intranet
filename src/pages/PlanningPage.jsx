@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CATEGORIES, LS_KEYS } from "../constants";
+import { CATEGORIES, LS_KEYS, SITE_KEY } from "../constants";
 import { TextInput, GhostBtn, PrimaryBtn } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { loadLS, saveLS } from "../utils";
+import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
+import { toast } from "../utils/toast.js";
+import { logger } from "../utils/logger";
+import {
+  PLANNING_VISIBLE_SETTINGS_TYPE,
+  fetchPlanningVisibleActivityIds,
+  savePlanningVisibleActivityIds,
+} from "../utils/planningVisibleActivities";
 
 /** Ordre d’affichage planning (Lun → Dim). `index` = index dans availableDays (0 = dimanche). */
 const PLANNING_DAYS = [
@@ -46,11 +54,10 @@ function activityStableId(activity) {
 }
 
 /**
- * Charge la sélection persistée.
+ * Charge la sélection locale (cache).
  * `null` = aucun choix enregistré → tout afficher.
- * `Set` = uniquement les IDs cochés.
  */
-function loadVisibleIdSet() {
+function loadVisibleIdSetFromCache() {
   const raw = loadLS(LS_KEYS.planningVisibleActivityIds, null);
   if (!Array.isArray(raw)) return null;
   return new Set(raw.map((id) => String(id)));
@@ -58,6 +65,7 @@ function loadVisibleIdSet() {
 
 /**
  * Planning hebdomadaire : activités ouvertes chaque jour (masque availableDays).
+ * La sélection cochée est partagée via Supabase sur tous les postes.
  */
 export function PlanningPage({ activities = [] }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,10 +75,13 @@ export function PlanningPage({ activities = [] }) {
   const [pickerSearch, setPickerSearch] = useState("");
   const debouncedPickerSearch = useDebounce(pickerSearch, 150);
   /** null = tout afficher ; sinon Set d’IDs cochés */
-  const [visibleIds, setVisibleIds] = useState(() => loadVisibleIdSet());
+  const [visibleIds, setVisibleIds] = useState(() => loadVisibleIdSetFromCache());
   /** Brouillon dans le panneau (avant « Appliquer ») */
   const [draftIds, setDraftIds] = useState(() => new Set());
+  const [savingSelection, setSavingSelection] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("idle"); // idle | loading | synced | error
   const todayIndex = new Date().getDay(); // 0 = dimanche … 6 = samedi
+  const isSupabaseConfigured = Boolean(__SUPABASE_DEBUG__?.isConfigured && supabase);
 
   const allActivityIds = useMemo(() => {
     const ids = [];
@@ -80,6 +91,85 @@ export function PlanningPage({ activities = [] }) {
     }
     return ids;
   }, [activities]);
+
+  const setVisibleAndCache = useCallback((idsOrNull) => {
+    if (idsOrNull == null) {
+      setVisibleIds(null);
+      saveLS(LS_KEYS.planningVisibleActivityIds, null);
+      return;
+    }
+    const list = [...idsOrNull].map((id) => String(id));
+    setVisibleIds(new Set(list));
+    saveLS(LS_KEYS.planningVisibleActivityIds, list);
+  }, []);
+
+  // Chargement partagé + écoute temps réel (tous les PC)
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setSyncStatus("idle");
+      return undefined;
+    }
+
+    let cancelled = false;
+    setSyncStatus("loading");
+
+    const applyRemote = (ids) => {
+      if (cancelled) return;
+      if (ids == null) {
+        // Rien en base : si ce PC a déjà une sélection locale, on la pousse une fois
+        // pour démarrer le partage, sinon tout reste affiché.
+        const local = loadVisibleIdSetFromCache();
+        if (local != null) {
+          const list = [...local];
+          setVisibleIds(local);
+          void savePlanningVisibleActivityIds(supabase, list).then(({ error }) => {
+            if (error) logger.warn("Migration sélection Planning vers Supabase:", error);
+          });
+        }
+        setSyncStatus("synced");
+        return;
+      }
+      setVisibleAndCache(ids);
+      setSyncStatus("synced");
+    };
+
+    (async () => {
+      const ids = await fetchPlanningVisibleActivityIds(supabase);
+      applyRemote(ids);
+    })();
+
+    const channel = supabase
+      .channel(`planning-visible-${SITE_KEY}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "message_settings",
+          filter: `site_key=eq.${SITE_KEY}`,
+        },
+        (payload) => {
+          const row = payload.new || payload.old;
+          if (!row || row.settings_type !== PLANNING_VISIBLE_SETTINGS_TYPE) return;
+          if (payload.eventType === "DELETE") {
+            setVisibleAndCache(null);
+            return;
+          }
+          const raw = payload.new?.payload;
+          let ids = null;
+          if (Array.isArray(raw?.activityIds)) ids = raw.activityIds;
+          else if (Array.isArray(raw)) ids = raw;
+          setVisibleAndCache(ids == null ? null : ids);
+          setSyncStatus("synced");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [isSupabaseConfigured, setVisibleAndCache]);
 
   const openPicker = useCallback(() => {
     const next =
@@ -91,13 +181,36 @@ export function PlanningPage({ activities = [] }) {
     setPickerOpen(true);
   }, [visibleIds, allActivityIds]);
 
-  const applyPicker = useCallback(() => {
+  const applyPicker = useCallback(async () => {
     const cleaned = [...draftIds].filter((id) => allActivityIds.includes(id));
-    const next = new Set(cleaned);
-    setVisibleIds(next);
-    saveLS(LS_KEYS.planningVisibleActivityIds, cleaned);
+    setVisibleAndCache(cleaned);
     setPickerOpen(false);
-  }, [draftIds, allActivityIds]);
+
+    if (!isSupabaseConfigured) {
+      toast.success("Sélection enregistrée sur ce PC (Supabase non disponible).");
+      return;
+    }
+
+    setSavingSelection(true);
+    setSyncStatus("loading");
+    try {
+      const { error } = await savePlanningVisibleActivityIds(supabase, cleaned);
+      if (error) {
+        logger.warn("Sauvegarde sélection Planning:", error);
+        setSyncStatus("error");
+        toast.error("Enregistré en local, mais pas synchronisé sur les autres PC.");
+        return;
+      }
+      setSyncStatus("synced");
+      toast.success("Sélection synchronisée sur tous les PC.");
+    } catch (err) {
+      logger.warn("Exception sauvegarde sélection Planning:", err);
+      setSyncStatus("error");
+      toast.error("Enregistré en local, mais pas synchronisé sur les autres PC.");
+    } finally {
+      setSavingSelection(false);
+    }
+  }, [draftIds, allActivityIds, setVisibleAndCache, isSupabaseConfigured]);
 
   const toggleDraftId = useCallback((id) => {
     setDraftIds((prev) => {
@@ -115,22 +228,6 @@ export function PlanningPage({ activities = [] }) {
   const clearAllDraft = useCallback(() => {
     setDraftIds(new Set());
   }, []);
-
-  // Si des activités disparaissent, nettoyer la sélection persistée
-  useEffect(() => {
-    if (visibleIds == null || allActivityIds.length === 0) return;
-    const idSet = new Set(allActivityIds);
-    let changed = false;
-    const cleaned = [];
-    for (const id of visibleIds) {
-      if (idSet.has(id)) cleaned.push(id);
-      else changed = true;
-    }
-    if (!changed) return;
-    const next = new Set(cleaned);
-    setVisibleIds(next);
-    saveLS(LS_KEYS.planningVisibleActivityIds, cleaned);
-  }, [allActivityIds, visibleIds]);
 
   const pickerList = useMemo(() => {
     let list = Array.isArray(activities) ? [...activities] : [];
@@ -188,6 +285,17 @@ export function PlanningPage({ activities = [] }) {
   const selectedCount = visibleIds == null ? allActivityIds.length : visibleIds.size;
   const draftCount = draftIds.size;
 
+  const syncLabel =
+    syncStatus === "loading"
+      ? "Sync…"
+      : syncStatus === "error"
+        ? "Sync erreur"
+        : syncStatus === "synced"
+          ? "Partagé (tous les PC)"
+          : isSupabaseConfigured
+            ? "Partagé"
+            : "Local uniquement";
+
   return (
     <div className="space-y-4 md:space-y-5">
       <div className="flex flex-col gap-3 rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/90 via-white to-sky-50/80 p-4 md:p-5 shadow-sm">
@@ -199,9 +307,25 @@ export function PlanningPage({ activities = [] }) {
               planning · {filteredActivities.length} après filtre · {totalOpenSlots} ouverture
               {totalOpenSlots !== 1 ? "s" : ""} / semaine
             </p>
+            <p
+              className={`mt-1 text-xs font-semibold ${
+                syncStatus === "error"
+                  ? "text-rose-600"
+                  : syncStatus === "loading"
+                    ? "text-amber-700"
+                    : "text-emerald-700"
+              }`}
+            >
+              {syncLabel}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <PrimaryBtn type="button" onClick={openPicker} className="!min-h-[40px] !px-4 !text-sm">
+            <PrimaryBtn
+              type="button"
+              onClick={openPicker}
+              disabled={savingSelection}
+              className="!min-h-[40px] !px-4 !text-sm"
+            >
               Choisir les activités
             </PrimaryBtn>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-900">
@@ -243,7 +367,7 @@ export function PlanningPage({ activities = [] }) {
           aria-modal="true"
           aria-labelledby="planning-picker-title"
           onClick={(e) => {
-            if (e.target === e.currentTarget) setPickerOpen(false);
+            if (e.target === e.currentTarget && !savingSelection) setPickerOpen(false);
           }}
         >
           <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
@@ -253,6 +377,7 @@ export function PlanningPage({ activities = [] }) {
               </h2>
               <p className="mt-1 text-sm text-slate-600">
                 Coche celles à afficher · {draftCount} sélectionnée{draftCount !== 1 ? "s" : ""}
+                {isSupabaseConfigured ? " · synchronisé sur tous les PC" : ""}
               </p>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div className="min-w-0 flex-1">
@@ -312,11 +437,21 @@ export function PlanningPage({ activities = [] }) {
             </ul>
 
             <footer className="flex flex-wrap justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3">
-              <GhostBtn type="button" onClick={() => setPickerOpen(false)} className="!min-h-[40px]">
+              <GhostBtn
+                type="button"
+                onClick={() => setPickerOpen(false)}
+                disabled={savingSelection}
+                className="!min-h-[40px]"
+              >
                 Annuler
               </GhostBtn>
-              <PrimaryBtn type="button" onClick={applyPicker} className="!min-h-[40px]">
-                Appliquer
+              <PrimaryBtn
+                type="button"
+                onClick={() => void applyPicker()}
+                disabled={savingSelection}
+                className="!min-h-[40px]"
+              >
+                {savingSelection ? "Enregistrement…" : "Appliquer"}
               </PrimaryBtn>
             </footer>
           </div>
