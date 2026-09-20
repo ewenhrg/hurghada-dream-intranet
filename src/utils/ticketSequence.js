@@ -1,6 +1,6 @@
 import { SITE_KEY } from "../constants";
 import { logger } from "./logger";
-import { normalizeTicketNumberKey } from "./ticketCollections";
+import { incrementTicketNumber, normalizeTicketNumberKey } from "./ticketCollections";
 
 /** Longueur max d’un n° de carnet (ignore concaténations / typos 8+ chiffres). */
 const CARNET_MAX_LEN = 7;
@@ -53,6 +53,45 @@ export function findMaxTicketNumericValue(quotes) {
     }
   }
   return bestMax;
+}
+
+function buildUsedTicketKeys(quotes) {
+  const used = new Set();
+  for (const quote of quotes || []) {
+    for (const item of quote?.items || []) {
+      const key = normalizeTicketNumberKey(item?.ticketNumber);
+      if (key) used.add(key);
+    }
+  }
+  return used;
+}
+
+/**
+ * Lit le prochain n° sans le consommer.
+ * @param {import("@supabase/supabase-js").SupabaseClient} supabase
+ */
+export async function peekTicketSequence(supabase) {
+  if (!supabase) return { ok: false, error: new Error("Supabase non configuré"), nextValue: null };
+  try {
+    const { data, error } = await supabase
+      .from("ticket_sequence")
+      .select("next_value")
+      .eq("site_key", SITE_KEY)
+      .maybeSingle();
+    if (error) {
+      logger.warn("peek ticket_sequence:", error);
+      return { ok: false, error, nextValue: null };
+    }
+    const nextValue = Number(data?.next_value);
+    return {
+      ok: true,
+      error: null,
+      nextValue: Number.isFinite(nextValue) && nextValue >= 1 ? nextValue : null,
+    };
+  } catch (err) {
+    logger.warn("peek ticket_sequence exception:", err);
+    return { ok: false, error: err, nextValue: null };
+  }
 }
 
 /**
@@ -112,96 +151,91 @@ export async function setTicketSequenceNext(supabase, nextValue) {
 }
 
 /**
- * Réserve atomiquement `count` numéros consécutifs (safe multi-PC).
- * @returns {{ ok: boolean, numbers: string[], error?: Error, start?: number, next?: number }}
+ * Aligne le compteur sur le max historique (réparation si dérive), sans consommer de n°.
+ * @returns {{ ok: boolean, nextValue: number|null, error?: Error }}
  */
-export async function reserveTicketNumbers(supabase, count) {
-  const n = Math.max(0, Math.floor(Number(count) || 0));
-  if (n === 0) return { ok: true, numbers: [], start: null, next: null };
-  if (!supabase) {
-    return { ok: false, numbers: [], error: new Error("Supabase non configuré") };
+export async function syncTicketSequenceBaseline(supabase, quotes) {
+  const maxExisting = findMaxTicketNumericValue(quotes);
+  const expectedNext = Math.max(1, maxExisting + 1);
+
+  let peek = await peekTicketSequence(supabase);
+  if (!peek.ok || peek.nextValue == null) {
+    // Ligne absente : crée au minimum attendu (ne consomme rien).
+    const seed = await ensureTicketSequence(supabase, expectedNext);
+    return seed.ok
+      ? { ok: true, nextValue: seed.nextValue ?? expectedNext, error: null }
+      : { ok: false, nextValue: null, error: seed.error };
   }
-  try {
-    const { data, error } = await supabase.rpc("reserve_ticket_numbers", {
-      p_site_key: SITE_KEY,
-      p_count: n,
-    });
-    if (error) {
-      logger.warn("reserve_ticket_numbers:", error);
-      return { ok: false, numbers: [], error };
+
+  if (peek.nextValue > expectedNext + SEQUENCE_DRIFT_LIMIT) {
+    const repaired = await setTicketSequenceNext(supabase, expectedNext);
+    if (repaired.ok) {
+      return { ok: true, nextValue: repaired.nextValue ?? expectedNext, error: null };
     }
-    const numbers = Array.isArray(data?.numbers)
-      ? data.numbers.map((x) => String(x || "").trim()).filter(Boolean)
-      : [];
-    if (numbers.length !== n) {
-      return {
-        ok: false,
-        numbers: [],
-        error: new Error(`Réservation incomplète (${numbers.length}/${n})`),
-      };
+    logger.warn("Réparation compteur tickets échouée:", repaired.error);
+  } else if (peek.nextValue < expectedNext) {
+    const raised = await ensureTicketSequence(supabase, expectedNext);
+    if (raised.ok) {
+      return { ok: true, nextValue: raised.nextValue ?? expectedNext, error: null };
     }
-    return {
-      ok: true,
-      numbers,
-      start: data?.start != null ? Number(data.start) : null,
-      next: data?.next != null ? Number(data.next) : null,
-      error: null,
-    };
-  } catch (err) {
-    logger.warn("reserve_ticket_numbers exception:", err);
-    return { ok: false, numbers: [], error: err };
   }
+
+  return { ok: true, nextValue: Math.max(peek.nextValue, expectedNext), error: null };
 }
 
 /**
- * Prépare le compteur (max historique + 1) puis réserve `count` tickets.
+ * Propose `count` n° suivants SANS consommer le compteur (lecture seule + réparation éventuelle).
+ * Le compteur n’avance qu’à la validation du paiement via commitTicketSequenceAfterPayment.
  */
-export async function reserveTicketNumbersForPayment(supabase, quotes, count) {
+export async function suggestTicketNumbersForPayment(supabase, quotes, count) {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   if (n === 0) return { ok: true, numbers: [] };
 
-  const maxExisting = findMaxTicketNumericValue(quotes);
-  const expectedNext = Math.max(1, maxExisting + 1);
-  let seed = await ensureTicketSequence(supabase, expectedNext);
-  if (!seed.ok) {
-    return { ok: false, numbers: [], error: seed.error };
+  const baseline = await syncTicketSequenceBaseline(supabase, quotes);
+  if (!baseline.ok || baseline.nextValue == null) {
+    return { ok: false, numbers: [], error: baseline.error };
   }
 
-  // Répare un compteur dérivé (concaténations / outliers) qui ne peut plus baisser via ensure.
-  if (
-    seed.nextValue != null &&
-    seed.nextValue > expectedNext + SEQUENCE_DRIFT_LIMIT
-  ) {
-    const repaired = await setTicketSequenceNext(supabase, expectedNext);
-    if (repaired.ok) {
-      seed = repaired;
-    } else {
-      logger.warn("Réparation compteur tickets échouée:", repaired.error);
+  const used = buildUsedTicketKeys(quotes);
+  const numbers = [];
+  let cursor = String(baseline.nextValue);
+  let guard = 0;
+  while (numbers.length < n && guard < n + 500) {
+    guard += 1;
+    const key = normalizeTicketNumberKey(cursor);
+    if (!key || used.has(key)) {
+      const bumped = incrementTicketNumber(cursor, 1);
+      if (!bumped) break;
+      cursor = bumped;
+      continue;
     }
-  }
-
-  const reserved = await reserveTicketNumbers(supabase, n);
-  if (!reserved.ok) return reserved;
-
-  // Filet de sécurité côté client (en plus de l’atomicité SQL)
-  const used = new Set();
-  for (const quote of quotes || []) {
-    for (const item of quote?.items || []) {
-      const key = normalizeTicketNumberKey(item?.ticketNumber);
-      if (key) used.add(key);
-    }
-  }
-  for (const num of reserved.numbers) {
-    const key = normalizeTicketNumberKey(num);
-    if (used.has(key)) {
-      return {
-        ok: false,
-        numbers: [],
-        error: new Error(`Doublon détecté après réservation (${num}). Réessayez.`),
-      };
-    }
+    numbers.push(cursor);
     used.add(key);
+    const bumped = incrementTicketNumber(cursor, 1);
+    if (!bumped) break;
+    cursor = bumped;
   }
 
-  return reserved;
+  if (numbers.length !== n) {
+    return {
+      ok: false,
+      numbers: [],
+      error: new Error(`Suggestion incomplète (${numbers.length}/${n})`),
+    };
+  }
+
+  return { ok: true, numbers, error: null };
+}
+
+/**
+ * Après validation paiement : avance le compteur juste après le plus grand n° confirmé.
+ */
+export async function commitTicketSequenceAfterPayment(supabase, ticketNumbers) {
+  let maxConfirmed = 0;
+  for (const raw of ticketNumbers || []) {
+    const parsed = parseCarnetTicketNumber(raw);
+    if (parsed && parsed.n > maxConfirmed) maxConfirmed = parsed.n;
+  }
+  if (maxConfirmed < 1) return { ok: true, nextValue: null, error: null };
+  return ensureTicketSequence(supabase, maxConfirmed + 1);
 }

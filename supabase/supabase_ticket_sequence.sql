@@ -1,5 +1,6 @@
 -- Suite automatique des numéros de ticket (partagée entre tous les postes).
--- Réservation atomique : UPDATE ... RETURNING sous verrou de ligne → zéro doublon.
+-- Suggestion à l’ouverture du paiement (lecture seule) ;
+-- le compteur n’avance qu’à la validation via ensure_ticket_sequence(max+1).
 
 CREATE TABLE IF NOT EXISTS public.ticket_sequence (
   site_key TEXT PRIMARY KEY,

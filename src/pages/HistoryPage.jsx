@@ -64,9 +64,8 @@ import {
   resolveQuoteById,
 } from "../utils/ticketCollections";
 import {
-  ensureTicketSequence,
-  findMaxTicketNumericValue,
-  reserveTicketNumbersForPayment,
+  commitTicketSequenceAfterPayment,
+  suggestTicketNumbersForPayment,
 } from "../utils/ticketSequence";
 
 
@@ -410,14 +409,15 @@ function QuoteCardComponent({
 
     setTicketAllocating(true);
     try {
-      const reserved = await reserveTicketNumbersForPayment(
+      // Suggestion seule : le compteur n’avance qu’à la validation (commit).
+      const suggested = await suggestTicketNumbersForPayment(
         supabase,
         quotes,
         slotsNeedingTicket.length
       );
-      if (!reserved.ok || !reserved.numbers?.length) {
-        logger.warn("Réservation tickets échouée:", reserved.error);
-        const msg = reserved.error?.message || reserved.error?.details || "";
+      if (!suggested.ok || !suggested.numbers?.length) {
+        logger.warn("Suggestion tickets échouée:", suggested.error);
+        const msg = suggested.error?.message || suggested.error?.details || "";
         toast.error(
           msg.includes("function") || msg.includes("schema cache") || msg.includes("does not exist")
             ? "Compteur tickets non installé en base. Exécutez supabase_ticket_sequence.sql puis réessayez."
@@ -428,8 +428,8 @@ function QuoteCardComponent({
       setTicketDrafts((prev) => {
         const next = { ...prev };
         slotsNeedingTicket.forEach(({ originalIndex }, i) => {
-          if (!String(next[originalIndex] || "").trim() && reserved.numbers[i]) {
-            next[originalIndex] = reserved.numbers[i];
+          if (!String(next[originalIndex] || "").trim() && suggested.numbers[i]) {
+            next[originalIndex] = suggested.numbers[i];
           }
         });
         return next;
@@ -642,16 +642,13 @@ function QuoteCardComponent({
             }
             toast.success("Devis payé — tickets enregistrés.");
           }
-
-          // Si l’agent a modifié les n° auto, avancer le compteur partagé au-delà du max saisi.
-          const maxConfirmed = findMaxTicketNumericValue([{ items: updatedItems }]);
-          if (maxConfirmed > 0) {
-            await ensureTicketSequence(supabase, maxConfirmed + 1);
-          }
         } catch (error) {
           logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
           toast.error("Erreur de synchronisation Supabase (tickets).");
         }
+
+        // Compteur partagé : avance uniquement après le clic Valider (pas à l’ouverture Payer).
+        await commitTicketSequenceAfterPayment(supabase, normalized);
       } else {
         toast.success("Devis payé — tickets enregistrés (local uniquement).");
       }
