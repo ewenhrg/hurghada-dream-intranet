@@ -113,6 +113,11 @@ function QuoteCardComponent({
   const ticketTouchedRef = useRef(new Set());
   /** Indices qui ont reçu une suggestion auto (à réserver à la validation). */
   const ticketAutoSlotsRef = useRef([]);
+  /** Devis à jour sans re-souscrire le canal temps réel à chaque rendu. */
+  const quotesRef = useRef(quotes);
+  useEffect(() => {
+    quotesRef.current = quotes;
+  }, [quotes]);
 
   // Calculer allTicketsFilled si ce n'est pas déjà défini
   const allTicketsFilled = d.allTicketsFilled !== undefined 
@@ -458,27 +463,40 @@ function QuoteCardComponent({
   useEffect(() => {
     if (!showTicketModal || !supabase) return undefined;
 
+    let cancelled = false;
+    let refreshing = false;
+
     const applyRemoteSuggestion = async () => {
+      if (cancelled || refreshing) return;
       const slots = ticketAutoSlotsRef.current.filter(
         (oi) => !ticketTouchedRef.current.has(oi)
       );
       if (slots.length === 0) return;
 
-      const suggested = await suggestTicketNumbersForPayment(supabase, quotes, slots.length);
-      if (!suggested.ok || !suggested.numbers?.length) return;
+      refreshing = true;
+      try {
+        const suggested = await suggestTicketNumbersForPayment(
+          supabase,
+          quotesRef.current,
+          slots.length
+        );
+        if (cancelled || !suggested.ok || !suggested.numbers?.length) return;
 
-      setTicketDrafts((prev) => {
-        const next = { ...prev };
-        let changed = false;
-        slots.forEach((oi, i) => {
-          const num = suggested.numbers[i];
-          if (num && String(next[oi] || "").trim() !== num) {
-            next[oi] = num;
-            changed = true;
-          }
+        setTicketDrafts((prev) => {
+          const next = { ...prev };
+          let changed = false;
+          slots.forEach((oi, i) => {
+            const num = suggested.numbers[i];
+            if (num && String(next[oi] || "").trim() !== num) {
+              next[oi] = num;
+              changed = true;
+            }
+          });
+          return changed ? next : prev;
         });
-        return changed ? next : prev;
-      });
+      } finally {
+        refreshing = false;
+      }
     };
 
     const channel = supabase
@@ -491,16 +509,23 @@ function QuoteCardComponent({
           table: "ticket_sequence",
           filter: `site_key=eq.${SITE_KEY}`,
         },
-        () => {
-          applyRemoteSuggestion();
-        }
+        applyRemoteSuggestion
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          logger.warn("Realtime compteur tickets:", status, err);
+        }
+      });
+
+    // Filet si le temps réel est coupé (réseau, proxy) : on revérifie régulièrement.
+    const stopPolling = setVisibilityAwareInterval(applyRemoteSuggestion, 15000);
 
     return () => {
+      cancelled = true;
+      stopPolling();
       supabase.removeChannel(channel);
     };
-  }, [showTicketModal, quotes, d.id]);
+  }, [showTicketModal, d.id]);
 
   const handleConfirmTickets = useCallback(async () => {
     const rawQuote = resolveQuoteById(quotes, d.id) || d;
