@@ -2,84 +2,72 @@ import { SITE_KEY } from "../constants";
 import { logger } from "./logger";
 import { incrementTicketNumber, normalizeTicketNumberKey } from "./ticketCollections";
 
-/** Longueur max d’un n° de carnet (ignore concaténations / typos 8+ chiffres). */
-const CARNET_MAX_LEN = 7;
-const CARNET_MIN_LEN = 3;
+/** Carnets actuels = 6 chiffres (ignore concaténations / typos). */
+const CARNET_LEN = 6;
 /**
- * Écart max toléré entre compteur et max historique.
- * Au-delà : on répare vers le bas, on ne remonte JAMAIS le compteur depuis un cache local pollué.
+ * Fenêtre de densité pour valider un max (outliers isolés type 195998).
+ * Au-delà de cet écart sans tickets voisins → outlier.
  */
-const SEQUENCE_DRIFT_LIMIT = 50;
+const SUPPORT_WINDOW = 500;
+const MIN_SUPPORT = 5;
+/** Petit rattrapage compteur si un paiement vient d’être saisi localement. */
+const RAISE_LIMIT = 50;
+/**
+ * Zone du carnet en cours. Un compteur au-dessus est considéré dérivé
+ * (ex. 195998) et peut être recalé ; on ne redescend jamais sous cette zone
+ * à cause d’un cache local incomplet (ex. 168051).
+ */
+const CARNET_ZONE_MIN = 180000;
+const CARNET_ZONE_MAX = 189999;
 
 /**
- * Parse un n° de carnet pur (chiffres uniquement, longueur raisonnable).
  * @param {unknown} raw
- * @returns {{ n: number, len: number } | null}
+ * @returns {number | null}
  */
 function parseCarnetTicketNumber(raw) {
   const s = String(raw || "").trim();
-  if (!new RegExp(`^\\d{${CARNET_MIN_LEN},${CARNET_MAX_LEN}}$`).test(s)) return null;
+  if (!new RegExp(`^\\d{${CARNET_LEN}}$`).test(s)) return null;
   const n = Number(s);
   if (!Number.isFinite(n) || n < 1) return null;
-  return { n, len: s.length };
+  return n;
+}
+
+function collectCarnetNumbers(quotes) {
+  const nums = [];
+  for (const quote of quotes || []) {
+    for (const item of quote?.items || []) {
+      const n = parseCarnetTicketNumber(item?.ticketNumber);
+      if (n != null) nums.push(n);
+    }
+  }
+  return nums;
+}
+
+function countSupport(nums, center, window = SUPPORT_WINDOW) {
+  let c = 0;
+  for (const n of nums) {
+    if (n >= center - window && n <= center) c += 1;
+  }
+  return c;
 }
 
 /**
- * Plus grand n° de la série dominante (ex. 6 chiffres → 185498).
- * Ignore outliers isolés en haut de plage (ex. 195997 restés dans le cache local).
+ * Plus grand n° de carnet 6 chiffres avec support local (ignore 195998 isolé).
  * @param {Array} quotes
  * @returns {number} 0 si aucun
  */
 export function findMaxTicketNumericValue(quotes) {
-  /** @type {Map<number, number[]>} */
-  const byLen = new Map();
+  const nums = collectCarnetNumbers(quotes);
+  if (nums.length === 0) return 0;
 
-  for (const quote of quotes || []) {
-    for (const item of quote?.items || []) {
-      const parsed = parseCarnetTicketNumber(item?.ticketNumber);
-      if (!parsed) continue;
-      const list = byLen.get(parsed.len) || [];
-      list.push(parsed.n);
-      byLen.set(parsed.len, list);
-    }
+  let max = Math.max(...nums);
+  // Retire les plateaux hauts isolés (peu de voisins).
+  while (max > 0 && countSupport(nums, max) < MIN_SUPPORT) {
+    const lower = nums.filter((n) => n < max);
+    if (lower.length === 0) break;
+    max = Math.max(...lower);
   }
-
-  if (byLen.size === 0) return 0;
-
-  let bestLen = 0;
-  let bestCount = -1;
-  for (const [len, list] of byLen) {
-    if (list.length > bestCount) {
-      bestCount = list.length;
-      bestLen = len;
-    }
-  }
-
-  const values = (byLen.get(bestLen) || []).slice().sort((a, b) => a - b);
-  if (values.length === 0) return 0;
-
-  // Chaînes sans trou > DRIFT : on garde le max de la chaîne la plus longue
-  // (évite qu’un plateau 19599x pollué en cache local écrase 185498).
-  const unique = [];
-  for (const n of values) {
-    if (unique.length === 0 || unique[unique.length - 1] !== n) unique.push(n);
-  }
-
-  let bestChainMax = unique[0];
-  let bestChainLen = 1;
-  let chainStart = 0;
-  for (let i = 1; i <= unique.length; i++) {
-    const broken = i === unique.length || unique[i] - unique[i - 1] > SEQUENCE_DRIFT_LIMIT;
-    if (!broken) continue;
-    const len = i - chainStart;
-    const chainMax = unique[i - 1];
-    if (len > bestChainLen || (len === bestChainLen && chainMax > bestChainMax)) {
-      bestChainLen = len;
-      bestChainMax = chainMax;
-    }
-    chainStart = i;
-  }
-  return bestChainMax;
+  return max;
 }
 
 function buildUsedTicketKeys(quotes) {
@@ -149,7 +137,7 @@ export async function ensureTicketSequence(supabase, minNext = 1) {
 }
 
 /**
- * Force le prochain n° (peut baisser — réparation / reprise de carnet).
+ * Force le prochain n° (peut baisser — réparation ciblée uniquement).
  * @param {import("@supabase/supabase-js").SupabaseClient} supabase
  * @param {number} nextValue
  */
@@ -177,52 +165,80 @@ export async function setTicketSequenceNext(supabase, nextValue) {
   }
 }
 
+function isInCurrentCarnetZone(n) {
+  return n >= CARNET_ZONE_MIN && n <= CARNET_ZONE_MAX;
+}
+
 /**
- * Aligne le compteur sur le max historique réel, sans consommer de n°.
- * Ne remonte jamais le compteur à partir d’un max local aberrant (cache pollué).
- * @returns {{ ok: boolean, nextValue: number|null, error?: Error }}
+ * Aligne suggestion / compteur sans casser la suite réelle du carnet.
+ * - Ne redescend JAMAIS vers un max local bas (cache incomplet → 168051).
+ * - Recale seulement un compteur clairement hors zone (ex. 195998).
  */
 export async function syncTicketSequenceBaseline(supabase, quotes) {
+  const nums = collectCarnetNumbers(quotes);
   const maxExisting = findMaxTicketNumericValue(quotes);
   const expectedNext = Math.max(1, maxExisting + 1);
 
   let peek = await peekTicketSequence(supabase);
   if (!peek.ok || peek.nextValue == null) {
-    const seed = await ensureTicketSequence(supabase, expectedNext);
+    const seedAt = isInCurrentCarnetZone(expectedNext) ? expectedNext : CARNET_ZONE_MIN;
+    const seed = await ensureTicketSequence(supabase, seedAt);
     return seed.ok
-      ? { ok: true, nextValue: seed.nextValue ?? expectedNext, error: null }
+      ? { ok: true, nextValue: seed.nextValue ?? seedAt, error: null }
       : { ok: false, nextValue: null, error: seed.error };
   }
 
-  // Compteur trop haut (réservations annulées / cache) → forcer la suite réelle.
-  if (peek.nextValue > expectedNext + SEQUENCE_DRIFT_LIMIT) {
-    const repaired = await setTicketSequenceNext(supabase, expectedNext);
+  let next = peek.nextValue;
+
+  // Compteur hors zone haute (dérive type 195998) → recaler sur le max supporté dans la zone.
+  if (next > CARNET_ZONE_MAX) {
+    const zoneMax = nums.filter((n) => isInCurrentCarnetZone(n));
+    const repairTo =
+      zoneMax.length > 0
+        ? Math.max(...zoneMax) + 1
+        : isInCurrentCarnetZone(expectedNext)
+          ? expectedNext
+          : CARNET_ZONE_MIN;
+    const repaired = await setTicketSequenceNext(supabase, repairTo);
     if (repaired.ok) {
-      return { ok: true, nextValue: repaired.nextValue ?? expectedNext, error: null };
+      return { ok: true, nextValue: repaired.nextValue ?? repairTo, error: null };
     }
-    logger.warn("Réparation compteur tickets échouée:", repaired.error);
-    // Propose quand même le bon n° même si l’écriture RPC a échoué.
-    return { ok: true, nextValue: expectedNext, error: null };
+    logger.warn("Réparation compteur hors zone échouée:", repaired.error);
+    return { ok: true, nextValue: repairTo, error: null };
   }
 
-  // Remonter seulement d’un petit écart (paiement frais pas encore reflété en base).
+  // Compteur trop bas hors zone (ex. 168051 après mauvaise réparation) → remonter dans la zone.
+  if (next < CARNET_ZONE_MIN) {
+    const zoneMax = nums.filter((n) => isInCurrentCarnetZone(n));
+    const raiseTo =
+      zoneMax.length > 0
+        ? Math.max(...zoneMax) + 1
+        : isInCurrentCarnetZone(expectedNext)
+          ? expectedNext
+          : 185499;
+    const repaired = await setTicketSequenceNext(supabase, raiseTo);
+    if (repaired.ok) {
+      return { ok: true, nextValue: repaired.nextValue ?? raiseTo, error: null };
+    }
+    return { ok: true, nextValue: raiseTo, error: null };
+  }
+
+  // Petit rattrapage si le max local (zone) est juste devant le peek.
   if (
-    peek.nextValue < expectedNext &&
-    expectedNext - peek.nextValue <= SEQUENCE_DRIFT_LIMIT
+    isInCurrentCarnetZone(expectedNext) &&
+    expectedNext > next &&
+    expectedNext - next <= RAISE_LIMIT &&
+    countSupport(nums, expectedNext - 1) >= MIN_SUPPORT
   ) {
     const raised = await ensureTicketSequence(supabase, expectedNext);
-    if (raised.ok) {
-      return { ok: true, nextValue: raised.nextValue ?? expectedNext, error: null };
-    }
+    if (raised.ok && raised.nextValue != null) next = raised.nextValue;
   }
 
-  // Si le max local est aberrant (expected >> peek), on ignore et on garde le peek.
-  return { ok: true, nextValue: peek.nextValue, error: null };
+  return { ok: true, nextValue: next, error: null };
 }
 
 /**
  * Propose `count` n° suivants SANS consommer le compteur.
- * Le compteur n’avance qu’à la validation via commitTicketSequenceAfterPayment.
  */
 export async function suggestTicketNumbersForPayment(supabase, quotes, count) {
   const n = Math.max(0, Math.floor(Number(count) || 0));
@@ -265,33 +281,15 @@ export async function suggestTicketNumbersForPayment(supabase, quotes, count) {
 }
 
 /**
- * Après validation paiement : avance le compteur juste après le plus grand n° confirmé.
- * Ignore les n° aberrants (hors série carnet) pour ne pas re-polluer le compteur.
+ * Après validation paiement : avance le compteur juste après le plus grand n° confirmé (zone carnet).
  */
 export async function commitTicketSequenceAfterPayment(supabase, ticketNumbers) {
   let maxConfirmed = 0;
   for (const raw of ticketNumbers || []) {
-    const parsed = parseCarnetTicketNumber(raw);
-    if (!parsed) continue;
-    // Garde-fou : ne pas committer un saut énorme (typo / ancien bug).
-    if (maxConfirmed > 0 && parsed.n > maxConfirmed + SEQUENCE_DRIFT_LIMIT) continue;
-    if (parsed.n > maxConfirmed) maxConfirmed = parsed.n;
+    const n = parseCarnetTicketNumber(raw);
+    if (n == null || !isInCurrentCarnetZone(n)) continue;
+    if (n > maxConfirmed) maxConfirmed = n;
   }
   if (maxConfirmed < 1) return { ok: true, nextValue: null, error: null };
-
-  const peek = await peekTicketSequence(supabase);
-  const peekVal = peek.nextValue;
-  // Si on validerait un n° déjà largement dépassé / aberrant vs compteur, ramener d’abord.
-  if (peekVal != null && maxConfirmed + 1 < peekVal - SEQUENCE_DRIFT_LIMIT) {
-    // Validation d’un n° « normal » alors que le compteur a dérivé : réparer puis ensure.
-    await setTicketSequenceNext(supabase, maxConfirmed + 1);
-    return { ok: true, nextValue: maxConfirmed + 1, error: null };
-  }
-  if (peekVal != null && maxConfirmed > peekVal + SEQUENCE_DRIFT_LIMIT) {
-    // N° saisi aberrant : ne pas monter le compteur jusque-là.
-    logger.warn("commit ticket ignoré (n° trop éloigné du compteur):", maxConfirmed, "peek", peekVal);
-    return { ok: true, nextValue: peekVal, error: null };
-  }
-
   return ensureTicketSequence(supabase, maxConfirmed + 1);
 }
