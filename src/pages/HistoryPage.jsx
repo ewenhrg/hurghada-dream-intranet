@@ -560,11 +560,15 @@ function QuoteCardComponent({
       return;
     }
 
+    const restParsed = Math.round(Number(String(payRestAmount).replace(",", ".")) || 0);
+    // Avec un reste à payer, un montant encaissé à 0 est légitime (tout est reporté).
+    const allowsZeroPaid = restParsed > 0;
+
     let paidCashAmount = 0;
     let paidStripeAmount = 0;
     if (payCash) {
       const parsed = Math.round(Number(String(payCashAmount).replace(",", ".")) || 0);
-      if (!(parsed > 0)) {
+      if (parsed < 0 || (!(parsed > 0) && !allowsZeroPaid)) {
         toast.warning("Indiquez le montant total payé en Cash.");
         return;
       }
@@ -572,14 +576,12 @@ function QuoteCardComponent({
     }
     if (payStripe) {
       const parsed = Math.round(Number(String(payStripeAmount).replace(",", ".")) || 0);
-      if (!(parsed > 0)) {
+      if (parsed < 0 || (!(parsed > 0) && !allowsZeroPaid)) {
         toast.warning("Indiquez le montant total payé en Stripe.");
         return;
       }
       paidStripeAmount = parsed;
     }
-
-    const restParsed = Math.round(Number(String(payRestAmount).replace(",", ".")) || 0);
     const restItemIndex =
       payRestItemIndex === "" || payRestItemIndex == null
         ? -1
