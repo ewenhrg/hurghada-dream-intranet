@@ -90,7 +90,7 @@ export async function peekTicketSequence(supabase) {
   try {
     const { data, error } = await supabase
       .from("ticket_sequence")
-      .select("next_value")
+      .select("next_value, updated_at")
       .eq("site_key", SITE_KEY)
       .maybeSingle();
     if (error) {
@@ -238,12 +238,54 @@ export async function syncTicketSequenceBaseline(supabase, quotes) {
 }
 
 /**
+ * Réserve atomiquement `count` numéros (safe multi-PC). À utiliser uniquement à la validation.
+ */
+export async function reserveTicketNumbers(supabase, count) {
+  const n = Math.max(0, Math.floor(Number(count) || 0));
+  if (n === 0) return { ok: true, numbers: [], start: null, next: null };
+  if (!supabase) {
+    return { ok: false, numbers: [], error: new Error("Supabase non configuré") };
+  }
+  try {
+    const { data, error } = await supabase.rpc("reserve_ticket_numbers", {
+      p_site_key: SITE_KEY,
+      p_count: n,
+    });
+    if (error) {
+      logger.warn("reserve_ticket_numbers:", error);
+      return { ok: false, numbers: [], error };
+    }
+    const numbers = Array.isArray(data?.numbers)
+      ? data.numbers.map((x) => String(x || "").trim()).filter(Boolean)
+      : [];
+    if (numbers.length !== n) {
+      return {
+        ok: false,
+        numbers: [],
+        error: new Error(`Réservation incomplète (${numbers.length}/${n})`),
+      };
+    }
+    return {
+      ok: true,
+      numbers,
+      start: data?.start != null ? Number(data.start) : null,
+      next: data?.next != null ? Number(data.next) : null,
+      error: null,
+    };
+  } catch (err) {
+    logger.warn("reserve_ticket_numbers exception:", err);
+    return { ok: false, numbers: [], error: err };
+  }
+}
+
+/**
  * Propose `count` n° suivants SANS consommer le compteur.
  */
 export async function suggestTicketNumbersForPayment(supabase, quotes, count) {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   if (n === 0) return { ok: true, numbers: [] };
 
+  // Toujours relire le compteur serveur (pas de cache local).
   const baseline = await syncTicketSequenceBaseline(supabase, quotes);
   if (!baseline.ok || baseline.nextValue == null) {
     return { ok: false, numbers: [], error: baseline.error };
@@ -277,19 +319,36 @@ export async function suggestTicketNumbersForPayment(supabase, quotes, count) {
     };
   }
 
-  return { ok: true, numbers, error: null };
+  return { ok: true, numbers, nextValue: baseline.nextValue, error: null };
 }
 
 /**
- * Après validation paiement : avance le compteur juste après le plus grand n° confirmé (zone carnet).
+ * Après validation : avance le compteur au-delà du max confirmé (zone carnet).
+ * Si des n° auto non modifiés sont fournis, les réserve atomiquement (multi-PC).
+ * @param {{ autoCount?: number }} [options]
+ * @returns {{ ok: boolean, reservedNumbers?: string[], error?: Error, nextValue?: number|null }}
  */
-export async function commitTicketSequenceAfterPayment(supabase, ticketNumbers) {
+export async function commitTicketSequenceAfterPayment(supabase, ticketNumbers, options = {}) {
+  const autoCount = Math.max(0, Math.floor(Number(options.autoCount) || 0));
+  let reservedNumbers = [];
+
+  if (autoCount > 0) {
+    const reserved = await reserveTicketNumbers(supabase, autoCount);
+    if (!reserved.ok) {
+      return { ok: false, reservedNumbers: [], error: reserved.error };
+    }
+    reservedNumbers = reserved.numbers;
+  }
+
   let maxConfirmed = 0;
-  for (const raw of ticketNumbers || []) {
+  for (const raw of [...(ticketNumbers || []), ...reservedNumbers]) {
     const n = parseCarnetTicketNumber(raw);
     if (n == null || !isInCurrentCarnetZone(n)) continue;
     if (n > maxConfirmed) maxConfirmed = n;
   }
-  if (maxConfirmed < 1) return { ok: true, nextValue: null, error: null };
-  return ensureTicketSequence(supabase, maxConfirmed + 1);
+  if (maxConfirmed >= 1) {
+    await ensureTicketSequence(supabase, maxConfirmed + 1);
+  }
+
+  return { ok: true, reservedNumbers, nextValue: maxConfirmed > 0 ? maxConfirmed + 1 : null, error: null };
 }

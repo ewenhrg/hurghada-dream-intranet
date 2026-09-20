@@ -166,4 +166,4 @@ GRANT EXECUTE ON FUNCTION public.reserve_ticket_numbers(TEXT, INTEGER) TO anon, 
 GRANT EXECUTE ON FUNCTION public.set_ticket_sequence_next(TEXT, BIGINT) TO anon, authenticated, service_role;
 
 COMMENT ON TABLE public.ticket_sequence IS
-  'Compteur partagé des n° de ticket intranet (réservation atomique multi-postes).';
+  'Compteur partagé des n° de ticket intranet (suggestion lecture seule, réservation atomique à la validation, realtime multi-postes).';

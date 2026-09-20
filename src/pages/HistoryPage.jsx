@@ -109,6 +109,10 @@ function QuoteCardComponent({
   const [ticketGenerating, setTicketGenerating] = useState(false);
   const [ticketAllocating, setTicketAllocating] = useState(false);
   const [ztUploadingType, setZtUploadingType] = useState(null);
+  /** Indices auto dont l’agent a modifié le n° à la main (ne pas écraser / ne pas réserver). */
+  const ticketTouchedRef = useRef(new Set());
+  /** Indices qui ont reçu une suggestion auto (à réserver à la validation). */
+  const ticketAutoSlotsRef = useRef([]);
 
   // Calculer allTicketsFilled si ce n'est pas déjà défini
   const allTicketsFilled = d.allTicketsFilled !== undefined 
@@ -243,6 +247,9 @@ function QuoteCardComponent({
   const handleTicketDraftChange = useCallback(
     (originalIndex, sortedIndex, rawValue, options = {}) => {
       const manualOnly = Boolean(options.manualOnly);
+      if (!manualOnly) {
+        ticketTouchedRef.current.add(originalIndex);
+      }
       setTicketDrafts((prev) => {
         const next = { ...prev, [originalIndex]: rawValue };
         if (manualOnly) return next;
@@ -278,7 +285,9 @@ function QuoteCardComponent({
           if (!fillFromFirst && current) continue;
           const suggested = incrementTicketNumber(base, s - sortedIndex);
           if (!suggested) break;
-          if (isAvailable(suggested, oi)) next[oi] = suggested;
+          if (isAvailable(suggested, oi)) {
+            next[oi] = suggested;
+          }
         }
         return next;
       });
@@ -407,9 +416,12 @@ function QuoteCardComponent({
       return;
     }
 
+    ticketTouchedRef.current = new Set();
+    ticketAutoSlotsRef.current = slotsNeedingTicket.map((s) => s.originalIndex);
+
     setTicketAllocating(true);
     try {
-      // Suggestion seule : le compteur n’avance qu’à la validation (commit).
+      // Suggestion seule : le compteur n’avance qu’à la validation (réservation atomique).
       const suggested = await suggestTicketNumbersForPayment(
         supabase,
         quotes,
@@ -441,6 +453,54 @@ function QuoteCardComponent({
       setTicketAllocating(false);
     }
   }, [d, quotes, activities, isManualTicketActivityName]);
+
+  // Synchro temps réel du compteur tant que le modal Payer est ouvert.
+  useEffect(() => {
+    if (!showTicketModal || !supabase) return undefined;
+
+    const applyRemoteSuggestion = async () => {
+      const slots = ticketAutoSlotsRef.current.filter(
+        (oi) => !ticketTouchedRef.current.has(oi)
+      );
+      if (slots.length === 0) return;
+
+      const suggested = await suggestTicketNumbersForPayment(supabase, quotes, slots.length);
+      if (!suggested.ok || !suggested.numbers?.length) return;
+
+      setTicketDrafts((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        slots.forEach((oi, i) => {
+          const num = suggested.numbers[i];
+          if (num && String(next[oi] || "").trim() !== num) {
+            next[oi] = num;
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    };
+
+    const channel = supabase
+      .channel(`ticket-sequence-${SITE_KEY}-${d.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "ticket_sequence",
+          filter: `site_key=eq.${SITE_KEY}`,
+        },
+        () => {
+          applyRemoteSuggestion();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [showTicketModal, quotes, d.id]);
 
   const handleConfirmTickets = useCallback(async () => {
     const rawQuote = resolveQuoteById(quotes, d.id) || d;
@@ -560,6 +620,36 @@ function QuoteCardComponent({
 
     setTicketGenerating(true);
     try {
+      let finalTicketNumbers = [...normalized];
+
+      // Réservation atomique multi-PC au Valider (pas à l’ouverture).
+      if (supabase) {
+        const autoSlots = ticketAutoSlotsRef.current.filter(
+          (oi) => !ticketTouchedRef.current.has(oi)
+        );
+        const autoTouched = ticketAutoSlotsRef.current.some((oi) =>
+          ticketTouchedRef.current.has(oi)
+        );
+        const autoCount = !autoTouched && autoSlots.length > 0 ? autoSlots.length : 0;
+        const commit = await commitTicketSequenceAfterPayment(supabase, finalTicketNumbers, {
+          autoCount,
+        });
+        if (!commit.ok) {
+          toast.error("Impossible de synchroniser les n° de ticket. Réessayez.");
+          return;
+        }
+        if (autoCount > 0 && commit.reservedNumbers?.length) {
+          autoSlots.forEach((oi, i) => {
+            if (commit.reservedNumbers[i]) finalTicketNumbers[oi] = commit.reservedNumbers[i];
+          });
+          const recheck = validateQuoteTicketNumbers(quotes, d.id, finalTicketNumbers);
+          if (!recheck.ok) {
+            toast.warning(recheck.message);
+            return;
+          }
+        }
+      }
+
       const agentName = String(user?.name || user?.fullName || user?.email || "").trim();
       const paymentMethodLabel = [
         payCash ? "cash" : null,
@@ -588,7 +678,7 @@ function QuoteCardComponent({
         );
         return {
           ...item,
-          ticketNumber: normalized[idx],
+          ticketNumber: finalTicketNumbers[idx],
           pickupTime: nextPickup,
           slot: matched?.slot || item.slot || "",
           ticketEnteredByName: agentName || item.ticketEnteredByName || "",
@@ -646,9 +736,6 @@ function QuoteCardComponent({
           logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
           toast.error("Erreur de synchronisation Supabase (tickets).");
         }
-
-        // Compteur partagé : avance uniquement après le clic Valider (pas à l’ouverture Payer).
-        await commitTicketSequenceAfterPayment(supabase, normalized);
       } else {
         toast.success("Devis payé — tickets enregistrés (local uniquement).");
       }
