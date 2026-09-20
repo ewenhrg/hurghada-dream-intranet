@@ -63,7 +63,12 @@ import {
   validateQuoteTicketNumbers,
   resolveQuoteById,
 } from "../utils/ticketCollections";
-import { reserveTicketNumbersForPayment } from "../utils/ticketSequence";
+import {
+  ensureTicketSequence,
+  findMaxTicketNumericValue,
+  reserveTicketNumbersForPayment,
+} from "../utils/ticketSequence";
+
 
 const QUOTE_DOC_BUCKET = "documents";
 const QUOTE_DOC_FALLBACK_BUCKET = "Catalogue";
@@ -637,6 +642,12 @@ function QuoteCardComponent({
             }
             toast.success("Devis payé — tickets enregistrés.");
           }
+
+          // Si l’agent a modifié les n° auto, avancer le compteur partagé au-delà du max saisi.
+          const maxConfirmed = findMaxTicketNumericValue([{ items: updatedItems }]);
+          if (maxConfirmed > 0) {
+            await ensureTicketSequence(supabase, maxConfirmed + 1);
+          }
         } catch (error) {
           logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
           toast.error("Erreur de synchronisation Supabase (tickets).");
@@ -1182,7 +1193,7 @@ function QuoteCardComponent({
                         </span>
                       ) : (
                         <span className="ml-1 font-semibold normal-case tracking-normal text-teal-700">
-                          · auto (suite partagée)
+                          · auto (modifiable)
                         </span>
                       )}
                     </span>
@@ -1203,7 +1214,6 @@ function QuoteCardComponent({
                             : "Auto"
                       }
                       disabled={ticketGenerating || (!manualTicket && ticketAllocating)}
-                      readOnly={!manualTicket && !ticketGenerating && !ticketAllocating}
                       aria-invalid={ticketDraftErrors[originalIndex] ? true : undefined}
                       className={`mt-1.5 w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:ring-2 disabled:opacity-60 ${
                         ticketDraftErrors[originalIndex]

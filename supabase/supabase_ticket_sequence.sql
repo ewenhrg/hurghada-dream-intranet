@@ -125,8 +125,44 @@ BEGIN
 END;
 $$;
 
+-- Force le prochain n° (peut baisser : reprise de carnet / réparation outliers).
+CREATE OR REPLACE FUNCTION public.set_ticket_sequence_next(
+  p_site_key TEXT,
+  p_next BIGINT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_next BIGINT;
+BEGIN
+  IF p_site_key IS NULL OR length(trim(p_site_key)) = 0 THEN
+    RAISE EXCEPTION 'site_key required';
+  END IF;
+  IF p_next IS NULL OR p_next < 1 THEN
+    RAISE EXCEPTION 'p_next must be >= 1';
+  END IF;
+
+  INSERT INTO public.ticket_sequence (site_key, next_value)
+  VALUES (trim(p_site_key), p_next)
+  ON CONFLICT (site_key) DO UPDATE
+  SET
+    next_value = EXCLUDED.next_value,
+    updated_at = NOW();
+
+  SELECT next_value INTO v_next
+  FROM public.ticket_sequence
+  WHERE site_key = trim(p_site_key);
+
+  RETURN jsonb_build_object('ok', true, 'next_value', v_next);
+END;
+$$;
+
 GRANT EXECUTE ON FUNCTION public.ensure_ticket_sequence(TEXT, BIGINT) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.reserve_ticket_numbers(TEXT, INTEGER) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.set_ticket_sequence_next(TEXT, BIGINT) TO anon, authenticated, service_role;
 
 COMMENT ON TABLE public.ticket_sequence IS
   'Compteur partagé des n° de ticket intranet (réservation atomique multi-postes).';
