@@ -63,6 +63,7 @@ import {
   validateQuoteTicketNumbers,
   resolveQuoteById,
 } from "../utils/ticketCollections";
+import { reserveTicketNumbersForPayment } from "../utils/ticketSequence";
 
 const QUOTE_DOC_BUCKET = "documents";
 const QUOTE_DOC_FALLBACK_BUCKET = "Catalogue";
@@ -102,6 +103,7 @@ function QuoteCardComponent({
   const [payRestAmount, setPayRestAmount] = useState("");
   const [payRestItemIndex, setPayRestItemIndex] = useState("");
   const [ticketGenerating, setTicketGenerating] = useState(false);
+  const [ticketAllocating, setTicketAllocating] = useState(false);
   const [ztUploadingType, setZtUploadingType] = useState(null);
 
   // Calculer allTicketsFilled si ce n'est pas déjà défini
@@ -178,11 +180,16 @@ function QuoteCardComponent({
   /**
    * 1er n° saisi → détecte le chiffre et propose la suite sur les activités suivantes
    * (ordre date du modal). Édition du 1er champ : écrase la suite. Autres : remplit seulement les vides.
+   * Zero Tracas / Hors zone : saisie manuelle uniquement (pas de cascade auto).
    */
   const payModalItemCount = useMemo(
     () => ((resolveQuoteById(quotes, d.id) || d).items || []).length,
     [quotes, d]
   );
+
+  const isManualTicketActivityName = useCallback((activityName) => {
+    return isZeroTracasActivity(activityName) || isZeroTracasHorsZoneActivity(activityName);
+  }, []);
 
   const ticketDraftErrors = useMemo(
     () => getTicketNumberFieldErrors(quotes, d.id, ticketDrafts, payModalItemCount),
@@ -230,9 +237,12 @@ function QuoteCardComponent({
   ]);
 
   const handleTicketDraftChange = useCallback(
-    (originalIndex, sortedIndex, rawValue) => {
+    (originalIndex, sortedIndex, rawValue, options = {}) => {
+      const manualOnly = Boolean(options.manualOnly);
       setTicketDrafts((prev) => {
         const next = { ...prev, [originalIndex]: rawValue };
+        if (manualOnly) return next;
+
         const base = String(rawValue || "").trim();
         if (!base || !incrementTicketNumber(base, 1)) return next;
 
@@ -258,6 +268,8 @@ function QuoteCardComponent({
         const fillFromFirst = sortedIndex === 0;
         for (let s = sortedIndex + 1; s < payModalItems.length; s++) {
           const oi = payModalItems[s].originalIndex;
+          const actName = payModalItems[s].item?.activityName;
+          if (isManualTicketActivityName(actName)) continue;
           const current = String(next[oi] ?? "").trim();
           if (!fillFromFirst && current) continue;
           const suggested = incrementTicketNumber(base, s - sortedIndex);
@@ -267,7 +279,7 @@ function QuoteCardComponent({
         return next;
       });
     },
-    [payModalItems, quotes, d.id]
+    [payModalItems, quotes, d.id, isManualTicketActivityName]
   );
 
   const handlePrintClick = useCallback(() => {
@@ -297,11 +309,12 @@ function QuoteCardComponent({
     }
   }, [activities]);
 
-  const openTicketModal = useCallback(() => {
+  const openTicketModal = useCallback(async () => {
     const rawQuote = resolveQuoteById(quotes, d.id) || d;
+    const items = rawQuote.items || [];
     const initial = {};
     const initialPickups = {};
-    (rawQuote.items || []).forEach((item, idx) => {
+    items.forEach((item, idx) => {
       initial[idx] = String(item.ticketNumber || "").trim();
       const act = resolveActivityFromList(item, activities);
       const neighborhood =
@@ -319,10 +332,28 @@ function QuoteCardComponent({
       }
       initialPickups[idx] = pickup;
     });
+
+    // Ordre date (comme le modal) : réservation uniquement pour les lignes sans ticket
+    const sortedForAssign = items
+      .map((item, originalIndex) => ({ item, originalIndex }))
+      .sort((a, b) => {
+        const da = String(a.item?.date || "").trim();
+        const db = String(b.item?.date || "").trim();
+        if (da && db && da !== db) return da.localeCompare(db);
+        if (da && !db) return -1;
+        if (!da && db) return 1;
+        return a.originalIndex - b.originalIndex;
+      });
+    const slotsNeedingTicket = sortedForAssign.filter(
+      ({ item, originalIndex }) =>
+        !String(initial[originalIndex] || "").trim() &&
+        !isManualTicketActivityName(item?.activityName)
+    );
+
     setTicketDrafts(initial);
     setPickupDrafts(initialPickups);
     setEditPickupTimes(
-      (rawQuote.items || []).some((item) => {
+      items.some((item) => {
         const act = resolveActivityFromList(item, activities);
         const neighborhood =
           String(item?.neighborhood || "").trim() ||
@@ -334,7 +365,6 @@ function QuoteCardComponent({
     const methods = normalizeTicketsPaymentMethods(rawQuote);
     setPayCash(methods.cash);
     setPayStripe(methods.stripe);
-    const items = rawQuote.items || [];
     const cashTotal =
       items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||
       Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0);
@@ -365,7 +395,47 @@ function QuoteCardComponent({
           : ""
     );
     setShowTicketModal(true);
-  }, [d, quotes, activities]);
+
+    if (slotsNeedingTicket.length === 0) return;
+
+    if (!supabase) {
+      toast.error("Connexion requise pour attribuer automatiquement les n° de ticket.");
+      return;
+    }
+
+    setTicketAllocating(true);
+    try {
+      const reserved = await reserveTicketNumbersForPayment(
+        supabase,
+        quotes,
+        slotsNeedingTicket.length
+      );
+      if (!reserved.ok || !reserved.numbers?.length) {
+        logger.warn("Réservation tickets échouée:", reserved.error);
+        const msg = reserved.error?.message || reserved.error?.details || "";
+        toast.error(
+          msg.includes("function") || msg.includes("schema cache") || msg.includes("does not exist")
+            ? "Compteur tickets non installé en base. Exécutez supabase_ticket_sequence.sql puis réessayez."
+            : "Impossible d’attribuer les tickets (sync). Réessayez."
+        );
+        return;
+      }
+      setTicketDrafts((prev) => {
+        const next = { ...prev };
+        slotsNeedingTicket.forEach(({ originalIndex }, i) => {
+          if (!String(next[originalIndex] || "").trim() && reserved.numbers[i]) {
+            next[originalIndex] = reserved.numbers[i];
+          }
+        });
+        return next;
+      });
+    } catch (err) {
+      logger.warn("Exception attribution tickets:", err);
+      toast.error("Impossible d’attribuer les tickets. Réessayez.");
+    } finally {
+      setTicketAllocating(false);
+    }
+  }, [d, quotes, activities, isManualTicketActivityName]);
 
   const handleConfirmTickets = useCallback(async () => {
     const rawQuote = resolveQuoteById(quotes, d.id) || d;
@@ -1006,7 +1076,7 @@ function QuoteCardComponent({
       {showTicketModal && createPortal(
         <div
           className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4 bg-black/50 backdrop-blur-sm"
-          onClick={() => !ticketGenerating && setShowTicketModal(false)}
+          onClick={() => !ticketGenerating && !ticketAllocating && setShowTicketModal(false)}
         >
           <div
             className="my-8 w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 p-6 md:p-7"
@@ -1024,13 +1094,18 @@ function QuoteCardComponent({
                   Payer — numéros de ticket
                 </h3>
                 <p className="text-sm text-slate-600 mt-1">
-                  Activités classées par date — saisissez le premier n° de ticket : les suivants
-                  se proposent automatiquement. Validez ensuite pour imprimer. Le devis passera
-                  en « Payé ».
+                  Les n° sont attribués automatiquement à la suite (sans doublon entre PC), sauf
+                  pour Zero Tracas / Hors zone : saisie manuelle obligatoire. Vérifiez puis
+                  validez pour imprimer — le devis passera en « Payé ».
                   {needsZeroTracasDocs
                     ? " Pour Zero Tracas, joignez aussi passeport, réservation d’hôtel et réservation de vol."
                     : ""}
                 </p>
+                {ticketAllocating ? (
+                  <p className="mt-2 text-xs font-bold text-teal-700" role="status">
+                    Attribution des numéros en cours…
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setEditPickupTimes((v) => !v)}
@@ -1051,7 +1126,9 @@ function QuoteCardComponent({
             </div>
 
             <ul className="mt-5 space-y-3 max-h-[50vh] overflow-y-auto pr-1">
-              {payModalItems.map(({ item, originalIndex }, sortedIndex) => (
+              {payModalItems.map(({ item, originalIndex }, sortedIndex) => {
+                const manualTicket = isManualTicketActivityName(item?.activityName);
+                return (
                 <li
                   key={`${item.activityId || "act"}-${item.date || originalIndex}-${originalIndex}`}
                   className="rounded-xl border border-teal-100 bg-teal-50/50 px-4 py-3"
@@ -1095,26 +1172,45 @@ function QuoteCardComponent({
                   <label className="mt-3 block">
                     <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
                       N° ticket
-                      {sortedIndex === 0 && payModalItems.length > 1 ? (
-                        <span className="ml-1 font-semibold normal-case tracking-normal text-teal-700">
-                          · la suite se remplit auto
+                      {manualTicket ? (
+                        <span className="ml-1 font-semibold normal-case tracking-normal text-amber-700">
+                          · saisie manuelle obligatoire
                         </span>
-                      ) : null}
+                      ) : ticketAllocating ? (
+                        <span className="ml-1 font-semibold normal-case tracking-normal text-teal-700">
+                          · attribution…
+                        </span>
+                      ) : (
+                        <span className="ml-1 font-semibold normal-case tracking-normal text-teal-700">
+                          · auto (suite partagée)
+                        </span>
+                      )}
                     </span>
                     <input
                       type="text"
                       autoComplete="off"
                       value={ticketDrafts[originalIndex] ?? ""}
                       onChange={(e) =>
-                        handleTicketDraftChange(originalIndex, sortedIndex, e.target.value)
+                        handleTicketDraftChange(originalIndex, sortedIndex, e.target.value, {
+                          manualOnly: manualTicket,
+                        })
                       }
-                      placeholder={sortedIndex === 0 ? "Ex. 1042" : "Auto ou saisie"}
-                      disabled={ticketGenerating}
+                      placeholder={
+                        manualTicket
+                          ? "Saisir le n° de ticket"
+                          : ticketAllocating
+                            ? "…"
+                            : "Auto"
+                      }
+                      disabled={ticketGenerating || (!manualTicket && ticketAllocating)}
+                      readOnly={!manualTicket && !ticketGenerating && !ticketAllocating}
                       aria-invalid={ticketDraftErrors[originalIndex] ? true : undefined}
                       className={`mt-1.5 w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:ring-2 disabled:opacity-60 ${
                         ticketDraftErrors[originalIndex]
                           ? "border-rose-400 focus:border-rose-400 focus:ring-rose-500/20"
-                          : "border-slate-200 focus:border-teal-400 focus:ring-teal-500/20"
+                          : manualTicket
+                            ? "border-amber-300 focus:border-amber-400 focus:ring-amber-500/20"
+                            : "border-slate-200 focus:border-teal-400 focus:ring-teal-500/20"
                       }`}
                     />
                     {ticketDraftErrors[originalIndex] ? (
@@ -1201,7 +1297,8 @@ function QuoteCardComponent({
                     );
                   })()}
                 </li>
-              ))}
+                );
+              })}
             </ul>
 
             {needsZeroTracasDocs ? (
@@ -1472,7 +1569,7 @@ function QuoteCardComponent({
                 type="button"
                 className="w-full sm:w-auto rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 border-2 border-slate-200 bg-white hover:bg-slate-50 transition-colors"
                 onClick={() => setShowTicketModal(false)}
-                disabled={ticketGenerating}
+                disabled={ticketGenerating || ticketAllocating}
               >
                 Annuler
               </button>
@@ -1482,6 +1579,7 @@ function QuoteCardComponent({
                 onClick={() => void handleConfirmTickets()}
                 disabled={
                   ticketGenerating ||
+                  ticketAllocating ||
                   hasTicketDraftErrors ||
                   Boolean(ztUploadingType) ||
                   (needsZeroTracasDocs && missingZeroTracasDocs.length > 0) ||
@@ -1491,7 +1589,9 @@ function QuoteCardComponent({
                   payItemsNeedingPickupChoice.length > 0
                 }
               >
-                {ticketGenerating
+                {ticketAllocating
+                  ? "Attribution des tickets…"
+                  : ticketGenerating
                   ? "Enregistrement…"
                   : needsZeroTracasDocs && missingZeroTracasDocs.length > 0
                     ? "Joignez les documents Zero Tracas"
