@@ -6,7 +6,7 @@ import { incrementTicketNumber, normalizeTicketNumberKey } from "./ticketCollect
 const CARNET_MAX_LEN = 7;
 const CARNET_MIN_LEN = 3;
 /** Écart max toléré entre le compteur et le max historique avant correction. */
-const SEQUENCE_DRIFT_LIMIT = 10_000;
+const SEQUENCE_DRIFT_LIMIT = 50;
 
 /**
  * Parse un n° de carnet pur (chiffres uniquement, longueur raisonnable).
