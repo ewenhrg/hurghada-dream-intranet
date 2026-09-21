@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Pencil, X } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { SITE_KEY, LS_KEYS } from "../../constants";
@@ -213,9 +214,9 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
     }
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-[2px] md:p-4"
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="edit-ticket-title"
@@ -223,8 +224,8 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
         if (e.target === e.currentTarget && !saving) onClose?.();
       }}
     >
-      <div className="max-h-[95vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-indigo-100/80 bg-white shadow-[0_24px_60px_-28px_rgba(79,70,229,0.55)]">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-4 py-3.5 backdrop-blur-md md:px-5">
+      <div className="flex max-h-[100dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-2xl border border-indigo-100/80 bg-white shadow-[0_24px_60px_-28px_rgba(79,70,229,0.55)] sm:max-h-[92vh] sm:rounded-2xl">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200/80 bg-white px-4 py-3.5 md:px-5">
           <div className="min-w-0">
             <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-indigo-600">
               <Pencil className="size-3.5" aria-hidden />
@@ -247,7 +248,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
           </button>
         </div>
 
-        <div className="space-y-4 px-4 py-4 md:px-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 md:px-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block space-y-1.5">
               <span className="text-xs font-semibold text-slate-600">N° ticket</span>
@@ -401,7 +402,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
           </p>
         </div>
 
-        <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur-md md:px-5">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 bg-white px-4 py-3 md:px-5">
           <GhostBtn type="button" onClick={() => !saving && onClose?.()} disabled={saving}>
             Annuler
           </GhostBtn>
@@ -410,7 +411,8 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
           </PrimaryBtn>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
