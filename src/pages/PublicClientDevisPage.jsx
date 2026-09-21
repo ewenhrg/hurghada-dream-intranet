@@ -6,7 +6,10 @@ import { logger } from "../utils/logger";
 import { formatPhoneWithPlus } from "../utils";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 import {
+  CATALOGUE_STAY_SAME_DAY_MESSAGE,
   formatCatalogueStaySummary,
+  getMinDepartureDate,
+  isSameDayCatalogueStay,
   isValidCatalogueStay,
   loadPublicCatalogueStay,
   PUBLIC_CATALOGUE_STAY_EVENT,
@@ -515,8 +518,12 @@ export function PublicClientDevisPage() {
       setError("La date de fin de séjour (départ) est obligatoire.");
       return;
     }
+    if (arrival === departure) {
+      setError(CATALOGUE_STAY_SAME_DAY_MESSAGE);
+      return;
+    }
     if (arrival > departure) {
-      setError("La date de départ doit être le même jour ou après la date d’arrivée.");
+      setError("La date de départ doit être après la date d’arrivée.");
       return;
     }
 
@@ -1392,11 +1399,21 @@ export function PublicClientDevisPage() {
                     type="date"
                     value={client.arrivalDate}
                     onChange={(e) => {
-                      updateClientField("arrivalDate", e.target.value);
-                      if (isValidCatalogueStay({ arrivalDate: e.target.value, departureDate: client.departureDate })) {
+                      const nextArrival = e.target.value;
+                      const minDep = getMinDepartureDate(nextArrival);
+                      const nextDeparture =
+                        minDep && client.departureDate && client.departureDate < minDep
+                          ? ""
+                          : client.departureDate;
+                      setClient((prev) => ({
+                        ...prev,
+                        arrivalDate: nextArrival,
+                        departureDate: nextDeparture,
+                      }));
+                      if (isValidCatalogueStay({ arrivalDate: nextArrival, departureDate: nextDeparture })) {
                         savePublicCatalogueStay({
-                          arrivalDate: e.target.value,
-                          departureDate: client.departureDate,
+                          arrivalDate: nextArrival,
+                          departureDate: nextDeparture,
                         });
                       }
                     }}
@@ -1409,7 +1426,7 @@ export function PublicClientDevisPage() {
                   <input
                     type="date"
                     value={client.departureDate}
-                    min={client.arrivalDate || undefined}
+                    min={getMinDepartureDate(client.arrivalDate) || undefined}
                     onChange={(e) => {
                       updateClientField("departureDate", e.target.value);
                       if (isValidCatalogueStay({ arrivalDate: client.arrivalDate, departureDate: e.target.value })) {
@@ -1424,6 +1441,11 @@ export function PublicClientDevisPage() {
                   />
                 </label>
               </div>
+              {isSameDayCatalogueStay(client) ? (
+                <p className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-900">
+                  {CATALOGUE_STAY_SAME_DAY_MESSAGE}
+                </p>
+              ) : null}
 
               {cartNeedsMinorBirthDates ? (
                 <div className="space-y-3 rounded-2xl border-2 border-violet-200 bg-violet-50/60 p-4">

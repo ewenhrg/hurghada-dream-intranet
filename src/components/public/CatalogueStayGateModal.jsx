@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { getEarliestBookableActivityDateYmd } from "../../utils/activityAvailableDates";
 import {
+  CATALOGUE_STAY_SAME_DAY_MESSAGE,
+  getMinDepartureDate,
+  isSameDayCatalogueStay,
   isValidCatalogueStay,
   savePublicCatalogueStay,
 } from "../../utils/publicCatalogueStayStorage";
@@ -56,6 +59,7 @@ export function CatalogueStayGateModal({
     return `${y}-${m}-${d}`;
   })();
   const earliestActivity = getEarliestBookableActivityDateYmd();
+  const sameDaySelected = isSameDayCatalogueStay({ arrivalDate, departureDate });
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -68,8 +72,12 @@ export function CatalogueStayGateModal({
       setError("Indiquez vos dates d’arrivée et de départ.");
       return;
     }
+    if (isSameDayCatalogueStay(stay)) {
+      setError(CATALOGUE_STAY_SAME_DAY_MESSAGE);
+      return;
+    }
     if (stay.arrivalDate > stay.departureDate) {
-      setError("La date de départ doit être le même jour ou après l’arrivée.");
+      setError("La date de départ doit être après la date d’arrivée.");
       return;
     }
     if (!isValidCatalogueStay(stay)) {
@@ -148,7 +156,14 @@ export function CatalogueStayGateModal({
                 type="date"
                 value={arrivalDate}
                 min={todayYmd}
-                onChange={(e) => setArrivalDate(e.target.value)}
+                onChange={(e) => {
+                  const nextArrival = e.target.value;
+                  setArrivalDate(nextArrival);
+                  const minDep = getMinDepartureDate(nextArrival);
+                  if (departureDate && minDep && departureDate < minDep) {
+                    setDepartureDate("");
+                  }
+                }}
                 required
                 className={fieldClass}
               />
@@ -158,7 +173,7 @@ export function CatalogueStayGateModal({
               <input
                 type="date"
                 value={departureDate}
-                min={arrivalDate || todayYmd}
+                min={getMinDepartureDate(arrivalDate) || todayYmd}
                 onChange={(e) => setDepartureDate(e.target.value)}
                 required
                 className={fieldClass}
@@ -166,8 +181,15 @@ export function CatalogueStayGateModal({
             </label>
           </div>
 
+          {sameDaySelected ? (
+            <p className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-900">
+              {CATALOGUE_STAY_SAME_DAY_MESSAGE}
+            </p>
+          ) : null}
+
           <ul className="mt-4 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium leading-relaxed text-slate-700">
             <li>Les activités se réservent à partir du <strong>lendemain de votre arrivée</strong>.</li>
+            <li>Le départ doit être <strong>au moins le lendemain</strong> de l’arrivée.</li>
             <li>
               Pas de réservation pour <strong>aujourd’hui ni demain</strong> (premier jour possible :{" "}
               {new Date(`${earliestActivity}T12:00:00`).toLocaleDateString("fr-FR", {
@@ -187,9 +209,12 @@ export function CatalogueStayGateModal({
         <div className="shrink-0 border-t border-slate-100 px-5 py-4 sm:px-6">
           <button
             type="submit"
-            className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-900/25 transition hover:from-violet-900 hover:to-orange-500"
+            disabled={sameDaySelected}
+            className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-900/25 transition hover:from-violet-900 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Voir le catalogue avec mes dates
+            {sameDaySelected
+              ? "Indiquez votre vraie date de départ"
+              : "Voir le catalogue avec mes dates"}
           </button>
           {!allowDismiss ? (
             <p className="mt-2 text-center text-[11px] font-medium text-slate-500">
