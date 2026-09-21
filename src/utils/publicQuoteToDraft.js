@@ -133,7 +133,7 @@ export function mapPublicCatalogLinesToQuoteItems(lines) {
 
 /**
  * @param {object} vm - retour de `rowToViewModel` sur PublicDevisPage
- * @returns {{ client: object, items: object[], notes: string }}
+ * @returns {{ client: object, items: object[], notes: string, source: string }}
  */
 export function buildQuoteDraftFromPublicViewModel(vm) {
   const items = mapPublicCatalogLinesToQuoteItems(vm.parsedItems);
@@ -155,5 +155,6 @@ export function buildQuoteDraftFromPublicViewModel(vm) {
       vm.notes || "",
       getMammaMiaSelfTransferActivityNames(items.map((it) => it.activityName || ""))
     ),
+    source: "web",
   };
 }

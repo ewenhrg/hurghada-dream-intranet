@@ -42,6 +42,13 @@ import {
   stripAirbnbColumns,
 } from "../utils/clientAirbnb.js";
 import { isLikelyGoogleMapsUrl } from "../utils/googleMapsUrl.js";
+import {
+  QUOTE_SOURCE_MANUAL,
+  QUOTE_SOURCE_WEB,
+  normalizeQuoteSource,
+  isMissingQuoteSourceColumnError,
+  stripQuoteSourceColumn,
+} from "../utils/quoteOrigin";
 import { DoubleHotelModal } from "../components/quotes/DoubleHotelModal.jsx";
 import { useAutoFillDates } from "../hooks/useAutoFillDates";
 import { useDebounce } from "../hooks/useDebounce";
@@ -235,6 +242,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
   
   const [items, setItems] = useState(() => (draft?.items && draft.items.length > 0 ? draft.items : [blankItemMemo()]));
   const [notes, setNotes] = useState(() => draft?.notes || "");
+  const [quoteSource, setQuoteSource] = useState(() => normalizeQuoteSource(draft?.source));
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [_ticketNumbers, setTicketNumbers] = useState({});
@@ -299,9 +307,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         client,
         items,
         notes,
+        source: quoteSource,
       });
     }
-  }, [client, items, notes, setDraft]);
+  }, [client, items, notes, quoteSource, setDraft]);
+
+  useEffect(() => {
+    if (normalizeQuoteSource(draft?.source) === QUOTE_SOURCE_WEB) {
+      setQuoteSource(QUOTE_SOURCE_WEB);
+    }
+  }, [draft?.source]);
 
   // Parachute / Combo aquatique : note auto RDV Mamma Mia (transfert non compris)
   useEffect(() => {
@@ -397,6 +412,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     setClient(emptyClient);
     setItems([blankItemMemo()]);
     setNotes("");
+    setQuoteSource(QUOTE_SOURCE_MANUAL);
     setTicketNumbers({});
     setPaymentMethods({});
     setGlobalAdults("");
@@ -1133,6 +1149,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
       clientDepartureDate: cleanedClient.departureDate || "",
       notes: notesWithDoubleHotel,
       createdByName: user?.name || "",
+      source: quoteSource,
       items: validComputed.map((c) => ({
         activityId: c.act.id,
         activityName: c.act.name || "",
@@ -1254,6 +1271,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           currency: q.currency,
           items: JSON.stringify(q.items),
           created_by_name: q.createdByName || "",
+          source: q.source || QUOTE_SOURCE_MANUAL,
           created_at: q.createdAt,
           updated_at: q.createdAt, // Initialiser updated_at avec la date de création
         };
@@ -1279,6 +1297,17 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           ({ data, error } = await supabase
             .from("quotes")
             .insert(stripAirbnbColumns(stripSecondHotelColumns(supabaseData)))
+            .select()
+            .single());
+        }
+
+        if (isMissingQuoteSourceColumnError(error)) {
+          logger.warn(
+            "Colonne source absente — insert sans ce champ. Exécutez supabase_quotes_add_source.sql"
+          );
+          ({ data, error } = await supabase
+            .from("quotes")
+            .insert(stripQuoteSourceColumn(stripAirbnbColumns(stripSecondHotelColumns(supabaseData))))
             .select()
             .single());
         }

@@ -15,6 +15,7 @@ import { runWhenIdle } from "./utils/idle";
 import { attachTicketPaymentMetaFromItems } from "./utils/ticketCollections";
 import { normalizeClientDocuments } from "./utils/hotelRequestDocuments";
 import { airbnbFieldsFromRow } from "./utils/clientAirbnb";
+import { normalizeQuoteSource } from "./utils/quoteOrigin";
 import { loadUserFromSession } from "./utils/userPermissions";
 import {
   ActivitiesPage,
@@ -623,7 +624,7 @@ export default function App() {
         const QUOTES_SYNC_LIMIT = 6000;
         const QUOTES_PAGE_SIZE = 1000;
         const quoteSelectBase =
-          "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, items, total, currency, paid_stripe, paid_cash, client_documents, client_is_airbnb, client_airbnb_maps_url";
+          "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, source, items, total, currency, paid_stripe, paid_cash, client_documents, client_is_airbnb, client_airbnb_maps_url";
         const quoteSelectWithSecondHotel =
           quoteSelectBase.replace(
             "client_departure_date,",
@@ -667,6 +668,11 @@ export default function App() {
               quoteSelect = quoteSelect
                 .replace(/,\s*client_is_airbnb/gi, "")
                 .replace(/,\s*client_airbnb_maps_url/gi, "");
+              from -= QUOTES_PAGE_SIZE;
+              continue;
+            }
+            if (/\bsource\b/i.test(msg) && /,\s*source\b/.test(quoteSelect)) {
+              quoteSelect = quoteSelect.replace(/,\s*source\b/gi, "");
               from -= QUOTES_PAGE_SIZE;
               continue;
             }
@@ -719,6 +725,7 @@ export default function App() {
               notes: row.notes || "",
               createdByName: row.created_by_name || "",
               updatedByName: row.updated_by_name || "",
+              source: normalizeQuoteSource(row.source, row.created_by_name),
               items,
               total: row.total || 0,
               totalCash: Math.round(row.total || 0),
@@ -846,6 +853,7 @@ export default function App() {
         notes: row.notes || "",
         createdByName: row.created_by_name || "",
         updatedByName: row.updated_by_name || "",
+        source: normalizeQuoteSource(row.source, row.created_by_name),
         items,
         total: row.total || 0,
         totalCash: Math.round(row.total || 0),

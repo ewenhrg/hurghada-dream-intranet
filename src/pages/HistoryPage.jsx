@@ -56,6 +56,11 @@ import {
 import { cleanupExpiredQuoteDocuments, isQuoteLastActivityPastRetention } from "../utils/cleanupExpiredQuoteDocuments";
 import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
 import {
+  isQuoteFromWeb,
+  isMissingQuoteSourceColumnError,
+  stripQuoteSourceColumn,
+} from "../utils/quoteOrigin";
+import {
   incrementTicketNumber,
   normalizeTicketNumberKey,
   buildUsedTicketNumberMap,
@@ -962,6 +967,15 @@ function QuoteCardComponent({
                 📎 {clientDocuments.length} document{clientDocuments.length > 1 ? "s" : ""}
               </span>
             ) : null}
+            {isQuoteFromWeb(d) ? (
+              <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white border-violet-600 shadow-violet-200/50">
+                🌐 Demande web
+              </span>
+            ) : (
+              <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white border-slate-600 shadow-slate-200/50">
+                ✍️ Devis manuel
+              </span>
+            )}
           </div>
           <p className="text-xs md:text-sm text-slate-500 font-medium">
             📅 {d.formattedCreatedAt}
@@ -2511,6 +2525,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   items: JSON.stringify(finalUpdatedQuote.items),
                   created_by_name: finalUpdatedQuote.createdByName || "",
                   updated_by_name: finalUpdatedQuote.updatedByName || "",
+                  ...(finalUpdatedQuote.source
+                    ? { source: finalUpdatedQuote.source }
+                    : {}),
                   updated_at: finalUpdatedQuote.updated_at,
                 };
 
@@ -2551,6 +2568,17 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
                   );
                   ({ data, error: updateError } = await runUpdate(
                     stripAirbnbColumns(stripSecondHotelColumns(supabaseUpdate))
+                  ));
+                }
+
+                if (isMissingQuoteSourceColumnError(updateError)) {
+                  logger.warn(
+                    "Colonne source absente — mise à jour sans ce champ. Exécutez supabase_quotes_add_source.sql"
+                  );
+                  ({ data, error: updateError } = await runUpdate(
+                    stripQuoteSourceColumn(
+                      stripAirbnbColumns(stripSecondHotelColumns(supabaseUpdate))
+                    )
                   ));
                 }
 
