@@ -11,7 +11,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, formatTurtleFinSizesLabel, isArrivalDayServiceActivity, ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, formatTurtleFinSizesLabel, isArrivalDayServiceActivity, isTransferActivity, ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -60,6 +60,7 @@ import {
   isMissingQuoteSourceColumnError,
   stripQuoteSourceColumn,
 } from "../utils/quoteOrigin";
+import { canEditAutoAssignedTicketNumbers } from "../constants/permissions";
 import {
   incrementTicketNumber,
   normalizeTicketNumberKey,
@@ -198,16 +199,28 @@ function QuoteCardComponent({
   /**
    * 1er n° saisi → détecte le chiffre et propose la suite sur les activités suivantes
    * (ordre date du modal). Édition du 1er champ : écrase la suite. Autres : remplit seulement les vides.
-   * Zero Tracas / Hors zone : saisie manuelle uniquement (pas de cascade auto).
+   * Zero Tracas / transferts : saisie manuelle uniquement (pas de cascade auto).
+   * Autres activités : n° auto — modifiables seulement par Ewen / Karim.
    */
   const payModalItemCount = useMemo(
     () => ((resolveQuoteById(quotes, d.id) || d).items || []).length,
     [quotes, d]
   );
 
-  const isManualTicketActivityName = useCallback((activityName) => {
-    return isZeroTracasActivity(activityName) || isZeroTracasHorsZoneActivity(activityName);
-  }, []);
+  const canEditAutoTickets = useMemo(() => canEditAutoAssignedTicketNumbers(user), [user]);
+
+  const isManualTicketActivity = useCallback(
+    (item) => {
+      const act = resolveActivityFromList(item, activities);
+      const name = item?.activityName || act?.name || "";
+      return (
+        isZeroTracasActivity(name) ||
+        isZeroTracasHorsZoneActivity(name) ||
+        isTransferActivity(name, act)
+      );
+    },
+    [activities]
+  );
 
   const ticketDraftErrors = useMemo(
     () => getTicketNumberFieldErrors(quotes, d.id, ticketDrafts, payModalItemCount),
@@ -257,6 +270,9 @@ function QuoteCardComponent({
   const handleTicketDraftChange = useCallback(
     (originalIndex, sortedIndex, rawValue, options = {}) => {
       const manualOnly = Boolean(options.manualOnly);
+      const locked = Boolean(options.locked);
+      if (locked) return;
+
       if (!manualOnly) {
         ticketTouchedRef.current.add(originalIndex);
       }
@@ -289,8 +305,8 @@ function QuoteCardComponent({
         const fillFromFirst = sortedIndex === 0;
         for (let s = sortedIndex + 1; s < payModalItems.length; s++) {
           const oi = payModalItems[s].originalIndex;
-          const actName = payModalItems[s].item?.activityName;
-          if (isManualTicketActivityName(actName)) continue;
+          const rowItem = payModalItems[s].item;
+          if (isManualTicketActivity(rowItem)) continue;
           const current = String(next[oi] ?? "").trim();
           if (!fillFromFirst && current) continue;
           const suggested = incrementTicketNumber(base, s - sortedIndex);
@@ -302,7 +318,7 @@ function QuoteCardComponent({
         return next;
       });
     },
-    [payModalItems, quotes, d.id, isManualTicketActivityName]
+    [payModalItems, quotes, d.id, isManualTicketActivity]
   );
 
   const handlePrintClick = useCallback(() => {
@@ -369,8 +385,7 @@ function QuoteCardComponent({
       });
     const slotsNeedingTicket = sortedForAssign.filter(
       ({ item, originalIndex }) =>
-        !String(initial[originalIndex] || "").trim() &&
-        !isManualTicketActivityName(item?.activityName)
+        !String(initial[originalIndex] || "").trim() && !isManualTicketActivity(item)
     );
 
     setTicketDrafts(initial);
@@ -462,7 +477,7 @@ function QuoteCardComponent({
     } finally {
       setTicketAllocating(false);
     }
-  }, [d, quotes, activities, isManualTicketActivityName]);
+  }, [d, quotes, activities, isManualTicketActivity]);
 
   // Synchro temps réel du compteur tant que le modal Payer est ouvert.
   useEffect(() => {
@@ -1230,9 +1245,12 @@ function QuoteCardComponent({
                   Payer — numéros de ticket
                 </h3>
                 <p className="text-sm text-slate-600 mt-1">
-                  Les n° sont attribués automatiquement à la suite (sans doublon entre PC), sauf
-                  pour Zero Tracas / Hors zone : saisie manuelle obligatoire. Vérifiez puis
-                  validez pour imprimer — le devis passera en « Payé ».
+                  Les n° sont attribués automatiquement (sans doublon entre PC). Zero Tracas et
+                  transferts : saisie manuelle obligatoire.
+                  {canEditAutoTickets
+                    ? " Vous pouvez modifier les n° auto."
+                    : " Les n° auto ne sont pas modifiables."}{" "}
+                  Validez ensuite pour imprimer — le devis passera en « Payé ».
                   {needsZeroTracasDocs
                     ? " Pour Zero Tracas, joignez aussi passeport, réservation d’hôtel et réservation de vol."
                     : ""}
@@ -1263,7 +1281,8 @@ function QuoteCardComponent({
 
             <ul className="mt-5 space-y-3 max-h-[50vh] overflow-y-auto pr-1">
               {payModalItems.map(({ item, originalIndex }, sortedIndex) => {
-                const manualTicket = isManualTicketActivityName(item?.activityName);
+                const manualTicket = isManualTicketActivity(item);
+                const ticketLocked = !manualTicket && !canEditAutoTickets;
                 return (
                 <li
                   key={`${item.activityId || "act"}-${item.date || originalIndex}-${originalIndex}`}
@@ -1316,6 +1335,10 @@ function QuoteCardComponent({
                         <span className="ml-1 font-semibold normal-case tracking-normal text-teal-700">
                           · attribution…
                         </span>
+                      ) : ticketLocked ? (
+                        <span className="ml-1 font-semibold normal-case tracking-normal text-slate-500">
+                          · auto (verrouillé)
+                        </span>
                       ) : (
                         <span className="ml-1 font-semibold normal-case tracking-normal text-teal-700">
                           · auto (modifiable)
@@ -1325,10 +1348,12 @@ function QuoteCardComponent({
                     <input
                       type="text"
                       autoComplete="off"
+                      readOnly={ticketLocked}
                       value={ticketDrafts[originalIndex] ?? ""}
                       onChange={(e) =>
                         handleTicketDraftChange(originalIndex, sortedIndex, e.target.value, {
                           manualOnly: manualTicket,
+                          locked: ticketLocked,
                         })
                       }
                       placeholder={
@@ -1338,14 +1363,20 @@ function QuoteCardComponent({
                             ? "…"
                             : "Auto"
                       }
-                      disabled={ticketGenerating || (!manualTicket && ticketAllocating)}
+                      disabled={
+                        ticketGenerating ||
+                        (!manualTicket && ticketAllocating) ||
+                        ticketLocked
+                      }
                       aria-invalid={ticketDraftErrors[originalIndex] ? true : undefined}
                       className={`mt-1.5 w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:ring-2 disabled:opacity-60 ${
                         ticketDraftErrors[originalIndex]
                           ? "border-rose-400 focus:border-rose-400 focus:ring-rose-500/20"
                           : manualTicket
                             ? "border-amber-300 focus:border-amber-400 focus:ring-amber-500/20"
-                            : "border-slate-200 focus:border-teal-400 focus:ring-teal-500/20"
+                            : ticketLocked
+                              ? "border-slate-200 bg-slate-50 text-slate-700"
+                              : "border-slate-200 focus:border-teal-400 focus:ring-teal-500/20"
                       }`}
                     />
                     {ticketDraftErrors[originalIndex] ? (

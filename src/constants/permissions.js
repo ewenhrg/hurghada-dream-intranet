@@ -165,6 +165,12 @@ export function canManageTicketLines(user) {
   return n === "ewen" || n === "karim" || n === "lea";
 }
 
+/** Modifier les n° de ticket auto-attribués au paiement — Ewen et Karim uniquement. */
+export function canEditAutoAssignedTicketNumbers(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "ewen" || n === "karim";
+}
+
 /** Supprimer une demande / devis hôtel (historique) — Ewen et Karim uniquement. */
 export function canDeleteHotelRequest(user) {
   const n = normalizeIntranetUserName(user?.name);

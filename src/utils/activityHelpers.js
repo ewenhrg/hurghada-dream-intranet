@@ -464,6 +464,24 @@ export function isArrivalDayServiceActivity(activityName) {
   return isZeroTracasActivity(activityName) || isZeroTracasHorsZoneActivity(activityName);
 }
 
+/**
+ * Activités de la catégorie TRANSFERT (aéroport, Hurghada–Le Caire, etc.).
+ * @param {string} [activityName]
+ * @param {{ category?: string, name?: string }|null} [activityLike]
+ */
+export function isTransferActivity(activityName, activityLike = null) {
+  const category = String(activityLike?.category || "").trim().toLowerCase();
+  if (category === "transfert") return true;
+  const name = normalizeActivityName(activityName || activityLike?.name);
+  if (!name) return false;
+  // Zero Tracas a ses propres règles (saisie manuelle) — ne pas les classer ici.
+  if (isArrivalDayServiceActivity(name)) return false;
+  if (name.includes("transfert")) return true;
+  if (name.includes("aeroport") || name.includes("aerport") || name.includes("airport")) return true;
+  if (name.includes("hurghada") && (name.includes("le caire") || name.includes("louxor"))) return true;
+  return false;
+}
+
 /** Options Zero Tracas incluant une carte SIM (indisponibles pour le moment). */
 export const ZERO_TRACAS_SIM_OPTION_KEYS = [
   "zeroTracasTransfertVisaSim",
