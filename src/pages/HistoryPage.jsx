@@ -71,6 +71,7 @@ import {
 } from "../utils/ticketCollections";
 import {
   commitTicketSequenceAfterPayment,
+  rollbackTicketReservation,
   suggestTicketNumbersForPayment,
 } from "../utils/ticketSequence";
 
@@ -666,31 +667,39 @@ function QuoteCardComponent({
     }
 
     setTicketGenerating(true);
+    let pendingReservation = null;
     try {
       let finalTicketNumbers = [...normalized];
 
       // Réservation atomique multi-PC au Valider (pas à l’ouverture).
+      // Toujours réserver les slots auto non modifiés (même si d’autres l’ont été).
       if (supabase) {
         const autoSlots = ticketAutoSlotsRef.current.filter(
           (oi) => !ticketTouchedRef.current.has(oi)
         );
-        const autoTouched = ticketAutoSlotsRef.current.some((oi) =>
-          ticketTouchedRef.current.has(oi)
-        );
-        const autoCount = !autoTouched && autoSlots.length > 0 ? autoSlots.length : 0;
+        const autoCount = autoSlots.length > 0 ? autoSlots.length : 0;
+        const usedElsewhere = buildUsedTicketNumberMap(quotes, { excludeQuoteId: d.id });
+        const keepTicketNumbers = finalTicketNumbers.filter((_, idx) => !autoSlots.includes(idx));
         const commit = await commitTicketSequenceAfterPayment(supabase, finalTicketNumbers, {
           autoCount,
+          excludeKeys: usedElsewhere.keys(),
+          keepTicketNumbers,
         });
         if (!commit.ok) {
           toast.error("Impossible de synchroniser les n° de ticket. Réessayez.");
           return;
         }
+        pendingReservation = commit.reservation || null;
         if (autoCount > 0 && commit.reservedNumbers?.length) {
           autoSlots.forEach((oi, i) => {
             if (commit.reservedNumbers[i]) finalTicketNumbers[oi] = commit.reservedNumbers[i];
           });
           const recheck = validateQuoteTicketNumbers(quotes, d.id, finalTicketNumbers);
           if (!recheck.ok) {
+            if (pendingReservation) {
+              await rollbackTicketReservation(supabase, pendingReservation);
+              pendingReservation = null;
+            }
             toast.warning(recheck.message);
             return;
           }
@@ -755,6 +764,8 @@ function QuoteCardComponent({
       const updatedQuotes = quotes.map((q) => (q.id === d.id ? updatedQuote : q));
       setQuotes(updatedQuotes);
       saveQuotesCache(updatedQuotes);
+      // N° bien attribués localement : ne plus rollback même si sync serveur échoue.
+      pendingReservation = null;
 
       if (supabase) {
         try {
@@ -789,6 +800,16 @@ function QuoteCardComponent({
 
       setShowTicketModal(false);
       openTicketsWindow(updatedQuote);
+    } catch (err) {
+      if (pendingReservation && supabase) {
+        try {
+          await rollbackTicketReservation(supabase, pendingReservation);
+        } catch (rollbackErr) {
+          logger.warn("Rollback réservation tickets échoué:", rollbackErr);
+        }
+      }
+      logger.error("Erreur validation paiement / tickets:", err);
+      toast.error("Erreur lors de l’enregistrement des tickets. Réessayez.");
     } finally {
       setTicketGenerating(false);
     }
