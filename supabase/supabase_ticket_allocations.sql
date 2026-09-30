@@ -404,38 +404,8 @@ SET
   assigned_at = COALESCE(public.ticket_allocations.assigned_at, NOW()),
   updated_at = NOW();
 
--- Seed released : trous entre 186080 et next_value-1
-WITH used AS (
-  SELECT DISTINCT trim(item->>'ticketNumber') AS ticket_number
-  FROM public.quotes q
-  CROSS JOIN LATERAL jsonb_array_elements(
-    CASE WHEN jsonb_typeof(q.items) = 'array' THEN q.items ELSE '[]'::jsonb END
-  ) AS item
-  WHERE q.site_key = 'hurghada_dream_0606'
-    AND jsonb_typeof(item) = 'object'
-    AND (item->>'ticketNumber') ~ '^[0-9]{6}$'
-),
-bounds AS (
-  SELECT 186080::bigint AS lo,
-         GREATEST(
-           186080,
-           COALESCE((SELECT next_value - 1 FROM public.ticket_sequence WHERE site_key = 'hurghada_dream_0606'), 186080)
-         ) AS hi
-),
-series AS (
-  SELECT generate_series(lo, hi) AS n FROM bounds WHERE hi >= lo
-)
-INSERT INTO public.ticket_allocations (site_key, ticket_number, status, released_at, updated_at)
-SELECT
-  'hurghada_dream_0606',
-  s.n::text,
-  'released',
-  NOW(),
-  NOW()
-FROM series s
-LEFT JOIN used u ON u.ticket_number = s.n::text
-WHERE u.ticket_number IS NULL
-ON CONFLICT (site_key, ticket_number) DO NOTHING;
+-- Les anciens trous historiques ne sont PAS remis dans le pool (released).
+-- Seuls les n° orphelins futurs (échec sync / suppression) seront réutilisés.
 
 COMMENT ON TABLE public.ticket_allocations IS
-  'Registre des n° ticket : held=réservé, assigned=sur un devis, released=trou réutilisable.';
+  'Registre des n° ticket : held=réservé, assigned=sur un devis, released=trou récent réutilisable (pas les trous historiques).';
