@@ -71,6 +71,7 @@ import {
 } from "../utils/ticketCollections";
 import {
   commitTicketSequenceAfterPayment,
+  confirmTicketAllocations,
   rollbackTicketReservation,
   suggestTicketNumbersForPayment,
 } from "../utils/ticketSequence";
@@ -761,11 +762,10 @@ function QuoteCardComponent({
         totalCard: cardTotal,
         updated_at: enteredAt,
       };
+      const previousQuotes = quotes;
       const updatedQuotes = quotes.map((q) => (q.id === d.id ? updatedQuote : q));
       setQuotes(updatedQuotes);
       saveQuotesCache(updatedQuotes);
-      // N° bien attribués localement : ne plus rollback même si sync serveur échoue.
-      pendingReservation = null;
 
       if (supabase) {
         try {
@@ -777,24 +777,49 @@ function QuoteCardComponent({
 
           if (!ok) {
             logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
+            if (pendingReservation) {
+              await rollbackTicketReservation(supabase, pendingReservation);
+              pendingReservation = null;
+            }
+            setQuotes(previousQuotes);
+            saveQuotesCache(previousQuotes);
             toast.error(
               error?.message ||
-                "Les tickets sont enregistrés en local mais pas sur le serveur. Réessayez ou vérifiez la connexion."
+                "Échec sync serveur : les n° de ticket ont été remis dans le pool. Réessayez."
             );
-          } else {
-            if (!rawQuote.supabase_id && data?.id) {
-              const withId = { ...updatedQuote, supabase_id: data.id };
-              const finalQuotes = updatedQuotes.map((q) => (q.id === d.id ? withId : q));
-              setQuotes(finalQuotes);
-              saveQuotesCache(finalQuotes);
-            }
-            toast.success("Devis payé — tickets enregistrés.");
+            return;
           }
+
+          if (pendingReservation?.numbers?.length) {
+            const quoteDbId = data?.id || rawQuote.supabase_id || null;
+            await confirmTicketAllocations(supabase, pendingReservation.numbers, quoteDbId);
+            pendingReservation = null;
+          }
+
+          if (!rawQuote.supabase_id && data?.id) {
+            const withId = { ...updatedQuote, supabase_id: data.id };
+            const finalQuotes = updatedQuotes.map((q) => (q.id === d.id ? withId : q));
+            setQuotes(finalQuotes);
+            saveQuotesCache(finalQuotes);
+          }
+          toast.success("Devis payé — tickets enregistrés.");
         } catch (error) {
           logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
-          toast.error("Erreur de synchronisation Supabase (tickets).");
+          if (pendingReservation) {
+            try {
+              await rollbackTicketReservation(supabase, pendingReservation);
+            } catch (rollbackErr) {
+              logger.warn("Rollback réservation tickets échoué:", rollbackErr);
+            }
+            pendingReservation = null;
+          }
+          setQuotes(previousQuotes);
+          saveQuotesCache(previousQuotes);
+          toast.error("Erreur de synchronisation Supabase (tickets). Réessayez.");
+          return;
         }
       } else {
+        pendingReservation = null;
         toast.success("Devis payé — tickets enregistrés (local uniquement).");
       }
 

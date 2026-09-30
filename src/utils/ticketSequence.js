@@ -346,26 +346,33 @@ function parseReserveResult(data, expectedCount) {
 }
 
 /**
- * Annule une réservation si le compteur n’a pas été repris par un autre poste (CAS).
+ * Annule une réservation : remet les n° en released (réutilisables) + CAS compteur si possible.
  * @param {import("@supabase/supabase-js").SupabaseClient} supabase
- * @param {{ expectedNext?: number|null, restoreNext?: number|null, next?: number|null, start?: number|null }} reservation
+ * @param {{ expectedNext?: number|null, restoreNext?: number|null, next?: number|null, start?: number|null, numbers?: string[] }} reservation
  */
 export async function rollbackTicketReservation(supabase, reservation) {
   if (!supabase || !reservation) {
     return { ok: false, restored: false, error: new Error("Rollback impossible") };
   }
+  const numbers = Array.isArray(reservation.numbers)
+    ? reservation.numbers.map((x) => String(x || "").trim()).filter(Boolean)
+    : [];
   const expectedNext = Number(reservation.expectedNext ?? reservation.next);
   const restoreNext = Number(reservation.restoreNext ?? reservation.start);
-  if (!Number.isFinite(expectedNext) || !Number.isFinite(restoreNext) || restoreNext < 1) {
-    return { ok: false, restored: false, error: new Error("Réservation invalide pour rollback") };
-  }
   try {
-    const { data, error } = await supabase.rpc("rollback_ticket_reservation", {
+    const payload = {
       p_site_key: SITE_KEY,
-      p_expected_next: expectedNext,
-      p_restore_next: restoreNext,
-    });
+      p_expected_next: Number.isFinite(expectedNext) ? expectedNext : null,
+      p_restore_next: Number.isFinite(restoreNext) && restoreNext >= 1 ? restoreNext : null,
+    };
+    if (numbers.length > 0) payload.p_numbers = numbers;
+
+    const { data, error } = await supabase.rpc("rollback_ticket_reservation", payload);
     if (error) {
+      // Fallback : au moins relâcher les n° dans le registre.
+      if (numbers.length > 0) {
+        await releaseTicketAllocations(supabase, numbers);
+      }
       logger.warn("rollback_ticket_reservation:", error);
       return { ok: false, restored: false, error };
     }
@@ -376,19 +383,106 @@ export async function rollbackTicketReservation(supabase, reservation) {
       error: null,
     };
   } catch (err) {
+    if (numbers.length > 0) {
+      try {
+        await releaseTicketAllocations(supabase, numbers);
+      } catch {
+        /* ignore */
+      }
+    }
     logger.warn("rollback_ticket_reservation exception:", err);
     return { ok: false, restored: false, error: err };
   }
 }
 
 /**
+ * Confirme des n° held → assigned (après sync devis OK).
+ */
+export async function confirmTicketAllocations(supabase, ticketNumbers, quoteId = null) {
+  const numbers = [...(ticketNumbers || [])].map((x) => String(x || "").trim()).filter(Boolean);
+  if (!supabase || numbers.length === 0) return { ok: true, confirmed: 0 };
+  try {
+    const payload = {
+      p_site_key: SITE_KEY,
+      p_numbers: numbers,
+    };
+    if (quoteId != null && Number.isFinite(Number(quoteId))) {
+      payload.p_quote_id = Number(quoteId);
+    }
+    const { data, error } = await supabase.rpc("confirm_ticket_allocations", payload);
+    if (error) {
+      logger.warn("confirm_ticket_allocations:", error);
+      return { ok: false, confirmed: 0, error };
+    }
+    return { ok: true, confirmed: Number(data?.confirmed) || 0, error: null };
+  } catch (err) {
+    logger.warn("confirm_ticket_allocations exception:", err);
+    return { ok: false, confirmed: 0, error: err };
+  }
+}
+
+/**
+ * Remet des n° dans le pool (released) pour réutilisation — suppression / échec sync.
+ */
+export async function releaseTicketAllocations(supabase, ticketNumbers) {
+  const numbers = [...(ticketNumbers || [])].map((x) => String(x || "").trim()).filter(Boolean);
+  if (!supabase || numbers.length === 0) return { ok: true, released: 0 };
+  try {
+    const { data, error } = await supabase.rpc("release_ticket_allocations", {
+      p_site_key: SITE_KEY,
+      p_numbers: numbers,
+    });
+    if (error) {
+      logger.warn("release_ticket_allocations:", error);
+      return { ok: false, released: 0, error };
+    }
+    return { ok: true, released: Number(data?.released) || 0, error: null };
+  } catch (err) {
+    logger.warn("release_ticket_allocations exception:", err);
+    return { ok: false, released: 0, error: err };
+  }
+}
+
+/**
+ * N° released (trous) disponibles, triés croissant.
+ */
+async function peekReleasedTicketNumbers(supabase, limit = 50) {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from("ticket_allocations")
+      .select("ticket_number")
+      .eq("site_key", SITE_KEY)
+      .eq("status", "released")
+      .order("ticket_number", { ascending: true })
+      .limit(Math.max(1, Math.min(200, limit)));
+    if (error) {
+      logger.warn("peek released tickets:", error);
+      return [];
+    }
+    return (data || [])
+      .map((r) => String(r.ticket_number || "").trim())
+      .filter(Boolean)
+      .sort((a, b) => {
+        const na = parseCarnetTicketNumber(a);
+        const nb = parseCarnetTicketNumber(b);
+        if (na != null && nb != null) return na - nb;
+        return a.localeCompare(b, undefined, { numeric: true });
+      });
+  } catch (err) {
+    logger.warn("peek released tickets exception:", err);
+    return [];
+  }
+}
+
+/**
  * Propose `count` n° suivants SANS consommer le compteur.
+ * Priorité aux trous (released), puis suite du compteur.
  */
 export async function suggestTicketNumbersForPayment(supabase, quotes, count) {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   if (n === 0) return { ok: true, numbers: [] };
 
-  // Toujours relire le compteur serveur (pas de cache local).
   const baseline = await syncTicketSequenceBaseline(supabase, quotes);
   if (!baseline.ok || baseline.nextValue == null) {
     return { ok: false, numbers: [], error: baseline.error };
@@ -396,6 +490,15 @@ export async function suggestTicketNumbersForPayment(supabase, quotes, count) {
 
   const used = buildUsedTicketKeys(quotes);
   const numbers = [];
+  const released = await peekReleasedTicketNumbers(supabase, n + 20);
+  for (const candidate of released) {
+    if (numbers.length >= n) break;
+    const key = normalizeTicketNumberKey(candidate);
+    if (!key || used.has(key)) continue;
+    numbers.push(candidate);
+    used.add(key);
+  }
+
   let cursor = String(baseline.nextValue);
   let guard = 0;
   while (numbers.length < n && guard < n + ADVANCE_PAST_USED_LIMIT) {

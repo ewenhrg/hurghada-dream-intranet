@@ -41,6 +41,7 @@ import { toast } from "../utils/toast.js";
 import { canManageTicketLines } from "../constants/permissions";
 import { supabase } from "../lib/supabase";
 import { computePaidColumnsFromItems } from "../utils/ticketCollections";
+import { releaseTicketAllocations } from "../utils/ticketSequence";
 import { logger } from "../utils/logger";
 
 const slotLabel = (slot) =>
@@ -675,7 +676,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             logger.error("Erreur suppression ticket:", error);
             toast.error("Supprimé en local, mais la sync Supabase a échoué.");
           } else {
-            toast.success(`Ticket ${row.ticketNumber} supprimé.`);
+            // Remet le n° dans le pool pour réutilisation (évite un trou définitif).
+            await releaseTicketAllocations(supabase, [row.ticketNumber]);
+            toast.success(`Ticket ${row.ticketNumber} supprimé (n° remis au pool).`);
           }
         } else {
           toast.success(`Ticket ${row.ticketNumber} supprimé.`);
