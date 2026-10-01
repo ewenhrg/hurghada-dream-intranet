@@ -171,6 +171,12 @@ export function canEditAutoAssignedTicketNumbers(user) {
   return n === "ewen" || n === "karim";
 }
 
+/** Page Stagiaires (planning / appartements / CV) — Ewen et Karim uniquement. */
+export function canAccessInternsPage(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "ewen" || n === "karim";
+}
+
 /** Supprimer une demande / devis hôtel (historique) — Ewen et Karim uniquement. */
 export function canDeleteHotelRequest(user) {
   const n = normalizeIntranetUserName(user?.name);

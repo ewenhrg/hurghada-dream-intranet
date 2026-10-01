@@ -43,6 +43,9 @@ export const StopSalePage = lazyWithRetry(() =>
 export const DocumentsPage = lazyWithRetry(() =>
   import("../pages/DocumentsPage").then((module) => ({ default: module.DocumentsPage }))
 );
+export const InternsPage = lazyWithRetry(() =>
+  import("../pages/InternsPage").then((module) => ({ default: module.InternsPage }))
+);
 export const RequestPage = lazyWithRetry(() =>
   import("../pages/RequestPage").then((module) => ({ default: module.RequestPage }))
 );

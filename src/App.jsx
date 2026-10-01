@@ -9,7 +9,7 @@ import {
   getQuoteSiteKeysForSync,
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
-import { canAccessHotelsPage, canAccessHotelHistoryPage, hasFullIntranetAccess } from "./constants/permissions";
+import { canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, hasFullIntranetAccess } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, saveQuotesCache, loadLS, normalizeQuoteItemsFromDb } from "./utils";
 import { runWhenIdle } from "./utils/idle";
 import { attachTicketPaymentMetaFromItems } from "./utils/ticketCollections";
@@ -31,6 +31,7 @@ import {
   SituationPage,
   StopSalePage,
   DocumentsPage,
+  InternsPage,
   RequestPage,
   PublicTarifsPage,
   PublicClientDevisPage,
@@ -1521,6 +1522,11 @@ export default function App() {
                     {t("nav.ewenDashboard")}
                   </Pill>
                 )}
+                {canAccessInternsPage(user) && (
+                  <Pill active={tab === "stagiaires"} onClick={() => setTab("stagiaires")}>
+                    Stagiaires
+                  </Pill>
+                )}
                 <Pill active={tab === "documents"} onClick={() => setTab("documents")}>
                   {t("nav.documents")}
                 </Pill>
@@ -1741,6 +1747,19 @@ export default function App() {
                     onForceLogoutRequest={sendForceLogoutRequest}
                     onSendUserScreenMessage={sendUserScreenMessage}
                   />
+                </Suspense>
+              </ErrorBoundary>
+            </Section>
+          )}
+
+          {tab === "stagiaires" && canAccessInternsPage(user) && (
+            <Section
+              title="Stagiaires"
+              subtitle="Planning des venues, appartements colloc et CV"
+            >
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>
+                  <InternsPage user={user} />
                 </Suspense>
               </ErrorBoundary>
             </Section>
