@@ -5,6 +5,8 @@
 
 import { getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, clearZeroTracasSimQuantities } from "./activityHelpers";
 import { formatPhoneWithPlus } from "../utils.js";
+import { createEmptyAirbnb, pickAirbnbFields } from "./clientAirbnb.js";
+import { createEmptySecondHotel, pickSecondHotelFields } from "./clientSecondHotel.js";
 
 export const HD_PUBLIC_QUOTE_TO_DRAFT_EVENT = "hd-public-quote-to-draft";
 
@@ -156,5 +158,35 @@ export function buildQuoteDraftFromPublicViewModel(vm) {
       getMammaMiaSelfTransferActivityNames(items.map((it) => it.activityName || ""))
     ),
     source: "web",
+  };
+}
+
+/**
+ * Nouveau devis (onglet Devis) prérempli avec les infos client d’un devis historique.
+ * Les activités payées / tickets ne sont pas repris : ligne vide pour en ajouter.
+ * @param {object} quote
+ * @returns {{ client: object, items: object[], notes: string, source: string }}
+ */
+export function buildQuoteDraftFromExistingQuote(quote) {
+  const c = quote?.client || {};
+  return {
+    client: {
+      name: c.name || "",
+      phone: formatPhoneWithPlus(c.phone || ""),
+      emergencyPhone: formatPhoneWithPlus(c.emergencyPhone || ""),
+      email: c.email || "",
+      hotel: c.hotel || "",
+      room: c.room || "",
+      neighborhood: c.neighborhood || "",
+      arrivalDate: c.arrivalDate || quote?.clientArrivalDate || "",
+      departureDate: c.departureDate || quote?.clientDepartureDate || "",
+      ...createEmptySecondHotel(),
+      ...pickSecondHotelFields(c),
+      ...createEmptyAirbnb(),
+      ...pickAirbnbFields(c),
+    },
+    items: [createBlankQuoteLine()],
+    notes: "",
+    source: "manual",
   };
 }

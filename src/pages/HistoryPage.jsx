@@ -100,6 +100,7 @@ function QuoteCardComponent({
   setShowEditModal,
   onDocuments,
   onAddDocument,
+  onReuseClient,
   activities = [],
 }) {
   // NOTE: ne pas télécharger la fiche info côté navigateur (payload trop gros pour Edge Functions).
@@ -1268,6 +1269,16 @@ function QuoteCardComponent({
               >
                 💳 Payer
               </button>
+              {typeof onReuseClient === "function" && (
+                <button
+                  type="button"
+                  className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-sky-500 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                  onClick={() => onReuseClient(d)}
+                  title="Créer un nouveau devis avec les infos client déjà saisies"
+                >
+                  ➕ Nouveau devis
+                </button>
+              )}
               {!allTicketsFilled && (
                 <button
                   type="button"
@@ -1859,7 +1870,7 @@ function isQuoteCreatedToday(createdAt) {
 }
 
 // Exporter HistoryPage après la déclaration de QuoteCard
-export function HistoryPage({ quotes, setQuotes, user, activities }) {
+export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient }) {
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
@@ -2512,6 +2523,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities }) {
             setShowEditModal={setShowEditModal}
             onDocuments={setDocsQuote}
             onAddDocument={handleAddQuoteDocument}
+            onReuseClient={onReuseClient}
             activities={activities}
           />
         ))}

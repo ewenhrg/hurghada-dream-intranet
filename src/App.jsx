@@ -62,7 +62,7 @@ import {
   stripLocalOnlyActivityForStorage,
 } from "./utils/activitiesBackup";
 import { normalizeCatalogImageUrlsFromDb } from "./utils/catalogContent";
-import { HD_PUBLIC_QUOTE_TO_DRAFT_EVENT } from "./utils/publicQuoteToDraft";
+import { HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, buildQuoteDraftFromExistingQuote } from "./utils/publicQuoteToDraft";
 import {
   startPresenceSession,
   touchPresenceSession,
@@ -269,6 +269,16 @@ export default function App() {
     };
     window.addEventListener(HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, handler);
     return () => window.removeEventListener(HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, handler);
+  }, []);
+
+  /** Historique → nouveau devis avec les infos client déjà saisies (activités à ajouter ensuite). */
+  const handleReuseClientFromHistory = useCallback((quote) => {
+    if (!quote) return;
+    const draft = buildQuoteDraftFromExistingQuote(quote);
+    setQuoteDraft(draft);
+    saveLS(LS_KEYS.quoteForm, draft);
+    setTab("devis");
+    toast.success("Nouveau devis ouvert avec les infos client. Ajoutez les activités puis créez le devis.");
   }, []);
 
   /**
@@ -1647,7 +1657,13 @@ export default function App() {
 
         {tab === "history" && user?.canAccessHistory !== false && (
           <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")} bare>
-            <HistoryPage quotes={quotes} setQuotes={setQuotes} user={user} activities={activities} />
+            <HistoryPage
+              quotes={quotes}
+              setQuotes={setQuotes}
+              user={user}
+              activities={activities}
+              onReuseClient={handleReuseClientFromHistory}
+            />
           </Section>
         )}
 
