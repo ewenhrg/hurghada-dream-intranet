@@ -9,5 +9,6 @@ export const SPEED_BOAT_EXTRAS = [
   { id: "eden_lunch", label: "EDEN + LUNCH", priceAdult: 30, priceChild: 15 },
   { id: "ozeria", label: "OZERIA", priceAdult: 25, priceChild: 15 },
   { id: "ozeria_lunch", label: "OZERIA + LUNCH", priceAdult: 45, priceChild: 25 },
+  { id: "paradise_island_beach_use", label: "PARADISE ISLAND BEACH USE", priceAdult: 15, priceChild: 10 },
 ];
 
