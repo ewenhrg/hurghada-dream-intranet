@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS public.interns (
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
   age INT NULL CHECK (age IS NULL OR (age >= 14 AND age <= 80)),
+  phone TEXT NOT NULL DEFAULT '',
   stage_start DATE NOT NULL,
   stage_end DATE NOT NULL,
   cv_url TEXT NOT NULL DEFAULT '',

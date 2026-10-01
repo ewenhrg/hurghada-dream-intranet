@@ -14,6 +14,7 @@ function emptyInternForm() {
     first_name: "",
     last_name: "",
     age: "",
+    phone: "",
     stage_start: "",
     stage_end: "",
     notes: "",
@@ -188,6 +189,7 @@ export function InternsPage({ user }) {
       first_name: intern.first_name || "",
       last_name: intern.last_name || "",
       age: intern.age != null ? String(intern.age) : "",
+      phone: intern.phone || "",
       stage_start: intern.stage_start || "",
       stage_end: intern.stage_end || "",
       notes: intern.notes || "",
@@ -260,6 +262,7 @@ export function InternsPage({ user }) {
         first_name: first,
         last_name: last,
         age,
+        phone: String(internForm.phone || "").trim(),
         stage_start: start,
         stage_end: end,
         notes: String(internForm.notes || "").trim(),
@@ -621,6 +624,7 @@ export function InternsPage({ user }) {
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-3 py-2.5 font-semibold">Nom</th>
+                  <th className="px-3 py-2.5 font-semibold">Téléphone</th>
                   <th className="px-3 py-2.5 font-semibold">Âge</th>
                   <th className="px-3 py-2.5 font-semibold">Stage</th>
                   <th className="px-3 py-2.5 font-semibold">Appartement</th>
@@ -634,6 +638,15 @@ export function InternsPage({ user }) {
                   return (
                     <tr key={intern.id} className="border-t border-slate-100">
                       <td className="px-3 py-2.5 font-medium text-slate-900">{fullName(intern)}</td>
+                      <td className="px-3 py-2.5 text-slate-600">
+                        {intern.phone ? (
+                          <a href={`tel:${String(intern.phone).replace(/\s+/g, "")}`} className="hover:text-indigo-700">
+                            {intern.phone}
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="px-3 py-2.5 text-slate-600">{intern.age ?? "—"}</td>
                       <td className="px-3 py-2.5 text-slate-600">
                         {formatDateFr(intern.stage_start)} → {formatDateFr(intern.stage_end)}
@@ -725,6 +738,16 @@ export function InternsPage({ user }) {
                   max={80}
                   value={internForm.age}
                   onChange={(e) => setInternForm((f) => ({ ...f, age: e.target.value }))}
+                />
+              </label>
+              <label className="block text-xs font-medium text-slate-600">
+                Téléphone
+                <TextInput
+                  className="mt-1"
+                  type="tel"
+                  placeholder="+20 …"
+                  value={internForm.phone}
+                  onChange={(e) => setInternForm((f) => ({ ...f, phone: e.target.value }))}
                 />
               </label>
               <label className="block text-xs font-medium text-slate-600">
