@@ -444,6 +444,56 @@ export async function releaseTicketAllocations(supabase, ticketNumbers) {
 }
 
 /**
+ * Claim exclusif serveur de TOUS les n° d’un devis (anti-doublon multi-PC).
+ * Doit être appelé AVANT le persist, pour auto ET manuel.
+ * @returns {{ ok: boolean, claimed?: string[], conflicts?: string[], error?: Error }}
+ */
+export async function claimTicketNumbersForQuote(supabase, quoteId, ticketNumbers) {
+  const numbers = [...(ticketNumbers || [])].map((x) => String(x || "").trim()).filter(Boolean);
+  if (!supabase) {
+    return { ok: false, claimed: [], conflicts: [], error: new Error("Supabase non configuré") };
+  }
+  if (numbers.length === 0) return { ok: true, claimed: [], conflicts: [] };
+
+  const quoteDbId =
+    quoteId != null && Number.isFinite(Number(quoteId)) ? Number(quoteId) : null;
+
+  try {
+    const { data, error } = await supabase.rpc("claim_ticket_numbers_for_quote", {
+      p_site_key: SITE_KEY,
+      p_quote_id: quoteDbId,
+      p_numbers: numbers,
+    });
+    if (error) {
+      logger.warn("claim_ticket_numbers_for_quote:", error);
+      return { ok: false, claimed: [], conflicts: [], error };
+    }
+    const conflicts = Array.isArray(data?.conflicts)
+      ? data.conflicts.map((x) => String(x || "")).filter(Boolean)
+      : [];
+    const claimed = Array.isArray(data?.claimed)
+      ? data.claimed.map((x) => String(x || "")).filter(Boolean)
+      : [];
+    if (data?.ok === false || conflicts.length > 0) {
+      return {
+        ok: false,
+        claimed,
+        conflicts,
+        error: new Error(
+          conflicts.length
+            ? `Numéro(s) déjà utilisés : ${conflicts.join(", ")}`
+            : "Conflit de numéros de ticket"
+        ),
+      };
+    }
+    return { ok: true, claimed, conflicts: [], error: null };
+  } catch (err) {
+    logger.warn("claim_ticket_numbers_for_quote exception:", err);
+    return { ok: false, claimed: [], conflicts: [], error: err };
+  }
+}
+
+/**
  * N° released (trous) disponibles, triés croissant.
  */
 async function peekReleasedTicketNumbers(supabase, limit = 50) {

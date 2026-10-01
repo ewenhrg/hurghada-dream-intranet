@@ -3,6 +3,7 @@ import { LS_KEYS } from "../../constants";
 import { currency, saveQuotesCache, calculateCardPrice } from "../../utils";
 import { persistQuoteItemsToSupabase } from "../../utils/persistQuoteItems";
 import { computePaidColumnsFromItems, validateQuoteTicketNumbers } from "../../utils/ticketCollections";
+import { claimTicketNumbersForQuote } from "../../utils/ticketSequence";
 import { formatQuoteItemParticipantsSummary } from "../../utils/quoteItemDisplay.js";
 import { TextInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
@@ -51,6 +52,20 @@ export function PaymentModal({
     if (!ticketValidation.ok) {
       toast.warning(ticketValidation.message);
       return;
+    }
+
+    if (supabase) {
+      const quoteDbId =
+        selectedQuote.supabase_id != null ? Number(selectedQuote.supabase_id) : null;
+      const claim = await claimTicketNumbersForQuote(supabase, quoteDbId, normalizedTickets);
+      if (!claim.ok) {
+        toast.error(
+          claim.conflicts?.length
+            ? `Numéro déjà utilisé ailleurs : ${claim.conflicts.join(", ")}.`
+            : claim.error?.message || "Impossible de réserver ces n° de ticket."
+        );
+        return;
+      }
     }
 
     // Mettre à jour le devis avec les numéros de ticket et les méthodes de paiement

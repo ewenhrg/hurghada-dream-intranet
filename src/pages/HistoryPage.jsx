@@ -70,6 +70,7 @@ import {
   resolveQuoteById,
 } from "../utils/ticketCollections";
 import {
+  claimTicketNumbersForQuote,
   commitTicketSequenceAfterPayment,
   confirmTicketAllocations,
   rollbackTicketReservation,
@@ -704,6 +705,26 @@ function QuoteCardComponent({
             toast.warning(recheck.message);
             return;
           }
+        }
+
+        // Claim exclusif serveur (tous les n°, auto + manuel) — bloque les doublons multi-PC.
+        const quoteDbIdForClaim = rawQuote.supabase_id != null ? Number(rawQuote.supabase_id) : null;
+        const claim = await claimTicketNumbersForQuote(
+          supabase,
+          quoteDbIdForClaim,
+          finalTicketNumbers
+        );
+        if (!claim.ok) {
+          if (pendingReservation) {
+            await rollbackTicketReservation(supabase, pendingReservation);
+            pendingReservation = null;
+          }
+          toast.error(
+            claim.conflicts?.length
+              ? `Numéro déjà utilisé ailleurs : ${claim.conflicts.join(", ")}. Réessayez le paiement.`
+              : claim.error?.message || "Impossible de réserver ces n° de ticket. Réessayez."
+          );
+          return;
         }
       }
 

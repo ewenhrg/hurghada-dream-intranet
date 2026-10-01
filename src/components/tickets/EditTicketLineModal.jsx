@@ -5,7 +5,7 @@ import { supabase } from "../../lib/supabase";
 import { SITE_KEY, LS_KEYS } from "../../constants";
 import { saveQuotesCache, calculateCardPrice, formatPhoneWithPlus } from "../../utils";
 import { computePaidColumnsFromItems, findTicketNumberConflict, resolveQuoteById } from "../../utils/ticketCollections";
-import { confirmTicketAllocations, releaseTicketAllocations } from "../../utils/ticketSequence";
+import { claimTicketNumbersForQuote, releaseTicketAllocations } from "../../utils/ticketSequence";
 import { isBoatPartyActivity } from "../../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
@@ -118,6 +118,21 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
 
     setSaving(true);
     try {
+      const prevTicket = String(row.ticketNumber || "").trim();
+      const quoteDbId = quote.supabase_id != null ? Number(quote.supabase_id) : null;
+
+      if (supabase && prevTicket.toLowerCase() !== nextTicket.toLowerCase()) {
+        const claim = await claimTicketNumbersForQuote(supabase, quoteDbId, [nextTicket]);
+        if (!claim.ok) {
+          toast.error(
+            claim.conflicts?.length
+              ? `Numéro déjà utilisé : ${claim.conflicts.join(", ")}`
+              : "Impossible de verrouiller ce n° de ticket."
+          );
+          return;
+        }
+      }
+
       const originalItem = quote.items[itemIndex];
       const enteredAt = originalItem.ticketsEnteredAt || new Date().toISOString();
       const patchedItem = {
@@ -200,15 +215,9 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
           logger.error("Erreur mise à jour ticket:", error);
           toast.error("Enregistré en local, mais la sync Supabase a échoué.");
         } else {
-          const prevTicket = String(row.ticketNumber || "").trim();
           if (prevTicket && prevTicket.toLowerCase() !== nextTicket.toLowerCase()) {
             await releaseTicketAllocations(supabase, [prevTicket]);
           }
-          await confirmTicketAllocations(
-            supabase,
-            [nextTicket],
-            quote.supabase_id || null
-          );
           toast.success(`Ticket ${nextTicket} mis à jour.`);
         }
       } else {
