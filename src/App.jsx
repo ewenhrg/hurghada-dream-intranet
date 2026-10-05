@@ -1533,8 +1533,8 @@ export default function App() {
                   </Pill>
                 )}
                 {canAccessInternsPage(user) && (
-                  <Pill active={tab === "stagiaires"} onClick={() => setTab("stagiaires")}>
-                    Stagiaires
+                  <Pill active={tab === "appartements"} onClick={() => setTab("appartements")}>
+                    Appartement
                   </Pill>
                 )}
                 <Pill active={tab === "documents"} onClick={() => setTab("documents")}>
@@ -1768,9 +1768,9 @@ export default function App() {
             </Section>
           )}
 
-          {tab === "stagiaires" && canAccessInternsPage(user) && (
+          {tab === "appartements" && canAccessInternsPage(user) && (
             <Section
-              title="Stagiaires"
+              title="Appartement"
               subtitle="Planning des venues, appartements colloc et CV"
             >
               <ErrorBoundary>
