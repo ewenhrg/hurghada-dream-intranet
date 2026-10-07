@@ -54,7 +54,7 @@ import {
   hasAllZeroTracasRequiredDocuments,
 } from "../utils/hotelRequestDocuments";
 import { cleanupExpiredQuoteDocuments, isQuoteLastActivityPastRetention } from "../utils/cleanupExpiredQuoteDocuments";
-import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
+import { persistQuoteItemsToSupabase, persistedQuoteHasTicketNumbers } from "../utils/persistQuoteItems";
 import {
   isQuoteFromWeb,
   isMissingQuoteSourceColumnError,
@@ -73,7 +73,7 @@ import {
   claimTicketNumbersForQuote,
   commitTicketSequenceAfterPayment,
   confirmTicketAllocations,
-  rollbackTicketReservation,
+  rollbackTicketAttempt,
   suggestTicketNumbersForPayment,
 } from "../utils/ticketSequence";
 
@@ -123,6 +123,8 @@ function QuoteCardComponent({
   const ticketTouchedRef = useRef(new Set());
   /** Indices qui ont reçu une suggestion auto (à réserver à la validation). */
   const ticketAutoSlotsRef = useRef([]);
+  /** Empêche un double-clic Valider (2 réservations → 1 persist = n° sautés). */
+  const ticketConfirmLockRef = useRef(false);
   /** Devis à jour sans re-souscrire le canal temps réel à chaque rendu. */
   const quotesRef = useRef(quotes);
   useEffect(() => {
@@ -552,6 +554,7 @@ function QuoteCardComponent({
   }, [showTicketModal, d.id]);
 
   const handleConfirmTickets = useCallback(async () => {
+    if (ticketConfirmLockRef.current) return;
     const rawQuote = resolveQuoteById(quotes, d.id) || d;
     const items = rawQuote.items || [];
     if (items.length === 0) {
@@ -669,6 +672,7 @@ function QuoteCardComponent({
       return;
     }
 
+    ticketConfirmLockRef.current = true;
     setTicketGenerating(true);
     let pendingReservation = null;
     try {
@@ -683,10 +687,14 @@ function QuoteCardComponent({
         const autoCount = autoSlots.length > 0 ? autoSlots.length : 0;
         const usedElsewhere = buildUsedTicketNumberMap(quotes, { excludeQuoteId: d.id });
         const keepTicketNumbers = finalTicketNumbers.filter((_, idx) => !autoSlots.includes(idx));
+        const preferredNumbers = autoSlots
+          .map((oi) => finalTicketNumbers[oi])
+          .filter((n) => String(n || "").trim());
         const commit = await commitTicketSequenceAfterPayment(supabase, finalTicketNumbers, {
           autoCount,
           excludeKeys: usedElsewhere.keys(),
           keepTicketNumbers,
+          preferredNumbers,
         });
         if (!commit.ok) {
           toast.error("Impossible de synchroniser les n° de ticket. Réessayez.");
@@ -699,10 +707,8 @@ function QuoteCardComponent({
           });
           const recheck = validateQuoteTicketNumbers(quotes, d.id, finalTicketNumbers);
           if (!recheck.ok) {
-            if (pendingReservation) {
-              await rollbackTicketReservation(supabase, pendingReservation);
-              pendingReservation = null;
-            }
+            await rollbackTicketAttempt(supabase, pendingReservation, finalTicketNumbers);
+            pendingReservation = null;
             toast.warning(recheck.message);
             return;
           }
@@ -716,10 +722,8 @@ function QuoteCardComponent({
           finalTicketNumbers
         );
         if (!claim.ok) {
-          if (pendingReservation) {
-            await rollbackTicketReservation(supabase, pendingReservation);
-            pendingReservation = null;
-          }
+          await rollbackTicketAttempt(supabase, pendingReservation, finalTicketNumbers);
+          pendingReservation = null;
           toast.error(
             claim.conflicts?.length
               ? `Numéro déjà utilisé ailleurs : ${claim.conflicts.join(", ")}. Réessayez le paiement.`
@@ -797,12 +801,10 @@ function QuoteCardComponent({
             paidStripe: paidStripeAmount,
           });
 
-          if (!ok) {
+          if (!ok || !persistedQuoteHasTicketNumbers(data, finalTicketNumbers)) {
             logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
-            if (pendingReservation) {
-              await rollbackTicketReservation(supabase, pendingReservation);
-              pendingReservation = null;
-            }
+            await rollbackTicketAttempt(supabase, pendingReservation, finalTicketNumbers);
+            pendingReservation = null;
             setQuotes(previousQuotes);
             saveQuotesCache(previousQuotes);
             toast.error(
@@ -812,11 +814,9 @@ function QuoteCardComponent({
             return;
           }
 
-          if (pendingReservation?.numbers?.length) {
-            const quoteDbId = data?.id || rawQuote.supabase_id || null;
-            await confirmTicketAllocations(supabase, pendingReservation.numbers, quoteDbId);
-            pendingReservation = null;
-          }
+          const quoteDbId = data?.id || rawQuote.supabase_id || null;
+          await confirmTicketAllocations(supabase, finalTicketNumbers, quoteDbId);
+          pendingReservation = null;
 
           if (!rawQuote.supabase_id && data?.id) {
             const withId = { ...updatedQuote, supabase_id: data.id };
@@ -827,14 +827,12 @@ function QuoteCardComponent({
           toast.success("Devis payé — tickets enregistrés.");
         } catch (error) {
           logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
-          if (pendingReservation) {
-            try {
-              await rollbackTicketReservation(supabase, pendingReservation);
-            } catch (rollbackErr) {
-              logger.warn("Rollback réservation tickets échoué:", rollbackErr);
-            }
-            pendingReservation = null;
+          try {
+            await rollbackTicketAttempt(supabase, pendingReservation, finalTicketNumbers);
+          } catch (rollbackErr) {
+            logger.warn("Rollback réservation tickets échoué:", rollbackErr);
           }
+          pendingReservation = null;
           setQuotes(previousQuotes);
           saveQuotesCache(previousQuotes);
           toast.error("Erreur de synchronisation Supabase (tickets). Réessayez.");
@@ -848,9 +846,9 @@ function QuoteCardComponent({
       setShowTicketModal(false);
       openTicketsWindow(updatedQuote);
     } catch (err) {
-      if (pendingReservation && supabase) {
+      if (supabase) {
         try {
-          await rollbackTicketReservation(supabase, pendingReservation);
+          await rollbackTicketAttempt(supabase, pendingReservation, normalized);
         } catch (rollbackErr) {
           logger.warn("Rollback réservation tickets échoué:", rollbackErr);
         }
@@ -858,6 +856,7 @@ function QuoteCardComponent({
       logger.error("Erreur validation paiement / tickets:", err);
       toast.error("Erreur lors de l’enregistrement des tickets. Réessayez.");
     } finally {
+      ticketConfirmLockRef.current = false;
       setTicketGenerating(false);
     }
   }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, pickupDrafts, user, payCash, payStripe, payCashAmount, payStripeAmount, payRestAmount, payRestItemIndex, needsZeroTracasDocs, activities]);

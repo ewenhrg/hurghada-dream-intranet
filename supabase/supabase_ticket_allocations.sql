@@ -1,6 +1,6 @@
 -- Registre des n° de ticket : empêche les trous (réservation orpheline / suppression).
 -- Les n° held non confirmés peuvent être relâchés et RÉUTILISÉS.
--- Les trous déjà présents sont réinjectés dans le pool (released).
+-- Recyclage orphelins + reserve atomique : supabase_ticket_holes_guard.sql.
 
 CREATE TABLE IF NOT EXISTS public.ticket_allocations (
   site_key TEXT NOT NULL,
@@ -57,188 +57,9 @@ BEGIN
 END;
 $$;
 
-DROP FUNCTION IF EXISTS public.reserve_ticket_numbers(TEXT, INTEGER);
-DROP FUNCTION IF EXISTS public.reserve_ticket_numbers(TEXT, INTEGER, TEXT[]);
+-- reserve_ticket_numbers : version canonique dans supabase_ticket_holes_guard.sql
+-- (ne pas DROP/CREATE ici — ça écraserait les garde-fous anti-trous).
 
-CREATE OR REPLACE FUNCTION public.reserve_ticket_numbers(
-  p_site_key TEXT,
-  p_count INTEGER,
-  p_exclude TEXT[] DEFAULT NULL
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_site TEXT;
-  v_cursor BIGINT;
-  v_seq_next BIGINT;
-  v_prefix TEXT;
-  v_pad INT;
-  v_nums TEXT[] := ARRAY[]::TEXT[];
-  v_exclude TEXT[] := ARRAY[]::TEXT[];
-  v_reuse TEXT;
-  n TEXT;
-  v_guard INT := 0;
-  v_max_guard INT;
-  v_start BIGINT;
-  v_taken BOOLEAN;
-BEGIN
-  v_site := trim(p_site_key);
-  IF v_site IS NULL OR length(v_site) = 0 THEN
-    RAISE EXCEPTION 'site_key required';
-  END IF;
-  IF p_count IS NULL OR p_count < 1 THEN
-    RETURN jsonb_build_object('ok', true, 'numbers', '[]'::jsonb, 'start', NULL, 'next', NULL);
-  END IF;
-  IF p_count > 100 THEN
-    RAISE EXCEPTION 'count too large (max 100)';
-  END IF;
-
-  IF p_exclude IS NOT NULL THEN
-    SELECT coalesce(array_agg(DISTINCT lower(trim(x))), ARRAY[]::TEXT[])
-    INTO v_exclude
-    FROM unnest(p_exclude) AS x
-    WHERE length(trim(x)) > 0;
-  END IF;
-
-  INSERT INTO public.ticket_sequence (site_key, next_value)
-  VALUES (v_site, 1)
-  ON CONFLICT (site_key) DO NOTHING;
-
-  SELECT next_value, prefix, pad_width
-  INTO v_cursor, v_prefix, v_pad
-  FROM public.ticket_sequence
-  WHERE site_key = v_site
-  FOR UPDATE;
-
-  IF v_cursor IS NULL THEN
-    RAISE EXCEPTION 'ticket_sequence row missing for site_key %', v_site;
-  END IF;
-
-  -- Libère les holds abandonnés (crash navigateur / onglet fermé) → redeviennent réutilisables.
-  UPDATE public.ticket_allocations
-  SET
-    status = 'released',
-    quote_id = NULL,
-    item_index = NULL,
-    released_at = NOW(),
-    assigned_at = NULL,
-    updated_at = NOW()
-  WHERE site_key = v_site
-    AND status = 'held'
-    AND held_at < NOW() - INTERVAL '20 minutes';
-
-  -- 1) Réutiliser les n° released (trous), plus petit d’abord.
-  FOR v_reuse IN
-    SELECT ta.ticket_number
-    FROM public.ticket_allocations ta
-    WHERE ta.site_key = v_site
-      AND ta.status = 'released'
-      AND (
-        v_exclude IS NULL
-        OR cardinality(v_exclude) = 0
-        OR NOT (lower(ta.ticket_number) = ANY (v_exclude))
-      )
-    ORDER BY
-      CASE WHEN ta.ticket_number ~ '^[0-9]+$' THEN ta.ticket_number::bigint ELSE NULL END NULLS LAST,
-      ta.ticket_number
-    FOR UPDATE SKIP LOCKED
-  LOOP
-    EXIT WHEN cardinality(v_nums) >= p_count;
-    UPDATE public.ticket_allocations
-    SET
-      status = 'held',
-      quote_id = NULL,
-      item_index = NULL,
-      held_at = NOW(),
-      assigned_at = NULL,
-      released_at = NULL,
-      updated_at = NOW()
-    WHERE site_key = v_site
-      AND ticket_number = v_reuse
-      AND status = 'released';
-    IF FOUND THEN
-      v_nums := array_append(v_nums, v_reuse);
-    END IF;
-  END LOOP;
-
-  -- 2) Compléter depuis le compteur.
-  v_start := NULL;
-  v_max_guard := GREATEST(p_count * 30, 800);
-  WHILE cardinality(v_nums) < p_count AND v_guard < v_max_guard LOOP
-    v_guard := v_guard + 1;
-    n := public.format_ticket_number(v_cursor, v_prefix, v_pad);
-    v_taken := false;
-
-    IF v_exclude IS NULL OR cardinality(v_exclude) = 0 OR NOT (lower(n) = ANY (v_exclude)) THEN
-      IF EXISTS (
-        SELECT 1 FROM public.ticket_allocations ta
-        WHERE ta.site_key = v_site
-          AND lower(ta.ticket_number) = lower(n)
-          AND ta.status IN ('held', 'assigned')
-      ) THEN
-        v_taken := true;
-      ELSIF EXISTS (
-        SELECT 1 FROM public.ticket_allocations ta
-        WHERE ta.site_key = v_site
-          AND lower(ta.ticket_number) = lower(n)
-          AND ta.status = 'released'
-      ) THEN
-        UPDATE public.ticket_allocations
-        SET
-          status = 'held',
-          quote_id = NULL,
-          item_index = NULL,
-          held_at = NOW(),
-          assigned_at = NULL,
-          released_at = NULL,
-          updated_at = NOW()
-        WHERE site_key = v_site
-          AND ticket_number = n
-          AND status = 'released';
-        IF FOUND THEN
-          v_nums := array_append(v_nums, n);
-          IF v_start IS NULL THEN v_start := v_cursor; END IF;
-        ELSE
-          v_taken := true;
-        END IF;
-      ELSE
-        BEGIN
-          INSERT INTO public.ticket_allocations (site_key, ticket_number, status, held_at, updated_at)
-          VALUES (v_site, n, 'held', NOW(), NOW());
-          v_nums := array_append(v_nums, n);
-          IF v_start IS NULL THEN v_start := v_cursor; END IF;
-        EXCEPTION WHEN unique_violation THEN
-          v_taken := true;
-        END;
-      END IF;
-    END IF;
-
-    v_cursor := v_cursor + 1;
-  END LOOP;
-
-  IF cardinality(v_nums) <> p_count THEN
-    RAISE EXCEPTION 'unable to reserve % ticket numbers (got %)', p_count, cardinality(v_nums);
-  END IF;
-
-  UPDATE public.ticket_sequence
-  SET
-    next_value = GREATEST(next_value, v_cursor),
-    updated_at = NOW()
-  WHERE site_key = v_site
-  RETURNING next_value INTO v_seq_next;
-
-  RETURN jsonb_build_object(
-    'ok', true,
-    'numbers', to_jsonb(v_nums),
-    'start', v_start,
-    'next', v_seq_next,
-    'count', p_count
-  );
-END;
-$$;
 
 CREATE OR REPLACE FUNCTION public.confirm_ticket_allocations(
   p_site_key TEXT,
@@ -375,7 +196,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.reserve_ticket_numbers(TEXT, INTEGER, TEXT[]) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.reserve_ticket_numbers(TEXT, INTEGER, TEXT[], TEXT[]) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.confirm_ticket_allocations(TEXT, TEXT[], BIGINT) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.release_ticket_allocations(TEXT, TEXT[]) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.rollback_ticket_reservation(TEXT, BIGINT, BIGINT, TEXT[]) TO anon, authenticated, service_role;
@@ -404,8 +225,7 @@ SET
   assigned_at = COALESCE(public.ticket_allocations.assigned_at, NOW()),
   updated_at = NOW();
 
--- Les anciens trous historiques ne sont PAS remis dans le pool (released).
--- Seuls les n° orphelins futurs (échec sync / suppression) seront réutilisés.
+-- Recyclage des orphelins + reserve : supabase_ticket_holes_guard.sql
 
 COMMENT ON TABLE public.ticket_allocations IS
   'Registre des n° ticket : held=réservé, assigned=sur un devis, released=trou récent réutilisable (pas les trous historiques).';

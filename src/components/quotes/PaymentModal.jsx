@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { LS_KEYS } from "../../constants";
 import { currency, saveQuotesCache, calculateCardPrice } from "../../utils";
-import { persistQuoteItemsToSupabase } from "../../utils/persistQuoteItems";
+import { persistQuoteItemsToSupabase, persistedQuoteHasTicketNumbers } from "../../utils/persistQuoteItems";
 import { computePaidColumnsFromItems, validateQuoteTicketNumbers } from "../../utils/ticketCollections";
-import { claimTicketNumbersForQuote } from "../../utils/ticketSequence";
+import { claimTicketNumbersForQuote, releaseTicketAllocations } from "../../utils/ticketSequence";
 import { formatQuoteItemParticipantsSummary } from "../../utils/quoteItemDisplay.js";
 import { TextInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
@@ -21,11 +21,14 @@ export function PaymentModal({
 }) {
   const [ticketNumbers, setTicketNumbers] = useState({});
   const [paymentMethods, setPaymentMethods] = useState({});
+  const [saving, setSaving] = useState(false);
+  const saveLockRef = useRef(false);
   const canEditLockedTickets = hasFullIntranetAccess(user);
 
   if (!show || !selectedQuote) return null;
 
   const handleSave = async () => {
+    if (saveLockRef.current) return;
     // Vérifier que tous les tickets sont renseignés
     const allFilled = selectedQuote.items?.every((_, idx) => ticketNumbers[idx]?.trim());
     if (!allFilled) {
@@ -54,6 +57,9 @@ export function PaymentModal({
       return;
     }
 
+    saveLockRef.current = true;
+    setSaving(true);
+    try {
     if (supabase) {
       const quoteDbId =
         selectedQuote.supabase_id != null ? Number(selectedQuote.supabase_id) : null;
@@ -95,6 +101,7 @@ export function PaymentModal({
       updated_at: enteredAt,
     };
 
+    const previousQuotes = quotes;
     const updatedQuotes = quotes.map((q) => (q.id === selectedQuote.id ? updatedQuote : q));
     setQuotes(updatedQuotes);
     saveQuotesCache(updatedQuotes);
@@ -102,28 +109,39 @@ export function PaymentModal({
     // Mettre à jour dans Supabase si configuré
     if (supabase) {
       try {
-        const { ok, error } = await persistQuoteItemsToSupabase(selectedQuote, updatedQuote.items, {
+        const { ok, data, error } = await persistQuoteItemsToSupabase(selectedQuote, updatedQuote.items, {
           updatedAt: updatedQuote.updated_at,
           paidCash,
           paidStripe,
         });
 
-        if (!ok) {
+        if (!ok || !persistedQuoteHasTicketNumbers(data, normalizedTickets)) {
           logger.error("Erreur lors de la mise à jour Supabase:", error);
+          await releaseTicketAllocations(supabase, normalizedTickets);
+          setQuotes(previousQuotes);
+          saveQuotesCache(previousQuotes);
           toast.error(
             error?.message ||
-              "Tickets enregistrés en local mais pas synchronisés. Réessayez."
+              "Échec sync serveur : les n° de ticket ont été remis dans le pool. Réessayez."
           );
-        } else {
-          toast.success("Numéros de ticket et méthodes de paiement enregistrés avec succès.");
+          return;
         }
+        toast.success("Numéros de ticket et méthodes de paiement enregistrés avec succès.");
       } catch (error) {
         logger.error("Erreur lors de la mise à jour Supabase:", error);
+        await releaseTicketAllocations(supabase, normalizedTickets);
+        setQuotes(previousQuotes);
+        saveQuotesCache(previousQuotes);
         toast.error("Erreur lors de la synchronisation avec Supabase.");
+        return;
       }
     }
 
     onClose();
+    } finally {
+      saveLockRef.current = false;
+      setSaving(false);
+    }
   };
 
   const handleClose = () => {
@@ -231,8 +249,9 @@ export function PaymentModal({
           <PrimaryBtn
             className="w-full sm:w-auto order-1 sm:order-2"
             onClick={handleSave}
+            disabled={saving}
           >
-            Enregistrer
+            {saving ? "Enregistrement…" : "Enregistrer"}
           </PrimaryBtn>
         </div>
       </div>

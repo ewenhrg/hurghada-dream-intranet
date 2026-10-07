@@ -274,6 +274,24 @@ export async function syncTicketSequenceBaseline(supabase, quotes) {
  * @param {number} count
  * @param {{ exclude?: Iterable<string>|string[] }} [options]
  */
+export async function recycleOrphanTicketAllocations(supabase, graceSeconds = 120) {
+  if (!supabase) return { ok: false, recycled: 0, error: new Error("Supabase non configuré") };
+  try {
+    const { data, error } = await supabase.rpc("recycle_orphan_ticket_allocations", {
+      p_site_key: SITE_KEY,
+      p_grace_seconds: Math.max(0, Math.floor(Number(graceSeconds) || 0)),
+    });
+    if (error) {
+      logger.warn("recycle_orphan_ticket_allocations:", error);
+      return { ok: false, recycled: 0, error };
+    }
+    return { ok: true, recycled: Number(data?.recycled) || 0, error: null };
+  } catch (err) {
+    logger.warn("recycle_orphan_ticket_allocations exception:", err);
+    return { ok: false, recycled: 0, error: err };
+  }
+}
+
 export async function reserveTicketNumbers(supabase, count, options = {}) {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   if (n === 0) {
@@ -283,6 +301,7 @@ export async function reserveTicketNumbers(supabase, count, options = {}) {
     return { ok: false, numbers: [], error: new Error("Supabase non configuré") };
   }
   const exclude = usedKeysToExcludeArray(options.exclude);
+  const prefer = usedKeysToExcludeArray(options.prefer);
   try {
     const payload = {
       p_site_key: SITE_KEY,
@@ -291,10 +310,22 @@ export async function reserveTicketNumbers(supabase, count, options = {}) {
     if (exclude.length > 0) {
       payload.p_exclude = exclude;
     }
+    if (prefer.length > 0) {
+      payload.p_prefer = prefer;
+    }
     const { data, error } = await supabase.rpc("reserve_ticket_numbers", payload);
     if (error) {
+      const msg = String(error.message || "");
+      if (prefer.length > 0 && /p_prefer/i.test(msg)) {
+        const retry = { p_site_key: SITE_KEY, p_count: n };
+        if (exclude.length > 0) retry.p_exclude = exclude;
+        const fallbackPrefer = await supabase.rpc("reserve_ticket_numbers", retry);
+        if (!fallbackPrefer.error) {
+          return parseReserveResult(fallbackPrefer.data, n);
+        }
+      }
       // Ancienne signature SQL (sans p_exclude) : réessayer sans exclusion.
-      if (exclude.length > 0 && /p_exclude|function.*reserve_ticket_numbers/i.test(String(error.message || ""))) {
+      if (exclude.length > 0 && /p_exclude|function.*reserve_ticket_numbers/i.test(msg)) {
         logger.warn("reserve_ticket_numbers sans p_exclude (SQL à mettre à jour):", error);
         const fallback = await supabase.rpc("reserve_ticket_numbers", {
           p_site_key: SITE_KEY,
@@ -319,11 +350,16 @@ function parseReserveResult(data, expectedCount) {
   const numbers = Array.isArray(data?.numbers)
     ? data.numbers.map((x) => String(x || "").trim()).filter(Boolean)
     : [];
-  if (numbers.length !== expectedCount) {
+  const uniqueKeys = new Set(numbers.map((x) => x.toLowerCase()));
+  if (numbers.length !== expectedCount || uniqueKeys.size !== numbers.length) {
     return {
       ok: false,
       numbers: [],
-      error: new Error(`Réservation incomplète (${numbers.length}/${expectedCount})`),
+      error: new Error(
+        uniqueKeys.size !== numbers.length
+          ? "Réservation avec n° en double"
+          : `Réservation incomplète (${numbers.length}/${expectedCount})`
+      ),
     };
   }
   const start = data?.start != null ? Number(data.start) : null;
@@ -393,6 +429,29 @@ export async function rollbackTicketReservation(supabase, reservation) {
     logger.warn("rollback_ticket_reservation exception:", err);
     return { ok: false, restored: false, error: err };
   }
+}
+
+/**
+ * Annule une tentative (réservation auto + n° claimés) pour ne jamais laisser d’orphelins.
+ */
+export async function rollbackTicketAttempt(supabase, reservation, extraNumbers = []) {
+  const extras = [...(extraNumbers || [])].map((x) => String(x || "").trim()).filter(Boolean);
+  if (!supabase) {
+    return { ok: false, error: new Error("Supabase non configuré") };
+  }
+  let reservationOk = true;
+  if (reservation) {
+    const rolled = await rollbackTicketReservation(supabase, reservation);
+    reservationOk = rolled.ok;
+  }
+  const reserved = new Set(
+    (reservation?.numbers || []).map((x) => String(x || "").trim().toLowerCase()).filter(Boolean)
+  );
+  const leftover = extras.filter((n) => !reserved.has(n.toLowerCase()));
+  if (leftover.length > 0) {
+    await releaseTicketAllocations(supabase, leftover);
+  }
+  return { ok: reservationOk, error: reservationOk ? null : new Error("Rollback incomplet") };
 }
 
 /**
@@ -496,7 +555,7 @@ export async function claimTicketNumbersForQuote(supabase, quoteId, ticketNumber
 /**
  * N° released (trous) disponibles, triés croissant.
  */
-async function peekReleasedTicketNumbers(supabase, limit = 50) {
+async function peekReleasedTicketNumbers(supabase, limit = 50, minNumeric = null) {
   if (!supabase) return [];
   try {
     const { data, error } = await supabase
@@ -510,9 +569,18 @@ async function peekReleasedTicketNumbers(supabase, limit = 50) {
       logger.warn("peek released tickets:", error);
       return [];
     }
+    const floor =
+      minNumeric != null && Number.isFinite(Number(minNumeric))
+        ? Math.floor(Number(minNumeric))
+        : null;
     return (data || [])
       .map((r) => String(r.ticket_number || "").trim())
       .filter(Boolean)
+      .filter((n) => {
+        if (floor == null) return true;
+        const parsed = parseCarnetTicketNumber(n);
+        return parsed == null || parsed >= floor;
+      })
       .sort((a, b) => {
         const na = parseCarnetTicketNumber(a);
         const nb = parseCarnetTicketNumber(b);
@@ -533,6 +601,8 @@ export async function suggestTicketNumbersForPayment(supabase, quotes, count) {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   if (n === 0) return { ok: true, numbers: [] };
 
+  await recycleOrphanTicketAllocations(supabase, 120);
+
   const baseline = await syncTicketSequenceBaseline(supabase, quotes);
   if (!baseline.ok || baseline.nextValue == null) {
     return { ok: false, numbers: [], error: baseline.error };
@@ -540,7 +610,8 @@ export async function suggestTicketNumbersForPayment(supabase, quotes, count) {
 
   const used = buildUsedTicketKeys(quotes);
   const numbers = [];
-  const released = await peekReleasedTicketNumbers(supabase, n + 20);
+  const releasedFloor = Math.max(1, baseline.nextValue - ADVANCE_PAST_USED_LIMIT);
+  const released = await peekReleasedTicketNumbers(supabase, n + 20, releasedFloor);
   for (const candidate of released) {
     if (numbers.length >= n) break;
     const key = normalizeTicketNumberKey(candidate);
@@ -591,6 +662,7 @@ export async function suggestTicketNumbersForPayment(supabase, quotes, count) {
  * }} [options]
  * `excludeKeys` / `quotes` = n° déjà distribués ailleurs.
  * `keepTicketNumbers` = n° manuels de CE devis à ne pas réattribuer.
+ * `preferredNumbers` = n° auto déjà affichés, à garder s’ils sont encore libres.
  * Ne pas passer les suggestions auto dans exclude/keep (elles seront remplacées).
  * @returns {{ ok: boolean, reservedNumbers?: string[], reservation?: object|null, error?: Error, nextValue?: number|null }}
  */
@@ -609,8 +681,12 @@ export async function commitTicketSequenceAfterPayment(supabase, _ticketNumbers,
     if (key && !exclude.includes(key)) exclude.push(key);
   }
 
+  const prefer = usedKeysToExcludeArray(options.preferredNumbers).filter(
+    (n) => !exclude.includes(normalizeTicketNumberKey(n))
+  );
+
   if (autoCount > 0) {
-    const reserved = await reserveTicketNumbers(supabase, autoCount, { exclude });
+    const reserved = await reserveTicketNumbers(supabase, autoCount, { exclude, prefer });
     if (!reserved.ok) {
       return { ok: false, reservedNumbers: [], reservation: null, error: reserved.error };
     }

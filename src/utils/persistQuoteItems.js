@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, getQuoteSiteKeysForSync } from "../constants";
 import { logger } from "./logger";
+import { normalizeTicketNumberKey } from "./ticketCollections";
 
 /**
  * Parse `quotes.items` (JSONB) même si double-encodé en string.
@@ -16,6 +17,23 @@ export function parseQuoteItemsColumn(raw) {
     }
   }
   return Array.isArray(value) ? value : [];
+}
+
+/**
+ * Vérifie que le JSON devis renvoyé par Supabase contient bien tous les n° persistés.
+ */
+export function persistedQuoteHasTicketNumbers(data, expectedNumbers) {
+  const wanted = [...(expectedNumbers || [])]
+    .map((x) => normalizeTicketNumberKey(x))
+    .filter(Boolean);
+  if (wanted.length === 0) return true;
+  const items = parseQuoteItemsColumn(data?.items);
+  const got = new Set(
+    items
+      .map((item) => normalizeTicketNumberKey(item?.ticketNumber))
+      .filter(Boolean)
+  );
+  return wanted.every((key) => got.has(key));
 }
 
 /**

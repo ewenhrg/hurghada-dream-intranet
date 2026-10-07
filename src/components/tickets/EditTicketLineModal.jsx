@@ -180,6 +180,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
         updated_at: new Date().toISOString(),
       };
 
+      const previousQuotes = quotes;
       const updatedQuotes = (quotes || []).map((q) => (q.id === quote.id ? updatedQuote : q));
       setQuotes(updatedQuotes);
       saveQuotesCache(updatedQuotes);
@@ -213,13 +214,18 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
         const { error } = await updateQuery;
         if (error) {
           logger.error("Erreur mise à jour ticket:", error);
-          toast.error("Enregistré en local, mais la sync Supabase a échoué.");
-        } else {
-          if (prevTicket && prevTicket.toLowerCase() !== nextTicket.toLowerCase()) {
-            await releaseTicketAllocations(supabase, [prevTicket]);
+          setQuotes(previousQuotes);
+          saveQuotesCache(previousQuotes);
+          if (prevTicket.toLowerCase() !== nextTicket.toLowerCase()) {
+            await releaseTicketAllocations(supabase, [nextTicket]);
           }
-          toast.success(`Ticket ${nextTicket} mis à jour.`);
+          toast.error("Échec sync serveur : le n° n’a pas été consommé. Réessayez.");
+          return;
         }
+        if (prevTicket && prevTicket.toLowerCase() !== nextTicket.toLowerCase()) {
+          await releaseTicketAllocations(supabase, [prevTicket]);
+        }
+        toast.success(`Ticket ${nextTicket} mis à jour.`);
       } else {
         toast.success(`Ticket ${nextTicket} mis à jour.`);
       }
