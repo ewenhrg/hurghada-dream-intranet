@@ -601,8 +601,6 @@ export async function suggestTicketNumbersForPayment(supabase, quotes, count) {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   if (n === 0) return { ok: true, numbers: [] };
 
-  await recycleOrphanTicketAllocations(supabase, 120);
-
   const baseline = await syncTicketSequenceBaseline(supabase, quotes);
   if (!baseline.ok || baseline.nextValue == null) {
     return { ok: false, numbers: [], error: baseline.error };

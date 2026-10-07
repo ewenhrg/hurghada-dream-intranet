@@ -59,6 +59,16 @@ BEGIN
   END IF;
   v_grace := make_interval(secs => GREATEST(0, COALESCE(p_grace_seconds, 0)));
 
+  WITH live AS MATERIALIZED (
+    SELECT DISTINCT lower(trim(item->>'ticketNumber')) AS k
+    FROM public.quotes q
+    CROSS JOIN LATERAL jsonb_array_elements(
+      CASE WHEN jsonb_typeof(q.items) = 'array' THEN q.items ELSE '[]'::jsonb END
+    ) AS item
+    WHERE q.site_key = v_site
+      AND jsonb_typeof(item) = 'object'
+      AND length(trim(COALESCE(item->>'ticketNumber', ''))) > 0
+  )
   UPDATE public.ticket_allocations ta
   SET
     status = 'released',
@@ -76,7 +86,9 @@ BEGIN
       )
       OR (ta.status = 'held' AND ta.held_at < NOW() - INTERVAL '20 minutes')
     )
-    AND NOT public.ticket_number_in_quotes(v_site, ta.ticket_number);
+    AND NOT EXISTS (
+      SELECT 1 FROM live lt WHERE lt.k = lower(ta.ticket_number)
+    );
 
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RETURN jsonb_build_object('ok', true, 'recycled', v_count);
