@@ -66,6 +66,7 @@ BEGIN
 
   FOR r IN
     SELECT
+      q.client_phone,
       q.client_name,
       q.client_hotel,
       q.client_room,
@@ -78,11 +79,9 @@ BEGIN
     FROM public.quotes q
     WHERE q.site_key = v_site
       AND regexp_replace(coalesce(q.client_phone, ''), '[^0-9]', '', 'g') LIKE '%' || v_key
+      AND public.phone_match_key(q.client_phone) = v_key
     ORDER BY coalesce(q.updated_at, q.created_at) DESC
   LOOP
-    IF public.phone_match_key(r.client_phone) IS DISTINCT FROM v_key THEN
-      CONTINUE;
-    END IF;
     IF length(v_name) = 0 AND length(trim(coalesce(r.client_name, ''))) > 0 THEN
       v_name := trim(r.client_name);
     END IF;
