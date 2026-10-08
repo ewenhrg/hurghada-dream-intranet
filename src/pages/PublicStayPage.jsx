@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays, Clock, Hotel, LogOut, MessageCircle, Ticket, Users } from "lucide-react";
 import { formatPhoneWithPlus } from "../utils";
@@ -68,26 +68,55 @@ function groupItemsByDate(items) {
   }));
 }
 
+function pickupFingerprint(items) {
+  return (items || [])
+    .map((it) => `${it.activityName}|${it.date}|${it.pickupTime}`)
+    .join("\n");
+}
+
+function formatUpdatedAt(iso) {
+  const s = String(iso || "").trim();
+  if (!s) return "";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function PublicStayPage() {
   const [phone, setPhone] = useState(() => loadSavedStayPhone());
   const [inputPhone, setInputPhone] = useState(() => loadSavedStayPhone());
   const [loading, setLoading] = useState(() => Boolean(loadSavedStayPhone()));
   const [stay, setStay] = useState(null);
   const [error, setError] = useState("");
+  const [programUpdated, setProgramUpdated] = useState(false);
+  const stayRef = useRef(stay);
 
-  const loadStay = useCallback(async (rawPhone) => {
+  useEffect(() => {
+    stayRef.current = stay;
+  }, [stay]);
+
+  const loadStay = useCallback(async (rawPhone, { silent = false } = {}) => {
     const formatted = formatPhoneWithPlus(rawPhone);
     if (formatted.replace(/\D/g, "").length < 10) {
       setError("Indiquez votre numéro WhatsApp (au moins 10 chiffres).");
       return;
     }
-    setError("");
-    setLoading(true);
+    if (!silent) {
+      setError("");
+      setLoading(true);
+    }
     try {
       const result = await fetchClientStayByPhone(formatted);
       if (!result.ok) {
-        setError("Impossible de charger votre programme. Réessayez.");
-        setStay(null);
+        if (!silent) {
+          setError("Impossible de charger votre programme. Réessayez.");
+          setStay(null);
+        }
         return;
       }
       if (!result.found) {
@@ -96,11 +125,20 @@ export function PublicStayPage() {
         setPhone(formatted);
         return;
       }
+      if (silent) {
+        const prev = stayRef.current;
+        if (
+          prev?.found &&
+          pickupFingerprint(prev.items) !== pickupFingerprint(result.items)
+        ) {
+          setProgramUpdated(true);
+        }
+      }
       saveStayPhone(formatted);
       setPhone(formatted);
       setStay(result);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -111,6 +149,14 @@ export function PublicStayPage() {
     }
   }, [loadStay]);
 
+  useEffect(() => {
+    if (!phone || !stay?.found) return undefined;
+    const id = window.setInterval(() => {
+      void loadStay(phone, { silent: true });
+    }, 45000);
+    return () => window.clearInterval(id);
+  }, [phone, stay?.found, loadStay]);
+
   const days = useMemo(() => groupItemsByDate(stay?.items || []), [stay]);
 
   const handleLogout = () => {
@@ -119,6 +165,7 @@ export function PublicStayPage() {
     setInputPhone("");
     setStay(null);
     setError("");
+    setProgramUpdated(false);
   };
 
   const clientName = String(stay?.client?.name || "").trim();
@@ -223,6 +270,11 @@ export function PublicStayPage() {
           </section>
         ) : (
           <>
+            {programUpdated ? (
+              <p className="mb-4 rounded-2xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-900">
+                Vos heures de prise en charge ont été mises à jour.
+              </p>
+            ) : null}
             <section className="rounded-3xl border border-violet-200/80 bg-white p-5 shadow-catalog-premium">
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-violet-700">
                 Bonjour
@@ -248,6 +300,11 @@ export function PublicStayPage() {
                     : ""}
                 </p>
               )}
+              {formatUpdatedAt(stay.updatedAt) ? (
+                <p className="mt-2 text-[11px] font-semibold text-catalog-muted">
+                  Mis à jour {formatUpdatedAt(stay.updatedAt)}
+                </p>
+              ) : null}
             </section>
 
             <div className="mt-5 space-y-5">

@@ -54,6 +54,7 @@ export async function fetchClientStayByPhone(phone) {
       found: payload.found === true,
       client: payload.client && typeof payload.client === "object" ? payload.client : {},
       items,
+      updatedAt: String(payload.updatedAt || ""),
       error: null,
     };
   } catch (err) {

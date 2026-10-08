@@ -44,6 +44,7 @@ DECLARE
   v_arrival TEXT := '';
   v_departure TEXT := '';
   v_items JSONB := '[]'::jsonb;
+  v_updated TIMESTAMPTZ;
   r RECORD;
   item JSONB;
   v_name_item TEXT;
@@ -99,6 +100,11 @@ BEGIN
     END IF;
     IF length(v_departure) = 0 AND r.client_departure_date IS NOT NULL THEN
       v_departure := r.client_departure_date::text;
+    END IF;
+    IF r.updated_at IS NOT NULL AND (v_updated IS NULL OR r.updated_at > v_updated) THEN
+      v_updated := r.updated_at;
+    ELSIF r.created_at IS NOT NULL AND (v_updated IS NULL OR r.created_at > v_updated) THEN
+      v_updated := r.created_at;
     END IF;
 
     IF jsonb_typeof(r.items) = 'array' THEN
@@ -158,7 +164,8 @@ BEGIN
       'arrivalDate', v_arrival,
       'departureDate', v_departure
     ),
-    'items', v_items
+    'items', v_items,
+    'updatedAt', CASE WHEN v_updated IS NULL THEN '' ELSE v_updated::text END
   );
 END;
 $$;
