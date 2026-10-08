@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, Clock, Hotel, LogOut, MessageCircle, Ticket, Users } from "lucide-react";
+import { Bell, CalendarDays, Clock, Hotel, LogOut, MessageCircle, Ticket, Users } from "lucide-react";
 import { formatPhoneWithPlus } from "../utils";
 import {
   clearStayPhone,
@@ -8,6 +8,10 @@ import {
   loadSavedStayPhone,
   saveStayPhone,
 } from "../utils/clientStay";
+import {
+  enableStayPushNotifications,
+  stayPushPermissionLabel,
+} from "../utils/clientStayPush";
 
 const AGENCY_WHATSAPP = "201062002850";
 
@@ -94,6 +98,8 @@ export function PublicStayPage() {
   const [stay, setStay] = useState(null);
   const [error, setError] = useState("");
   const [programUpdated, setProgramUpdated] = useState(false);
+  const [pushState, setPushState] = useState("unknown");
+  const [pushBusy, setPushBusy] = useState(false);
   const stayRef = useRef(stay);
 
   useEffect(() => {
@@ -157,6 +163,32 @@ export function PublicStayPage() {
     return () => window.clearInterval(id);
   }, [phone, stay?.found, loadStay]);
 
+  useEffect(() => {
+    if (!phone || !stay?.found) return undefined;
+    let cancelled = false;
+    (async () => {
+      const label = stayPushPermissionLabel();
+      if (label !== "granted") {
+        if (!cancelled) setPushState(label);
+        return;
+      }
+      try {
+        const result = await enableStayPushNotifications(phone);
+        if (!cancelled) {
+          if (result.ok) setPushState("subscribed");
+          else if (result.error === "ios-install") setPushState("ios-install");
+          else if (result.error === "denied") setPushState("denied");
+          else setPushState("default");
+        }
+      } catch {
+        if (!cancelled) setPushState("default");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [phone, stay?.found]);
+
   const days = useMemo(() => groupItemsByDate(stay?.items || []), [stay]);
 
   const handleLogout = () => {
@@ -166,6 +198,18 @@ export function PublicStayPage() {
     setStay(null);
     setError("");
     setProgramUpdated(false);
+    setPushState("unknown");
+  };
+
+  const handleEnablePush = async () => {
+    setPushBusy(true);
+    try {
+      const result = await enableStayPushNotifications(phone);
+      if (result.ok) setPushState("subscribed");
+      else setPushState(result.error === "ios-install" ? "ios-install" : stayPushPermissionLabel() === "denied" ? "denied" : "default");
+    } finally {
+      setPushBusy(false);
+    }
   };
 
   const clientName = String(stay?.client?.name || "").trim();
@@ -273,6 +317,28 @@ export function PublicStayPage() {
             {programUpdated ? (
               <p className="mb-4 rounded-2xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-900">
                 Vos heures de prise en charge ont été mises à jour.
+              </p>
+            ) : null}
+            {pushState === "ios-install" ? (
+              <p className="mb-4 rounded-2xl bg-violet-100 px-4 py-3 text-sm font-semibold text-violet-950">
+                Sur iPhone : Partager → Sur l’écran d’accueil, puis ouvrez Mon séjour pour activer
+                les notifications.
+              </p>
+            ) : null}
+            {pushState === "default" || pushState === "unknown" ? (
+              <button
+                type="button"
+                onClick={() => void handleEnablePush()}
+                disabled={pushBusy}
+                className="mb-4 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-violet-800 px-4 text-sm font-extrabold text-white disabled:opacity-60"
+              >
+                <Bell className="h-4 w-4" aria-hidden />
+                {pushBusy ? "Activation…" : "Recevoir les horaires sur mon téléphone"}
+              </button>
+            ) : null}
+            {pushState === "subscribed" ? (
+              <p className="mb-4 rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-catalog-muted">
+                Notifications activées : vous serez prévenu si une heure change.
               </p>
             ) : null}
             <section className="rounded-3xl border border-violet-200/80 bg-white p-5 shadow-catalog-premium">

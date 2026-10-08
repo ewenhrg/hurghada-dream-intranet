@@ -11,15 +11,23 @@ import "./index.css"; // 👈 c'est ici qu'on charge le CSS (où il y aura @tail
 // Initialiser le système de toasts au démarrage
 initToast();
 
-// Désactiver temporairement le Service Worker pour éviter les versions figées en cache.
+// Désactiver l’ancien SW de cache. Conserver stay-sw.js (notifications Mon séjour).
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
       const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map((registration) => registration.unregister()));
-      logger.log("Service Worker désenregistré (mode cache-safe).");
+      const stale = registrations.filter((registration) => {
+        const script =
+          registration.active?.scriptURL ||
+          registration.waiting?.scriptURL ||
+          registration.installing?.scriptURL ||
+          "";
+        return !script.includes("stay-sw.js");
+      });
+      await Promise.all(stale.map((registration) => registration.unregister()));
+      if (stale.length) logger.log("Ancien Service Worker de cache désenregistré.");
     } catch (error) {
-      logger.warn("Impossible de désenregistrer le Service Worker:", error);
+      logger.warn("Impossible de désenregistrer l’ancien Service Worker:", error);
     }
   });
 }

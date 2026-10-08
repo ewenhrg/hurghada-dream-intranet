@@ -10,7 +10,7 @@ import { isBoatPartyActivity } from "../../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
 import { logger } from "../../utils/logger";
-import { offerStayWhatsAppAfterPickupChange } from "../../utils/clientStayNotify";
+import { requestClientStayPush } from "../../utils/clientStayPush";
 
 function toInt(value, fallback = 0) {
   const n = Number(value);
@@ -231,7 +231,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
         toast.success(`Ticket ${nextTicket} mis à jour.`);
       }
 
-      offerStayWhatsAppAfterPickupChange(updatedQuote, quote.items);
+      void requestClientStayPush(updatedQuote.client?.phone);
       onClose?.();
     } catch (err) {
       logger.error("Erreur sauvegarde ticket:", err);

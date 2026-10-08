@@ -55,7 +55,6 @@ import {
 } from "../utils/hotelRequestDocuments";
 import { cleanupExpiredQuoteDocuments, isQuoteLastActivityPastRetention } from "../utils/cleanupExpiredQuoteDocuments";
 import { persistQuoteItemsToSupabase, persistedQuoteHasTicketNumbers } from "../utils/persistQuoteItems";
-import { offerStayWhatsAppAfterPickupChange, openClientStayWhatsApp } from "../utils/clientStayNotify";
 import {
   isQuoteFromWeb,
   isMissingQuoteSourceColumnError,
@@ -826,7 +825,6 @@ function QuoteCardComponent({
             saveQuotesCache(finalQuotes);
           }
           toast.success("Devis payé — tickets enregistrés.");
-          offerStayWhatsAppAfterPickupChange(updatedQuote, items);
         } catch (error) {
           logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
           try {
@@ -843,7 +841,6 @@ function QuoteCardComponent({
       } else {
         pendingReservation = null;
         toast.success("Devis payé — tickets enregistrés (local uniquement).");
-        offerStayWhatsAppAfterPickupChange(updatedQuote, items);
       }
 
       setShowTicketModal(false);
@@ -1270,14 +1267,6 @@ function QuoteCardComponent({
                 onClick={openTicketModal}
               >
                 💳 Payer
-              </button>
-              <button
-                type="button"
-                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-emerald-500 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
-                onClick={() => openClientStayWhatsApp(d)}
-                title="Envoyer le lien Mon séjour et les heures de prise en charge"
-              >
-                📱 Programme
               </button>
               {typeof onReuseClient === "function" && (
                 <button

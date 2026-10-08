@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, getQuoteSiteKeysForSync } from "../constants";
 import { logger } from "./logger";
 import { normalizeTicketNumberKey } from "./ticketCollections";
+import { requestClientStayPush } from "./clientStayPush";
 
 /**
  * Parse `quotes.items` (JSONB) même si double-encodé en string.
@@ -112,6 +113,7 @@ export async function persistQuoteItemsToSupabase(
         continue;
       }
       if (Array.isArray(data) && data.length > 0) {
+        void requestClientStayPush(quote.client?.phone);
         return { ok: true, data: data[0], error: null };
       }
     } catch (e) {
