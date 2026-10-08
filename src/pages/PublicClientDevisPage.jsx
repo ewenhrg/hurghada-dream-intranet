@@ -771,6 +771,13 @@ export function PublicClientDevisPage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/sejour")}
+              className="inline-flex min-h-[44px] items-center rounded-full border border-white/25 bg-white/10 px-3 text-xs font-extrabold uppercase tracking-wide text-white"
+            >
+              Séjour
+            </button>
             <a
               href={INSTAGRAM_CATALOG_URL}
               target="_blank"

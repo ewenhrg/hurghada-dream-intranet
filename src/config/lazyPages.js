@@ -55,6 +55,9 @@ export const PublicTarifsPage = lazyWithRetry(() =>
 export const PublicClientDevisPage = lazyWithRetry(() =>
   import("../pages/PublicClientDevisPage").then((m) => ({ default: m.PublicClientDevisPage }))
 );
+export const PublicStayPage = lazyWithRetry(() =>
+  import("../pages/PublicStayPage").then((m) => ({ default: m.PublicStayPage }))
+);
 export const PublicCatalogueActivityPage = lazyWithRetry(() =>
   import("../pages/PublicCatalogueActivityPage").then((m) => ({ default: m.PublicCatalogueActivityPage }))
 );

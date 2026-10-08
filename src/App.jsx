@@ -35,6 +35,7 @@ import {
   RequestPage,
   PublicTarifsPage,
   PublicClientDevisPage,
+  PublicStayPage,
   PublicCatalogueActivityPage,
   EwenDashboardPage,
   PublicDevisPage,
@@ -84,6 +85,10 @@ function isPublicClientPath(path) {
     p.startsWith("/hotels/") ||
     p === "/demande-hotel" ||
     p.startsWith("/demande-hotel/") ||
+    p === "/sejour" ||
+    p.startsWith("/sejour/") ||
+    p === "/mon-sejour" ||
+    p.startsWith("/mon-sejour/") ||
     p.startsWith("/request")
   );
 }
@@ -1180,6 +1185,21 @@ export default function App() {
 
     return () => clearTimeout(timer);
   }, [ok, isPublicClientRoute]);
+
+  if (
+    location.pathname === "/sejour" ||
+    location.pathname === "/sejour/" ||
+    location.pathname === "/mon-sejour" ||
+    location.pathname === "/mon-sejour/"
+  ) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <PublicStayPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
 
   // Page tarifs publique (sans compte)
   if (location.pathname === "/tarifs" || location.pathname === "/tarifs/") {

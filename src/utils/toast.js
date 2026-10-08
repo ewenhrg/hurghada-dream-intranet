@@ -11,6 +11,10 @@ function isPublicClientPath(pathname = typeof window !== "undefined" ? window.lo
     p.startsWith("/hotels/") ||
     p === "/demande-hotel" ||
     p.startsWith("/demande-hotel/") ||
+    p === "/sejour" ||
+    p.startsWith("/sejour/") ||
+    p === "/mon-sejour" ||
+    p.startsWith("/mon-sejour/") ||
     p.startsWith("/request")
   );
 }
