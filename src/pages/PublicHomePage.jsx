@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -27,7 +27,6 @@ import {
   startPhotoFlight,
   useGSAP,
   useHeroArrival,
-  useLayerReveal,
 } from "../components/public/motion";
 import { useHurghadaWeather } from "../hooks/useHurghadaWeather";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
@@ -38,34 +37,23 @@ const AGENCY_MAP_EMBED = "https://www.google.com/maps?q=27.1893675,33.8324796&z=
 const HERO_IMAGE = "/client/home-hero-red-sea.jpg";
 const TILE_EXCURSIONS = "/client/home-tile-excursions.jpg";
 const TILE_STAY = "/client/home-tile-stay-calendar.jpg";
-/**
- * Réel du hero. `onReady` dès la première image affichable : le calque des réels
- * apparaît alors en fondu sur la photo de secours. Mouvement réduit : pas de lecture auto,
- * l’affiche du réel reste visible.
- */
-function HeroReel({ reel, onReady }) {
+const heroReelsPromise = fetchInstagramReels();
+/** Réel du hero. L’affiche du réel est visible tout de suite, la lecture démarre dès que possible. */
+function HeroReel({ reel }) {
   const videoRef = useRef(null);
   const still = useMemo(() => prefersReducedMotion(), []);
 
   useEffect(() => {
     const node = videoRef.current;
-    if (!node) return undefined;
+    if (!node || still) return undefined;
     node.muted = true;
-    if (still) {
-      onReady();
-      return undefined;
-    }
     const play = () => {
       node.play().catch(() => {});
     };
     play();
     node.addEventListener("loadeddata", play);
-    node.addEventListener("playing", onReady);
-    return () => {
-      node.removeEventListener("loadeddata", play);
-      node.removeEventListener("playing", onReady);
-    };
-  }, [reel.video, still, onReady]);
+    return () => node.removeEventListener("loadeddata", play);
+  }, [reel.video, still]);
 
   return (
     <div className="hdc-hero-reel relative h-full shrink-0 snap-start overflow-hidden">
@@ -116,15 +104,13 @@ export function PublicHomePage() {
   const navigate = useNavigate();
   const [hotels, setHotels] = useState([]);
   const [heroReels, setHeroReels] = useState([]);
+  const [reelsSettled, setReelsSettled] = useState(false);
   const weather = useHurghadaWeather();
   const hello = useMemo(() => greeting(), []);
   const heroRef = useRef(null);
   const heroScrollRef = useRef(null);
   const railRef = useRef(null);
   const railDragRef = useRef(false);
-  const reelsLayerRef = useRef(null);
-  const [reelsReady, setReelsReady] = useState(false);
-  const markReelsReady = useCallback(() => setReelsReady(true), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -142,9 +128,10 @@ export function PublicHomePage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchInstagramReels().then((list) => {
+    heroReelsPromise.then((list) => {
       if (cancelled) return;
       setHeroReels(list.filter((reel) => reel.video).slice(0, 12));
+      setReelsSettled(true);
     });
     return () => {
       cancelled = true;
@@ -178,9 +165,8 @@ export function PublicHomePage() {
     { to: "/hotels", title: "Hôtels", subtitle: "All inclusive, en bord de mer", image: hotelPhoto || HERO_IMAGE },
   ];
 
-  /* ——— Arrivée « horizon » (motion.js) + réels qui prennent le relais de la photo ——— */
-  useHeroArrival(heroRef);
-  useLayerReveal(reelsLayerRef, reelsReady);
+  /* L’ouverture attend les 3 réels, pour ne pas dévoiler la photo de secours avant eux. */
+  useHeroArrival(heroRef, heroReels.length >= 3 || reelsSettled);
 
   /* ——— Carrousel « Nos adresses » : parallaxe horizontale dans chaque photo ——— */
   useGSAP(
@@ -296,17 +282,15 @@ export function PublicHomePage() {
           data-hero-frame
           className="relative h-full overflow-hidden bg-catalog-raised"
         >
-          <div data-hero-stage className="absolute inset-0">
-            {/* Photo de secours, affichée dès la première image ; les réels la recouvrent en fondu. */}
-            <img src={HERO_IMAGE} alt="" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover" />
+          <div data-hero-stage className="absolute inset-0 bg-catalog-abyss">
             {heroReels.length >= 3 ? (
-              <div ref={reelsLayerRef} className="absolute inset-0 opacity-0">
-                <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Réels Instagram">
-                  {heroReels.map((reel) => (
-                    <HeroReel key={reel.id} reel={reel} onReady={markReelsReady} />
-                  ))}
-                </div>
+              <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Réels Instagram">
+                {heroReels.map((reel) => (
+                  <HeroReel key={reel.id} reel={reel} />
+                ))}
               </div>
+            ) : reelsSettled ? (
+              <img src={HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
             ) : null}
           </div>
           <div aria-hidden className="pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(10,42,51,0.32)_0%,rgba(10,42,51,0)_30%,rgba(11,79,92,0.18)_55%,rgba(8,36,46,0.88)_100%)]" />

@@ -242,11 +242,11 @@ export function useScreenIntro(scopeRef, dependencies = []) {
  * un éclat de lumière la traverse, et le titre monte mot à mot. Au scroll, la scène dérive.
  * Réduit : le CSS n’enferme pas l’image, tout est déjà en place.
  */
-export function useHeroArrival(scopeRef) {
+export function useHeroArrival(scopeRef, ready = true) {
   useGSAP(
     () => {
       const root = scopeRef.current;
-      if (!root) return;
+      if (!root || !ready) return;
       const mm = gsap.matchMedia();
       mm.add(FULL_MOTION, () => {
         const split = SplitText.create("[data-hero-title]", { type: "words", mask: "words", wordsClass: "hdc-w" });
@@ -289,26 +289,7 @@ export function useHeroArrival(scopeRef) {
         });
       });
     },
-    { scope: scopeRef }
-  );
-}
-
-/**
- * Calque qui apparaît quand son contenu est prêt (ex. : réels du hero dès la première image vidéo) :
- * fondu doux par-dessus la photo de secours, sans saut. Réduit : affiché d’un coup.
- */
-export function useLayerReveal(layerRef, ready) {
-  useGSAP(
-    () => {
-      const el = layerRef.current;
-      if (!el || !ready) return;
-      if (prefersReduced()) {
-        gsap.set(el, { autoAlpha: 1 });
-        return;
-      }
-      gsap.fromTo(el, { autoAlpha: 0, scale: 1.12 }, { autoAlpha: 1, scale: 1, duration: 0.8, ease: "power3.out" });
-    },
-    { dependencies: [ready] }
+    { scope: scopeRef, dependencies: [ready], revertOnUpdate: true }
   );
 }
 
