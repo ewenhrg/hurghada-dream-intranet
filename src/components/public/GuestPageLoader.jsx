@@ -1,6 +1,7 @@
 import { useRef } from "react";
-import "@fontsource-variable/manrope";
-import "@fontsource/instrument-serif/400.css";
+import "@fontsource-variable/figtree";
+import "@fontsource-variable/fraunces/opsz.css";
+import "@fontsource-variable/fraunces/opsz-italic.css";
 import { gsap, useGSAP } from "./motion";
 
 /** Loader de marque, sobre : monogramme serif + trait fin qui se trace en boucle. */

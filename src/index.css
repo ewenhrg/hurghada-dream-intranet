@@ -129,7 +129,7 @@ body {
 /**
  * Appli client « Riviera mer Rouge » (.hd-public-catalog) — distincte de l’intranet.
  * Blanc chaud #FAF6EF, lagon #0E7C86, grand bleu #0B4F5C, corail couchant #DE5530, sable doré #E3AE55.
- * Instrument Serif (titres) + Manrope (texte), locales. Motion GSAP sobre (motion.js).
+ * Fraunces (titres, taille optique) + Figtree (texte), locales. Motion GSAP sobre (motion.js).
  */
 .hd-public-catalog {
   --hdc-bg: #FAF6EF;
@@ -146,10 +146,13 @@ body {
     radial-gradient(120% 60% at 100% 0%, rgba(14, 124, 134, 0.10) 0%, rgba(14, 124, 134, 0) 60%),
     radial-gradient(90% 50% at 0% 100%, rgba(227, 174, 85, 0.14) 0%, rgba(227, 174, 85, 0) 60%),
     var(--hdc-bg);
-  font-family: "Manrope Variable", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  font-family: "Figtree Variable", "Figtree", ui-sans-serif, system-ui, sans-serif;
   font-size: 0.9375rem;
   line-height: 1.6;
-  letter-spacing: -0.003em;
+  letter-spacing: -0.005em;
+  /* L’intranet passe `body` en `optimizeSpeed` sur mobile (crénage coupé) : on le rétablit ici. */
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
@@ -170,10 +173,11 @@ html:has(.hd-public-catalog) body::after {
 
 /* (0,0,2) : bat le CSS global intranet sur h1–h3, laisse gagner les classes Tailwind. */
 html :where(.hd-public-catalog) :is(h1, h2, h3) {
-  font-family: "Instrument Serif", Georgia, ui-serif, serif;
-  font-weight: 400;
+  font-family: "Fraunces Variable", Fraunces, Georgia, ui-serif, serif;
+  font-weight: 460;
+  font-optical-sizing: auto;
   color: var(--hdc-ink);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.018em;
   line-height: 1.12;
   text-transform: none;
   text-shadow: none;
@@ -181,10 +185,11 @@ html :where(.hd-public-catalog) :is(h1, h2, h3) {
 }
 
 .hd-public-catalog .hdc-serif {
-  font-family: "Instrument Serif", Georgia, ui-serif, serif;
+  font-family: "Fraunces Variable", Fraunces, Georgia, ui-serif, serif;
   font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.005em;
+  font-weight: 420;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
 }
 
 /* Accent italique des titres sur fond clair : lagon. */
@@ -208,7 +213,7 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 
 /* ——— Primitives ——— */
 .hd-public-catalog .hdc-eyebrow {
-  font-family: "Manrope Variable", "Manrope", ui-sans-serif, sans-serif;
+  font-family: "Figtree Variable", "Figtree", ui-sans-serif, sans-serif;
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.18em;

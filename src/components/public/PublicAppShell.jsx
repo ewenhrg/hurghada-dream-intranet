@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import "@fontsource-variable/manrope";
-import "@fontsource/instrument-serif/400.css";
-import "@fontsource/instrument-serif/400-italic.css";
+import "@fontsource-variable/figtree";
+import "@fontsource-variable/fraunces/opsz.css";
+import "@fontsource-variable/fraunces/opsz-italic.css";
 import { publicBackPath } from "../../config/clientApp";
 import { PublicBackLink } from "./PublicBackLink";
 import { useHeaderMorph, usePopOnChange, usePressFeedback, useScreenIntro, useScrollMotion } from "./motion";

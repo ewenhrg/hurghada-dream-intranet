@@ -18,10 +18,10 @@ export default {
         /** "Inter Variable" = paquet local @fontsource : rendu immédiat, sans réseau. */
         sans: ['"Inter Variable"', 'Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
         display: ['Outfit', '"Inter Variable"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        /** Appli client « luxe éditorial » : Instrument Serif (titres), Manrope (texte). Locales. */
-        'catalog-sans': ['"Manrope Variable"', 'Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        'catalog-display': ['"Instrument Serif"', 'Georgia', 'ui-serif', 'serif'],
-        'catalog-serif': ['"Instrument Serif"', 'Georgia', 'ui-serif', 'serif'],
+        /** Appli client « luxe éditorial » : Fraunces (titres, taille optique), Figtree (texte). Locales. */
+        'catalog-sans': ['"Figtree Variable"', 'Figtree', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        'catalog-display': ['"Fraunces Variable"', 'Fraunces', 'Georgia', 'ui-serif', 'serif'],
+        'catalog-serif': ['"Fraunces Variable"', 'Fraunces', 'Georgia', 'ui-serif', 'serif'],
       },
       colors: {
         /** Tokens shadcn/ui (mappés sur les variables CSS de src/index.css).
