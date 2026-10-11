@@ -41,21 +41,26 @@ const heroReelsPromise = fetchInstagramReels();
 function playableReels(list) {
   return (Array.isArray(list) ? list : []).filter((reel) => reel.video).slice(0, 12);
 }
-/** Démarre une vidéo muette. Sur téléphone, plusieurs `play()` en même temps sont refusés. */
+const pendingPlays = new WeakSet();
+
+/** Démarre une vidéo muette. Un second `play()` pendant le démarrage remet la lecture à zéro. */
 function playMuted(video) {
+  if (!video || !video.paused || pendingPlays.has(video)) return Promise.resolve();
   video.muted = true;
   video.defaultMuted = true;
   video.playsInline = true;
+  video.setAttribute("muted", "");
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
-  return video.play().catch(() => {});
+  pendingPlays.add(video);
+  return video.play().catch(() => {}).finally(() => pendingPlays.delete(video));
 }
 
 /**
  * Réel du hero. Seules les vidéos à l’écran sont chargées et lancées :
  * en démarrer douze d’un coup fige les trois visibles sur téléphone.
  */
-function HeroReel({ reel, priority = false }) {
+function HeroReel({ reel, priority = false, delay = 0 }) {
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -64,14 +69,13 @@ function HeroReel({ reel, priority = false }) {
     const play = () => {
       playMuted(node);
     };
-    play();
-    node.addEventListener("loadeddata", play);
+    const timer = window.setTimeout(play, delay);
     node.addEventListener("canplay", play);
     return () => {
-      node.removeEventListener("loadeddata", play);
+      window.clearTimeout(timer);
       node.removeEventListener("canplay", play);
     };
-  }, [reel.video, priority]);
+  }, [reel.video, priority, delay]);
 
   return (
     <div className="hdc-hero-reel relative h-full shrink-0 snap-start overflow-hidden">
@@ -175,24 +179,26 @@ export function PublicHomePage() {
           return;
         }
         if (source && !node.getAttribute("src")) node.setAttribute("src", source);
-        if (node.paused || node.currentTime === 0) playMuted(node);
+        if (node.paused) playMuted(node);
       });
     };
 
-    sync();
+    const starters = [...root.querySelectorAll("video")].slice(0, 3);
+    const stagger = starters.map((node, index) => window.setTimeout(() => playMuted(node), index * 200));
     const interval = window.setInterval(() => {
       const first = [...root.querySelectorAll("video")].slice(0, 3);
-      const playing = first.length === 3 && first.every((node) => !node.paused && node.currentTime > 0);
+      const playing = first.length === 3 && first.every((node) => !node.paused && node.currentTime > 0.05);
       if (playing) {
         window.clearInterval(interval);
         return;
       }
       sync();
-    }, 200);
-    const stop = window.setTimeout(() => window.clearInterval(interval), 8000);
+    }, 600);
+    const stop = window.setTimeout(() => window.clearInterval(interval), 15000);
     root.addEventListener("scroll", sync, { passive: true });
     window.addEventListener("touchstart", sync, { passive: true });
     return () => {
+      stagger.forEach((timer) => window.clearTimeout(timer));
       window.clearInterval(interval);
       window.clearTimeout(stop);
       root.removeEventListener("scroll", sync);
@@ -325,7 +331,7 @@ export function PublicHomePage() {
             {heroReels.length >= 3 ? (
               <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Réels Instagram">
                 {heroReels.map((reel, index) => (
-                  <HeroReel key={reel.id} reel={reel} priority={index < 3} />
+                  <HeroReel key={reel.id} reel={reel} priority={index < 3} delay={index < 3 ? index * 200 : 0} />
                 ))}
               </div>
             ) : reelsSettled ? (

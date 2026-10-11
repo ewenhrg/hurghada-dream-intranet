@@ -10,7 +10,6 @@ const REELS_URL = IS_CLIENT_APP
 const REELS_CACHE_KEY = "hd-ig-reels";
 const REELS_CACHE_MS = 2 * 60 * 60 * 1000;
 let reelsRequest = null;
-const warmedVideos = [];
 
 export function readCachedReels() {
   try {
@@ -34,20 +33,22 @@ function rememberReels(reels) {
   }
 }
 
-/** Démarre le téléchargement des 3 réels du hero avant même que la page les affiche. */
+/** Précharge les 3 réels du hero sans ouvrir de lecteur caché (un téléphone n’en décode qu’un ou deux). */
 function warmReels(reels) {
   if (typeof document === "undefined") return;
-  reels.filter((reel) => reel?.video).slice(0, 3).forEach((reel) => {
-    if (warmedVideos.some((node) => node.dataset.src === reel.video)) return;
-    const node = document.createElement("video");
-    node.muted = true;
-    node.defaultMuted = true;
-    node.playsInline = true;
-    node.preload = "auto";
-    node.dataset.src = reel.video;
-    node.src = reel.video;
-    node.load();
-    warmedVideos.push(node);
+  reels.filter((reel) => reel?.video).slice(0, 3).forEach((reel, index) => {
+    const id = `hd-preload-reel-${index}`;
+    let link = document.getElementById(id);
+    if (link?.getAttribute("href") === reel.video) return;
+    if (!link) {
+      link = document.createElement("link");
+      link.id = id;
+      link.rel = "preload";
+      link.as = "video";
+      link.referrerPolicy = "no-referrer";
+      document.head.appendChild(link);
+    }
+    link.href = reel.video;
   });
 }
 

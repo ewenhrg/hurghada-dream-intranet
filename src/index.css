@@ -448,9 +448,9 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   padding-right: 0.75rem;
 }
 .hd-public-catalog .hdc-review-row {
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
+  overflow: hidden;
+  min-width: 0;
+  width: 100%;
   --hdc-review-speed: 0.004;
 }
 .hd-public-catalog .hdc-review-row::-webkit-scrollbar {
@@ -463,6 +463,12 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 @media (min-width: 1024px) {
   .hd-public-catalog .hdc-review-row {
     --hdc-review-speed: 0.008;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hd-public-catalog .hdc-review-row {
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 }
 /* Desktop : les bandes défilantes s’effacent sur les bords au lieu d’être coupées net. */

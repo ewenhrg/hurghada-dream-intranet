@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { StarRow } from "./HotelUI";
 
 const GOOGLE_REVIEWS_URL = "https://www.trustindex.io/reviews/hurghadadream.com";
@@ -87,22 +87,23 @@ function ReviewCard({ review }) {
 
 function ReviewLine({ reviews, reverse = false }) {
   const rowRef = useRef(null);
-  const halfRef = useRef(null);
+  const trackRef = useRef(null);
   const pausedRef = useRef(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const row = rowRef.current;
-    const half = halfRef.current;
-    if (!row || !half) return undefined;
+    const track = trackRef.current;
+    const half = track?.firstElementChild;
+    if (!row || !track || !half) return undefined;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
 
+    let offset = null;
     let last = 0;
     let frame = 0;
     const readSpeed = () => {
       const raw = parseFloat(window.getComputedStyle(row).getPropertyValue("--hdc-review-speed"));
       return Number.isFinite(raw) && raw > 0 ? raw : 0.004;
     };
-    if (reverse && half.offsetWidth > 1) row.scrollLeft = half.offsetWidth;
 
     const tick = (now) => {
       if (!last) last = now;
@@ -110,19 +111,20 @@ function ReviewLine({ reviews, reverse = false }) {
       last = now;
       const width = half.offsetWidth;
       if (!pausedRef.current && width > 1) {
+        if (offset === null) offset = reverse ? -width : 0;
         const step = dt * readSpeed();
-        if (reverse) {
-          row.scrollLeft -= step;
-          if (row.scrollLeft <= 1) row.scrollLeft += width;
-        } else {
-          row.scrollLeft += step;
-          if (row.scrollLeft >= width) row.scrollLeft -= width;
-        }
+        offset += reverse ? step : -step;
+        if (reverse && offset >= 0) offset -= width;
+        if (!reverse && offset <= -width) offset += width;
+        track.style.transform = `translate3d(${offset}px,0,0)`;
       }
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      track.style.transform = "";
+    };
   }, [reverse]);
 
   return (
@@ -136,11 +138,10 @@ function ReviewLine({ reviews, reverse = false }) {
         if (event.pointerType === "mouse") pausedRef.current = false;
       }}
     >
-      <div className="hdc-review-track">
+      <div ref={trackRef} className="hdc-review-track">
         {[0, 1].map((copy) => (
           <ul
             key={copy}
-            ref={copy === 0 ? halfRef : undefined}
             className="hdc-review-set"
             aria-hidden={copy === 1 ? true : undefined}
           >
