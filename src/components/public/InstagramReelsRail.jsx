@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { Play } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { IS_CLIENT_APP } from "../../config/clientApp";
 
 const PROFILE_URL = "https://www.instagram.com/hurghada_dream/";
@@ -7,8 +6,59 @@ const REELS_URL = IS_CLIENT_APP
   ? "https://hurghada-dream-intranet.vercel.app/api/instagram-reels"
   : "/api/instagram-reels";
 
+function ReelCard({ reel, onError }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const node = videoRef.current;
+    if (!node) return undefined;
+    node.muted = true;
+    return undefined;
+  }, [reel.video]);
+
+  return (
+    <a
+      href={reel.href || PROFILE_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-press
+      aria-label={reel.caption || "Ouvrir le réel Instagram"}
+      className="relative block h-72 w-40 overflow-hidden rounded-[1.25rem] bg-catalog-raised lg:h-80 lg:w-44"
+    >
+      {reel.video ? (
+        <video
+          ref={videoRef}
+          src={reel.video}
+          poster={reel.image}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          referrerPolicy="no-referrer"
+          className="pointer-events-none h-full w-full object-cover"
+          onError={onError}
+        />
+      ) : (
+        <img
+          src={reel.image}
+          alt=""
+          referrerPolicy="no-referrer"
+          decoding="async"
+          className="pointer-events-none h-full w-full object-cover"
+          onError={onError}
+        />
+      )}
+      <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,36,46,0)_62%,rgba(8,36,46,0.55)_100%)]" />
+    </a>
+  );
+}
+
 export function InstagramReelsRail() {
   const [reels, setReels] = useState([]);
+  const trackRef = useRef(null);
+  const marqueeRef = useRef(null);
+  const pausedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,9 +77,60 @@ export function InstagramReelsRail() {
     };
   }, []);
 
-  if (reels.length < 2) return null;
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || reels.length < 2) return undefined;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
 
-  const duration = `${Math.max(reels.length, 4) * 5}s`;
+    let x = 0;
+    let last = 0;
+    let frame = 0;
+    const gap = parseFloat(window.getComputedStyle(track).columnGap || "12") || 12;
+
+    const tick = (now) => {
+      if (!last) last = now;
+      const dt = Math.min(32, now - last);
+      last = now;
+      if (!pausedRef.current) x -= dt * 0.05;
+      const first = track.firstElementChild;
+      if (first) {
+        const width = first.getBoundingClientRect().width + gap;
+        if (width > 1 && -x >= width) {
+          x += width;
+          track.appendChild(first);
+        }
+      }
+      track.style.transform = `translate3d(${x}px,0,0)`;
+      frame = requestAnimationFrame(tick);
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [reels]);
+
+  useEffect(() => {
+    const root = marqueeRef.current;
+    if (!root) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target;
+          if (!(video instanceof HTMLVideoElement)) return;
+          if (entry.isIntersecting) {
+            video.muted = true;
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
+        });
+      },
+      { root, rootMargin: "0px 120px", threshold: 0.35 }
+    );
+    root.querySelectorAll("video").forEach((video) => observer.observe(video));
+    return () => observer.disconnect();
+  }, [reels]);
+
+  if (reels.length < 2) return null;
 
   return (
     <section className="pt-10 lg:pt-16" aria-labelledby="home-reels-title">
@@ -51,42 +152,28 @@ export function InstagramReelsRail() {
         </a>
       </div>
 
-      <div className="hdc-reel-marquee mt-4 lg:mt-8">
-        <div className="hdc-reel-track" style={{ animationDuration: duration }}>
-          {[0, 1].map((copy) => (
-            <ul key={copy} className="hdc-reel-group" aria-hidden={copy === 1 ? true : undefined}>
-              {reels.map((reel) => (
-                <li key={`${copy}-${reel.id}`} className="shrink-0">
-                  <a
-                    href={reel.href || PROFILE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    data-press
-                    aria-label={copy === 0 ? reel.caption || "Ouvrir le réel Instagram" : undefined}
-                    tabIndex={copy === 1 ? -1 : undefined}
-                    className="relative block h-72 w-40 overflow-hidden rounded-[1.25rem] bg-catalog-raised lg:h-80 lg:w-44"
-                  >
-                    <img
-                      src={reel.image}
-                      alt=""
-                      referrerPolicy="no-referrer"
-                      loading="lazy"
-                      decoding="async"
-                      className="pointer-events-none h-full w-full object-cover"
-                      onError={() => {
-                        setReels((prev) => prev.filter((item) => item.id !== reel.id));
-                      }}
-                    />
-                    <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,36,46,0)_55%,rgba(8,36,46,0.72)_100%)]" />
-                    <span className="pointer-events-none absolute bottom-3 left-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-catalog-ink">
-                      <Play className="h-4 w-4" aria-hidden />
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
+      <div
+        ref={marqueeRef}
+        className="hdc-reel-marquee mt-4 lg:mt-8"
+        onMouseEnter={() => {
+          pausedRef.current = true;
+        }}
+        onMouseLeave={() => {
+          pausedRef.current = false;
+        }}
+      >
+        <ul ref={trackRef} className="hdc-reel-track">
+          {reels.map((reel) => (
+            <li key={reel.id} className="shrink-0">
+              <ReelCard
+                reel={reel}
+                onError={() => {
+                  setReels((prev) => prev.filter((item) => item.id !== reel.id));
+                }}
+              />
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );

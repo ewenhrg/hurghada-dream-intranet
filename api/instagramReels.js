@@ -39,16 +39,92 @@ function imageOf(node) {
   return String(node?.thumbnail_src || node?.display_url || fromResources || "").trim();
 }
 
+function videoOf(node) {
+  return String(node?.video_url || "").trim();
+}
+
 function toReel(node) {
   const id = String(node?.shortcode || "").trim();
   const image = imageOf(node);
   if (!id || !image) return null;
+  const video = videoOf(node);
   return {
     id,
     href: `https://www.instagram.com/reel/${id}/`,
     image,
+    ...(isReelVideoUrl(video) ? { video } : {}),
     caption: captionOf(node) || "Réel Hurghada Dream",
   };
+}
+
+const EMBED_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
+};
+
+function isReelVideoUrl(url) {
+  if (!url.startsWith("https://") || !url.includes(".mp4")) return false;
+  try {
+    const host = new URL(url).hostname;
+    return host.endsWith("fbcdn.net") || host.endsWith("cdninstagram.com");
+  } catch {
+    return false;
+  }
+}
+
+/** L’URL mp4 est dans le HTML d’embed, échappée plusieurs fois. */
+function extractVideoUrl(html) {
+  const marker = 'video_url\\":\\"';
+  const start = html.indexOf(marker);
+  if (start < 0) return "";
+  const from = start + marker.length;
+  const end = html.indexOf('\\"', from);
+  if (end < 0) return "";
+  let value = html.slice(from, end);
+  for (let pass = 0; pass < 3; pass += 1) {
+    if (value.startsWith("https://") && !value.includes("\\")) break;
+    try {
+      value = JSON.parse(`"${value}"`);
+    } catch {
+      break;
+    }
+  }
+  return isReelVideoUrl(value) ? value : "";
+}
+
+async function videoForShortcode(id) {
+  try {
+    const response = await fetch(`https://www.instagram.com/reel/${id}/embed/`, {
+      headers: EMBED_HEADERS,
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!response.ok) return "";
+    return extractVideoUrl(await response.text());
+  } catch {
+    return "";
+  }
+}
+
+async function attachVideos(reels) {
+  const enriched = [];
+  for (let index = 0; index < reels.length; index += 4) {
+    const batch = reels.slice(index, index + 4);
+    const videos = await Promise.all(
+      batch.map((reel) => (reel.video ? reel.video : videoForShortcode(reel.id)))
+    );
+    batch.forEach((reel, batchIndex) => {
+      const video = videos[batchIndex];
+      enriched.push(video ? { ...reel, video } : reel);
+    });
+  }
+  return enriched;
 }
 
 function nodesFrom(user) {
@@ -81,9 +157,7 @@ function pickReels(nodes) {
   return reels;
 }
 
-export async function loadInstagramReels() {
-  if (cache.reels.length && Date.now() - cache.at < TTL_MS) return cache.reels;
-
+async function loadBaseReels() {
   try {
     const response = await fetch(
       `https://www.instagram.com/api/v1/users/web_profile_info/?username=${HANDLE}`,
@@ -97,14 +171,23 @@ export async function loadInstagramReels() {
         },
       }
     );
-    if (!response.ok) return cache.reels.length ? cache.reels : FALLBACK_REELS;
+    if (!response.ok) return FALLBACK_REELS;
     const payload = await response.json();
     const reels = pickReels(nodesFrom(payload?.data?.user));
-    if (reels.length) cache = { at: Date.now(), reels };
     return reels.length ? reels : FALLBACK_REELS;
   } catch {
-    return cache.reels.length ? cache.reels : FALLBACK_REELS;
+    return FALLBACK_REELS;
   }
+}
+
+export async function loadInstagramReels() {
+  if (cache.reels.length && Date.now() - cache.at < TTL_MS) return cache.reels;
+
+  const enriched = await attachVideos(await loadBaseReels());
+  const playing = enriched.filter((reel) => reel.video);
+  const reels = playing.length >= 2 ? playing : enriched;
+  if (playing.length >= 2) cache = { at: Date.now(), reels };
+  return reels;
 }
 
 export const INSTAGRAM_HANDLE = HANDLE;
