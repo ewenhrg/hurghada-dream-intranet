@@ -242,13 +242,32 @@ export function PublicHomePage() {
     navigate(`/hotels/${encodeURIComponent(hotel.slug || hotel.id)}`);
   };
 
+  const desktopNav = (
+    <nav aria-label="Navigation" className="flex items-center gap-1">
+      {[
+        ["/catalogue", "Excursions"],
+        ["/hotels", "Hôtels"],
+        ["/sejour", "Mon séjour"],
+        ["/contacts", "Contacts"],
+      ].map(([to, label]) => (
+        <Link
+          key={to}
+          to={to}
+          className="inline-flex min-h-11 items-center rounded-full px-3.5 text-sm font-semibold text-catalog-ink hover:bg-white"
+        >
+          {label}
+        </Link>
+      ))}
+    </nav>
+  );
+
   return (
-    <PublicAppShell title="Accueil">
+    <PublicAppShell title="Accueil" wide="xl" nav={desktopNav}>
       {/* ——— Hero « horizon » ——— */}
       <section ref={heroRef} className="relative">
         <div
           data-hero-frame
-          className="relative h-[clamp(520px,76svh,720px)] overflow-hidden rounded-b-[2rem] bg-catalog-raised"
+          className="relative h-[clamp(520px,76svh,720px)] overflow-hidden rounded-b-[2rem] bg-catalog-raised lg:h-[min(78vh,820px)] lg:rounded-none"
         >
           <div data-hero-stage className="absolute inset-0">
             {slides.map((slide, i) => (
@@ -260,15 +279,16 @@ export function PublicHomePage() {
           <div aria-hidden className="absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(10,42,51,0.32)_0%,rgba(10,42,51,0)_30%,rgba(11,79,92,0.18)_55%,rgba(8,36,46,0.88)_100%)]" />
 
 
-          <div data-hero-copy className="absolute inset-x-5 bottom-7 z-[4]">
+          <div data-hero-copy className="absolute inset-x-5 bottom-7 z-[4] lg:inset-x-0 lg:bottom-16">
+            <div className="lg:mx-auto lg:max-w-7xl lg:px-8">
             <p data-hero-eyebrow className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-white/85">
               <span className="h-px w-6 bg-catalog-sand" />
               Hurghada · Mer Rouge
             </p>
-            <h1 data-hero-title className="mt-3 font-catalog-display text-[2.25rem] leading-[1.05] !text-white">
+            <h1 data-hero-title className="mt-3 font-catalog-display text-[2.25rem] leading-[1.05] !text-white lg:max-w-4xl lg:text-6xl lg:leading-[1.02]">
               {hello}, <span className="hdc-serif text-catalog-sand">bienvenue</span> en mer Rouge.
             </h1>
-            <p data-hero-sub className="mt-3 max-w-xs text-[0.9375rem] leading-relaxed text-white/85">
+            <p data-hero-sub className="mt-3 max-w-xs text-[0.9375rem] leading-relaxed text-white/85 lg:max-w-xl lg:text-lg">
               Hôtels d’exception, excursions privées et votre séjour orchestré par la référence locale.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
@@ -312,6 +332,7 @@ export function PublicHomePage() {
                 {slides[slideIndex]?.caption}
               </p>
             </div>
+            </div>
           </div>
         </div>
         {/* Fil d’horizon qui se trace avant l’ouverture de l’image. */}
@@ -323,63 +344,66 @@ export function PublicHomePage() {
         />
       </section>
 
-      <main className="mx-auto w-full max-w-lg pb-12">
+      <main className="mx-auto w-full max-w-lg pb-12 lg:max-w-7xl lg:px-8">
         {/* ——— Les deux univers ——— */}
-        <section className="px-4 pt-8">
+        <section className="px-4 pt-8 lg:px-0 lg:pt-14">
           <p data-reveal="item" className="hdc-eyebrow">Réserver</p>
-          <h2 data-reveal="item" className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink">
+          <h2 data-reveal="item" className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink lg:text-5xl">
             Que souhaitez-vous <span className="hdc-serif">vivre</span>&nbsp;?
           </h2>
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-2 gap-3 lg:mt-8 lg:grid-cols-3 lg:gap-5">
             {actions.map((action) => (
               <Link
                 key={action.to}
                 to={action.to}
                 data-reveal="card"
                 data-press
-                className="group relative flex h-56 flex-col items-start justify-end overflow-hidden rounded-[1.25rem] bg-catalog-raised p-4 text-left"
+                className="group relative flex h-56 flex-col items-start justify-end overflow-hidden rounded-[1.25rem] bg-catalog-raised p-4 text-left lg:h-80 lg:p-6"
               >
                 <div data-card-media className="absolute inset-0">
                   <img src={action.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
                 </div>
                 <div aria-hidden className="absolute inset-0 bg-catalog-photo-fade" />
-                <span className="relative block font-catalog-display text-[1.375rem] leading-none text-white">{action.title}</span>
-                <span className="relative mt-1 block text-xs leading-snug text-white/80">{action.subtitle}</span>
+                <span className="relative block font-catalog-display text-[1.375rem] leading-none text-white lg:text-[2rem]">{action.title}</span>
+                <span className="relative mt-1 block text-xs leading-snug text-white/80 lg:text-sm">{action.subtitle}</span>
                 <span className="relative mt-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-catalog-ink">
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </span>
               </Link>
             ))}
-          </div>
-
           <Link
             to="/sejour"
             data-reveal="card"
             data-press
-            className="relative mt-3 flex min-h-[6rem] items-center justify-start gap-4 overflow-hidden rounded-[1.25rem] bg-catalog-raised p-4 text-left"
+            className="relative col-span-2 flex min-h-[6rem] items-center justify-start gap-4 overflow-hidden rounded-[1.25rem] bg-catalog-raised p-4 text-left lg:col-span-1 lg:h-80 lg:flex-col lg:items-start lg:justify-end lg:p-6"
           >
             <div data-card-media className="absolute inset-0">
-              <img src={TILE_STAY} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+              <img src={TILE_STAY} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60 lg:opacity-100" />
             </div>
-            <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgba(11,79,92,0.92)_0%,rgba(14,124,134,0.45)_100%)]" />
-            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-md">
+            <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgba(11,79,92,0.92)_0%,rgba(14,124,134,0.45)_100%)] lg:hidden" />
+            <div aria-hidden className="absolute inset-0 hidden bg-catalog-photo-fade lg:block" />
+            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-md lg:hidden">
               <CalendarDays className="h-5 w-5" strokeWidth={1.5} aria-hidden />
             </span>
-            <span className="relative min-w-0 flex-1">
-              <span className="block font-catalog-display text-[1.375rem] leading-tight text-white">Mon séjour</span>
-              <span className="mt-0.5 block text-sm text-white/80">Programme et heures de prise en charge</span>
+            <span className="relative min-w-0 flex-1 lg:flex-none">
+              <span className="block font-catalog-display text-[1.375rem] leading-tight text-white lg:text-[2rem] lg:leading-none">Mon séjour</span>
+              <span className="mt-0.5 block text-sm text-white/80 lg:mt-1 lg:text-sm">Programme et heures de prise en charge</span>
             </span>
-            <ChevronRight className="relative h-5 w-5 shrink-0 text-white/80" aria-hidden />
+            <ChevronRight className="relative h-5 w-5 shrink-0 text-white/80 lg:hidden" aria-hidden />
+            <span className="relative mt-3 hidden h-9 w-9 items-center justify-center rounded-full bg-white/90 text-catalog-ink lg:inline-flex">
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </span>
           </Link>
+          </div>
         </section>
 
         {/* ——— Nos adresses ——— */}
         {hotelsWithPhoto.length ? (
-          <section className="pt-10">
-            <div data-reveal="item" className="flex items-end justify-between gap-3 px-4">
+          <section className="pt-10 lg:pt-16">
+            <div data-reveal="item" className="flex items-end justify-between gap-3 px-4 lg:px-0">
               <div>
                 <p className="hdc-eyebrow">Nos adresses</p>
-                <h2 className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink">
+                <h2 className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink lg:text-5xl">
                   Les hôtels <span className="hdc-serif">de la sélection</span>
                 </h2>
               </div>
@@ -388,7 +412,7 @@ export function PublicHomePage() {
                 <ChevronRight className="h-4 w-4" aria-hidden />
               </Link>
             </div>
-            <div ref={railRef} className="hdc-hotel-rail mt-4 flex snap-x snap-proximity gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+            <div ref={railRef} className="hdc-hotel-rail mt-4 flex snap-x snap-proximity gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide lg:mt-8 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:px-0">
               {hotelsWithPhoto.slice(0, 8).map((hotel) => (
                 <button
                   key={hotel.dbId || hotel.slug || hotel.id}
@@ -396,7 +420,7 @@ export function PublicHomePage() {
                   data-rail-card
                   data-press
                   onClick={(e) => openHotel(e, hotel)}
-                  className="relative h-72 w-[72%] shrink-0 snap-center overflow-hidden rounded-[1.25rem] bg-catalog-raised p-0 text-left"
+                  className="relative h-72 w-[72%] shrink-0 snap-center overflow-hidden rounded-[1.25rem] bg-catalog-raised p-0 text-left lg:h-80 lg:w-auto"
                   aria-label={`Découvrir ${hotel.name}`}
                 >
                   <img src={hotel.images[0]} alt="" loading="lazy" decoding="async" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
@@ -413,24 +437,28 @@ export function PublicHomePage() {
         ) : null}
 
         {/* ——— Conciergerie ——— */}
-        <section data-reveal="item" className="relative mx-4 mt-10 overflow-hidden rounded-[1.25rem] bg-catalog-abyss p-6 text-white shadow-catalog-float">
+        <div className="mt-10 px-4 lg:mt-16 lg:grid lg:grid-cols-[minmax(0,1.6fr)_16rem] lg:items-stretch lg:gap-5 lg:px-0">
+        <section data-reveal="item" className="relative overflow-hidden rounded-[1.25rem] bg-catalog-abyss p-6 text-white shadow-catalog-float lg:flex lg:items-end lg:justify-between lg:gap-10 lg:p-10">
           <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(227,174,85,0.45)_0%,rgba(227,174,85,0)_70%)]" />
+          <div className="relative max-w-xl">
           <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-catalog-sand">Conciergerie</p>
-          <p className="mt-2 font-catalog-display text-[1.5rem] leading-snug !text-white">
+          <p className="mt-2 font-catalog-display text-[1.5rem] leading-snug !text-white lg:text-4xl">
             Une équipe locale vous répond, <span className="hdc-serif text-catalog-sand">7 jours sur 7.</span>
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-white/75">Une question, un transfert, une envie de dernière minute : écrivez-nous.</p>
-          <a href={AGENCY_WHATSAPP_URL} target="_blank" rel="noopener noreferrer" data-press className="hdc-btn hdc-btn-ghost relative mt-5 w-full">
+          <p className="mt-2 text-sm leading-relaxed text-white/75 lg:text-base">Une question, un transfert, une envie de dernière minute : écrivez-nous.</p>
+          </div>
+          <a href={AGENCY_WHATSAPP_URL} target="_blank" rel="noopener noreferrer" data-press className="hdc-btn hdc-btn-ghost relative mt-5 w-full lg:mt-0 lg:w-auto lg:shrink-0">
             <WhatsAppGlyph className="h-5 w-5 text-[#1F8F55]" />
             Écrire sur WhatsApp
           </a>
         </section>
 
-        <div className="px-4 pt-3">
-          <Link to="/contacts" data-press className="hdc-btn hdc-btn-ink w-full">
+        <div className="pt-3 lg:flex lg:pt-0">
+          <Link to="/contacts" data-press className="hdc-btn hdc-btn-ink w-full lg:h-auto lg:min-h-full lg:flex-1 lg:flex-col lg:gap-3 lg:rounded-[1.25rem] lg:px-6 lg:text-base">
             <Phone className="h-5 w-5" strokeWidth={1.75} aria-hidden />
             Nos contacts
           </Link>
+        </div>
         </div>
       </main>
     </PublicAppShell>

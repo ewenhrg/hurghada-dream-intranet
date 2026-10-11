@@ -40,7 +40,7 @@ export function GuestHeaderButton({ onClick, count, children, ariaLabel }) {
  * Header fixe sous la barre d’état (padding natif MainActivity + safe-area), fond ivoire.
  * Accueil = logo ; sinon flèche retour en haut à gauche. Pas de barre d’onglets.
  */
-export function PublicAppShell({ title, right, children, wide = false, revealKey }) {
+export function PublicAppShell({ title, right, children, wide = false, revealKey, nav = null }) {
   const { pathname } = useLocation();
   const backTo = publicBackPath(pathname);
   // `wide="xl"` : catalogue excursions (contenu en max-w-7xl), aligne le header sur la grille.
@@ -81,13 +81,9 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
 
       <div className="relative flex-1 pb-[env(safe-area-inset-bottom)]">
         {backTo ? null : (
-          <div className={`mx-auto flex justify-center px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] ${inner}`}>
-            <img
-              src="/client/logo-wordmark.png"
-              alt="Hurghada Dream"
-              className="object-contain"
-              style={{ height: "1.4rem", width: "auto", maxWidth: "7.5rem" }}
-            />
+          <div className={`mx-auto flex items-center justify-center gap-6 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] ${nav ? "hdc-homebar lg:justify-between" : ""} ${inner}`}>
+            <img src="/client/logo-wordmark.png" alt="Hurghada Dream" className="hdc-wordmark object-contain" />
+            {nav ? <div className="hidden lg:block">{nav}</div> : null}
           </div>
         )}
         {children}

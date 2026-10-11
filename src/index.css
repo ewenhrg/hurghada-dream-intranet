@@ -231,6 +231,18 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   background: linear-gradient(90deg, var(--hdc-sand), var(--hdc-clay));
 }
 
+.hd-public-catalog .hdc-wordmark {
+  height: 1.4rem;
+  width: auto;
+  max-width: 7.5rem;
+}
+@media (min-width: 1024px) {
+  .hd-public-catalog .hdc-homebar .hdc-wordmark {
+    height: 1.75rem;
+    max-width: 10rem;
+  }
+}
+
 .hd-public-catalog .hdc-btn {
   position: relative;
   display: inline-flex;
