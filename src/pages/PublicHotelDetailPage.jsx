@@ -131,7 +131,7 @@ export function PublicHotelDetailPage({ hotelId }) {
       </div>
       <p className="mt-4 flex items-center gap-2 text-xs text-catalog-muted">
         <ShieldCheck className="h-4 w-4 shrink-0 text-catalog-lagoon" aria-hidden />
-        Réponse rapide par une équipe locale, 7j/7.
+        Réponse rapide par une équipe française, 7j/7.
       </p>
     </div>
   );

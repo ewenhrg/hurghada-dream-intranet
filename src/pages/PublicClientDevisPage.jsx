@@ -118,7 +118,7 @@ function getCategoryPublicNotice(categoryKey) {
 const REASSURANCES = [
   { Icon: ShieldCheck, title: "Devis gratuit", text: "Sans engagement ni paiement en ligne." },
   { Icon: CalendarDays, title: "Selon vos dates", text: "Le calendrier ne propose que les jours disponibles pendant votre séjour." },
-  { Icon: Headset, title: "Équipe locale 7j/7", text: "Nous confirmons chaque détail avec vous sur WhatsApp." },
+  { Icon: Headset, title: "Équipe française 7j/7", text: "Nous confirmons chaque détail avec vous sur WhatsApp." },
 ];
 
 /** Pied de page du catalogue : réassurance, contact direct, liens de l’appli client. */

@@ -38,7 +38,7 @@ export function PublicContactsPage() {
           Nos <span className="hdc-serif">contacts</span>
         </h1>
         <p className="mt-2 max-w-sm text-[0.9375rem] leading-relaxed text-catalog-muted">
-          Une équipe locale vous répond, 7 jours sur 7. Appuyez sur un numéro pour appeler.
+          Une équipe française vous répond, 7 jours sur 7. Appuyez sur un numéro pour appeler.
         </p>
 
         <ul className="mt-6 space-y-3">

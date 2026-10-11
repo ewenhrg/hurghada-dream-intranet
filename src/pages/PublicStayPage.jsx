@@ -359,7 +359,7 @@ export function PublicStayPage() {
               {[
                 { icon: Clock, title: "Heures de prise en charge", text: "Chaque sortie, jour par jour, à l’heure près." },
                 { icon: BellRing, title: "Alerte en cas de changement", text: "Vous êtes prévenu si une heure bouge." },
-                { icon: ShieldCheck, title: "Équipe locale 7j/7", text: "Une question ? On vous répond sur WhatsApp." },
+                { icon: ShieldCheck, title: "Équipe française 7j/7", text: "Une question ? On vous répond sur WhatsApp." },
               ].map(({ icon: Icon, title, text }) => (
                 <li key={title} data-reveal="item" className="flex items-start gap-3.5">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-catalog-lagoonSoft text-catalog-lagoon">
@@ -643,7 +643,7 @@ export function PublicStayPage() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold text-catalog-ink">Une question sur votre programme ?</span>
-                <span className="block text-xs text-catalog-muted">L’équipe locale vous répond 7j/7 sur WhatsApp.</span>
+                <span className="block text-xs text-catalog-muted">L’équipe française vous répond 7j/7 sur WhatsApp.</span>
               </span>
             </a>
           </>

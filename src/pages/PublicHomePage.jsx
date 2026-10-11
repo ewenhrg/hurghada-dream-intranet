@@ -308,7 +308,7 @@ export function PublicHomePage() {
               ) : null}
               <GlassChip>
                 <Headset className="h-4 w-4" strokeWidth={1.75} aria-hidden />
-                Équipe locale 7j/7
+                Équipe française 7j/7
               </GlassChip>
             </div>
             <div className="mt-5 flex items-center gap-3">
@@ -446,7 +446,7 @@ export function PublicHomePage() {
           <div className="relative max-w-xl">
           <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-catalog-sand">Conciergerie</p>
           <p className="mt-2 font-catalog-display text-[1.5rem] leading-snug !text-white lg:text-4xl">
-            Une équipe locale vous répond, <span className="hdc-serif text-catalog-sand">7 jours sur 7.</span>
+            Une équipe française vous répond, <span className="hdc-serif text-catalog-sand">7 jours sur 7.</span>
           </p>
           <p className="mt-2 text-sm leading-relaxed text-white/75 lg:text-base">Une question, un transfert, une envie de dernière minute : écrivez-nous.</p>
           </div>
