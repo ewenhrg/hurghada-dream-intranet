@@ -23,3 +23,15 @@ scripts/
 ../../*
 
 supabase/.temp/
+
+# Capacitor / Android (garder le projet, ignorer les builds locaux)
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/captures/
+android/.idea/
+*.apk
+*.aab
+ios/App/Pods/
+ios/App/build/

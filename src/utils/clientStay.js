@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { SITE_KEY } from "../constants";
 import { supabase } from "../lib/supabase";
 import { logger } from "./logger";
@@ -7,7 +8,12 @@ const STAY_PHONE_KEY = "hd_client_stay_phone";
 
 export function loadSavedStayPhone() {
   try {
-    return String(sessionStorage.getItem(STAY_PHONE_KEY) || "").trim();
+    const session = String(sessionStorage.getItem(STAY_PHONE_KEY) || "").trim();
+    if (session) return session;
+    if (Capacitor.isNativePlatform()) {
+      return String(localStorage.getItem(STAY_PHONE_KEY) || "").trim();
+    }
+    return "";
   } catch {
     return "";
   }
@@ -18,6 +24,9 @@ export function saveStayPhone(phone) {
     const value = String(phone || "").trim();
     if (value) sessionStorage.setItem(STAY_PHONE_KEY, value);
     else sessionStorage.removeItem(STAY_PHONE_KEY);
+    if (!Capacitor.isNativePlatform()) return;
+    if (value) localStorage.setItem(STAY_PHONE_KEY, value);
+    else localStorage.removeItem(STAY_PHONE_KEY);
   } catch {
     /* ignore */
   }

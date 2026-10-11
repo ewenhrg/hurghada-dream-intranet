@@ -46,35 +46,21 @@ export const DocumentsPage = lazyWithRetry(() =>
 export const InternsPage = lazyWithRetry(() =>
   import("../pages/InternsPage").then((module) => ({ default: module.InternsPage }))
 );
-export const RequestPage = lazyWithRetry(() =>
-  import("../pages/RequestPage").then((module) => ({ default: module.RequestPage }))
-);
-export const PublicTarifsPage = lazyWithRetry(() =>
-  import("../pages/PublicTarifsPage").then((m) => ({ default: m.PublicTarifsPage }))
-);
-export const PublicClientDevisPage = lazyWithRetry(() =>
-  import("../pages/PublicClientDevisPage").then((m) => ({ default: m.PublicClientDevisPage }))
-);
-export const PublicStayPage = lazyWithRetry(() =>
-  import("../pages/PublicStayPage").then((m) => ({ default: m.PublicStayPage }))
-);
-export const PublicCatalogueActivityPage = lazyWithRetry(() =>
-  import("../pages/PublicCatalogueActivityPage").then((m) => ({ default: m.PublicCatalogueActivityPage }))
-);
+export {
+  RequestPage,
+  PublicTarifsPage,
+  PublicClientDevisPage,
+  PublicStayPage,
+  PublicCatalogueActivityPage,
+  PublicHotelRequestPage,
+  PublicHotelsCataloguePage,
+  PublicHotelDetailPage,
+} from "./lazyPublicPages";
 export const EwenDashboardPage = lazyWithRetry(() =>
   import("../pages/EwenDashboardPage").then((module) => ({ default: module.EwenDashboardPage }))
 );
 export const PublicDevisPage = lazyWithRetry(() =>
   import("../pages/PublicDevisPage").then((m) => ({ default: m.PublicDevisPage }))
-);
-export const PublicHotelRequestPage = lazyWithRetry(() =>
-  import("../pages/PublicHotelRequestPage").then((m) => ({ default: m.PublicHotelRequestPage }))
-);
-export const PublicHotelsCataloguePage = lazyWithRetry(() =>
-  import("../pages/PublicHotelsCataloguePage").then((m) => ({ default: m.PublicHotelsCataloguePage }))
-);
-export const PublicHotelDetailPage = lazyWithRetry(() =>
-  import("../pages/PublicHotelDetailPage").then((m) => ({ default: m.PublicHotelDetailPage }))
 );
 export const PublicHotelsAdminPage = lazyWithRetry(() =>
   import("../pages/PublicHotelsAdminPage").then((m) => ({ default: m.PublicHotelsAdminPage }))

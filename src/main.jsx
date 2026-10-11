@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import App from "./App.jsx";
+import { IS_CLIENT_APP } from "./config/clientApp";
 import { initToast } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { LanguageProvider } from "./contexts/LanguageContext";
@@ -32,14 +32,23 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <LanguageProvider>
-        <ScrollOptimizer>
-          <App />
-        </ScrollOptimizer>
-      </LanguageProvider>
-    </BrowserRouter>
-  </React.StrictMode>
-);
+async function boot() {
+  // Chargement séparé : le build client (Capacitor) n’embarque pas l’intranet.
+  const Root = IS_CLIENT_APP
+    ? (await import("./ClientApp.jsx")).ClientApp
+    : (await import("./App.jsx")).default;
+
+  ReactDOM.createRoot(document.getElementById("root")).render(
+    <React.StrictMode>
+      <BrowserRouter>
+        <LanguageProvider>
+          <ScrollOptimizer>
+            <Root />
+          </ScrollOptimizer>
+        </LanguageProvider>
+      </BrowserRouter>
+    </React.StrictMode>
+  );
+}
+
+void boot();

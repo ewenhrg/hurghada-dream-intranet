@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Bell, CalendarDays, Clock, Hotel, LogOut, MessageCircle, Ticket, Users } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { Bell, BellRing, CalendarDays, Clock, Hotel, LogOut, MapPin, RefreshCw, ShieldCheck, Ticket, Users, Wallet } from "lucide-react";
+import { PublicAppShell } from "../components/public/PublicAppShell";
+import { HdLoader } from "../components/public/GuestPageLoader";
+import { StateCard, WhatsAppGlyph } from "../components/public/PublicUI";
 import { formatPhoneWithPlus } from "../utils";
 import {
   clearStayPhone,
@@ -10,10 +13,59 @@ import {
 } from "../utils/clientStay";
 import {
   enableStayPushNotifications,
+  isStayPushSupported,
   stayPushPermissionLabel,
 } from "../utils/clientStayPush";
+import {
+  disarmStayWatch,
+  enableStayReminders,
+  stayNotifyEnabled,
+  syncStayReminders,
+} from "../utils/stayLocalNotifications";
 
 const AGENCY_WHATSAPP = "201062002850";
+const STAY_HERO_IMAGE = "/client/home-hero-red-sea.jpg";
+const STAY_FORM_IMAGE = "/client/home-tile-stay-calendar.jpg";
+const DAY_MS = 86400000;
+
+function keyToTime(key) {
+  return new Date(`${key}T12:00:00`).getTime();
+}
+
+function daysBetween(fromKey, toKey) {
+  return Math.round((keyToTime(toKey) - keyToTime(fromKey)) / DAY_MS);
+}
+
+/** Avancement du séjour : avant l’arrivée (J-x), pendant (jour n / total), ou terminé. */
+function stayProgress(arrivalIso, departureIso) {
+  const arrival = dateKey(arrivalIso);
+  const departure = dateKey(departureIso);
+  if (!arrival || !departure) return null;
+  const total = daysBetween(arrival, departure) + 1;
+  if (total < 1) return null;
+  const today = todayKey();
+  if (today < arrival) return { phase: "before", left: daysBetween(today, arrival), total, ratio: 0 };
+  if (today > departure) return { phase: "after", total, ratio: 1 };
+  const day = daysBetween(arrival, today) + 1;
+  return { phase: "during", day, total, ratio: day / total };
+}
+
+function relativeDayLabel(key) {
+  if (!key || key === "sans-date") return "Date à confirmer";
+  const diff = daysBetween(todayKey(), key);
+  if (diff === 0) return "Aujourd’hui";
+  if (diff === 1) return "Demain";
+  return formatStayDate(key);
+}
+
+function dayBadge(key) {
+  if (!key || key === "sans-date") return { day: "?", month: "" };
+  const d = new Date(`${key}T12:00:00`);
+  return {
+    day: d.toLocaleDateString("fr-FR", { day: "numeric" }),
+    month: d.toLocaleDateString("fr-FR", { month: "short" }).replace(".", ""),
+  };
+}
 
 function formatStayDate(iso) {
   const s = String(iso || "").trim();
@@ -131,15 +183,12 @@ export function PublicStayPage() {
         setPhone(formatted);
         return;
       }
-      if (silent) {
-        const prev = stayRef.current;
-        if (
-          prev?.found &&
-          pickupFingerprint(prev.items) !== pickupFingerprint(result.items)
-        ) {
-          setProgramUpdated(true);
-        }
-      }
+      const pickupChanged =
+        silent &&
+        stayRef.current?.found &&
+        pickupFingerprint(stayRef.current.items) !== pickupFingerprint(result.items);
+      if (pickupChanged) setProgramUpdated(true);
+      void syncStayReminders(result.items, { announceChange: pickupChanged });
       saveStayPhone(formatted);
       setPhone(formatted);
       setStay(result);
@@ -159,7 +208,7 @@ export function PublicStayPage() {
     if (!phone || !stay?.found) return undefined;
     const id = window.setInterval(() => {
       void loadStay(phone, { silent: true });
-    }, 45000);
+    }, 10000);
     return () => window.clearInterval(id);
   }, [phone, stay?.found, loadStay]);
 
@@ -167,9 +216,13 @@ export function PublicStayPage() {
     if (!phone || !stay?.found) return undefined;
     let cancelled = false;
     (async () => {
+      if (Capacitor.isNativePlatform() && stayNotifyEnabled()) {
+        if (!cancelled) setPushState("subscribed");
+        return;
+      }
       const label = stayPushPermissionLabel();
       if (label !== "granted") {
-        if (!cancelled) setPushState(label);
+        if (!cancelled) setPushState(label === "unsupported" && Capacitor.isNativePlatform() ? "default" : label);
         return;
       }
       try {
@@ -193,6 +246,7 @@ export function PublicStayPage() {
 
   const handleLogout = () => {
     clearStayPhone();
+    void disarmStayWatch();
     setPhone("");
     setInputPhone("");
     setStay(null);
@@ -204,6 +258,16 @@ export function PublicStayPage() {
   const handleEnablePush = async () => {
     setPushBusy(true);
     try {
+      if (Capacitor.isNativePlatform()) {
+        const local = await enableStayReminders(stay?.items);
+        if (isStayPushSupported()) void enableStayPushNotifications(phone);
+        if (local.ok) {
+          setPushState("subscribed");
+          return;
+        }
+        setPushState(local.error === "denied" ? "denied" : "default");
+        return;
+      }
       const result = await enableStayPushNotifications(phone);
       if (result.ok) setPushState("subscribed");
       else setPushState(result.error === "ios-install" ? "ios-install" : stayPushPermissionLabel() === "denied" ? "denied" : "default");
@@ -215,251 +279,376 @@ export function PublicStayPage() {
   const clientName = String(stay?.client?.name || "").trim();
   const hotel = String(stay?.client?.hotel || "").trim();
   const room = String(stay?.client?.room || "").trim();
+  const progress = stayProgress(stay?.client?.arrivalDate, stay?.client?.departureDate);
+  const today = todayKey();
+  const nextDay = days.find((day) => day.key !== "sans-date" && day.key >= today) || null;
+  const nextItem = nextDay?.items[0] || null;
+  const activityCount = (stay?.items || []).length;
 
   return (
-    <div className="hd-public-catalog relative isolate flex min-h-screen flex-col overflow-x-hidden bg-catalog-bg font-catalog-sans text-catalog-body antialiased">
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-bg" />
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.42]" />
-
-      <header className="sticky top-0 z-30 border-b border-violet-500/25 bg-catalog-night/95 text-white shadow-[0_16px_48px_-12px_rgba(15,8,32,0.65)] backdrop-blur-md">
-        <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3.5">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-orange-600 p-1.5 ring-2 ring-orange-300/50">
-              <img src="/logo.png" alt="" className="relative h-full w-full object-contain" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate font-catalog-display text-lg font-semibold tracking-tight text-white">
-                Hurghada Dream
-              </p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-violet-200/95">
-                Mon séjour
-              </p>
-            </div>
-          </div>
-          {phone ? (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-white/20 px-3 text-xs font-bold text-white/90"
-            >
-              <LogOut className="h-3.5 w-3.5" aria-hidden />
-              Changer
-            </button>
-          ) : (
-            <Link
-              to="/catalogue"
-              className="text-xs font-bold uppercase tracking-wide text-amber-200"
-            >
-              Catalogue
-            </Link>
-          )}
-        </div>
-      </header>
-
-      <main className="relative z-10 mx-auto w-full max-w-lg flex-1 px-4 py-6 pb-28">
+    <PublicAppShell
+      title="Mon séjour"
+      revealKey={`${loading ? "l" : "r"}-${stay ? (stay.found === false ? "none" : days.length) : "form"}`}
+      right={
+        phone ? (
+          <button
+            type="button"
+            data-press
+            onClick={handleLogout}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white px-3.5 text-xs font-semibold text-catalog-ink ring-1 ring-catalog-border"
+          >
+            <LogOut className="h-3.5 w-3.5" aria-hidden />
+            Changer
+          </button>
+        ) : null
+      }
+    >
+      <main className="mx-auto w-full max-w-lg px-4 pb-14 pt-2">
         {loading && !stay ? (
-          <section className="rounded-3xl border border-violet-200/80 bg-white p-8 text-center shadow-catalog-premium">
-            <p className="text-sm font-bold text-violet-800">Chargement de votre programme…</p>
-          </section>
+          <HdLoader label="Chargement de votre programme…" className="py-28" />
         ) : !phone || !stay ? (
-          <section className="rounded-3xl border border-violet-200/80 bg-white p-5 shadow-catalog-premium sm:p-7">
-            <h1 className="font-catalog-display text-2xl font-semibold tracking-tight text-catalog-ink">
-              Votre programme
-            </h1>
-            <p className="mt-2 text-sm font-semibold leading-relaxed text-catalog-muted">
-              Entrez le numéro WhatsApp utilisé pour vos réservations. Vous verrez vos activités et
-              les heures de prise en charge.
-            </p>
-            <label className="mt-5 block text-xs font-bold uppercase tracking-wide text-violet-800">
-              Numéro WhatsApp
-              <input
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                value={inputPhone}
-                onChange={(e) => setInputPhone(formatPhoneWithPlus(e.target.value))}
-                placeholder="+20 …"
-                className="mt-2 w-full rounded-2xl border-2 border-violet-200 bg-violet-50/40 px-4 py-3.5 text-base font-semibold text-catalog-ink outline-none focus:border-violet-500"
-              />
-            </label>
-            {error ? (
-              <p className="mt-3 text-sm font-semibold text-rose-700" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => void loadStay(inputPhone)}
-              disabled={loading}
-              className="mt-5 inline-flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-5 text-sm font-extrabold text-white shadow-md disabled:opacity-60"
-            >
-              {loading ? "Recherche…" : "Voir mon séjour"}
-            </button>
-          </section>
-        ) : stay.found === false ? (
-          <section className="rounded-3xl border border-violet-200/80 bg-white p-6 text-center shadow-catalog-premium">
-            <p className="font-catalog-display text-xl font-semibold text-catalog-ink">
-              Aucun programme trouvé
-            </p>
-            <p className="mt-2 text-sm font-semibold text-catalog-muted">
-              Vérifiez le numéro, ou écrivez-nous sur WhatsApp.
-            </p>
-            <a
-              href={`https://wa.me/${AGENCY_WHATSAPP}`}
-              className="mt-5 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-sm font-bold text-white"
-            >
-              <MessageCircle className="h-4 w-4" aria-hidden />
-              WhatsApp
-            </a>
-          </section>
-        ) : (
-          <>
-            {programUpdated ? (
-              <p className="mb-4 rounded-2xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-900">
-                Vos heures de prise en charge ont été mises à jour.
-              </p>
-            ) : null}
-            {pushState === "ios-install" ? (
-              <p className="mb-4 rounded-2xl bg-violet-100 px-4 py-3 text-sm font-semibold text-violet-950">
-                Sur iPhone : Partager → Sur l’écran d’accueil, puis ouvrez Mon séjour pour activer
-                les notifications.
-              </p>
-            ) : null}
-            {pushState === "default" || pushState === "unknown" ? (
+          <section>
+            <div data-hero-media className="relative h-[19rem] overflow-hidden rounded-[1.5rem] bg-catalog-raised">
+              <img data-hero-img src={STAY_FORM_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <div aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,42,51,0.15)_0%,rgba(11,79,92,0.35)_45%,rgba(8,36,46,0.9)_100%)]" />
+              <div className="absolute inset-x-5 bottom-14">
+                <p className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-white/85">
+                  <span className="h-[2px] w-5 rounded-full bg-catalog-sand" />
+                  Votre programme
+                </p>
+                <h1 data-split className="mt-2 font-catalog-display text-[2.125rem] leading-[1.05] !text-white">
+                  Votre séjour, <span className="hdc-serif text-catalog-sand">heure par heure.</span>
+                </h1>
+              </div>
+            </div>
+
+            <div data-reveal="item" className="hdc-card relative z-[1] mx-2 -mt-9 p-5">
+              <label className="block">
+                <span className="text-sm font-semibold text-catalog-ink">Votre numéro WhatsApp</span>
+                <span className="relative mt-2 block">
+                  <WhatsAppGlyph className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#1F8F55]" />
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={inputPhone}
+                    onChange={(e) => setInputPhone(formatPhoneWithPlus(e.target.value))}
+                    placeholder="+20 …"
+                    className="hdc-input !pl-12"
+                  />
+                </span>
+              </label>
+              <p className="mt-2 text-xs leading-relaxed text-catalog-muted">Celui utilisé pour vos réservations avec nous.</p>
+              {error ? (
+                <p className="mt-3 text-sm text-catalog-coralDeep" role="alert">
+                  {error}
+                </p>
+              ) : null}
               <button
                 type="button"
-                onClick={() => void handleEnablePush()}
-                disabled={pushBusy}
-                className="mb-4 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-violet-800 px-4 text-sm font-extrabold text-white disabled:opacity-60"
+                data-press
+                onClick={() => void loadStay(inputPhone)}
+                disabled={loading}
+                className="hdc-btn hdc-btn-primary mt-4 w-full"
               >
-                <Bell className="h-4 w-4" aria-hidden />
-                {pushBusy ? "Activation…" : "Recevoir les horaires sur mon téléphone"}
+                {loading ? "Recherche…" : "Voir mon séjour"}
               </button>
-            ) : null}
-            {pushState === "subscribed" ? (
-              <p className="mb-4 rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-catalog-muted">
-                Notifications activées : vous serez prévenu si une heure change.
-              </p>
-            ) : null}
-            <section className="rounded-3xl border border-violet-200/80 bg-white p-5 shadow-catalog-premium">
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-violet-700">
-                Bonjour
-              </p>
-              <h1 className="mt-1 font-catalog-display text-2xl font-semibold tracking-tight text-catalog-ink">
-                {clientName || "Votre séjour"}
-              </h1>
-              {hotel ? (
-                <p className="mt-2 flex items-start gap-2 text-sm font-semibold text-catalog-body">
-                  <Hotel className="mt-0.5 h-4 w-4 shrink-0 text-violet-700" aria-hidden />
-                  <span>
-                    {hotel}
-                    {room ? ` · chambre ${room}` : ""}
+            </div>
+
+            <ul className="mt-7 space-y-3 px-1">
+              {[
+                { icon: Clock, title: "Heures de prise en charge", text: "Chaque sortie, jour par jour, à l’heure près." },
+                { icon: BellRing, title: "Alerte en cas de changement", text: "Vous êtes prévenu si une heure bouge." },
+                { icon: ShieldCheck, title: "Équipe locale 7j/7", text: "Une question ? On vous répond sur WhatsApp." },
+              ].map(({ icon: Icon, title, text }) => (
+                <li key={title} data-reveal="item" className="flex items-start gap-3.5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-catalog-lagoonSoft text-catalog-lagoon">
+                    <Icon className="h-[1.125rem] w-[1.125rem]" strokeWidth={1.75} aria-hidden />
                   </span>
+                  <span className="min-w-0 pt-0.5">
+                    <span className="block text-sm font-semibold text-catalog-ink">{title}</span>
+                    <span className="block text-xs leading-relaxed text-catalog-muted">{text}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : stay.found === false ? (
+          <StateCard
+            title="Aucun programme trouvé"
+            action={
+              <a href={`https://wa.me/${AGENCY_WHATSAPP}`} data-press className="hdc-btn hdc-btn-ink">
+                <WhatsAppGlyph className="h-5 w-5" />
+                Écrire sur WhatsApp
+              </a>
+            }
+          >
+            Vérifiez le numéro, ou écrivez-nous : nous retrouvons votre réservation.
+          </StateCard>
+        ) : (
+          <>
+            {/* ——— Carte séjour ——— */}
+            <section data-hero-media className="relative overflow-hidden rounded-[1.5rem] bg-catalog-raised text-white shadow-catalog-float">
+              <img data-hero-img src={STAY_HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <div aria-hidden className="absolute inset-0 bg-[linear-gradient(165deg,rgba(11,79,92,0.55)_0%,rgba(10,59,74,0.82)_55%,rgba(8,36,46,0.95)_100%)]" />
+              <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(227,174,85,0.4)_0%,rgba(227,174,85,0)_70%)]" />
+              <div className="relative p-5 pt-6">
+                <p className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-white/80">
+                  <span className="h-[2px] w-5 rounded-full bg-catalog-sand" />
+                  Bon séjour
                 </p>
-              ) : null}
-              {(stay.client?.arrivalDate || stay.client?.departureDate) && (
-                <p className="mt-1 flex items-center gap-2 text-xs font-bold text-catalog-muted">
-                  <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                  {formatStayDate(stay.client.arrivalDate) || "…"}
-                  {stay.client.departureDate
-                    ? ` → ${formatStayDate(stay.client.departureDate)}`
-                    : ""}
-                </p>
-              )}
-              {formatUpdatedAt(stay.updatedAt) ? (
-                <p className="mt-2 text-[11px] font-semibold text-catalog-muted">
-                  Mis à jour {formatUpdatedAt(stay.updatedAt)}
-                </p>
-              ) : null}
+                <h1 data-split className="mt-2 font-catalog-display text-[2.125rem] leading-[1.05] !text-white">
+                  {clientName || <>Votre <span className="hdc-serif text-catalog-sand">séjour</span></>}
+                </h1>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {hotel ? (
+                    <span className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-full bg-white/15 px-3 text-xs font-semibold ring-1 ring-white/25 backdrop-blur-md">
+                      <Hotel className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                      <span className="truncate">
+                        {hotel}
+                        {room ? ` · ch. ${room}` : ""}
+                      </span>
+                    </span>
+                  ) : null}
+                  {activityCount ? (
+                    <span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white/15 px-3 text-xs font-semibold ring-1 ring-white/25 backdrop-blur-md">
+                      <MapPin className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                      {activityCount} sortie{activityCount > 1 ? "s" : ""}
+                    </span>
+                  ) : null}
+                </div>
+
+                {(stay.client?.arrivalDate || stay.client?.departureDate) && (
+                  <div className="mt-5 rounded-[1rem] bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur-md">
+                    <div className="flex items-end justify-between gap-3">
+                      <p className="flex min-w-0 items-center gap-2 text-xs capitalize text-white/85">
+                        <CalendarDays className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                        <span className="truncate">
+                          {formatStayDate(stay.client.arrivalDate) || "…"}
+                          {stay.client.departureDate ? ` → ${formatStayDate(stay.client.departureDate)}` : ""}
+                        </span>
+                      </p>
+                      {progress ? (
+                        <p className="shrink-0 font-catalog-display text-[1.375rem] leading-none !text-white tabular-nums">
+                          {progress.phase === "before"
+                            ? `J-${progress.left}`
+                            : progress.phase === "during"
+                              ? `Jour ${progress.day}/${progress.total}`
+                              : "Terminé"}
+                        </p>
+                      ) : null}
+                    </div>
+                    {progress ? (
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/20">
+                        <div
+                          className="h-full origin-left rounded-full bg-[linear-gradient(90deg,#E3AE55_0%,#F07A4A_100%)]"
+                          style={{ transform: `scaleX(${Math.max(0.04, progress.ratio)})` }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
             </section>
 
-            <div className="mt-5 space-y-5">
-              {days.length === 0 ? (
-                <p className="rounded-2xl bg-white p-5 text-center text-sm font-semibold text-catalog-muted">
-                  Aucune activité enregistrée pour le moment.
+            {/* ——— Prochaine sortie ——— */}
+            {nextItem ? (
+              <section
+                data-reveal="item"
+                className="relative mt-4 overflow-hidden rounded-[1.5rem] bg-catalog-sunset p-5 text-white shadow-catalog-cta"
+              >
+                <div aria-hidden className="pointer-events-none absolute -bottom-16 -right-10 h-44 w-44 rounded-full bg-white/10" />
+                <p className="relative text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-white/85">
+                  Prochaine sortie · {relativeDayLabel(nextDay.key)}
                 </p>
+                <div className="relative mt-3 flex items-end gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-catalog-display text-[1.5rem] leading-tight !text-white">{nextItem.activityName}</p>
+                    <p className="mt-1 text-xs text-white/85">Prise en charge à votre hôtel</p>
+                  </div>
+                  <div className="shrink-0 rounded-[1rem] bg-white px-3.5 py-2.5 text-center text-catalog-coralDeep">
+                    <span className="block text-[0.625rem] font-semibold uppercase tracking-[0.12em]">Départ</span>
+                    <span className="mt-0.5 block font-catalog-display text-[1.75rem] leading-none tabular-nums">
+                      {String(nextItem.pickupTime || "").trim() || "—"}
+                    </span>
+                  </div>
+                </div>
+              </section>
+            ) : null}
+
+            {/* ——— Alertes ——— */}
+            <div className="mt-4 space-y-3">
+              {programUpdated ? (
+                <p data-reveal="item" className="flex items-center gap-3 rounded-[1rem] bg-catalog-lagoonSoft px-4 py-3.5 text-sm font-medium text-catalog-lagoon">
+                  <BellRing className="h-5 w-5 shrink-0" aria-hidden />
+                  Vos heures de prise en charge ont été mises à jour.
+                </p>
+              ) : null}
+              {pushState === "ios-install" ? (
+                <p data-reveal="item" className="rounded-[1rem] bg-catalog-brassSoft px-4 py-3.5 text-sm text-catalog-body">
+                  Sur iPhone : Partager → Sur l’écran d’accueil, puis ouvrez Mon séjour pour activer les notifications.
+                </p>
+              ) : null}
+              {pushState === "default" || pushState === "unknown" ? (
+                <button
+                  type="button"
+                  data-reveal="item"
+                  data-press
+                  onClick={() => void handleEnablePush()}
+                  disabled={pushBusy}
+                  className="flex min-h-[4rem] w-full items-center gap-3.5 rounded-[1rem] bg-white p-3.5 text-left shadow-catalog-card ring-1 ring-catalog-line disabled:opacity-60"
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-catalog-abyss text-white">
+                    <Bell className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-catalog-ink">
+                      {pushBusy ? "Activation…" : "Recevoir les horaires sur mon téléphone"}
+                    </span>
+                    <span className="block text-xs text-catalog-muted">Alerte si une heure de prise en charge change</span>
+                  </span>
+                </button>
+              ) : null}
+              {pushState === "subscribed" ? (
+                <p data-reveal="item" className="flex items-center gap-2 px-1 text-xs text-catalog-muted">
+                  <BellRing className="h-3.5 w-3.5 text-catalog-lagoon" aria-hidden />
+                  Notifications activées : vous serez prévenu si une heure change.
+                </p>
+              ) : null}
+            </div>
+
+            {/* ——— Programme ——— */}
+            <div data-reveal="item" className="mt-9 flex items-end justify-between gap-3">
+              <div>
+                <p className="hdc-eyebrow">Programme</p>
+                <h2 className="mt-1.5 font-catalog-display text-[1.75rem] leading-tight">
+                  Jour <span className="hdc-serif">par jour</span>
+                </h2>
+              </div>
+              {formatUpdatedAt(stay.updatedAt) ? (
+                <p className="flex shrink-0 items-center gap-1.5 pb-1 text-[0.6875rem] text-catalog-muted">
+                  <RefreshCw className="h-3 w-3" aria-hidden />
+                  {formatUpdatedAt(stay.updatedAt)}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="mt-5">
+              {days.length === 0 ? (
+                <StateCard title="Aucune activité pour le moment">
+                  Vos excursions réservées apparaîtront ici avec leur heure de prise en charge.
+                </StateCard>
               ) : (
-                days.map((day) => (
-                  <section key={day.key}>
-                    <h2
-                      className={`mb-2 flex items-center gap-2 text-sm font-extrabold capitalize ${
-                        day.isToday ? "text-orange-700" : "text-violet-900"
-                      }`}
-                    >
-                      <CalendarDays className="h-4 w-4" aria-hidden />
-                      {day.isToday ? "Aujourd’hui · " : ""}
-                      {day.label}
-                    </h2>
-                    <ul className="space-y-3">
-                      {day.items.map((item, idx) => {
-                        const pickup = String(item.pickupTime || "").trim();
-                        const ticket = String(item.ticketNumber || "").trim();
-                        const rest = Math.round(Number(item.restAmount) || 0);
-                        const people = participantsLabel(item);
-                        return (
-                          <li
-                            key={`${day.key}-${idx}-${item.activityName}`}
-                            className="rounded-3xl border border-violet-200/80 bg-white p-4 shadow-sm"
-                          >
-                            <p className="font-catalog-display text-lg font-semibold leading-snug text-catalog-ink">
-                              {item.activityName}
-                            </p>
-                            <p
-                              className={`mt-2 inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-base font-black ${
-                                pickup
-                                  ? "bg-violet-700 text-white"
-                                  : "bg-amber-100 text-amber-900"
-                              }`}
-                            >
-                              <Clock className="h-4 w-4" aria-hidden />
-                              {pickup || "Heure à confirmer"}
-                            </p>
-                            {people ? (
-                              <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-catalog-muted">
-                                <Users className="h-3.5 w-3.5" aria-hidden />
-                                {people}
-                              </p>
-                            ) : null}
-                            {ticket ? (
-                              <p className="mt-1 flex items-center gap-1.5 text-xs font-bold text-violet-800">
-                                <Ticket className="h-3.5 w-3.5" aria-hidden />
-                                Ticket {ticket}
-                              </p>
-                            ) : null}
-                            {rest > 0 ? (
-                              <p className="mt-2 text-xs font-extrabold text-orange-700">
-                                Reste à payer : {rest} €
-                              </p>
-                            ) : null}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </section>
-                ))
+                days.map((day, dayIdx) => {
+                  const badge = dayBadge(day.key);
+                  const isPast = day.key !== "sans-date" && day.key < today;
+                  const isLast = dayIdx === days.length - 1;
+                  return (
+                    <section key={day.key} className="relative flex gap-3.5">
+                      {/* Rail chronologique */}
+                      <div className="relative flex w-12 shrink-0 flex-col items-center">
+                        <div
+                          data-reveal="item"
+                          className={`relative z-[1] flex h-12 w-12 flex-col items-center justify-center rounded-[0.875rem] leading-none ${
+                            day.isToday
+                              ? "bg-catalog-sunset text-white shadow-catalog-cta"
+                              : isPast
+                                ? "bg-catalog-bgDeep text-catalog-muted"
+                                : "bg-catalog-abyss text-white shadow-catalog-card"
+                          }`}
+                        >
+                          <span className="font-catalog-display text-[1.25rem]">{badge.day}</span>
+                          <span className="mt-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] opacity-85">{badge.month}</span>
+                        </div>
+                        {!isLast ? (
+                          <span aria-hidden className="mt-1 w-[2px] flex-1 rounded-full bg-[linear-gradient(180deg,rgba(14,124,134,0.35),rgba(227,174,85,0.35))]" />
+                        ) : null}
+                      </div>
+
+                      <div className={`min-w-0 flex-1 ${isLast ? "" : "pb-7"}`}>
+                        <h3 data-reveal="item" className="flex min-h-12 flex-wrap items-center gap-x-2.5 font-catalog-display text-[1.25rem] capitalize leading-tight">
+                          <span className={day.isToday ? "text-catalog-coral" : "text-catalog-ink"}>{day.label}</span>
+                          {day.isToday ? (
+                            <span className="rounded-full bg-catalog-coralSoft px-2 py-0.5 font-catalog-sans text-[0.625rem] font-bold uppercase tracking-[0.14em] text-catalog-coralDeep">
+                              Aujourd’hui
+                            </span>
+                          ) : null}
+                        </h3>
+                        <ol className="mt-2 space-y-3">
+                          {day.items.map((item, idx) => {
+                            const pickup = String(item.pickupTime || "").trim();
+                            const ticket = String(item.ticketNumber || "").trim();
+                            const rest = Math.round(Number(item.restAmount) || 0);
+                            const people = participantsLabel(item);
+                            return (
+                              <li key={`${day.key}-${idx}-${item.activityName}`} data-reveal="card" className="hdc-card overflow-hidden">
+                                <div className="flex items-stretch">
+                                  <div className="min-w-0 flex-1 p-4">
+                                    <p className="font-catalog-display text-[1.1875rem] leading-snug text-catalog-ink">{item.activityName}</p>
+                                    <div className="mt-2 flex flex-wrap gap-1.5 text-[0.6875rem] font-medium">
+                                      {people ? (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-catalog-mist px-2 py-1 text-catalog-body">
+                                          <Users className="h-3 w-3" aria-hidden />
+                                          {people}
+                                        </span>
+                                      ) : null}
+                                      {ticket ? (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-catalog-lagoonSoft px-2 py-1 text-catalog-lagoon">
+                                          <Ticket className="h-3 w-3" aria-hidden />
+                                          Ticket {ticket}
+                                        </span>
+                                      ) : null}
+                                      {rest > 0 ? (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-catalog-coralSoft px-2 py-1 font-semibold text-catalog-coralDeep">
+                                          <Wallet className="h-3 w-3" aria-hidden />
+                                          Reste {rest} €
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                  <div
+                                    className={`flex w-[5.25rem] shrink-0 flex-col items-center justify-center px-2 text-center ${
+                                      day.isToday ? "bg-catalog-sunset text-white" : "bg-catalog-lagoonSoft text-catalog-lagoon"
+                                    }`}
+                                  >
+                                    <Clock className="h-3.5 w-3.5 opacity-80" aria-hidden />
+                                    <span className={`mt-1 tabular-nums ${pickup ? "font-catalog-display text-[1.5rem] leading-none" : "text-[0.6875rem] font-semibold"}`}>
+                                      {pickup || "À confirmer"}
+                                    </span>
+                                    <span className="mt-1 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] opacity-80">Prise en charge</span>
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      </div>
+                    </section>
+                  );
+                })
               )}
             </div>
+
+            {/* ——— Aide ——— */}
+            <a
+              href={`https://wa.me/${AGENCY_WHATSAPP}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-reveal="item"
+              data-press
+              className="mt-10 flex min-h-[4.5rem] items-center gap-3.5 rounded-[1.25rem] bg-white p-4 text-left shadow-catalog-card ring-1 ring-catalog-line"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E7F6EE]">
+                <WhatsAppGlyph className="h-5 w-5 text-[#1F8F55]" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-catalog-ink">Une question sur votre programme ?</span>
+                <span className="block text-xs text-catalog-muted">L’équipe locale vous répond 7j/7 sur WhatsApp.</span>
+              </span>
+            </a>
           </>
         )}
       </main>
-
-      <footer className="fixed inset-x-0 bottom-0 z-20 border-t border-violet-200 bg-white/95 px-4 py-3 backdrop-blur-md">
-        <div className="mx-auto flex max-w-lg gap-2">
-          <a
-            href={`https://wa.me/${AGENCY_WHATSAPP}`}
-            className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-sm font-bold text-white"
-          >
-            <MessageCircle className="h-4 w-4" aria-hidden />
-            WhatsApp
-          </a>
-          <Link
-            to="/catalogue"
-            className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-2xl border-2 border-violet-200 text-sm font-bold text-violet-900"
-          >
-            Catalogue
-          </Link>
-        </div>
-      </footer>
-    </div>
+    </PublicAppShell>
   );
 }

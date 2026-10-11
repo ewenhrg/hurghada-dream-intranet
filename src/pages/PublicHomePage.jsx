@@ -1,0 +1,438 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  ArrowRight,
+  CalendarDays,
+  ChevronRight,
+  Cloud,
+  CloudLightning,
+  CloudRain,
+  CloudSun,
+  Headset,
+  Hotel,
+  Phone,
+  Sun,
+} from "lucide-react";
+import { PublicAppShell } from "../components/public/PublicAppShell";
+import { StarRow } from "../components/public/HotelUI";
+import { WhatsAppGlyph } from "../components/public/PublicUI";
+import { gsap, ScrollTrigger, SplitText, startPhotoFlight, useGSAP } from "../components/public/motion";
+import { useHurghadaWeather } from "../hooks/useHurghadaWeather";
+import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
+
+const AGENCY_WHATSAPP_URL = "https://wa.me/201062002850?text=Bonjour%20Hurghada%20Dream%2C%20";
+const HERO_IMAGE = "/client/home-hero-red-sea.jpg";
+const TILE_EXCURSIONS = "/client/home-tile-excursions.jpg";
+const TILE_STAY = "/client/home-tile-stay-calendar.jpg";
+const SLIDE_SECONDS = 2;
+const SLIDE_FADE = 0.7;
+const FULL_MOTION = "(prefers-reduced-motion: no-preference)";
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 5 || h >= 18 ? "Bonsoir" : "Bonjour";
+}
+
+function WeatherIcon({ code, className }) {
+  const c = Number(code);
+  if (c === 0) return <Sun className={className} strokeWidth={1.75} aria-hidden />;
+  if (c === 1 || c === 2) return <CloudSun className={className} strokeWidth={1.75} aria-hidden />;
+  if (c === 3 || c === 45 || c === 48) return <Cloud className={className} strokeWidth={1.75} aria-hidden />;
+  if (c >= 95) return <CloudLightning className={className} strokeWidth={1.75} aria-hidden />;
+  if (c >= 51) return <CloudRain className={className} strokeWidth={1.75} aria-hidden />;
+  return <Sun className={className} strokeWidth={1.75} aria-hidden />;
+}
+
+/** Puce « verre dépoli » posée sur la photo du hero. */
+function GlassChip({ children }) {
+  return (
+    <span
+      data-hero-chip
+      className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white/15 px-3 text-xs font-semibold text-white ring-1 ring-white/25 backdrop-blur-md"
+    >
+      {children}
+    </span>
+  );
+}
+
+export function PublicHomePage() {
+  const navigate = useNavigate();
+  const [hotels, setHotels] = useState([]);
+  const [slideIndex, setSlideIndex] = useState(0);
+  const weather = useHurghadaWeather();
+  const hello = useMemo(() => greeting(), []);
+  const heroRef = useRef(null);
+  const railRef = useRef(null);
+  const railDragRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const result = await loadPublicHotelsCatalog({ publishedOnly: true });
+      if (!cancelled) setHotels(result.hotels || []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hotelsWithPhoto = useMemo(() => hotels.filter((h) => Array.isArray(h.images) && h.images[0]), [hotels]);
+  const hotelPhoto = hotelsWithPhoto[0]?.images[0] || null;
+
+  /** Diaporama du hero : plage, récif, puis les vraies adresses du catalogue. */
+  const slides = useMemo(
+    () => [
+      { src: HERO_IMAGE, caption: "Les plages de la mer Rouge" },
+      { src: TILE_EXCURSIONS, caption: "Récifs coralliens & snorkeling" },
+      ...hotelsWithPhoto.slice(0, 3).map((h) => ({ src: h.images[0], caption: h.name })),
+    ],
+    [hotelsWithPhoto]
+  );
+
+  const actions = [
+    { to: "/catalogue", title: "Excursions", subtitle: "Mer, désert, Louxor", image: TILE_EXCURSIONS },
+    { to: "/hotels", title: "Hôtels", subtitle: "All inclusive, en bord de mer", image: hotelPhoto || HERO_IMAGE },
+  ];
+
+  /* ——— Ouverture « horizon » : fil sable → l’image s’ouvre depuis l’horizon → titre → puces ——— */
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add(FULL_MOTION, () => {
+        const split = SplitText.create("[data-hero-title]", { type: "words", mask: "words", wordsClass: "hdc-w" });
+        const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
+        tl.fromTo("[data-horizon]", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power3.inOut" })
+          .fromTo(
+            "[data-hero-frame]",
+            { clipPath: "inset(46% 0% 54% 0% round 0px 0px 32px 32px)" },
+            { clipPath: "inset(0% 0% 0% 0% round 0px 0px 32px 32px)", duration: 1.4, ease: "expo.inOut" },
+            0.45
+          )
+          .to("[data-horizon]", { autoAlpha: 0, duration: 0.4 }, 0.75)
+          .fromTo("[data-hero-stage]", { scale: 1.35 }, { scale: 1, duration: 2.2 }, 0.45)
+          .fromTo("[data-hero-eyebrow]", { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.8 }, 1.2)
+          .fromTo(split.words, { yPercent: 105 }, { yPercent: 0, duration: 1, stagger: 0.06 }, 1.3)
+          .fromTo("[data-hero-sub]", { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.8 }, 1.6)
+          .fromTo("[data-hero-chip]", { y: 16, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.8, stagger: 0.08 }, 1.75);
+
+        // Scroll : la photo glisse lentement, le texte s’efface avec élégance.
+        gsap.to("[data-hero-stage]", {
+          yPercent: 12,
+          ease: "none",
+          scrollTrigger: { trigger: heroRef.current, start: "top top", end: "bottom top", scrub: 0.6 },
+        });
+        gsap.to("[data-hero-copy]", {
+          y: -40,
+          autoAlpha: 0,
+          ease: "none",
+          scrollTrigger: { trigger: heroRef.current, start: "top top", end: "55% top", scrub: 0.6 },
+        });
+      });
+    },
+    { scope: heroRef }
+  );
+
+  /* ——— Diaporama : fondu lent, sans zoom ni barres façon story ——— */
+  useEffect(() => {
+    if (slides.length < 2) return undefined;
+    const id = window.setInterval(() => setSlideIndex((i) => (i + 1) % slides.length), SLIDE_SECONDS * 1000);
+    return () => window.clearInterval(id);
+  }, [slides.length, slideIndex]);
+
+  useGSAP(
+    () => {
+      const root = heroRef.current;
+      if (!root) return;
+      const all = root.querySelectorAll("[data-slide]");
+      const current = root.querySelector(`[data-slide="${slideIndex}"]`);
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      all.forEach((el) => {
+        if (el !== current) gsap.to(el, { autoAlpha: 0, duration: reduce ? 0 : SLIDE_FADE, ease: "power1.inOut" });
+      });
+      if (current) {
+        gsap.set(current, { zIndex: 2 });
+        gsap.to(current, { autoAlpha: 1, duration: reduce ? 0 : SLIDE_FADE, ease: "power1.inOut" });
+      }
+    },
+    { dependencies: [slideIndex, slides.length], scope: heroRef }
+  );
+
+  /* ——— Carrousel « Nos adresses » : parallaxe horizontale dans chaque photo ——— */
+  useGSAP(
+    () => {
+      const rail = railRef.current;
+      if (!rail || !hotelsWithPhoto.length) return undefined;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+      const cards = Array.from(rail.querySelectorAll("[data-rail-card]"));
+      const setters = cards.map((c) => gsap.quickSetter(c.querySelector("img"), "xPercent"));
+      const update = () => {
+        const mid = rail.scrollLeft + rail.clientWidth / 2;
+        cards.forEach((card, i) => {
+          const center = card.offsetLeft + card.offsetWidth / 2;
+          setters[i](gsap.utils.clamp(-12, 12, ((center - mid) / rail.clientWidth) * -14));
+        });
+      };
+      cards.forEach((c) => gsap.set(c.querySelector("img"), { scale: 1.25 }));
+      update();
+      rail.addEventListener("scroll", update, { passive: true });
+      gsap.fromTo(
+        cards,
+        { x: 60, autoAlpha: 0 },
+        {
+          x: 0,
+          autoAlpha: 1,
+          duration: 0.9,
+          ease: "expo.out",
+          stagger: 0.07,
+          scrollTrigger: { trigger: rail, start: "top 90%", once: true },
+        }
+      );
+      ScrollTrigger.refresh();
+      return () => rail.removeEventListener("scroll", update);
+    },
+    { dependencies: [hotelsWithPhoto.length], scope: railRef }
+  );
+
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return undefined;
+    let startX = 0;
+    let startY = 0;
+    let startScroll = 0;
+    let axis = null;
+    const onStart = (event) => {
+      if (event.touches.length !== 1) return;
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+      startScroll = rail.scrollLeft;
+      axis = null;
+      railDragRef.current = false;
+    };
+    const onMove = (event) => {
+      if (event.touches.length !== 1) return;
+      const dx = event.touches[0].clientX - startX;
+      const dy = event.touches[0].clientY - startY;
+      if (!axis) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      }
+      if (axis !== "x") return;
+      rail.scrollLeft = startScroll - dx;
+      if (Math.abs(dx) > 10) railDragRef.current = true;
+    };
+    const onClickCapture = (event) => {
+      if (!railDragRef.current) return;
+      event.preventDefault();
+      event.stopPropagation();
+      railDragRef.current = false;
+    };
+    rail.addEventListener("touchstart", onStart, { passive: true });
+    rail.addEventListener("touchmove", onMove, { passive: true });
+    rail.addEventListener("click", onClickCapture, true);
+    return () => {
+      rail.removeEventListener("touchstart", onStart);
+      rail.removeEventListener("touchmove", onMove);
+      rail.removeEventListener("click", onClickCapture, true);
+    };
+  }, [hotelsWithPhoto.length]);
+
+  const openHotel = (event, hotel) => {
+    if (railDragRef.current) return;
+    startPhotoFlight(event.currentTarget.querySelector("img"));
+    navigate(`/hotels/${encodeURIComponent(hotel.slug || hotel.id)}`);
+  };
+
+  return (
+    <PublicAppShell title="Accueil">
+      {/* ——— Hero « horizon » ——— */}
+      <section ref={heroRef} className="relative">
+        <div
+          data-hero-frame
+          className="relative h-[clamp(520px,76svh,720px)] overflow-hidden rounded-b-[2rem] bg-catalog-raised"
+        >
+          <div data-hero-stage className="absolute inset-0">
+            {slides.map((slide, i) => (
+              <div key={`${i}-${slide.src}`} data-slide={i} className="absolute inset-0" style={{ opacity: i === 0 ? 1 : 0 }}>
+                <img src={slide.src} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              </div>
+            ))}
+          </div>
+          <div aria-hidden className="absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(10,42,51,0.32)_0%,rgba(10,42,51,0)_30%,rgba(11,79,92,0.18)_55%,rgba(8,36,46,0.88)_100%)]" />
+
+
+          <div data-hero-copy className="absolute inset-x-5 bottom-7 z-[4]">
+            <p data-hero-eyebrow className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-white/85">
+              <span className="h-px w-6 bg-catalog-sand" />
+              Hurghada · Mer Rouge
+            </p>
+            <h1 data-hero-title className="mt-3 font-catalog-display text-[2.25rem] leading-[1.05] !text-white">
+              {hello}, <span className="hdc-serif text-catalog-sand">bienvenue</span> en mer Rouge.
+            </h1>
+            <p data-hero-sub className="mt-3 max-w-xs text-[0.9375rem] leading-relaxed text-white/85">
+              Hôtels d’exception, excursions privées et votre séjour orchestré par la référence locale.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {weather ? (
+                <GlassChip>
+                  <WeatherIcon code={weather.code} className="h-4 w-4" />
+                  <span className="tabular-nums">{weather.celsius}°</span>
+                  <span className="font-medium text-white/80">{weather.label}</span>
+                </GlassChip>
+              ) : null}
+              {hotels.length ? (
+                <GlassChip>
+                  <Hotel className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                  {hotels.length} hôtels sélectionnés
+                </GlassChip>
+              ) : null}
+              <GlassChip>
+                <Headset className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                Équipe locale 7j/7
+              </GlassChip>
+            </div>
+            <div className="mt-5 flex items-center gap-3">
+              {slides.length > 1 ? (
+                <div className="flex items-center gap-1.5" role="tablist" aria-label="Photos">
+                  {slides.map((slide, i) => (
+                    <button
+                      key={`${i}-${slide.src}`}
+                      type="button"
+                      role="tab"
+                      aria-label={slide.caption}
+                      aria-selected={i === slideIndex}
+                      onClick={() => setSlideIndex(i)}
+                      className={`hdc-slide-dot rounded-full transition-[width,background-color] duration-500 ${
+                        i === slideIndex ? "w-5 bg-white" : "w-1.5 bg-white/45"
+                      }`}
+                    />
+                  ))}
+                </div>
+              ) : null}
+              <p data-hero-caption className="min-w-0 truncate text-[0.6875rem] font-medium tracking-wide text-white/75">
+                {slides[slideIndex]?.caption}
+              </p>
+            </div>
+          </div>
+        </div>
+        {/* Fil d’horizon qui se trace avant l’ouverture de l’image. */}
+        <span
+          data-horizon
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-[46%] z-[5] h-px origin-center bg-catalog-sand"
+          style={{ transform: "scaleX(0)" }}
+        />
+      </section>
+
+      <main className="mx-auto w-full max-w-lg pb-12">
+        {/* ——— Les deux univers ——— */}
+        <section className="px-4 pt-8">
+          <p data-reveal="item" className="hdc-eyebrow">Réserver</p>
+          <h2 data-reveal="item" className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink">
+            Que souhaitez-vous <span className="hdc-serif">vivre</span>&nbsp;?
+          </h2>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {actions.map((action) => (
+              <Link
+                key={action.to}
+                to={action.to}
+                data-reveal="card"
+                data-press
+                className="group relative flex h-56 flex-col items-start justify-end overflow-hidden rounded-[1.25rem] bg-catalog-raised p-4 text-left"
+              >
+                <div data-card-media className="absolute inset-0">
+                  <img src={action.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                </div>
+                <div aria-hidden className="absolute inset-0 bg-catalog-photo-fade" />
+                <span className="relative block font-catalog-display text-[1.375rem] leading-none text-white">{action.title}</span>
+                <span className="relative mt-1 block text-xs leading-snug text-white/80">{action.subtitle}</span>
+                <span className="relative mt-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-catalog-ink">
+                  <ArrowRight className="h-4 w-4" aria-hidden />
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <Link
+            to="/sejour"
+            data-reveal="card"
+            data-press
+            className="relative mt-3 flex min-h-[6rem] items-center justify-start gap-4 overflow-hidden rounded-[1.25rem] bg-catalog-raised p-4 text-left"
+          >
+            <div data-card-media className="absolute inset-0">
+              <img src={TILE_STAY} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+            </div>
+            <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgba(11,79,92,0.92)_0%,rgba(14,124,134,0.45)_100%)]" />
+            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-md">
+              <CalendarDays className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+            </span>
+            <span className="relative min-w-0 flex-1">
+              <span className="block font-catalog-display text-[1.375rem] leading-tight text-white">Mon séjour</span>
+              <span className="mt-0.5 block text-sm text-white/80">Programme et heures de prise en charge</span>
+            </span>
+            <ChevronRight className="relative h-5 w-5 shrink-0 text-white/80" aria-hidden />
+          </Link>
+        </section>
+
+        {/* ——— Nos adresses ——— */}
+        {hotelsWithPhoto.length ? (
+          <section className="pt-10">
+            <div data-reveal="item" className="flex items-end justify-between gap-3 px-4">
+              <div>
+                <p className="hdc-eyebrow">Nos adresses</p>
+                <h2 className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink">
+                  Les hôtels <span className="hdc-serif">de la sélection</span>
+                </h2>
+              </div>
+              <Link to="/hotels" data-press className="inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-catalog-lagoon">
+                Tout voir
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </div>
+            <div ref={railRef} className="hdc-hotel-rail mt-4 flex snap-x snap-proximity gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+              {hotelsWithPhoto.slice(0, 8).map((hotel) => (
+                <button
+                  key={hotel.dbId || hotel.slug || hotel.id}
+                  type="button"
+                  data-rail-card
+                  data-press
+                  onClick={(e) => openHotel(e, hotel)}
+                  className="relative h-72 w-[72%] shrink-0 snap-center overflow-hidden rounded-[1.25rem] bg-catalog-raised p-0 text-left"
+                  aria-label={`Découvrir ${hotel.name}`}
+                >
+                  <img src={hotel.images[0]} alt="" loading="lazy" decoding="async" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+                  <div aria-hidden className="absolute inset-0 bg-catalog-photo-fade" />
+                  <span className="absolute inset-x-4 bottom-4">
+                    <StarRow count={hotel.stars} />
+                    <span className="mt-1.5 block font-catalog-display text-[1.375rem] leading-tight text-white">{hotel.name}</span>
+                    {hotel.location ? <span className="mt-0.5 block text-xs text-white/80">{hotel.location}</span> : null}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* ——— Conciergerie ——— */}
+        <section data-reveal="item" className="relative mx-4 mt-10 overflow-hidden rounded-[1.25rem] bg-catalog-abyss p-6 text-white shadow-catalog-float">
+          <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(227,174,85,0.45)_0%,rgba(227,174,85,0)_70%)]" />
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-catalog-sand">Conciergerie</p>
+          <p className="mt-2 font-catalog-display text-[1.5rem] leading-snug !text-white">
+            Une équipe locale vous répond, <span className="hdc-serif text-catalog-sand">7 jours sur 7.</span>
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-white/75">Une question, un transfert, une envie de dernière minute : écrivez-nous.</p>
+          <a href={AGENCY_WHATSAPP_URL} target="_blank" rel="noopener noreferrer" data-press className="hdc-btn hdc-btn-ghost relative mt-5 w-full">
+            <WhatsAppGlyph className="h-5 w-5 text-[#1F8F55]" />
+            Écrire sur WhatsApp
+          </a>
+        </section>
+
+        <div className="px-4 pt-3">
+          <Link to="/contacts" data-press className="hdc-btn hdc-btn-ink w-full">
+            <Phone className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+            Nos contacts
+          </Link>
+        </div>
+      </main>
+    </PublicAppShell>
+  );
+}

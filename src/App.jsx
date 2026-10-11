@@ -32,16 +32,8 @@ import {
   StopSalePage,
   DocumentsPage,
   InternsPage,
-  RequestPage,
-  PublicTarifsPage,
-  PublicClientDevisPage,
-  PublicStayPage,
-  PublicCatalogueActivityPage,
   EwenDashboardPage,
   PublicDevisPage,
-  PublicHotelRequestPage,
-  PublicHotelsCataloguePage,
-  PublicHotelDetailPage,
   PublicHotelsAdminPage,
   HotelHistoryPage,
   HotelTarifsPage,
@@ -64,34 +56,13 @@ import {
 } from "./utils/activitiesBackup";
 import { normalizeCatalogImageUrlsFromDb } from "./utils/catalogContent";
 import { HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, buildQuoteDraftFromExistingQuote } from "./utils/publicQuoteToDraft";
+import { isPublicClientPath } from "./config/clientApp";
+import { PublicClientRoutes } from "./PublicClientRoutes";
 import {
   startPresenceSession,
   touchPresenceSession,
   endPresenceSession,
 } from "./utils/presenceSessions";
-
-/**
- * Routes visiteur (catalogue, fiches hôtel, demande de devis, tarifs).
- * Elles chargent leurs propres données : aucune synchro intranet ne doit y tourner.
- */
-function isPublicClientPath(path) {
-  const p = path || "";
-  return (
-    p === "/tarifs" ||
-    p === "/tarifs/" ||
-    p === "/catalogue" ||
-    p.startsWith("/catalogue/") ||
-    p === "/hotels" ||
-    p.startsWith("/hotels/") ||
-    p === "/demande-hotel" ||
-    p.startsWith("/demande-hotel/") ||
-    p === "/sejour" ||
-    p.startsWith("/sejour/") ||
-    p === "/mon-sejour" ||
-    p.startsWith("/mon-sejour/") ||
-    p.startsWith("/request")
-  );
-}
 
 export default function App() {
   const location = useLocation();
@@ -1186,99 +1157,8 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [ok, isPublicClientRoute]);
 
-  if (
-    location.pathname === "/sejour" ||
-    location.pathname === "/sejour/" ||
-    location.pathname === "/mon-sejour" ||
-    location.pathname === "/mon-sejour/"
-  ) {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoader />}>
-          <PublicStayPage />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  // Page tarifs publique (sans compte)
-  if (location.pathname === "/tarifs" || location.pathname === "/tarifs/") {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoader />}>
-          <PublicTarifsPage />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  // Fiche activité publique (clic depuis le catalogue) — avant la liste /catalogue
-  const catalogueActivityMatch = location.pathname.match(/^\/catalogue\/activity\/([^/]+)\/?$/);
-  if (catalogueActivityMatch) {
-    const catalogueActivityId = decodeURIComponent(catalogueActivityMatch[1]);
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoader />}>
-          <PublicCatalogueActivityPage activityId={catalogueActivityId} />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  // Page publique catalogue + panier + demande de devis
-  if (location.pathname === "/catalogue" || location.pathname === "/catalogue/") {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoader />}>
-          <PublicClientDevisPage />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  // Fiche hôtel publique (style Booking) — avant la liste /hotels
-  const hotelDetailMatch = location.pathname.match(/^\/hotels\/([^/]+)\/?$/);
-  if (hotelDetailMatch) {
-    const hotelDetailId = decodeURIComponent(hotelDetailMatch[1]);
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoader />}>
-          <PublicHotelDetailPage hotelId={hotelDetailId} />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  // Catalogue hôtels public (liste des hôtels, sans prix)
-  if (location.pathname === "/hotels" || location.pathname === "/hotels/") {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoader />}>
-          <PublicHotelsCataloguePage />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  if (location.pathname === "/demande-hotel" || location.pathname === "/demande-hotel/") {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoader />}>
-          <PublicHotelRequestPage />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  // Si on est sur la route publique /request (avec ou sans token), afficher RequestPage sans authentification
-  if (location.pathname.startsWith("/request")) {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoader />}>
-          <RequestPage />
-        </Suspense>
-      </ErrorBoundary>
-    );
+  if (isPublicClientRoute) {
+    return <PublicClientRoutes />;
   }
 
   if (!ok) {

@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { PublicAppShell } from "../components/public/PublicAppShell";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -25,23 +27,22 @@ const EMPTY_FORM = {
   notes: "",
 };
 
-const inputClass =
-  "mt-1.5 w-full rounded-xl border-2 border-indigo-200/80 bg-white px-3.5 py-2.5 text-[15px] text-indigo-950 shadow-sm placeholder:text-indigo-300 transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-400/40 disabled:cursor-not-allowed disabled:border-indigo-100 disabled:bg-indigo-50/50 disabled:text-indigo-400";
+const inputClass = "hdc-input mt-1.5 disabled:cursor-not-allowed disabled:opacity-50";
 
 function FormSection({ step, title, description, children }) {
   return (
-    <section className="rounded-2xl border-2 border-white/40 bg-white/95 p-5 shadow-xl shadow-indigo-950/20 ring-1 ring-indigo-200/60 backdrop-blur-sm sm:p-6">
+    <section data-reveal="item" className="hdc-card p-5 sm:p-6">
       <div className="mb-5 flex gap-4">
         <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 via-violet-600 to-orange-500 text-sm font-bold text-white shadow-lg shadow-violet-600/40"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-catalog-raised font-catalog-display text-base text-catalog-sand"
           aria-hidden
         >
           {step}
         </span>
         <div className="min-w-0 pt-0.5">
-          <h2 className="text-base font-bold tracking-tight text-indigo-950">{title}</h2>
+          <h2 className="font-catalog-display text-[1.375rem] font-medium leading-tight text-catalog-ink">{title}</h2>
           {description ? (
-            <p className="mt-1 text-sm leading-relaxed text-violet-800/85">{description}</p>
+            <p className="mt-1 text-sm leading-relaxed text-catalog-muted">{description}</p>
           ) : null}
         </div>
       </div>
@@ -52,9 +53,9 @@ function FormSection({ step, title, description, children }) {
 
 function FieldLabel({ children, required, htmlFor }) {
   return (
-    <label htmlFor={htmlFor} className="block text-sm font-semibold text-indigo-900">
+    <label htmlFor={htmlFor} className="block text-sm font-bold text-catalog-ink">
       {children}
-      {required ? <span className="ml-0.5 text-orange-500">*</span> : null}
+      {required ? <span className="ml-0.5 text-catalog-coral">*</span> : null}
     </label>
   );
 }
@@ -212,46 +213,40 @@ export function PublicHotelRequestPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-violet-900 to-indigo-900 px-4 py-16">
-        <div className="mx-auto max-w-md rounded-3xl border border-white/20 bg-white/10 p-8 text-center shadow-2xl backdrop-blur-md">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-3xl text-white shadow-lg">
-            ✓
+      <PublicAppShell title="Demande hôtel" revealKey="sent">
+        <div data-reveal="item" className="mx-auto max-w-md px-4 py-14 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-catalog-lagoonSoft text-catalog-lagoon">
+            <CheckCircle2 className="h-8 w-8" aria-hidden />
           </div>
-          <h1 className="mt-6 text-2xl font-bold text-white">Demande envoyée</h1>
-          <p className="mt-3 text-sm leading-relaxed text-violet-100">
+          <h1 className="mt-6 font-catalog-display text-[1.75rem] text-catalog-ink">Demande envoyée</h1>
+          <p className="mt-3 text-sm leading-relaxed text-catalog-muted">
             Merci ! L&apos;équipe Hurghada Dream a bien reçu votre demande d&apos;hébergement et vous
             recontactera rapidement.
           </p>
           <button
             type="button"
-            className="mt-8 rounded-xl bg-white px-6 py-3 text-sm font-bold text-indigo-900 shadow-lg transition hover:bg-violet-50"
+            data-press
+            className="hdc-btn hdc-btn-ink mt-8"
             onClick={() => setSubmitted(false)}
           >
             Nouvelle demande
           </button>
         </div>
-      </div>
+      </PublicAppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-violet-900 to-indigo-900">
-      <header className="border-b border-white/10 bg-gradient-to-r from-indigo-900/90 via-violet-800/90 to-indigo-900/90 px-4 py-8 text-center shadow-lg">
-        <p className="text-[11px] font-extrabold uppercase tracking-[0.28em] text-violet-200">
-          Hurghada Dream
-        </p>
-        <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
-          Demande d&apos;hébergement
+    <PublicAppShell title="Demande hôtel" wide revealKey="form">
+      <div className="mx-auto max-w-3xl px-4 pb-14 pt-7 sm:pt-12">
+        <p data-reveal="item" className="hdc-eyebrow">Hébergement sur mesure</p>
+        <h1 data-split className="mt-2 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink">
+          Trouvons votre hôtel
+          <span className="hdc-serif text-catalog-lagoon"> à Hurghada.</span>
         </h1>
-        <p className="mx-auto mt-3 max-w-lg text-sm font-medium text-violet-100/95">
-          Trouvez l&apos;hôtel idéal pour votre séjour à Hurghada.
-        </p>
-      </header>
-
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:py-10">
-        <p className="mb-8 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm leading-relaxed text-violet-50 backdrop-blur-sm">
-          Complétez ce formulaire en quelques minutes. Les champs marqués d&apos;un{" "}
-          <span className="font-bold text-orange-300">*</span> sont obligatoires.
+        <p data-reveal="item" className="mb-7 mt-4 text-sm leading-relaxed text-catalog-muted">
+          Trouvez l&apos;hôtel idéal pour votre séjour à Hurghada. Les champs marqués d&apos;un{" "}
+          <span className="font-semibold text-catalog-coral">*</span> sont obligatoires.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -407,7 +402,7 @@ export function PublicHotelRequestPage() {
             title="Hôtels & budget"
             description="Jusqu'à trois hôtels qui vous intéressent, ou demandez une proposition sur mesure."
           >
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-amber-300/90 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3.5 shadow-sm transition hover:border-amber-400 hover:shadow-md">
+            <label className="flex min-h-[3.5rem] cursor-pointer items-center gap-3 rounded-2xl bg-catalog-brassSoft px-4 py-3.5 transition-colors">
               <input
                 type="checkbox"
                 checked={form.wantsCustomOffer}
@@ -421,9 +416,9 @@ export function PublicHotelRequestPage() {
                       : {}),
                   }));
                 }}
-                className="mt-1 h-4 w-4 shrink-0 rounded border-amber-400 text-indigo-600 focus:ring-indigo-500"
+                className="h-5 w-5 shrink-0 rounded accent-catalog-coral"
               />
-              <span className="text-sm font-semibold leading-snug text-amber-950">
+              <span className="text-sm font-bold leading-snug text-catalog-ink">
                 Je n&apos;ai pas de choix d&apos;hôtel — faites-moi une offre
               </span>
             </label>
@@ -448,7 +443,7 @@ export function PublicHotelRequestPage() {
               ))}
             </div>
 
-            <div className="mt-5 border-t border-indigo-100 pt-5">
+            <div className="mt-5 border-t border-catalog-line pt-5">
               <FieldLabel htmlFor="hd-budget" required>
                 Budget maximum
               </FieldLabel>
@@ -462,7 +457,7 @@ export function PublicHotelRequestPage() {
                 className={inputClass}
                 aria-required="true"
               />
-              <p className="mt-3 rounded-xl border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-900">
+              <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-catalog-lagoonSoft px-3.5 py-2 text-sm font-bold text-catalog-lagoon">
                 Formule : All inclusive
               </p>
             </div>
@@ -482,16 +477,18 @@ export function PublicHotelRequestPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-orange-500 py-4 text-base font-bold text-white shadow-xl shadow-violet-900/40 transition hover:from-indigo-700 hover:via-violet-700 hover:to-orange-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+            data-press
+            className="hdc-btn hdc-btn-primary w-full min-h-[3.5rem] text-base"
           >
             {submitting ? "Envoi en cours…" : "Envoyer ma demande"}
+            {!submitting ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}
           </button>
 
-          <p className="pb-6 text-center text-xs font-medium text-violet-200/90">
+          <p className="pb-6 text-center text-xs font-medium text-catalog-muted">
             Vos informations sont transmises de façon sécurisée à Hurghada Dream.
           </p>
         </form>
       </div>
-    </div>
+    </PublicAppShell>
   );
 }

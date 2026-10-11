@@ -1,22 +1,11 @@
+import { isPublicClientPath as isPublicClientRoute } from "../config/clientApp";
+
 // Gestionnaire global des notifications toast
 let toastContainer = null;
 
 /** Routes visibles par les clients (hors intranet). */
 function isPublicClientPath(pathname = typeof window !== "undefined" ? window.location.pathname : "") {
-  const p = String(pathname || "");
-  return (
-    p === "/catalogue" ||
-    p.startsWith("/catalogue/") ||
-    p === "/hotels" ||
-    p.startsWith("/hotels/") ||
-    p === "/demande-hotel" ||
-    p.startsWith("/demande-hotel/") ||
-    p === "/sejour" ||
-    p.startsWith("/sejour/") ||
-    p === "/mon-sejour" ||
-    p.startsWith("/mon-sejour/") ||
-    p.startsWith("/request")
-  );
+  return isPublicClientRoute(String(pathname || ""));
 }
 
 function isCataloguePath(pathname = typeof window !== "undefined" ? window.location.pathname : "") {

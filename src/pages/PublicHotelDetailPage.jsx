@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  ExternalLink,
-  MapPin,
-  MessageCircle,
-  ShoppingBag,
-} from "lucide-react";
-import { HOTEL_DEFAULT_COVER, getHotelMapEmbedUrl, getHotelMapsOpenUrl } from "../data/publicHotels";
+import { ArrowLeft, Check, Expand, ExternalLink, MapPin, Plus, ShieldCheck, ShoppingBag } from "lucide-react";
+import { getHotelMapEmbedUrl, getHotelMapsOpenUrl } from "../data/publicHotels";
+import { GuestHeaderButton, PublicAppShell } from "../components/public/PublicAppShell";
 import { HotelAgePolicyBadge, HotelCover, StarRow } from "../components/public/HotelUI";
+import { HdLoader } from "../components/public/GuestPageLoader";
+import { StateCard, WhatsAppGlyph } from "../components/public/PublicUI";
 import { CatalogPhotoLightbox } from "../components/public/CatalogPhotoLightbox";
 import { HotelsDevisCart } from "../components/public/HotelsDevisCart";
 import { AMENITY_META, WHATSAPP_BASE } from "../components/public/hotelAmenities";
@@ -80,222 +75,158 @@ export function PublicHotelDetailPage({ hotelId }) {
 
   if (loading) {
     return (
-      <div className="hd-public-catalog flex min-h-screen flex-col items-center justify-center bg-catalog-bg font-catalog-sans text-catalog-body">
-        <div className="h-12 w-12 animate-spin rounded-full border-[3px] border-violet-200 border-t-violet-800" aria-hidden />
-        <p className="mt-5 font-catalog-display text-base font-semibold text-catalog-ink">
-          Chargement de l’hôtel…
-        </p>
-      </div>
+      <PublicAppShell title="Hôtel" wide revealKey="loading">
+        <HdLoader label="Chargement de l’hôtel…" className="py-28" />
+      </PublicAppShell>
     );
   }
 
   if (!hotel) {
     return (
-      <div className="hd-public-catalog min-h-screen bg-catalog-bg px-4 py-20 text-center font-catalog-sans text-catalog-body">
-        <p className="font-catalog-display text-lg font-semibold text-catalog-ink">
-          Cet hôtel n’existe pas ou n’est plus disponible.
-        </p>
-        <Link
-          to="/hotels"
-          className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-950/30 transition hover:brightness-110"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Retour aux hôtels
-        </Link>
-      </div>
+      <PublicAppShell title="Hôtel" wide revealKey="missing">
+        <div className="mx-auto max-w-lg px-4 py-10">
+          <StateCard
+            tone="error"
+            title="Cet hôtel n’est plus disponible"
+            action={
+              <Link to="/hotels" data-press className="hdc-btn hdc-btn-ink">
+                <ArrowLeft className="h-4 w-4" aria-hidden /> Tous les hôtels
+              </Link>
+            }
+          >
+            Il a peut-être été retiré du catalogue. Découvrez nos autres adresses.
+          </StateCard>
+        </div>
+      </PublicAppShell>
     );
   }
 
-  const fallbackCover = HOTEL_DEFAULT_COVER;
-
-  const BookingCard = (
-    <div className="rounded-2xl border border-violet-900/10 bg-white p-6 shadow-soft shadow-violet-950/10">
+    const BookingCard = (
+    <div className="hdc-card p-5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-catalog-label">Votre séjour</p>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200">
-          All inclusive
-        </span>
+        <p className="hdc-eyebrow">Votre séjour</p>
+        <span className="rounded-full bg-catalog-lagoonSoft px-2.5 py-1 text-[0.6875rem] font-semibold text-catalog-lagoon">All inclusive</span>
       </div>
-      <p className="mt-2 font-catalog-display text-2xl font-semibold tracking-tight text-catalog-ink">
-        Tarif sur demande
+      <p className="mt-3 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink">
+        Tarif <span className="hdc-serif">sur demande</span>
       </p>
-      <p className="mt-1 text-sm leading-relaxed text-catalog-muted">
-        Ajoutez l’hôtel au panier avec vos dates et voyageurs, puis finalisez pour recevoir votre devis.
+      <p className="mt-1.5 text-sm leading-relaxed text-catalog-muted">
+        Ajoutez l’hôtel avec vos dates et voyageurs, puis finalisez pour recevoir votre devis.
       </p>
-
-      <div className="mt-5 space-y-2.5">
-        <button
-          type="button"
-          onClick={requestDevis}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 py-3.5 text-sm font-bold text-white shadow-md shadow-violet-900/25 transition hover:from-violet-900 hover:to-orange-500"
-        >
+      <div className="mt-5 space-y-2">
+        <button type="button" data-press onClick={requestDevis} className="hdc-btn hdc-btn-primary w-full">
+          <Plus className="h-4 w-4" aria-hidden />
           Ajouter au panier
-          <ArrowRight className="h-4 w-4" aria-hidden />
         </button>
         <a
           href={`${WHATSAPP_BASE}${encodeURIComponent(hotel.name)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-500 bg-white px-4 py-3.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50"
+          data-press
+          className="hdc-btn hdc-btn-ghost w-full"
         >
-          <MessageCircle className="h-4 w-4" aria-hidden />
+          <WhatsAppGlyph className="h-5 w-5 text-[#1F8F55]" />
           Écrire sur WhatsApp
         </a>
       </div>
-
-      <div className="mt-5 flex items-center gap-2 rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-3.5 py-3 text-xs font-semibold text-emerald-800">
-        <Check className="h-4 w-4 shrink-0" aria-hidden />
+      <p className="mt-4 flex items-center gap-2 text-xs text-catalog-muted">
+        <ShieldCheck className="h-4 w-4 shrink-0 text-catalog-lagoon" aria-hidden />
         Réponse rapide par une équipe locale, 7j/7.
-      </div>
+      </p>
     </div>
   );
 
   return (
-    <div className="hd-public-catalog relative isolate flex min-h-screen flex-col bg-catalog-bg font-catalog-sans text-catalog-body antialiased selection:bg-violet-200/55 selection:text-catalog-ink">
-      <div aria-hidden className="pointer-events-none absolute inset-0 z-0 bg-catalog-bg" />
-      <div aria-hidden className="pointer-events-none absolute inset-0 z-0 bg-catalog-mesh opacity-[0.42]" />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 bg-catalog-grid opacity-[0.16] [background-size:48px_48px]"
-      />
-
-      {/* Header */}
-      <header className="sticky top-0 z-[100] border-b border-violet-500/25 bg-catalog-night text-white shadow-[0_16px_48px_-12px_rgba(15,8,32,0.65)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link
-              to="/hotels"
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-violet-200/95 transition hover:bg-white/10 hover:text-white"
+    <PublicAppShell
+      title={hotel.name}
+      wide
+      revealKey={hotel.slug || hotel.id}
+      right={
+        <GuestHeaderButton onClick={() => setOpenDrawerSignal((n) => n + 1)} count={cartCount} ariaLabel="Panier">
+          <ShoppingBag className="h-4 w-4" aria-hidden />
+        </GuestHeaderButton>
+      }
+    >
+      <main className="relative z-10 pb-16">
+        {/* Photo principale (cible du vol photo depuis la liste) */}
+        <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div data-hero-media className="relative h-[clamp(340px,52vh,520px)] overflow-hidden rounded-[1.25rem] bg-catalog-mist">
+            <button
+              type="button"
+              onClick={() => openLightbox(0)}
+              disabled={!hasImages}
+              className="absolute inset-0 block h-full w-full"
+              aria-label="Agrandir la photo principale"
             >
-              <ArrowLeft className="h-4 w-4" aria-hidden /> Hôtels
-            </Link>
-            <div className="hidden h-8 w-px bg-white/15 sm:block" aria-hidden />
-            <div className="hidden min-w-0 items-center gap-2.5 sm:flex">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-orange-600 p-1.5 shadow-lg ring-2 ring-orange-300/45 ring-offset-2 ring-offset-catalog-night">
-                <img src="/logo.png" alt="" className="h-full w-full object-contain drop-shadow" />
+              <div data-hero-img className="absolute inset-0">
+                {hasImages ? (
+                  <img data-kenburns src={images[0]} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                ) : (
+                  <HotelCover hotel={hotel} iconClassName="h-16 w-16" />
+                )}
               </div>
-              <span className="truncate font-catalog-display text-sm font-semibold text-white">
-                Hurghada Dream
+            </button>
+            {hasImages ? (
+              <span className="pointer-events-none absolute bottom-4 right-4 inline-flex min-h-8 items-center gap-1.5 rounded-full bg-white/90 px-3 text-xs font-semibold text-catalog-ink">
+                <Expand className="h-3.5 w-3.5" aria-hidden />
+                {images.length} photo{images.length > 1 ? "s" : ""}
               </span>
-            </div>
+            ) : null}
           </div>
-          <button
-            type="button"
-            onClick={() => setOpenDrawerSignal((n) => n + 1)}
-            className="inline-flex min-h-[40px] items-center gap-2 rounded-full bg-white/10 px-3.5 py-2 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/15"
-          >
-            <ShoppingBag className="h-4 w-4" aria-hidden />
-            {cartCount > 0 ? (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-400 px-1 text-[11px] font-extrabold text-slate-950">
-                {cartCount}
-              </span>
-            ) : (
-              <span className="text-xs font-semibold text-violet-100">Panier</span>
-            )}
-          </button>
-        </div>
-      </header>
 
-      <main className="relative z-10 flex-grow">
-        {/* Galerie */}
-        <section className="mx-auto max-w-6xl px-4 pt-5 sm:px-6 lg:px-8">
-          <nav className="mb-4 hidden sm:block">
-            <ol className="flex items-center gap-1.5 text-xs font-semibold text-catalog-muted">
-              <li>
-                <Link to="/hotels" className="text-catalog-label transition-colors hover:text-violet-900">
-                  Hôtels
-                </Link>
-              </li>
-              <li aria-hidden>/</li>
-              <li>
-                <span className="text-catalog-body">{hotel.name}</span>
-              </li>
-            </ol>
-          </nav>
-
-          {hasImages ? (
-            <div className="grid gap-2 overflow-hidden rounded-3xl sm:grid-cols-[2fr_1fr] sm:gap-2">
-              <button
-                type="button"
-                onClick={() => openLightbox(0)}
-                className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 sm:aspect-[16/11]"
-                aria-label="Agrandir la photo principale"
-              >
-                <img src={images[0]} alt="" className="h-full w-full object-cover transition hover:opacity-95" />
-              </button>
-              <div className="hidden grid-rows-2 gap-2 sm:grid">
-                {[1, 2].map((idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => openLightbox(idx)}
-                    className="relative overflow-hidden bg-slate-100"
-                    aria-label={`Agrandir la photo ${idx + 1}`}
-                  >
-                    {images[idx] ? (
-                      <img src={images[idx]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition hover:opacity-95" />
-                    ) : (
-                      <div className="h-full w-full" style={{ background: fallbackCover }} />
-                    )}
-                    {idx === 2 && images.length > 3 ? (
-                      <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-bold text-white">
-                        +{images.length - 3} photos
-                      </span>
-                    ) : null}
-                  </button>
-                ))}
-              </div>
+          {hasImages && images.length > 1 ? (
+            <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {images.slice(1, 8).map((src, i) => (
+                <button
+                  key={src}
+                  type="button"
+                  data-press
+                  onClick={() => openLightbox(i + 1)}
+                  className="h-16 w-20 shrink-0 overflow-hidden rounded-xl p-0"
+                  aria-label={`Agrandir la photo ${i + 2}`}
+                >
+                  <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                </button>
+              ))}
             </div>
-          ) : (
-            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-3xl bg-slate-100 sm:aspect-[16/7]">
-              <HotelCover hotel={hotel} iconClassName="h-24 w-24" />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/50 to-transparent" />
-              <span className="absolute bottom-4 left-4 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
-                Photos bientôt disponibles
-              </span>
-            </div>
-          )}
+          ) : null}
         </section>
 
-        {/* Titre + contenu */}
-        <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <section className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-3 lg:items-start">
-            <div className="space-y-8 lg:col-span-2">
+            <div className="space-y-10 lg:col-span-2">
               <div>
-                <div className="mb-2 flex flex-wrap items-center gap-3">
-                  <StarRow count={hotel.stars} />
-                </div>
-                <h1 className="font-catalog-display text-3xl font-semibold tracking-tight text-catalog-ink sm:text-4xl">
+                <StarRow count={hotel.stars} />
+                <h1 data-split className="mt-2 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink">
                   {hotel.name}
                 </h1>
-                <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-catalog-muted">
-                  <MapPin className="h-4 w-4 text-violet-600" aria-hidden />
-                  {hotel.location}
-                </p>
-                <HotelAgePolicyBadge hotel={hotel} className="mt-3 max-w-md" />
+                {hotel.location ? (
+                  <p data-reveal="item" className="mt-2 flex items-center gap-1.5 text-sm text-catalog-muted">
+                    <MapPin className="h-4 w-4 text-catalog-lagoon" aria-hidden />
+                    {hotel.location}
+                  </p>
+                ) : null}
+                <div data-reveal="item">
+                  <HotelAgePolicyBadge hotel={hotel} className="mt-3 max-w-md" />
+                </div>
               </div>
 
-              {/* Encart réservation mobile */}
-              <div className="lg:hidden">{BookingCard}</div>
+              <div data-reveal="item" className="lg:hidden">{BookingCard}</div>
 
-              <section>
-                <h2 className="font-catalog-display text-xl font-semibold text-catalog-ink">
-                  À propos de l’hôtel
-                </h2>
-                <p className="mt-3 text-[15px] leading-relaxed text-catalog-body">{hotel.description}</p>
+              <section data-reveal="item">
+                <p className="hdc-eyebrow">L’adresse</p>
+                <h2 className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">À propos de l’hôtel</h2>
+                <p className="mt-3 text-[0.9375rem] leading-[1.75] text-catalog-body">{hotel.description}</p>
               </section>
 
               {hotel.highlights?.length ? (
-                <section>
-                  <h2 className="font-catalog-display text-xl font-semibold text-catalog-ink">Points forts</h2>
-                  <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                <section data-reveal="item">
+                  <p className="hdc-eyebrow">On aime</p>
+                  <h2 className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">Points forts</h2>
+                  <ul className="mt-4 divide-y divide-catalog-line border-y border-catalog-line">
                     {hotel.highlights.map((item) => (
-                      <li
-                        key={item}
-                        className="flex items-start gap-3 rounded-xl border border-violet-100 bg-white/80 px-4 py-3 text-sm font-semibold text-catalog-body shadow-sm"
-                      >
-                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                          <Check className="h-3 w-3" aria-hidden />
-                        </span>
+                      <li key={item} className="flex items-start gap-3 py-3.5 text-[0.9375rem] text-catalog-body">
+                        <Check className="mt-1 h-4 w-4 shrink-0 text-catalog-lagoon" aria-hidden />
                         {item}
                       </li>
                     ))}
@@ -304,21 +235,17 @@ export function PublicHotelDetailPage({ hotelId }) {
               ) : null}
 
               {hotel.amenities?.length ? (
-                <section>
-                  <h2 className="font-catalog-display text-xl font-semibold text-catalog-ink">Équipements & services</h2>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <section data-reveal="item">
+                  <p className="hdc-eyebrow">Sur place</p>
+                  <h2 className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">Équipements & services</h2>
+                  <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                     {hotel.amenities.map((a) => {
                       const meta = AMENITY_META[a];
                       if (!meta) return null;
                       const { label, Icon } = meta;
                       return (
-                        <div
-                          key={a}
-                          className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-catalog-body shadow-sm"
-                        >
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
-                            <Icon className="h-4.5 w-4.5" aria-hidden />
-                          </span>
+                        <div key={a} className="flex items-center gap-3 rounded-[1rem] bg-white px-3.5 py-3 text-sm text-catalog-body ring-1 ring-catalog-line">
+                          <Icon className="h-5 w-5 shrink-0 text-catalog-lagoon" strokeWidth={1.5} aria-hidden />
                           {label}
                         </div>
                       );
@@ -327,40 +254,29 @@ export function PublicHotelDetailPage({ hotelId }) {
                 </section>
               ) : null}
 
-              {/* Emplacement + mini carte Google Maps */}
-              <section>
+              <section data-reveal="item">
                 <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-                  <h2 className="font-catalog-display text-xl font-semibold text-catalog-ink">
-                    Emplacement
-                  </h2>
+                  <div>
+                    <p className="hdc-eyebrow">Localisation</p>
+                    <h2 className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">Emplacement</h2>
+                  </div>
                   {mapsOpenUrl ? (
-                    <a
-                      href={mapsOpenUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm font-bold text-violet-700 transition hover:text-violet-900"
-                    >
-                      Ouvrir dans Google Maps
+                    <a href={mapsOpenUrl} target="_blank" rel="noopener noreferrer" data-press className="hdc-btn hdc-btn-ghost !min-h-11 !px-4 text-sm">
+                      Google Maps
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden />
                     </a>
                   ) : null}
                 </div>
-
-                <div className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
-                  <div className="flex items-start gap-3 border-b border-violet-50 px-4 py-3.5 sm:px-5">
-                    <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white">
-                      <MapPin className="h-5 w-5" aria-hidden />
-                    </span>
+                <div className="hdc-card overflow-hidden">
+                  <div className="flex items-start gap-3 px-4 py-4">
+                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-catalog-lagoon" aria-hidden />
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-catalog-ink">{hotel.name}</p>
-                      <p className="mt-0.5 text-sm font-semibold leading-snug text-catalog-body">
-                        {hotel.address || hotel.location}
-                      </p>
+                      <p className="text-sm font-semibold text-catalog-ink">{hotel.name}</p>
+                      <p className="mt-0.5 text-sm leading-snug text-catalog-muted">{hotel.address || hotel.location}</p>
                     </div>
                   </div>
-
                   {mapEmbedUrl ? (
-                    <div className="relative aspect-[16/10] w-full bg-slate-100 sm:aspect-[16/9]">
+                    <div className="relative aspect-[16/11] w-full bg-catalog-mist sm:aspect-[16/9]">
                       <iframe
                         title={`Carte Google Maps — ${hotel.name}`}
                         src={mapEmbedUrl}
@@ -371,56 +287,18 @@ export function PublicHotelDetailPage({ hotelId }) {
                       />
                     </div>
                   ) : (
-                    <div className="px-5 py-8 text-center text-sm font-semibold text-catalog-muted">
-                      Carte indisponible pour cet hôtel.
-                    </div>
+                    <div className="px-5 py-8 text-center text-sm text-catalog-muted">Carte indisponible pour cet hôtel.</div>
                   )}
                 </div>
               </section>
             </div>
 
-            {/* Sidebar desktop */}
             <aside className="hidden lg:col-span-1 lg:block">
-              <div className="lg:sticky lg:top-24">{BookingCard}</div>
+              <div className="lg:sticky lg:top-28">{BookingCard}</div>
             </aside>
           </div>
         </section>
       </main>
-
-      <footer className="relative z-10 border-t-2 border-violet-200/60 bg-gradient-to-b from-white via-violet-50/40 to-catalog-bg py-12 text-center">
-        <p className="font-catalog-display text-sm font-semibold tracking-wide text-catalog-ink">Hurghada Dream</p>
-        <p className="mx-auto mt-3 max-w-lg px-4 text-sm font-semibold leading-relaxed text-catalog-muted">
-          Hôtels & séjours sur-mesure · Mer Rouge — une équipe locale à votre écoute.
-        </p>
-      </footer>
-
-      {/* Barre CTA mobile fixe */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-violet-900/12 bg-white/95 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(76,29,149,0.14)] backdrop-blur-md lg:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-[1fr_auto] gap-2">
-          <button
-            type="button"
-            onClick={requestDevis}
-            className="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 text-sm font-bold text-white shadow-md active:scale-[0.98]"
-          >
-            Ajouter au panier
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpenDrawerSignal((n) => n + 1)}
-            className="relative inline-flex min-h-[48px] min-w-[52px] items-center justify-center rounded-2xl border border-violet-200 bg-white text-violet-800 active:scale-[0.98]"
-            aria-label={`Ouvrir le panier (${cartCount})`}
-          >
-            <ShoppingBag className="h-5 w-5" aria-hidden />
-            {cartCount > 0 ? (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[11px] font-extrabold text-white">
-                {cartCount}
-              </span>
-            ) : null}
-          </button>
-        </div>
-      </div>
-
-      <div className="h-24 lg:hidden" aria-hidden />
 
       <HotelsDevisCart
         stayHotel={stayHotel}
@@ -437,6 +315,6 @@ export function PublicHotelDetailPage({ hotelId }) {
         onClose={closeLightbox}
         altPrefix={hotel?.name || "Hôtel"}
       />
-    </div>
+    </PublicAppShell>
   );
 }

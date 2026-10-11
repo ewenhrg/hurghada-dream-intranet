@@ -127,20 +127,40 @@ body {
 }
 
 /**
- * Catalogue public (/catalogue) : le body intranet impose texte clair + fond sombre.
- * Sans ce bloc, le « bleed » du thème global rend polices / couleurs peu lisibles.
+ * Appli client « Riviera mer Rouge » (.hd-public-catalog) — distincte de l’intranet.
+ * Blanc chaud #FAF6EF, lagon #0E7C86, grand bleu #0B4F5C, corail couchant #DE5530, sable doré #E3AE55.
+ * Instrument Serif (titres) + Manrope (texte), locales. Motion GSAP sobre (motion.js).
  */
 .hd-public-catalog {
-  color: #1f1333;
-  font-family: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
-  font-size: 1.0625rem;
-  line-height: 1.62;
-  letter-spacing: -0.01em;
+  --hdc-bg: #FAF6EF;
+  --hdc-ink: #0F2A33;
+  --hdc-body: #33474D;
+  --hdc-muted: #5F7378;
+  --hdc-teal: #0E7C86;
+  --hdc-deep: #0B4F5C;
+  --hdc-clay: #DE5530;
+  --hdc-sand: #E3AE55;
+  --hdc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color: var(--hdc-body);
+  background:
+    radial-gradient(120% 60% at 100% 0%, rgba(14, 124, 134, 0.10) 0%, rgba(14, 124, 134, 0) 60%),
+    radial-gradient(90% 50% at 0% 100%, rgba(227, 174, 85, 0.14) 0%, rgba(227, 174, 85, 0) 60%),
+    var(--hdc-bg);
+  font-family: "Manrope Variable", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  letter-spacing: -0.003em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Masque l’aurore globale derrière les pages catalogue (évite le scintillement au scroll). */
+html:has(.hd-public-catalog),
+html:has(.hd-public-catalog) body {
+  background: #FAF6EF !important;
+  color: #33474D;
+}
+
 html:has(.hd-public-catalog) body::before,
 html:has(.hd-public-catalog) body::after {
   animation: none !important;
@@ -148,94 +168,382 @@ html:has(.hd-public-catalog) body::after {
   visibility: hidden !important;
 }
 
-.hd-public-catalog h1,
-.hd-public-catalog h2,
-.hd-public-catalog h3 {
-  font-family: Literata, Georgia, "Times New Roman", serif;
-  font-weight: 700;
-  color: #12051f;
-  letter-spacing: -0.02em;
+/* (0,0,2) : bat le CSS global intranet sur h1–h3, laisse gagner les classes Tailwind. */
+html :where(.hd-public-catalog) :is(h1, h2, h3) {
+  font-family: "Instrument Serif", Georgia, ui-serif, serif;
+  font-weight: 400;
+  color: var(--hdc-ink);
+  letter-spacing: -0.01em;
+  line-height: 1.12;
+  text-transform: none;
+  text-shadow: none;
+  text-wrap: balance;
 }
 
-/* Résumé tarifaire fiche activité : forcer une encre lisible (le body intranet peut « baver » sur les contrastes). */
-.hd-public-catalog .hd-booking-pricing-summary {
-  color: #12051f;
+.hd-public-catalog .hdc-serif {
+  font-family: "Instrument Serif", Georgia, ui-serif, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.005em;
 }
+
+/* Accent italique des titres sur fond clair : lagon. */
+html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
+  color: var(--hdc-teal);
+}
+
+.hd-public-catalog .hd-booking-pricing-summary,
 .hd-public-catalog .hd-booking-pricing-summary p {
-  color: #1f1333;
+  color: var(--hdc-body);
 }
 
-.hd-public-catalog .catalog-shell {
+.hd-public-catalog :focus-visible {
+  outline: 2px solid var(--hdc-teal);
+  outline-offset: 2px;
+}
+
+.hd-public-catalog p:not([class*="mb-"]):not([class*="my-"]) {
+  margin-bottom: 0;
+}
+
+/* ——— Primitives ——— */
+.hd-public-catalog .hdc-eyebrow {
+  font-family: "Manrope Variable", "Manrope", ui-sans-serif, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--hdc-teal);
+}
+.hd-public-catalog .hdc-eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 1.25rem;
+  height: 2px;
+  margin-right: 0.5rem;
+  vertical-align: 0.22em;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--hdc-sand), var(--hdc-clay));
+}
+
+.hd-public-catalog .hdc-btn {
   position: relative;
-  border: 1px solid rgba(76, 29, 149, 0.1);
-  background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 245, 255, 0.88) 100%),
-    radial-gradient(120% 100% at 100% 0%, rgba(234, 88, 12, 0.08), transparent 52%);
-  box-shadow:
-    0 28px 60px -32px rgba(76, 29, 149, 0.28),
-    0 2px 12px rgba(15, 23, 42, 0.06);
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0 1.375rem;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  transition: background-color 200ms var(--hdc-ease), color 200ms var(--hdc-ease), box-shadow 200ms var(--hdc-ease);
+  touch-action: manipulation;
+  user-select: none;
+}
+.hd-public-catalog .hdc-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+.hd-public-catalog .hdc-btn-primary {
+  background: linear-gradient(135deg, #F07A4A 0%, #DE5530 55%, #C9452A 100%);
+  color: #fff;
+  box-shadow: 0 10px 24px -12px rgba(222, 85, 48, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.hd-public-catalog .hdc-btn-ink,
+.hd-public-catalog .hdc-btn-night {
+  background: linear-gradient(135deg, #12909A 0%, #0E7C86 45%, #0B4F5C 100%);
+  color: #fff;
+  box-shadow: 0 10px 24px -14px rgba(11, 79, 92, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.hd-public-catalog .hdc-btn-ghost {
+  background: #fff;
+  color: var(--hdc-ink);
+  box-shadow: inset 0 0 0 1px rgba(15, 42, 51, 0.16);
 }
 
-.hd-public-catalog .catalog-elevated {
-  border: 1px solid rgba(91, 33, 182, 0.14);
-  background: linear-gradient(168deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 248, 255, 0.92) 100%);
-  box-shadow:
-    0 20px 40px -22px rgba(76, 29, 149, 0.18),
-    0 1px 4px rgba(15, 23, 42, 0.06);
+.hd-public-catalog .hdc-card {
+  position: relative;
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(11, 79, 92, 0.06), 0 14px 32px -18px rgba(11, 79, 92, 0.28);
 }
 
-.hd-public-catalog .catalog-chip {
-  border: 1px solid rgba(76, 29, 149, 0.12);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(245, 243, 255, 0.88));
-  box-shadow: 0 12px 22px -16px rgba(76, 29, 149, 0.25);
-}
-
-.hd-public-catalog .catalog-chip-active {
-  background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 42%, #7c3aed 100%);
-  color: #faf5ff;
-  border-color: rgba(251, 191, 36, 0.45);
-  box-shadow:
-    0 18px 36px -14px rgba(76, 29, 149, 0.55),
-    0 0 0 1px rgba(15, 23, 42, 0.12) inset;
-}
-
-.hd-public-catalog .catalog-title-glow {
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.85),
-    0 10px 36px rgba(109, 40, 217, 0.18),
-    0 4px 20px rgba(234, 88, 12, 0.12);
-}
-
-.hd-public-catalog .catalog-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(91, 33, 182, 0.2), transparent);
-}
-
-.hd-public-catalog .catalog-ring-focus:focus-visible {
+.hd-public-catalog .hdc-input {
+  width: 100%;
+  min-height: 3.125rem;
+  border-radius: 0.875rem;
+  border: 1px solid rgba(15, 42, 51, 0.16);
+  background: #fff;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--hdc-ink);
   outline: none;
-  box-shadow:
-    0 0 0 3px rgba(167, 139, 250, 0.45),
-    0 0 0 1px rgba(76, 29, 149, 0.25) inset;
+  transition: border-color 200ms var(--hdc-ease), box-shadow 200ms var(--hdc-ease);
+}
+.hd-public-catalog .hdc-input::placeholder {
+  color: #8D918C;
+}
+.hd-public-catalog .hdc-input:focus {
+  border-color: var(--hdc-teal);
+  box-shadow: 0 0 0 3px rgba(14, 124, 134, 0.18);
 }
 
-@keyframes catalogFloatSoft {
-  0%, 100% {
-    transform: translateY(0);
+.hd-public-catalog .hdc-chip {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background: #fff;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--hdc-ink);
+  box-shadow: inset 0 0 0 1px rgba(15, 42, 51, 0.12);
+  transition: background-color 220ms var(--hdc-ease), color 220ms var(--hdc-ease), box-shadow 220ms var(--hdc-ease);
+}
+.hd-public-catalog .hdc-chip[aria-pressed="true"] {
+  background: linear-gradient(135deg, #12909A 0%, #0E7C86 50%, #0B5A68 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px -10px rgba(14, 124, 134, 0.7);
+}
+
+.hd-public-catalog .hdc-hairline {
+  height: 1px;
+  background: rgba(15, 42, 51, 0.08);
+}
+
+/* Classes de la passe précédente neutralisées (plus de découpe, plus de grain). */
+.hd-public-catalog .hdc-cut,
+.hd-public-catalog .hdc-cut-soft {
+  clip-path: none;
+}
+
+/* ——— Motion (GSAP) ——— */
+.hd-public-catalog [data-press] {
+  touch-action: manipulation;
+  scale: var(--hdc-press, 1);
+}
+/* Le bandeau d’hôtels ne doit pas avaler le scroll vertical de la page. */
+.hd-public-catalog .hdc-hotel-rail {
+  touch-action: pan-y;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+}
+.hd-public-catalog .hdc-hotel-rail [data-press],
+.hd-public-catalog .hdc-hotel-rail button {
+  touch-action: pan-y;
+}
+.hd-public-catalog .hdc-hotel-rail button:active {
+  transform: none;
+  opacity: 1;
+}
+.hd-public-catalog .hdc-slide-dot {
+  min-height: 0.375rem;
+  min-width: 0.375rem;
+  height: 0.375rem;
+  padding: 0;
+}
+.hd-public-catalog .hdc-w-mask {
+  padding: 0.08em 0.02em 0.12em;
+  margin: -0.08em -0.02em -0.12em;
+}
+.hd-public-catalog [data-reveal],
+.hd-public-catalog [data-reveal] img,
+.hd-public-catalog [data-card-media],
+.hd-public-catalog [data-kenburns],
+.hd-public-catalog [data-parallax] {
+  transition-property: background-color, color, box-shadow, border-color;
+}
+.hd-public-catalog [data-kenburns],
+.hd-public-catalog [data-parallax] {
+  will-change: transform;
+}
+
+/* Header : se densifie au scroll (fond animé par GSAP). */
+.hd-public-catalog .hdc-header-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(250, 246, 239, 0.9);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  box-shadow: 0 1px 0 rgba(15, 42, 51, 0.07);
+}
+
+/* ——— Catalogue excursions ——— */
+.hd-public-catalog .hdc-eyebrow.hdc-eyebrow-light {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+/* Carte : `translate` / `scale` (propriétés indépendantes) pour ne pas entrer en conflit
+   avec le `transform` piloté par GSAP ni avec `.scrolling *:hover { transform: none }`. */
+.hd-public-catalog .hdc-excursion {
+  box-shadow: 0 0 0 1px rgba(11, 79, 92, 0.07), 0 1px 2px rgba(11, 79, 92, 0.04), 0 16px 36px -24px rgba(11, 79, 92, 0.3);
+  transition-property: box-shadow, translate;
+  transition-duration: 380ms;
+  transition-timing-function: var(--hdc-ease);
+}
+.hd-public-catalog .hdc-excursion .hdc-excursion-img {
+  transition: scale 900ms var(--hdc-ease);
+}
+.hd-public-catalog .hdc-excursion .hdc-excursion-cta {
+  background: #DCF0EF;
+  color: #0B4F5C;
+  transition: background-color 260ms var(--hdc-ease), color 260ms var(--hdc-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hd-public-catalog .hdc-excursion:hover {
+    translate: 0 -4px;
+    box-shadow: 0 0 0 1px rgba(11, 79, 92, 0.09), 0 2px 4px rgba(11, 79, 92, 0.05), 0 28px 48px -26px rgba(11, 79, 92, 0.42);
   }
-  50% {
-    transform: translateY(-3px);
+  .hd-public-catalog .hdc-excursion:hover .hdc-excursion-img {
+    scale: 1.05;
+  }
+  .hd-public-catalog .hdc-excursion:hover .hdc-excursion-cta {
+    background: #0B4F5C;
+    color: #fff;
+  }
+  .hd-public-catalog .hdc-chip:not([aria-pressed="true"]):hover {
+    box-shadow: inset 0 0 0 1px rgba(14, 124, 134, 0.45);
+  }
+}
+.hd-public-catalog .hdc-excursion:focus-visible {
+  outline: 2px solid var(--hdc-teal);
+  outline-offset: 3px;
+}
+
+/* Barre de filtres collante sous l’en-tête. */
+.hd-public-catalog .hdc-filterbar {
+  background: rgba(250, 246, 239, 0.92);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  box-shadow: 0 1px 0 rgba(15, 42, 51, 0.07);
+}
+/* Fondu de bord : signale que la rangée de puces défile sur mobile. */
+.hd-public-catalog .hdc-chip-rail {
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 2rem), transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 2rem), transparent 100%);
+}
+@media (min-width: 1024px) {
+  .hd-public-catalog .hdc-chip-rail {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  /* Les 7 univers tiennent sur une ligne dès 1280 px. */
+  .hd-public-catalog .hdc-chip-rail .hdc-chip {
+    gap: 0.4375rem;
+    padding: 0 0.875rem;
+  }
+}
+.hd-public-catalog .hdc-chip .hdc-chip-count {
+  min-width: 1.5rem;
+  border-radius: 9999px;
+  background: rgba(15, 42, 51, 0.06);
+  padding: 0.0625rem 0.4375rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.hd-public-catalog .hdc-chip[aria-pressed="true"] .hdc-chip-count {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Le champ de recherche a son propre bouton « effacer » (44 px). */
+.hd-public-catalog .hdc-search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Barre panier flottante : entrée courte depuis le bas. */
+.hd-public-catalog .hdc-cart-bar {
+  animation: hdc-rise 420ms var(--hdc-ease) both;
+}
+@keyframes hdc-rise {
+  from { opacity: 0; translate: 0 16px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hd-public-catalog .hdc-cart-bar {
+    animation: none;
   }
 }
 
-.hd-public-catalog .catalog-float-soft:hover {
-  animation: catalogFloatSoft 1.8s ease-in-out infinite;
+/* Squelettes de chargement. */
+.hd-public-catalog .hdc-skeleton {
+  background: linear-gradient(90deg, #F1EBE1 0%, #F8F4EE 50%, #F1EBE1 100%);
+  background-size: 200% 100%;
+  animation: hdc-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes hdc-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hd-public-catalog .hdc-skeleton {
+    animation: none;
+  }
 }
 
-/**
- * Cartes du catalogue public : les règles globales tactiles ([role="button"], img @768px)
- * peuvent casser le flex, zoomer l’image ou capter le tap sur l’img (iOS). On rétablit
- * un bloc carte plein largeur + image qui remplit la zone (object-fit cover).
- */
+/* ——— Neutralise les règles globales de l’intranet dans l’appli client ——— */
+.hd-public-catalog a,
+.hd-public-catalog button,
+.hd-public-catalog [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+.hd-public-catalog a:not([class*="text-"]):not(.hdc-btn) {
+  color: inherit;
+}
+.hd-public-catalog img.h-full {
+  height: 100%;
+}
+@media (max-width: 768px) {
+  html :where(.hd-public-catalog) section,
+  html :where(.hd-public-catalog) form {
+    padding: 0;
+  }
+  .hd-public-catalog .hdc-sheet[role="dialog"] {
+    margin: 0;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+  }
+  .hd-public-catalog .grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hd-public-catalog .grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 640px) and (max-width: 768px) {
+  .hd-public-catalog .sm\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hd-public-catalog .sm\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+/* L’intranet assombrit tous les bg-white (!important) : l’appli client garde du vrai blanc. */
+.hd-public-catalog [class~="bg-white"]:not([class*="bg-white/"]) {
+  background-color: #fff !important;
+}
+.hd-public-catalog [class*="bg-white/95"],
+.hd-public-catalog [class*="bg-white/98"],
+.hd-public-catalog [class*="bg-white/99"] {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+.hd-public-catalog [class*="bg-white/90"] {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+.hd-public-catalog [class*="bg-white/80"] {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
 .hd-public-catalog article.public-catalog-grid-card[role="button"] {
   display: flex !important;
   flex-direction: column !important;
@@ -245,9 +553,7 @@ html:has(.hd-public-catalog) body::after {
   min-width: 0 !important;
   padding: 0 !important;
   touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(20, 184, 166, 0.22);
 }
-
 .hd-public-catalog img.hd-catalog-card-cover {
   display: block;
   height: 100%;
@@ -261,7 +567,6 @@ html:has(.hd-public-catalog) body::after {
   user-select: none;
   -webkit-touch-callout: none;
 }
-
 @media (max-width: 768px) {
   .hd-public-catalog img.hd-catalog-card-cover {
     height: 100% !important;
@@ -269,36 +574,6 @@ html:has(.hd-public-catalog) body::after {
     max-width: none !important;
     max-height: none !important;
     object-fit: cover !important;
-  }
-
-  /* Mobile perf: évite le clignotement/réapparition des cartes au scroll. */
-  .hd-public-catalog .animate-catalog-in-up,
-  .hd-public-catalog .animate-catalog-in-fade,
-  .hd-public-catalog .animate-catalog-in-soft {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .hd-public-catalog .public-catalog-grid-card,
-  .hd-public-catalog .catalog-float-soft {
-    transition: none !important;
-    animation: none !important;
-    transform: none !important;
-    will-change: auto !important;
-  }
-
-  .hd-public-catalog .catalog-title-glow {
-    text-shadow: none !important;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hd-public-catalog .animate-catalog-in-up,
-  .hd-public-catalog .animate-catalog-in-fade,
-  .hd-public-catalog .animate-catalog-in-soft {
-    animation: none !important;
-    opacity: 1 !important;
   }
 }
 

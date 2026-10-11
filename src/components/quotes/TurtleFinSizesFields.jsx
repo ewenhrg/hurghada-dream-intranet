@@ -30,14 +30,14 @@ export function TurtleFinSizesFields({
   if (variant === "catalog") {
     return (
       <div className="space-y-2">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-800">Pointures palmes</p>
-        <p className="text-xs font-medium leading-relaxed text-slate-700">
+        <p className="text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-catalog-lagoon">Pointures palmes</p>
+        <p className="text-xs font-medium leading-relaxed text-catalog-muted">
           Indiquez la pointure européenne de chaque participant (ex. 42) — nécessaire pour les palmes.
         </p>
         <div className="grid grid-cols-2 gap-2">
           {slots.map((slot, idx) => (
             <label key={slot.key} className="block" htmlFor={`${idPrefix}-${idx}`}>
-              <span className="mb-1 block text-[11px] font-bold text-slate-700">{slot.label}</span>
+              <span className="mb-1 block text-[11px] font-bold text-catalog-body">{slot.label}</span>
               <input
                 id={`${idPrefix}-${idx}`}
                 type="text"
@@ -47,7 +47,7 @@ export function TurtleFinSizesFields({
                 onChange={(e) => handleChange(idx, e.target.value)}
                 placeholder="ex. 42"
                 aria-label={`Pointure ${slot.label}`}
-                className="w-full rounded-xl border-2 border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-950 placeholder:text-slate-400 transition-colors hover:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                className="hdc-input"
                 style={{ fontSize: "16px" }}
               />
             </label>

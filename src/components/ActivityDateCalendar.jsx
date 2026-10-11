@@ -231,27 +231,27 @@ export function ActivityDateCalendar({
       : "";
 
   return (
-    <div className="rounded-xl border border-gray-300 bg-white p-3 shadow-sm">
+    <div className="rounded-[1.4rem] bg-white p-3.5 ring-1 ring-catalog-line">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Date</p>
+        <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-catalog-lagoon">Date</p>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={goPrev}
             disabled={!canPrevMonth || disabled}
-            className="rounded-lg p-1.5 text-gray-700 transition hover:bg-gray-100 disabled:opacity-40"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-catalog-bg text-catalog-ink transition hover:bg-catalog-mist disabled:opacity-35"
             aria-label="Mois précédent"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
               <path d="m15 18-6-6 6-6" />
             </svg>
           </button>
-          <span className="min-w-[9rem] text-center text-sm font-semibold text-gray-900">{title}</span>
+          <span className="min-w-[8rem] text-center font-catalog-display text-base font-medium capitalize text-catalog-ink">{title}</span>
           <button
             type="button"
             onClick={goNext}
             disabled={!canNextMonth || disabled}
-            className="rounded-lg p-1.5 text-gray-700 transition hover:bg-gray-100 disabled:opacity-40"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-catalog-bg text-catalog-ink transition hover:bg-catalog-mist disabled:opacity-35"
             aria-label="Mois suivant"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -262,9 +262,9 @@ export function ActivityDateCalendar({
       </div>
 
       {stayLabel ? (
-        <p className="mb-2 rounded-lg border border-violet-100 bg-violet-50/80 px-2.5 py-1.5 text-center text-[11px] font-semibold text-violet-950">
+        <p className="mb-2 rounded-xl bg-catalog-lagoonSoft px-3 py-2 text-center text-[11px] font-semibold text-catalog-ink">
           Dates de votre séjour : {stayLabel}
-          <span className="mt-0.5 block font-medium text-violet-800/90">
+          <span className="mt-0.5 block font-medium text-catalog-lagoon">
             {pinToArrival
               ? "Zero Tracas : date fixée au jour d’arrivée"
               : `Excursions à partir du lendemain d’arrivée · pas demain${
@@ -273,12 +273,12 @@ export function ActivityDateCalendar({
           </span>
         </p>
       ) : (
-        <p className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-center text-[11px] font-semibold text-amber-950">
+        <p className="mb-2 rounded-xl bg-catalog-brassSoft px-3 py-2 text-center text-[11px] font-semibold text-catalog-ink">
           Indiquez d’abord vos dates de séjour pour choisir une date.
         </p>
       )}
 
-      <div className="grid grid-cols-7 gap-0.5 text-center text-[11px] font-medium text-gray-500 sm:text-xs">
+      <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-catalog-muted sm:text-xs">
         {WEEK_HEADERS.map((h) => (
           <div key={h} className="py-1">
             {h}
@@ -291,27 +291,27 @@ export function ActivityDateCalendar({
 
           let colorClass = "";
           if (selected) {
-            colorClass = "bg-emerald-600 text-white shadow-inner ring-2 ring-emerald-700";
+            colorClass = "bg-[#0B4F5C] font-bold text-white ring-2 ring-[#0B4F5C]";
           } else if (cell.inCurrentMonth && status === "stop-sale") {
             colorClass =
-              "cursor-not-allowed bg-red-500 font-bold text-white ring-1 ring-red-600 shadow-sm shadow-red-500/40";
+              "cursor-not-allowed bg-[#F8D9D2] font-bold text-[#7A2414] ring-2 ring-[#C04A32]";
           } else if (cell.inCurrentMonth && status === "diving-blocked") {
             colorClass =
-              "cursor-not-allowed bg-rose-100 font-semibold text-rose-800 ring-1 ring-rose-300";
+              "cursor-not-allowed bg-[#F8D9D2] font-semibold text-[#7A2414] ring-2 ring-[#E7B2A4]";
           } else if (selectable && status === "push-sale") {
             colorClass =
-              "cursor-pointer bg-emerald-500 font-bold text-white ring-1 ring-emerald-600 shadow-sm shadow-emerald-500/40 hover:bg-emerald-600";
+              "cursor-pointer bg-[#FBF0DC] font-bold text-[#6B4A10] ring-2 ring-[#C4922A] hover:bg-[#F6E4C0]";
           } else if (selectable && cell.inCurrentMonth) {
             colorClass =
-              "cursor-pointer bg-emerald-50/90 text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100";
+              "cursor-pointer bg-[#D7EFEA] font-bold text-[#0C3F3A] ring-2 ring-[#1F6B62] hover:bg-[#C5E6DF]";
           } else if (selectable && !cell.inCurrentMonth) {
-            colorClass = "cursor-pointer text-emerald-800 hover:bg-emerald-50";
+            colorClass = "cursor-pointer font-semibold text-[#1F6B62] hover:bg-[#D7EFEA]";
           } else if (cell.inCurrentMonth && inWindow && status === "unavailable") {
-            colorClass = "cursor-not-allowed bg-red-50 text-red-400/90 ring-1 ring-red-100";
+            colorClass = "cursor-not-allowed bg-[#F8D9D2] font-semibold text-[#7A2414] ring-2 ring-[#E7B2A4]";
           } else if (cell.inCurrentMonth) {
-            colorClass = "cursor-not-allowed text-gray-300";
+            colorClass = "cursor-not-allowed text-catalog-subtle";
           } else {
-            colorClass = "cursor-default text-gray-300";
+            colorClass = "cursor-default text-catalog-subtle/70";
           }
 
           const titleHint = selectable
@@ -338,8 +338,8 @@ export function ActivityDateCalendar({
               }
               onClick={() => selectable && onChange(iso)}
               className={[
-                "relative flex h-9 min-w-0 items-center justify-center rounded-lg text-sm font-medium transition sm:h-10",
-                muted && !selected && status !== "stop-sale" && status !== "push-sale" ? "opacity-70" : "",
+                "relative flex h-11 min-w-0 items-center justify-center rounded-full text-sm tabular-nums transition-colors",
+                muted && !selected && status !== "stop-sale" && status !== "push-sale" && status !== "unavailable" ? "opacity-80" : "",
                 colorClass,
               ]
                 .filter(Boolean)
@@ -352,26 +352,26 @@ export function ActivityDateCalendar({
       </div>
 
       {showSalesLegend ? (
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-gray-100 pt-2 text-[11px] text-gray-600">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-catalog-line pt-2.5 text-[11px] font-semibold text-catalog-muted">
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded bg-emerald-50 ring-1 ring-emerald-200" aria-hidden />
+            <span className="h-3 w-3 rounded-full bg-[#D7EFEA] ring-2 ring-[#1F6B62]" aria-hidden />
             Ouvert
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded bg-red-500" aria-hidden />
+            <span className="h-3 w-3 rounded-full bg-[#F8D9D2] ring-2 ring-[#C04A32]" aria-hidden />
             Stop sale
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded bg-emerald-500" aria-hidden />
+            <span className="h-3 w-3 rounded-full bg-[#FBF0DC] ring-2 ring-[#C4922A]" aria-hidden />
             Push sale
           </span>
         </div>
       ) : null}
 
       {value ? (
-        <p className="mt-2 text-center text-xs text-gray-600">
+        <p className="mt-2 text-center text-xs text-catalog-muted">
           Sélection :{" "}
-          <span className="font-semibold text-gray-900">
+          <span className="font-bold capitalize text-catalog-ink">
             {new Intl.DateTimeFormat("fr-FR", {
               weekday: "long",
               day: "numeric",
@@ -381,8 +381,8 @@ export function ActivityDateCalendar({
           </span>
         </p>
       ) : (
-        <p className="mt-2 text-center text-xs text-gray-500">
-          Choisis un jour en vert pendant votre séjour
+        <p className="mt-2 text-center text-xs text-catalog-muted">
+          Choisis un jour ouvert pendant votre séjour
         </p>
       )}
     </div>

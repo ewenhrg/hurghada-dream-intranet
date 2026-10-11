@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Baby, Minus, Plus, ShoppingBag, Trash2, Users, X } from "lucide-react";
+import { ArrowRight, Baby, CheckCircle2, Minus, Plus, ShoppingBag, Trash2, Users } from "lucide-react";
+import { Sheet, SheetFooter, SheetHeader } from "./PublicUI";
 import { supabase, __SUPABASE_DEBUG__ } from "../../lib/supabase";
 import { SITE_KEY } from "../../constants";
 import { boardFieldsToPayload } from "../../constants/hotelRequestBoardOptions";
@@ -32,8 +33,7 @@ const EMPTY_CLIENT = {
   notes: "",
 };
 
-const fieldClass =
-  "mt-1.5 min-h-[48px] w-full rounded-xl border-2 border-violet-200/80 bg-white px-3.5 py-3 text-base text-catalog-ink shadow-sm placeholder:text-slate-400 transition focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-400/40 sm:text-[15px]";
+const fieldClass = "hdc-input mt-1.5";
 
 function resizeBirthDates(list, count) {
   const next = Array.isArray(list) ? [...list] : [];
@@ -43,30 +43,32 @@ function resizeBirthDates(list, count) {
 
 function CountStepper({ label, icon: Icon, value, min, max, onChange }) {
   return (
-    <div className="rounded-2xl border border-violet-100 bg-violet-50/40 px-3 py-3">
-      <p className="mb-2 flex items-center justify-center gap-1 text-xs font-bold uppercase tracking-wide text-violet-800">
+    <div className="rounded-[1.25rem] bg-catalog-bg px-3 py-3 ring-1 ring-catalog-line">
+      <p className="mb-2 flex items-center justify-center gap-1.5 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">
         {Icon ? <Icon className="h-3.5 w-3.5" aria-hidden /> : null}
         {label}
       </p>
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"
+          data-press="0.9"
           aria-label={`Diminuer ${label}`}
           disabled={value <= min}
           onClick={() => onChange(Math.max(min, value - 1))}
-          className="flex h-11 w-11 items-center justify-center rounded-xl border border-violet-200 bg-white text-violet-800 shadow-sm active:scale-95 disabled:opacity-40"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-catalog-ink ring-1 ring-catalog-border disabled:opacity-35"
         >
           <Minus className="h-4 w-4" aria-hidden />
         </button>
-        <span className="min-w-[2ch] text-center text-xl font-extrabold tabular-nums text-catalog-ink">
+        <span className="min-w-[2ch] text-center font-catalog-display text-[1.625rem] leading-none tabular-nums text-catalog-ink">
           {value}
         </span>
         <button
           type="button"
+          data-press="0.9"
           aria-label={`Augmenter ${label}`}
           disabled={value >= max}
           onClick={() => onChange(Math.min(max, value + 1))}
-          className="flex h-11 w-11 items-center justify-center rounded-xl border border-violet-200 bg-white text-violet-800 shadow-sm active:scale-95 disabled:opacity-40"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-catalog-raised text-white disabled:opacity-35"
         >
           <Plus className="h-4 w-4" aria-hidden />
         </button>
@@ -76,11 +78,11 @@ function CountStepper({ label, icon: Icon, value, min, max, onChange }) {
 }
 
 function categoryBadgeClass(category) {
-  if (category === "baby") return "border-orange-200 bg-orange-50 text-orange-900";
-  if (category === "child") return "border-violet-200 bg-violet-50 text-violet-900";
-  if (category === "adult") return "border-sky-200 bg-sky-50 text-sky-900";
-  if (category === "unknown") return "border-amber-200 bg-amber-50 text-amber-900";
-  return "border-slate-200 bg-slate-50 text-slate-600";
+  if (category === "baby") return "border-transparent bg-catalog-coralSoft text-catalog-coralDeep";
+  if (category === "child") return "border-transparent bg-catalog-lagoonSoft text-catalog-lagoon";
+  if (category === "adult") return "border-transparent bg-catalog-mist text-catalog-ink";
+  if (category === "unknown") return "border-transparent bg-catalog-brassSoft text-catalog-ink";
+  return "border-transparent bg-catalog-bg text-catalog-muted";
 }
 
 /**
@@ -399,431 +401,364 @@ export function HotelsDevisCart({
     }
   }
 
+  const closeCheckout = () => {
+    setCheckoutOpen(false);
+    setWantsCustomOffer(false);
+  };
+
   return (
     <>
       {/* FAB panier */}
       {!hideFab ? (
         <button
           type="button"
+          data-press
           onClick={() => setDrawerOpen(true)}
-          className="fixed bottom-24 left-6 z-40 inline-flex h-14 items-center gap-2 rounded-full bg-gradient-to-r from-violet-800 to-orange-600 px-5 text-sm font-bold text-white shadow-lg shadow-violet-950/35 transition hover:brightness-110 active:scale-[0.98] lg:bottom-6"
+          className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-4 z-30 inline-flex h-14 items-center gap-2 rounded-full bg-catalog-raised pl-4 pr-2 text-sm font-bold text-white shadow-catalog-float"
           aria-label={`Ouvrir le panier (${itemCount} hôtel${itemCount !== 1 ? "s" : ""})`}
         >
           <ShoppingBag className="h-5 w-5" aria-hidden />
           Panier
-          {itemCount > 0 ? (
-            <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1.5 text-xs font-extrabold text-violet-900">
-              {itemCount}
-            </span>
-          ) : null}
+          <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-catalog-coral px-2 text-xs font-extrabold">
+            {itemCount}
+          </span>
         </button>
       ) : null}
 
-      {/* Modal dates & voyageurs */}
+      {/* Feuille dates & voyageurs */}
       {stayModalOpen ? (
-        <div
-          className="fixed inset-0 z-[120] flex items-end justify-center sm:items-center sm:p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="hotel-stay-title"
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-slate-950/60"
-            aria-label="Fermer"
-            onClick={closeStayModal}
+        <Sheet onClose={closeStayModal} labelledBy="hotel-stay-title">
+          <SheetHeader
+            eyebrow={customOfferOpen ? "Proposition · Séjour" : "Étape 1 sur 2 · Séjour"}
+            title={customOfferOpen ? "Je veux une proposition" : stayHotel?.name || "Séjour"}
+            titleId="hotel-stay-title"
+            onClose={closeStayModal}
           />
-          <div className="relative z-10 flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-[1.75rem] border border-violet-200/70 bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl">
-            <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-slate-200 sm:hidden" aria-hidden />
-            <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3 sm:px-6 sm:pt-5">
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-700">
-                  {customOfferOpen ? "Proposition · Séjour" : "Étape 1 · Séjour"}
-                </p>
-                <h2
-                  id="hotel-stay-title"
-                  className="mt-1 truncate font-catalog-display text-xl font-semibold text-catalog-ink"
-                >
-                  {customOfferOpen
-                    ? "Je veux une proposition"
-                    : stayHotel?.name || "Séjour"}
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={closeStayModal}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600"
-                aria-label="Fermer"
-              >
-                <X className="h-5 w-5" aria-hidden />
-              </button>
-            </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3 sm:px-6">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm font-semibold text-catalog-ink">
-                  Arrivée <span className="text-orange-500">*</span>
-                  <input
-                    type="date"
-                    value={stayDraft.arrivalDate}
-                    onChange={(e) => updateStayField("arrivalDate", e.target.value)}
-                    className={fieldClass}
-                  />
-                </label>
-                <label className="block text-sm font-semibold text-catalog-ink">
-                  Départ <span className="text-orange-500">*</span>
-                  <input
-                    type="date"
-                    value={stayDraft.departureDate}
-                    min={stayDraft.arrivalDate || undefined}
-                    onChange={(e) => updateStayField("departureDate", e.target.value)}
-                    className={fieldClass}
-                  />
-                </label>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <CountStepper
-                  label="Adultes"
-                  icon={Users}
-                  value={stayDraft.adultsCount}
-                  min={1}
-                  max={10}
-                  onChange={(n) => updateStayField("adultsCount", n)}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4 sm:px-6">
+            <div data-sheet-item className="grid grid-cols-2 gap-3">
+              <label className="block text-sm font-bold text-catalog-ink">
+                Arrivée <span className="text-catalog-coral">*</span>
+                <input
+                  type="date"
+                  value={stayDraft.arrivalDate}
+                  onChange={(e) => updateStayField("arrivalDate", e.target.value)}
+                  className={fieldClass}
                 />
-                <CountStepper
-                  label="Enfants / bébés"
-                  icon={Baby}
-                  value={stayDraft.minorsCount || 0}
-                  min={0}
-                  max={10}
-                  onChange={(n) => updateStayField("minorsCount", n)}
-                />
-              </div>
-
-              {stayAgeLabel ? (
-                <p className="mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold leading-snug text-violet-900">
-                  {customOfferOpen ? "Grille d’âges (indicatif)" : "Grille hôtel"} : {stayAgeLabel}
-                  <span className="mt-1 block font-medium text-violet-700/90">
-                    Indiquez la date de naissance : bébé ou enfant est calculé automatiquement à
-                    l’arrivée.
-                  </span>
-                </p>
-              ) : null}
-
-              {(stayDraft.minorsCount || 0) > 0 ? (
-                <div className="mt-4 space-y-3 rounded-2xl border border-violet-100 bg-violet-50/50 p-3">
-                  <p className="text-xs font-bold uppercase tracking-wide text-violet-800">
-                    Dates de naissance
-                  </p>
-                  {Array.from({ length: stayDraft.minorsCount }, (_, i) => {
-                    const detail = stayDraftDerived.details[i];
-                    const category = detail?.category ?? null;
-                    return (
-                      <label key={`dob-${i}`} className="block text-xs font-semibold text-catalog-muted">
-                        Voyageur {i + 1}
-                        <input
-                          type="date"
-                          value={stayDraft.birthDates?.[i] || ""}
-                          max={stayDraft.arrivalDate || undefined}
-                          onChange={(e) => setBirthDateAt(i, e.target.value)}
-                          className={fieldClass}
-                        />
-                        <span
-                          className={`mt-1.5 inline-flex rounded-lg border px-2.5 py-1 text-[11px] font-bold ${categoryBadgeClass(category)}`}
-                        >
-                          {formatMinorCategoryLabel(category, detail?.age)}
-                        </span>
-                      </label>
-                    );
-                  })}
-                  {stayDraftDerived.childrenCount +
-                    stayDraftDerived.babiesCount +
-                    stayDraftDerived.upgradedAdultsCount >
-                  0 ? (
-                    <p className="text-xs font-semibold text-catalog-body">
-                      Résumé :{" "}
-                      {[
-                        `${stayDraftDerived.effectiveAdultsCount} adulte${stayDraftDerived.effectiveAdultsCount > 1 ? "s" : ""}`,
-                        stayDraftDerived.childrenCount
-                          ? `${stayDraftDerived.childrenCount} enfant${stayDraftDerived.childrenCount > 1 ? "s" : ""}`
-                          : null,
-                        stayDraftDerived.babiesCount
-                          ? `${stayDraftDerived.babiesCount} bébé${stayDraftDerived.babiesCount > 1 ? "s" : ""}`
-                          : null,
-                        stayDraftDerived.upgradedAdultsCount
-                          ? `(${stayDraftDerived.upgradedAdultsCount} reclassé${stayDraftDerived.upgradedAdultsCount > 1 ? "s" : ""} en adulte)`
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="shrink-0 border-t border-violet-100 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
-              <button
-                type="button"
-                onClick={customOfferOpen ? confirmCustomOfferStay : confirmAddToCart}
-                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 text-base font-bold text-white shadow-md active:scale-[0.99]"
-              >
-                {customOfferOpen ? "Continuer ma demande" : "Ajouter au panier"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Drawer panier — plein écran mobile */}
-      {drawerOpen ? (
-        <div
-          className="fixed inset-0 z-[110] flex justify-end"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="hotels-cart-title"
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-slate-950/55 sm:block"
-            aria-label="Fermer le panier"
-            onClick={() => setDrawerOpen(false)}
-          />
-          <div className="relative z-10 flex h-full w-full max-w-md flex-col bg-white shadow-2xl sm:border-l sm:border-violet-200/70">
-            <div className="flex items-center justify-between border-b border-violet-950/30 bg-gradient-to-r from-violet-950 via-violet-800 to-indigo-950 px-4 py-4 text-white sm:px-5 sm:py-5">
-              <h2 id="hotels-cart-title" className="font-catalog-display text-xl font-semibold">
-                Panier ({itemCount})
-              </h2>
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(false)}
-                className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-white/20"
-                aria-label="Fermer"
-              >
-                <X className="h-5 w-5" aria-hidden />
-              </button>
-            </div>
-
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
-              {staySummary ? (
-                <div className="rounded-2xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm font-semibold leading-snug text-violet-950">
-                  {staySummary}
-                </div>
-              ) : null}
-
-              {itemCount === 0 ? (
-                <p className="rounded-2xl border-2 border-dashed border-violet-300/80 bg-violet-50/80 px-5 py-12 text-center text-sm font-semibold text-catalog-body">
-                  Votre panier est vide.
-                  <br />
-                  <span className="font-extrabold text-violet-800">Ajoutez un hôtel pour continuer.</span>
-                </p>
-              ) : null}
-
-              {cart.items.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-base font-bold text-catalog-ink">{item.hotelName}</p>
-                      {item.location ? (
-                        <p className="mt-0.5 text-xs font-semibold text-catalog-muted">{item.location}</p>
-                      ) : null}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item.id)}
-                      className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-extrabold text-rose-900"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden />
-                      Retirer
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="shrink-0 border-t border-violet-100 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-              <button
-                type="button"
-                disabled={itemCount === 0}
-                onClick={openCheckout}
-                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 text-base font-bold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
-              >
-                Finaliser ma demande
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Checkout */}
-      {checkoutOpen ? (
-        <div
-          className="fixed inset-0 z-[120] flex items-end justify-center sm:items-center sm:p-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-slate-950/60"
-            aria-label="Fermer"
-            onClick={() => {
-              setCheckoutOpen(false);
-              setWantsCustomOffer(false);
-            }}
-          />
-          <form
-            onSubmit={(e) => void submitCheckout(e)}
-            className="relative z-10 flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-[1.75rem] border border-violet-200/70 bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl"
-          >
-            <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-slate-200 sm:hidden" aria-hidden />
-            <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-3 sm:px-6 sm:pt-5">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-700">
-                  {wantsCustomOffer ? "Proposition · Contact" : "Étape 2 · Contact"}
-                </p>
-                <h2 className="mt-1 font-catalog-display text-xl font-semibold text-catalog-ink">
-                  Vos coordonnées
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setCheckoutOpen(false);
-                  setWantsCustomOffer(false);
-                }}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100"
-                aria-label="Fermer"
-              >
-                <X className="h-5 w-5" aria-hidden />
-              </button>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3 sm:px-6">
-              {staySummary ? (
-                <p className="mb-3 rounded-xl border border-violet-100 bg-violet-50 px-3 py-2.5 text-xs font-semibold leading-snug text-violet-900">
-                  {staySummary}
-                </p>
-              ) : null}
-              {wantsCustomOffer ? (
-                <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-950">
-                  Offre personnalisée — sans hôtel préchoisi. Nous vous proposons une adresse adaptée.
-                </p>
-              ) : (
-                <ul className="mb-4 space-y-1 text-sm font-semibold text-catalog-body">
-                  {cart.items.map((it) => (
-                    <li key={it.id} className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-violet-500" aria-hidden />
-                      {it.hotelName}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm font-semibold text-catalog-ink">
-                  Prénom <span className="text-orange-500">*</span>
-                  <input
-                    required
-                    autoComplete="given-name"
-                    value={client.firstName}
-                    onChange={(e) => setClient((p) => ({ ...p, firstName: e.target.value }))}
-                    className={fieldClass}
-                  />
-                </label>
-                <label className="block text-sm font-semibold text-catalog-ink">
-                  Nom <span className="text-orange-500">*</span>
-                  <input
-                    required
-                    autoComplete="family-name"
-                    value={client.lastName}
-                    onChange={(e) => setClient((p) => ({ ...p, lastName: e.target.value }))}
-                    className={fieldClass}
-                  />
-                </label>
-                <label className="block text-sm font-semibold text-catalog-ink sm:col-span-2">
-                  Téléphone <span className="text-orange-500">*</span>
-                  <input
-                    required
-                    type="tel"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    value={formatPhoneWithPlus(client.phone)}
-                    onChange={(e) => setClient((p) => ({ ...p, phone: formatPhoneWithPlus(e.target.value) }))}
-                    className={fieldClass}
-                  />
-                </label>
-                <label className="block text-sm font-semibold text-catalog-ink sm:col-span-2">
-                  E-mail <span className="text-orange-500">*</span>
-                  <input
-                    required
-                    type="email"
-                    autoComplete="email"
-                    inputMode="email"
-                    value={client.email}
-                    onChange={(e) => setClient((p) => ({ ...p, email: e.target.value }))}
-                    className={fieldClass}
-                  />
-                </label>
-                <label className="block text-sm font-semibold text-catalog-ink sm:col-span-2">
-                  Budget maximum du séjour <span className="text-orange-500">*</span>
-                  <input
-                    required
-                    value={client.budget}
-                    onChange={(e) => setClient((p) => ({ ...p, budget: e.target.value }))}
-                    placeholder="Ex. 1 500 € maximum pour tout le séjour"
-                    className={fieldClass}
-                    aria-required="true"
-                  />
-                </label>
-              </div>
-
-              <p className="mt-4 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2.5 text-sm font-semibold text-emerald-900">
-                Formule : All inclusive
-              </p>
-
-              <label className="mt-4 block text-sm font-semibold text-catalog-ink">
-                Notes / précisions
-                <textarea
-                  rows={3}
-                  value={client.notes}
-                  onChange={(e) => setClient((p) => ({ ...p, notes: e.target.value }))}
-                  className={`${fieldClass} min-h-[96px] resize-y`}
-                  placeholder="Vue mer, lit bébé, transfert aéroport…"
+              </label>
+              <label className="block text-sm font-bold text-catalog-ink">
+                Départ <span className="text-catalog-coral">*</span>
+                <input
+                  type="date"
+                  value={stayDraft.departureDate}
+                  min={stayDraft.arrivalDate || undefined}
+                  onChange={(e) => updateStayField("departureDate", e.target.value)}
+                  className={fieldClass}
                 />
               </label>
             </div>
 
-            <div className="shrink-0 border-t border-violet-100 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 text-base font-bold text-white shadow-md disabled:opacity-60 active:scale-[0.99]"
-              >
-                {submitting ? "Envoi…" : "Envoyer ma demande"}
-              </button>
+            <div data-sheet-item className="mt-4 grid grid-cols-2 gap-2.5">
+              <CountStepper
+                label="Adultes"
+                icon={Users}
+                value={stayDraft.adultsCount}
+                min={1}
+                max={10}
+                onChange={(n) => updateStayField("adultsCount", n)}
+              />
+              <CountStepper
+                label="Enfants / bébés"
+                icon={Baby}
+                value={stayDraft.minorsCount || 0}
+                min={0}
+                max={10}
+                onChange={(n) => updateStayField("minorsCount", n)}
+              />
             </div>
-          </form>
-        </div>
+
+            {stayAgeLabel ? (
+              <p data-sheet-item className="mt-3 rounded-2xl bg-catalog-brassSoft px-3.5 py-3 text-xs font-semibold leading-snug text-catalog-ink">
+                {customOfferOpen ? "Grille d’âges (indicatif)" : "Grille hôtel"} : {stayAgeLabel}
+                <span className="mt-1 block font-medium text-catalog-muted">
+                  Indiquez la date de naissance : bébé ou enfant est calculé automatiquement à l’arrivée.
+                </span>
+              </p>
+            ) : null}
+
+            {(stayDraft.minorsCount || 0) > 0 ? (
+              <div data-sheet-item className="mt-4 space-y-3 rounded-[1.25rem] bg-catalog-bg p-3.5 ring-1 ring-catalog-line">
+                <p className="hdc-eyebrow">Dates de naissance</p>
+                {Array.from({ length: stayDraft.minorsCount }, (_, i) => {
+                  const detail = stayDraftDerived.details[i];
+                  const category = detail?.category ?? null;
+                  return (
+                    <label key={`dob-${i}`} className="block text-xs font-bold text-catalog-muted">
+                      Voyageur {i + 1}
+                      <input
+                        type="date"
+                        value={stayDraft.birthDates?.[i] || ""}
+                        max={stayDraft.arrivalDate || undefined}
+                        onChange={(e) => setBirthDateAt(i, e.target.value)}
+                        className={fieldClass}
+                      />
+                      <span
+                        className={`mt-1.5 inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${categoryBadgeClass(category)}`}
+                      >
+                        {formatMinorCategoryLabel(category, detail?.age)}
+                      </span>
+                    </label>
+                  );
+                })}
+                {stayDraftDerived.childrenCount +
+                  stayDraftDerived.babiesCount +
+                  stayDraftDerived.upgradedAdultsCount >
+                0 ? (
+                  <p className="text-xs font-semibold text-catalog-body">
+                    Résumé :{" "}
+                    {[
+                      `${stayDraftDerived.effectiveAdultsCount} adulte${stayDraftDerived.effectiveAdultsCount > 1 ? "s" : ""}`,
+                      stayDraftDerived.childrenCount
+                        ? `${stayDraftDerived.childrenCount} enfant${stayDraftDerived.childrenCount > 1 ? "s" : ""}`
+                        : null,
+                      stayDraftDerived.babiesCount
+                        ? `${stayDraftDerived.babiesCount} bébé${stayDraftDerived.babiesCount > 1 ? "s" : ""}`
+                        : null,
+                      stayDraftDerived.upgradedAdultsCount
+                        ? `(${stayDraftDerived.upgradedAdultsCount} reclassé${stayDraftDerived.upgradedAdultsCount > 1 ? "s" : ""} en adulte)`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <SheetFooter>
+            <button
+              type="button"
+              data-press
+              onClick={customOfferOpen ? confirmCustomOfferStay : confirmAddToCart}
+              className="hdc-btn hdc-btn-primary w-full min-h-[3.25rem] text-base"
+            >
+              {customOfferOpen ? "Continuer ma demande" : "Ajouter au panier"}
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
+          </SheetFooter>
+        </Sheet>
+      ) : null}
+
+      {/* Tiroir panier */}
+      {drawerOpen ? (
+        <Sheet
+          variant="right"
+          zClass="z-[110]"
+          onClose={() => setDrawerOpen(false)}
+          closeLabel="Fermer le panier"
+          labelledBy="hotels-cart-title"
+        >
+          <div className="pt-[env(safe-area-inset-top)]">
+            <SheetHeader
+              dark
+              eyebrow="Hôtels"
+              title={`Votre panier · ${itemCount}`}
+              titleId="hotels-cart-title"
+              onClose={() => setDrawerOpen(false)}
+            />
+          </div>
+
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
+            {staySummary ? (
+              <div data-sheet-item className="rounded-2xl bg-catalog-lagoonSoft px-4 py-3 text-sm font-semibold leading-snug text-catalog-ink">
+                {staySummary}
+              </div>
+            ) : null}
+
+            {itemCount === 0 ? (
+              <div data-sheet-item className="rounded-[1.4rem] bg-white px-5 py-12 text-center ring-1 ring-catalog-line">
+                <ShoppingBag className="mx-auto h-8 w-8 text-catalog-subtle" aria-hidden />
+                <p className="mt-3 font-catalog-display text-lg font-medium text-catalog-ink">Votre panier est vide</p>
+                <p className="mt-1 text-sm text-catalog-muted">Ajoutez un hôtel pour continuer.</p>
+              </div>
+            ) : null}
+
+            {cart.items.map((item) => (
+              <div key={item.id} data-sheet-item className="hdc-card flex items-center gap-3 p-4">
+                <div className="min-w-0 flex-1">
+                  <p className="font-catalog-display text-[1.0625rem] font-medium leading-snug text-catalog-ink">{item.hotelName}</p>
+                  {item.location ? <p className="mt-0.5 text-xs font-semibold text-catalog-muted">{item.location}</p> : null}
+                </div>
+                <button
+                  type="button"
+                  data-press="0.9"
+                  onClick={() => removeItem(item.id)}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-catalog-coralSoft text-catalog-coralDeep"
+                  aria-label={`Retirer ${item.hotelName}`}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <SheetFooter>
+            <button
+              type="button"
+              data-press
+              disabled={itemCount === 0}
+              onClick={openCheckout}
+              className="hdc-btn hdc-btn-primary w-full min-h-[3.25rem] text-base"
+            >
+              Finaliser ma demande
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
+          </SheetFooter>
+        </Sheet>
+      ) : null}
+
+      {/* Coordonnées */}
+      {checkoutOpen ? (
+        <Sheet onClose={closeCheckout} as="form" panelProps={{ onSubmit: (e) => void submitCheckout(e) }} labelledBy="hotels-checkout-title">
+          <SheetHeader
+            eyebrow={wantsCustomOffer ? "Proposition · Contact" : "Étape 2 sur 2 · Contact"}
+            title="Vos coordonnées"
+            titleId="hotels-checkout-title"
+            onClose={closeCheckout}
+          />
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4 sm:px-6">
+            {staySummary ? (
+              <p data-sheet-item className="mb-3 rounded-2xl bg-catalog-lagoonSoft px-3.5 py-3 text-xs font-semibold leading-snug text-catalog-ink">
+                {staySummary}
+              </p>
+            ) : null}
+            {wantsCustomOffer ? (
+              <p data-sheet-item className="mb-4 rounded-2xl bg-catalog-brassSoft px-3.5 py-3 text-sm font-semibold text-catalog-ink">
+                Offre personnalisée — sans hôtel préchoisi. Nous vous proposons une adresse adaptée.
+              </p>
+            ) : (
+              <ul data-sheet-item className="mb-4 flex flex-wrap gap-1.5">
+                {cart.items.map((it) => (
+                  <li key={it.id} className="inline-flex min-h-8 items-center rounded-full bg-catalog-bg px-3 text-xs font-bold text-catalog-ink ring-1 ring-catalog-line">
+                    {it.hotelName}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div data-sheet-item className="grid grid-cols-2 gap-3">
+              <label className="block text-sm font-bold text-catalog-ink">
+                Prénom <span className="text-catalog-coral">*</span>
+                <input
+                  required
+                  autoComplete="given-name"
+                  value={client.firstName}
+                  onChange={(e) => setClient((p) => ({ ...p, firstName: e.target.value }))}
+                  className={fieldClass}
+                />
+              </label>
+              <label className="block text-sm font-bold text-catalog-ink">
+                Nom <span className="text-catalog-coral">*</span>
+                <input
+                  required
+                  autoComplete="family-name"
+                  value={client.lastName}
+                  onChange={(e) => setClient((p) => ({ ...p, lastName: e.target.value }))}
+                  className={fieldClass}
+                />
+              </label>
+              <label className="col-span-2 block text-sm font-bold text-catalog-ink">
+                Téléphone WhatsApp <span className="text-catalog-coral">*</span>
+                <input
+                  required
+                  type="tel"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  value={formatPhoneWithPlus(client.phone)}
+                  onChange={(e) => setClient((p) => ({ ...p, phone: formatPhoneWithPlus(e.target.value) }))}
+                  className={fieldClass}
+                />
+              </label>
+              <label className="col-span-2 block text-sm font-bold text-catalog-ink">
+                E-mail <span className="text-catalog-coral">*</span>
+                <input
+                  required
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  value={client.email}
+                  onChange={(e) => setClient((p) => ({ ...p, email: e.target.value }))}
+                  className={fieldClass}
+                />
+              </label>
+              <label className="col-span-2 block text-sm font-bold text-catalog-ink">
+                Budget maximum du séjour <span className="text-catalog-coral">*</span>
+                <input
+                  required
+                  value={client.budget}
+                  onChange={(e) => setClient((p) => ({ ...p, budget: e.target.value }))}
+                  placeholder="Ex. 1 500 € maximum pour tout le séjour"
+                  className={fieldClass}
+                  aria-required="true"
+                />
+              </label>
+            </div>
+
+            <p data-sheet-item className="mt-4 inline-flex items-center gap-2 rounded-full bg-catalog-lagoonSoft px-3.5 py-2 text-sm font-bold text-catalog-lagoon">
+              <CheckCircle2 className="h-4 w-4" aria-hidden />
+              Formule : All inclusive
+            </p>
+
+            <label data-sheet-item className="mt-4 block text-sm font-bold text-catalog-ink">
+              Notes / précisions
+              <textarea
+                rows={3}
+                value={client.notes}
+                onChange={(e) => setClient((p) => ({ ...p, notes: e.target.value }))}
+                className={`${fieldClass} min-h-[96px] resize-y`}
+                placeholder="Vue mer, lit bébé, transfert aéroport…"
+              />
+            </label>
+          </div>
+
+          <SheetFooter>
+            <button
+              type="submit"
+              data-press
+              disabled={submitting}
+              className="hdc-btn hdc-btn-primary w-full min-h-[3.25rem] text-base"
+            >
+              {submitting ? "Envoi…" : "Envoyer ma demande"}
+            </button>
+          </SheetFooter>
+        </Sheet>
       ) : null}
 
       {successOpen ? (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <button type="button" className="absolute inset-0 bg-slate-950/60" aria-label="Fermer" onClick={() => setSuccessOpen(false)} />
-          <div className="relative z-10 max-w-md rounded-3xl border border-emerald-200 bg-white p-6 text-center shadow-2xl">
-            <p className="font-catalog-display text-2xl font-semibold text-catalog-ink">Demande envoyée</p>
-            <p className="mt-2 text-sm font-semibold leading-relaxed text-catalog-muted">
+        <Sheet variant="center" zClass="z-[130]" onClose={() => setSuccessOpen(false)} labelledBy="hotels-success-title">
+          <div className="p-7 text-center">
+            <span data-sheet-item className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-catalog-lagoonSoft text-catalog-lagoon">
+              <CheckCircle2 className="h-8 w-8" aria-hidden />
+            </span>
+            <p data-sheet-item id="hotels-success-title" className="mt-4 font-catalog-display text-[1.75rem] font-normal text-catalog-ink">
+              Demande envoyée
+            </p>
+            <p data-sheet-item className="mt-2 text-sm leading-relaxed text-catalog-muted">
               Merci ! Notre équipe vous recontacte rapidement avec une proposition pour votre séjour.
             </p>
             <button
               type="button"
+              data-sheet-item
+              data-press
               onClick={() => setSuccessOpen(false)}
-              className="mt-5 inline-flex rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-5 py-3 text-sm font-bold text-white"
+              className="hdc-btn hdc-btn-ink mt-6 w-full"
             >
               Continuer
             </button>
           </div>
-        </div>
+        </Sheet>
       ) : null}
     </>
   );

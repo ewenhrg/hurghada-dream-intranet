@@ -1,5 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  Headset,
+  Info,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  Trash2,
+  X,
+} from "lucide-react";
+import { GuestHeaderButton, PublicAppShell } from "../components/public/PublicAppShell";
+import { HdLoader } from "../components/public/GuestPageLoader";
+import { Sheet, SheetFooter, SheetHeader, StateCard, WhatsAppGlyph } from "../components/public/PublicUI";
+import {
+  CatalogueActivityCard,
+  CatalogueActivityCardSkeleton,
+  CategoryIcon,
+} from "../components/public/CatalogueActivityCard";
+import { displayActivityName, getPublicCategoryLabel, formatMoney as formatPublicMoney } from "../components/public/catalogueDisplay";
+import { PUBLIC_HOME_PATH } from "../config/clientApp";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
@@ -31,6 +54,7 @@ import {
   getSpeedBoatMaxParticipantsMessage,
   getMammaMiaSelfTransferActivityNames,
   withMammaMiaSelfTransferNote,
+  getActivityPublicProse,
   isTurtleActivity,
   persistTurtleFinSizes,
   hasAllTurtleFinSizes,
@@ -50,7 +74,6 @@ import { isLikelyGoogleMapsUrl } from "../utils/googleMapsUrl.js";
 /** `*` : toutes les colonnes présentes en base (évite erreur si `babies_forbidden` n’est pas encore migrée). */
 const ACTIVITY_COLUMNS = "*";
 
-const INSTAGRAM_CATALOG_URL = "https://www.instagram.com/hurghada_dream/";
 const LAST_PUBLIC_CATEGORY_KEY = "marsa_alam";
 
 function toNumber(value) {
@@ -59,15 +82,7 @@ function toNumber(value) {
 }
 
 function formatMoney(value, currency = "EUR") {
-  const safeValue = toNumber(value);
-  try {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: String(currency || "EUR").toUpperCase(),
-    }).format(safeValue);
-  } catch {
-    return `${safeValue} ${currency || "EUR"}`;
-  }
+  return formatPublicMoney(toNumber(value), currency);
 }
 
 /** Affichage lisible de la date d’excursion dans le panier (lecture seule). */
@@ -90,35 +105,8 @@ function normalizeCategory(rawCategory) {
   return exists ? value : "desert";
 }
 
-function getCategoryCover(categoryKey) {
-  const covers = {
-    desert:
-      "linear-gradient(145deg, rgba(251,191,36,0.98) 0%, rgba(217,119,6,0.92) 45%, rgba(180,83,9,0.88) 100%)",
-    aquatique:
-      "linear-gradient(145deg, rgba(34,211,238,0.95) 0%, rgba(6,182,212,0.92) 50%, rgba(8,145,178,0.9) 100%)",
-    exploration_bien_etre:
-      "linear-gradient(145deg, rgba(52,211,153,0.96) 0%, rgba(16,185,129,0.92) 50%, rgba(5,150,105,0.9) 100%)",
-    luxor_caire:
-      "linear-gradient(145deg, rgba(165,180,252,0.98) 0%, rgba(99,102,241,0.94) 45%, rgba(67,56,202,0.9) 100%)",
-    marsa_alam:
-      "linear-gradient(145deg, rgba(251,113,133,0.96) 0%, rgba(244,63,94,0.92) 50%, rgba(190,18,60,0.88) 100%)",
-    transfert:
-      "linear-gradient(145deg, rgba(100,116,139,0.96) 0%, rgba(51,65,85,0.94) 50%, rgba(15,23,42,0.92) 100%)",
-  };
-  return covers[categoryKey] || covers.desert;
-}
-
-function getCategoryEmoji(categoryKey) {
-  const map = {
-    desert: "🏜",
-    aquatique: "🌊",
-    exploration_bien_etre: "✨",
-    luxor_caire: "🏛",
-    marsa_alam: "🐠",
-    transfert: "🚐",
-  };
-  return map[categoryKey] || "⭐";
-}
+const HERO_IMAGE = "/client/home-tile-excursions.jpg";
+const AGENCY_WHATSAPP_URL = "https://wa.me/201062002850?text=Bonjour%20Hurghada%20Dream%2C%20";
 
 function getCategoryPublicNotice(categoryKey) {
   if (categoryKey === "marsa_alam") {
@@ -127,8 +115,83 @@ function getCategoryPublicNotice(categoryKey) {
   return "";
 }
 
+const REASSURANCES = [
+  { Icon: ShieldCheck, title: "Devis gratuit", text: "Sans engagement ni paiement en ligne." },
+  { Icon: CalendarDays, title: "Selon vos dates", text: "Le calendrier ne propose que les jours disponibles pendant votre séjour." },
+  { Icon: Headset, title: "Équipe locale 7j/7", text: "Nous confirmons chaque détail avec vous sur WhatsApp." },
+];
+
+/** Pied de page du catalogue : réassurance, contact direct, liens de l’appli client. */
+function CatalogueFooter() {
+  return (
+    <footer className="mx-auto w-full max-w-7xl px-4 pb-32 pt-6 sm:px-6 lg:px-8">
+      <ul data-reveal="item" className="grid gap-3 sm:grid-cols-3">
+        {REASSURANCES.map(({ Icon, title, text }) => (
+          <li key={title} className="flex items-start gap-3.5 rounded-[1.25rem] bg-white p-5 ring-1 ring-catalog-line">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-catalog-lagoonSoft text-catalog-lagoon">
+              <Icon className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-catalog-ink">{title}</span>
+              <span className="mt-0.5 block text-sm leading-relaxed text-catalog-muted">{text}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <section
+        data-reveal="item"
+        className="relative mt-4 overflow-hidden rounded-[1.5rem] bg-catalog-abyss px-6 py-8 text-white sm:px-10 sm:py-10"
+        aria-labelledby="catalogue-help-title"
+      >
+        <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(227,174,85,0.4)_0%,rgba(227,174,85,0)_70%)]" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-xl">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-catalog-sand">Conciergerie</p>
+            <h2 id="catalogue-help-title" className="mt-2 font-catalog-display text-[1.75rem] leading-snug !text-white sm:text-[2rem]">
+              Une question avant de choisir&nbsp;? <span className="hdc-serif text-catalog-sand">Parlons-en.</span>
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-white/75 sm:text-[0.9375rem]">
+              Niveau de difficulté, âge des enfants, prise en charge à l’hôtel : notre équipe vous conseille.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
+            <a href={AGENCY_WHATSAPP_URL} target="_blank" rel="noopener noreferrer" data-press className="hdc-btn hdc-btn-ghost">
+              <WhatsAppGlyph className="h-5 w-5 text-[#1F8F55]" />
+              Écrire sur WhatsApp
+            </a>
+            <Link to="/contacts" data-press className="hdc-btn border border-white/30 text-white hover:bg-white/10">
+              Nos contacts
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <div className="mt-10 flex flex-col items-center gap-4 border-t border-catalog-line pt-8 sm:flex-row sm:justify-between">
+        <img src="/client/logo-wordmark.png" alt="Hurghada Dream" className="h-5 w-auto object-contain" loading="lazy" />
+        <nav aria-label="Liens du catalogue" className="flex flex-wrap justify-center gap-1 text-sm font-medium text-catalog-muted">
+          <Link to={PUBLIC_HOME_PATH} className="inline-flex min-h-11 items-center rounded-full px-3 hover:text-catalog-ink">
+            Accueil
+          </Link>
+          <Link to="/hotels" className="inline-flex min-h-11 items-center rounded-full px-3 hover:text-catalog-ink">
+            Hôtels
+          </Link>
+          <Link to="/sejour" className="inline-flex min-h-11 items-center rounded-full px-3 hover:text-catalog-ink">
+            Mon séjour
+          </Link>
+          <Link to="/contacts" className="inline-flex min-h-11 items-center rounded-full px-3 hover:text-catalog-ink">
+            Contacts
+          </Link>
+        </nav>
+      </div>
+      <p className="mt-4 text-center text-xs text-catalog-subtle sm:text-left">
+        © {new Date().getFullYear()} Hurghada Dream · Excursions en mer Rouge
+      </p>
+    </footer>
+  );
+}
+
 export function PublicClientDevisPage() {
-  const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -158,6 +221,7 @@ export function PublicClientDevisPage() {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const resultsRef = useRef(null);
 
   const publicDisplayCategories = useMemo(() => {
     const categories = [...CATEGORIES];
@@ -216,18 +280,6 @@ export function PublicClientDevisPage() {
       }))
       .filter((category) => category.items.length > 0);
   }, [filteredActivities, publicDisplayCategories]);
-
-  /** Délais d’entrée échelonnés pour les cartes (effet « vivant », plafonné pour perf). */
-  const catalogCardEnterDelayMsById = useMemo(() => {
-    const map = new Map();
-    let idx = 0;
-    groupedActivities.forEach((g) => {
-      g.items.forEach((a) => {
-        map.set(a.id, Math.min(idx++, 20) * 42);
-      });
-    });
-    return map;
-  }, [groupedActivities]);
 
   const categoryCounts = useMemo(() => {
     const counts = { all: publicActivities.length };
@@ -740,512 +792,437 @@ export function PublicClientDevisPage() {
     }
   }
 
-  return (
-    <div className="hd-public-catalog relative isolate flex min-h-screen flex-col overflow-x-hidden bg-catalog-bg font-catalog-sans text-catalog-body antialiased selection:bg-violet-200/55 selection:text-catalog-ink">
-      {/* Fond opaque : coupe le dégradé sombre global du body intranet */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-bg" />
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-catalog-mesh opacity-[0.42]" />
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 z-0 bg-catalog-grid opacity-[0.18] [background-size:48px_48px]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[min(72vh,520px)] bg-[radial-gradient(ellipse_90%_70%_at_50%_-18%,rgba(167,139,250,0.22),transparent_58%)]"
-      />
+  const hasActiveFilters = selectedCategory !== "all" || search.trim() !== "";
+  const universeCount = publicDisplayCategories.filter((c) => (categoryCounts[c.key] || 0) > 0).length;
+  const showCartBar = cartLines.length > 0 && !cartDrawerOpen && !checkoutOpen && !successModalOpen && !stayModalOpen;
 
-      <header className="sticky top-0 z-30 border-b border-violet-500/25 bg-catalog-night/95 text-white shadow-[0_16px_48px_-12px_rgba(15,8,32,0.65)] backdrop-blur-md backdrop-saturate-150">
-        <div className="mx-auto flex max-w-[1440px] animate-catalog-in-fade items-center justify-between gap-4 px-4 py-3.5 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3.5">
-            <div className="relative flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-orange-600 p-1.5 shadow-xl shadow-violet-950/50 ring-2 ring-orange-300/50 ring-offset-2 ring-offset-catalog-night">
-              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/25 to-transparent" />
-              <img src="/logo.png" alt="Hurghada Dream" className="relative h-full w-full object-contain drop-shadow-md" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate font-catalog-display text-lg font-semibold tracking-tight text-white sm:text-xl">
-                Hurghada Dream
-              </p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-violet-200/95 sm:text-[11px]">
-                Excursions · Mer Rouge
-              </p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => navigate("/sejour")}
-              className="inline-flex min-h-[44px] items-center rounded-full border border-white/25 bg-white/10 px-3 text-xs font-extrabold uppercase tracking-wide text-white"
+  /** Changement d’univers depuis la barre collante : on ramène le début des résultats sous la barre. */
+  function selectCategory(key) {
+    setSelectedCategory(key);
+    window.requestAnimationFrame(() => {
+      const el = resultsRef.current;
+      if (!el || el.getBoundingClientRect().top >= 0) return;
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    });
+  }
+
+  function resetFilters() {
+    setSearch("");
+    selectCategory("all");
+  }
+
+  function retryFetch() {
+    setError("");
+    setLoading(true);
+    void fetchActivities();
+  }
+
+  function openCart() {
+    setError("");
+    setSuccess("");
+    setCartDrawerOpen(true);
+  }
+
+  const revealKey = `${loading ? "l" : "r"}-${selectedCategory}-${filteredActivities.length}-${error ? "e" : ""}`;
+  let cardIndex = 0;
+
+  return (
+    <PublicAppShell
+      title="Excursions"
+      wide="xl"
+      revealKey={revealKey}
+      right={
+        <GuestHeaderButton onClick={openCart} count={cartLines.length} ariaLabel="Panier">
+          <ShoppingBag className="h-4 w-4" aria-hidden />
+        </GuestHeaderButton>
+      }
+    >
+      {/* ——— Hero ——— */}
+      <section className="mx-auto max-w-7xl px-4 pt-2 sm:px-6 lg:px-8" aria-labelledby="catalogue-title">
+        <div
+          data-hero-media
+          className="relative isolate flex min-h-[19rem] items-end overflow-hidden rounded-[1.5rem] bg-catalog-raised sm:min-h-[22rem] lg:min-h-[26rem]"
+        >
+          <img
+            data-hero-img
+            src={HERO_IMAGE}
+            alt=""
+            fetchPriority="high"
+            decoding="async"
+            className="absolute inset-0 -z-10 h-full w-full object-cover"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(10,42,51,0.1)_0%,rgba(10,42,51,0.25)_40%,rgba(8,36,46,0.88)_100%)] lg:bg-[linear-gradient(90deg,rgba(8,36,46,0.86)_0%,rgba(10,42,51,0.55)_45%,rgba(10,42,51,0)_80%)]"
+          />
+          <div className="w-full max-w-2xl p-5 sm:p-8 lg:p-12">
+            <p data-reveal="item" className="hdc-eyebrow hdc-eyebrow-light">Excursions · Mer Rouge</p>
+            <h1
+              id="catalogue-title"
+              data-split
+              className="mt-3 font-catalog-display text-[2.25rem] leading-[1.04] !text-white sm:text-[2.75rem] lg:text-[3.5rem]"
             >
-              Séjour
-            </button>
-            <a
-              href={INSTAGRAM_CATALOG_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative inline-flex min-h-[44px] items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888] px-3.5 py-2.5 pl-3.5 text-sm font-extrabold tracking-tight text-white shadow-[0_4px_20px_-4px_rgba(225,48,108,0.45),0_2px_8px_-2px_rgba(15,23,42,0.2)] ring-2 ring-white/30 transition hover:brightness-105 hover:shadow-[0_8px_28px_-6px_rgba(225,48,108,0.5)] active:scale-[0.98] sm:gap-2 sm:px-4 sm:py-2.5"
-              aria-label="Instagram Hurghada Dream — 127K abonnés (nouvelle fenêtre)"
-            >
-              <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-              <svg
-                className="relative h-5 w-5 shrink-0 text-white drop-shadow-sm"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden
-              >
-                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.06-1.28.072-1.689.072-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
-              </svg>
-              <span className="relative text-[15px] font-black tabular-nums tracking-tight drop-shadow-sm">127K</span>
-            </a>
-            <button
-              type="button"
-              onClick={() => {
-                setError("");
-                setSuccess("");
-                setCartDrawerOpen(true);
-              }}
-              className="group relative inline-flex min-h-[44px] items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-orange-500 to-amber-400 px-3.5 py-2.5 pl-3.5 text-sm font-extrabold tracking-tight text-slate-950 shadow-[0_4px_22px_-4px_rgba(234,88,12,0.55),0_2px_8px_-2px_rgba(0,0,0,0.35)] ring-2 ring-orange-200/90 transition hover:from-orange-400 hover:to-amber-300 hover:shadow-[0_8px_30px_-6px_rgba(234,88,12,0.5)] active:scale-[0.98] sm:gap-2.5 sm:px-5 sm:py-2.5"
-            >
-              <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-              <span className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100">
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition duration-700 group-hover:translate-x-full" />
-              </span>
-              <svg className="relative h-5 w-5 shrink-0 text-slate-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden>
-                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-                <path d="M3 6h18" />
-                <path d="M16 10a4 4 0 0 1-8 0" />
-              </svg>
-              <span className="relative text-[15px]">Panier</span>
-              {cartLines.length > 0 ? (
-                <span className="relative flex h-7 min-w-[1.75rem] items-center justify-center rounded-full border border-slate-900/20 bg-slate-900 px-2 text-xs font-black text-amber-300 shadow-inner">
-                  {cartLines.length}
-                </span>
-              ) : null}
-            </button>
+              Votre prochaine <span className="hdc-serif text-catalog-sand">escapade</span> commence ici.
+            </h1>
+            <p data-reveal="item" className="mt-3 max-w-lg text-[0.9375rem] leading-relaxed text-white/85 sm:text-base">
+              Désert, récifs, îles, Louxor &amp; Le Caire : composez votre sélection et recevez une proposition claire,
+              sans engagement.
+            </p>
+            {!loading && publicActivities.length > 0 ? (
+              <ul data-reveal="item" className="mt-5 flex flex-wrap gap-2 text-xs font-semibold text-white">
+                <li className="inline-flex min-h-8 items-center rounded-full bg-white/15 px-3 ring-1 ring-white/25 backdrop-blur-md">
+                  {publicActivities.length} expériences
+                </li>
+                <li className="inline-flex min-h-8 items-center rounded-full bg-white/15 px-3 ring-1 ring-white/25 backdrop-blur-md">
+                  {universeCount} univers
+                </li>
+                <li className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-white/15 px-3 ring-1 ring-white/25 backdrop-blur-md">
+                  <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                  Devis gratuit
+                </li>
+              </ul>
+            ) : null}
           </div>
         </div>
-      </header>
 
-      <section className="catalog-shell relative z-10 border-b border-violet-200/50 bg-white">
-        <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-12 text-center sm:px-6 sm:pb-20 sm:pt-16 lg:max-w-7xl">
-          <span className="mb-6 inline-flex animate-catalog-in-up items-center gap-2 rounded-full border border-violet-300/70 bg-gradient-to-r from-white via-violet-50/95 to-orange-50/90 px-5 py-2 text-[10px] font-bold uppercase tracking-[0.26em] text-violet-950 opacity-0 shadow-md shadow-violet-900/15 backdrop-blur-sm motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[11px]">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500 shadow-[0_0_12px_rgba(234,88,12,0.85)]" aria-hidden />
-            Catalogue en direct
-          </span>
-          <h1 className="catalog-title-glow mx-auto max-w-4xl animate-catalog-in-up font-catalog-display text-[2rem] font-semibold leading-[1.08] tracking-tight text-catalog-ink opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[2.35rem] md:text-5xl md:leading-[1.06]" style={{ animationDelay: "70ms" }}>
-            Votre prochaine{" "}
-            <span className="relative inline-block">
-              <span className="relative z-10 font-semibold text-violet-700 [text-shadow:0_1px_0_rgba(255,255,255,0.95),0_2px_14px_rgba(109,40,217,0.28)]">
-                aventure
-              </span>
-              <span
-                aria-hidden
-                className="absolute -inset-x-1 -bottom-1 z-0 h-3 rounded-md bg-gradient-to-r from-orange-400/95 via-violet-300/85 to-fuchsia-200/50"
-              />
-            </span>{" "}
-            à Hurghada
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl animate-catalog-in-up text-[15px] font-semibold leading-relaxed text-catalog-body opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:text-lg sm:leading-relaxed" style={{ animationDelay: "130ms" }}>
-            Désert, mer, Louxor &amp; Caires — parcourez le catalogue, composez votre panier et recevez une proposition claire, sans engagement.
-          </p>
-
+        {/* ——— Recherche + séjour ——— */}
+        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <label data-reveal="item" className="relative block" htmlFor="public-search">
+            <span className="sr-only">Rechercher une excursion</span>
+            <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-catalog-subtle" aria-hidden />
+            <input
+              id="public-search"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher une excursion, un lieu…"
+              autoComplete="off"
+              enterKeyHint="search"
+              className="hdc-input hdc-search !min-h-[3.25rem] !rounded-full !pl-12 !pr-14"
+            />
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-1.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-catalog-muted hover:bg-catalog-bg hover:text-catalog-ink"
+                aria-label="Effacer la recherche"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            ) : null}
+          </label>
           {isValidCatalogueStay(stay) ? (
-            <div
-              className="mx-auto mt-8 flex max-w-xl animate-catalog-in-up flex-col items-center gap-2 rounded-2xl border border-violet-200/90 bg-white/90 px-4 py-3 shadow-sm opacity-0 backdrop-blur-sm motion-reduce:animate-none motion-reduce:opacity-100 sm:flex-row sm:justify-between"
-              style={{ animationDelay: "160ms" }}
-            >
-              <p className="text-sm font-semibold text-catalog-ink">
-                Séjour :{" "}
-                <span className="text-violet-800">{formatCatalogueStaySummary(stay)}</span>
+            <div data-reveal="item" className="flex min-h-[3.25rem] items-center gap-3 rounded-full bg-white py-1 pl-4 pr-1 ring-1 ring-catalog-border">
+              <CalendarDays className="h-5 w-5 shrink-0 text-catalog-lagoon" strokeWidth={1.5} aria-hidden />
+              <p className="min-w-0 flex-1 truncate text-sm font-medium text-catalog-ink">
+                <span className="sr-only">Votre séjour : </span>
+                {formatCatalogueStaySummary(stay)}
               </p>
               <button
                 type="button"
+                data-press
                 onClick={openStayEditor}
-                className="rounded-full border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-900 transition hover:bg-violet-100"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-catalog-lagoon hover:bg-catalog-lagoonSoft"
               >
-                Modifier les dates
+                Modifier
               </button>
             </div>
           ) : null}
-
-          <div className="mx-auto mt-12 max-w-xl animate-catalog-in-up opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "190ms" }}>
-            <label className="relative block text-left" htmlFor="public-search">
-              <span className="mb-2.5 block text-center text-[10px] font-extrabold uppercase tracking-[0.28em] text-catalog-label">
-                Recherche instantanée
-              </span>
-              <span className="catalog-elevated relative block rounded-[1.4rem] border-2 border-violet-200/90 bg-white p-1 shadow-catalog-premium ring-1 ring-violet-900/[0.06] backdrop-blur-md transition focus-within:border-violet-500 focus-within:shadow-catalog-premium-hover focus-within:ring-2 focus-within:ring-orange-400/35">
-                <svg
-                  className="pointer-events-none absolute left-6 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-violet-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  aria-hidden
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
-                </svg>
-                <input
-                  id="public-search"
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Nom d’activité, mot-clé, lieu…"
-                  autoComplete="off"
-                  className="w-full rounded-[1.15rem] border-0 bg-transparent py-4 pl-14 pr-5 text-[15px] font-semibold text-catalog-body shadow-none outline-none ring-0 placeholder:font-medium placeholder:text-catalog-subtle"
-                />
-              </span>
-            </label>
-          </div>
-
-          <div className="mx-auto mt-12 max-w-5xl animate-catalog-in-up opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:max-w-none" style={{ animationDelay: "240ms" }}>
-            <p className="mb-3 text-center text-xs font-bold uppercase tracking-[0.12em] text-slate-900 sm:text-sm sm:tracking-[0.14em]">
-              Filtrer par univers
-            </p>
-            <div className="-mx-1 flex snap-x snap-mandatory flex-nowrap justify-start gap-2 overflow-x-auto px-1 pb-2 pt-1 scrollbar-hide sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:pb-0">
-              <button
-                type="button"
-                onClick={() => setSelectedCategory("all")}
-                className={`catalog-ring-focus snap-center shrink-0 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:rounded-full sm:px-5 sm:text-center ${
-                  selectedCategory === "all"
-                    ? "catalog-chip-active scale-[1.02] ring-2 ring-orange-300/50 ring-offset-2 ring-offset-white"
-                    : "catalog-chip border-2 border-violet-300/90 text-slate-950 hover:-translate-y-0.5 hover:border-violet-500 hover:bg-violet-50/95 hover:shadow-md"
-                }`}
-              >
-                <span className="mr-1.5" aria-hidden>
-                  ✦
-                </span>
-                Toutes
-                <span
-                  className={`ml-1.5 tabular-nums ${selectedCategory === "all" ? "text-white/90" : "text-slate-600"}`}
-                >
-                  · {categoryCounts.all || 0}
-                </span>
-              </button>
-              {publicDisplayCategories.map((category) => {
-                const active = selectedCategory === category.key;
-                const categoryNotice = getCategoryPublicNotice(category.key);
-                return (
-                <button
-                  key={category.key}
-                  type="button"
-                  onClick={() => setSelectedCategory(category.key)}
-                  className={`catalog-ring-focus snap-center flex min-w-[9.5rem] shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-left text-sm font-semibold leading-snug transition-all sm:min-w-0 sm:rounded-full sm:px-5 sm:text-center ${
-                    active
-                      ? "catalog-chip-active scale-[1.02] ring-2 ring-orange-300/50 ring-offset-2 ring-offset-white"
-                      : "catalog-chip border-2 border-violet-300/90 text-slate-950 hover:-translate-y-0.5 hover:border-violet-500 hover:bg-violet-50/95 hover:shadow-md"
-                  }`}
-                >
-                  <span className={`text-lg leading-none sm:text-xl ${active ? "text-white" : "text-slate-900"}`} aria-hidden>
-                    {getCategoryEmoji(category.key)}
-                  </span>
-                  <span className={`min-w-0 text-balance leading-snug ${active ? "text-white" : "text-slate-950"}`}>
-                    {category.label}
-                    <span className={`ml-1 tabular-nums ${active ? "text-white/90" : "text-slate-800"}`}>
-                      · {categoryCounts[category.key] || 0}
-                    </span>
-                  </span>
-                  {categoryNotice ? (
-                    <span
-                      className={`inline-flex items-center rounded-xl border px-2 py-1 text-[10px] font-extrabold leading-tight sm:text-[11px] ${
-                        active
-                          ? "border-white/60 bg-white/15 text-white"
-                          : "border-amber-300 bg-amber-50 text-amber-900"
-                      }`}
-                    >
-                      {categoryNotice}
-                    </span>
-                  ) : null}
-                </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
       </section>
 
-      <main className="relative z-10 mx-auto max-w-[1440px] space-y-10 px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-        <section className="space-y-10">
-          {error && !loading && (
-            <div className="flex items-start gap-4 rounded-3xl border border-rose-200/90 bg-gradient-to-br from-rose-50 via-white to-rose-50/50 px-6 py-5 text-sm font-semibold text-rose-950 shadow-catalog-premium">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-500/15 text-lg font-black text-rose-700" aria-hidden>
-                !
-              </span>
-              <span className="pt-0.5 leading-relaxed">{error}</span>
-            </div>
-          )}
-
-          {loading && (
-            <div className="flex flex-col items-center justify-center gap-6 rounded-[2rem] border border-white/80 bg-white/90 py-24 shadow-catalog-premium backdrop-blur-md">
-              <div className="relative h-16 w-16" aria-hidden>
-                <div className="absolute inset-0 animate-ping rounded-full bg-emerald-400/30" />
-                <div className="relative h-16 w-16 animate-spin rounded-full border-[3px] border-violet-100 border-t-violet-700" />
-              </div>
-              <p className="font-catalog-display text-lg font-semibold text-catalog-ink">Chargement du catalogue…</p>
-              <p className="max-w-sm text-center text-sm font-semibold text-catalog-muted">Préparation des meilleures expériences pour vous.</p>
-            </div>
-          )}
-
-          {!loading && !error && filteredActivities.length === 0 && (
-            <div className="rounded-[2rem] border border-violet-200/70 bg-gradient-to-br from-white via-violet-50/50 to-orange-50/40 px-8 py-20 text-center shadow-catalog-premium">
-              <p className="font-catalog-display text-2xl font-semibold text-catalog-ink">Aucun résultat</p>
-              <p className="mx-auto mt-4 max-w-md text-base font-semibold leading-relaxed text-catalog-muted">
-                Essayez un autre mot-clé ou changez de catégorie — notre catalogue évolue souvent.
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-16 pb-16">
-            {groupedActivities.map((group, groupIndex) => (
-              <section
-                key={group.key}
-                className="animate-catalog-in-fade space-y-8 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100"
-                style={{ animationDelay: `${Math.min(groupIndex, 12) * 50}ms` }}
-              >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-                  <div className="flex items-start gap-4">
-                    <span className="mt-1 hidden h-14 w-1 shrink-0 rounded-full bg-gradient-to-b from-orange-400 via-violet-500 to-fuchsia-700 shadow-md sm:block" />
-                    <div>
-                      <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.22em] text-catalog-label">Collection</p>
-                      <h2 className="font-catalog-display text-[1.65rem] font-semibold tracking-tight text-catalog-ink sm:text-3xl md:text-[2rem]">
-                        {group.label}
-                      </h2>
-                      {group.key === "marsa_alam" ? (
-                        <p className="mt-2 max-w-3xl rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold leading-relaxed text-amber-900 sm:text-sm">
-                          Si vous ne logez pas à Marsa Alam, des frais de transfert d’environ 100 € peuvent s’ajouter.
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                  <span className="inline-flex w-fit items-center gap-2 rounded-2xl border-2 border-violet-200/80 bg-white px-4 py-2.5 text-xs font-extrabold text-catalog-body shadow-sm">
-                    <span className="text-base leading-none" aria-hidden>
-                      {getCategoryEmoji(group.key)}
-                    </span>
-                    {group.items.length} expérience{group.items.length > 1 ? "s" : ""}
-                  </span>
-                </div>
-                <div className="grid auto-rows-fr gap-8 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                  {group.items.map((activity) => {
-                    const categoryKey = normalizeCategory(activity.category);
-                    const catalogUrls = normalizeCatalogImageUrlsFromDb(activity.catalog_image_urls);
-                    const coverImageUrl = catalogUrls[0] || null;
-                    const listFrom = getPublicCatalogListFromPrice(activity);
-                    const cardFrom =
-                      toNumber(activity.price_adult) > 0 ? toNumber(activity.price_adult) : listFrom?.amount ?? null;
-                    return (
-                      <article
-                        key={activity.id}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`${activity.name || "Activité"} — ouvrir la fiche pour configurer et ajouter au panier`}
-                        onClick={() =>
-                          navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`)
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`);
-                          }
-                        }}
-                        className="public-catalog-grid-card catalog-float-soft group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-violet-200/80 bg-white opacity-0 shadow-catalog-premium ring-1 ring-violet-900/[0.06] transition-all duration-300 ease-out animate-catalog-in-fade motion-reduce:animate-none motion-reduce:opacity-100 hover:-translate-y-2 hover:border-orange-400/70 hover:shadow-catalog-premium-hover hover:ring-orange-400/25 active:scale-[0.99]"
-                        style={{ animationDelay: `${catalogCardEnterDelayMsById.get(activity.id) ?? 0}ms` }}
-                      >
-                        <div className="relative aspect-[5/4] w-full overflow-hidden bg-slate-100 sm:aspect-[5/4]">
-                          {coverImageUrl ? (
-                            <img
-                              src={coverImageUrl}
-                              alt=""
-                              draggable={false}
-                              className="hd-catalog-card-cover pointer-events-none absolute inset-0 h-full w-full select-none object-cover transition duration-700 ease-out sm:group-hover:scale-[1.08]"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div
-                              className="absolute inset-0 h-full w-full transition duration-500 group-hover:brightness-105"
-                              style={{ background: getCategoryCover(categoryKey) }}
-                            />
-                          )}
-                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#022c22]/88 via-slate-900/25 to-transparent" />
-                          <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/75 via-black/35 to-transparent sm:h-44" />
-                          <div className="absolute left-3 top-3 z-10 flex max-w-[min(100%,calc(100%-1.25rem))] flex-col items-start gap-2 sm:left-4 sm:top-4">
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-slate-950/95 px-3 py-1.5 text-xs font-extrabold text-white shadow-[0_3px_16px_rgba(0,0,0,0.55)] ring-1 ring-black/25 backdrop-blur-md sm:text-sm">
-                              <span aria-hidden>{getCategoryEmoji(categoryKey)}</span>
-                              {CATEGORIES.find((c) => c.key === categoryKey)?.label || "Activité"}
-                            </span>
-                            {activity.popular === true ? (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-400/95 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-amber-950 shadow-md ring-1 ring-black/10">
-                                ★ Populaire
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                        <div className="catalog-elevated flex grow flex-col bg-white p-5 sm:p-6">
-                          <h3 className="line-clamp-2 text-left font-catalog-display text-xl font-bold leading-tight tracking-tight text-catalog-ink sm:text-[1.35rem]">
-                            {activity.name || "Activité"}
-                          </h3>
-                          <div className="mt-auto flex items-end justify-between gap-3 border-t-2 border-slate-100 pt-4">
-                            <p className="max-w-[58%] text-left text-[11px] font-semibold leading-snug text-catalog-muted sm:text-xs">
-                              Dates &amp; participants sur la fiche — ajout panier en un clic.
-                            </p>
-                            <div className="flex shrink-0 flex-col items-end text-right">
-                              <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-catalog-subtle">
-                                à partir de
-                              </span>
-                              <div className="mt-1">
-                                {cardFrom != null && cardFrom > 0 ? (
-                                  <span className="inline-block rounded-xl border-2 border-violet-200 bg-violet-50/95 px-3 py-1.5 font-catalog-display text-xl font-bold tabular-nums text-catalog-ink shadow-sm">
-                                    {formatMoney(cardFrom, activity.currency || "EUR")}
-                                  </span>
-                                ) : (
-                                  <span className="inline-block rounded-xl border-2 border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-extrabold text-amber-950">
-                                    Sur devis
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
-        </section>
-      </main>
-
-      <footer className="relative z-10 border-t-2 border-violet-200/60 bg-gradient-to-b from-white via-violet-50/40 to-catalog-bg py-16 text-center">
-        <div className="mx-auto max-w-lg animate-catalog-in-fade px-4 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "320ms" }}>
-          <p className="font-catalog-display text-sm font-semibold tracking-wide text-catalog-ink">Hurghada Dream</p>
-          <p className="mt-3 text-sm font-semibold leading-relaxed text-catalog-muted">
-            Excursions sur-mesure · Mer Rouge, désert &amp; temples — une équipe locale à votre écoute.
-          </p>
-          <div className="mx-auto mt-6 h-px max-w-xs bg-gradient-to-r from-transparent via-violet-300/70 to-transparent" aria-hidden />
-        </div>
-      </footer>
-
-      {cartDrawerOpen && (
-        <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="cart-drawer-title">
+      {/* ——— Univers (barre collante) ——— */}
+      <div className="hdc-filterbar sticky top-[calc(max(0.35rem,env(safe-area-inset-top))+3.25rem)] z-30 mt-4">
+        <div
+          className="hdc-chip-rail mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 scrollbar-hide sm:px-6 lg:flex-wrap lg:gap-1.5 lg:px-8 xl:justify-between"
+          role="group"
+          aria-label="Filtrer par univers"
+        >
           <button
             type="button"
-            className="absolute inset-0 bg-slate-950/55 backdrop-blur-sm transition-opacity"
-            aria-label="Fermer le panier"
-            onClick={() => setCartDrawerOpen(false)}
-          />
-          <div className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-violet-200/70 bg-white shadow-2xl shadow-violet-950/30">
-            <div className="relative flex items-center justify-between overflow-hidden border-b border-violet-950/30 bg-gradient-to-r from-violet-950 via-violet-800 to-indigo-950 px-5 py-5 text-white shadow-lg">
-              <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
-              <h2 id="cart-drawer-title" className="relative font-catalog-display text-xl font-semibold tracking-tight text-white drop-shadow-md">
-                Votre panier
-              </h2>
+            data-press
+            aria-pressed={selectedCategory === "all"}
+            onClick={() => selectCategory("all")}
+            className="hdc-chip shrink-0"
+          >
+            Toutes
+            <span className="hdc-chip-count">{categoryCounts.all || 0}</span>
+          </button>
+          {publicDisplayCategories.map((category) => (
+            <button
+              key={category.key}
+              type="button"
+              data-press
+              aria-pressed={selectedCategory === category.key}
+              onClick={() => selectCategory(category.key)}
+              className="hdc-chip shrink-0"
+            >
+              <CategoryIcon categoryKey={category.key} className="h-4 w-4 lg:hidden" />
+              {getPublicCategoryLabel(category.key)}
+              <span className="hdc-chip-count">{categoryCounts[category.key] || 0}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <main
+        ref={resultsRef}
+        className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-[calc(max(0.35rem,env(safe-area-inset-top))+7.5rem)] px-4 pb-10 pt-6 sm:px-6 lg:px-8"
+      >
+        {getCategoryPublicNotice(selectedCategory) ? (
+          <p className="mb-6 flex items-start gap-2.5 rounded-[1rem] bg-catalog-brassSoft px-4 py-3 text-sm leading-relaxed text-catalog-body" role="note">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-catalog-brass" aria-hidden />
+            {getCategoryPublicNotice(selectedCategory)}
+          </p>
+        ) : null}
+
+        {!loading && !error ? (
+          <div className="mb-6 flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <p className="text-sm text-catalog-muted" aria-live="polite">
+              <span className="font-semibold text-catalog-ink">{filteredActivities.length}</span>{" "}
+              expérience{filteredActivities.length > 1 ? "s" : ""}
+              {selectedCategory !== "all" ? ` · ${getPublicCategoryLabel(selectedCategory)}` : ""}
+              {search.trim() ? ` · « ${search.trim()} »` : ""}
+            </p>
+            {hasActiveFilters ? (
               <button
                 type="button"
-                onClick={() => setCartDrawerOpen(false)}
-                className="relative rounded-xl p-2 text-white transition hover:bg-white/20"
-                aria-label="Fermer"
+                data-press
+                onClick={resetFilters}
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-catalog-lagoon hover:bg-catalog-lagoonSoft"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <RotateCcw className="h-4 w-4" aria-hidden />
+                Effacer les filtres
               </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {error && !loading ? (
+          <StateCard
+            tone="error"
+            title="Catalogue momentanément indisponible"
+            action={
+              <button type="button" data-press onClick={retryFetch} className="hdc-btn hdc-btn-ink">
+                <RotateCcw className="h-4 w-4" aria-hidden />
+                Réessayer
+              </button>
+            }
+          >
+            {error}
+          </StateCard>
+        ) : null}
+
+        {loading ? (
+          <div role="status" aria-live="polite">
+            <span className="sr-only">Chargement du catalogue…</span>
+            <div className="hdc-skeleton mb-6 h-5 w-40 rounded-md" aria-hidden />
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 2xl:grid-cols-4">
+              {Array.from({ length: 6 }, (_, i) => (
+                <CatalogueActivityCardSkeleton key={i} />
+              ))}
             </div>
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-slate-50/40 to-white px-4 py-5">
-              {cartLines.length === 0 && (
-                <p className="rounded-2xl border-2 border-dashed border-violet-300/80 bg-violet-50/80 px-5 py-10 text-center text-sm font-semibold leading-relaxed text-catalog-body">
-                  Votre panier est vide.
-                  <br />
-                  <span className="font-extrabold text-violet-800">Ajoutez des activités depuis le catalogue.</span>
+          </div>
+        ) : null}
+
+        {!loading && !error && filteredActivities.length === 0 ? (
+          <StateCard
+            title="Aucune excursion ne correspond"
+            action={
+              hasActiveFilters ? (
+                <button type="button" data-press onClick={resetFilters} className="hdc-btn hdc-btn-ink">
+                  <RotateCcw className="h-4 w-4" aria-hidden />
+                  Voir toutes les excursions
+                </button>
+              ) : null
+            }
+          >
+            Essayez un autre mot-clé ou un autre univers. Une envie précise ? Écrivez-nous, nous trouverons la sortie qui
+            vous ressemble.
+          </StateCard>
+        ) : null}
+
+        <div className="space-y-14 lg:space-y-20">
+          {groupedActivities.map((group) => (
+            <section key={group.key} aria-labelledby={`univers-${group.key}`}>
+              <div data-reveal="item" className="mb-5 flex items-end justify-between gap-4 border-b border-catalog-line pb-4 lg:mb-7">
+                <div className="flex min-w-0 items-center gap-3.5">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-catalog-lagoonSoft text-catalog-lagoon">
+                    <CategoryIcon categoryKey={group.key} className="h-5 w-5" strokeWidth={1.5} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="hdc-eyebrow">Univers</p>
+                    <h2 id={`univers-${group.key}`} className="mt-1 font-catalog-display text-[1.75rem] leading-tight text-catalog-ink lg:text-[2rem]">
+                      {getPublicCategoryLabel(group.key)}
+                    </h2>
+                  </div>
+                </div>
+                <span className="shrink-0 pb-1 text-sm text-catalog-muted">
+                  {group.items.length} expérience{group.items.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              {group.key === "marsa_alam" && selectedCategory !== "marsa_alam" ? (
+                <p className="mb-5 flex items-start gap-2.5 rounded-[1rem] bg-catalog-brassSoft px-4 py-3 text-sm leading-relaxed text-catalog-body" role="note">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-catalog-brass" aria-hidden />
+                  {getCategoryPublicNotice("marsa_alam")}
                 </p>
-              )}
+              ) : null}
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 2xl:grid-cols-4">
+                {group.items.map((activity) => {
+                  const listFrom = getPublicCatalogListFromPrice(activity);
+                  const fromPrice =
+                    toNumber(activity.price_adult) > 0 ? toNumber(activity.price_adult) : listFrom?.amount ?? null;
+                  const index = cardIndex++;
+                  return (
+                    <CatalogueActivityCard
+                      key={activity.id}
+                      activity={activity}
+                      categoryKey={normalizeCategory(activity.category)}
+                      coverUrl={normalizeCatalogImageUrlsFromDb(activity.catalog_image_urls)[0] || null}
+                      fromPrice={fromPrice}
+                      prose={getActivityPublicProse(activity)}
+                      priority={index < 2}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      </main>
+
+      <CatalogueFooter />
+
+      {showCartBar ? (
+        <div className="hdc-cart-bar pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            data-press
+            onClick={openCart}
+            className="pointer-events-auto mx-auto flex w-full max-w-md items-center gap-3 rounded-full bg-catalog-ink py-2 pl-2 pr-5 text-left text-white shadow-catalog-float"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10">
+              <ShoppingBag className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs text-white/70">
+                {cartLines.length} excursion{cartLines.length > 1 ? "s" : ""} sélectionnée{cartLines.length > 1 ? "s" : ""}
+              </span>
+              <span className="block text-base font-semibold tabular-nums">
+                {cartTotal > 0 ? formatMoney(cartTotal, "EUR") : "Total sur devis"}
+              </span>
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold">
+              Mon panier
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </span>
+          </button>
+        </div>
+      ) : null}
+
+      {cartDrawerOpen ? (
+        <Sheet
+          variant="right"
+          zClass="z-[110]"
+          onClose={() => setCartDrawerOpen(false)}
+          closeLabel="Fermer le panier"
+          labelledBy="cart-drawer-title"
+        >
+          <SheetHeader
+            dark
+            eyebrow="Excursions"
+            title={`Votre panier · ${cartLines.length}`}
+            titleId="cart-drawer-title"
+            onClose={() => setCartDrawerOpen(false)}
+          />
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
+            {cartLines.length === 0 ? (
+              <div data-sheet-item className="rounded-[1.4rem] bg-white px-5 py-12 text-center ring-1 ring-catalog-line">
+                <ShoppingBag className="mx-auto h-8 w-8 text-catalog-subtle" aria-hidden />
+                <p className="mt-3 font-catalog-display text-lg font-medium text-catalog-ink">Votre panier est vide</p>
+                <p className="mt-1 text-sm text-catalog-muted">Ajoutez des activités depuis le catalogue.</p>
+            </div>
+            ) : null}
               {cartLines.map((line) => {
                 const ageChild = String(line.activity.age_child || "").trim();
                 const ageBaby = String(line.activity.age_baby || "").trim();
                 const minors = line.derived?.minorsCount || 0;
                 const classified = Boolean(line.derived?.complete);
+              const babiesForbiddenLine = Boolean(line.activity?.babies_forbidden ?? line.activity?.babiesForbidden);
                 return (
-                  <div
-                    key={line.id}
-                    className="rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-md shadow-slate-900/8 ring-1 ring-slate-900/[0.04]"
-                  >
+                <div key={line.id} data-sheet-item className="hdc-card p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <p className="min-w-0 flex-1 line-clamp-2 text-sm font-bold leading-snug text-catalog-body">
-                        {line.activity.name}
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 font-catalog-display text-[1.0625rem] font-medium leading-snug text-catalog-ink">
+                        {displayActivityName(line.activity.name)}
                       </p>
+                      <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold capitalize text-catalog-muted">
+                        <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+                        {formatCartLineDate(line.date)}
+                      </p>
+                    </div>
                       <button
                         type="button"
+                      data-press="0.9"
                         onClick={() => removeCartLine(line.id)}
-                        className="shrink-0 rounded-xl border-2 border-rose-200 bg-rose-50 px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-rose-900 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-catalog-coralSoft text-catalog-coralDeep"
+                      aria-label={`Retirer ${line.activity.name}`}
                       >
-                        Retirer
+                      <Trash2 className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
-                    <p className="mt-2 text-[11px] font-semibold leading-snug text-catalog-muted">
-                      Date et participants ne sont pas modifiables ici. Pour les changer, retirez la ligne puis rouvrez la fiche de l&apos;activité.
-                    </p>
-                    <div className="mt-3 rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2.5">
-                      <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-subtle">
-                        Date d&apos;excursion
-                      </span>
-                      <p className="mt-0.5 text-sm font-bold text-catalog-body">{formatCartLineDate(line.date)}</p>
-                    </div>
                     <div className="mt-3 grid grid-cols-3 gap-2">
-                      <div className="space-y-1">
-                        <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-body">Adultes</span>
-                        <div className="rounded-lg border-2 border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-catalog-body">
+                    <div className="rounded-xl bg-catalog-bg px-2 py-2 text-center">
+                      <span className="block text-[0.625rem] font-bold uppercase tracking-[0.12em] text-catalog-muted">Adultes</span>
+                      <span className="mt-0.5 block text-base font-extrabold tabular-nums text-catalog-ink">
                           {line.adultsBase ?? line.adults ?? 0}
                           {classified && (line.derived?.upgradedAdultsCount || 0) > 0
                             ? `+${line.derived.upgradedAdultsCount}`
                             : ""}
+                      </span>
                         </div>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-body">
-                          {classified ? "Enfants" : "Enfants / bébés"}
+                    <div className="rounded-xl bg-catalog-bg px-2 py-2 text-center">
+                      <span className="block text-[0.625rem] font-bold uppercase tracking-[0.12em] text-catalog-muted">
+                        {classified ? "Enfants" : "Enf. / bébés"}
                         </span>
-                        {ageChild ? (
-                          <span className="mb-1 block text-[10px] font-semibold leading-tight text-catalog-muted">Âge : {ageChild}</span>
-                        ) : null}
-                        <div className="rounded-lg border-2 border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-catalog-body">
+                      <span className="mt-0.5 block text-base font-extrabold tabular-nums text-catalog-ink">
                           {classified ? line.derived.childrenCount : minors}
+                      </span>
+                      {ageChild ? <span className="block text-[0.625rem] font-semibold text-catalog-muted">{ageChild}</span> : null}
                         </div>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="block text-[10px] font-extrabold uppercase tracking-wide text-catalog-body">Bébés</span>
-                        {Boolean(line.activity?.babies_forbidden ?? line.activity?.babiesForbidden) ? (
-                          <>
-                            <span className="mb-1 block text-[10px] font-semibold leading-tight text-amber-900">Non autorisés</span>
-                            <div className="rounded-lg border border-amber-200/90 bg-amber-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-amber-950">
-                              0
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            {ageBaby ? (
-                              <span className="mb-1 block text-[10px] font-semibold leading-tight text-catalog-muted">Âge : {ageBaby}</span>
+                    <div className={`rounded-xl px-2 py-2 text-center ${babiesForbiddenLine ? "bg-catalog-brassSoft" : "bg-catalog-bg"}`}>
+                      <span className="block text-[0.625rem] font-bold uppercase tracking-[0.12em] text-catalog-muted">Bébés</span>
+                      <span className="mt-0.5 block text-base font-extrabold tabular-nums text-catalog-ink">
+                        {babiesForbiddenLine ? 0 : classified ? line.derived.babiesCount : "—"}
+                      </span>
+                      {babiesForbiddenLine ? (
+                        <span className="block text-[0.625rem] font-semibold text-catalog-ink">Non autorisés</span>
+                      ) : ageBaby ? (
+                        <span className="block text-[0.625rem] font-semibold text-catalog-muted">{ageBaby}</span>
                             ) : null}
-                            <div className="rounded-lg border-2 border-slate-200 bg-slate-50 px-2 py-2 text-center text-sm font-bold tabular-nums text-catalog-body">
-                              {classified ? line.derived.babiesCount : "—"}
-                            </div>
-                          </>
-                        )}
                       </div>
                     </div>
                     {minors > 0 && !classified ? (
-                      <p className="mt-2 text-[11px] font-semibold text-violet-800">
+                    <p className="mt-2 text-[11px] font-semibold text-catalog-lagoon">
                         Dates de naissance demandées à l’étape suivante pour classer bébé / enfant.
                       </p>
                     ) : null}
                     {formatDivingVisitorLabel(line, line.activity?.name) ? (
-                      <p className="mt-2 text-[11px] font-semibold text-cyan-800">
+                    <p className="mt-2 text-[11px] font-semibold text-catalog-lagoon">
                         {formatDivingVisitorLabel(line, line.activity?.name)}
                       </p>
                     ) : null}
                     {formatTurtleFinSizesLabel(line, line.activity?.name) ? (
-                      <p className="mt-2 text-[11px] font-semibold text-teal-800">
+                    <p className="mt-2 text-[11px] font-semibold text-catalog-lagoon">
                         {formatTurtleFinSizesLabel(line, line.activity?.name)}
                       </p>
                     ) : null}
-                    <div className="mt-3 border-t border-slate-100 pt-3">
-                      <p className="font-catalog-display text-sm font-bold tabular-nums text-violet-800">
+                  <div className="mt-3 flex items-center justify-between border-t border-catalog-line pt-3">
+                    <p className="text-[11px] leading-snug text-catalog-muted">
+                      Pour modifier, retirez la ligne puis rouvrez la fiche.
+                    </p>
+                    <p className="shrink-0 font-catalog-display text-lg tabular-nums text-catalog-ink">
                         {formatMoney(line.lineTotal, line.activity.currency)}
                       </p>
                     </div>
@@ -1253,15 +1230,16 @@ export function PublicClientDevisPage() {
                 );
               })}
             </div>
-            <div className="border-t border-slate-200/80 bg-gradient-to-t from-slate-50 to-white p-6 shadow-[0_-8px_30px_-12px_rgba(15,118,110,0.12)]">
-              <div className="mb-4 flex items-end justify-between gap-3">
-                <span className="text-xs font-extrabold uppercase tracking-[0.12em] text-catalog-body">Total estimé</span>
-                <span className="font-catalog-display text-2xl font-bold tabular-nums text-violet-800">
+          <SheetFooter>
+            <div className="mb-3 flex items-end justify-between gap-3">
+              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-catalog-muted">Total estimé</span>
+              <span className="font-catalog-display text-[1.75rem] leading-none tabular-nums text-catalog-ink">
                   {formatMoney(cartTotal, "EUR")}
                 </span>
               </div>
               <button
                 type="button"
+              data-press
                 disabled={cartLines.length === 0}
                 onClick={() => {
                   setError("");
@@ -1269,91 +1247,69 @@ export function PublicClientDevisPage() {
                   setCartDrawerOpen(false);
                   setCheckoutOpen(true);
                 }}
-                className="flex w-full min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/10 bg-gradient-to-r from-violet-900 via-violet-700 to-orange-600 px-4 py-4 text-sm font-extrabold tracking-tight text-white shadow-[0_8px_28px_-6px_rgba(76,29,149,0.5)] transition hover:from-violet-950 hover:via-violet-800 hover:to-orange-500 disabled:cursor-not-allowed disabled:border-slate-300 disabled:from-slate-200 disabled:via-slate-200 disabled:to-slate-200 disabled:text-slate-700 disabled:shadow-none"
+              className="hdc-btn hdc-btn-primary w-full min-h-[3.25rem] text-base"
               >
-                <span>Finaliser mon devis</span>
-                <span aria-hidden>→</span>
+              Finaliser mon devis
+              <ArrowRight className="h-4 w-4" aria-hidden />
               </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </SheetFooter>
+        </Sheet>
+      ) : null}
 
-      {checkoutOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
-          <button
-            type="button"
-            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
-            aria-label="Fermer"
-            onClick={() => setCheckoutOpen(false)}
-          />
-          <form
-            onSubmit={submitPublicQuote}
-            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-[1.75rem] border-2 border-slate-200 bg-white p-6 shadow-[0_28px_90px_-18px_rgba(15,23,42,0.18)] sm:rounded-3xl sm:p-8"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-catalog-label">Devis</p>
-                <h2 id="checkout-title" className="font-catalog-display text-xl font-semibold text-catalog-ink sm:text-2xl">
-                  Vos coordonnées
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCheckoutOpen(false)}
-                className="rounded-xl p-2 text-catalog-muted transition hover:bg-slate-100 hover:text-catalog-ink"
-                aria-label="Fermer"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            {error && (
-              <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900">
+      {checkoutOpen ? (
+        <Sheet
+          onClose={() => setCheckoutOpen(false)}
+          as="form"
+          panelProps={{ onSubmit: submitPublicQuote, onClick: (e) => e.stopPropagation() }}
+          labelledBy="checkout-title"
+        >
+          <SheetHeader eyebrow="Devis" title="Vos coordonnées" titleId="checkout-title" onClose={() => setCheckoutOpen(false)} />
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4 sm:px-6">
+            {error ? (
+              <div className="mb-4 rounded-2xl bg-catalog-coralSoft px-4 py-3 text-sm font-semibold text-catalog-coralDeep" role="alert">
                 {error}
               </div>
-            )}
-            <p className="mb-3 text-xs font-semibold leading-relaxed text-catalog-body">
+            ) : null}
+            <p className="mb-3 text-xs font-semibold leading-relaxed text-catalog-muted">
               Tous les champs ci-dessous sont <strong className="text-catalog-ink">obligatoires</strong> pour envoyer votre demande.
             </p>
             <div className="space-y-3.5">
               <input
+                data-sheet-item
                 value={client.name}
                 onChange={(e) => updateClientField("name", e.target.value)}
                 placeholder="Nom complet *"
                 required
-                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
+                className="hdc-input"
                 autoComplete="name"
               />
               <input
+                data-sheet-item
                 value={formatPhoneWithPlus(client.phone)}
                 onChange={(e) => updateClientField("phone", formatPhoneWithPlus(e.target.value))}
                 placeholder="Téléphone WhatsApp *"
                 required
                 inputMode="tel"
-                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
+                className="hdc-input"
                 autoComplete="tel"
               />
               <input
+                data-sheet-item
                 type="email"
                 value={client.email}
                 onChange={(e) => updateClientField("email", e.target.value)}
                 placeholder="E-mail *"
                 required
-                className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
+                className="hdc-input"
                 autoComplete="email"
               />
-              <div className="space-y-2">
+              <div data-sheet-item className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-catalog-body">
-                    Hôtel / lieu *
-                  </span>
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-rose-300/80 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-800">
+                  <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">Hôtel / lieu *</span>
+                  <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full bg-catalog-coralSoft px-3 text-xs font-bold text-catalog-coralDeep">
                     <input
                       type="checkbox"
-                      className="size-3.5 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                      className="size-4 rounded accent-[#C9452C]"
                       checked={Boolean(client.isAirbnb)}
                       onChange={(e) => {
                         const checked = e.target.checked;
@@ -1370,18 +1326,14 @@ export function PublicClientDevisPage() {
                 <input
                   value={client.hotel}
                   onChange={(e) => updateClientField("hotel", e.target.value)}
-                  placeholder={
-                    client.isAirbnb
-                      ? "Nom / libellé Airbnb (optionnel)"
-                      : "Hôtel ou lieu de prise en charge *"
-                  }
+                  placeholder={client.isAirbnb ? "Nom / libellé Airbnb (optionnel)" : "Hôtel ou lieu de prise en charge *"}
                   required={!client.isAirbnb}
-                  className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
+                  className="hdc-input"
                 />
                 {client.isAirbnb ? (
-                  <div className="rounded-2xl border-2 border-rose-200 bg-rose-50/80 p-3 space-y-2">
+                  <div className="space-y-2 rounded-2xl bg-catalog-coralSoft p-3">
                     <label className="block space-y-1">
-                      <span className="text-[11px] font-extrabold uppercase tracking-wide text-rose-800">
+                      <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-coralDeep">
                         Lien Google Maps *
                       </span>
                       <input
@@ -1390,18 +1342,18 @@ export function PublicClientDevisPage() {
                         onChange={(e) => updateClientField("airbnbMapsUrl", e.target.value)}
                         placeholder="https://maps.google.com/... ou maps.app.goo.gl/..."
                         required
-                        className="w-full rounded-2xl border-2 border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-rose-400 focus:ring-4 focus:ring-rose-300/30"
+                        className="hdc-input !bg-white"
                       />
                     </label>
-                    <p className="text-[11px] font-medium text-rose-800/80">
+                    <p className="text-[11px] font-medium text-catalog-coralDeep">
                       Collez le lien Maps du logement pour organiser le transfert.
                     </p>
                   </div>
                 ) : null}
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div data-sheet-item className="grid grid-cols-2 gap-3">
                 <label className="block space-y-1">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-catalog-body">Date d’arrivée *</span>
+                  <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">Arrivée *</span>
                   <input
                     type="date"
                     value={client.arrivalDate}
@@ -1425,11 +1377,11 @@ export function PublicClientDevisPage() {
                       }
                     }}
                     required
-                    className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
+                    className="hdc-input"
                   />
                 </label>
                 <label className="block space-y-1">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-catalog-body">Date de fin (départ) *</span>
+                  <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">Départ *</span>
                   <input
                     type="date"
                     value={client.departureDate}
@@ -1444,26 +1396,23 @@ export function PublicClientDevisPage() {
                       }
                     }}
                     required
-                    className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
+                    className="hdc-input"
                   />
                 </label>
               </div>
               {isSameDayCatalogueStay(client) ? (
-                <p className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-900">
+                <p className="rounded-2xl bg-catalog-brassSoft px-4 py-3 text-xs font-semibold leading-relaxed text-catalog-ink">
                   {CATALOGUE_STAY_SAME_DAY_MESSAGE}
                 </p>
               ) : null}
 
               {cartNeedsMinorBirthDates ? (
-                <div className="space-y-3 rounded-2xl border-2 border-violet-200 bg-violet-50/60 p-4">
+                <div className="space-y-3 rounded-[1.25rem] bg-catalog-bg p-4 ring-1 ring-catalog-line">
                   <div>
-                    <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-violet-800">
-                      Dates de naissance
-                    </p>
-                    <p className="mt-1 text-xs font-medium leading-relaxed text-violet-900/90">
-                      Comme pour les hôtels : indiquez la date de naissance de chaque enfant / bébé. Le système calcule
-                      automatiquement le tarif enfant ou bébé selon la grille de l’activité (âge au jour de
-                      l’excursion).
+                    <p className="hdc-eyebrow">Dates de naissance</p>
+                    <p className="mt-1 text-xs leading-relaxed text-catalog-muted">
+                      Indiquez la date de naissance de chaque enfant / bébé : le tarif enfant ou bébé est calculé
+                      automatiquement selon la grille de l’activité (âge au jour de l’excursion).
                     </p>
                   </div>
                   {cartLines
@@ -1471,15 +1420,10 @@ export function PublicClientDevisPage() {
                     .map((line) => {
                       const ageChild = String(line.activity?.age_child || "").trim();
                       const ageBaby = String(line.activity?.age_baby || "").trim();
-                      const babiesForbidden = Boolean(
-                        line.activity?.babies_forbidden ?? line.activity?.babiesForbidden
-                      );
+                      const babiesForbidden = Boolean(line.activity?.babies_forbidden ?? line.activity?.babiesForbidden);
                       return (
-                        <div
-                          key={`dob-${line.id}`}
-                          className="rounded-xl border border-violet-200/80 bg-white p-3 shadow-sm"
-                        >
-                          <p className="text-sm font-bold text-catalog-ink">{line.activity?.name}</p>
+                        <div key={`dob-${line.id}`} className="rounded-2xl bg-white p-3.5 ring-1 ring-catalog-line">
+                          <p className="text-sm font-bold text-catalog-ink">{displayActivityName(line.activity?.name)}</p>
                           <p className="mt-0.5 text-[11px] font-semibold text-catalog-muted">
                             {formatCartLineDate(line.date)}
                             {ageChild || ageBaby
@@ -1490,7 +1434,7 @@ export function PublicClientDevisPage() {
                             {Array.from({ length: line.derived.minorsCount }, (_, i) => {
                               const detail = line.derived.details[i];
                               return (
-                                <label key={`${line.id}-dob-${i}`} className="block text-xs font-semibold text-catalog-body">
+                                <label key={`${line.id}-dob-${i}`} className="block text-xs font-bold text-catalog-body">
                                   Voyageur {i + 1}
                                   <input
                                     type="date"
@@ -1498,18 +1442,18 @@ export function PublicClientDevisPage() {
                                     max={line.date || client.arrivalDate || undefined}
                                     required
                                     onChange={(e) => updateLineBirthDate(line.id, i, e.target.value)}
-                                    className="mt-1 w-full rounded-xl border-2 border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-catalog-body outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
+                                    className="hdc-input mt-1"
                                   />
                                   <span
                                     className={`mt-1 block text-[11px] font-bold ${
                                       detail?.category === "forbidden"
-                                        ? "text-rose-700"
+                                        ? "text-catalog-coralDeep"
                                         : detail?.category === "baby"
-                                          ? "text-sky-800"
+                                          ? "text-catalog-coral"
                                           : detail?.category === "child"
-                                            ? "text-emerald-800"
+                                            ? "text-catalog-lagoon"
                                             : detail?.category === "adult"
-                                              ? "text-amber-800"
+                                              ? "text-catalog-brass"
                                               : "text-catalog-muted"
                                     }`}
                                   >
@@ -1520,7 +1464,7 @@ export function PublicClientDevisPage() {
                             })}
                           </div>
                           {line.derived.complete ? (
-                            <p className="mt-2 text-[11px] font-semibold text-emerald-800">
+                            <p className="mt-2 text-[11px] font-semibold text-catalog-lagoon">
                               Classé : {line.derived.childrenCount} enfant
                               {line.derived.childrenCount !== 1 ? "s" : ""}
                               {line.derived.babiesCount
@@ -1538,12 +1482,12 @@ export function PublicClientDevisPage() {
               ) : null}
 
               {cartLines.some((line) => isTurtleActivity(line.activity?.name)) ? (
-                <div className="space-y-3 rounded-2xl border-2 border-teal-200 bg-teal-50/60 p-4">
+                <div className="space-y-3 rounded-[1.25rem] bg-catalog-lagoonSoft p-4">
                   {cartLines
                     .filter((line) => isTurtleActivity(line.activity?.name))
                     .map((line) => (
                       <div key={`fins-${line.id}`} className="space-y-2">
-                        <p className="text-sm font-bold text-catalog-ink">{line.activity?.name}</p>
+                        <p className="text-sm font-bold text-catalog-ink">{displayActivityName(line.activity?.name)}</p>
                         <TurtleFinSizesFields
                           variant="catalog"
                           adults={toNumber(line.adultsBase ?? line.adults)}
@@ -1564,48 +1508,58 @@ export function PublicClientDevisPage() {
                 onChange={(e) => updateClientField("notes", e.target.value)}
                 placeholder="Précisions (horaires, langue du guide, etc.) — optionnel"
                 rows={3}
-                className="w-full resize-none rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-catalog-body outline-none transition placeholder:font-medium placeholder:text-catalog-subtle focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
+                className="hdc-input resize-none"
               />
             </div>
-            <p className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-catalog-body">
-              Total : <span className="font-catalog-display font-bold text-catalog-ink tabular-nums">{formatMoney(cartTotal, "EUR")}</span> —{" "}
+          </div>
+          <SheetFooter>
+            <div className="mb-3 flex items-center justify-between text-xs font-semibold text-catalog-muted">
+              <span>
               {cartLines.length} ligne{cartLines.length > 1 ? "s" : ""}
-            </p>
+              </span>
+              <span className="font-catalog-display text-xl tabular-nums text-catalog-ink">{formatMoney(cartTotal, "EUR")}</span>
+            </div>
             <button
               type="submit"
+              data-press
               disabled={submitLoading}
-              className="mt-6 w-full min-h-[52px] rounded-2xl border border-white/15 bg-gradient-to-r from-violet-900 via-violet-700 to-orange-600 px-4 py-4 text-sm font-extrabold tracking-tight text-white shadow-[0_10px_32px_-8px_rgba(76,29,149,0.45)] transition hover:from-violet-950 hover:via-violet-800 hover:to-orange-500 disabled:cursor-not-allowed disabled:from-slate-300 disabled:via-slate-300 disabled:to-slate-300 disabled:text-slate-700 disabled:shadow-none"
+              className="hdc-btn hdc-btn-primary w-full min-h-[3.25rem] text-base"
             >
               {submitLoading ? "Envoi en cours…" : "Envoyer ma demande"}
             </button>
-          </form>
-        </div>
-      )}
+          </SheetFooter>
+        </Sheet>
+      ) : null}
+
       {successModalOpen && success ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="public-quote-success-title">
-          <button
-            type="button"
-            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
-            aria-label="Fermer la confirmation"
-            onClick={() => setSuccessModalOpen(false)}
-          />
-          <div className="relative z-10 w-full max-w-md rounded-3xl border-2 border-emerald-200 bg-white p-6 shadow-[0_28px_90px_-18px_rgba(15,23,42,0.22)] sm:p-7">
-            <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-xl font-black text-emerald-700">
-              ✓
-            </div>
-            <h3 id="public-quote-success-title" className="font-catalog-display text-xl font-semibold text-catalog-ink">
-              Demande envoyee
+        <Sheet
+          variant="center"
+          zClass="z-[130]"
+          onClose={() => setSuccessModalOpen(false)}
+          closeLabel="Fermer la confirmation"
+          labelledBy="public-quote-success-title"
+        >
+          <div className="p-7 text-center">
+            <span data-sheet-item className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-catalog-lagoonSoft text-catalog-lagoon">
+              <CheckCircle2 className="h-8 w-8" aria-hidden />
+            </span>
+            <h3 data-sheet-item id="public-quote-success-title" className="mt-4 font-catalog-display text-[1.75rem] font-normal text-catalog-ink">
+              Demande envoyée
             </h3>
-            <p className="mt-3 text-sm font-semibold leading-relaxed text-catalog-body">{success}</p>
+            <p data-sheet-item className="mt-2 text-sm leading-relaxed text-catalog-muted">
+              {success}
+            </p>
             <button
               type="button"
+              data-sheet-item
+              data-press
               onClick={() => setSuccessModalOpen(false)}
-              className="mt-6 w-full min-h-[48px] rounded-2xl border border-white/15 bg-gradient-to-r from-emerald-700 to-emerald-500 px-4 py-3 text-sm font-extrabold tracking-tight text-white shadow-[0_10px_26px_-10px_rgba(22,163,74,0.5)] transition hover:from-emerald-800 hover:to-emerald-600"
+              className="hdc-btn hdc-btn-ink mt-6 w-full"
             >
-              OK
+              Parfait
             </button>
           </div>
-        </div>
+        </Sheet>
       ) : null}
 
       <CatalogueStayGateModal
@@ -1618,6 +1572,6 @@ export function PublicClientDevisPage() {
         }}
         onSaved={handleStaySaved}
       />
-    </div>
+    </PublicAppShell>
   );
 }
