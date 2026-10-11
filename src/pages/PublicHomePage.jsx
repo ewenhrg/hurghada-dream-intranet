@@ -76,7 +76,10 @@ function HeroReel({ reel, active, eager }) {
     const node = videoRef.current;
     if (!node || !eager) return undefined;
     armVideo(node);
+    node.autoplay = true;
+    node.setAttribute("autoplay", "");
     if (node.getAttribute("src") !== reel.video) node.src = reel.video;
+    playMuted(node);
     return undefined;
   }, [reel.video, eager]);
 
@@ -87,6 +90,7 @@ function HeroReel({ reel, active, eager }) {
           ref={videoRef}
           data-src={reel.video}
           poster={reel.image}
+          autoPlay={eager}
           muted
           loop
           playsInline
@@ -196,8 +200,8 @@ export function PublicHomePage() {
     const hero = heroRef.current;
     if (!hero) return undefined;
     const observer = new IntersectionObserver(
-      ([entry]) => setHeroClear(entry.intersectionRatio < 0.25),
-      { threshold: [0, 0.25, 0.6, 1] }
+      ([entry]) => setHeroClear(entry.boundingClientRect.bottom < 80),
+      { threshold: [0, 0.25, 1] }
     );
     observer.observe(hero);
     return () => observer.disconnect();
@@ -206,9 +210,6 @@ export function PublicHomePage() {
   useEffect(() => {
     const root = heroScrollRef.current;
     if (!root || heroReels.length < 3) return undefined;
-
-    let cancelled = false;
-    const mobile = window.matchMedia(PHONE_QUERY).matches;
 
     const syncVisible = () => {
       if (!window.matchMedia(PHONE_QUERY).matches) return;
@@ -244,14 +245,9 @@ export function PublicHomePage() {
       kicking = true;
       try {
         const nodes = [...root.querySelectorAll("video")].filter((node) => node.getAttribute("src"));
-        if (!mobile) {
-          nodes.forEach((node) => playMuted(node));
-          return;
-        }
-        for (const node of nodes) {
-          if (cancelled) return;
-          if (node.paused) await playMuted(node);
-        }
+        nodes.forEach((node) => {
+          if (node.paused) playMuted(node);
+        });
       } finally {
         kicking = false;
       }
@@ -264,8 +260,7 @@ export function PublicHomePage() {
     const onCanPlay = (event) => {
       const node = event.target;
       if (!(node instanceof HTMLVideoElement) || !node.paused || !node.getAttribute("src")) return;
-      if (mobile) kick();
-      else playMuted(node);
+      playMuted(node);
     };
     const interval = window.setInterval(() => {
       const first = [...root.querySelectorAll("video")].filter((node) => node.getAttribute("src")).slice(0, 3);
@@ -285,7 +280,6 @@ export function PublicHomePage() {
     window.addEventListener("touchstart", retry, { passive: true });
     window.addEventListener("pageshow", retry);
     return () => {
-      cancelled = true;
       window.clearInterval(interval);
       window.clearTimeout(stop);
       root.removeEventListener("scroll", onScroll);
@@ -447,8 +441,8 @@ export function PublicHomePage() {
               <img src={HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
             ) : null}
           </div>
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-1/2" data-veil-top />
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-1/2" data-veil-bottom />
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[4] h-1/2" data-veil-top />
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[4] h-1/2" data-veil-bottom />
           <div aria-hidden className="pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(10,42,51,0.32)_0%,rgba(10,42,51,0)_30%,rgba(11,79,92,0.18)_55%,rgba(8,36,46,0.88)_100%)]" />
 
           <div data-hero-copy className="pointer-events-none absolute inset-x-5 bottom-16 z-[5] lg:inset-x-0 lg:bottom-20">

@@ -252,8 +252,10 @@ export function useHeroArrival(scopeRef, ready = true) {
       mm.add(FULL_MOTION, () => {
         const split = SplitText.create("[data-hero-title]", { type: "words", mask: "words", wordsClass: "hdc-w" });
         gsap.set("[data-horizon]", { scaleX: 0, autoAlpha: 1 });
+        gsap.set("[data-veil-top], [data-veil-bottom]", { scaleY: 1, autoAlpha: 1 });
         gsap.set("[data-hero-eyebrow]", { y: 14, autoAlpha: 0 });
         gsap.set("[data-hero-rule]", { scaleX: 0 });
+        gsap.set("[data-hero-title]", { autoAlpha: 1 });
         gsap.set(split.words, { yPercent: 110 });
         gsap.set("[data-hero-sub]", { y: 16, autoAlpha: 0 });
         gsap.set("[data-hero-chip]", { y: 14, autoAlpha: 0 });
@@ -261,7 +263,10 @@ export function useHeroArrival(scopeRef, ready = true) {
 
         const tl = gsap.timeline({ defaults: { ease: MOTION.out } });
         tl.to("[data-horizon]", { scaleX: 1, duration: 0.55, ease: "power2.inOut" }, 0)
+          .to("[data-veil-top]", { scaleY: 0, duration: 1.15, ease: "power3.inOut" }, 0.2)
+          .to("[data-veil-bottom]", { scaleY: 0, duration: 1.15, ease: "power3.inOut" }, 0.2)
           .to("[data-horizon]", { autoAlpha: 0, duration: 0.35, ease: "power1.out" }, 0.7)
+          .set("[data-veil-top], [data-veil-bottom]", { autoAlpha: 0 }, 1.4)
           .to("[data-hero-eyebrow]", { y: 0, autoAlpha: 1, duration: 0.55 }, 0.55)
           .to("[data-hero-rule]", { scaleX: 1, duration: 0.5, ease: "power2.out" }, 0.55)
           .to(split.words, { yPercent: 0, duration: 0.7, stagger: 0.04, ease: MOTION.out }, 0.62)
