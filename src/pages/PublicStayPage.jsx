@@ -24,6 +24,7 @@ import {
 } from "../utils/stayLocalNotifications";
 
 const AGENCY_WHATSAPP = "201062002850";
+const STAY_PAGE_PAUSED = true;
 const STAY_HERO_IMAGE = "/client/home-hero-red-sea.jpg";
 const STAY_FORM_IMAGE = "/client/home-tile-stay-calendar.jpg";
 const DAY_MS = 86400000;
@@ -143,7 +144,38 @@ function formatUpdatedAt(iso) {
   });
 }
 
+function StayMaintenance() {
+  return (
+    <PublicAppShell title="Mon séjour">
+      <main className="mx-auto w-full max-w-lg px-4 pb-14 pt-8">
+        <p className="hdc-eyebrow">Maintenance</p>
+        <h1 className="mt-1.5 font-catalog-display text-[1.85rem] leading-tight text-catalog-ink">
+          Mon séjour est <span className="hdc-serif">en pause.</span>
+        </h1>
+        <p className="mt-3 max-w-sm text-[0.9375rem] leading-relaxed text-catalog-muted">
+          Le programme et les heures de prise en charge sont momentanément indisponibles. Une équipe française vous répond, 7 jours sur 7.
+        </p>
+        <a
+          href={`https://wa.me/${AGENCY_WHATSAPP}?text=${encodeURIComponent("Bonjour Hurghada Dream, ")}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-press
+          className="hdc-btn hdc-btn-ink mt-6 w-full sm:w-auto"
+        >
+          <WhatsAppGlyph className="h-5 w-5 text-[#1F8F55]" />
+          Écrire sur WhatsApp
+        </a>
+      </main>
+    </PublicAppShell>
+  );
+}
+
 export function PublicStayPage() {
+  if (STAY_PAGE_PAUSED) return <StayMaintenance />;
+  return <PublicStayPageLive />;
+}
+
+function PublicStayPageLive() {
   const [phone, setPhone] = useState(() => loadSavedStayPhone());
   const [inputPhone, setInputPhone] = useState(() => loadSavedStayPhone());
   const [loading, setLoading] = useState(() => Boolean(loadSavedStayPhone()));
