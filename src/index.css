@@ -184,6 +184,21 @@ html :where(.hd-public-catalog) :is(h1, h2, h3) {
   text-wrap: balance;
 }
 
+/* Accueil : le salut sur la photo reste en sans, pas en Fraunces. */
+html :where(.hd-public-catalog) h1.hdc-hero-title,
+html :where(.hd-public-catalog) h1.hdc-hero-title .hdc-hero-accent {
+  font-family: "Figtree Variable", "Figtree", ui-sans-serif, system-ui, sans-serif;
+  font-optical-sizing: none;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+html :where(.hd-public-catalog) h1.hdc-hero-title .hdc-hero-accent {
+  font-style: italic;
+  font-weight: 550;
+}
+
 .hd-public-catalog .hdc-serif {
   font-family: "Fraunces Variable", Fraunces, Georgia, ui-serif, serif;
   font-style: italic;

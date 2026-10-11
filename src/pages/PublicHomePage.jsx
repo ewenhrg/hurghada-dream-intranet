@@ -285,8 +285,8 @@ export function PublicHomePage() {
               <span className="h-px w-6 bg-catalog-sand" />
               Hurghada · Mer Rouge
             </p>
-            <h1 data-hero-title className="mt-3 font-catalog-display text-[2.25rem] leading-[1.05] !text-white lg:max-w-4xl lg:text-6xl lg:leading-[1.02]">
-              {hello}, <span className="hdc-serif text-catalog-sand">bienvenue</span> en mer Rouge.
+            <h1 data-hero-title className="hdc-hero-title mt-3 text-[2.25rem] leading-[1.08] !text-white lg:max-w-4xl lg:text-6xl">
+              {hello}, <span className="hdc-hero-accent text-catalog-sand">bienvenue</span> en mer Rouge.
             </h1>
             <p data-hero-sub className="mt-3 max-w-xs text-[0.9375rem] leading-relaxed text-white/85 lg:max-w-xl lg:text-lg">
               Hôtels d’exception, excursions privées et votre séjour orchestré par la référence locale.
