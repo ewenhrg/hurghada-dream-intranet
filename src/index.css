@@ -374,10 +374,36 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   transform: none;
   opacity: 1;
 }
+.hd-public-catalog .hdc-hero-reels {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+.hd-public-catalog .hdc-hero-reels::-webkit-scrollbar {
+  display: none;
+}
+.hd-public-catalog .hdc-hero-reel {
+  flex: 0 0 33.333%;
+  width: 33.333%;
+}
 .hd-public-catalog .hdc-reel-marquee {
-  overflow: hidden;
-  touch-action: pan-y;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
   --hdc-reel-speed: 0.016;
+}
+.hd-public-catalog .hdc-reel-marquee::-webkit-scrollbar {
+  display: none;
 }
 @media (min-width: 1024px) {
   .hd-public-catalog .hdc-reel-marquee {
@@ -389,14 +415,41 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   width: max-content;
   gap: 0.75rem;
   padding-right: 0.75rem;
-  will-change: transform;
+}
+.hd-public-catalog .hdc-review-row {
+  overflow: hidden;
+}
+.hd-public-catalog .hdc-review-track {
+  display: flex;
+  width: max-content;
+  animation: hdc-review-scroll 72s linear infinite;
+}
+.hd-public-catalog .hdc-review-track.is-reverse {
+  animation-duration: 88s;
+  animation-direction: reverse;
+}
+.hd-public-catalog .hdc-review-row:hover .hdc-review-track {
+  animation-play-state: paused;
+}
+.hd-public-catalog .hdc-review-set {
+  display: flex;
+  gap: 0.75rem;
+  padding-right: 0.75rem;
+}
+@keyframes hdc-review-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hd-public-catalog .hdc-reel-track { transform: none !important; }
-  .hd-public-catalog .hdc-reel-marquee {
+  .hd-public-catalog .hdc-review-track {
+    animation: none;
+  }
+  .hd-public-catalog .hdc-review-row {
     overflow-x: auto;
-    overscroll-behavior-x: contain;
-    overscroll-behavior-y: auto;
+    scrollbar-width: none;
+  }
+  .hd-public-catalog .hdc-review-row::-webkit-scrollbar {
+    display: none;
   }
 }
 

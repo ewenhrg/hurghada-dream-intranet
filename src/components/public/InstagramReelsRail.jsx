@@ -6,6 +6,24 @@ const REELS_URL = IS_CLIENT_APP
   ? "https://hurghada-dream-intranet.vercel.app/api/instagram-reels"
   : "/api/instagram-reels";
 
+let reelsRequest = null;
+
+export function fetchInstagramReels() {
+  if (!reelsRequest) {
+    reelsRequest = (async () => {
+      try {
+        const response = await fetch(REELS_URL);
+        if (!response.ok) return [];
+        const payload = await response.json();
+        return Array.isArray(payload?.reels) ? payload.reels : [];
+      } catch {
+        return [];
+      }
+    })();
+  }
+  return reelsRequest;
+}
+
 function ReelCard({ reel, onError }) {
   const videoRef = useRef(null);
 
@@ -56,18 +74,16 @@ function ReelCard({ reel, onError }) {
 
 export function InstagramReelsRail() {
   const [reels, setReels] = useState([]);
-  const trackRef = useRef(null);
   const marqueeRef = useRef(null);
+  const halfRef = useRef(null);
   const pausedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch(REELS_URL);
-        if (!response.ok) return;
-        const payload = await response.json();
-        if (!cancelled && Array.isArray(payload?.reels)) setReels(payload.reels.slice(0, 12));
+        const list = await fetchInstagramReels();
+        if (!cancelled) setReels(list.slice(0, 12));
       } catch {
         /* La bande reste masquée si Instagram ne répond pas. */
       }
@@ -78,48 +94,54 @@ export function InstagramReelsRail() {
   }, []);
 
   useEffect(() => {
-    const track = trackRef.current;
-    if (!track || reels.length < 2) return undefined;
+    const root = marqueeRef.current;
+    const half = halfRef.current;
+    if (!root || !half || reels.length < 2) return undefined;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
 
-    const marquee = marqueeRef.current;
-    let x = 0;
     let last = 0;
     let frame = 0;
+    let writing = false;
+    let resumeTimer = 0;
     let speed = 0.016;
-    let step = 0;
-    const gap = parseFloat(window.getComputedStyle(track).columnGap || "12") || 12;
 
-    const measure = () => {
-      const first = track.firstElementChild;
-      const raw = marquee
-        ? parseFloat(window.getComputedStyle(marquee).getPropertyValue("--hdc-reel-speed"))
-        : 0.016;
+    const readSpeed = () => {
+      const raw = parseFloat(window.getComputedStyle(root).getPropertyValue("--hdc-reel-speed"));
       speed = Number.isFinite(raw) && raw > 0 ? raw : 0.016;
-      step = first ? first.getBoundingClientRect().width + gap : 0;
     };
-    measure();
+    readSpeed();
 
-    const onResize = () => measure();
+    const onScroll = () => {
+      if (writing) return;
+      pausedRef.current = true;
+      window.clearTimeout(resumeTimer);
+      resumeTimer = window.setTimeout(() => {
+        pausedRef.current = false;
+      }, 1600);
+    };
+    const onResize = () => readSpeed();
+    root.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize);
 
     const tick = (now) => {
       if (!last) last = now;
       const dt = Math.min(32, now - last);
       last = now;
-      if (!pausedRef.current) x -= dt * speed;
-      if (step > 1 && -x >= step) {
-        x += step;
-        const first = track.firstElementChild;
-        if (first) track.appendChild(first);
+      if (!pausedRef.current) {
+        const width = half.offsetWidth;
+        writing = true;
+        root.scrollLeft += dt * speed;
+        if (width > 1 && root.scrollLeft >= width) root.scrollLeft -= width;
+        writing = false;
       }
-      track.style.transform = `translate3d(${x}px,0,0)`;
       frame = requestAnimationFrame(tick);
     };
 
     frame = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(frame);
+      window.clearTimeout(resumeTimer);
+      root.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
     };
   }, [reels]);
@@ -187,18 +209,27 @@ export function InstagramReelsRail() {
           pausedRef.current = false;
         }}
       >
-        <ul ref={trackRef} className="hdc-reel-track">
-          {reels.map((reel) => (
-            <li key={reel.id} className="shrink-0">
-              <ReelCard
-                reel={reel}
-                onError={() => {
-                  setReels((prev) => prev.filter((item) => item.id !== reel.id));
-                }}
-              />
-            </li>
+        <div className="hdc-reel-track">
+          {[0, 1].map((copy) => (
+            <ul
+              key={copy}
+              ref={copy === 0 ? halfRef : undefined}
+              className="flex gap-3 pr-3"
+              aria-hidden={copy === 1 ? true : undefined}
+            >
+              {reels.map((reel) => (
+                <li key={`${copy}-${reel.id}`} className="shrink-0">
+                  <ReelCard
+                    reel={reel}
+                    onError={() => {
+                      setReels((prev) => prev.filter((item) => item.id !== reel.id));
+                    }}
+                  />
+                </li>
+              ))}
+            </ul>
           ))}
-        </ul>
+        </div>
       </div>
     </section>
   );

@@ -10,10 +10,12 @@ import {
   CloudSun,
   Headset,
   Hotel,
+  MapPin,
   Phone,
   Sun,
 } from "lucide-react";
-import { InstagramReelsRail } from "../components/public/InstagramReelsRail";
+import { HomeReviewsMarquee } from "../components/public/HomeReviewsMarquee";
+import { fetchInstagramReels, InstagramReelsRail } from "../components/public/InstagramReelsRail";
 import { PublicAppShell } from "../components/public/PublicAppShell";
 import { StarRow } from "../components/public/HotelUI";
 import { WhatsAppGlyph } from "../components/public/PublicUI";
@@ -22,12 +24,45 @@ import { useHurghadaWeather } from "../hooks/useHurghadaWeather";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
 
 const AGENCY_WHATSAPP_URL = "https://wa.me/201062002850?text=Bonjour%20Hurghada%20Dream%2C%20";
+const AGENCY_MAPS_URL = "https://maps.app.goo.gl/qcx9LvVG3QwKUWyWA";
+const AGENCY_MAP_EMBED = "https://www.google.com/maps?q=27.1893675,33.8324796&z=16&hl=fr&output=embed";
 const HERO_IMAGE = "/client/home-hero-red-sea.jpg";
 const TILE_EXCURSIONS = "/client/home-tile-excursions.jpg";
 const TILE_STAY = "/client/home-tile-stay-calendar.jpg";
-const SLIDE_SECONDS = 2;
-const SLIDE_FADE = 0.7;
 const FULL_MOTION = "(prefers-reduced-motion: no-preference)";
+
+function HeroReel({ reel }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const node = videoRef.current;
+    if (!node) return undefined;
+    node.muted = true;
+    const play = () => {
+      node.play().catch(() => {});
+    };
+    play();
+    node.addEventListener("loadeddata", play);
+    return () => node.removeEventListener("loadeddata", play);
+  }, [reel.video]);
+
+  return (
+    <div className="hdc-hero-reel relative h-full shrink-0 snap-start overflow-hidden">
+      <video
+        ref={videoRef}
+        src={reel.video}
+        poster={reel.image}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        referrerPolicy="no-referrer"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+      />
+    </div>
+  );
+}
 
 function greeting() {
   const h = new Date().getHours();
@@ -59,10 +94,11 @@ function GlassChip({ children }) {
 export function PublicHomePage() {
   const navigate = useNavigate();
   const [hotels, setHotels] = useState([]);
-  const [slideIndex, setSlideIndex] = useState(0);
+  const [heroReels, setHeroReels] = useState([]);
   const weather = useHurghadaWeather();
   const hello = useMemo(() => greeting(), []);
   const heroRef = useRef(null);
+  const heroScrollRef = useRef(null);
   const railRef = useRef(null);
   const railDragRef = useRef(false);
 
@@ -80,15 +116,38 @@ export function PublicHomePage() {
   const hotelsWithPhoto = useMemo(() => hotels.filter((h) => Array.isArray(h.images) && h.images[0]), [hotels]);
   const hotelPhoto = hotelsWithPhoto[0]?.images[0] || null;
 
-  /** Diaporama du hero : plage, récif, puis les vraies adresses du catalogue. */
-  const slides = useMemo(
-    () => [
-      { src: HERO_IMAGE, caption: "Les plages de la mer Rouge" },
-      { src: TILE_EXCURSIONS, caption: "Récifs coralliens & snorkeling" },
-      ...hotelsWithPhoto.slice(0, 3).map((h) => ({ src: h.images[0], caption: h.name })),
-    ],
-    [hotelsWithPhoto]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    fetchInstagramReels().then((list) => {
+      if (cancelled) return;
+      setHeroReels(list.filter((reel) => reel.video).slice(0, 12));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const root = heroScrollRef.current;
+    if (!root || heroReels.length < 3) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target;
+          if (!(video instanceof HTMLVideoElement)) return;
+          if (entry.isIntersecting) {
+            video.muted = true;
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
+        });
+      },
+      { root, threshold: 0.35 }
+    );
+    root.querySelectorAll("video").forEach((video) => observer.observe(video));
+    return () => observer.disconnect();
+  }, [heroReels]);
 
   const actions = [
     { to: "/catalogue", title: "Excursions", subtitle: "Mer, désert, Louxor", image: TILE_EXCURSIONS },
@@ -131,31 +190,6 @@ export function PublicHomePage() {
       });
     },
     { scope: heroRef }
-  );
-
-  /* ——— Diaporama : fondu lent, sans zoom ni barres façon story ——— */
-  useEffect(() => {
-    if (slides.length < 2) return undefined;
-    const id = window.setInterval(() => setSlideIndex((i) => (i + 1) % slides.length), SLIDE_SECONDS * 1000);
-    return () => window.clearInterval(id);
-  }, [slides.length, slideIndex]);
-
-  useGSAP(
-    () => {
-      const root = heroRef.current;
-      if (!root) return;
-      const all = root.querySelectorAll("[data-slide]");
-      const current = root.querySelector(`[data-slide="${slideIndex}"]`);
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      all.forEach((el) => {
-        if (el !== current) gsap.to(el, { autoAlpha: 0, duration: reduce ? 0 : SLIDE_FADE, ease: "power1.inOut" });
-      });
-      if (current) {
-        gsap.set(current, { zIndex: 2 });
-        gsap.to(current, { autoAlpha: 1, duration: reduce ? 0 : SLIDE_FADE, ease: "power1.inOut" });
-      }
-    },
-    { dependencies: [slideIndex, slides.length], scope: heroRef }
   );
 
   /* ——— Carrousel « Nos adresses » : parallaxe horizontale dans chaque photo ——— */
@@ -271,16 +305,20 @@ export function PublicHomePage() {
           className="relative h-[clamp(520px,76svh,720px)] overflow-hidden rounded-b-[2rem] bg-catalog-raised lg:h-[min(78vh,820px)] lg:rounded-none"
         >
           <div data-hero-stage className="absolute inset-0">
-            {slides.map((slide, i) => (
-              <div key={`${i}-${slide.src}`} data-slide={i} className="absolute inset-0" style={{ opacity: i === 0 ? 1 : 0 }}>
-                <img src={slide.src} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            {heroReels.length >= 3 ? (
+              <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Réels Instagram">
+                {heroReels.map((reel) => (
+                  <HeroReel key={reel.id} reel={reel} />
+                ))}
               </div>
-            ))}
+            ) : (
+              <img src={HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            )}
           </div>
-          <div aria-hidden className="absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(10,42,51,0.32)_0%,rgba(10,42,51,0)_30%,rgba(11,79,92,0.18)_55%,rgba(8,36,46,0.88)_100%)]" />
+          <div aria-hidden className="pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(10,42,51,0.32)_0%,rgba(10,42,51,0)_30%,rgba(11,79,92,0.18)_55%,rgba(8,36,46,0.88)_100%)]" />
 
 
-          <div data-hero-copy className="absolute inset-x-5 bottom-7 z-[4] lg:inset-x-0 lg:bottom-16">
+          <div data-hero-copy className="pointer-events-none absolute inset-x-5 bottom-7 z-[4] lg:inset-x-0 lg:bottom-16">
             <div className="lg:mx-auto lg:max-w-7xl lg:px-8">
             <p data-hero-eyebrow className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-white/85">
               <span className="h-px w-6 bg-catalog-sand" />
@@ -310,28 +348,6 @@ export function PublicHomePage() {
                 <Headset className="h-4 w-4" strokeWidth={1.75} aria-hidden />
                 Équipe française 7j/7
               </GlassChip>
-            </div>
-            <div className="mt-5 flex items-center gap-3">
-              {slides.length > 1 ? (
-                <div className="flex items-center gap-1.5" role="tablist" aria-label="Photos">
-                  {slides.map((slide, i) => (
-                    <button
-                      key={`${i}-${slide.src}`}
-                      type="button"
-                      role="tab"
-                      aria-label={slide.caption}
-                      aria-selected={i === slideIndex}
-                      onClick={() => setSlideIndex(i)}
-                      className={`hdc-slide-dot rounded-full transition-[width,background-color] duration-500 ${
-                        i === slideIndex ? "w-5 bg-white" : "w-1.5 bg-white/45"
-                      }`}
-                    />
-                  ))}
-                </div>
-              ) : null}
-              <p data-hero-caption className="min-w-0 truncate text-[0.6875rem] font-medium tracking-wide text-white/75">
-                {slides[slideIndex]?.caption}
-              </p>
             </div>
             </div>
           </div>
@@ -398,6 +414,8 @@ export function PublicHomePage() {
           </div>
         </section>
 
+        <HomeReviewsMarquee />
+
         <InstagramReelsRail />
 
         {/* ——— Nos adresses ——— */}
@@ -440,7 +458,7 @@ export function PublicHomePage() {
         ) : null}
 
         {/* ——— Conciergerie ——— */}
-        <div className="mt-10 px-4 lg:mt-16 lg:grid lg:grid-cols-[minmax(0,1.6fr)_16rem] lg:items-stretch lg:gap-5 lg:px-0">
+        <div className="mt-10 px-4 lg:mt-16 lg:grid lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,22rem)] lg:items-stretch lg:gap-5 lg:px-0">
         <section data-reveal="item" className="relative overflow-hidden rounded-[1.25rem] bg-catalog-abyss p-6 text-white shadow-catalog-float lg:flex lg:items-end lg:justify-between lg:gap-10 lg:p-10">
           <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(227,174,85,0.45)_0%,rgba(227,174,85,0)_70%)]" />
           <div className="relative max-w-xl">
@@ -456,8 +474,36 @@ export function PublicHomePage() {
           </a>
         </section>
 
-        <div className="pt-3 lg:flex lg:pt-0">
-          <Link to="/contacts" data-press className="hdc-btn hdc-btn-ink w-full lg:h-auto lg:min-h-full lg:flex-1 lg:flex-col lg:gap-3 lg:rounded-[1.25rem] lg:px-6 lg:text-base">
+        <div className="flex flex-col gap-3 pt-3 lg:pt-0">
+          <div className="hdc-card flex flex-col overflow-hidden lg:min-h-0 lg:flex-1">
+            <div className="flex items-start gap-3 px-4 py-3.5">
+              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-catalog-lagoon" aria-hidden />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-catalog-ink">L’agence</p>
+                <p className="mt-0.5 text-sm leading-snug text-catalog-muted">Esplanada mall, villages touristiques, Hurghada</p>
+              </div>
+            </div>
+            <div className="relative h-44 w-full bg-catalog-mist lg:h-auto lg:min-h-[12rem] lg:flex-1">
+              <iframe
+                title="Carte Google Maps — agence Hurghada Dream, Esplanada mall, Hurghada"
+                src={AGENCY_MAP_EMBED}
+                className="absolute inset-0 h-full w-full border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            </div>
+            <a
+              href={AGENCY_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-press
+              className="inline-flex min-h-11 items-center px-4 text-sm font-semibold text-catalog-lagoon"
+            >
+              Ouvrir dans Google Maps
+            </a>
+          </div>
+          <Link to="/contacts" data-press className="hdc-btn hdc-btn-ink w-full lg:shrink-0">
             <Phone className="h-5 w-5" strokeWidth={1.75} aria-hidden />
             Nos contacts
           </Link>
