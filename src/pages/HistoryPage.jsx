@@ -357,6 +357,9 @@ function QuoteCardComponent({
   const openTicketModal = useCallback(async () => {
     const rawQuote = resolveQuoteById(quotes, d.id) || d;
     const items = rawQuote.items || [];
+    // Un second « Payer » ne doit pas réserver de nouveaux n° pour les lignes déjà ticketées.
+    ticketTouchedRef.current = new Set();
+    ticketAutoSlotsRef.current = [];
     const initial = {};
     const initialPickups = {};
     items.forEach((item, idx) => {
@@ -447,7 +450,6 @@ function QuoteCardComponent({
       return;
     }
 
-    ticketTouchedRef.current = new Set();
     ticketAutoSlotsRef.current = slotsNeedingTicket.map((s) => s.originalIndex);
 
     setTicketAllocating(true);
@@ -494,8 +496,14 @@ function QuoteCardComponent({
 
     const applyRemoteSuggestion = async () => {
       if (cancelled || refreshing) return;
+      const rawQuote = resolveQuoteById(quotesRef.current, d.id);
+      const alreadyIssued = new Set(
+        (rawQuote?.items || [])
+          .map((item, idx) => (String(item?.ticketNumber || "").trim() ? idx : -1))
+          .filter((idx) => idx >= 0)
+      );
       const slots = ticketAutoSlotsRef.current.filter(
-        (oi) => !ticketTouchedRef.current.has(oi)
+        (oi) => !ticketTouchedRef.current.has(oi) && !alreadyIssued.has(oi)
       );
       if (slots.length === 0) return;
 
@@ -657,8 +665,14 @@ function QuoteCardComponent({
     }
 
     const normalized = items.map((_, idx) => String(ticketDrafts[idx] || "").trim());
+    const persistedTicketNumbers = items.map((item) => String(item?.ticketNumber || "").trim());
+    const keptTicketNumbers = normalized.map((draft, idx) => {
+      const persisted = persistedTicketNumbers[idx];
+      if (persisted && !ticketTouchedRef.current.has(idx)) return persisted;
+      return draft;
+    });
     for (let i = 0; i < items.length; i++) {
-      if (!normalized[i]) {
+      if (!keptTicketNumbers[i]) {
         toast.warning(
           `Renseignez le numéro de ticket pour « ${items[i].activityName || `Activité ${i + 1}`} ».`
         );
@@ -666,7 +680,7 @@ function QuoteCardComponent({
       }
     }
 
-    const ticketValidation = validateQuoteTicketNumbers(quotes, d.id, normalized);
+    const ticketValidation = validateQuoteTicketNumbers(quotes, d.id, keptTicketNumbers);
     if (!ticketValidation.ok) {
       toast.warning(ticketValidation.message);
       return;
@@ -676,13 +690,13 @@ function QuoteCardComponent({
     setTicketGenerating(true);
     let pendingReservation = null;
     try {
-      let finalTicketNumbers = [...normalized];
+      let finalTicketNumbers = [...keptTicketNumbers];
 
       // Réservation atomique multi-PC au Valider (pas à l’ouverture).
-      // Toujours réserver les slots auto non modifiés (même si d’autres l’ont été).
+      // Les lignes qui ont déjà un n° ne sont jamais réattribuées.
       if (supabase) {
         const autoSlots = ticketAutoSlotsRef.current.filter(
-          (oi) => !ticketTouchedRef.current.has(oi)
+          (oi) => !ticketTouchedRef.current.has(oi) && !persistedTicketNumbers[oi]
         );
         const autoCount = autoSlots.length > 0 ? autoSlots.length : 0;
         const usedElsewhere = buildUsedTicketNumberMap(quotes, { excludeQuoteId: d.id });
