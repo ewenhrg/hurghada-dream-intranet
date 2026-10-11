@@ -293,8 +293,9 @@ export function PublicHomePage() {
               <img src={HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
             ) : null}
           </div>
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-1/2" data-veil-top />
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-1/2" data-veil-bottom />
           <div aria-hidden className="pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(10,42,51,0.32)_0%,rgba(10,42,51,0)_30%,rgba(11,79,92,0.18)_55%,rgba(8,36,46,0.88)_100%)]" />
-          <span data-hero-flare aria-hidden className="hdc-hero-flare pointer-events-none absolute inset-y-0 left-0 z-[4] opacity-0" />
 
           <div data-hero-copy className="pointer-events-none absolute inset-x-5 bottom-16 z-[5] lg:inset-x-0 lg:bottom-20">
             <div className="lg:mx-auto lg:max-w-7xl lg:px-8">

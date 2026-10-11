@@ -389,31 +389,34 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   height: 2px;
   box-shadow: 0 0 16px 2px rgba(227, 174, 85, 0.95), 0 0 42px 10px rgba(227, 174, 85, 0.45);
 }
-.hd-public-catalog .hdc-hero-flare {
-  width: 34%;
-  background: linear-gradient(90deg, transparent, rgba(255, 246, 224, 0.72), transparent);
-  mix-blend-mode: screen;
-  will-change: transform;
-}
 .hd-public-catalog .hdc-hero-cue {
-  animation: hdc-hero-cue 1.5s ease-in-out infinite;
+  animation: hdc-hero-cue 1.8s ease-in-out infinite;
 }
 @keyframes hdc-hero-cue {
   0%, 100% { transform: translate(-50%, 0); }
-  50% { transform: translate(-50%, 8px); }
+  50% { transform: translate(-50%, 6px); }
 }
+.hd-public-catalog [data-veil-top],
+.hd-public-catalog [data-veil-bottom] {
+  height: 50%;
+  background: #0b4f5c;
+  will-change: transform;
+}
+.hd-public-catalog [data-veil-top] { transform-origin: top center; }
+.hd-public-catalog [data-veil-bottom] { transform-origin: bottom center; }
 @media (prefers-reduced-motion: no-preference) {
-  .hd-public-catalog .hdc-hero-screen [data-hero-frame] {
-    clip-path: inset(42% 10% 42% 10% round 36px);
-  }
-  .hd-public-catalog .hdc-hero-screen [data-hero-stage] {
-    transform: scale(1.55);
-    will-change: transform;
+  .hd-public-catalog .hdc-hero-screen [data-veil-top],
+  .hd-public-catalog .hdc-hero-screen [data-veil-bottom] {
+    transform: scaleY(0.78);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .hd-public-catalog .hdc-hero-cue {
     animation: none;
+  }
+  .hd-public-catalog [data-veil-top],
+  .hd-public-catalog [data-veil-bottom] {
+    display: none;
   }
 }
 .hd-public-catalog .hdc-hero-reels {
