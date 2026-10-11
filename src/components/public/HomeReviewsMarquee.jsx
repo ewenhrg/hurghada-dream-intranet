@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { StarRow } from "./HotelUI";
 
 const GOOGLE_REVIEWS_URL = "https://www.trustindex.io/reviews/hurghadadream.com";
@@ -85,11 +86,64 @@ function ReviewCard({ review }) {
 }
 
 function ReviewLine({ reviews, reverse = false }) {
+  const rowRef = useRef(null);
+  const halfRef = useRef(null);
+  const pausedRef = useRef(false);
+
+  useEffect(() => {
+    const row = rowRef.current;
+    const half = halfRef.current;
+    if (!row || !half) return undefined;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+
+    let last = 0;
+    let frame = 0;
+    const readSpeed = () => {
+      const raw = parseFloat(window.getComputedStyle(row).getPropertyValue("--hdc-review-speed"));
+      return Number.isFinite(raw) && raw > 0 ? raw : 0.004;
+    };
+    if (reverse && half.offsetWidth > 1) row.scrollLeft = half.offsetWidth;
+
+    const tick = (now) => {
+      if (!last) last = now;
+      const dt = Math.min(40, now - last);
+      last = now;
+      const width = half.offsetWidth;
+      if (!pausedRef.current && width > 1) {
+        const step = dt * readSpeed();
+        if (reverse) {
+          row.scrollLeft -= step;
+          if (row.scrollLeft <= 1) row.scrollLeft += width;
+        } else {
+          row.scrollLeft += step;
+          if (row.scrollLeft >= width) row.scrollLeft -= width;
+        }
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [reverse]);
+
   return (
-    <div className="hdc-review-row">
-      <div className={reverse ? "hdc-review-track is-reverse" : "hdc-review-track"}>
+    <div
+      ref={rowRef}
+      className="hdc-review-row"
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") pausedRef.current = true;
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType === "mouse") pausedRef.current = false;
+      }}
+    >
+      <div className="hdc-review-track">
         {[0, 1].map((copy) => (
-          <ul key={copy} className="hdc-review-set" aria-hidden={copy === 1 ? true : undefined}>
+          <ul
+            key={copy}
+            ref={copy === 0 ? halfRef : undefined}
+            className="hdc-review-set"
+            aria-hidden={copy === 1 ? true : undefined}
+          >
             {reviews.map((review) => (
               <li key={`${copy}-${review.name}`}>
                 <ReviewCard review={review} />

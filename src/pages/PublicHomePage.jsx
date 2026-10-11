@@ -16,7 +16,7 @@ import {
   Sun,
 } from "lucide-react";
 import { HomeReviewsMarquee } from "../components/public/HomeReviewsMarquee";
-import { fetchInstagramReels, InstagramReelsRail } from "../components/public/InstagramReelsRail";
+import { fetchInstagramReels, InstagramReelsRail, readCachedReels } from "../components/public/InstagramReelsRail";
 import { PublicAppShell } from "../components/public/PublicAppShell";
 import { StarRow } from "../components/public/HotelUI";
 import { WhatsAppGlyph } from "../components/public/PublicUI";
@@ -37,6 +37,10 @@ const HERO_IMAGE = "/client/home-hero-red-sea.jpg";
 const TILE_EXCURSIONS = "/client/home-tile-excursions.jpg";
 const TILE_STAY = "/client/home-tile-stay-calendar.jpg";
 const heroReelsPromise = fetchInstagramReels();
+
+function playableReels(list) {
+  return (Array.isArray(list) ? list : []).filter((reel) => reel.video).slice(0, 12);
+}
 /** Démarre une vidéo muette. Sur téléphone, plusieurs `play()` en même temps sont refusés. */
 function playMuted(video) {
   video.muted = true;
@@ -118,8 +122,8 @@ function GlassChip({ children }) {
 export function PublicHomePage() {
   const navigate = useNavigate();
   const [hotels, setHotels] = useState([]);
-  const [heroReels, setHeroReels] = useState([]);
-  const [reelsSettled, setReelsSettled] = useState(false);
+  const [heroReels, setHeroReels] = useState(() => playableReels(readCachedReels()));
+  const [reelsSettled, setReelsSettled] = useState(() => playableReels(readCachedReels()).length >= 3);
   const weather = useHurghadaWeather();
   const hello = useMemo(() => greeting(), []);
   const heroRef = useRef(null);
@@ -145,7 +149,8 @@ export function PublicHomePage() {
     let cancelled = false;
     heroReelsPromise.then((list) => {
       if (cancelled) return;
-      setHeroReels(list.filter((reel) => reel.video).slice(0, 12));
+      const next = playableReels(list);
+      if (next.length >= 3) setHeroReels(next);
       setReelsSettled(true);
     });
     return () => {
@@ -159,29 +164,37 @@ export function PublicHomePage() {
 
     const sync = () => {
       const rootBox = root.getBoundingClientRect();
-      root.querySelectorAll("video").forEach((node) => {
+      [...root.querySelectorAll("video")].forEach((node, index) => {
         if (!(node instanceof HTMLVideoElement)) return;
+        const source = node.dataset.src;
+        const onStage = index < 3;
         const box = node.getBoundingClientRect();
-        const visible = box.width > 8 && box.right > rootBox.left + 12 && box.left < rootBox.right - 12;
+        const visible = onStage || (box.width > 8 && box.left < rootBox.right - 24 && box.right > rootBox.left + 24);
         if (!visible) {
-          node.pause();
+          if (!node.paused) node.pause();
           return;
         }
-        const source = node.dataset.src;
         if (source && !node.getAttribute("src")) node.setAttribute("src", source);
-        if (node.paused) playMuted(node);
+        if (node.paused || node.currentTime === 0) playMuted(node);
       });
     };
 
     sync();
-    const retries = [400, 1200, 2400].map((delay) => window.setTimeout(sync, delay));
-    const observer = new IntersectionObserver(sync, { root, threshold: 0.2 });
-    root.querySelectorAll("video").forEach((video) => observer.observe(video));
+    const interval = window.setInterval(() => {
+      const first = [...root.querySelectorAll("video")].slice(0, 3);
+      const playing = first.length === 3 && first.every((node) => !node.paused && node.currentTime > 0);
+      if (playing) {
+        window.clearInterval(interval);
+        return;
+      }
+      sync();
+    }, 200);
+    const stop = window.setTimeout(() => window.clearInterval(interval), 8000);
     root.addEventListener("scroll", sync, { passive: true });
     window.addEventListener("touchstart", sync, { passive: true });
     return () => {
-      retries.forEach((id) => window.clearTimeout(id));
-      observer.disconnect();
+      window.clearInterval(interval);
+      window.clearTimeout(stop);
       root.removeEventListener("scroll", sync);
       window.removeEventListener("touchstart", sync);
     };
@@ -192,8 +205,7 @@ export function PublicHomePage() {
     { to: "/hotels", title: "Hôtels", subtitle: "All inclusive, en bord de mer", image: hotelPhoto || HERO_IMAGE },
   ];
 
-  /* L’ouverture attend les 3 réels, pour ne pas dévoiler la photo de secours avant eux. */
-  useHeroArrival(heroRef, heroReels.length >= 3 || reelsSettled);
+  useHeroArrival(heroRef);
 
   /* ——— Carrousel « Nos adresses » : parallaxe horizontale dans chaque photo ——— */
   useGSAP(

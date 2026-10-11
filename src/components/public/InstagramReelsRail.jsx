@@ -7,7 +7,49 @@ const REELS_URL = IS_CLIENT_APP
   ? "https://hurghada-dream-intranet.vercel.app/api/instagram-reels"
   : "/api/instagram-reels";
 
+const REELS_CACHE_KEY = "hd-ig-reels";
+const REELS_CACHE_MS = 2 * 60 * 60 * 1000;
 let reelsRequest = null;
+const warmedVideos = [];
+
+export function readCachedReels() {
+  try {
+    const raw = sessionStorage.getItem(REELS_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!parsed?.at || Date.now() - parsed.at > REELS_CACHE_MS) return [];
+    return Array.isArray(parsed.reels) ? parsed.reels : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberReels(reels) {
+  const slim = reels.filter((reel) => reel?.video).slice(0, 12);
+  if (slim.length < 3) return;
+  try {
+    sessionStorage.setItem(REELS_CACHE_KEY, JSON.stringify({ at: Date.now(), reels: slim }));
+  } catch {
+    /* quota pleine : la lecture reste possible sans cache */
+  }
+}
+
+/** Démarre le téléchargement des 3 réels du hero avant même que la page les affiche. */
+function warmReels(reels) {
+  if (typeof document === "undefined") return;
+  reels.filter((reel) => reel?.video).slice(0, 3).forEach((reel) => {
+    if (warmedVideos.some((node) => node.dataset.src === reel.video)) return;
+    const node = document.createElement("video");
+    node.muted = true;
+    node.defaultMuted = true;
+    node.playsInline = true;
+    node.preload = "auto";
+    node.dataset.src = reel.video;
+    node.src = reel.video;
+    node.load();
+    warmedVideos.push(node);
+  });
+}
 
 export function fetchInstagramReels() {
   if (!reelsRequest) {
@@ -16,7 +58,10 @@ export function fetchInstagramReels() {
         const response = await fetch(REELS_URL);
         if (!response.ok) return [];
         const payload = await response.json();
-        return Array.isArray(payload?.reels) ? payload.reels : [];
+        const reels = Array.isArray(payload?.reels) ? payload.reels : [];
+        rememberReels(reels);
+        warmReels(reels);
+        return reels;
       } catch {
         return [];
       }
@@ -24,6 +69,9 @@ export function fetchInstagramReels() {
   }
   return reelsRequest;
 }
+
+warmReels(readCachedReels());
+fetchInstagramReels();
 
 function ReelCard({ reel, onError, still }) {
   const videoRef = useRef(null);

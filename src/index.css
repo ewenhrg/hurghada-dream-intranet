@@ -398,25 +398,11 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 }
 .hd-public-catalog [data-veil-top],
 .hd-public-catalog [data-veil-bottom] {
-  height: 50%;
-  background: #0b4f5c;
-  will-change: transform;
-}
-.hd-public-catalog [data-veil-top] { transform-origin: top center; }
-.hd-public-catalog [data-veil-bottom] { transform-origin: bottom center; }
-@media (prefers-reduced-motion: no-preference) {
-  .hd-public-catalog .hdc-hero-screen [data-veil-top],
-  .hd-public-catalog .hdc-hero-screen [data-veil-bottom] {
-    transform: scaleY(0.78);
-  }
+  display: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .hd-public-catalog .hdc-hero-cue {
     animation: none;
-  }
-  .hd-public-catalog [data-veil-top],
-  .hd-public-catalog [data-veil-bottom] {
-    display: none;
   }
 }
 .hd-public-catalog .hdc-hero-reels {
@@ -462,27 +448,22 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   padding-right: 0.75rem;
 }
 .hd-public-catalog .hdc-review-row {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  --hdc-review-speed: 0.004;
+}
+.hd-public-catalog .hdc-review-row::-webkit-scrollbar {
+  display: none;
 }
 .hd-public-catalog .hdc-review-track {
   display: flex;
   width: max-content;
-  animation: hdc-review-scroll 150s linear infinite;
-}
-.hd-public-catalog .hdc-review-track.is-reverse {
-  animation-duration: 180s;
-  animation-direction: reverse;
 }
 @media (min-width: 1024px) {
-  .hd-public-catalog .hdc-review-track {
-    animation-duration: 72s;
+  .hd-public-catalog .hdc-review-row {
+    --hdc-review-speed: 0.008;
   }
-  .hd-public-catalog .hdc-review-track.is-reverse {
-    animation-duration: 88s;
-  }
-}
-.hd-public-catalog .hdc-review-row:hover .hdc-review-track {
-  animation-play-state: paused;
 }
 /* Desktop : les bandes défilantes s’effacent sur les bords au lieu d’être coupées net. */
 @media (min-width: 1024px) {
@@ -496,22 +477,6 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   display: flex;
   gap: 0.75rem;
   padding-right: 0.75rem;
-}
-@keyframes hdc-review-scroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hd-public-catalog .hdc-review-track {
-    animation: none;
-  }
-  .hd-public-catalog .hdc-review-row {
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .hd-public-catalog .hdc-review-row::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 .hd-public-catalog .hdc-slide-dot {

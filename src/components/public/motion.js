@@ -252,16 +252,13 @@ export function useHeroArrival(scopeRef, ready = true) {
         const split = SplitText.create("[data-hero-title]", { type: "words", mask: "words", wordsClass: "hdc-w" });
         const tl = gsap.timeline({ defaults: { ease: MOTION.out } });
         tl.fromTo("[data-horizon]", { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: "power2.inOut" }, 0)
-          .fromTo("[data-veil-top]", { scaleY: 0.78 }, { scaleY: 0, duration: 1.05, ease: "power3.inOut" }, 0.15)
-          .fromTo("[data-veil-bottom]", { scaleY: 0.78 }, { scaleY: 0, duration: 1.05, ease: "power3.inOut" }, 0.15)
           .to("[data-horizon]", { autoAlpha: 0, duration: 0.35, ease: "power1.out" }, 0.7)
           .fromTo("[data-hero-eyebrow]", { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.55 }, 0.55)
           .fromTo("[data-hero-rule]", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power2.out" }, 0.55)
           .fromTo(split.words, { yPercent: 110 }, { yPercent: 0, duration: 0.7, stagger: 0.04, ease: MOTION.out }, 0.62)
           .fromTo("[data-hero-sub]", { y: 16, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.55 }, 0.95)
           .fromTo("[data-hero-chip]", { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.5, stagger: 0.05 }, 1.05)
-          .fromTo("[data-hero-cue]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4, ease: "power1.out" }, 1.25)
-          .set("[data-veil-top], [data-veil-bottom]", { autoAlpha: 0 });
+          .fromTo("[data-hero-cue]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4, ease: "power1.out" }, 1.25);
 
         tl.eventCallback("onComplete", () => {
           gsap.to("[data-hero-stage]", {
