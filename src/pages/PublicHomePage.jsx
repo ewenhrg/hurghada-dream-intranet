@@ -22,7 +22,6 @@ import { StarRow } from "../components/public/HotelUI";
 import { WhatsAppGlyph } from "../components/public/PublicUI";
 import {
   gsap,
-  prefersReducedMotion,
   ScrollTrigger,
   startPhotoFlight,
   useGSAP,
@@ -38,34 +37,50 @@ const HERO_IMAGE = "/client/home-hero-red-sea.jpg";
 const TILE_EXCURSIONS = "/client/home-tile-excursions.jpg";
 const TILE_STAY = "/client/home-tile-stay-calendar.jpg";
 const heroReelsPromise = fetchInstagramReels();
-/** Réel du hero. L’affiche du réel est visible tout de suite, la lecture démarre dès que possible. */
-function HeroReel({ reel }) {
+/** Démarre une vidéo muette. Sur téléphone, plusieurs `play()` en même temps sont refusés. */
+function playMuted(video) {
+  video.muted = true;
+  video.defaultMuted = true;
+  video.playsInline = true;
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  return video.play().catch(() => {});
+}
+
+/**
+ * Réel du hero. Seules les vidéos à l’écran sont chargées et lancées :
+ * en démarrer douze d’un coup fige les trois visibles sur téléphone.
+ */
+function HeroReel({ reel, priority = false }) {
   const videoRef = useRef(null);
-  const still = useMemo(() => prefersReducedMotion(), []);
 
   useEffect(() => {
     const node = videoRef.current;
-    if (!node || still) return undefined;
-    node.muted = true;
+    if (!node || !priority) return undefined;
     const play = () => {
-      node.play().catch(() => {});
+      playMuted(node);
     };
     play();
     node.addEventListener("loadeddata", play);
-    return () => node.removeEventListener("loadeddata", play);
-  }, [reel.video, still]);
+    node.addEventListener("canplay", play);
+    return () => {
+      node.removeEventListener("loadeddata", play);
+      node.removeEventListener("canplay", play);
+    };
+  }, [reel.video, priority]);
 
   return (
     <div className="hdc-hero-reel relative h-full shrink-0 snap-start overflow-hidden">
       <video
         ref={videoRef}
-        src={reel.video}
+        src={priority ? reel.video : undefined}
+        data-src={reel.video}
         poster={reel.image}
-        autoPlay={!still}
+        autoPlay={priority}
         muted
         loop
         playsInline
-        preload="auto"
+        preload={priority ? "auto" : "none"}
         referrerPolicy="no-referrer"
         className="pointer-events-none absolute inset-0 h-full w-full object-cover"
       />
@@ -140,24 +155,36 @@ export function PublicHomePage() {
 
   useEffect(() => {
     const root = heroScrollRef.current;
-    if (!root || heroReels.length < 3 || prefersReducedMotion()) return undefined;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const video = entry.target;
-          if (!(video instanceof HTMLVideoElement)) return;
-          if (entry.isIntersecting) {
-            video.muted = true;
-            video.play().catch(() => {});
-          } else {
-            video.pause();
-          }
-        });
-      },
-      { root, threshold: 0.35 }
-    );
+    if (!root || heroReels.length < 3) return undefined;
+
+    const sync = () => {
+      const rootBox = root.getBoundingClientRect();
+      root.querySelectorAll("video").forEach((node) => {
+        if (!(node instanceof HTMLVideoElement)) return;
+        const box = node.getBoundingClientRect();
+        const visible = box.width > 8 && box.right > rootBox.left + 12 && box.left < rootBox.right - 12;
+        if (!visible) {
+          node.pause();
+          return;
+        }
+        const source = node.dataset.src;
+        if (source && !node.getAttribute("src")) node.setAttribute("src", source);
+        if (node.paused) playMuted(node);
+      });
+    };
+
+    sync();
+    const retries = [400, 1200, 2400].map((delay) => window.setTimeout(sync, delay));
+    const observer = new IntersectionObserver(sync, { root, threshold: 0.2 });
     root.querySelectorAll("video").forEach((video) => observer.observe(video));
-    return () => observer.disconnect();
+    root.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("touchstart", sync, { passive: true });
+    return () => {
+      retries.forEach((id) => window.clearTimeout(id));
+      observer.disconnect();
+      root.removeEventListener("scroll", sync);
+      window.removeEventListener("touchstart", sync);
+    };
   }, [heroReels]);
 
   const actions = [
@@ -285,8 +312,8 @@ export function PublicHomePage() {
           <div data-hero-stage className="absolute inset-0 bg-catalog-abyss">
             {heroReels.length >= 3 ? (
               <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Réels Instagram">
-                {heroReels.map((reel) => (
-                  <HeroReel key={reel.id} reel={reel} />
+                {heroReels.map((reel, index) => (
+                  <HeroReel key={reel.id} reel={reel} priority={index < 3} />
                 ))}
               </div>
             ) : reelsSettled ? (
