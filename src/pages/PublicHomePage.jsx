@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   CalendarDays,
+  ChevronDown,
   ChevronRight,
   Cloud,
   CloudLightning,
@@ -19,7 +20,15 @@ import { fetchInstagramReels, InstagramReelsRail } from "../components/public/In
 import { PublicAppShell } from "../components/public/PublicAppShell";
 import { StarRow } from "../components/public/HotelUI";
 import { WhatsAppGlyph } from "../components/public/PublicUI";
-import { gsap, ScrollTrigger, SplitText, startPhotoFlight, useGSAP } from "../components/public/motion";
+import {
+  gsap,
+  prefersReducedMotion,
+  ScrollTrigger,
+  startPhotoFlight,
+  useGSAP,
+  useHeroArrival,
+  useLayerReveal,
+} from "../components/public/motion";
 import { useHurghadaWeather } from "../hooks/useHurghadaWeather";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
 
@@ -29,22 +38,34 @@ const AGENCY_MAP_EMBED = "https://www.google.com/maps?q=27.1893675,33.8324796&z=
 const HERO_IMAGE = "/client/home-hero-red-sea.jpg";
 const TILE_EXCURSIONS = "/client/home-tile-excursions.jpg";
 const TILE_STAY = "/client/home-tile-stay-calendar.jpg";
-const FULL_MOTION = "(prefers-reduced-motion: no-preference)";
-
-function HeroReel({ reel }) {
+/**
+ * Réel du hero. `onReady` dès la première image affichable : le calque des réels
+ * apparaît alors en fondu sur la photo de secours. Mouvement réduit : pas de lecture auto,
+ * l’affiche du réel reste visible.
+ */
+function HeroReel({ reel, onReady }) {
   const videoRef = useRef(null);
+  const still = useMemo(() => prefersReducedMotion(), []);
 
   useEffect(() => {
     const node = videoRef.current;
     if (!node) return undefined;
     node.muted = true;
+    if (still) {
+      onReady();
+      return undefined;
+    }
     const play = () => {
       node.play().catch(() => {});
     };
     play();
     node.addEventListener("loadeddata", play);
-    return () => node.removeEventListener("loadeddata", play);
-  }, [reel.video]);
+    node.addEventListener("playing", onReady);
+    return () => {
+      node.removeEventListener("loadeddata", play);
+      node.removeEventListener("playing", onReady);
+    };
+  }, [reel.video, still, onReady]);
 
   return (
     <div className="hdc-hero-reel relative h-full shrink-0 snap-start overflow-hidden">
@@ -52,7 +73,7 @@ function HeroReel({ reel }) {
         ref={videoRef}
         src={reel.video}
         poster={reel.image}
-        autoPlay
+        autoPlay={!still}
         muted
         loop
         playsInline
@@ -101,6 +122,9 @@ export function PublicHomePage() {
   const heroScrollRef = useRef(null);
   const railRef = useRef(null);
   const railDragRef = useRef(false);
+  const reelsLayerRef = useRef(null);
+  const [reelsReady, setReelsReady] = useState(false);
+  const markReelsReady = useCallback(() => setReelsReady(true), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,7 +153,7 @@ export function PublicHomePage() {
 
   useEffect(() => {
     const root = heroScrollRef.current;
-    if (!root || heroReels.length < 3) return undefined;
+    if (!root || heroReels.length < 3 || prefersReducedMotion()) return undefined;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -154,43 +178,9 @@ export function PublicHomePage() {
     { to: "/hotels", title: "Hôtels", subtitle: "All inclusive, en bord de mer", image: hotelPhoto || HERO_IMAGE },
   ];
 
-  /* ——— Ouverture « horizon » : fil sable → l’image s’ouvre depuis l’horizon → titre → puces ——— */
-  useGSAP(
-    () => {
-      const mm = gsap.matchMedia();
-      mm.add(FULL_MOTION, () => {
-        const split = SplitText.create("[data-hero-title]", { type: "words", mask: "words", wordsClass: "hdc-w" });
-        const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
-        tl.fromTo("[data-horizon]", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power3.inOut" })
-          .fromTo(
-            "[data-hero-frame]",
-            { clipPath: "inset(46% 0% 54% 0% round 0px 0px 32px 32px)" },
-            { clipPath: "inset(0% 0% 0% 0% round 0px 0px 32px 32px)", duration: 1.4, ease: "expo.inOut" },
-            0.45
-          )
-          .to("[data-horizon]", { autoAlpha: 0, duration: 0.4 }, 0.75)
-          .fromTo("[data-hero-stage]", { scale: 1.35 }, { scale: 1, duration: 2.2 }, 0.45)
-          .fromTo("[data-hero-eyebrow]", { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.8 }, 1.2)
-          .fromTo(split.words, { yPercent: 105 }, { yPercent: 0, duration: 1, stagger: 0.06 }, 1.3)
-          .fromTo("[data-hero-sub]", { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.8 }, 1.6)
-          .fromTo("[data-hero-chip]", { y: 16, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.8, stagger: 0.08 }, 1.75);
-
-        // Scroll : la photo glisse lentement, le texte s’efface avec élégance.
-        gsap.to("[data-hero-stage]", {
-          yPercent: 12,
-          ease: "none",
-          scrollTrigger: { trigger: heroRef.current, start: "top top", end: "bottom top", scrub: 0.6 },
-        });
-        gsap.to("[data-hero-copy]", {
-          y: -40,
-          autoAlpha: 0,
-          ease: "none",
-          scrollTrigger: { trigger: heroRef.current, start: "top top", end: "55% top", scrub: 0.6 },
-        });
-      });
-    },
-    { scope: heroRef }
-  );
+  /* ——— Arrivée « horizon » (motion.js) + réels qui prennent le relais de la photo ——— */
+  useHeroArrival(heroRef);
+  useLayerReveal(reelsLayerRef, reelsReady);
 
   /* ——— Carrousel « Nos adresses » : parallaxe horizontale dans chaque photo ——— */
   useGSAP(
@@ -300,20 +290,24 @@ export function PublicHomePage() {
     <PublicAppShell title="Accueil" wide="xl" nav={desktopNav}>
       {/* ——— Hero « horizon » ——— */}
       <section ref={heroRef} className="relative">
+        {/* Grand bleu derrière l’ouverture : l’horizon se trace sur la mer avant que l’image s’ouvre. */}
+        <div aria-hidden className="absolute inset-0 rounded-b-[2rem] bg-catalog-abyss lg:rounded-none" />
         <div
           data-hero-frame
           className="relative h-[clamp(520px,76svh,720px)] overflow-hidden rounded-b-[2rem] bg-catalog-raised lg:h-[min(78vh,820px)] lg:rounded-none"
         >
           <div data-hero-stage className="absolute inset-0">
+            {/* Photo de secours, affichée dès la première image ; les réels la recouvrent en fondu. */}
+            <img src={HERO_IMAGE} alt="" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover" />
             {heroReels.length >= 3 ? (
-              <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Réels Instagram">
-                {heroReels.map((reel) => (
-                  <HeroReel key={reel.id} reel={reel} />
-                ))}
+              <div ref={reelsLayerRef} className="absolute inset-0 opacity-0">
+                <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Réels Instagram">
+                  {heroReels.map((reel) => (
+                    <HeroReel key={reel.id} reel={reel} onReady={markReelsReady} />
+                  ))}
+                </div>
               </div>
-            ) : (
-              <img src={HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            )}
+            ) : null}
           </div>
           <div aria-hidden className="pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(10,42,51,0.32)_0%,rgba(10,42,51,0)_30%,rgba(11,79,92,0.18)_55%,rgba(8,36,46,0.88)_100%)]" />
 
@@ -321,7 +315,7 @@ export function PublicHomePage() {
           <div data-hero-copy className="pointer-events-none absolute inset-x-5 bottom-7 z-[4] lg:inset-x-0 lg:bottom-16">
             <div className="lg:mx-auto lg:max-w-7xl lg:px-8">
             <p data-hero-eyebrow className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-white/85">
-              <span className="h-px w-6 bg-catalog-sand" />
+              <span data-hero-rule className="h-px w-6 origin-left bg-catalog-sand" />
               Hurghada · Mer Rouge
             </p>
             <h1 data-hero-title className="hdc-hero-title mt-3 text-[2.25rem] leading-[1.08] !text-white lg:max-w-4xl lg:text-6xl">
@@ -352,11 +346,19 @@ export function PublicHomePage() {
             </div>
           </div>
         </div>
+        {/* Invite au scroll : décorative, s’efface dès les premiers pixels de défilement. */}
+        <span
+          data-hero-cue
+          aria-hidden
+          className="pointer-events-none absolute bottom-3 left-1/2 z-[5] hidden -translate-x-1/2 text-white/70 lg:block"
+        >
+          <ChevronDown className="h-5 w-5" strokeWidth={1.5} />
+        </span>
         {/* Fil d’horizon qui se trace avant l’ouverture de l’image. */}
         <span
           data-horizon
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-[46%] z-[5] h-px origin-center bg-catalog-sand"
+          className="pointer-events-none absolute inset-x-0 top-1/2 z-[5] h-px origin-center bg-catalog-sand"
           style={{ transform: "scaleX(0)" }}
         />
       </section>
@@ -365,7 +367,7 @@ export function PublicHomePage() {
         {/* ——— Les deux univers ——— */}
         <section className="px-4 pt-8 lg:px-0 lg:pt-14">
           <p data-reveal="item" className="hdc-eyebrow">Réserver</p>
-          <h2 data-reveal="item" className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink lg:text-5xl">
+          <h2 data-heading className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink lg:text-5xl">
             Que souhaitez-vous <span className="hdc-serif">vivre</span>&nbsp;?
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-3 lg:mt-8 lg:grid-cols-3 lg:gap-5">
@@ -424,7 +426,7 @@ export function PublicHomePage() {
             <div data-reveal="item" className="flex items-end justify-between gap-3 px-4 lg:px-0">
               <div>
                 <p className="hdc-eyebrow">Nos adresses</p>
-                <h2 className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink lg:text-5xl">
+                <h2 data-heading className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink lg:text-5xl">
                   Les hôtels <span className="hdc-serif">de la sélection</span>
                 </h2>
               </div>

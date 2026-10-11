@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { IS_CLIENT_APP } from "../../config/clientApp";
+import { prefersReducedMotion } from "./motion";
 
 const PROFILE_URL = "https://www.instagram.com/hurghada_dream/";
 const REELS_URL = IS_CLIENT_APP
@@ -24,7 +25,7 @@ export function fetchInstagramReels() {
   return reelsRequest;
 }
 
-function ReelCard({ reel, onError }) {
+function ReelCard({ reel, onError, still }) {
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -48,11 +49,11 @@ function ReelCard({ reel, onError }) {
           ref={videoRef}
           src={reel.video}
           poster={reel.image}
-          autoPlay
+          autoPlay={!still}
           muted
           loop
           playsInline
-          preload="auto"
+          preload={still ? "metadata" : "auto"}
           referrerPolicy="no-referrer"
           className="pointer-events-none h-full w-full object-cover"
           onError={onError}
@@ -77,6 +78,8 @@ export function InstagramReelsRail() {
   const marqueeRef = useRef(null);
   const halfRef = useRef(null);
   const pausedRef = useRef(false);
+  // Mouvement réduit : ni défilement ni lecture automatiques, la bande reste balayable.
+  const [still] = useState(() => prefersReducedMotion());
 
   useEffect(() => {
     let cancelled = false;
@@ -148,7 +151,7 @@ export function InstagramReelsRail() {
 
   useEffect(() => {
     const root = marqueeRef.current;
-    if (!root) return undefined;
+    if (!root || still) return undefined;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -166,7 +169,7 @@ export function InstagramReelsRail() {
     );
     root.querySelectorAll("video").forEach((video) => observer.observe(video));
     return () => observer.disconnect();
-  }, [reels]);
+  }, [reels, still]);
 
   if (reels.length < 2) return null;
 
@@ -174,8 +177,8 @@ export function InstagramReelsRail() {
     <section className="pt-10 lg:pt-16" aria-labelledby="home-reels-title">
       <div className="flex items-end justify-between gap-3 px-4 lg:px-0">
         <div>
-          <p className="hdc-eyebrow">Instagram</p>
-          <h2 id="home-reels-title" className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink lg:text-5xl">
+          <p data-reveal="item" className="hdc-eyebrow">Instagram</p>
+          <h2 id="home-reels-title" data-heading className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink lg:text-5xl">
             Les réels <span className="hdc-serif">du moment</span>
           </h2>
         </div>
@@ -221,6 +224,7 @@ export function InstagramReelsRail() {
                 <li key={`${copy}-${reel.id}`} className="shrink-0">
                   <ReelCard
                     reel={reel}
+                    still={still}
                     onError={() => {
                       setReels((prev) => prev.filter((item) => item.id !== reel.id));
                     }}

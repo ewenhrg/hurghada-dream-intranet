@@ -1064,7 +1064,7 @@ export function PublicClientDevisPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="hdc-eyebrow">Univers</p>
-                    <h2 id={`univers-${group.key}`} className="mt-1 font-catalog-display text-[1.75rem] leading-tight text-catalog-ink lg:text-[2rem]">
+                    <h2 id={`univers-${group.key}`} data-heading className="mt-1 font-catalog-display text-[1.75rem] leading-tight text-catalog-ink lg:text-[2rem]">
                       {getPublicCategoryLabel(group.key)}
                     </h2>
                   </div>

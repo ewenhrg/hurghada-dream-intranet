@@ -71,7 +71,7 @@ export function SectionHeading({ eyebrow, title, aside, className = "" }) {
     <div data-reveal="item" className={`flex items-end justify-between gap-4 ${className}`}>
       <div className="min-w-0">
         {eyebrow ? <p className="hdc-eyebrow">{eyebrow}</p> : null}
-        <h2 className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight text-catalog-ink">{title}</h2>
+        <h2 data-heading className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight text-catalog-ink">{title}</h2>
       </div>
       {aside ? <div className="shrink-0">{aside}</div> : null}
     </div>

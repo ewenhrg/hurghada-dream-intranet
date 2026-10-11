@@ -21,27 +21,66 @@ function prefersReduced() {
   return typeof window !== "undefined" && window.matchMedia(REDUCED).matches;
 }
 
-/** Vol photo carte → fiche : posé par startPhotoFlight, consommé par l’écran suivant. */
-let flightPending = false;
-function consumeFlight() {
-  const was = flightPending;
-  flightPending = false;
-  return was;
+/** Lecture ponctuelle de la préférence système (ex. : ne pas lancer de vidéo décorative). */
+export const prefersReducedMotion = prefersReduced;
+
+/** Vol photo carte → fiche : clone posé par startPhotoFlight, posé à sa place par l’écran suivant. */
+let flight = null;
+const inset = (t, rgt, b, l, rad) => `inset(${t}px ${rgt}px ${b}px ${l}px round ${rad}px)`;
+
+function dropFlight(clone) {
+  gsap.to(clone, { autoAlpha: 0, duration: 0.35, ease: MOTION.soft, overwrite: "auto", onComplete: () => clone.remove() });
+}
+
+/** Cible d’atterrissage visible : `data-flight-target` en priorité, sinon la photo hero. */
+function findFlightTarget(root) {
+  const candidates = [...root.querySelectorAll("[data-flight-target]"), ...root.querySelectorAll("[data-hero-media]")];
+  return candidates.find((el) => el.getBoundingClientRect().width > 0) || null;
+}
+
+/** Appelé par l’écran d’arrivée : la photo rejoint exactement le cadre cible puis s’efface. */
+function landFlight(root) {
+  if (!flight) return false;
+  const target = findFlightTarget(root);
+  if (!target) return false;
+  const { clone, timer } = flight;
+  flight = null;
+  window.clearTimeout(timer);
+  const r = target.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const radius = parseFloat(window.getComputedStyle(target).borderTopLeftRadius) || 20;
+  gsap.to(clone, {
+    clipPath: inset(r.top, vw - r.right, vh - r.bottom, r.left, radius),
+    duration: 0.5,
+    ease: "power3.inOut",
+    overwrite: "auto",
+    onComplete: () => dropFlight(clone),
+  });
+  return true;
 }
 
 /**
- * Élément partagé discret : la photo de la carte s’agrandit jusqu’au hero de la fiche
- * (clone fixe ouvert par clip-path, puis fondu). À appeler juste avant navigate().
+ * Élément partagé : la photo de la carte s’agrandit vers la fiche (clone fixe ouvert par
+ * clip-path), puis la fiche la pose sur son propre cadre (`data-flight-target` /
+ * `data-hero-media`) et la laisse fondre. À appeler juste avant navigate().
  */
 export function startPhotoFlight(img) {
   if (!img || prefersReduced()) return;
   const src = img.currentSrc || img.src;
   if (!src) return;
+  if (flight) {
+    window.clearTimeout(flight.timer);
+    flight.clone.remove();
+  }
   const r = img.getBoundingClientRect();
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const heroTop = 76;
+  // Approche : sous le header de l’écran courant, à la hauteur du hero mobile.
+  const header = document.querySelector(".hd-public-catalog > header");
+  const heroTop = header ? Math.round(header.getBoundingClientRect().height) : 58;
   const heroH = Math.min(Math.max(vh * 0.52, 340), 520);
+  const side = vw >= 768 ? Math.max(24, (vw - Math.min(vw, 1280)) / 2 + 32) : 16;
   const clone = document.createElement("img");
   clone.src = src;
   clone.alt = "";
@@ -57,16 +96,18 @@ export function startPhotoFlight(img) {
     pointerEvents: "none",
   });
   document.body.appendChild(clone);
-  flightPending = true;
-  const inset = (t, rgt, b, l, rad) => `inset(${t}px ${rgt}px ${b}px ${l}px round ${rad}px)`;
-  gsap
-    .timeline({ onComplete: () => clone.remove() })
-    .fromTo(
-      clone,
-      { clipPath: inset(r.top, vw - r.right, vh - r.bottom, r.left, 20) },
-      { clipPath: inset(heroTop, 16, Math.max(0, vh - heroTop - heroH), 16, 20), duration: 0.7, ease: "power3.inOut" }
-    )
-    .to(clone, { autoAlpha: 0, duration: 0.35, ease: "power2.out" }, 0.8);
+  gsap.fromTo(
+    clone,
+    { clipPath: inset(r.top, vw - r.right, vh - r.bottom, r.left, 20) },
+    { clipPath: inset(heroTop, side, Math.max(0, vh - heroTop - heroH), side, 20), duration: 0.7, ease: "power3.inOut" }
+  );
+  // Filet de sécurité : fiche lente ou sans cadre → la photo s’efface seule.
+  const timer = window.setTimeout(() => {
+    if (flight?.clone !== clone) return;
+    flight = null;
+    dropFlight(clone);
+  }, 2200);
+  flight = { clone, timer };
 }
 
 function fresh(root, attr, value) {
@@ -81,8 +122,9 @@ function fresh(root, attr, value) {
  * Entrée d’écran, pilotée par attributs (scope = écran) :
  * - `data-hero-media` : photo hero révélée par un masque qui s’ouvre + léger dézoom (`data-hero-img`)
  * - `data-split`      : titre mot par mot, montée courte depuis un masque
- * - `data-reveal="item"` : blocs (fondu + y 20, stagger 60 ms)
+ * - `data-reveal="item"` : blocs ; visibles à l’arrivée → cascade d’entrée, plus bas → révélés au scroll
  * - `data-reveal="card"` : cartes au scroll (y 24, stagger 30 ms, photo qui se dévoile)
+ * - `data-heading`    : titre de section, mots qui montent depuis un masque quand il entre à l’écran
  * Animations fromTo explicites : un double passage ne peut pas figer l’état de départ.
  */
 export function useScreenIntro(scopeRef, dependencies = []) {
@@ -90,13 +132,20 @@ export function useScreenIntro(scopeRef, dependencies = []) {
     () => {
       const root = scopeRef.current;
       if (!root) return;
-      const flight = consumeFlight();
-      const base = flight ? 0.55 : 0.05;
+      const flight = landFlight(root);
+      const base = flight ? 0.45 : 0.05;
 
       const media = fresh(root, "data-hero-media");
       const words = fresh(root, "data-split");
       const items = fresh(root, "data-reveal", "item");
       const cards = fresh(root, "data-reveal", "card");
+      const headings = fresh(root, "data-heading");
+      // Lecture groupée avant toute écriture : ce qui est déjà à l’écran entre tout de suite,
+      // le reste attend le scroll (rythme de lecture au lieu d’une cascade invisible).
+      const fold = window.innerHeight * 0.92;
+      const tops = items.map((el) => el.getBoundingClientRect().top);
+      const introItems = items.filter((_, i) => tops[i] < fold);
+      const scrollItems = items.filter((_, i) => tops[i] >= fold);
 
       const mm = gsap.matchMedia();
       mm.add(FULL_MOTION, () => {
@@ -121,13 +170,38 @@ export function useScreenIntro(scopeRef, dependencies = []) {
           );
         });
 
-        if (items.length) {
+        if (introItems.length) {
           gsap.fromTo(
-            items,
+            introItems,
             { y: 20, autoAlpha: 0 },
             { y: 0, autoAlpha: 1, duration: 0.7, ease: MOTION.out, stagger: 0.06, delay: base + 0.15, clearProps: CLEAR }
           );
         }
+
+        if (scrollItems.length) {
+          gsap.set(scrollItems, { y: 28, autoAlpha: 0 });
+          ScrollTrigger.batch(scrollItems, {
+            start: "top bottom-=40",
+            once: true,
+            onEnter: (batch) =>
+              gsap.to(batch, { y: 0, autoAlpha: 1, duration: 0.8, ease: MOTION.out, stagger: 0.07, overwrite: true, clearProps: CLEAR }),
+          });
+        }
+
+        headings.forEach((el) => {
+          const split = SplitText.create(el, { type: "words", wordsClass: "hdc-w", mask: "words" });
+          gsap.fromTo(
+            split.words,
+            { yPercent: 110 },
+            {
+              yPercent: 0,
+              duration: 0.9,
+              ease: MOTION.expo,
+              stagger: 0.045,
+              scrollTrigger: { trigger: el, start: "top bottom-=40", once: true },
+            }
+          );
+        });
 
         if (cards.length) {
           gsap.set(cards, { y: 24, autoAlpha: 0 });
@@ -149,8 +223,8 @@ export function useScreenIntro(scopeRef, dependencies = []) {
               });
             },
           });
-          ScrollTrigger.refresh();
         }
+        if (cards.length || scrollItems.length || headings.length) ScrollTrigger.refresh();
       });
 
       mm.add(REDUCED, () => {
@@ -159,6 +233,80 @@ export function useScreenIntro(scopeRef, dependencies = []) {
       });
     },
     { scope: scopeRef, dependencies }
+  );
+}
+
+/**
+ * Arrivée de l’accueil, < 2 s, dans le scope du hero :
+ * fil d’horizon sable (`data-horizon`) → l’image s’ouvre depuis l’horizon (`data-hero-frame`)
+ * pendant que la scène se pose (`data-hero-stage`) → sur-titre, titre mot à mot (`data-hero-title`),
+ * sous-titre, puces. Au scroll : la scène dérive lentement, le texte s’efface vers le haut.
+ * Réduit : rien ne bouge, tout est déjà en place.
+ */
+export function useHeroArrival(scopeRef) {
+  useGSAP(
+    () => {
+      const root = scopeRef.current;
+      if (!root) return;
+      const mm = gsap.matchMedia();
+      mm.add(FULL_MOTION, () => {
+        const split = SplitText.create("[data-hero-title]", { type: "words", mask: "words", wordsClass: "hdc-w" });
+        gsap
+          .timeline({ defaults: { ease: MOTION.expo } })
+          .fromTo("[data-horizon]", { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: "power3.inOut" }, 0)
+          .fromTo(
+            "[data-hero-frame]",
+            { clipPath: "inset(50% 0% 50% 0% round 0px 0px 32px 32px)" },
+            { clipPath: "inset(0% 0% 0% 0% round 0px 0px 32px 32px)", duration: 1.1, ease: "expo.inOut" },
+            0.3
+          )
+          .to("[data-horizon]", { autoAlpha: 0, duration: 0.35, ease: "power1.out" }, 0.55)
+          .fromTo("[data-hero-stage]", { scale: 1.16 }, { scale: 1, duration: 1.9 }, 0.3)
+          .fromTo("[data-hero-eyebrow]", { y: 12, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7 }, 0.85)
+          .fromTo("[data-hero-rule]", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: MOTION.out }, 0.85)
+          .fromTo(split.words, { yPercent: 108 }, { yPercent: 0, duration: 0.85, stagger: 0.05 }, 0.9)
+          .fromTo("[data-hero-sub]", { y: 12, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7 }, 1.15)
+          .fromTo("[data-hero-chip]", { y: 12, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, stagger: 0.06 }, 1.3)
+          .fromTo("[data-hero-cue]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6, ease: "power1.out" }, 1.6);
+
+        gsap.to("[data-hero-stage]", {
+          yPercent: 10,
+          ease: "none",
+          scrollTrigger: { trigger: root, start: "top top", end: "bottom top", scrub: 0.6 },
+        });
+        gsap.to("[data-hero-copy]", {
+          y: -48,
+          autoAlpha: 0,
+          ease: "none",
+          scrollTrigger: { trigger: root, start: "top top", end: "55% top", scrub: 0.6 },
+        });
+        gsap.to("[data-hero-cue]", {
+          autoAlpha: 0,
+          ease: "none",
+          scrollTrigger: { trigger: root, start: "top top", end: "15% top", scrub: true },
+        });
+      });
+    },
+    { scope: scopeRef }
+  );
+}
+
+/**
+ * Calque qui apparaît quand son contenu est prêt (ex. : réels du hero dès la première image vidéo) :
+ * fondu doux par-dessus la photo de secours, sans saut. Réduit : affiché d’un coup.
+ */
+export function useLayerReveal(layerRef, ready) {
+  useGSAP(
+    () => {
+      const el = layerRef.current;
+      if (!el || !ready) return;
+      if (prefersReduced()) {
+        gsap.set(el, { autoAlpha: 1 });
+        return;
+      }
+      gsap.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.1, ease: "power2.inOut" });
+    },
+    { dependencies: [ready] }
   );
 }
 

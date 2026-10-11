@@ -48,6 +48,23 @@
       />
     </noscript>
     <title>Hurghada Dream - Gestion des devis</title>
+    <!--
+      Pages clients : fond ivoire dès le premier rendu (sinon le fond intranet sombre flashe
+      avant React). Classe retirée par PublicAppShell, l’intranet n’est jamais concerné.
+    -->
+    <style>
+      html.hd-public-boot,
+      html.hd-public-boot body { background: #FAF6EF !important; }
+    </style>
+    <script>
+      (function () {
+        var p = location.pathname;
+        var client = "%VITE_CLIENT_APP%" === "true";
+        if (client || /^\/(accueil|catalogue|hotels|demande-hotel|contacts|tarifs|sejour|mon-sejour|request)(\/|$)/.test(p)) {
+          document.documentElement.classList.add("hd-public-boot");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

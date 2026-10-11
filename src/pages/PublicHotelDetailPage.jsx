@@ -196,7 +196,9 @@ export function PublicHotelDetailPage({ hotelId }) {
           <div className="grid gap-8 lg:grid-cols-3 lg:items-start">
             <div className="space-y-10 lg:col-span-2">
               <div>
-                <StarRow count={hotel.stars} />
+                <div data-reveal="item">
+                  <StarRow count={hotel.stars} />
+                </div>
                 <h1 data-split className="mt-2 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink">
                   {hotel.name}
                 </h1>
@@ -215,14 +217,14 @@ export function PublicHotelDetailPage({ hotelId }) {
 
               <section data-reveal="item">
                 <p className="hdc-eyebrow">L’adresse</p>
-                <h2 className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">À propos de l’hôtel</h2>
+                <h2 data-heading className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">À propos de l’hôtel</h2>
                 <p className="mt-3 text-[0.9375rem] leading-[1.75] text-catalog-body">{hotel.description}</p>
               </section>
 
               {hotel.highlights?.length ? (
                 <section data-reveal="item">
                   <p className="hdc-eyebrow">On aime</p>
-                  <h2 className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">Points forts</h2>
+                  <h2 data-heading className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">Points forts</h2>
                   <ul className="mt-4 divide-y divide-catalog-line border-y border-catalog-line">
                     {hotel.highlights.map((item) => (
                       <li key={item} className="flex items-start gap-3 py-3.5 text-[0.9375rem] text-catalog-body">
@@ -237,7 +239,7 @@ export function PublicHotelDetailPage({ hotelId }) {
               {hotel.amenities?.length ? (
                 <section data-reveal="item">
                   <p className="hdc-eyebrow">Sur place</p>
-                  <h2 className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">Équipements & services</h2>
+                  <h2 data-heading className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">Équipements & services</h2>
                   <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                     {hotel.amenities.map((a) => {
                       const meta = AMENITY_META[a];
@@ -258,7 +260,7 @@ export function PublicHotelDetailPage({ hotelId }) {
                 <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                   <div>
                     <p className="hdc-eyebrow">Localisation</p>
-                    <h2 className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">Emplacement</h2>
+                    <h2 data-heading className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">Emplacement</h2>
                   </div>
                   {mapsOpenUrl ? (
                     <a href={mapsOpenUrl} target="_blank" rel="noopener noreferrer" data-press className="hdc-btn hdc-btn-ghost !min-h-11 !px-4 text-sm">

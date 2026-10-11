@@ -12,11 +12,16 @@ import { loadPublicHotelsCart } from "../utils/publicHotelsCartStorage";
 
 function HotelCardSkeleton() {
   return (
-    <div className="hdc-card overflow-hidden">
-      <div className="aspect-[4/3] animate-pulse bg-catalog-mist" />
+    <div aria-hidden className="hdc-card overflow-hidden">
+      <div className="hdc-skeleton aspect-[4/3]" />
       <div className="space-y-3 p-5">
-        <div className="h-3 w-40 max-w-full animate-pulse rounded-full bg-catalog-mist" />
-        <div className="mt-4 h-12 animate-pulse rounded-full bg-catalog-mist" />
+        <div className="hdc-skeleton h-3 w-24 rounded-full" />
+        <div className="hdc-skeleton h-7 w-4/5 rounded-md" />
+        <div className="hdc-skeleton h-4 w-full rounded-md" />
+        <div className="grid grid-cols-2 gap-2 pt-3">
+          <div className="hdc-skeleton h-12 rounded-full" />
+          <div className="hdc-skeleton h-12 rounded-full" />
+        </div>
       </div>
     </div>
   );
@@ -161,6 +166,9 @@ export function PublicHotelsCataloguePage() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <HotelCardSkeleton />
             <HotelCardSkeleton />
+            <div className="hidden lg:block">
+              <HotelCardSkeleton />
+            </div>
           </div>
         ) : hotels.length === 0 ? (
           <StateCard
@@ -188,7 +196,7 @@ export function PublicHotelsCataloguePage() {
 
         <div data-reveal="item" className="mt-10 rounded-[1.25rem] bg-catalog-brassSoft p-6">
           <p className="hdc-eyebrow !text-catalog-brass">Sur mesure</p>
-          <h2 className="mt-2 font-catalog-display text-[1.5rem] leading-tight text-catalog-ink">Besoin d’une autre adresse&nbsp;?</h2>
+          <h2 data-heading className="mt-2 font-catalog-display text-[1.5rem] leading-tight text-catalog-ink">Besoin d’une autre adresse&nbsp;?</h2>
           <p className="mt-2 max-w-xl text-[0.9375rem] leading-relaxed text-catalog-muted">
             Décrivez vos dates et votre budget : nous vous proposons un hôtel all inclusive adapté.
           </p>

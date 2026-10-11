@@ -107,8 +107,8 @@ export function HomeReviewsMarquee() {
     <section className="pt-10 lg:pt-16" aria-labelledby="home-reviews-title">
       <div className="flex items-end justify-between gap-3 px-4 lg:px-0">
         <div>
-          <p className="hdc-eyebrow">Avis Google</p>
-          <h2 id="home-reviews-title" className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink lg:text-5xl">
+          <p data-reveal="item" className="hdc-eyebrow">Avis Google</p>
+          <h2 id="home-reviews-title" data-heading className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink lg:text-5xl">
             Cinq étoiles, <span className="hdc-serif">mot pour mot</span>
           </h2>
         </div>

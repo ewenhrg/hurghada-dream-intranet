@@ -148,11 +148,11 @@ function StayMaintenance() {
   return (
     <PublicAppShell title="Mon séjour">
       <main className="mx-auto w-full max-w-lg px-4 pb-14 pt-8">
-        <p className="hdc-eyebrow">Maintenance</p>
-        <h1 className="mt-1.5 font-catalog-display text-[1.85rem] leading-tight text-catalog-ink">
+        <p data-reveal="item" className="hdc-eyebrow">Maintenance</p>
+        <h1 data-split className="mt-1.5 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink">
           Mon séjour est <span className="hdc-serif">en pause.</span>
         </h1>
-        <p className="mt-3 max-w-sm text-[0.9375rem] leading-relaxed text-catalog-muted">
+        <p data-reveal="item" className="mt-3 max-w-sm text-[0.9375rem] leading-relaxed text-catalog-muted">
           Le programme et les heures de prise en charge sont momentanément indisponibles. Une équipe française vous répond, 7 jours sur 7.
         </p>
         <a
@@ -160,6 +160,7 @@ function StayMaintenance() {
           target="_blank"
           rel="noopener noreferrer"
           data-press
+          data-reveal="item"
           className="hdc-btn hdc-btn-ink mt-6 w-full sm:w-auto"
         >
           <WhatsAppGlyph className="h-5 w-5 text-[#1F8F55]" />

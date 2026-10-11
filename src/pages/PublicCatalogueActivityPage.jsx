@@ -1664,6 +1664,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
                   <button
                     type="button"
+                    data-flight-target
                     onClick={() => openLightboxAt(0)}
                     className="relative aspect-[16/11] w-full overflow-hidden bg-catalog-raised"
                     aria-label="Agrandir la photo 1"
@@ -1737,7 +1738,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
               {bulletPoints.length > 0 ? (
                 <section data-reveal="item">
                   <p className="hdc-eyebrow">On aime</p>
-                  <h2 className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">Points forts</h2>
+                  <h2 data-heading className="mt-1.5 font-catalog-display text-[1.5rem] leading-tight">Points forts</h2>
                   <ul className="mt-4 divide-y divide-catalog-line overflow-hidden rounded-[1.4rem] bg-white ring-1 ring-catalog-line">
                     {bulletPoints.map((item) => (
                       <li key={item} className="flex items-start gap-3 px-4 py-3.5 text-sm font-semibold text-catalog-body md:text-base">

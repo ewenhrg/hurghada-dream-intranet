@@ -33,17 +33,17 @@ export function PublicContactsPage() {
   return (
     <PublicAppShell title="Contacts">
       <main className="mx-auto w-full max-w-lg px-4 pb-12 pt-6">
-        <p className="hdc-eyebrow">Nous joindre</p>
-        <h1 className="mt-1.5 font-catalog-display text-[1.75rem] leading-tight text-catalog-ink">
+        <p data-reveal="item" className="hdc-eyebrow">Nous joindre</p>
+        <h1 data-split className="mt-1.5 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink">
           Nos <span className="hdc-serif">contacts</span>
         </h1>
-        <p className="mt-2 max-w-sm text-[0.9375rem] leading-relaxed text-catalog-muted">
+        <p data-reveal="item" className="mt-3 max-w-sm text-[0.9375rem] leading-relaxed text-catalog-muted">
           Une équipe française vous répond, 7 jours sur 7. Appuyez sur un numéro pour appeler.
         </p>
 
         <ul className="mt-6 space-y-3">
           {CONTACTS.map((contact) => (
-            <li key={contact.tel} className="hdc-card p-4">
+            <li key={contact.tel} data-reveal="item" className="hdc-card p-4">
               <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-catalog-label">
                 {contact.title}
               </p>
@@ -62,7 +62,7 @@ export function PublicContactsPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-press
-                className="mt-3 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-catalog-lagoon"
+                className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-catalog-lagoon"
               >
                 <WhatsAppGlyph className="h-4 w-4 text-[#1F8F55]" />
                 Écrire sur WhatsApp

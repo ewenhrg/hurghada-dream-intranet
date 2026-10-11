@@ -59,6 +59,11 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
     if (meta) meta.setAttribute("content", APP_CHROME_COLOR);
   }, [title]);
 
+  // Le fond ivoire de démarrage (index.html) passe la main au scope `.hd-public-catalog`.
+  useEffect(() => {
+    document.documentElement.classList.remove("hd-public-boot");
+  }, []);
+
   return (
     <div
       ref={rootRef}

@@ -328,7 +328,7 @@ export function PublicTarifsPage() {
             <div data-reveal="item" className="flex items-end justify-between gap-4">
               <div>
                 <p className="hdc-eyebrow">Rubrique</p>
-                <h2 className="mt-1.5 font-catalog-display text-[1.75rem] font-medium leading-tight sm:text-3xl">{label}</h2>
+                <h2 data-heading className="mt-1.5 font-catalog-display text-[1.75rem] font-medium leading-tight sm:text-3xl">{label}</h2>
               </div>
               <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold tabular-nums text-catalog-muted ring-1 ring-catalog-line">
                 {items.length} activité{items.length !== 1 ? "s" : ""}
