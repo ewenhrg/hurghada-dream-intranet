@@ -36,6 +36,22 @@ export function computeCalecheLineTotal(calecheCount, activityLike) {
   return Math.max(0, Number(calecheCount) || 0) * getCalecheUnitPrice(activityLike);
 }
 
+/** Une calèche : 1 adulte et 2 enfants au maximum. */
+export function requiredCalecheCount(adults, children) {
+  const adultSeats = Math.max(0, Math.floor(Number(adults) || 0));
+  const childSeats = Math.max(0, Math.floor(Number(children) || 0));
+  if (adultSeats + childSeats === 0) return 0;
+  const forAdults = adultSeats;
+  const forChildren = Math.ceil(childSeats / 2);
+  return Math.max(forAdults, forChildren, 1);
+}
+
+export function calecheCapacityNotice(count) {
+  const total = Math.max(1, Math.floor(Number(count) || 1));
+  const label = total > 1 ? "calèches" : "calèche";
+  return `Maximum 1 adulte et 2 enfants par calèche. Pour ce groupe, le nombre passe à ${total} ${label}.`;
+}
+
 // Helper pour vérifier si une activité est Speed Boat (ex: "SPEED BOAT", "SPEEDBOAT", "SPEEDBOAT SUNSET")
 export function isSpeedBoatActivity(activityName) {
   if (!activityName) return false;

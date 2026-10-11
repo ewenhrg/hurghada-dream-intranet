@@ -31,6 +31,8 @@ import {
   isBuggyActivity,
   isCalecheActivity,
   getCalecheUnitPrice,
+  requiredCalecheCount,
+  calecheCapacityNotice,
   isCairePrivatifActivity,
   isLouxorPrivatifActivity,
   isMotoCrossActivity,
@@ -506,6 +508,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   const [adults, setAdults] = useState(1);
   const [minorsCount, setMinorsCount] = useState(0);
+  const [calecheNotice, setCalecheNotice] = useState("");
+  const calecheManualRef = useRef(0);
+  const calechePartyRef = useRef(null);
   const [date, setDate] = useState("");
   const [stay, setStay] = useState(() => loadPublicCatalogueStay());
   const [stayModalOpen, setStayModalOpen] = useState(() => !isValidCatalogueStay(loadPublicCatalogueStay()));
@@ -565,6 +570,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
   useEffect(() => {
     setSpecial({ ...INITIAL_CATALOG_SPECIAL });
     airportDefaultAppliedRef.current = false;
+    calecheManualRef.current = 0;
+    calechePartyRef.current = null;
+    setCalecheNotice("");
 
     if (prevActivityIdRef.current !== null && prevActivityIdRef.current !== activityId) {
       setDate("");
@@ -573,6 +581,27 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
     prevActivityIdRef.current = activityId;
   }, [activityId]);
+
+  /** Calèche : 1 adulte + 2 enfants max. Au-delà, on ajoute des calèches et on prévient. */
+  useEffect(() => {
+    if (!activity || !isCalecheActivity(activity.name)) return undefined;
+    const needed = requiredCalecheCount(adults, minorsCount);
+    const target = Math.max(calecheManualRef.current, needed);
+    const previous = calechePartyRef.current;
+    calechePartyRef.current = { activityId, needed };
+    setSpecial((current) => {
+      const count = Number(current.calecheCount) || 0;
+      if (count === target) return current;
+      return { ...current, calecheCount: target };
+    });
+    const sameActivity = previous && previous.activityId === activityId;
+    if (sameActivity && needed > previous.needed) {
+      setCalecheNotice(calecheCapacityNotice(needed));
+    } else if (sameActivity && needed < previous.needed) {
+      setCalecheNotice("");
+    }
+    return undefined;
+  }, [activity, activityId, adults, minorsCount]);
 
   /** Transferts aéroport : une fois par fiche, défaut aller simple (montant immédiat, aligné intranet). */
   useEffect(() => {
@@ -607,16 +636,23 @@ export function PublicCatalogueActivityPage({ activityId }) {
     return listFromPrice?.amount ?? (toNumber(activity.price_adult) > 0 ? toNumber(activity.price_adult) : null);
   }, [activity, listFromPrice]);
 
-  const pricingLine = useMemo(
-    () => ({
+  const pricingLine = useMemo(() => {
+    const line = {
       adults,
       // Estimation provisoire : tous les mineurs au tarif enfant jusqu’à classification checkout
       children: minorsCount,
       babies: 0,
       ...special,
-    }),
-    [adults, minorsCount, special]
-  );
+    };
+    if (activity && isCalecheActivity(activity.name)) {
+      line.calecheCount = Math.max(
+        Number(special.calecheCount) || 0,
+        calecheManualRef.current,
+        requiredCalecheCount(adults, minorsCount)
+      );
+    }
+    return line;
+  }, [activity, adults, minorsCount, special]);
 
   const lineTotal = useMemo(
     () => (activity ? computePublicCatalogLineTotal(activity, pricingLine) : 0),
@@ -643,7 +679,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       return "Indiquez le nombre de buggys 2 personnes / 4 personnes ci-dessous (prix selon grille interne).";
     }
     if (isCalecheActivity(activity.name)) {
-      return `Indiquez le nombre de calèches — ${getCalecheUnitPrice(activity)} € / calèche (pas par personne).`;
+      return `Maximum 1 adulte et 2 enfants par calèche — ${getCalecheUnitPrice(activity)} € / calèche (pas par personne). Le nombre de calèches augmente tout seul si le groupe est plus grand.`;
     }
     if (isMotoCrossActivity(activity.name)) {
       return "Sélectionnez le nombre de motos par modèle (prix affiché au total).";
@@ -853,6 +889,9 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
 
     if (isCalecheActivity(name)) {
+      const needed = requiredCalecheCount(adults, minorsCount);
+      const selected = Math.max(Number(special.calecheCount) || 0, needed);
+      const choices = Array.from({ length: Math.max(10, needed) - needed + 1 }, (_, index) => needed + index);
       return (
         <div className="rounded-xl border border-transparent bg-catalog-brassSoft p-3">
           <label className="mb-1 block text-xs font-semibold text-catalog-body">
@@ -860,15 +899,34 @@ export function PublicCatalogueActivityPage({ activityId }) {
           </label>
           <select
             className="w-full hdc-input !min-h-11 !rounded-xl !px-3 !py-2 text-sm"
-            value={special.calecheCount}
-            onChange={(e) => setSpecial((s) => ({ ...s, calecheCount: Number(e.target.value) }))}
+            value={selected}
+            onChange={(e) => {
+              const picked = Number(e.target.value);
+              if (picked < needed) {
+                calecheManualRef.current = needed;
+                setSpecial((s) => ({ ...s, calecheCount: needed }));
+                setCalecheNotice(calecheCapacityNotice(needed));
+                return;
+              }
+              calecheManualRef.current = picked;
+              setCalecheNotice("");
+              setSpecial((s) => ({ ...s, calecheCount: picked }));
+            }}
           >
-            {[0, 1, 2, 3, 4, 5, 6].map((n) => (
+            {choices.map((n) => (
               <option key={n} value={n}>
                 {n}
               </option>
             ))}
           </select>
+          <p className="mt-2 text-xs font-medium leading-snug text-catalog-body">
+            Maximum 1 adulte et 2 enfants par calèche.
+          </p>
+          {calecheNotice ? (
+            <p className="mt-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold leading-snug text-catalog-ink" role="status">
+              {calecheNotice}
+            </p>
+          ) : null}
         </div>
       );
     }
@@ -1089,7 +1147,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
 
     return null;
-  }, [activity, special, speedBoatPackValue, applySpeedBoatPack]);
+  }, [activity, adults, minorsCount, calecheNotice, special, speedBoatPackValue, applySpeedBoatPack]);
 
   const codedTotalPending = useMemo(() => {
     if (!activity) return false;
@@ -1441,18 +1499,26 @@ export function PublicCatalogueActivityPage({ activityId }) {
       return;
     }
     const minors = Math.max(0, toNumber(minorsCount));
+    const adultCount = Math.max(0, toNumber(adults));
     const prev = loadPublicCatalogueCart();
+    const lineSpecial = clearZeroTracasSimQuantities(special);
+    if (isCalecheActivity(activity.name)) {
+      lineSpecial.calecheCount = Math.max(
+        Number(lineSpecial.calecheCount) || 0,
+        requiredCalecheCount(adultCount, minors)
+      );
+    }
     const line = {
       id: `${activity.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       activityId: String(activity.id),
       date,
-      adults: Math.max(0, toNumber(adults)),
+      adults: adultCount,
       minorsCount: minors,
       birthDates: Array.from({ length: minors }, () => ""),
       // Provisoire jusqu’à classification au checkout
       children: minors,
       babies: 0,
-      ...clearZeroTracasSimQuantities(special),
+      ...lineSpecial,
     };
     savePublicCatalogueCart([...prev, line]);
     navigate("/catalogue");

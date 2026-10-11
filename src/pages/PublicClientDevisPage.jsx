@@ -55,6 +55,9 @@ import {
   getMammaMiaSelfTransferActivityNames,
   withMammaMiaSelfTransferNote,
   getActivityPublicProse,
+  isCalecheActivity,
+  requiredCalecheCount,
+  calecheCapacityNotice,
   isTurtleActivity,
   persistTurtleFinSizes,
   hasAllTurtleFinSizes,
@@ -313,9 +316,17 @@ export function PublicClientDevisPage() {
                 babies: 0,
                 adults: adultsBase,
               };
-        const lineTotal = computePublicCatalogLineTotal(activity, forPrice);
+        const storedCaleches = toNumber(line.calecheCount);
+        const neededCaleches = isCalecheActivity(activity.name)
+          ? requiredCalecheCount(forPrice.adults, toNumber(forPrice.children) + toNumber(forPrice.babies))
+          : storedCaleches;
+        const calecheCount = Math.max(storedCaleches, neededCaleches);
+        const pricedLine = calecheCount === storedCaleches ? forPrice : { ...forPrice, calecheCount };
+        const lineTotal = computePublicCatalogLineTotal(activity, pricedLine);
         return {
           ...line,
+          calecheCount,
+          calecheRaised: neededCaleches > storedCaleches,
           minorsCount: derived.minorsCount,
           birthDates: derived.birthDates,
           children: derived.childrenCount,
@@ -1203,6 +1214,11 @@ export function PublicClientDevisPage() {
                             ) : null}
                       </div>
                     </div>
+                    {line.calecheRaised ? (
+                    <p className="mt-2 text-[11px] font-semibold leading-snug text-catalog-ink" role="status">
+                        {calecheCapacityNotice(line.calecheCount)}
+                      </p>
+                    ) : null}
                     {minors > 0 && !classified ? (
                     <p className="mt-2 text-[11px] font-semibold text-catalog-lagoon">
                         Dates de naissance demandées à l’étape suivante pour classer bébé / enfant.
