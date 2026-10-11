@@ -374,6 +374,37 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   transform: none;
   opacity: 1;
 }
+.hd-public-catalog .hdc-reel-marquee {
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.hd-public-catalog .hdc-reel-track {
+  display: flex;
+  width: max-content;
+  animation: hdc-reel-scroll 40s linear infinite;
+}
+.hd-public-catalog .hdc-reel-group {
+  display: flex;
+  gap: 0.75rem;
+  padding-right: 0.75rem;
+}
+.hd-public-catalog .hdc-reel-marquee:hover .hdc-reel-track,
+.hd-public-catalog .hdc-reel-marquee:focus-within .hdc-reel-track {
+  animation-play-state: paused;
+}
+@keyframes hdc-reel-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hd-public-catalog .hdc-reel-track { animation: none; }
+  .hd-public-catalog .hdc-reel-marquee {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+  }
+}
+
 .hd-public-catalog .hdc-slide-dot {
   min-height: 0.375rem;
   min-width: 0.375rem;

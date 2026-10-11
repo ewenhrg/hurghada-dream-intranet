@@ -1,6 +1,7 @@
 import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { INSTAGRAM_HANDLE, loadInstagramReels } from "./api/instagramReels.js";
 
 /** Chemins Windows -> POSIX (une seule définition, réutilisée par manualChunks). */
 function toPosixId(id) {
@@ -17,8 +18,24 @@ function isReactCoreModule(id) {
   );
 }
 
+function instagramReelsDevApi() {
+  return {
+    name: "instagram-reels-dev",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const pathname = (req.url || "").split("?")[0];
+        if (pathname !== "/api/instagram-reels") return next();
+        const reels = await loadInstagramReels();
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.end(JSON.stringify({ handle: INSTAGRAM_HANDLE, reels }));
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), instagramReelsDevApi()],
 
   resolve: {
     alias: {

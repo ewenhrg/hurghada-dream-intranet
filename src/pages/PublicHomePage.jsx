@@ -13,6 +13,7 @@ import {
   Phone,
   Sun,
 } from "lucide-react";
+import { InstagramReelsRail } from "../components/public/InstagramReelsRail";
 import { PublicAppShell } from "../components/public/PublicAppShell";
 import { StarRow } from "../components/public/HotelUI";
 import { WhatsAppGlyph } from "../components/public/PublicUI";
@@ -396,6 +397,8 @@ export function PublicHomePage() {
           </Link>
           </div>
         </section>
+
+        <InstagramReelsRail />
 
         {/* ——— Nos adresses ——— */}
         {hotelsWithPhoto.length ? (
