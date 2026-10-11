@@ -374,6 +374,48 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   transform: none;
   opacity: 1;
 }
+/* Accueil : le premier écran est une fente de mer tant que l’ouverture n’a pas joué. */
+.hd-public-catalog .hdc-hero-screen {
+  height: calc(100svh - 3.4rem - env(safe-area-inset-top, 0px));
+  min-height: 34rem;
+}
+@media (min-width: 1024px) {
+  .hd-public-catalog .hdc-hero-screen {
+    height: calc(100svh - 4rem);
+    min-height: 40rem;
+  }
+}
+.hd-public-catalog .hdc-horizon {
+  height: 2px;
+  box-shadow: 0 0 16px 2px rgba(227, 174, 85, 0.95), 0 0 42px 10px rgba(227, 174, 85, 0.45);
+}
+.hd-public-catalog .hdc-hero-flare {
+  width: 34%;
+  background: linear-gradient(90deg, transparent, rgba(255, 246, 224, 0.72), transparent);
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+.hd-public-catalog .hdc-hero-cue {
+  animation: hdc-hero-cue 1.5s ease-in-out infinite;
+}
+@keyframes hdc-hero-cue {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, 8px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hd-public-catalog .hdc-hero-screen [data-hero-frame] {
+    clip-path: inset(42% 10% 42% 10% round 36px);
+  }
+  .hd-public-catalog .hdc-hero-screen [data-hero-stage] {
+    transform: scale(1.55);
+    will-change: transform;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hd-public-catalog .hdc-hero-cue {
+    animation: none;
+  }
+}
 .hd-public-catalog .hdc-hero-reels {
   display: flex;
   height: 100%;

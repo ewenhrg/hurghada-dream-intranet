@@ -289,12 +289,12 @@ export function PublicHomePage() {
   return (
     <PublicAppShell title="Accueil" wide="xl" nav={desktopNav}>
       {/* ——— Hero « horizon » ——— */}
-      <section ref={heroRef} className="relative">
+      <section ref={heroRef} className="hdc-hero-screen relative">
         {/* Grand bleu derrière l’ouverture : l’horizon se trace sur la mer avant que l’image s’ouvre. */}
-        <div aria-hidden className="absolute inset-0 rounded-b-[2rem] bg-catalog-abyss lg:rounded-none" />
+        <div aria-hidden className="absolute inset-0 bg-catalog-abyss" />
         <div
           data-hero-frame
-          className="relative h-[clamp(520px,76svh,720px)] overflow-hidden rounded-b-[2rem] bg-catalog-raised lg:h-[min(78vh,820px)] lg:rounded-none"
+          className="relative h-full overflow-hidden bg-catalog-raised"
         >
           <div data-hero-stage className="absolute inset-0">
             {/* Photo de secours, affichée dès la première image ; les réels la recouvrent en fondu. */}
@@ -310,15 +310,15 @@ export function PublicHomePage() {
             ) : null}
           </div>
           <div aria-hidden className="pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(10,42,51,0.32)_0%,rgba(10,42,51,0)_30%,rgba(11,79,92,0.18)_55%,rgba(8,36,46,0.88)_100%)]" />
+          <span data-hero-flare aria-hidden className="hdc-hero-flare pointer-events-none absolute inset-y-0 left-0 z-[4] opacity-0" />
 
-
-          <div data-hero-copy className="pointer-events-none absolute inset-x-5 bottom-7 z-[4] lg:inset-x-0 lg:bottom-16">
+          <div data-hero-copy className="pointer-events-none absolute inset-x-5 bottom-16 z-[5] lg:inset-x-0 lg:bottom-20">
             <div className="lg:mx-auto lg:max-w-7xl lg:px-8">
             <p data-hero-eyebrow className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-white/85">
               <span data-hero-rule className="h-px w-6 origin-left bg-catalog-sand" />
               Hurghada · Mer Rouge
             </p>
-            <h1 data-hero-title className="hdc-hero-title mt-3 text-[2.25rem] leading-[1.08] !text-white lg:max-w-4xl lg:text-6xl">
+            <h1 data-hero-title className="hdc-hero-title mt-3 text-[2.85rem] leading-[0.98] !text-white sm:text-6xl lg:max-w-5xl lg:text-[5.25rem]">
               {hello}, <span className="hdc-hero-accent text-catalog-sand">bienvenue</span> en mer Rouge.
             </h1>
             <p data-hero-sub className="mt-3 max-w-xs text-[0.9375rem] leading-relaxed text-white/85 lg:max-w-xl lg:text-lg">
@@ -350,15 +350,15 @@ export function PublicHomePage() {
         <span
           data-hero-cue
           aria-hidden
-          className="pointer-events-none absolute bottom-3 left-1/2 z-[5] hidden -translate-x-1/2 text-white/70 lg:block"
+          className="hdc-hero-cue pointer-events-none absolute bottom-5 left-1/2 z-[6] -translate-x-1/2 text-white/80"
         >
-          <ChevronDown className="h-5 w-5" strokeWidth={1.5} />
+          <ChevronDown className="h-6 w-6" strokeWidth={1.5} />
         </span>
         {/* Fil d’horizon qui se trace avant l’ouverture de l’image. */}
         <span
           data-horizon
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-1/2 z-[5] h-px origin-center bg-catalog-sand"
+          className="hdc-horizon pointer-events-none absolute inset-x-8 top-1/2 z-[6] origin-center bg-catalog-sand sm:inset-x-16"
           style={{ transform: "scaleX(0)" }}
         />
       </section>

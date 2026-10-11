@@ -204,22 +204,22 @@ export function useScreenIntro(scopeRef, dependencies = []) {
         });
 
         if (cards.length) {
-          gsap.set(cards, { y: 24, autoAlpha: 0 });
+          gsap.set(cards, { y: 64, autoAlpha: 0 });
           ScrollTrigger.batch(cards, {
-            start: "top 95%",
+            start: "top 92%",
             once: true,
             onEnter: (batch) => {
-              gsap.to(batch, { y: 0, autoAlpha: 1, duration: 0.7, ease: MOTION.out, stagger: 0.03, overwrite: true, clearProps: CLEAR });
+              gsap.to(batch, { y: 0, autoAlpha: 1, duration: 0.95, ease: MOTION.out, stagger: 0.08, overwrite: true, clearProps: CLEAR });
               batch.forEach((card, i) => {
                 const mediaEl = card.querySelector("[data-card-media]");
                 if (!mediaEl) return;
                 gsap.fromTo(
                   mediaEl,
-                  { clipPath: "inset(6% 6% 6% 6% round 16px)" },
-                  { clipPath: "inset(0% 0% 0% 0% round 0px)", duration: 0.9, ease: MOTION.expo, delay: i * 0.03, clearProps: "clipPath" }
+                  { clipPath: "inset(22% 14% 22% 14% round 24px)" },
+                  { clipPath: "inset(0% 0% 0% 0% round 0px)", duration: 1.15, ease: MOTION.expo, delay: i * 0.08, clearProps: "clipPath" }
                 );
                 const img = mediaEl.querySelector("img");
-                if (img) gsap.fromTo(img, { scale: 1.1 }, { scale: 1, duration: 1.2, ease: MOTION.expo, delay: i * 0.03, clearProps: "transform" });
+                if (img) gsap.fromTo(img, { scale: 1.28 }, { scale: 1, duration: 1.4, ease: MOTION.expo, delay: i * 0.08, clearProps: "transform" });
               });
             },
           });
@@ -237,11 +237,10 @@ export function useScreenIntro(scopeRef, dependencies = []) {
 }
 
 /**
- * Arrivée de l’accueil, < 2 s, dans le scope du hero :
- * fil d’horizon sable (`data-horizon`) → l’image s’ouvre depuis l’horizon (`data-hero-frame`)
- * pendant que la scène se pose (`data-hero-stage`) → sur-titre, titre mot à mot (`data-hero-title`),
- * sous-titre, puces. Au scroll : la scène dérive lentement, le texte s’efface vers le haut.
- * Réduit : rien ne bouge, tout est déjà en place.
+ * Arrivée de l’accueil : le premier écran est une fente de mer, pas l’image déjà ouverte.
+ * Le CSS pose cette fente avant JS. Puis le fil d’horizon se trace, l’image s’ouvre en grand,
+ * un éclat de lumière la traverse, et le titre monte mot à mot. Au scroll, la scène dérive.
+ * Réduit : le CSS n’enferme pas l’image, tout est déjà en place.
  */
 export function useHeroArrival(scopeRef) {
   useGSAP(
@@ -253,21 +252,24 @@ export function useHeroArrival(scopeRef) {
         const split = SplitText.create("[data-hero-title]", { type: "words", mask: "words", wordsClass: "hdc-w" });
         gsap
           .timeline({ defaults: { ease: MOTION.expo } })
-          .fromTo("[data-horizon]", { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: "power3.inOut" }, 0)
+          .fromTo("[data-horizon]", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power3.inOut" }, 0)
           .fromTo(
             "[data-hero-frame]",
-            { clipPath: "inset(50% 0% 50% 0% round 0px 0px 32px 32px)" },
-            { clipPath: "inset(0% 0% 0% 0% round 0px 0px 32px 32px)", duration: 1.1, ease: "expo.inOut" },
-            0.3
+            { clipPath: "inset(42% 10% 42% 10% round 36px)" },
+            { clipPath: "inset(0% 0% 0% 0% round 0px)", duration: 1.45, ease: "expo.inOut" },
+            0.42
           )
-          .to("[data-horizon]", { autoAlpha: 0, duration: 0.35, ease: "power1.out" }, 0.55)
-          .fromTo("[data-hero-stage]", { scale: 1.16 }, { scale: 1, duration: 1.9 }, 0.3)
-          .fromTo("[data-hero-eyebrow]", { y: 12, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7 }, 0.85)
-          .fromTo("[data-hero-rule]", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: MOTION.out }, 0.85)
-          .fromTo(split.words, { yPercent: 108 }, { yPercent: 0, duration: 0.85, stagger: 0.05 }, 0.9)
-          .fromTo("[data-hero-sub]", { y: 12, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7 }, 1.15)
-          .fromTo("[data-hero-chip]", { y: 12, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, stagger: 0.06 }, 1.3)
-          .fromTo("[data-hero-cue]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6, ease: "power1.out" }, 1.6);
+          .fromTo("[data-hero-stage]", { scale: 1.55 }, { scale: 1, duration: 2.4, ease: "power3.out" }, 0.42)
+          .fromTo("[data-hero-flare]", { xPercent: -140 }, { xPercent: 240, duration: 1.15, ease: "power2.inOut" }, 0.65)
+          .fromTo("[data-hero-flare]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, 0.65)
+          .to("[data-hero-flare]", { autoAlpha: 0, duration: 0.35, ease: "power1.out" }, 1.45)
+          .to("[data-horizon]", { autoAlpha: 0, duration: 0.4, ease: "power1.out" }, 1.05)
+          .fromTo("[data-hero-eyebrow]", { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7 }, 1.15)
+          .fromTo("[data-hero-rule]", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: MOTION.out }, 1.15)
+          .fromTo(split.words, { yPercent: 130 }, { yPercent: 0, duration: 0.95, stagger: 0.07 }, 1.22)
+          .fromTo("[data-hero-sub]", { y: 20, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.75 }, 1.7)
+          .fromTo("[data-hero-chip]", { y: 22, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, stagger: 0.08 }, 1.9)
+          .fromTo("[data-hero-cue]", { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.6, ease: "power1.out" }, 2.15);
 
         gsap.to("[data-hero-stage]", {
           yPercent: 10,
@@ -304,7 +306,7 @@ export function useLayerReveal(layerRef, ready) {
         gsap.set(el, { autoAlpha: 1 });
         return;
       }
-      gsap.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.1, ease: "power2.inOut" });
+      gsap.fromTo(el, { autoAlpha: 0, scale: 1.12 }, { autoAlpha: 1, scale: 1, duration: 0.8, ease: "power3.out" });
     },
     { dependencies: [ready] }
   );
