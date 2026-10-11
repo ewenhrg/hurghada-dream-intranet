@@ -193,6 +193,7 @@ html :where(.hd-public-catalog) h1.hdc-hero-title .hdc-hero-accent {
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.08;
+  text-wrap: wrap;
 }
 html :where(.hd-public-catalog) h1.hdc-hero-title .hdc-hero-accent {
   font-style: italic;
@@ -400,9 +401,23 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 .hd-public-catalog [data-veil-bottom] {
   display: none;
 }
+@media (prefers-reduced-motion: no-preference) {
+  .hd-public-catalog [data-horizon] {
+    transform: scaleX(0);
+  }
+  .hd-public-catalog [data-hero-eyebrow],
+  .hd-public-catalog [data-hero-sub],
+  .hd-public-catalog [data-hero-chip],
+  .hd-public-catalog [data-hero-cue] {
+    opacity: 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .hd-public-catalog .hdc-hero-cue {
     animation: none;
+  }
+  .hd-public-catalog [data-horizon] {
+    display: none;
   }
 }
 .hd-public-catalog .hdc-hero-reels {
@@ -419,6 +434,12 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 }
 .hd-public-catalog .hdc-hero-reels::-webkit-scrollbar {
   display: none;
+}
+@media (max-width: 1023px) {
+  .hd-public-catalog .hdc-hero-reels {
+    -webkit-overflow-scrolling: auto;
+    scroll-snap-type: none;
+  }
 }
 .hd-public-catalog .hdc-hero-reel {
   flex: 0 0 33.333%;

@@ -74,18 +74,39 @@ export function fetchInstagramReels() {
 warmReels(readCachedReels());
 fetchInstagramReels();
 
-function ReelCard({ reel, onError, still }) {
+function ReelCard({ reel, onError, still, lazy = false }) {
+  const cardRef = useRef(null);
   const videoRef = useRef(null);
+  const [near, setNear] = useState(!lazy);
+
+  useEffect(() => {
+    if (!lazy) return undefined;
+    const node = cardRef.current;
+    if (!node) return undefined;
+    const root = node.closest(".hdc-reel-marquee");
+    const observer = new IntersectionObserver(
+      ([entry]) => setNear(entry.isIntersecting),
+      { root, threshold: 0.45 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [lazy, reel.id]);
 
   useEffect(() => {
     const node = videoRef.current;
     if (!node) return undefined;
     node.muted = true;
+    node.defaultMuted = true;
+    node.setAttribute("muted", "");
+    node.setAttribute("playsinline", "");
     return undefined;
-  }, [reel.video]);
+  }, [reel.video, near, still]);
+
+  const showVideo = Boolean(reel.video) && !still && near;
 
   return (
     <a
+      ref={cardRef}
       href={reel.href || PROFILE_URL}
       target="_blank"
       rel="noopener noreferrer"
@@ -93,16 +114,16 @@ function ReelCard({ reel, onError, still }) {
       aria-label={reel.caption || "Ouvrir le réel Instagram"}
       className="relative block h-72 w-40 overflow-hidden rounded-[1.25rem] bg-catalog-raised lg:h-80 lg:w-44"
     >
-      {reel.video ? (
+      {showVideo ? (
         <video
           ref={videoRef}
           src={reel.video}
           poster={reel.image}
-          autoPlay={!still}
+          autoPlay
           muted
           loop
           playsInline
-          preload={still ? "metadata" : "auto"}
+          preload="auto"
           referrerPolicy="no-referrer"
           className="pointer-events-none h-full w-full object-cover"
           onError={onError}
@@ -122,13 +143,15 @@ function ReelCard({ reel, onError, still }) {
   );
 }
 
-export function InstagramReelsRail() {
+export function InstagramReelsRail({ videos = true }) {
   const [reels, setReels] = useState([]);
   const marqueeRef = useRef(null);
   const halfRef = useRef(null);
   const pausedRef = useRef(false);
   // Mouvement réduit : ni défilement ni lecture automatiques, la bande reste balayable.
   const [still] = useState(() => prefersReducedMotion());
+  const [phone] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches);
+  const showVideo = videos && !still;
 
   useEffect(() => {
     let cancelled = false;
@@ -273,7 +296,8 @@ export function InstagramReelsRail() {
                 <li key={`${copy}-${reel.id}`} className="shrink-0">
                   <ReelCard
                     reel={reel}
-                    still={still}
+                    still={!showVideo}
+                    lazy={phone && showVideo}
                     onError={() => {
                       setReels((prev) => prev.filter((item) => item.id !== reel.id));
                     }}

@@ -237,51 +237,64 @@ export function useScreenIntro(scopeRef, dependencies = []) {
 }
 
 /**
- * Arrivée de l’accueil. Deux voiles (transform uniquement) s’écartent sur les réels,
- * puis le titre monte. Pas de clip-path ni de zoom sur les vidéos : ces deux-là
- * saccadaient. Le défilement ne prend le relais qu’une fois l’ouverture finie.
- * Réduit : les voiles sont masquées en CSS, tout est déjà en place.
+ * Arrivée de l’accueil. L’état caché est posé tout de suite : un `fromTo` retardé
+ * laissait le texte visible, puis le faisait disparaître avant de l’animer.
+ * Le défilement ne prend le relais qu’une fois l’ouverture finie.
  */
 export function useHeroArrival(scopeRef, ready = true) {
-  useGSAP(
+  const safeRef = useRef((fn) => fn);
+  const api = useGSAP(
     () => {
+      const contextSafe = safeRef.current;
       const root = scopeRef.current;
       if (!root || !ready) return;
       const mm = gsap.matchMedia();
       mm.add(FULL_MOTION, () => {
         const split = SplitText.create("[data-hero-title]", { type: "words", mask: "words", wordsClass: "hdc-w" });
-        const tl = gsap.timeline({ defaults: { ease: MOTION.out } });
-        tl.fromTo("[data-horizon]", { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: "power2.inOut" }, 0)
-          .to("[data-horizon]", { autoAlpha: 0, duration: 0.35, ease: "power1.out" }, 0.7)
-          .fromTo("[data-hero-eyebrow]", { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.55 }, 0.55)
-          .fromTo("[data-hero-rule]", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power2.out" }, 0.55)
-          .fromTo(split.words, { yPercent: 110 }, { yPercent: 0, duration: 0.7, stagger: 0.04, ease: MOTION.out }, 0.62)
-          .fromTo("[data-hero-sub]", { y: 16, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.55 }, 0.95)
-          .fromTo("[data-hero-chip]", { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.5, stagger: 0.05 }, 1.05)
-          .fromTo("[data-hero-cue]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4, ease: "power1.out" }, 1.25);
+        gsap.set("[data-horizon]", { scaleX: 0, autoAlpha: 1 });
+        gsap.set("[data-hero-eyebrow]", { y: 14, autoAlpha: 0 });
+        gsap.set("[data-hero-rule]", { scaleX: 0 });
+        gsap.set(split.words, { yPercent: 110 });
+        gsap.set("[data-hero-sub]", { y: 16, autoAlpha: 0 });
+        gsap.set("[data-hero-chip]", { y: 14, autoAlpha: 0 });
+        gsap.set("[data-hero-cue]", { autoAlpha: 0 });
 
-        tl.eventCallback("onComplete", () => {
-          gsap.to("[data-hero-stage]", {
-            yPercent: 8,
-            ease: "none",
-            scrollTrigger: { trigger: root, start: "top top", end: "bottom top", scrub: 0.4 },
-          });
-          gsap.to("[data-hero-copy]", {
-            y: -36,
-            autoAlpha: 0,
-            ease: "none",
-            scrollTrigger: { trigger: root, start: "top top", end: "55% top", scrub: 0.4 },
-          });
-          gsap.to("[data-hero-cue]", {
-            autoAlpha: 0,
-            ease: "none",
-            scrollTrigger: { trigger: root, start: "top top", end: "12% top", scrub: true },
-          });
-        });
+        const tl = gsap.timeline({ defaults: { ease: MOTION.out } });
+        tl.to("[data-horizon]", { scaleX: 1, duration: 0.55, ease: "power2.inOut" }, 0)
+          .to("[data-horizon]", { autoAlpha: 0, duration: 0.35, ease: "power1.out" }, 0.7)
+          .to("[data-hero-eyebrow]", { y: 0, autoAlpha: 1, duration: 0.55 }, 0.55)
+          .to("[data-hero-rule]", { scaleX: 1, duration: 0.5, ease: "power2.out" }, 0.55)
+          .to(split.words, { yPercent: 0, duration: 0.7, stagger: 0.04, ease: MOTION.out }, 0.62)
+          .to("[data-hero-sub]", { y: 0, autoAlpha: 1, duration: 0.55 }, 0.95)
+          .to("[data-hero-chip]", { y: 0, autoAlpha: 1, duration: 0.5, stagger: 0.05 }, 1.05)
+          .to("[data-hero-cue]", { autoAlpha: 1, duration: 0.4, ease: "power1.out" }, 1.25);
+
+        tl.eventCallback(
+          "onComplete",
+          contextSafe(() => {
+            gsap.to("[data-hero-stage]", {
+              yPercent: 8,
+              ease: "none",
+              scrollTrigger: { trigger: root, start: "top top", end: "bottom top", scrub: 0.4 },
+            });
+            gsap.to("[data-hero-copy]", {
+              y: -36,
+              autoAlpha: 0,
+              ease: "none",
+              scrollTrigger: { trigger: root, start: "top top", end: "55% top", scrub: 0.4 },
+            });
+            gsap.to("[data-hero-cue]", {
+              autoAlpha: 0,
+              ease: "none",
+              scrollTrigger: { trigger: root, start: "top top", end: "12% top", scrub: true },
+            });
+          })
+        );
       });
     },
     { scope: scopeRef, dependencies: [ready], revertOnUpdate: true }
   );
+  safeRef.current = api.contextSafe;
 }
 
 /**

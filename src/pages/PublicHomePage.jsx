@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -41,57 +41,68 @@ const heroReelsPromise = fetchInstagramReels();
 function playableReels(list) {
   return (Array.isArray(list) ? list : []).filter((reel) => reel.video).slice(0, 12);
 }
-const pendingPlays = new WeakSet();
+const PHONE_QUERY = "(max-width: 1023px)";
+const pendingPlays = new WeakMap();
 
-/** Démarre une vidéo muette. Un second `play()` pendant le démarrage remet la lecture à zéro. */
-function playMuted(video) {
-  if (!video || !video.paused || pendingPlays.has(video)) return Promise.resolve();
+function armVideo(video) {
   video.muted = true;
   video.defaultMuted = true;
   video.playsInline = true;
   video.setAttribute("muted", "");
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
-  pendingPlays.add(video);
-  return video.play().catch(() => {}).finally(() => pendingPlays.delete(video));
+}
+
+/** Démarre une vidéo muette. Un second `play()` pendant le démarrage remet la lecture à zéro. */
+function playMuted(video) {
+  if (!video) return Promise.resolve();
+  armVideo(video);
+  if (!video.paused) return Promise.resolve();
+  const existing = pendingPlays.get(video);
+  if (existing) return existing;
+  const job = video.play().catch(() => {}).finally(() => pendingPlays.delete(video));
+  pendingPlays.set(video, job);
+  return job;
 }
 
 /**
- * Réel du hero. Seules les vidéos à l’écran sont chargées et lancées :
- * en démarrer douze d’un coup fige les trois visibles sur téléphone.
+ * Réel du hero. Sur téléphone, seules les colonnes à l’écran ont un lecteur :
+ * une douzaine de `<video>` sature le décodeur et fige les trois visibles.
  */
-function HeroReel({ reel, priority = false, delay = 0 }) {
+function HeroReel({ reel, active, eager }) {
   const videoRef = useRef(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = videoRef.current;
-    if (!node || !priority) return undefined;
-    const play = () => {
-      playMuted(node);
-    };
-    const timer = window.setTimeout(play, delay);
-    node.addEventListener("canplay", play);
-    return () => {
-      window.clearTimeout(timer);
-      node.removeEventListener("canplay", play);
-    };
-  }, [reel.video, priority, delay]);
+    if (!node || !eager) return undefined;
+    armVideo(node);
+    if (node.getAttribute("src") !== reel.video) node.src = reel.video;
+    return undefined;
+  }, [reel.video, eager]);
 
   return (
     <div className="hdc-hero-reel relative h-full shrink-0 snap-start overflow-hidden">
-      <video
-        ref={videoRef}
-        src={priority ? reel.video : undefined}
-        data-src={reel.video}
-        poster={reel.image}
-        autoPlay={priority}
-        muted
-        loop
-        playsInline
-        preload={priority ? "auto" : "none"}
-        referrerPolicy="no-referrer"
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-      />
+      {active ? (
+        <video
+          ref={videoRef}
+          data-src={reel.video}
+          poster={reel.image}
+          muted
+          loop
+          playsInline
+          preload={eager ? "auto" : "none"}
+          referrerPolicy="no-referrer"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <img
+          src={reel.image}
+          alt=""
+          referrerPolicy="no-referrer"
+          decoding="async"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        />
+      )}
     </div>
   );
 }
@@ -110,6 +121,15 @@ function WeatherIcon({ code, className }) {
   if (c >= 51) return <CloudRain className={className} strokeWidth={1.75} aria-hidden />;
   return <Sun className={className} strokeWidth={1.75} aria-hidden />;
 }
+
+/** Le titre ne doit pas être réécrit par React pendant que GSAP le découpe en mots. */
+const HeroTitle = memo(function HeroTitle({ hello }) {
+  return (
+    <h1 data-hero-title className="hdc-hero-title mt-3 text-[2.85rem] leading-[1.05] !text-white sm:text-6xl lg:max-w-5xl lg:text-[5.25rem]">
+      {hello}, <span className="hdc-hero-accent text-catalog-sand">bienvenue</span> en mer Rouge.
+    </h1>
+  );
+});
 
 /** Puce « verre dépoli » posée sur la photo du hero. */
 function GlassChip({ children }) {
@@ -134,6 +154,9 @@ export function PublicHomePage() {
   const heroScrollRef = useRef(null);
   const railRef = useRef(null);
   const railDragRef = useRef(false);
+  const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia(PHONE_QUERY).matches);
+  const [visibleReels, setVisibleReels] = useState([0, 1, 2]);
+  const [heroClear, setHeroClear] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,48 +186,129 @@ export function PublicHomePage() {
   }, []);
 
   useEffect(() => {
+    const media = window.matchMedia(PHONE_QUERY);
+    const onChange = () => setPhone(media.matches);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    const hero = heroRef.current;
+    if (!hero) return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeroClear(entry.intersectionRatio < 0.25),
+      { threshold: [0, 0.25, 0.6, 1] }
+    );
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     const root = heroScrollRef.current;
     if (!root || heroReels.length < 3) return undefined;
 
-    const sync = () => {
+    let cancelled = false;
+    const mobile = window.matchMedia(PHONE_QUERY).matches;
+
+    const syncVisible = () => {
+      if (!window.matchMedia(PHONE_QUERY).matches) return;
+      const rootBox = root.getBoundingClientRect();
+      const next = [];
+      [...root.children].forEach((child, index) => {
+        const box = child.getBoundingClientRect();
+        if (box.width > 8 && box.right > rootBox.left + 12 && box.left < rootBox.right - 12) next.push(index);
+      });
+      if (!next.length) return;
+      setVisibleReels((prev) => (prev.length === next.length && prev.every((value, index) => value === next[index]) ? prev : next));
+    };
+
+    const syncDesktop = () => {
+      if (window.matchMedia(PHONE_QUERY).matches) return;
       const rootBox = root.getBoundingClientRect();
       [...root.querySelectorAll("video")].forEach((node, index) => {
-        if (!(node instanceof HTMLVideoElement)) return;
         const source = node.dataset.src;
-        const onStage = index < 3;
         const box = node.getBoundingClientRect();
-        const visible = onStage || (box.width > 8 && box.left < rootBox.right - 24 && box.right > rootBox.left + 24);
+        const visible = index < 3 || (box.width > 8 && box.left < rootBox.right - 24 && box.right > rootBox.left + 24);
         if (!visible) {
           if (!node.paused) node.pause();
           return;
         }
-        if (source && !node.getAttribute("src")) node.setAttribute("src", source);
+        if (source && !node.getAttribute("src")) node.src = source;
         if (node.paused) playMuted(node);
       });
     };
 
-    const starters = [...root.querySelectorAll("video")].slice(0, 3);
-    const stagger = starters.map((node, index) => window.setTimeout(() => playMuted(node), index * 200));
+    let kicking = false;
+    const kick = async () => {
+      if (kicking) return;
+      kicking = true;
+      try {
+        const nodes = [...root.querySelectorAll("video")].filter((node) => node.getAttribute("src"));
+        if (!mobile) {
+          nodes.forEach((node) => playMuted(node));
+          return;
+        }
+        for (const node of nodes) {
+          if (cancelled) return;
+          if (node.paused) await playMuted(node);
+        }
+      } finally {
+        kicking = false;
+      }
+    };
+    kick();
+
+    const retry = () => {
+      kick();
+    };
+    const onCanPlay = (event) => {
+      const node = event.target;
+      if (!(node instanceof HTMLVideoElement) || !node.paused || !node.getAttribute("src")) return;
+      if (mobile) kick();
+      else playMuted(node);
+    };
     const interval = window.setInterval(() => {
-      const first = [...root.querySelectorAll("video")].slice(0, 3);
-      const playing = first.length === 3 && first.every((node) => !node.paused && node.currentTime > 0.05);
-      if (playing) {
+      const first = [...root.querySelectorAll("video")].filter((node) => node.getAttribute("src")).slice(0, 3);
+      if (first.length >= 3 && first.every((node) => !node.paused && node.currentTime > 0.05)) {
         window.clearInterval(interval);
         return;
       }
-      sync();
-    }, 600);
-    const stop = window.setTimeout(() => window.clearInterval(interval), 15000);
-    root.addEventListener("scroll", sync, { passive: true });
-    window.addEventListener("touchstart", sync, { passive: true });
+      kick();
+    }, 900);
+    const stop = window.setTimeout(() => window.clearInterval(interval), 12000);
+    const onScroll = () => {
+      syncVisible();
+      syncDesktop();
+    };
+    root.addEventListener("scroll", onScroll, { passive: true });
+    root.addEventListener("canplay", onCanPlay, true);
+    window.addEventListener("touchstart", retry, { passive: true });
+    window.addEventListener("pageshow", retry);
     return () => {
-      stagger.forEach((timer) => window.clearTimeout(timer));
+      cancelled = true;
       window.clearInterval(interval);
       window.clearTimeout(stop);
-      root.removeEventListener("scroll", sync);
-      window.removeEventListener("touchstart", sync);
+      root.removeEventListener("scroll", onScroll);
+      root.removeEventListener("canplay", onCanPlay, true);
+      window.removeEventListener("touchstart", retry);
+      window.removeEventListener("pageshow", retry);
     };
-  }, [heroReels]);
+  }, [heroReels, visibleReels, phone]);
+
+  useEffect(() => {
+    if (!phone || !heroClear) return undefined;
+    const root = heroScrollRef.current;
+    if (!root) return undefined;
+    root.querySelectorAll("video").forEach((node) => node.pause());
+    return () => {
+      const nodes = [...root.querySelectorAll("video")];
+      (async () => {
+        for (const node of nodes) {
+          if (node.isConnected && node.getAttribute("src") && node.paused) await playMuted(node);
+        }
+      })();
+    };
+  }, [heroClear, phone]);
 
   const actions = [
     { to: "/catalogue", title: "Excursions", subtitle: "Mer, désert, Louxor", image: TILE_EXCURSIONS },
@@ -331,7 +435,12 @@ export function PublicHomePage() {
             {heroReels.length >= 3 ? (
               <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Réels Instagram">
                 {heroReels.map((reel, index) => (
-                  <HeroReel key={reel.id} reel={reel} priority={index < 3} delay={index < 3 ? index * 200 : 0} />
+                  <HeroReel
+                    key={reel.id}
+                    reel={reel}
+                    active={!phone || visibleReels.includes(index)}
+                    eager={phone ? visibleReels.includes(index) : index < 3}
+                  />
                 ))}
               </div>
             ) : reelsSettled ? (
@@ -348,26 +457,20 @@ export function PublicHomePage() {
               <span data-hero-rule className="h-px w-6 origin-left bg-catalog-sand" />
               Hurghada · Mer Rouge
             </p>
-            <h1 data-hero-title className="hdc-hero-title mt-3 text-[2.85rem] leading-[0.98] !text-white sm:text-6xl lg:max-w-5xl lg:text-[5.25rem]">
-              {hello}, <span className="hdc-hero-accent text-catalog-sand">bienvenue</span> en mer Rouge.
-            </h1>
+            <HeroTitle hello={hello} />
             <p data-hero-sub className="mt-3 max-w-xs text-[0.9375rem] leading-relaxed text-white/85 lg:max-w-xl lg:text-lg">
               Hôtels d’exception, excursions privées et votre séjour orchestré par la référence locale.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              {weather ? (
-                <GlassChip>
-                  <WeatherIcon code={weather.code} className="h-4 w-4" />
-                  <span className="tabular-nums">{weather.celsius}°</span>
-                  <span className="font-medium text-white/80">{weather.label}</span>
-                </GlassChip>
-              ) : null}
-              {hotels.length ? (
-                <GlassChip>
-                  <Hotel className="h-4 w-4" strokeWidth={1.75} aria-hidden />
-                  {hotels.length} hôtels sélectionnés
-                </GlassChip>
-              ) : null}
+              <GlassChip>
+                <WeatherIcon code={weather?.code ?? 1} className="h-4 w-4" />
+                <span className="tabular-nums">{weather ? `${weather.celsius}°` : "—"}</span>
+                <span className="font-medium text-white/80">{weather?.label ?? "Météo"}</span>
+              </GlassChip>
+              <GlassChip>
+                <Hotel className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                {hotels.length ? `${hotels.length} hôtels sélectionnés` : "Hôtels sélectionnés"}
+              </GlassChip>
               <GlassChip>
                 <Headset className="h-4 w-4" strokeWidth={1.75} aria-hidden />
                 Équipe française 7j/7
@@ -389,7 +492,6 @@ export function PublicHomePage() {
           data-horizon
           aria-hidden
           className="hdc-horizon pointer-events-none absolute inset-x-8 top-1/2 z-[6] origin-center bg-catalog-sand sm:inset-x-16"
-          style={{ transform: "scaleX(0)" }}
         />
       </section>
 
@@ -448,7 +550,7 @@ export function PublicHomePage() {
 
         <HomeReviewsMarquee />
 
-        <InstagramReelsRail />
+        <InstagramReelsRail videos={!phone || heroClear} />
 
         {/* ——— Nos adresses ——— */}
         {hotelsWithPhoto.length ? (
