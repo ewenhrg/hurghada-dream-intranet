@@ -377,6 +377,12 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 .hd-public-catalog .hdc-reel-marquee {
   overflow: hidden;
   touch-action: pan-y;
+  --hdc-reel-speed: 0.016;
+}
+@media (min-width: 1024px) {
+  .hd-public-catalog .hdc-reel-marquee {
+    --hdc-reel-speed: 0.05;
+  }
 }
 .hd-public-catalog .hdc-reel-track {
   display: flex;

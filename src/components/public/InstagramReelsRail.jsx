@@ -82,30 +82,46 @@ export function InstagramReelsRail() {
     if (!track || reels.length < 2) return undefined;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
 
+    const marquee = marqueeRef.current;
     let x = 0;
     let last = 0;
     let frame = 0;
+    let speed = 0.016;
+    let step = 0;
     const gap = parseFloat(window.getComputedStyle(track).columnGap || "12") || 12;
+
+    const measure = () => {
+      const first = track.firstElementChild;
+      const raw = marquee
+        ? parseFloat(window.getComputedStyle(marquee).getPropertyValue("--hdc-reel-speed"))
+        : 0.016;
+      speed = Number.isFinite(raw) && raw > 0 ? raw : 0.016;
+      step = first ? first.getBoundingClientRect().width + gap : 0;
+    };
+    measure();
+
+    const onResize = () => measure();
+    window.addEventListener("resize", onResize);
 
     const tick = (now) => {
       if (!last) last = now;
       const dt = Math.min(32, now - last);
       last = now;
-      if (!pausedRef.current) x -= dt * 0.05;
-      const first = track.firstElementChild;
-      if (first) {
-        const width = first.getBoundingClientRect().width + gap;
-        if (width > 1 && -x >= width) {
-          x += width;
-          track.appendChild(first);
-        }
+      if (!pausedRef.current) x -= dt * speed;
+      if (step > 1 && -x >= step) {
+        x += step;
+        const first = track.firstElementChild;
+        if (first) track.appendChild(first);
       }
       track.style.transform = `translate3d(${x}px,0,0)`;
       frame = requestAnimationFrame(tick);
     };
 
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", onResize);
+    };
   }, [reels]);
 
   useEffect(() => {
@@ -155,10 +171,19 @@ export function InstagramReelsRail() {
       <div
         ref={marqueeRef}
         className="hdc-reel-marquee mt-4 lg:mt-8"
-        onMouseEnter={() => {
-          pausedRef.current = true;
+        onPointerEnter={(event) => {
+          if (event.pointerType === "mouse") pausedRef.current = true;
         }}
-        onMouseLeave={() => {
+        onPointerLeave={(event) => {
+          if (event.pointerType === "mouse") pausedRef.current = false;
+        }}
+        onPointerDown={(event) => {
+          if (event.pointerType !== "mouse") pausedRef.current = true;
+        }}
+        onPointerUp={(event) => {
+          if (event.pointerType !== "mouse") pausedRef.current = false;
+        }}
+        onPointerCancel={() => {
           pausedRef.current = false;
         }}
       >
