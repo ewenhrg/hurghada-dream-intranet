@@ -55,6 +55,7 @@ import {
 } from "../utils/hotelRequestDocuments";
 import { cleanupExpiredQuoteDocuments, isQuoteLastActivityPastRetention } from "../utils/cleanupExpiredQuoteDocuments";
 import { persistQuoteItemsToSupabase, persistedQuoteHasTicketNumbers } from "../utils/persistQuoteItems";
+import { assignReservationCodeForQuote } from "../utils/clientStay";
 import {
   isQuoteFromWeb,
   isMissingQuoteSourceColumnError,
@@ -832,13 +833,30 @@ function QuoteCardComponent({
           await confirmTicketAllocations(supabase, finalTicketNumbers, quoteDbId);
           pendingReservation = null;
 
-          if (!rawQuote.supabase_id && data?.id) {
-            const withId = { ...updatedQuote, supabase_id: data.id };
-            const finalQuotes = updatedQuotes.map((q) => (q.id === d.id ? withId : q));
+          const assigned = await assignReservationCodeForQuote(
+            { ...updatedQuote, supabase_id: quoteDbId },
+            quoteDbId
+          );
+          let savedQuote = updatedQuote;
+          if (quoteDbId && !rawQuote.supabase_id) {
+            savedQuote = { ...savedQuote, supabase_id: quoteDbId };
+          }
+          if (assigned.ok && assigned.code) {
+            savedQuote = { ...savedQuote, reservationCode: assigned.code };
+          }
+          if (savedQuote !== updatedQuote) {
+            const finalQuotes = updatedQuotes.map((q) => (q.id === d.id ? savedQuote : q));
             setQuotes(finalQuotes);
             saveQuotesCache(finalQuotes);
           }
-          toast.success("Devis payé — tickets enregistrés.");
+          if (assigned.ok && assigned.code) {
+            toast.success(`Devis payé — n° de réservation ${assigned.code}`);
+          } else {
+            toast.success("Devis payé — tickets enregistrés.");
+            toast.error("Le n° de réservation n'a pas pu être créé. Les tickets sont bien enregistrés.");
+          }
+          updatedQuote.reservationCode = savedQuote.reservationCode || "";
+          if (savedQuote.supabase_id) updatedQuote.supabase_id = savedQuote.supabase_id;
         } catch (error) {
           logger.error("Erreur lors de la mise à jour Supabase (tickets):", error);
           try {
@@ -1096,6 +1114,11 @@ function QuoteCardComponent({
                   {d.client.name}
                 </p>
               )}
+              {d.reservationCode ? (
+                <p className="text-sm md:text-base font-bold tracking-wide text-indigo-700">
+                  N° de réservation {d.reservationCode}
+                </p>
+              ) : null}
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm md:text-base">
                 <p className="text-slate-700 font-semibold break-words flex items-center gap-2">
                   <span className="text-lg">📞</span>

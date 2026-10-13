@@ -4,12 +4,12 @@ import { Bell, BellRing, CalendarDays, Clock, Hotel, LogOut, MapPin, RefreshCw, 
 import { PublicAppShell } from "../components/public/PublicAppShell";
 import { HdLoader } from "../components/public/GuestPageLoader";
 import { StateCard, WhatsAppGlyph } from "../components/public/PublicUI";
-import { formatPhoneWithPlus } from "../utils";
 import {
-  clearStayPhone,
-  fetchClientStayByPhone,
-  loadSavedStayPhone,
-  saveStayPhone,
+  clearStayCode,
+  fetchClientStayByCode,
+  loadSavedStayCode,
+  normalizeReservationCode,
+  saveStayCode,
 } from "../utils/clientStay";
 import {
   enableStayPushNotifications,
@@ -24,7 +24,7 @@ import {
 } from "../utils/stayLocalNotifications";
 
 const AGENCY_WHATSAPP = "201062002850";
-const STAY_PAGE_PAUSED = true;
+const STAY_PAGE_PAUSED = false;
 const STAY_HERO_IMAGE = "/client/home-hero-red-sea.jpg";
 const STAY_FORM_IMAGE = "/client/home-tile-stay-calendar.jpg";
 const DAY_MS = 86400000;
@@ -177,9 +177,9 @@ export function PublicStayPage() {
 }
 
 function PublicStayPageLive() {
-  const [phone, setPhone] = useState(() => loadSavedStayPhone());
-  const [inputPhone, setInputPhone] = useState(() => loadSavedStayPhone());
-  const [loading, setLoading] = useState(() => Boolean(loadSavedStayPhone()));
+  const [code, setCode] = useState(() => loadSavedStayCode());
+  const [inputCode, setInputCode] = useState(() => loadSavedStayCode());
+  const [loading, setLoading] = useState(() => Boolean(loadSavedStayCode()));
   const [stay, setStay] = useState(null);
   const [error, setError] = useState("");
   const [programUpdated, setProgramUpdated] = useState(false);
@@ -191,10 +191,10 @@ function PublicStayPageLive() {
     stayRef.current = stay;
   }, [stay]);
 
-  const loadStay = useCallback(async (rawPhone, { silent = false } = {}) => {
-    const formatted = formatPhoneWithPlus(rawPhone);
-    if (formatted.replace(/\D/g, "").length < 10) {
-      setError("Indiquez votre numéro WhatsApp (au moins 10 chiffres).");
+  const loadStay = useCallback(async (rawCode, { silent = false } = {}) => {
+    const formatted = normalizeReservationCode(rawCode);
+    if (!/^[A-Z]{2}-\d{3,}$/.test(formatted)) {
+      if (!silent) setError("Indiquez votre numéro de réservation (exemple : HU-10042).");
       return;
     }
     if (!silent) {
@@ -202,7 +202,7 @@ function PublicStayPageLive() {
       setLoading(true);
     }
     try {
-      const result = await fetchClientStayByPhone(formatted);
+      const result = await fetchClientStayByCode(formatted);
       if (!result.ok) {
         if (!silent) {
           setError("Impossible de charger votre programme. Réessayez.");
@@ -211,9 +211,9 @@ function PublicStayPageLive() {
         return;
       }
       if (!result.found) {
-        setStay({ found: false, client: {}, items: [] });
-        saveStayPhone(formatted);
-        setPhone(formatted);
+        setStay({ found: false, expired: result.expired === true, client: {}, items: [] });
+        saveStayCode(formatted);
+        setCode(formatted);
         return;
       }
       const pickupChanged =
@@ -222,8 +222,8 @@ function PublicStayPageLive() {
         pickupFingerprint(stayRef.current.items) !== pickupFingerprint(result.items);
       if (pickupChanged) setProgramUpdated(true);
       void syncStayReminders(result.items, { announceChange: pickupChanged });
-      saveStayPhone(formatted);
-      setPhone(formatted);
+      saveStayCode(formatted);
+      setCode(formatted);
       setStay(result);
     } finally {
       if (!silent) setLoading(false);
@@ -231,22 +231,24 @@ function PublicStayPageLive() {
   }, []);
 
   useEffect(() => {
-    const saved = loadSavedStayPhone();
+    const saved = loadSavedStayCode();
     if (saved) {
       void loadStay(saved);
     }
   }, [loadStay]);
 
   useEffect(() => {
-    if (!phone || !stay?.found) return undefined;
+    if (!code || !stay?.found) return undefined;
     const id = window.setInterval(() => {
-      void loadStay(phone, { silent: true });
+      void loadStay(code, { silent: true });
     }, 10000);
     return () => window.clearInterval(id);
-  }, [phone, stay?.found, loadStay]);
+  }, [code, stay?.found, loadStay]);
+
+  const notifyPhone = String(stay?.client?.phone || "").trim();
 
   useEffect(() => {
-    if (!phone || !stay?.found) return undefined;
+    if (!code || !stay?.found || !notifyPhone) return undefined;
     let cancelled = false;
     (async () => {
       if (Capacitor.isNativePlatform() && stayNotifyEnabled()) {
@@ -259,7 +261,7 @@ function PublicStayPageLive() {
         return;
       }
       try {
-        const result = await enableStayPushNotifications(phone);
+        const result = await enableStayPushNotifications(notifyPhone);
         if (!cancelled) {
           if (result.ok) setPushState("subscribed");
           else if (result.error === "ios-install") setPushState("ios-install");
@@ -273,15 +275,15 @@ function PublicStayPageLive() {
     return () => {
       cancelled = true;
     };
-  }, [phone, stay?.found]);
+  }, [code, stay?.found, notifyPhone]);
 
   const days = useMemo(() => groupItemsByDate(stay?.items || []), [stay]);
 
   const handleLogout = () => {
-    clearStayPhone();
+    clearStayCode();
     void disarmStayWatch();
-    setPhone("");
-    setInputPhone("");
+    setCode("");
+    setInputCode("");
     setStay(null);
     setError("");
     setProgramUpdated(false);
@@ -293,7 +295,7 @@ function PublicStayPageLive() {
     try {
       if (Capacitor.isNativePlatform()) {
         const local = await enableStayReminders(stay?.items);
-        if (isStayPushSupported()) void enableStayPushNotifications(phone);
+        if (isStayPushSupported() && notifyPhone) void enableStayPushNotifications(notifyPhone);
         if (local.ok) {
           setPushState("subscribed");
           return;
@@ -301,7 +303,7 @@ function PublicStayPageLive() {
         setPushState(local.error === "denied" ? "denied" : "default");
         return;
       }
-      const result = await enableStayPushNotifications(phone);
+      const result = await enableStayPushNotifications(notifyPhone);
       if (result.ok) setPushState("subscribed");
       else setPushState(result.error === "ios-install" ? "ios-install" : stayPushPermissionLabel() === "denied" ? "denied" : "default");
     } finally {
@@ -323,7 +325,7 @@ function PublicStayPageLive() {
       title="Mon séjour"
       revealKey={`${loading ? "l" : "r"}-${stay ? (stay.found === false ? "none" : days.length) : "form"}`}
       right={
-        phone ? (
+        code ? (
           <button
             type="button"
             data-press
@@ -339,7 +341,7 @@ function PublicStayPageLive() {
       <main className="mx-auto w-full max-w-lg px-4 pb-14 pt-2">
         {loading && !stay ? (
           <HdLoader label="Chargement de votre programme…" className="py-28" />
-        ) : !phone || !stay ? (
+        ) : !code || !stay ? (
           <section>
             <div data-hero-media className="relative h-[19rem] overflow-hidden rounded-[1.5rem] bg-catalog-raised">
               <img data-hero-img src={STAY_FORM_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
@@ -357,21 +359,23 @@ function PublicStayPageLive() {
 
             <div data-reveal="item" className="hdc-card relative z-[1] mx-2 -mt-9 p-5">
               <label className="block">
-                <span className="text-sm font-semibold text-catalog-ink">Votre numéro WhatsApp</span>
+                <span className="text-sm font-semibold text-catalog-ink">Votre numéro de réservation</span>
                 <span className="relative mt-2 block">
-                  <WhatsAppGlyph className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#1F8F55]" />
+                  <Ticket className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-catalog-lagoon" />
                   <input
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    value={inputPhone}
-                    onChange={(e) => setInputPhone(formatPhoneWithPlus(e.target.value))}
-                    placeholder="+20 …"
-                    className="hdc-input !pl-12"
+                    type="text"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={inputCode}
+                    onChange={(e) => setInputCode(normalizeReservationCode(e.target.value))}
+                    placeholder="HU-10042"
+                    className="hdc-input !pl-12 uppercase tracking-wide"
                   />
                 </span>
               </label>
-              <p className="mt-2 text-xs leading-relaxed text-catalog-muted">Celui utilisé pour vos réservations avec nous.</p>
+              <p className="mt-2 text-xs leading-relaxed text-catalog-muted">Il vous est remis au moment du paiement de votre devis.</p>
               {error ? (
                 <p className="mt-3 text-sm text-catalog-coralDeep" role="alert">
                   {error}
@@ -380,7 +384,7 @@ function PublicStayPageLive() {
               <button
                 type="button"
                 data-press
-                onClick={() => void loadStay(inputPhone)}
+                onClick={() => void loadStay(inputCode)}
                 disabled={loading}
                 className="hdc-btn hdc-btn-primary mt-4 w-full"
               >
@@ -408,7 +412,7 @@ function PublicStayPageLive() {
           </section>
         ) : stay.found === false ? (
           <StateCard
-            title="Aucun programme trouvé"
+            title={stay.expired ? "Séjour terminé" : "Aucun programme trouvé"}
             action={
               <a href={`https://wa.me/${AGENCY_WHATSAPP}`} data-press className="hdc-btn hdc-btn-ink">
                 <WhatsAppGlyph className="h-5 w-5" />
@@ -416,7 +420,9 @@ function PublicStayPageLive() {
               </a>
             }
           >
-            Vérifiez le numéro, ou écrivez-nous : nous retrouvons votre réservation.
+            {stay.expired
+              ? "Toutes les dates de vos activités sont passées. L’accès à ce numéro de réservation est fermé."
+              : "Vérifiez le numéro de réservation, ou écrivez-nous : nous le retrouvons."}
           </StateCard>
         ) : (
           <>
@@ -433,6 +439,9 @@ function PublicStayPageLive() {
                 <h1 data-split className="mt-2 font-catalog-display text-[2.125rem] leading-[1.05] !text-white">
                   {clientName || <>Votre <span className="hdc-serif text-catalog-sand">séjour</span></>}
                 </h1>
+                {code ? (
+                  <p className="mt-2 text-sm font-semibold tracking-[0.14em] text-catalog-sand">{code}</p>
+                ) : null}
                 <div className="mt-4 flex flex-wrap gap-2">
                   {hotel ? (
                     <span className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-full bg-white/15 px-3 text-xs font-semibold ring-1 ring-white/25 backdrop-blur-md">

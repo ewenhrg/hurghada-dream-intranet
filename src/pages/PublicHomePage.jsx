@@ -534,7 +534,7 @@ export function PublicHomePage() {
             </span>
             <span className="relative min-w-0 flex-1 lg:flex-none">
               <span className="block font-catalog-display text-[1.375rem] leading-tight text-white lg:text-[2rem] lg:leading-none">Mon séjour</span>
-              <span className="mt-0.5 block text-sm text-white/80 lg:mt-1 lg:text-sm">En maintenance pour le moment</span>
+              <span className="mt-0.5 block text-sm text-white/80 lg:mt-1 lg:text-sm">Votre programme avec le n° de réservation</span>
             </span>
             <ChevronRight className="relative h-5 w-5 shrink-0 text-white/80 lg:hidden" aria-hidden />
             <span className="relative mt-3 hidden h-9 w-9 items-center justify-center rounded-full bg-white/90 text-catalog-ink lg:inline-flex">

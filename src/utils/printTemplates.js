@@ -577,6 +577,7 @@ export function generateTicketsHTML(quote, options = {}) {
 
   const client = quote.client || {};
   const clientName = esc(client.name || "—");
+  const reservationCode = esc(String(quote.reservationCode || "").trim());
   const clientPhone = esc(formatPhoneWithPlus(client.phone) || "—");
   const clientHotel = esc(
     client.isAirbnb
@@ -830,6 +831,7 @@ export function generateTicketsHTML(quote, options = {}) {
           ${divingVisitorBlock}
           <div class="ticket-grid">
             <div class="tf"><span class="tf-l">👤 Nom</span><span class="tf-v">${clientName}</span></div>
+            ${reservationCode ? `<div class="tf"><span class="tf-l">🔑 N° réservation</span><span class="tf-v">${reservationCode}</span></div>` : ""}
             <div class="tf"><span class="tf-l">📞 Téléphone</span><span class="tf-v">${clientPhone}</span></div>
             <div class="tf"><span class="tf-l">🏨 Hôtel</span><span class="tf-v">${clientHotel}</span></div>
             ${clientAirbnbMaps ? `<div class="tf"><span class="tf-l">📍 Maps</span><span class="tf-v"><a href="${clientAirbnbMaps}" target="_blank" rel="noopener noreferrer">${clientAirbnbMaps}</a></span></div>` : ""}

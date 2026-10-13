@@ -1,7 +1,7 @@
 import { App } from "@capacitor/app";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { SITE_KEY } from "../constants";
-import { fetchClientStayByPhone, loadSavedStayPhone } from "./clientStay";
+import { fetchClientStayByCode, loadSavedStayCode } from "./clientStay";
 
 const StayNotifications = registerPlugin("StayNotifications");
 
@@ -130,9 +130,9 @@ export function askStayNotificationsOnLaunch() {
         }
         if (granted) {
           localStorage.setItem(ENABLED_KEY, "1");
-          const phone = loadSavedStayPhone();
-          if (phone) {
-            const stay = await fetchClientStayByPhone(phone);
+          const code = loadSavedStayCode();
+          if (code) {
+            const stay = await fetchClientStayByCode(code);
             if (stay?.found) await syncStayReminders(stay.items, { announceChange: true });
           }
           return;
@@ -224,13 +224,14 @@ export async function refreshStayWatch() {
   watchBusy = true;
   try {
     if (!(await ensureNotifyEnabled())) return;
-    const phone = loadSavedStayPhone();
-    if (!phone) {
+    const code = loadSavedStayCode();
+    if (!code) {
       await StayNotifications.disarmWatch().catch(() => {});
       return;
     }
-    await armNativeWatch(phone);
-    const stay = await fetchClientStayByPhone(phone);
+    const stay = await fetchClientStayByCode(code);
+    const phone = String(stay?.client?.phone || "").trim();
+    if (phone) await armNativeWatch(phone);
     if (stay?.found) await syncStayReminders(stay.items, { announceChange: true });
   } catch {
     /* le prochain cycle réessaiera */

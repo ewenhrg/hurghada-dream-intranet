@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { LS_KEYS } from "../../constants";
 import { currency, saveQuotesCache, calculateCardPrice } from "../../utils";
 import { persistQuoteItemsToSupabase, persistedQuoteHasTicketNumbers } from "../../utils/persistQuoteItems";
+import { assignReservationCodeForQuote } from "../../utils/clientStay";
 import { computePaidColumnsFromItems, validateQuoteTicketNumbers } from "../../utils/ticketCollections";
 import { claimTicketNumbersForQuote, releaseTicketAllocations } from "../../utils/ticketSequence";
 import { formatQuoteItemParticipantsSummary } from "../../utils/quoteItemDisplay.js";
@@ -127,6 +128,24 @@ export function PaymentModal({
           return;
         }
         toast.success("Numéros de ticket et méthodes de paiement enregistrés avec succès.");
+        const quoteDbId = data?.id || selectedQuote.supabase_id || null;
+        const assigned = await assignReservationCodeForQuote(
+          { ...updatedQuote, supabase_id: quoteDbId },
+          quoteDbId
+        );
+        if (assigned.ok && assigned.code) {
+          const withCode = {
+            ...updatedQuote,
+            supabase_id: quoteDbId || updatedQuote.supabase_id,
+            reservationCode: assigned.code,
+          };
+          const finalQuotes = updatedQuotes.map((q) => (q.id === selectedQuote.id ? withCode : q));
+          setQuotes(finalQuotes);
+          saveQuotesCache(finalQuotes);
+          toast.success(`N° de réservation ${assigned.code}`);
+        } else {
+          toast.error("Le n° de réservation n'a pas pu être créé. Les tickets sont bien enregistrés.");
+        }
       } catch (error) {
         logger.error("Erreur lors de la mise à jour Supabase:", error);
         await releaseTicketAllocations(supabase, normalizedTickets);

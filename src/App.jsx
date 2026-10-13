@@ -611,7 +611,7 @@ export default function App() {
         const QUOTES_SYNC_LIMIT = 6000;
         const QUOTES_PAGE_SIZE = 1000;
         const quoteSelectBase =
-          "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, source, items, total, currency, paid_stripe, paid_cash, client_documents, client_is_airbnb, client_airbnb_maps_url";
+          "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, source, items, total, currency, paid_stripe, paid_cash, reservation_code, client_documents, client_is_airbnb, client_airbnb_maps_url";
         const quoteSelectWithSecondHotel =
           quoteSelectBase.replace(
             "client_departure_date,",
@@ -638,6 +638,11 @@ export default function App() {
               /client_second_|client_has_second_hotel/i.test(msg)
             ) {
               quoteSelect = quoteSelectBase;
+              from -= QUOTES_PAGE_SIZE;
+              continue;
+            }
+            if (/reservation_code/i.test(msg) && /reservation_code/.test(quoteSelect)) {
+              quoteSelect = quoteSelect.replace(/,\s*reservation_code/gi, "");
               from -= QUOTES_PAGE_SIZE;
               continue;
             }
@@ -721,6 +726,7 @@ export default function App() {
               isModified: hasQuoteModifications || false,
               paidStripe: Number(row.paid_stripe) || 0,
               paidCash: Number(row.paid_cash) || 0,
+              reservationCode: row.reservation_code || "",
               clientDocuments: normalizeClientDocuments(row.client_documents),
             });
           };
@@ -849,6 +855,7 @@ export default function App() {
         isModified: hasQuoteModifications || false,
         paidStripe: Number(row.paid_stripe) || 0,
         paidCash: Number(row.paid_cash) || 0,
+        reservationCode: row.reservation_code || "",
         clientDocuments: normalizeClientDocuments(row.client_documents),
       });
     };
