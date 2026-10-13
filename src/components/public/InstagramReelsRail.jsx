@@ -265,7 +265,7 @@ export function InstagramReelsRail({ videos = true }) {
           data-press
           className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-catalog-lagoon"
         >
-          @hurghada_dream
+          135K abonnés
         </a>
       </div>
 
