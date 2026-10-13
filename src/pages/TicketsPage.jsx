@@ -361,11 +361,20 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
 
   const filtered = useMemo(() => {
     const term = debouncedQ.trim().toLowerCase();
+    const compactTerm = term.replace(/[^a-z0-9]/g, "");
+    const looksLikeReservationCode = /^[a-z]{2}\d{3,}$/.test(compactTerm);
     return rows.filter((r) => {
-      if (filterDate && String(r.date || "").trim() !== filterDate) return false;
+      const codeCompact = String(r.reservationCode || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+      const codeMatch = compactTerm.length >= 3 && codeCompact.includes(compactTerm);
+      if (filterDate && !looksLikeReservationCode && String(r.date || "").trim() !== filterDate) {
+        return false;
+      }
       if (statusFilter === "new" && copied.has(r.ticketNumber)) return false;
       if (statusFilter === "copied" && !copied.has(r.ticketNumber)) return false;
       if (!term) return true;
+      if (codeMatch) return true;
       return [
         r.ticketNumber,
         r.activity,
@@ -1377,8 +1386,16 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                       <td className={`${TD} text-center tabular-nums font-semibold text-indigo-900`} title={formatDateDisplay(r.date)}>
                         {formatDateDisplay(r.date)}
                       </td>
-                      <td className={`${tdRead} truncate`} title={r.clientCell}>
-                        {r.clientCell || ""}
+                      <td
+                        className={`${tdRead}`}
+                        title={[r.clientCell, r.reservationCode].filter(Boolean).join(" · ")}
+                      >
+                        <span className="block truncate">{r.clientCell || ""}</span>
+                        {r.reservationCode ? (
+                          <span className="block truncate text-[9px] font-bold tracking-wide text-indigo-700">
+                            {r.reservationCode}
+                          </span>
+                        ) : null}
                       </td>
                       <td className={`${tdRead} truncate`} title={r.hotel}>
                         {r.hotel || ""}
