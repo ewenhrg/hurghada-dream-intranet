@@ -10,6 +10,32 @@ import { useHeaderMorph, usePopOnChange, usePressFeedback, useScreenIntro, useSc
 /** Couleur des barres système Android / navigateur : identique au fond de l’appli. */
 const APP_CHROME_COLOR = "#FAF6EF";
 
+const SOCIALS = [
+  {
+    name: "Snapchat",
+    href: "https://www.snapchat.com/@hdreamtours",
+    path: "M12.206.793c.99 0 4.347.276 5.93 3.821.529 1.193.403 3.219.299 4.847l-.003.06c-.012.18-.022.345-.03.51.075.045.203.09.401.09.3-.016.659-.12 1.033-.27.56-.225 1.013-.57 1.334-.57.18 0 .27.135.27.27 0 .09-.045.18-.12.285-.27.36-.87.72-1.335.96-.09.045-.18.09-.255.12.045.21.075.435.09.66.06.84-.15 1.56-.63 2.16-.405.51-.99.9-1.74 1.14-.12.045-.255.075-.39.12.18.36.33.75.42 1.17.21.96.045 1.86-.48 2.55-.48.63-1.2.99-2.07 1.05-.09 0-.18.015-.27.03-1.05.18-2.1.27-3.15.27-1.05 0-2.1-.09-3.15-.27-.09-.015-.18-.03-.27-.03-.87-.06-1.59-.42-2.07-1.05-.525-.69-.69-1.59-.48-2.55.09-.42.24-.81.42-1.17-.135-.045-.27-.075-.39-.12-.75-.24-1.335-.63-1.74-1.14-.48-.6-.69-1.32-.63-2.16.015-.225.045-.45.09-.66-.075-.03-.165-.075-.255-.12-.465-.24-1.065-.6-1.335-.96-.075-.105-.12-.195-.12-.285 0-.135.09-.27.27-.27.321 0 .774.345 1.334.57.374.15.733.254 1.033.27.198 0 .326-.045.401-.09-.008-.165-.018-.33-.03-.51l-.003-.06c-.104-1.628-.23-3.654.299-4.847C7.859 1.069 11.216.793 12.206.793z",
+  },
+  {
+    name: "TikTok",
+    href: "https://www.tiktok.com/@hurghadadream",
+    path: "M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15.2a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.75a8.2 8.2 0 0 0 4.76 1.52V6.84a4.84 4.84 0 0 1-1-.15z",
+  },
+  {
+    name: "Instagram",
+    href: "https://www.instagram.com/hurghada_dream/",
+    path: "M12 2.16c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.15 3.23-1.66 4.77-4.92 4.92-1.27.06-1.64.07-4.85.07s-3.58-.01-4.85-.07c-3.26-.15-4.77-1.7-4.92-4.92-.06-1.27-.07-1.64-.07-4.85s.01-3.58.07-4.85C2.38 3.92 3.9 2.38 7.15 2.23 8.42 2.17 8.8 2.16 12 2.16zM12 0C8.74 0 8.33.01 7.05.07 2.7.27.27 2.69.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.2 4.36 2.62 6.78 6.98 6.98C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c4.35-.2 6.78-2.62 6.98-6.98.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95C23.73 2.69 21.31.27 16.95.07 15.67.01 15.26 0 12 0zm0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zM12 16a4 4 0 1 1 4-4 4 4 0 0 1-4 4zm6.41-11.85a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44z",
+  },
+];
+
+function SocialMark({ path }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
+      <path d={path} />
+    </svg>
+  );
+}
+
 export function GuestHeaderButton({ onClick, count, children, ariaLabel }) {
   const badgeRef = useRef(null);
   usePopOnChange(badgeRef, count);
@@ -93,6 +119,24 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
         )}
         {children}
       </div>
+
+      <footer className={`mx-auto w-full px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 ${inner}`}>
+        <div className="flex items-center justify-center gap-3 border-t border-catalog-line pt-6">
+          {SOCIALS.map((social) => (
+            <a
+              key={social.name}
+              href={social.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-press
+              aria-label={social.name}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-catalog-ink ring-1 ring-catalog-border"
+            >
+              <SocialMark path={social.path} />
+            </a>
+          ))}
+        </div>
+      </footer>
     </div>
   );
 }
