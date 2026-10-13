@@ -1675,7 +1675,7 @@ function QuoteCardComponent({
                   (needsZeroTracasDocs && missingZeroTracasDocs.length > 0) ||
                   ((payCash || payStripe) && payCoverage.gap !== 0) ||
                   (Math.round(Number(String(payRestAmount).replace(",", ".")) || 0) > 0 &&
-                    String(payRestItemIndex).trim() === "") ||
+                    String(payRestItemIndex).trim() === "")
                 }
               >
                 {ticketAllocating
