@@ -61,7 +61,7 @@
       (function () {
         var p = location.pathname;
         var client = "%VITE_CLIENT_APP%" === "true";
-        if (client || /^\/(accueil|catalogue|hotels|demande-hotel|contacts|politique|tarifs|sejour|mon-sejour|request)(\/|$)/.test(p)) {
+        if (client || /^\/(accueil|catalogue|hotels|demande-hotel|contacts|politique|confidentialite|tarifs|sejour|mon-sejour|request)(\/|$)/.test(p)) {
           document.documentElement.classList.add("hd-public-boot");
         }
       })();

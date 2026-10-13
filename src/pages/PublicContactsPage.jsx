@@ -72,16 +72,28 @@ export function PublicContactsPage() {
           ))}
         </ul>
 
-        <Link
-          to="/politique"
-          data-press
-          data-reveal="item"
-          className="hdc-card mt-6 block p-4 text-catalog-ink"
-        >
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-catalog-label">Avant de réserver</p>
-          <p className="mt-1 font-catalog-display text-[1.25rem] leading-tight">Remboursement et modification</p>
-          <p className="mt-1 text-sm text-catalog-muted">Délais, Caire, Louxor et montgolfière.</p>
-        </Link>
+        <div className="mt-6 space-y-3">
+          <Link
+            to="/politique"
+            data-press
+            data-reveal="item"
+            className="hdc-card block p-4 text-catalog-ink"
+          >
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-catalog-label">Avant de réserver</p>
+            <p className="mt-1 font-catalog-display text-[1.25rem] leading-tight">Remboursement et modification</p>
+            <p className="mt-1 text-sm text-catalog-muted">Délais, Caire, Louxor et montgolfière.</p>
+          </Link>
+          <Link
+            to="/confidentialite"
+            data-press
+            data-reveal="item"
+            className="hdc-card block p-4 text-catalog-ink"
+          >
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-catalog-label">Vos données</p>
+            <p className="mt-1 font-catalog-display text-[1.25rem] leading-tight">Politique de confidentialité</p>
+            <p className="mt-1 text-sm text-catalog-muted">Collecte, conservation et droits RGPD.</p>
+          </Link>
+        </div>
       </main>
     </PublicAppShell>
   );

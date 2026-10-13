@@ -14,6 +14,7 @@ import {
   PublicHomePage,
   PublicContactsPage,
   PublicPolicyPage,
+  PublicPrivacyPage,
   PublicCatalogueActivityPage,
   PublicHotelRequestPage,
   PublicHotelsCataloguePage,
@@ -31,6 +32,9 @@ function PublicClientPage() {
   }
   if (pathname === "/politique" || pathname === "/politique/") {
     return <PublicPolicyPage />;
+  }
+  if (pathname === "/confidentialite" || pathname === "/confidentialite/") {
+    return <PublicPrivacyPage />;
   }
   if (
     pathname === "/sejour" ||

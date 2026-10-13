@@ -21,6 +21,9 @@ export const PublicContactsPage = lazyWithRetry(() =>
 export const PublicPolicyPage = lazyWithRetry(() =>
   import("../pages/PublicPolicyPage").then((m) => ({ default: m.PublicPolicyPage }))
 );
+export const PublicPrivacyPage = lazyWithRetry(() =>
+  import("../pages/PublicPrivacyPage").then((m) => ({ default: m.PublicPrivacyPage }))
+);
 export const PublicCatalogueActivityPage = lazyWithRetry(() =>
   import("../pages/PublicCatalogueActivityPage").then((m) => ({ default: m.PublicCatalogueActivityPage }))
 );

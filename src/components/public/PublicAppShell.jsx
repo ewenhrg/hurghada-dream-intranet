@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import "@fontsource-variable/figtree";
 import "@fontsource-variable/fraunces/opsz.css";
 import "@fontsource-variable/fraunces/opsz-italic.css";
@@ -121,20 +121,30 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
       </div>
 
       <footer className={`mx-auto w-full px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 ${inner}`}>
-        <div className="flex items-center justify-center gap-3 border-t border-catalog-line pt-6">
-          {SOCIALS.map((social) => (
-            <a
-              key={social.name}
-              href={social.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-press
-              aria-label={social.name}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-catalog-ink ring-1 ring-catalog-border"
-            >
-              <SocialMark path={social.path} />
-            </a>
-          ))}
+        <div className="flex flex-col items-center gap-4 border-t border-catalog-line pt-6">
+          <div className="flex items-center justify-center gap-3">
+            {SOCIALS.map((social) => (
+              <a
+                key={social.name}
+                href={social.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-press
+                aria-label={social.name}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-catalog-ink ring-1 ring-catalog-border"
+              >
+                <SocialMark path={social.path} />
+              </a>
+            ))}
+          </div>
+          <nav aria-label="Mentions légales" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-semibold text-catalog-lagoon">
+            <Link to="/politique" data-press className="min-h-11 inline-flex items-center">
+              Remboursement
+            </Link>
+            <Link to="/confidentialite" data-press className="min-h-11 inline-flex items-center">
+              Confidentialité
+            </Link>
+          </nav>
         </div>
       </footer>
     </div>

@@ -36,6 +36,8 @@ export function isPublicClientPath(path) {
     p.startsWith("/contacts/") ||
     p === "/politique" ||
     p.startsWith("/politique/") ||
+    p === "/confidentialite" ||
+    p.startsWith("/confidentialite/") ||
     p === "/sejour" ||
     p.startsWith("/sejour/") ||
     p === "/mon-sejour" ||
