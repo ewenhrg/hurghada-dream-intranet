@@ -24,6 +24,9 @@ export const PublicPolicyPage = lazyWithRetry(() =>
 export const PublicPrivacyPage = lazyWithRetry(() =>
   import("../pages/PublicPrivacyPage").then((m) => ({ default: m.PublicPrivacyPage }))
 );
+export const PublicAboutPage = lazyWithRetry(() =>
+  import("../pages/PublicAboutPage").then((m) => ({ default: m.PublicAboutPage }))
+);
 export const PublicCatalogueActivityPage = lazyWithRetry(() =>
   import("../pages/PublicCatalogueActivityPage").then((m) => ({ default: m.PublicCatalogueActivityPage }))
 );

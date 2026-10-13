@@ -138,6 +138,9 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
             ))}
           </div>
           <nav aria-label="Mentions légales" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-semibold text-catalog-lagoon">
+            <Link to="/qui-sommes-nous" data-press className="min-h-11 inline-flex items-center">
+              Qui sommes-nous
+            </Link>
             <Link to="/politique" data-press className="min-h-11 inline-flex items-center">
               Remboursement
             </Link>

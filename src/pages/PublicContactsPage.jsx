@@ -74,6 +74,16 @@ export function PublicContactsPage() {
 
         <div className="mt-6 space-y-3">
           <Link
+            to="/qui-sommes-nous"
+            data-press
+            data-reveal="item"
+            className="hdc-card block p-4 text-catalog-ink"
+          >
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-catalog-label">L’agence</p>
+            <p className="mt-1 font-catalog-display text-[1.25rem] leading-tight">Qui sommes-nous</p>
+            <p className="mt-1 text-sm text-catalog-muted">Notre histoire, nos expériences et notre engagement.</p>
+          </Link>
+          <Link
             to="/politique"
             data-press
             data-reveal="item"

@@ -403,6 +403,7 @@ export function PublicHomePage() {
         ["/hotels", "Hôtels"],
         ["/sejour", "Mon séjour"],
         ["/contacts", "Contacts"],
+        ["/qui-sommes-nous", "Qui sommes-nous"],
         ["/politique", "Remboursement"],
       ].map(([to, label]) => (
         <Link

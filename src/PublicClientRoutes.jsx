@@ -15,6 +15,7 @@ import {
   PublicContactsPage,
   PublicPolicyPage,
   PublicPrivacyPage,
+  PublicAboutPage,
   PublicCatalogueActivityPage,
   PublicHotelRequestPage,
   PublicHotelsCataloguePage,
@@ -35,6 +36,9 @@ function PublicClientPage() {
   }
   if (pathname === "/confidentialite" || pathname === "/confidentialite/") {
     return <PublicPrivacyPage />;
+  }
+  if (pathname === "/qui-sommes-nous" || pathname === "/qui-sommes-nous/") {
+    return <PublicAboutPage />;
   }
   if (
     pathname === "/sejour" ||
