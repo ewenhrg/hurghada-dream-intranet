@@ -174,7 +174,7 @@ export function HomeReviewsMarquee() {
           data-press
           className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-catalog-lagoon"
         >
-          2&nbsp;357 avis
+          7&nbsp;800 avis
         </a>
       </div>
       <div className="mt-4 grid gap-3 lg:mt-8">
