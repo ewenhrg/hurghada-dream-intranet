@@ -97,6 +97,23 @@ export function PublicAboutPage() {
           </div>
         </section>
 
+        <section className="mt-10" aria-labelledby="about-team">
+          <h2 id="about-team" data-heading className="font-catalog-display text-[1.5rem] leading-tight text-catalog-ink">
+            Notre équipe
+          </h2>
+          <div data-reveal="item" className="hdc-card mt-4 space-y-3 p-5 text-sm leading-relaxed text-catalog-ink">
+            <p>
+              Derrière Hurghada Dream, c’est une équipe de près de <span className="font-semibold">100 collaborateurs</span>{" "}
+              mobilisés chaque jour pour votre séjour.
+            </p>
+            <p>
+              Transferts, guides, staff des bateaux, vendeurs, équipes qui organisent et gèrent les excursions : chacun
+              a son rôle, tous partagent le même objectif — vous accueillir, vous accompagner et vous satisfaire du
+              premier message jusqu’à la fin de votre activité.
+            </p>
+          </div>
+        </section>
+
         <section className="mt-10" aria-labelledby="about-experiences">
           <h2
             id="about-experiences"
