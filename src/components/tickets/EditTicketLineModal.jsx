@@ -141,6 +141,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
         ticketNumber: nextTicket,
         date: date || "",
         pickupTime: String(pickup || "").trim(),
+        pickupPublished: Boolean(String(pickup || "").trim()),
         paymentMethod: paymentMethod || "",
         lineTotal: nextLineTotal,
         ticketsEnteredAt: enteredAt,

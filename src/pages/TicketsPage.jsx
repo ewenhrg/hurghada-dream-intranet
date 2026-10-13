@@ -37,21 +37,13 @@ import { isBoatPartyActivity, formatTurtleFinSizesLabel } from "../utils/activit
 import { getLocalDateKey } from "../utils/pushSaleExpiry.js";
 import { TextInput } from "../components/ui";
 import { EditTicketLineModal } from "../components/tickets/EditTicketLineModal.jsx";
+import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
 import { toast } from "../utils/toast.js";
 import { canManageTicketLines } from "../constants/permissions";
 import { supabase } from "../lib/supabase";
 import { computePaidColumnsFromItems } from "../utils/ticketCollections";
 import { releaseTicketAllocations } from "../utils/ticketSequence";
 import { logger } from "../utils/logger";
-
-const slotLabel = (slot) =>
-  slot === "morning"
-    ? "Matin"
-    : slot === "afternoon"
-      ? "Après-midi"
-      : slot === "evening"
-        ? "Soir"
-        : "";
 
 const paymentText = (method) =>
   method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
@@ -207,6 +199,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [editingRow, setEditingRow] = useState(null);
+  const [pickupDrafts, setPickupDrafts] = useState({});
+  const [savingPickupKey, setSavingPickupKey] = useState("");
   const [deletingTicket, setDeletingTicket] = useState(null);
   const scrollRef = useRef(null);
   const [copied, setCopied] = useState(() => {
@@ -236,6 +230,59 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     });
   }, []);
 
+  const commitPickup = useCallback(async (row, rawValue) => {
+    if (typeof setQuotes !== "function") return;
+    const next = String(rawValue ?? "").trim();
+    if (next === String(row.pickup || "").trim()) {
+      setPickupDrafts((prev) => {
+        if (!(row.key in prev)) return prev;
+        const copy = { ...prev };
+        delete copy[row.key];
+        return copy;
+      });
+      return;
+    }
+    const quote = (quotes || []).find((q) => q.id === row.quoteId);
+    if (!quote) return;
+    const items = (quote.items || []).map((it, idx) =>
+      idx === row.itemIndex
+        ? { ...it, pickupTime: next, pickupPublished: Boolean(next) }
+        : it
+    );
+    const updatedQuote = { ...quote, items, updated_at: new Date().toISOString() };
+    const previous = quotes;
+    const nextQuotes = (quotes || []).map((q) => (q.id === quote.id ? updatedQuote : q));
+    setQuotes(nextQuotes);
+    saveQuotesCache(nextQuotes);
+    setSavingPickupKey(row.key);
+    try {
+      if (supabase) {
+        const { ok, error } = await persistQuoteItemsToSupabase(quote, items, {
+          updatedAt: updatedQuote.updated_at,
+        });
+        if (!ok) {
+          setQuotes(previous);
+          saveQuotesCache(previous);
+          toast.error(error?.message || "Heure non enregistrée.");
+          return;
+        }
+      }
+      toast.success(
+        next
+          ? `Prise en charge ${next} — le client la voit dans Mon séjour.`
+          : "Heure retirée de Mon séjour."
+      );
+      setPickupDrafts((prev) => {
+        if (!(row.key in prev)) return prev;
+        const copy = { ...prev };
+        delete copy[row.key];
+        return copy;
+      });
+    } finally {
+      setSavingPickupKey("");
+    }
+  }, [quotes, setQuotes]);
+
   const rows = useMemo(() => {
     const list = [];
     const activitiesById = buildActivitiesByIdMap(activities);
@@ -251,10 +298,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         const lineTotal = Math.round(Number(item.lineTotal) || 0);
         // Prix activité hors supp. transfert (évite le double-compte dans Excel)
         const priceValue = Math.max(0, lineTotal - transferValue);
-        const pickup =
-          item.pickupTime && String(item.pickupTime).trim()
-            ? String(item.pickupTime).trim()
-            : slotLabel(item.slot);
+        const published = item.pickupPublished === true;
+        const pickup = published ? String(item.pickupTime || "").trim() : "";
 
         const boatParty = isBoatPartyActivity(item.activityName);
         const activityDisplayName = resolveTicketActivityName(item, activitiesById);
@@ -296,6 +341,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
               : "",
           paymentMethod: item.paymentMethod || "",
           createdByName: quote.createdByName || "",
+          reservationCode: String(quote.reservationCode || "").trim(),
         });
       });
     });
@@ -331,6 +377,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.hotel,
         r.room,
         r.createdByName,
+        r.reservationCode,
         r.comment,
       ].some((v) => String(v || "").toLowerCase().includes(term));
     });
@@ -926,7 +973,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             />
             <TextInput
               type="search"
-              placeholder="Rechercher : ticket, client, tél, hôtel, activité, vendeur…"
+              placeholder="Rechercher : n° réservation, ticket, client, tél, hôtel, activité…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               aria-label="Rechercher un ticket"
@@ -1345,8 +1392,23 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                       <td className={`${TD} truncate font-semibold text-slate-800`} title={r.activity}>
                         {r.activity}
                       </td>
-                      <td className={`${TD} truncate text-center font-semibold text-violet-800`} title={r.pickup}>
-                        {r.pickup || ""}
+                      <td className={`${TD} text-center`} title="Heure communiquée au client la veille">
+                        <input
+                          type="text"
+                          inputMode="text"
+                          value={pickupDrafts[r.key] ?? r.pickup}
+                          placeholder="08:30"
+                          disabled={savingPickupKey === r.key || typeof setQuotes !== "function"}
+                          aria-label={`Heure de prise en charge ${r.ticketNumber}`}
+                          onChange={(e) =>
+                            setPickupDrafts((prev) => ({ ...prev, [r.key]: e.target.value }))
+                          }
+                          onBlur={(e) => void commitPickup(r, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") e.currentTarget.blur();
+                          }}
+                          className="w-full min-w-0 rounded-md border border-violet-200 bg-white/80 px-1 py-0.5 text-center text-[10px] font-bold text-violet-900 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400 disabled:opacity-60"
+                        />
                       </td>
                       <td
                         className={`${TD} truncate text-center font-bold text-amber-900`}

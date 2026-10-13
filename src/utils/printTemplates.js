@@ -146,7 +146,6 @@ export function generateQuoteHTML(quote, options = {}) {
           ${extrasHTML}
         </td>
         <td>${itemDate}</td>
-        <td class="text-center">${item.pickupTime || "—"}</td>
         <td class="text-center">${participantCells.adults}</td>
         <td class="text-center">${participantCells.children}</td>
         <td class="text-center">${participantCells.babies}</td>
@@ -449,7 +448,6 @@ export function generateQuoteHTML(quote, options = {}) {
             <th>#</th>
             <th>Activité</th>
             <th>Date</th>
-            <th class="text-center">Heure prise en charge</th>
             <th class="text-center">Adultes</th>
             <th class="text-center">Enfants</th>
             <th class="text-center">Bébés</th>
@@ -520,15 +518,6 @@ export function generateTicketsHTML(quote, options = {}) {
       : "";
   const logoSrc = esc(origin ? `${origin}/logo-ticket.jpg` : "/logo-ticket.jpg");
   const baseHref = esc(origin ? `${origin}/` : "/");
-
-  const slotLabel = (slot) =>
-    slot === "morning"
-      ? "Matin"
-      : slot === "afternoon"
-        ? "Après-midi"
-        : slot === "evening"
-          ? "Soir"
-          : "";
 
   const formatTicketExtraLines = (item) => {
     const lines = [];
@@ -795,9 +784,9 @@ export function generateTicketsHTML(quote, options = {}) {
       }
       const paxTotal = (cells.adults || 0) + (cells.children || 0) + (cells.babies || 0);
 
-      const pickup = item.pickupTime && String(item.pickupTime).trim()
-        ? esc(item.pickupTime)
-        : slotLabel(item.slot) || "—";
+      const pickup = item.pickupPublished && String(item.pickupTime || "").trim()
+        ? esc(String(item.pickupTime).trim())
+        : "La veille";
 
       const priceText = esc(formatTicketPriceDisplay(item));
       const extraLines = formatTicketExtraLines(item);

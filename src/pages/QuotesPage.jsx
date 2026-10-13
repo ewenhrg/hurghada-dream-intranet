@@ -940,7 +940,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         .map((c) => c.act?.name || "activité")
         .join(", ");
       toast.warning(
-        `Choisissez un créneau / heure de prise en charge pour : ${names}.`
+        `Choisissez un créneau pour : ${names}.`
       );
       setIsSubmitting(false);
       return;
@@ -1211,7 +1211,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           getEffectiveNeighborhoodForDate(cleanedClient, c.raw.date) ||
           client.neighborhood,
         slot: c.raw.slot,
-        pickupTime: c.pickupTime || "",
+        pickupTime: "",
         lineTotal: c.lineTotal,
         privateTransferTier: c.raw.privateTransferTier || "",
         ...getTransferSurchargeFieldsForQuoteItem(c.act, c.transferInfo),

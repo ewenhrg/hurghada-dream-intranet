@@ -511,7 +511,7 @@ function PublicStayPageLive() {
                   <div className="shrink-0 rounded-[1rem] bg-white px-3.5 py-2.5 text-center text-catalog-coralDeep">
                     <span className="block text-[0.625rem] font-semibold uppercase tracking-[0.12em]">Départ</span>
                     <span className="mt-0.5 block font-catalog-display text-[1.75rem] leading-none tabular-nums">
-                      {String(nextItem.pickupTime || "").trim() || "—"}
+                      {String(nextItem.pickupTime || "").trim() || "La veille"}
                     </span>
                   </div>
                 </div>

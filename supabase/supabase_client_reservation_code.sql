@@ -228,6 +228,9 @@ BEGIN
           END IF;
         END IF;
         v_pickup := trim(coalesce(item->>'pickupTime', item->>'pickup_time', ''));
+        IF lower(coalesce(item->>'pickupPublished', '')) IS DISTINCT FROM 'true' THEN
+          v_pickup := '';
+        END IF;
         v_ticket := trim(coalesce(item->>'ticketNumber', item->>'ticket_number', ''));
         BEGIN
           v_rest := coalesce(NULLIF(item->>'restAmount', '')::numeric, 0);
