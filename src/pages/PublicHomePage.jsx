@@ -403,6 +403,7 @@ export function PublicHomePage() {
         ["/hotels", "Hôtels"],
         ["/sejour", "Mon séjour"],
         ["/contacts", "Contacts"],
+        ["/politique", "Remboursement"],
       ].map(([to, label]) => (
         <Link
           key={to}
@@ -634,6 +635,9 @@ export function PublicHomePage() {
           <Link to="/contacts" data-press className="hdc-btn hdc-btn-ink w-full lg:shrink-0">
             <Phone className="h-5 w-5" strokeWidth={1.75} aria-hidden />
             Nos contacts
+          </Link>
+          <Link to="/politique" data-press className="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-catalog-lagoon lg:shrink-0">
+            Remboursement et modification
           </Link>
         </div>
         </div>

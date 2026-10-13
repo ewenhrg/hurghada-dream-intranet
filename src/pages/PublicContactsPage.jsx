@@ -1,4 +1,5 @@
 import { Phone } from "lucide-react";
+import { Link } from "react-router-dom";
 import { PublicAppShell } from "../components/public/PublicAppShell";
 import { WhatsAppGlyph } from "../components/public/PublicUI";
 
@@ -70,6 +71,17 @@ export function PublicContactsPage() {
             </li>
           ))}
         </ul>
+
+        <Link
+          to="/politique"
+          data-press
+          data-reveal="item"
+          className="hdc-card mt-6 block p-4 text-catalog-ink"
+        >
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-catalog-label">Avant de réserver</p>
+          <p className="mt-1 font-catalog-display text-[1.25rem] leading-tight">Remboursement et modification</p>
+          <p className="mt-1 text-sm text-catalog-muted">Délais, Caire, Louxor et montgolfière.</p>
+        </Link>
       </main>
     </PublicAppShell>
   );

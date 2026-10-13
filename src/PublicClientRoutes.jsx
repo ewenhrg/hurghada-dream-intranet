@@ -13,6 +13,7 @@ import {
   PublicStayPage,
   PublicHomePage,
   PublicContactsPage,
+  PublicPolicyPage,
   PublicCatalogueActivityPage,
   PublicHotelRequestPage,
   PublicHotelsCataloguePage,
@@ -27,6 +28,9 @@ function PublicClientPage() {
   }
   if (pathname === "/contacts" || pathname === "/contacts/") {
     return <PublicContactsPage />;
+  }
+  if (pathname === "/politique" || pathname === "/politique/") {
+    return <PublicPolicyPage />;
   }
   if (
     pathname === "/sejour" ||

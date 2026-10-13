@@ -18,6 +18,9 @@ export const PublicHomePage = lazyWithRetry(() =>
 export const PublicContactsPage = lazyWithRetry(() =>
   import("../pages/PublicContactsPage").then((m) => ({ default: m.PublicContactsPage }))
 );
+export const PublicPolicyPage = lazyWithRetry(() =>
+  import("../pages/PublicPolicyPage").then((m) => ({ default: m.PublicPolicyPage }))
+);
 export const PublicCatalogueActivityPage = lazyWithRetry(() =>
   import("../pages/PublicCatalogueActivityPage").then((m) => ({ default: m.PublicCatalogueActivityPage }))
 );
