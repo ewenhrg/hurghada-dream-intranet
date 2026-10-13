@@ -27,6 +27,7 @@ import {
   calculateStandardTransferSurchargeFromItem,
   calculatePrivateTransferSurchargeFromItem,
   getPrivateTransferLabel,
+  formatStaffPickupLabel,
 } from "./transferPricing.js";
 import {
   currencyNoCents,
@@ -69,6 +70,7 @@ export function generateQuoteHTML(quote, options = {}) {
     return dateA - dateB;
   });
   
+  const showStaffPickup = sortedItems.some((item) => item?.staffPickup);
   const itemsHTML = sortedItems.map((item, idx) => {
     const itemDate = new Date(item.date + "T12:00:00").toLocaleDateString("fr-FR", {
       day: "2-digit",
@@ -146,6 +148,7 @@ export function generateQuoteHTML(quote, options = {}) {
           ${extrasHTML}
         </td>
         <td>${itemDate}</td>
+        ${showStaffPickup ? `<td class="text-center">${formatStaffPickupLabel(item) || "—"}</td>` : ""}
         <td class="text-center">${participantCells.adults}</td>
         <td class="text-center">${participantCells.children}</td>
         <td class="text-center">${participantCells.babies}</td>
@@ -448,6 +451,7 @@ export function generateQuoteHTML(quote, options = {}) {
             <th>#</th>
             <th>Activité</th>
             <th>Date</th>
+            ${showStaffPickup ? `<th class="text-center">Prise en charge</th>` : ""}
             <th class="text-center">Adultes</th>
             <th class="text-center">Enfants</th>
             <th class="text-center">Bébés</th>
@@ -784,8 +788,9 @@ export function generateTicketsHTML(quote, options = {}) {
       }
       const paxTotal = (cells.adults || 0) + (cells.children || 0) + (cells.babies || 0);
 
-      const pickup = item.pickupPublished && String(item.pickupTime || "").trim()
-        ? esc(String(item.pickupTime).trim())
+      const staffPickup = formatStaffPickupLabel(item);
+      const pickup = staffPickup
+        ? esc(staffPickup)
         : "La veille";
 
       const priceText = esc(formatTicketPriceDisplay(item));

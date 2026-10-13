@@ -202,3 +202,18 @@ export function pickupTimeFromOptionValue(options, selectedValue) {
   if (!match) return raw;
   return match.time || match.label || raw;
 }
+
+const STAFF_PICKUP_SLOT_LABELS = {
+  morning: "Matin",
+  afternoon: "Après-midi",
+  evening: "Soir",
+};
+
+/** Libellé interne devis / ticket quand plusieurs horaires existent. */
+export function formatStaffPickupLabel(item) {
+  if (!item?.staffPickup) return "";
+  const time = String(item.pickupTime || "").trim();
+  const slot = STAFF_PICKUP_SLOT_LABELS[item.slot] || "";
+  if (slot && time) return `${slot} · ${time}`;
+  return time || slot;
+}

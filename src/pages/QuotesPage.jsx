@@ -1211,7 +1211,8 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
           getEffectiveNeighborhoodForDate(cleanedClient, c.raw.date) ||
           client.neighborhood,
         slot: c.raw.slot,
-        pickupTime: "",
+        pickupTime: requiresPickupTimeChoice(c.transferInfo) ? String(c.pickupTime || "").trim() : "",
+        staffPickup: requiresPickupTimeChoice(c.transferInfo),
         lineTotal: c.lineTotal,
         privateTransferTier: c.raw.privateTransferTier || "",
         ...getTransferSurchargeFieldsForQuoteItem(c.act, c.transferInfo),

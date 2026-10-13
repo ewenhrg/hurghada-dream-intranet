@@ -689,7 +689,7 @@ function QuoteCardComponent({
         return {
           ...item,
           ticketNumber: finalTicketNumbers[idx],
-          pickupTime: item.pickupPublished ? String(item.pickupTime || "").trim() : "",
+          pickupTime: String(item.pickupTime || "").trim(),
           pickupPublished: Boolean(item.pickupPublished),
           ticketEnteredByName: agentName || item.ticketEnteredByName || "",
           paymentMethod: paymentMethodLabel || item.paymentMethod || "",
@@ -3045,7 +3045,12 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           zeroTracasVisaSeul: Number(c.raw.zeroTracasVisaSeul || 0),
           neighborhood: client.neighborhood,
           slot: c.raw.slot,
-          pickupTime: originalItem?.pickupPublished ? String(originalItem.pickupTime || "").trim() : "",
+          staffPickup: requiresPickupTimeChoice(c.transferInfo) || Boolean(originalItem?.staffPickup),
+          pickupTime: originalItem?.pickupPublished
+            ? String(originalItem.pickupTime || "").trim()
+            : requiresPickupTimeChoice(c.transferInfo)
+              ? String(c.pickupTime || "").trim()
+              : "",
           pickupPublished: Boolean(originalItem?.pickupPublished),
           lineTotal: c.lineTotal,
           privateTransferTier: c.raw.privateTransferTier || "",
