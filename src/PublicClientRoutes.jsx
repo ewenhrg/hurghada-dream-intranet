@@ -65,8 +65,9 @@ function PublicClientPage() {
 }
 
 export function PublicClientRoutes() {
+  const { pathname } = useLocation();
   return (
-    <ErrorBoundary>
+    <ErrorBoundary key={pathname}>
       <Suspense fallback={<GuestPageLoader />}>
         <PublicClientPage />
       </Suspense>

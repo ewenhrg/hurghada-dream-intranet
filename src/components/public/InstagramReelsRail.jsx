@@ -37,18 +37,22 @@ function rememberReels(reels) {
 function warmReels(reels) {
   if (typeof document === "undefined") return;
   reels.filter((reel) => reel?.video).slice(0, 3).forEach((reel, index) => {
+    const href = String(reel.video || "");
+    if (!/^https?:\/\//.test(href)) return;
     const id = `hd-preload-reel-${index}`;
     let link = document.getElementById(id);
-    if (link?.getAttribute("href") === reel.video) return;
+    if (link?.getAttribute("href") === href) return;
     if (!link) {
       link = document.createElement("link");
       link.id = id;
       link.rel = "preload";
-      link.as = "video";
-      link.referrerPolicy = "no-referrer";
+      link.as = "fetch";
+      link.crossOrigin = "anonymous";
+      link.href = href;
       document.head.appendChild(link);
+      return;
     }
-    link.href = reel.video;
+    link.href = href;
   });
 }
 

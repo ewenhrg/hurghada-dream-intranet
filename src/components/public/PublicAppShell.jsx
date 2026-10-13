@@ -51,7 +51,7 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
   usePressFeedback(rootRef);
   useScreenIntro(rootRef, [revealKey, pathname]);
   useScrollMotion(rootRef, [revealKey, pathname]);
-  useHeaderMorph(headerRef);
+  useHeaderMorph(headerRef, Boolean(backTo));
 
   useEffect(() => {
     document.title = title ? `${title} · Hurghada Dream` : "Hurghada Dream";
