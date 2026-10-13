@@ -6,31 +6,6 @@ import { configureUserPermissions } from "../utils/userPermissions";
 import { establishSupabaseWriterSession, isIntranetDatabaseWriterName } from "../utils/intranetSupabaseWriterAuth.js";
 import { toast } from "../utils/toast.js";
 
-/** Code d’accès permanent (sans Supabase) — vérifié avant toute requête base. */
-const EMERGENCY_ACCESS_CODE = "201003";
-
-function applyEmergencySession() {
-  const user = {
-    id: 0,
-    name: "Ewen",
-    code: EMERGENCY_ACCESS_CODE,
-    canDeleteQuote: true,
-    canAddActivity: true,
-    canEditActivity: true,
-    canDeleteActivity: true,
-    canResetData: true,
-    canAccessActivities: true,
-    canAccessHistory: true,
-    canAccessTickets: true,
-    canAccessModifications: true,
-    canAccessSituation: true,
-    canAccessUsers: true,
-    canAccessActivityPrices: true,
-  };
-  sessionStorage.setItem("hd_ok", "1");
-  sessionStorage.setItem("hd_user", JSON.stringify(user));
-}
-
 /* Comptes réduits (perf) : ~170 éléments animés en continu (particules, étoiles, formes...)
    faisaient ramer les PC bas de gamme dès l'écran de connexion, avant même toute interaction. */
 const PARTICLES = 22;
@@ -89,28 +64,21 @@ export function LoginPage({ onSuccess }) {
     setLoading(true);
 
     try {
-      // Toujours en premier : accès de secours si la base est injoignable ou mal configurée
-      if (code === EMERGENCY_ACCESS_CODE) {
-        applyEmergencySession();
-        onSuccess();
-        return;
-      }
-
       if (supabase) {
-        const { data, error: fetchError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("code", code)
-          .single();
+        const { data, error: fetchError } = await supabase.rpc("intranet_login", {
+          p_code: code,
+        });
+        const payload = data && typeof data === "object" ? data : {};
+        const dbUser = payload.user && typeof payload.user === "object" ? payload.user : null;
 
-        if (fetchError || !data) {
-          setError("Code incorrect. Réessayez.");
+        if (fetchError || payload.ok !== true || !dbUser) {
+          setError(payload.locked ? "Trop d’essais. Réessayez dans quelques minutes." : "Code incorrect. Réessayez.");
           setCode("");
           setLoading(false);
           return;
         }
 
-        const userPermissions = configureUserPermissions(dbUserToSessionUser(data));
+        const userPermissions = configureUserPermissions(dbUserToSessionUser({ ...dbUser, code }));
         if (!userPermissions) {
           setError("Données utilisateur invalides.");
           setLoading(false);
@@ -119,8 +87,8 @@ export function LoginPage({ onSuccess }) {
         sessionStorage.setItem("hd_ok", "1");
         sessionStorage.setItem("hd_user", JSON.stringify(userPermissions));
 
-        const writerAuth = await establishSupabaseWriterSession(supabase, data, code);
-        if (isIntranetDatabaseWriterName(data.name)) {
+        const writerAuth = await establishSupabaseWriterSession(supabase, { ...dbUser, code }, code);
+        if (isIntranetDatabaseWriterName(dbUser.name)) {
           if (writerAuth.missingEmail) {
             toast.warning(
               "Compte Ewen/Léa/Sophia/Karim : définissez intranet_auth_email en base (et un utilisateur Auth Supabase avec le même email, mot de passe = code à 6 chiffres) pour modifier ou supprimer utilisateurs et activités."
@@ -134,33 +102,8 @@ export function LoginPage({ onSuccess }) {
 
         onSuccess();
       } else {
-        if (code === "040203") {
-          sessionStorage.setItem("hd_ok", "1");
-          sessionStorage.setItem(
-            "hd_user",
-            JSON.stringify({
-              id: 1,
-              name: "Ewen",
-              code: "040203",
-              canDeleteQuote: true,
-              canAddActivity: true,
-              canEditActivity: true,
-              canDeleteActivity: true,
-              canResetData: true,
-              canAccessActivities: true,
-              canAccessHistory: true,
-              canAccessTickets: true,
-              canAccessModifications: true,
-              canAccessSituation: true,
-              canAccessUsers: true,
-              canAccessActivityPrices: true,
-            })
-          );
-          onSuccess();
-        } else {
-          setError("Code incorrect. Réessayez.");
-          setCode("");
-        }
+        setError("Connexion indisponible. Réessayez.");
+        setCode("");
       }
     } catch (err) {
       logger.error("Erreur lors de la connexion:", err);
