@@ -52,9 +52,11 @@ export function stayPushPermissionLabel() {
   return Notification.permission;
 }
 
-export async function enableStayPushNotifications(phone) {
+export async function enableStayPushNotifications(phone, reservationCode) {
   const digits = cleanPhoneNumber(phone);
+  const stayCode = String(reservationCode || "").trim();
   if (digits.length < 10) return { ok: false, error: "phone" };
+  if (stayCode.length < 4) return { ok: false, error: "code" };
   if (!isStayPushSupported()) return { ok: false, error: "unsupported" };
   if (isIosSafari() && !isStandaloneDisplay()) return { ok: false, error: "ios-install" };
   if (!supabase) return { ok: false, error: "unavailable" };
@@ -76,6 +78,7 @@ export async function enableStayPushNotifications(phone) {
     p_endpoint: json.endpoint,
     p_p256dh: json.keys?.p256dh,
     p_auth: json.keys?.auth,
+    p_reservation_code: stayCode,
   });
   if (error) {
     logger.warn("register_client_stay_push:", error);

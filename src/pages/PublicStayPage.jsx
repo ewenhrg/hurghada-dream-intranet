@@ -252,6 +252,9 @@ function PublicStayPageLive() {
     let cancelled = false;
     (async () => {
       if (Capacitor.isNativePlatform() && stayNotifyEnabled()) {
+        if (isStayPushSupported() && notifyPhone) {
+          void enableStayPushNotifications(notifyPhone, code);
+        }
         if (!cancelled) setPushState("subscribed");
         return;
       }
@@ -261,7 +264,7 @@ function PublicStayPageLive() {
         return;
       }
       try {
-        const result = await enableStayPushNotifications(notifyPhone);
+        const result = await enableStayPushNotifications(notifyPhone, code);
         if (!cancelled) {
           if (result.ok) setPushState("subscribed");
           else if (result.error === "ios-install") setPushState("ios-install");
@@ -295,7 +298,7 @@ function PublicStayPageLive() {
     try {
       if (Capacitor.isNativePlatform()) {
         const local = await enableStayReminders(stay?.items);
-        if (isStayPushSupported() && notifyPhone) void enableStayPushNotifications(notifyPhone);
+        if (isStayPushSupported() && notifyPhone) void enableStayPushNotifications(notifyPhone, code);
         if (local.ok) {
           setPushState("subscribed");
           return;
@@ -303,7 +306,7 @@ function PublicStayPageLive() {
         setPushState(local.error === "denied" ? "denied" : "default");
         return;
       }
-      const result = await enableStayPushNotifications(notifyPhone);
+      const result = await enableStayPushNotifications(notifyPhone, code);
       if (result.ok) setPushState("subscribed");
       else setPushState(result.error === "ios-install" ? "ios-install" : stayPushPermissionLabel() === "denied" ? "denied" : "default");
     } finally {

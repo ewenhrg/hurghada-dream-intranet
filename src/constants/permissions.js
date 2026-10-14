@@ -177,6 +177,12 @@ export function canAccessInternsPage(user) {
   return n === "ewen" || n === "karim";
 }
 
+/** Message push aux clients qui ont ouvert Mon séjour — Ewen et Karim uniquement. */
+export function canSendStayBroadcast(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "ewen" || n === "karim";
+}
+
 /** Supprimer une demande / devis hôtel (historique) — Ewen et Karim uniquement. */
 export function canDeleteHotelRequest(user) {
   const n = normalizeIntranetUserName(user?.name);

@@ -9,7 +9,7 @@ import {
   getQuoteSiteKeysForSync,
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
-import { canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, hasFullIntranetAccess } from "./constants/permissions";
+import { canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canSendStayBroadcast, hasFullIntranetAccess } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, saveQuotesCache, loadLS, normalizeQuoteItemsFromDb } from "./utils";
 import { runWhenIdle } from "./utils/idle";
 import { attachTicketPaymentMetaFromItems } from "./utils/ticketCollections";
@@ -32,6 +32,7 @@ import {
   StopSalePage,
   DocumentsPage,
   InternsPage,
+  StayBroadcastPage,
   EwenDashboardPage,
   PublicDevisPage,
   PublicHotelsAdminPage,
@@ -1444,6 +1445,11 @@ export default function App() {
                     Appartement
                   </Pill>
                 )}
+                {canSendStayBroadcast(user) && (
+                  <Pill active={tab === "message-sejour"} onClick={() => setTab("message-sejour")}>
+                    Message séjour
+                  </Pill>
+                )}
                 <Pill active={tab === "documents"} onClick={() => setTab("documents")}>
                   {t("nav.documents")}
                 </Pill>
@@ -1683,6 +1689,19 @@ export default function App() {
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <InternsPage user={user} />
+                </Suspense>
+              </ErrorBoundary>
+            </Section>
+          )}
+
+          {tab === "message-sejour" && canSendStayBroadcast(user) && (
+            <Section
+              title="Message séjour"
+              subtitle="Notification à tous les clients qui ont ouvert Mon séjour"
+            >
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>
+                  <StayBroadcastPage user={user} />
                 </Suspense>
               </ErrorBoundary>
             </Section>

@@ -46,6 +46,9 @@ export const DocumentsPage = lazyWithRetry(() =>
 export const InternsPage = lazyWithRetry(() =>
   import("../pages/InternsPage").then((module) => ({ default: module.InternsPage }))
 );
+export const StayBroadcastPage = lazyWithRetry(() =>
+  import("../pages/StayBroadcastPage").then((module) => ({ default: module.StayBroadcastPage }))
+);
 export {
   RequestPage,
   PublicTarifsPage,
