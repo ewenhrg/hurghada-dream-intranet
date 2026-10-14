@@ -13,6 +13,8 @@ import {
 } from "../utils/clientStay";
 import {
   enableStayPushNotifications,
+  releaseStayPushPresence,
+  touchStayPushPresence,
   isStayPushSupported,
   stayPushPermissionLabel,
 } from "../utils/clientStayPush";
@@ -282,7 +284,18 @@ function PublicStayPageLive() {
 
   const days = useMemo(() => groupItemsByDate(stay?.items || []), [stay]);
 
+  useEffect(() => {
+    if (!code || !stay?.found) return undefined;
+    const beat = () => {
+      void touchStayPushPresence(code);
+    };
+    beat();
+    const id = window.setInterval(beat, 40000);
+    return () => window.clearInterval(id);
+  }, [code, stay?.found]);
+
   const handleLogout = () => {
+    void releaseStayPushPresence();
     clearStayCode();
     void disarmStayWatch();
     setCode("");

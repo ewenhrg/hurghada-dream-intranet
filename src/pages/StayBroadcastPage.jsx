@@ -41,24 +41,26 @@ export function StayBroadcastPage({ user }) {
     [user]
   );
 
-  const refreshAudience = useCallback(async () => {
+  const refreshAudience = useCallback(async (silent = false) => {
     if (!allowed) return;
-    setLoadingCount(true);
+    if (!silent) setLoadingCount(true);
     try {
       const result = await callBroadcast("count", "");
       if (result.ok) {
         setAudience(result.clients);
         setAudienceError("");
-      } else {
+      } else if (!silent) {
         setAudienceError(result.error);
       }
     } finally {
-      setLoadingCount(false);
+      if (!silent) setLoadingCount(false);
     }
   }, [allowed, callBroadcast]);
 
   useEffect(() => {
-    void refreshAudience();
+    void refreshAudience(false);
+    const id = window.setInterval(() => void refreshAudience(true), 15000);
+    return () => window.clearInterval(id);
   }, [refreshAudience]);
 
   async function handleSend() {
@@ -99,8 +101,7 @@ export function StayBroadcastPage({ user }) {
   return (
     <div className="mx-auto max-w-xl space-y-4">
       <p className="text-sm leading-relaxed text-slate-600">
-        Le message part aux clients qui ont ouvert Mon séjour avec leur numéro de réservation et qui ont accepté les
-        notifications. Les autres vendeurs ne voient pas cette page.
+        Le message part aux clients connectés à Mon séjour avec leur numéro de réservation. Dès qu’ils se déconnectent, ils ne sont plus comptés.
       </p>
       <p className="text-sm font-semibold text-slate-800">
         {loadingCount
@@ -108,8 +109,8 @@ export function StayBroadcastPage({ user }) {
           : audienceError
             ? audienceError
             : audience
-              ? `${audience} client${audience > 1 ? "s" : ""} peuvent recevoir le message.`
-              : "Aucun client n'a encore activé les notifications avec son numéro."}
+              ? `${audience} client${audience > 1 ? "s" : ""} connecté${audience > 1 ? "s" : ""}.`
+              : "Aucun client n'est connecté à Mon séjour."}
       </p>
       <label className="block">
         <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">Message</span>

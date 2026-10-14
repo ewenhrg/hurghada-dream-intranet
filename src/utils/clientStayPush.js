@@ -87,6 +87,41 @@ export async function enableStayPushNotifications(phone, reservationCode) {
   return { ok: true };
 }
 
+async function currentPushEndpoint() {
+  if (!("serviceWorker" in navigator)) return "";
+  try {
+    const reg = await navigator.serviceWorker.getRegistration("/");
+    const sub = await reg?.pushManager?.getSubscription();
+    return String(sub?.endpoint || "");
+  } catch {
+    return "";
+  }
+}
+
+export async function touchStayPushPresence(reservationCode) {
+  if (!supabase) return;
+  const endpoint = await currentPushEndpoint();
+  const stayCode = String(reservationCode || "").trim();
+  if (endpoint.length < 20 || stayCode.length < 4) return;
+  const { error } = await supabase.rpc("touch_client_stay_push", {
+    p_site_key: SITE_KEY,
+    p_endpoint: endpoint,
+    p_reservation_code: stayCode,
+  });
+  if (error) logger.warn("touch_client_stay_push:", error);
+}
+
+export async function releaseStayPushPresence() {
+  if (!supabase) return;
+  const endpoint = await currentPushEndpoint();
+  if (endpoint.length < 20) return;
+  const { error } = await supabase.rpc("release_client_stay_push", {
+    p_site_key: SITE_KEY,
+    p_endpoint: endpoint,
+  });
+  if (error) logger.warn("release_client_stay_push:", error);
+}
+
 export async function requestClientStayPush(phone) {
   if (!supabase?.functions?.invoke) return;
   const digits = cleanPhoneNumber(phone);

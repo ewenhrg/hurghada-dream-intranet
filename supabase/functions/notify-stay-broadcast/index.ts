@@ -11,6 +11,8 @@ type PushRow = {
   p256dh: string;
   auth: string;
   phone_key: string;
+  reservation_code?: string | null;
+  last_seen_at?: string | null;
 };
 
 function json(status: number, body: unknown) {
@@ -69,14 +71,20 @@ Deno.serve(async (req: Request) => {
   if (allowed.locked) return json(200, { ok: false, locked: true });
   if (allowed.ok !== true) return json(200, { ok: false, error: "Accès refusé." });
 
+  const freshAfter = Date.now() - 3 * 60 * 1000;
   const { data: subs, error: subErr } = await admin
     .from("client_stay_push_subscriptions")
-    .select("id, endpoint, p256dh, auth, phone_key")
+    .select("id, endpoint, p256dh, auth, phone_key, reservation_code, last_seen_at")
     .eq("site_key", SITE_KEY)
     .not("reservation_code", "is", null);
 
   if (subErr) return json(500, { ok: false, error: subErr.message });
-  const rows = ((subs || []) as PushRow[]).filter((row) => String(row.phone_key || "").length >= 10);
+  const rows = ((subs || []) as PushRow[]).filter((row) => {
+    if (String(row.phone_key || "").length < 10) return false;
+    if (!String(row.reservation_code || "").trim()) return false;
+    const seen = Date.parse(String(row.last_seen_at || ""));
+    return Number.isFinite(seen) && seen >= freshAfter;
+  });
   const clients = new Set(rows.map((row) => row.phone_key)).size;
   if (action === "count") return json(200, { ok: true, clients, sent: 0 });
 

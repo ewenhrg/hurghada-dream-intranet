@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS public.client_stay_push_subscriptions (
   p256dh TEXT NOT NULL,
   auth TEXT NOT NULL,
   reservation_code TEXT,
+  last_seen_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (endpoint)
@@ -59,15 +60,16 @@ BEGIN
   END IF;
 
   INSERT INTO public.client_stay_push_subscriptions (
-    site_key, phone_key, endpoint, p256dh, auth, reservation_code, updated_at
+    site_key, phone_key, endpoint, p256dh, auth, reservation_code, last_seen_at, updated_at
   )
-  VALUES (v_site, v_key, v_endpoint, v_p256dh, v_auth, v_code, now())
+  VALUES (v_site, v_key, v_endpoint, v_p256dh, v_auth, v_code, now(), now())
   ON CONFLICT (endpoint) DO UPDATE SET
     site_key = EXCLUDED.site_key,
     phone_key = EXCLUDED.phone_key,
     p256dh = EXCLUDED.p256dh,
     auth = EXCLUDED.auth,
     reservation_code = COALESCE(EXCLUDED.reservation_code, public.client_stay_push_subscriptions.reservation_code),
+    last_seen_at = now(),
     updated_at = now();
 
   RETURN jsonb_build_object('ok', true);
