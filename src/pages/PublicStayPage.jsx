@@ -346,6 +346,7 @@ function PublicStayPageLive() {
       )
   );
   const nextIsSelfMeeting = requiresMammaMiaSelfTransfer(nextItem?.activityName);
+  const nextMeetsAtMarina = !nextIsSelfMeeting && nextItem?.meetAtHotelMarina === true;
 
   return (
     <PublicAppShell
@@ -536,12 +537,14 @@ function PublicStayPageLive() {
                     <p className="mt-1 text-xs text-white/85">
                       {nextIsSelfMeeting
                         ? "Pas de transfert. Rendez-vous au restaurant Mamma Mia, par vos propres moyens."
-                        : "Prise en charge à votre hôtel"}
+                        : nextMeetsAtMarina
+                          ? "Pas de transfert. Rendez-vous directement à la marina de votre hôtel pour rejoindre le bateau."
+                          : "Prise en charge à votre hôtel"}
                     </p>
                   </div>
                   <div className="shrink-0 rounded-[1rem] bg-white px-3.5 py-2.5 text-center text-catalog-coralDeep">
                     <span className="block text-[0.625rem] font-semibold uppercase tracking-[0.12em]">
-                      {nextIsSelfMeeting ? "Rendez-vous" : "Départ"}
+                      {nextIsSelfMeeting || nextMeetsAtMarina ? "Rendez-vous" : "Départ"}
                     </span>
                     <span className="mt-0.5 block font-catalog-display text-[1.75rem] leading-none tabular-nums">
                       {nextIsSelfMeeting ? "12:00" : String(nextItem.pickupTime || "").trim() || "La veille"}
@@ -659,6 +662,7 @@ function PublicStayPageLive() {
                         <ol className="mt-2 space-y-3">
                           {day.items.map((item, idx) => {
                             const selfMeeting = requiresMammaMiaSelfTransfer(item.activityName);
+                            const hotelMarina = !selfMeeting && item.meetAtHotelMarina === true;
                             const pickup = selfMeeting ? "12:00" : String(item.pickupTime || "").trim();
                             const ticket = String(item.ticketNumber || "").trim();
                             const rest = Math.round(Number(item.restAmount) || 0);
@@ -671,6 +675,11 @@ function PublicStayPageLive() {
                                     {selfMeeting ? (
                                       <p className="mt-1.5 text-xs leading-relaxed text-catalog-body">
                                         Pas de transfert. Rendez-vous à 12h00 au restaurant Mamma Mia, par vos propres moyens.
+                                      </p>
+                                    ) : null}
+                                    {hotelMarina ? (
+                                      <p className="mt-1.5 text-xs leading-relaxed text-catalog-body">
+                                        Pas de transfert. Rendez-vous {pickup ? `à ${pickup} ` : ""}directement à la marina de votre hôtel pour rejoindre le bateau.
                                       </p>
                                     ) : null}
                                     <div className="mt-2 flex flex-wrap gap-1.5 text-[0.6875rem] font-medium">
@@ -704,7 +713,7 @@ function PublicStayPageLive() {
                                       {pickup || "La veille"}
                                     </span>
                                     <span className="mt-1 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] opacity-80">
-                                      {selfMeeting ? "Mamma Mia" : "Prise en charge"}
+                                      {selfMeeting ? "Mamma Mia" : hotelMarina ? "Marina" : "Prise en charge"}
                                     </span>
                                   </div>
                                 </div>

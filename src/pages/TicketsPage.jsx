@@ -68,8 +68,8 @@ const EXPORT_HEADERS = [
   "Vendeur",
 ];
 
-/** Colonnes tableau Situation (✓ + 15 données). */
-const COL_COUNT = 16;
+/** Colonnes tableau Situation (✓ + 16 données). */
+const COL_COUNT = 17;
 
 /** Pagination : évite de monter des milliers de lignes d’un coup. */
 const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
@@ -202,6 +202,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   const [editingRow, setEditingRow] = useState(null);
   const [pickupDrafts, setPickupDrafts] = useState({});
   const [savingPickupKey, setSavingPickupKey] = useState("");
+  const [savingMarinaKey, setSavingMarinaKey] = useState("");
   const [deletingTicket, setDeletingTicket] = useState(null);
   const scrollRef = useRef(null);
   const [copied, setCopied] = useState(() => {
@@ -280,6 +281,38 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     }
   }, [quotes, setQuotes]);
 
+  const commitMarina = useCallback(async (row, checked) => {
+    if (typeof setQuotes !== "function") return;
+    const quote = (quotes || []).find((item) => String(item.id) === String(row.quoteId));
+    const currentItem = quote?.items?.[row.itemIndex];
+    if (!quote || !currentItem) return;
+    if (Boolean(currentItem.meetAtHotelMarina) === checked) return;
+    const items = quote.items.map((item, idx) =>
+      idx === row.itemIndex ? { ...item, meetAtHotelMarina: checked } : item
+    );
+    const updatedQuote = { ...quote, items, updated_at: new Date().toISOString() };
+    const previous = quotes;
+    const nextQuotes = quotes.map((item) => (String(item.id) === String(quote.id) ? updatedQuote : item));
+    setQuotes(nextQuotes);
+    saveQuotesCache(nextQuotes);
+    setSavingMarinaKey(row.key);
+    try {
+      if (supabase) {
+        const { ok, error } = await persistQuoteItemsToSupabase(quote, items, {
+          updatedAt: updatedQuote.updated_at,
+          notifyStay: false,
+        });
+        if (!ok) {
+          setQuotes(previous);
+          saveQuotesCache(previous);
+          toast.error(error?.message || "Case marina non enregistrée.");
+        }
+      }
+    } finally {
+      setSavingMarinaKey("");
+    }
+  }, [quotes, setQuotes]);
+
   const rows = useMemo(() => {
     const list = [];
     const activitiesById = buildActivitiesByIdMap(activities);
@@ -327,6 +360,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           activityBaseName: activityDisplayName || "—",
           activityNameFr: String(item.activityName || "").trim(),
           pickup: pickup || "",
+          meetAtHotelMarina: item.meetAtHotelMarina === true,
           comment: formatSituationComment(item, quote.currency || "EUR"),
           restAmount: Math.round(Number(item.restAmount) || 0),
           priceValue,
@@ -1205,8 +1239,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                 <col style={{ width: "2.5%" }} />
                 <col style={{ width: "2.5%" }} />
                 <col style={{ width: "2.5%" }} />
-                <col style={{ width: "14%" }} />
+                <col style={{ width: "11%" }} />
                 <col style={{ width: "5%" }} />
+                <col style={{ width: "3%" }} />
                 <col style={{ width: "7.5%" }} />
                 <col style={{ width: "6%" }} />
                 <col style={{ width: "4%" }} />
@@ -1247,6 +1282,13 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                   </th>
                   <th scope="col" className={TH_BASE} title="Prise en charge">
                     Heure
+                  </th>
+                  <th
+                    scope="col"
+                    className={`${TH_BASE} !bg-teal-700`}
+                    title="Cocher s’il n’y a pas de transfert : le client se rend à la marina de son hôtel"
+                  >
+                    Marina
                   </th>
                   <th scope="col" className={`${TH_BASE} !bg-amber-600`} title="Reste, transfert privé, réductions, pointures palmes">
                     Comment
@@ -1422,6 +1464,16 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                             if (e.key === "Enter") e.currentTarget.blur();
                           }}
                           className="w-full min-w-0 rounded-md border border-violet-200 bg-white/80 px-1 py-0.5 text-center text-[10px] font-bold text-violet-900 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400 disabled:opacity-60"
+                        />
+                      </td>
+                      <td className={`${TD} text-center`} title="Pas de transfert : marina de l’hôtel">
+                        <input
+                          type="checkbox"
+                          checked={r.meetAtHotelMarina}
+                          disabled={savingMarinaKey === r.key || typeof setQuotes !== "function"}
+                          aria-label={`Sans transfert, marina de l’hôtel, ${r.ticketNumber}`}
+                          onChange={(event) => void commitMarina(r, event.target.checked)}
+                          className="size-4 accent-teal-700 disabled:opacity-60"
                         />
                       </td>
                       <td

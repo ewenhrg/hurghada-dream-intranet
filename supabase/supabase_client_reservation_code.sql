@@ -158,6 +158,7 @@ DECLARE
   v_adults INT;
   v_children INT;
   v_babies INT;
+  v_marina BOOLEAN;
 BEGIN
   IF v_site IS NULL OR length(v_site) = 0 THEN
     RAISE EXCEPTION 'site_key required';
@@ -231,6 +232,7 @@ BEGIN
         IF lower(coalesce(item->>'pickupPublished', '')) IS DISTINCT FROM 'true' THEN
           v_pickup := '';
         END IF;
+        v_marina := lower(coalesce(item->>'meetAtHotelMarina', '')) IN ('true', 't', '1');
         v_ticket := trim(coalesce(item->>'ticketNumber', item->>'ticket_number', ''));
         BEGIN
           v_rest := coalesce(NULLIF(item->>'restAmount', '')::numeric, 0);
@@ -255,7 +257,8 @@ BEGIN
           'restAmount', v_rest,
           'adults', v_adults,
           'children', v_children,
-          'babies', v_babies
+          'babies', v_babies,
+          'meetAtHotelMarina', v_marina
         ));
       END LOOP;
     END IF;
