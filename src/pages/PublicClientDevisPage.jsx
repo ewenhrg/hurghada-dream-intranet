@@ -187,9 +187,6 @@ function CatalogueFooter() {
           </Link>
         </nav>
       </div>
-      <p className="mt-4 text-center text-xs text-catalog-subtle sm:text-left">
-        © {new Date().getFullYear()} Hurghada Dream · Excursions en mer Rouge
-      </p>
     </footer>
   );
 }

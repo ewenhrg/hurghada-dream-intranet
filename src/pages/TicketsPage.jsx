@@ -38,6 +38,7 @@ import { getLocalDateKey } from "../utils/pushSaleExpiry.js";
 import { TextInput } from "../components/ui";
 import { EditTicketLineModal } from "../components/tickets/EditTicketLineModal.jsx";
 import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
+import { itemWithPickupSchedule } from "../utils/pickupSchedule";
 import { toast } from "../utils/toast.js";
 import { canManageTicketLines } from "../constants/permissions";
 import { supabase } from "../lib/supabase";
@@ -232,8 +233,12 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
 
   const commitPickup = useCallback(async (row, rawValue) => {
     if (typeof setQuotes !== "function") return;
-    const next = String(rawValue ?? "").trim();
-    if (next === String(row.pickup || "").trim()) {
+    const quote = (quotes || []).find((q) => q.id === row.quoteId);
+    if (!quote) return;
+    const currentItem = quote.items?.[row.itemIndex];
+    if (!currentItem) return;
+    const patched = itemWithPickupSchedule(currentItem, rawValue);
+    if (!patched) {
       setPickupDrafts((prev) => {
         if (!(row.key in prev)) return prev;
         const copy = { ...prev };
@@ -242,13 +247,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
       });
       return;
     }
-    const quote = (quotes || []).find((q) => q.id === row.quoteId);
-    if (!quote) return;
-    const items = (quote.items || []).map((it, idx) =>
-      idx === row.itemIndex
-        ? { ...it, pickupTime: next, pickupPublished: Boolean(next) }
-        : it
-    );
+    const next = String(patched.pickupTime || "").trim();
+    const items = (quote.items || []).map((it, idx) => (idx === row.itemIndex ? patched : it));
     const updatedQuote = { ...quote, items, updated_at: new Date().toISOString() };
     const previous = quotes;
     const nextQuotes = (quotes || []).map((q) => (q.id === quote.id ? updatedQuote : q));
@@ -259,6 +259,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
       if (supabase) {
         const { ok, error } = await persistQuoteItemsToSupabase(quote, items, {
           updatedAt: updatedQuote.updated_at,
+          notifyStay: false,
         });
         if (!ok) {
           setQuotes(previous);
@@ -267,11 +268,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           return;
         }
       }
-      toast.success(
-        next
-          ? `Prise en charge ${next} — le client la voit dans Mon séjour.`
-          : "Heure retirée de Mon séjour."
-      );
+      toast.success(next ? `Prise en charge ${next} enregistrée.` : "Heure retirée de Mon séjour.");
       setPickupDrafts((prev) => {
         if (!(row.key in prev)) return prev;
         const copy = { ...prev };

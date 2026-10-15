@@ -20,7 +20,6 @@ import { loadUserFromSession } from "./utils/userPermissions";
 import {
   ActivitiesPage,
   PlanningPage,
-  ActivityUpdatePage,
   ActivityCatalogAdminPage,
   QuotesPage,
   HistoryPage,
@@ -98,14 +97,6 @@ export default function App() {
   useEffect(() => {
     if (isPublicClientRoute) clearToasts();
   }, [isPublicClientRoute, location.pathname]);
-
-  /** Maj prix : onglet réservé aux profils avec permission explicite. */
-  useEffect(() => {
-    if (!user || tab !== "activity-update") return;
-    if (user.canAccessActivities === false || user.canAccessActivityPrices !== true) {
-      setTab(user.canAccessActivities !== false ? "activities" : "devis");
-    }
-  }, [user, tab]);
 
   /** Historique hôtel : Amr, Karim, Ewen, Sara, Mayar, Léa uniquement. */
   useEffect(() => {
@@ -1358,11 +1349,6 @@ export default function App() {
                   {t("nav.planning")}
                 </Pill>
                 )}
-                {user?.canAccessActivities !== false && user?.canAccessActivityPrices === true && (
-                <Pill active={tab === "activity-update"} onClick={() => setTab("activity-update")}>
-                  {t("nav.activityUpdate")}
-                </Pill>
-                )}
                 {user?.canAccessActivities !== false &&
                   (user?.canEditActivity === true || hasFullIntranetAccess(user)) && (
                     <Pill active={tab === "catalog-admin"} onClick={() => setTab("catalog-admin")}>
@@ -1537,17 +1523,6 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "activity-update" &&
-          user?.canAccessActivities !== false &&
-          user?.canAccessActivityPrices === true && (
-          <Section
-            title={t("page.activityUpdate.title")}
-            subtitle={t("page.activityUpdate.subtitle")}
-          >
-            <ActivityUpdatePage activities={activities} setActivities={setActivities} user={user} />
-          </Section>
-        )}
-
         {tab === "catalog-admin" &&
           user?.canAccessActivities !== false &&
           (user?.canEditActivity === true || hasFullIntranetAccess(user)) && (
@@ -1613,7 +1588,7 @@ export default function App() {
         )} */}
 
         {!SITUATION_PAGE_STANDBY && tab === "situation" && (
-          <SituationPage activities={activities} user={user} />
+          <SituationPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
         )}
 
         {tab === "stopsale" && (user?.canAccessSituation || hasFullIntranetAccess(user) || user?.name === "situation") && (

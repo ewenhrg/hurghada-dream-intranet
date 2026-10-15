@@ -1,6 +1,6 @@
 import { lazyWithRetry } from "../utils/lazyWithRetry";
 
-/** Page Transferts WhatsApp (import Excel) — visible par toute l'équipe connectée */
+/** Page Transferts : situation du lendemain et envoi groupé des heures. */
 export const SITUATION_PAGE_STANDBY = false;
 
 export const ActivitiesPage = lazyWithRetry(() =>
@@ -8,9 +8,6 @@ export const ActivitiesPage = lazyWithRetry(() =>
 );
 export const PlanningPage = lazyWithRetry(() =>
   import("../pages/PlanningPage").then((module) => ({ default: module.PlanningPage }))
-);
-export const ActivityUpdatePage = lazyWithRetry(() =>
-  import("../pages/ActivityUpdatePage").then((module) => ({ default: module.ActivityUpdatePage }))
 );
 export const ActivityCatalogAdminPage = lazyWithRetry(() =>
   import("../pages/ActivityCatalogAdminPage").then((module) => ({ default: module.ActivityCatalogAdminPage }))
@@ -35,7 +32,7 @@ export const HotelsPage = lazyWithRetry(() =>
 //   import("../pages/ModificationsPage").then((module) => ({ default: module.ModificationsPage }))
 // );
 export const SituationPage = lazyWithRetry(() =>
-  import("../pages/SituationPage").then((module) => ({ default: module.SituationPage }))
+  import("../pages/TransferDayPage").then((module) => ({ default: module.TransferDayPage }))
 );
 export const StopSalePage = lazyWithRetry(() =>
   import("../pages/StopSalePage").then((module) => ({ default: module.StopSalePage }))

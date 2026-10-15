@@ -46,7 +46,7 @@ export function persistedQuoteHasTicketNumbers(data, expectedNumbers) {
 export async function persistQuoteItemsToSupabase(
   quote,
   items,
-  { updatedAt, paidCash, paidStripe } = {}
+  { updatedAt, paidCash, paidStripe, notifyStay = true } = {}
 ) {
   if (!supabase || !quote) {
     return { ok: false, error: new Error("Supabase ou devis manquant") };
@@ -113,7 +113,7 @@ export async function persistQuoteItemsToSupabase(
         continue;
       }
       if (Array.isArray(data) && data.length > 0) {
-        void requestClientStayPush(quote.client?.phone);
+        if (notifyStay) void requestClientStayPush(quote.client?.phone);
         return { ok: true, data: data[0], error: null };
       }
     } catch (e) {

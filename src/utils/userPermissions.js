@@ -22,7 +22,6 @@ function applyFullIntranetPermissions(userData) {
   userData.canAccessModifications = true;
   userData.canAccessSituation = true;
   userData.canAccessUsers = true;
-  userData.canAccessActivityPrices = true;
 }
 
 /**

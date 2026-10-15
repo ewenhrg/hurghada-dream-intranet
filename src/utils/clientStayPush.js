@@ -123,14 +123,20 @@ export async function releaseStayPushPresence() {
 }
 
 export async function requestClientStayPush(phone) {
-  if (!supabase?.functions?.invoke) return;
+  if (!supabase?.functions?.invoke) return { ok: false, sent: 0 };
   const digits = cleanPhoneNumber(phone);
-  if (digits.length < 10) return;
+  if (digits.length < 10) return { ok: true, sent: 0 };
   try {
-    await supabase.functions.invoke("notify-stay-update", {
+    const { data, error } = await supabase.functions.invoke("notify-stay-update", {
       body: { p_site_key: SITE_KEY, p_phone: digits },
     });
+    if (error) {
+      logger.warn("notify-stay-update:", error);
+      return { ok: false, sent: 0 };
+    }
+    return { ok: true, sent: Number(data?.sent) || 0 };
   } catch (err) {
     logger.warn("notify-stay-update:", err);
+    return { ok: false, sent: 0 };
   }
 }

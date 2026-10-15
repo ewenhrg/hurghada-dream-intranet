@@ -24,6 +24,7 @@ import {
   stayNotifyEnabled,
   syncStayReminders,
 } from "../utils/stayLocalNotifications";
+import { requiresMammaMiaSelfTransfer } from "../utils/activityHelpers";
 
 const AGENCY_WHATSAPP = "201062002850";
 const STAY_PAGE_PAUSED = false;
@@ -339,8 +340,12 @@ function PublicStayPageLive() {
     (day) =>
       day.key !== "sans-date" &&
       day.key >= today &&
-      day.items.some((item) => !String(item.pickupTime || "").trim())
+      day.items.some(
+        (item) =>
+          !requiresMammaMiaSelfTransfer(item.activityName) && !String(item.pickupTime || "").trim()
+      )
   );
+  const nextIsSelfMeeting = requiresMammaMiaSelfTransfer(nextItem?.activityName);
 
   return (
     <PublicAppShell
@@ -528,12 +533,18 @@ function PublicStayPageLive() {
                 <div className="relative mt-3 flex items-end gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="font-catalog-display text-[1.5rem] leading-tight !text-white">{nextItem.activityName}</p>
-                    <p className="mt-1 text-xs text-white/85">Prise en charge à votre hôtel</p>
+                    <p className="mt-1 text-xs text-white/85">
+                      {nextIsSelfMeeting
+                        ? "Pas de transfert. Rendez-vous au restaurant Mamma Mia, par vos propres moyens."
+                        : "Prise en charge à votre hôtel"}
+                    </p>
                   </div>
                   <div className="shrink-0 rounded-[1rem] bg-white px-3.5 py-2.5 text-center text-catalog-coralDeep">
-                    <span className="block text-[0.625rem] font-semibold uppercase tracking-[0.12em]">Départ</span>
+                    <span className="block text-[0.625rem] font-semibold uppercase tracking-[0.12em]">
+                      {nextIsSelfMeeting ? "Rendez-vous" : "Départ"}
+                    </span>
                     <span className="mt-0.5 block font-catalog-display text-[1.75rem] leading-none tabular-nums">
-                      {String(nextItem.pickupTime || "").trim() || "La veille"}
+                      {nextIsSelfMeeting ? "12:00" : String(nextItem.pickupTime || "").trim() || "La veille"}
                     </span>
                   </div>
                 </div>
@@ -647,7 +658,8 @@ function PublicStayPageLive() {
                         </h3>
                         <ol className="mt-2 space-y-3">
                           {day.items.map((item, idx) => {
-                            const pickup = String(item.pickupTime || "").trim();
+                            const selfMeeting = requiresMammaMiaSelfTransfer(item.activityName);
+                            const pickup = selfMeeting ? "12:00" : String(item.pickupTime || "").trim();
                             const ticket = String(item.ticketNumber || "").trim();
                             const rest = Math.round(Number(item.restAmount) || 0);
                             const people = participantsLabel(item);
@@ -656,6 +668,11 @@ function PublicStayPageLive() {
                                 <div className="flex items-stretch">
                                   <div className="min-w-0 flex-1 p-4">
                                     <p className="font-catalog-display text-[1.1875rem] leading-snug text-catalog-ink">{item.activityName}</p>
+                                    {selfMeeting ? (
+                                      <p className="mt-1.5 text-xs leading-relaxed text-catalog-body">
+                                        Pas de transfert. Rendez-vous à 12h00 au restaurant Mamma Mia, par vos propres moyens.
+                                      </p>
+                                    ) : null}
                                     <div className="mt-2 flex flex-wrap gap-1.5 text-[0.6875rem] font-medium">
                                       {people ? (
                                         <span className="inline-flex items-center gap-1 rounded-full bg-catalog-mist px-2 py-1 text-catalog-body">
@@ -686,7 +703,9 @@ function PublicStayPageLive() {
                                     <span className={`mt-1 tabular-nums ${pickup ? "font-catalog-display text-[1.5rem] leading-none" : "text-[0.6875rem] font-semibold"}`}>
                                       {pickup || "La veille"}
                                     </span>
-                                    <span className="mt-1 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] opacity-80">Prise en charge</span>
+                                    <span className="mt-1 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] opacity-80">
+                                      {selfMeeting ? "Mamma Mia" : "Prise en charge"}
+                                    </span>
                                   </div>
                                 </div>
                               </li>

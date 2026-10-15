@@ -16,7 +16,6 @@ export const PERMISSION_DB_TO_FORM = {
   can_access_modifications: "canAccessModifications",
   can_access_situation: "canAccessSituation",
   can_access_users: "canAccessUsers",
-  can_access_activity_prices: "canAccessActivityPrices",
 };
 
 /** Clé formulaire → clé base */
@@ -35,12 +34,6 @@ export const PERMISSION_GROUPS = [
     description: "Pages visibles dans le menu. Si une page est décochée, l’utilisateur ne la verra pas.",
     permissions: [
       { formKey: "canAccessActivities", label: "Page Activités", defaultValue: true },
-      {
-        formKey: "canAccessActivityPrices",
-        label: "Page Maj prix (tableau des tarifs)",
-        description: "Onglet dédié pour modifier rapidement adulte / enfant / bébé et les notes. Nécessite aussi l’accès Activités.",
-        defaultValue: false,
-      },
       { formKey: "canAccessHistory", label: "Page Historique", defaultValue: true },
       { formKey: "canAccessTickets", label: "Page Situation", defaultValue: true },
       { formKey: "canAccessModifications", label: "Page Modifications", defaultValue: false },
@@ -110,9 +103,7 @@ export function dbUserToFormUser(dbUser) {
   };
   Object.entries(PERMISSION_DB_TO_FORM).forEach(([dbKey, formKey]) => {
     const value = dbUser[dbKey];
-    if (dbKey === "can_access_activity_prices") {
-      form[formKey] = value === true;
-    } else if (dbKey.startsWith("can_access_")) {
+    if (dbKey.startsWith("can_access_")) {
       form[formKey] = value !== false;
     } else {
       form[formKey] = Boolean(value);
@@ -213,7 +204,6 @@ export function dbUserToSessionUser(dbUser) {
   session.canAccessModifications = Boolean(dbUser.can_access_modifications);
   session.canAccessSituation = Boolean(dbUser.can_access_situation);
   session.canAccessUsers = Boolean(dbUser.can_access_users);
-  session.canAccessActivityPrices = dbUser.can_access_activity_prices === true;
   session.canDeleteQuote = Boolean(dbUser.can_delete_quote);
   session.canAddActivity = Boolean(dbUser.can_add_activity);
   session.canEditActivity = Boolean(dbUser.can_edit_activity);

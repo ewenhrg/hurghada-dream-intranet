@@ -148,6 +148,9 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
               Confidentialité
             </Link>
           </nav>
+          <p className="text-center text-xs leading-relaxed text-catalog-muted">
+            © {new Date().getFullYear()} Hurghada Dream. Tous droits réservés.
+          </p>
         </div>
       </footer>
     </div>

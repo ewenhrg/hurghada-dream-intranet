@@ -11,6 +11,7 @@ import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../ui";
 import { toast } from "../../utils/toast.js";
 import { logger } from "../../utils/logger";
 import { requestClientStayPush } from "../../utils/clientStayPush";
+import { itemWithPickupSchedule } from "../../utils/pickupSchedule";
 
 function toInt(value, fallback = 0) {
   const n = Number(value);
@@ -136,12 +137,12 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
 
       const originalItem = quote.items[itemIndex];
       const enteredAt = originalItem.ticketsEnteredAt || new Date().toISOString();
+      const pickupPatch = itemWithPickupSchedule(originalItem, pickup);
       const patchedItem = {
         ...originalItem,
+        ...(pickupPatch || {}),
         ticketNumber: nextTicket,
         date: date || "",
-        pickupTime: String(pickup || "").trim(),
-        pickupPublished: Boolean(String(pickup || "").trim()),
         paymentMethod: paymentMethod || "",
         lineTotal: nextLineTotal,
         ticketsEnteredAt: enteredAt,
@@ -232,7 +233,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
         toast.success(`Ticket ${nextTicket} mis à jour.`);
       }
 
-      void requestClientStayPush(updatedQuote.client?.phone);
+      if (!pickupPatch) void requestClientStayPush(updatedQuote.client?.phone);
       onClose?.();
     } catch (err) {
       logger.error("Erreur sauvegarde ticket:", err);
