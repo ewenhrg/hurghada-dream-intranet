@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS public.ticket_allocations (
   site_key TEXT NOT NULL,
   ticket_number TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('held', 'assigned', 'released')),
+  status TEXT NOT NULL CHECK (status IN ('held', 'assigned', 'released', 'void')),
   quote_id BIGINT NULL,
   item_index INT NULL,
   held_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

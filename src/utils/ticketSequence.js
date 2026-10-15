@@ -481,6 +481,29 @@ export async function confirmTicketAllocations(supabase, ticketNumbers, quoteId 
 }
 
 /**
+ * Brûle des n° annulés. Ils ne reviennent jamais dans le pool.
+ * @returns {{ ok: boolean, voided?: number, error?: Error }}
+ */
+export async function voidTicketAllocations(supabase, ticketNumbers) {
+  const numbers = [...(ticketNumbers || [])].map((x) => String(x || "").trim()).filter(Boolean);
+  if (!supabase || numbers.length === 0) return { ok: true, voided: 0 };
+  try {
+    const { data, error } = await supabase.rpc("void_ticket_allocations", {
+      p_site_key: SITE_KEY,
+      p_numbers: numbers,
+    });
+    if (error) {
+      logger.warn("void_ticket_allocations:", error);
+      return { ok: false, voided: 0, error };
+    }
+    return { ok: true, voided: Number(data?.voided) || 0, error: null };
+  } catch (err) {
+    logger.warn("void_ticket_allocations exception:", err);
+    return { ok: false, voided: 0, error: err };
+  }
+}
+
+/**
  * Remet des n° dans le pool (released) pour réutilisation — suppression / échec sync.
  */
 export async function releaseTicketAllocations(supabase, ticketNumbers) {

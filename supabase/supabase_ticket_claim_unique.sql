@@ -86,6 +86,16 @@ BEGIN
       CONTINUE;
     END IF;
 
+    IF EXISTS (
+      SELECT 1 FROM public.ticket_allocations ta
+      WHERE ta.site_key = v_site
+        AND lower(ta.ticket_number) = v_key
+        AND ta.status = 'void'
+    ) THEN
+      v_conflicts := array_append(v_conflicts, n || ' (annulé, numéro mort)');
+      CONTINUE;
+    END IF;
+
     -- Aussi bloquer si le registre dit assigned à un autre devis
     IF EXISTS (
       SELECT 1 FROM public.ticket_allocations ta
@@ -119,10 +129,13 @@ BEGIN
       released_at = NULL,
       updated_at = NOW()
     WHERE
-      public.ticket_allocations.status <> 'assigned'
-      OR public.ticket_allocations.quote_id IS NULL
-      OR p_quote_id IS NULL
-      OR public.ticket_allocations.quote_id = p_quote_id;
+      public.ticket_allocations.status <> 'void'
+      AND (
+        public.ticket_allocations.status <> 'assigned'
+        OR public.ticket_allocations.quote_id IS NULL
+        OR p_quote_id IS NULL
+        OR public.ticket_allocations.quote_id = p_quote_id
+      );
 
     IF NOT EXISTS (
       SELECT 1 FROM public.ticket_allocations
@@ -136,7 +149,7 @@ BEGIN
       -- Assure quote_id
       UPDATE public.ticket_allocations
       SET quote_id = COALESCE(p_quote_id, quote_id), status = 'assigned', assigned_at = COALESCE(assigned_at, NOW()), released_at = NULL, updated_at = NOW()
-      WHERE site_key = v_site AND lower(ticket_number) = v_key;
+      WHERE site_key = v_site AND lower(ticket_number) = v_key AND status <> 'void';
       v_claimed := array_append(v_claimed, trim(n));
     END IF;
   END LOOP;

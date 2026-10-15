@@ -121,6 +121,10 @@ BEGIN
     AND lower(ta.ticket_number) = lower(v_num)
   FOR UPDATE;
 
+  IF v_status = 'void' THEN
+    RETURN false;
+  END IF;
+
   IF v_status = 'released' THEN
     UPDATE public.ticket_allocations
     SET
@@ -196,9 +200,12 @@ BEGIN
         released_at = NULL,
         updated_at = NOW()
       WHERE
-        public.ticket_allocations.status <> 'assigned'
-        OR public.ticket_allocations.quote_id IS NULL
-        OR public.ticket_allocations.quote_id = v_id;
+        public.ticket_allocations.status <> 'void'
+        AND (
+          public.ticket_allocations.status <> 'assigned'
+          OR public.ticket_allocations.quote_id IS NULL
+          OR public.ticket_allocations.quote_id = v_id
+        );
     END LOOP;
   END IF;
 

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { SITE_KEY } from "../constants";
 import { supabase } from "../lib/supabase";
-import { currencyNoCents, formatPhoneWithPlus, saveQuotesCache } from "../utils";
-import { findTicketNumberConflict } from "../utils/ticketCollections";
-import { claimTicketNumbersForQuote, releaseTicketAllocations } from "../utils/ticketSequence";
+import { calculateCardPrice, currencyNoCents, formatPhoneWithPlus, saveQuotesCache } from "../utils";
+import { computePaidColumnsFromItems, findTicketNumberConflict } from "../utils/ticketCollections";
+import { claimTicketNumbersForQuote, releaseTicketAllocations, voidTicketAllocations } from "../utils/ticketSequence";
 import { itemWithPickupSchedule, visiblePickupTime } from "../utils/pickupSchedule";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
@@ -39,6 +39,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [deadNote, setDeadNote] = useState("");
 
   const activityOptions = useMemo(() => {
     const list = [...(activities || [])].filter((activity) => activity?.name);
@@ -66,15 +67,27 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
     });
   };
 
-  const search = () => {
+  const search = async () => {
     const found = findTicketLine(quotes, query);
     setSearched(true);
-    if (!found) {
-      setMatch(null);
-      setForm(null);
+    setDeadNote("");
+    if (found) {
+      fillForm(found);
       return;
     }
-    fillForm(found);
+    setMatch(null);
+    setForm(null);
+    const needle = String(query || "").trim();
+    if (!needle || !supabase) return;
+    const { data } = await supabase
+      .from("ticket_allocations")
+      .select("status, ticket_number")
+      .eq("site_key", SITE_KEY)
+      .ilike("ticket_number", needle)
+      .maybeSingle();
+    if (data?.status === "void") {
+      setDeadNote(`Le ticket ${data.ticket_number} a été annulé. Ce numéro est mort et ne sera plus jamais redonné.`);
+    }
   };
 
   const setField = (key, value) => {
@@ -203,6 +216,92 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
     }
   };
 
+  const cancelActivity = async () => {
+    if (!match || saving || typeof setQuotes !== "function") return;
+    const quote = (quotes || []).find((item) => String(item.id) === String(match.quote.id)) || match.quote;
+    const original = quote.items?.[match.itemIndex];
+    const ticket = String(original?.ticketNumber || "").trim();
+    if (!original || !ticket) {
+      toast.error("Ce ticket n’est plus dans le devis.");
+      return;
+    }
+    const activity = String(original.activityName || "cette activité").trim();
+    const confirmed = window.confirm(
+      `Annuler le ticket ${ticket} (${activity}) ?\n\nL’activité disparaît de Situation, Transferts et Mon séjour. Le numéro ${ticket} est mort : il ne sera plus jamais redonné.`
+    );
+    if (!confirmed) return;
+
+    const previous = quotes;
+    const nextItems = quote.items.filter((_, index) => index !== match.itemIndex);
+    const nextTotal = nextItems.reduce((sum, item) => sum + (Math.round(Number(item.lineTotal) || 0)), 0);
+    const { paidCash, paidStripe } = computePaidColumnsFromItems(nextItems);
+    const updatedQuote = {
+      ...quote,
+      items: nextItems,
+      total: nextTotal,
+      totalCash: nextTotal,
+      totalCard: calculateCardPrice(nextTotal),
+      paidCash,
+      paidStripe,
+      updated_at: new Date().toISOString(),
+    };
+    const nextQuotes = quotes.map((item) => (String(item.id) === String(quote.id) ? updatedQuote : item));
+    const quoteDbId = quote.supabase_id != null ? Number(quote.supabase_id) : null;
+    setSaving(true);
+    try {
+      if (supabase) {
+        const burned = await voidTicketAllocations(supabase, [ticket]);
+        if (!burned.ok) {
+          toast.error("Impossible de brûler ce numéro. L’activité n’a pas été annulée.");
+          return;
+        }
+      }
+
+      setQuotes(nextQuotes);
+      saveQuotesCache(nextQuotes);
+
+      if (supabase) {
+        const payload = {
+          total: updatedQuote.total,
+          paid_cash: paidCash,
+          paid_stripe: paidStripe,
+          items: nextItems,
+          updated_at: updatedQuote.updated_at,
+        };
+        let updateQuery = supabase.from("quotes").update(payload).eq("site_key", SITE_KEY);
+        if (quote.supabase_id) updateQuery = updateQuery.eq("id", quote.supabase_id);
+        else updateQuery = updateQuery.eq("client_phone", quote.client?.phone || "").eq("created_at", quote.createdAt);
+        const { error } = await updateQuery;
+        if (error) {
+          logger.error("Annulation ticket:", error);
+          setQuotes(previous);
+          saveQuotesCache(previous);
+          await supabase
+            .from("ticket_allocations")
+            .update({
+              status: "assigned",
+              quote_id: quoteDbId,
+              released_at: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("site_key", SITE_KEY)
+            .eq("ticket_number", ticket);
+          toast.error("L’annulation n’a pas été enregistrée.");
+          return;
+        }
+      }
+
+      setMatch(null);
+      setForm(null);
+      setQuery("");
+      setSearched(true);
+      setDeadNote(`Le ticket ${ticket} est annulé. Ce numéro est mort et ne sera plus jamais redonné.`);
+      toast.success(`Ticket ${ticket} annulé. Le numéro ne sera plus réutilisé.`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const hotel = String(match?.quote?.client?.hotel || "").trim();
   const price = Math.round(Number(match?.item?.lineTotal) || 0);
   const currency = match?.quote?.currency || "EUR";
@@ -236,7 +335,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
 
       {searched && !form ? (
         <p className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-600">
-          Aucun ticket ne correspond à ce numéro.
+          {deadNote || "Aucun ticket ne correspond à ce numéro."}
         </p>
       ) : null}
 
@@ -371,13 +470,28 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
             </label>
           </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="h-12 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-60"
-          >
-            {saving ? "Enregistrement…" : "Enregistrer la modification"}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              disabled={saving}
+              className="h-12 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-60"
+            >
+              {saving ? "Enregistrement…" : "Enregistrer la modification"}
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => {
+                void cancelActivity();
+              }}
+              className="h-12 rounded-xl bg-rose-600 px-5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-60"
+            >
+              Annuler cette activité
+            </button>
+          </div>
+          <p className="text-xs leading-relaxed text-rose-700">
+            L’annulation retire l’activité de Situation, Transferts et Mon séjour. Le numéro de ticket reste mort : il n’est plus jamais redonné.
+          </p>
         </form>
       ) : null}
     </div>
