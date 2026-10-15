@@ -217,3 +217,10 @@ export function formatStaffPickupLabel(item) {
   if (slot && time) return `${slot} · ${time}`;
   return time || slot;
 }
+
+/** Ticket client : rien, sauf le créneau choisi quand l’activité a plusieurs heures. */
+export function formatTicketPickupLabel(item) {
+  const hasSlot = Boolean(STAFF_PICKUP_SLOT_LABELS[String(item?.slot || "").trim()]);
+  if (!item?.staffPickup && !hasSlot) return "";
+  return formatStaffPickupLabel({ ...item, staffPickup: true });
+}

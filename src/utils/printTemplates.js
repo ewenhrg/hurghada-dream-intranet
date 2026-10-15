@@ -28,6 +28,7 @@ import {
   calculatePrivateTransferSurchargeFromItem,
   getPrivateTransferLabel,
   formatStaffPickupLabel,
+  formatTicketPickupLabel,
 } from "./transferPricing.js";
 import {
   currencyNoCents,
@@ -788,10 +789,8 @@ export function generateTicketsHTML(quote, options = {}) {
       }
       const paxTotal = (cells.adults || 0) + (cells.children || 0) + (cells.babies || 0);
 
-      const staffPickup = formatStaffPickupLabel(item);
-      const pickup = staffPickup
-        ? esc(staffPickup)
-        : "La veille";
+      const pickupText = formatTicketPickupLabel(item);
+      const pickup = pickupText ? esc(pickupText) : "";
 
       const priceText = esc(formatTicketPriceDisplay(item));
       const extraLines = formatTicketExtraLines(item);
