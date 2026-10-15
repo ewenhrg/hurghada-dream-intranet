@@ -335,6 +335,12 @@ function PublicStayPageLive() {
   const nextDay = days.find((day) => day.key !== "sans-date" && day.key >= today) || null;
   const nextItem = nextDay?.items[0] || null;
   const activityCount = (stay?.items || []).length;
+  const pickupStillPending = days.some(
+    (day) =>
+      day.key !== "sans-date" &&
+      day.key >= today &&
+      day.items.some((item) => !String(item.pickupTime || "").trim())
+  );
 
   return (
     <PublicAppShell
@@ -534,6 +540,13 @@ function PublicStayPageLive() {
               </section>
             ) : null}
 
+            {pickupStillPending ? (
+              <p data-reveal="item" className="mt-4 flex items-start gap-3 rounded-[1rem] bg-catalog-brassSoft px-4 py-3.5 text-sm leading-relaxed text-catalog-body">
+                <Clock className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+                L’heure de prise en charge précise est mise à jour la veille de l’excursion, en fin de journée.
+              </p>
+            ) : null}
+
             {/* ——— Alertes ——— */}
             <div className="mt-4 space-y-3">
               {programUpdated ? (
@@ -671,7 +684,7 @@ function PublicStayPageLive() {
                                   >
                                     <Clock className="h-3.5 w-3.5 opacity-80" aria-hidden />
                                     <span className={`mt-1 tabular-nums ${pickup ? "font-catalog-display text-[1.5rem] leading-none" : "text-[0.6875rem] font-semibold"}`}>
-                                      {pickup || "À confirmer"}
+                                      {pickup || "La veille"}
                                     </span>
                                     <span className="mt-1 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] opacity-80">Prise en charge</span>
                                   </div>
