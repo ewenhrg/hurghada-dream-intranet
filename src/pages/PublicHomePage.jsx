@@ -14,6 +14,7 @@ import {
   MapPin,
   Phone,
   Sun,
+  Ticket,
 } from "lucide-react";
 import { HomeReviewsMarquee } from "../components/public/HomeReviewsMarquee";
 import { fetchInstagramReels, InstagramReelsRail, readCachedReels } from "../components/public/InstagramReelsRail";
@@ -28,6 +29,7 @@ import {
   useHeroArrival,
 } from "../components/public/motion";
 import { useHurghadaWeather } from "../hooks/useHurghadaWeather";
+import { normalizeReservationCode, saveStayCode } from "../utils/clientStay";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
 
 const AGENCY_WHATSAPP_URL = "https://wa.me/201062002850?text=Bonjour%20Hurghada%20Dream%2C%20";
@@ -111,6 +113,12 @@ function HeroReel({ reel, active, eager }) {
   );
 }
 
+function reservationCodeFromInput(raw) {
+  const compact = normalizeReservationCode(raw).replace(/-/g, "");
+  const match = compact.match(/^([A-Z]{2})(\d{3,})$/);
+  return match ? `${match[1]}-${match[2]}` : normalizeReservationCode(raw);
+}
+
 function greeting() {
   const h = new Date().getHours();
   return h < 5 || h >= 18 ? "Bonsoir" : "Bonjour";
@@ -154,6 +162,8 @@ export function PublicHomePage() {
   const [reelsSettled, setReelsSettled] = useState(() => playableReels(readCachedReels()).length >= 3);
   const weather = useHurghadaWeather();
   const hello = useMemo(() => greeting(), []);
+  const [stayCode, setStayCode] = useState("");
+  const [stayCodeError, setStayCodeError] = useState("");
   const heroRef = useRef(null);
   const heroScrollRef = useRef(null);
   const railRef = useRef(null);
@@ -472,6 +482,54 @@ export function PublicHomePage() {
                 Équipe française 7j/7
               </GlassChip>
             </div>
+            <form
+              className="pointer-events-auto mt-5 max-w-md"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const formatted = reservationCodeFromInput(stayCode);
+                if (!/^[A-Z]{2}-\d{3,}$/.test(formatted)) {
+                  setStayCodeError("Exemple : HU-10042");
+                  return;
+                }
+                setStayCodeError("");
+                saveStayCode(formatted);
+                navigate("/sejour");
+              }}
+            >
+              <label className="block text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-white/80">
+                Numéro de réservation
+              </label>
+              <div className="mt-2 flex gap-2">
+                <span className="relative min-w-0 flex-1">
+                  <Ticket className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-catalog-lagoon" aria-hidden />
+                  <input
+                    type="text"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={stayCode}
+                    onChange={(event) => {
+                      setStayCode(normalizeReservationCode(event.target.value));
+                      setStayCodeError("");
+                    }}
+                    placeholder="HU-10042"
+                    aria-label="Numéro de réservation"
+                    className="h-12 w-full rounded-full border border-white/30 bg-white/95 pl-10 pr-4 text-base font-semibold uppercase tracking-wide text-catalog-ink outline-none placeholder:font-medium placeholder:normal-case placeholder:tracking-normal placeholder:text-catalog-muted focus:border-white"
+                  />
+                </span>
+                <button
+                  type="submit"
+                  data-press
+                  className="inline-flex h-12 shrink-0 items-center rounded-full bg-catalog-sand px-4 text-sm font-semibold text-catalog-abyss"
+                >
+                  Voir
+                </button>
+              </div>
+              <p className={`mt-2 text-xs ${stayCodeError ? "text-catalog-sand" : "text-white/75"}`} role={stayCodeError ? "alert" : undefined}>
+                {stayCodeError || "Remis au paiement du devis. Ouvre Mon séjour."}
+              </p>
+            </form>
             </div>
           </div>
         </div>
