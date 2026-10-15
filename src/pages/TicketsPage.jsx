@@ -68,8 +68,8 @@ const EXPORT_HEADERS = [
   "Vendeur",
 ];
 
-/** Colonnes tableau Situation (✓ + 16 données). */
-const COL_COUNT = 17;
+/** Colonnes tableau Situation (✓ + 15 données). */
+const COL_COUNT = 16;
 
 /** Pagination : évite de monter des milliers de lignes d’un coup. */
 const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
@@ -1239,9 +1239,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                 <col style={{ width: "2.5%" }} />
                 <col style={{ width: "2.5%" }} />
                 <col style={{ width: "2.5%" }} />
-                <col style={{ width: "11%" }} />
-                <col style={{ width: "5%" }} />
-                <col style={{ width: "3%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "9%" }} />
                 <col style={{ width: "7.5%" }} />
                 <col style={{ width: "6%" }} />
                 <col style={{ width: "4%" }} />
@@ -1280,15 +1279,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                   <th scope="col" className={TH_BASE} title="Activité + extras">
                     Activité
                   </th>
-                  <th scope="col" className={TH_BASE} title="Prise en charge">
+                  <th scope="col" className={`${TH_BASE} !bg-teal-700`} title="Heure, et case Marina s’il n’y a pas de transfert">
                     Heure
-                  </th>
-                  <th
-                    scope="col"
-                    className={`${TH_BASE} !bg-teal-700`}
-                    title="Cocher s’il n’y a pas de transfert : le client se rend à la marina de son hôtel"
-                  >
-                    Marina
                   </th>
                   <th scope="col" className={`${TH_BASE} !bg-amber-600`} title="Reste, transfert privé, réductions, pointures palmes">
                     Comment
@@ -1448,33 +1440,34 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                       <td className={`${TD} truncate font-semibold text-slate-800`} title={r.activity}>
                         {r.activity}
                       </td>
-                      <td className={`${TD} text-center`} title="Heure communiquée au client la veille">
-                        <input
-                          type="text"
-                          inputMode="text"
-                          value={pickupDrafts[r.key] ?? r.pickup}
-                          placeholder="08:30"
-                          disabled={savingPickupKey === r.key || typeof setQuotes !== "function"}
-                          aria-label={`Heure de prise en charge ${r.ticketNumber}`}
-                          onChange={(e) =>
-                            setPickupDrafts((prev) => ({ ...prev, [r.key]: e.target.value }))
-                          }
-                          onBlur={(e) => void commitPickup(r, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") e.currentTarget.blur();
-                          }}
-                          className="w-full min-w-0 rounded-md border border-violet-200 bg-white/80 px-1 py-0.5 text-center text-[10px] font-bold text-violet-900 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400 disabled:opacity-60"
-                        />
-                      </td>
-                      <td className={`${TD} text-center`} title="Pas de transfert : marina de l’hôtel">
-                        <input
-                          type="checkbox"
-                          checked={r.meetAtHotelMarina}
-                          disabled={savingMarinaKey === r.key || typeof setQuotes !== "function"}
-                          aria-label={`Sans transfert, marina de l’hôtel, ${r.ticketNumber}`}
-                          onChange={(event) => void commitMarina(r, event.target.checked)}
-                          className="size-4 accent-teal-700 disabled:opacity-60"
-                        />
+                      <td className={`${TD} !overflow-visible text-center`} title="Heure, et case si le client va à la marina de son hôtel">
+                        <div className="flex items-center justify-center gap-1">
+                          <input
+                            type="text"
+                            inputMode="text"
+                            value={pickupDrafts[r.key] ?? r.pickup}
+                            placeholder="08:30"
+                            disabled={savingPickupKey === r.key || typeof setQuotes !== "function"}
+                            aria-label={`Heure de prise en charge ${r.ticketNumber}`}
+                            onChange={(e) =>
+                              setPickupDrafts((prev) => ({ ...prev, [r.key]: e.target.value }))
+                            }
+                            onBlur={(e) => void commitPickup(r, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") e.currentTarget.blur();
+                            }}
+                            className="min-w-0 flex-1 rounded-md border border-violet-200 bg-white/80 px-1 py-0.5 text-center text-[10px] font-bold text-violet-900 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400 disabled:opacity-60"
+                          />
+                          <input
+                            type="checkbox"
+                            checked={r.meetAtHotelMarina}
+                            disabled={savingMarinaKey === r.key || typeof setQuotes !== "function"}
+                            aria-label={`Sans transfert, marina de l’hôtel, ${r.ticketNumber}`}
+                            title="Pas de transfert : le client se rend à la marina de son hôtel"
+                            onChange={(event) => void commitMarina(r, event.target.checked)}
+                            className="size-5 shrink-0 accent-teal-700 disabled:opacity-60"
+                          />
+                        </div>
                       </td>
                       <td
                         className={`${TD} truncate text-center font-bold text-amber-900`}

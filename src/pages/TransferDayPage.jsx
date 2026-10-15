@@ -67,6 +67,7 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
   const [day, setDay] = useState(tomorrowKey);
   const [drafts, setDrafts] = useState({});
   const [savingKey, setSavingKey] = useState("");
+  const [savingMarinaKey, setSavingMarinaKey] = useState("");
   const [sending, setSending] = useState(false);
   const isTomorrow = day === tomorrowKey();
 
@@ -96,6 +97,7 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
           activityName: activityName || "Activité",
           pax: paxLabel(item),
           pickup: visiblePickupTime(item),
+          meetAtHotelMarina: item.meetAtHotelMarina === true,
           notifyPending: pickupAwaitingNotify(item),
         });
       });
@@ -172,6 +174,38 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
       });
     } finally {
       setSavingKey("");
+    }
+  }, [quotes, setQuotes]);
+
+  const commitMarina = useCallback(async (row, checked) => {
+    if (typeof setQuotes !== "function") return;
+    const quote = (quotes || []).find((item) => String(item.id) === String(row.quoteId));
+    const currentItem = quote?.items?.[row.itemIndex];
+    if (!quote || !currentItem) return;
+    if (Boolean(currentItem.meetAtHotelMarina) === checked) return;
+    const items = quote.items.map((item, idx) =>
+      idx === row.itemIndex ? { ...item, meetAtHotelMarina: checked } : item
+    );
+    const updatedQuote = { ...quote, items, updated_at: new Date().toISOString() };
+    const previous = quotes;
+    const nextQuotes = quotes.map((item) => (String(item.id) === String(quote.id) ? updatedQuote : item));
+    setQuotes(nextQuotes);
+    saveQuotesCache(nextQuotes);
+    setSavingMarinaKey(row.key);
+    try {
+      if (supabase) {
+        const { ok, error } = await persistQuoteItemsToSupabase(quote, items, {
+          updatedAt: updatedQuote.updated_at,
+          notifyStay: false,
+        });
+        if (!ok) {
+          setQuotes(previous);
+          saveQuotesCache(previous);
+          toast.error(error?.message || "Case marina non enregistrée.");
+        }
+      }
+    } finally {
+      setSavingMarinaKey("");
     }
   }, [quotes, setQuotes]);
 
@@ -360,6 +394,17 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
                                 }}
                                 className="h-11 w-[8.5rem] rounded-xl border border-violet-300 bg-white px-2 text-center text-base font-bold text-violet-950 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-300 disabled:opacity-60"
                               />
+                              <label className="inline-flex items-center gap-1.5 rounded-xl bg-teal-50 px-2 py-1 text-xs font-bold text-teal-900 ring-1 ring-teal-200">
+                                <input
+                                  type="checkbox"
+                                  checked={row.meetAtHotelMarina}
+                                  disabled={sending || savingMarinaKey === row.key || typeof setQuotes !== "function"}
+                                  aria-label={`Sans transfert, marina de l’hôtel, ${row.clientName || row.ticketNumber}`}
+                                  onChange={(event) => void commitMarina(row, event.target.checked)}
+                                  className="size-5 accent-teal-700 disabled:opacity-60"
+                                />
+                                Marina
+                              </label>
                               {row.notifyPending ? (
                                 <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-900">
                                   À envoyer
