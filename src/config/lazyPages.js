@@ -27,10 +27,9 @@ export const UsersPage = lazyWithRetry(() =>
 export const HotelsPage = lazyWithRetry(() =>
   import("../pages/HotelsPage").then((module) => ({ default: module.HotelsPage }))
 );
-// Page Modifications désactivée temporairement
-// export const ModificationsPage = lazyWithRetry(() =>
-//   import("../pages/ModificationsPage").then((module) => ({ default: module.ModificationsPage }))
-// );
+export const ModificationsPage = lazyWithRetry(() =>
+  import("../pages/TicketModificationPage").then((module) => ({ default: module.TicketModificationPage }))
+);
 export const SituationPage = lazyWithRetry(() =>
   import("../pages/TransferDayPage").then((module) => ({ default: module.TransferDayPage }))
 );

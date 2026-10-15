@@ -24,6 +24,7 @@ import {
   QuotesPage,
   HistoryPage,
   TicketsPage,
+  ModificationsPage,
   UsersPage,
   HotelsPage,
   SITUATION_PAGE_STANDBY,
@@ -1385,12 +1386,11 @@ export default function App() {
                   Hotel history
                 </Pill>
                 )}
-                {/* Page Modifications désactivée temporairement */}
-                {/* {(user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
+                {user?.canAccessHistory !== false && (
                   <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
                     {t("nav.modifications")}
                   </Pill>
-                )} */}
+                )}
                 {!SITUATION_PAGE_STANDBY && (
                   <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
                     📱 {t("nav.situation")}
@@ -1577,15 +1577,14 @@ export default function App() {
           </Section>
         )}
 
-        {/* Page Modifications désactivée temporairement */}
-        {/* {tab === "modifications" && (user?.canAccessModifications || user?.name === "Ewen" || user?.name === "Léa") && (
+        {tab === "modifications" && user?.canAccessHistory !== false && (
           <Section
             title={t("page.modifications.title")}
             subtitle={t("page.modifications.subtitle")}
           >
             <ModificationsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
           </Section>
-        )} */}
+        )}
 
         {!SITUATION_PAGE_STANDBY && tab === "situation" && (
           <SituationPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
