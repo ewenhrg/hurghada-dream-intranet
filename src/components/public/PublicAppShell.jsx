@@ -147,6 +147,9 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
             <Link to="/confidentialite" data-press className="min-h-11 inline-flex items-center">
               Confidentialité
             </Link>
+            <Link to="/b2b" data-press className="min-h-11 inline-flex items-center">
+              Espace agences
+            </Link>
           </nav>
           <p className="text-center text-xs leading-relaxed text-catalog-muted">
             © {new Date().getFullYear()} Hurghada Dream. Tous droits réservés.

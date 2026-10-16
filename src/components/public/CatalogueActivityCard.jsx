@@ -28,6 +28,14 @@ function cleanLine(line) {
     .trim();
 }
 
+function hideMoney(text) {
+  return String(text || "")
+    .replace(/\s*[–—-]?\s*\d[\d\s.,]*\s*(?:€|eur)(?:\s*\/\s*\p{L}+|\s+par\s+\p{L}+)?/giu, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.;])/g, "$1")
+    .trim();
+}
+
 function isShouting(line) {
   const letters = line.replace(/[^\p{L}]/gu, "");
   return letters.length > 0 && letters === letters.toUpperCase();
@@ -48,26 +56,32 @@ function teaser(text, name) {
  * Carte d’excursion du catalogue client : vrai lien (clic molette, partage), photo 4/3
  * révélée au scroll, prix « à partir de » et jours de départ issus des données de l’activité.
  */
-export function CatalogueActivityCard({ activity, categoryKey, coverUrl, fromPrice, prose, priority = false }) {
+export function CatalogueActivityCard({
+  activity,
+  categoryKey,
+  coverUrl,
+  fromPrice,
+  prose,
+  priority = false,
+  onAdd,
+  ctaLabel = "Découvrir",
+}) {
+  const quoteOnly = typeof onAdd === "function";
   const href = `/catalogue/activity/${encodeURIComponent(String(activity.id))}`;
-  const name = displayActivityName(activity.name) || "Activité";
+  const rawName = displayActivityName(activity.name) || "Activité";
+  const name = quoteOnly ? hideMoney(rawName) || rawName : rawName;
   const days = formatDepartureDays(activity);
-  const hook = teaser(prose, name);
-  const hasPrice = fromPrice != null && fromPrice > 0;
+  const hook = quoteOnly ? hideMoney(teaser(prose, rawName)) : teaser(prose, rawName);
+  const hasPrice = !quoteOnly && fromPrice != null && fromPrice > 0;
 
   const onClick = (event) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     startPhotoFlight(event.currentTarget.querySelector("[data-card-media] img"));
   };
 
-  return (
-    <Link
-      to={href}
-      onClick={onClick}
-      data-reveal="card"
-      data-press
-      className="hdc-excursion group flex h-full flex-col overflow-hidden rounded-[1.25rem] bg-white"
-    >
+  const shellClass = "hdc-excursion group flex h-full w-full flex-col overflow-hidden rounded-[1.25rem] bg-white text-left";
+  const inner = (
+    <>
       <div data-card-media className="relative aspect-[4/3] w-full overflow-hidden bg-catalog-mist">
         {coverUrl ? (
           <img
@@ -120,17 +134,33 @@ export function CatalogueActivityCard({ activity, categoryKey, coverUrl, fromPri
               </>
             ) : (
               <>
-                <span className="block text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-catalog-muted">Tarif</span>
+                <span className="block text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-catalog-muted">
+                  {quoteOnly ? "Tarif professionnel" : "Tarif"}
+                </span>
                 <span className="mt-0.5 block text-base font-semibold leading-none text-catalog-brass">Sur devis</span>
               </>
             )}
           </div>
           <span className="hdc-excursion-cta inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full pl-4 pr-3 text-sm font-semibold">
-            Découvrir
+            {ctaLabel}
             <ArrowUpRight className="h-4 w-4" aria-hidden />
           </span>
         </div>
       </div>
+    </>
+  );
+
+  if (quoteOnly) {
+    return (
+      <button type="button" onClick={() => onAdd(activity)} data-reveal="card" data-press className={shellClass}>
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <Link to={href} onClick={onClick} data-reveal="card" data-press className={shellClass}>
+      {inner}
     </Link>
   );
 }

@@ -61,6 +61,12 @@ export const EwenDashboardPage = lazyWithRetry(() =>
 export const PublicDevisPage = lazyWithRetry(() =>
   import("../pages/PublicDevisPage").then((m) => ({ default: m.PublicDevisPage }))
 );
+export const B2BAccessPage = lazyWithRetry(() =>
+  import("../pages/B2BAccessPage").then((m) => ({ default: m.B2BAccessPage }))
+);
+export const B2BQuotesPage = lazyWithRetry(() =>
+  import("../pages/B2BQuotesPage").then((m) => ({ default: m.B2BQuotesPage }))
+);
 export const PublicHotelsAdminPage = lazyWithRetry(() =>
   import("../pages/PublicHotelsAdminPage").then((m) => ({ default: m.PublicHotelsAdminPage }))
 );

@@ -20,6 +20,7 @@ import {
   PublicHotelRequestPage,
   PublicHotelsCataloguePage,
   PublicHotelDetailPage,
+  PublicB2BPage,
 } from "./config/lazyPublicPages";
 
 function PublicClientPage() {
@@ -47,6 +48,9 @@ function PublicClientPage() {
     pathname === "/mon-sejour/"
   ) {
     return <PublicStayPage />;
+  }
+  if (pathname === "/b2b" || pathname === "/b2b/") {
+    return <PublicB2BPage />;
   }
   if (pathname === "/tarifs" || pathname === "/tarifs/") {
     return <PublicTarifsPage />;

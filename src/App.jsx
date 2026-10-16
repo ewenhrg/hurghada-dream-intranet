@@ -35,6 +35,8 @@ import {
   StayBroadcastPage,
   EwenDashboardPage,
   PublicDevisPage,
+  B2BAccessPage,
+  B2BQuotesPage,
   PublicHotelsAdminPage,
   HotelHistoryPage,
   HotelTarifsPage,
@@ -1367,6 +1369,16 @@ export default function App() {
                 </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
+                <Pill active={tab === "b2b-access"} onClick={() => setTab("b2b-access")}>
+                  Accès B2B
+                </Pill>
+                )}
+                {user?.canAccessHistory !== false && (
+                <Pill active={tab === "b2b-quotes"} onClick={() => setTab("b2b-quotes")}>
+                  Devis B2B
+                </Pill>
+                )}
+                {user?.canAccessHistory !== false && (
                 <Pill active={tab === "public-devis"} onClick={() => setTab("public-devis")}>
                   <span className="inline-flex items-center gap-1.5">
                     {t("nav.publicDevis")}
@@ -1568,6 +1580,18 @@ export default function App() {
         {tab === "public-devis" && user?.canAccessHistory !== false && (
           <Section title={t("page.publicDevis.title")} subtitle={t("page.publicDevis.subtitle")}>
             <PublicDevisPage user={user} />
+          </Section>
+        )}
+
+        {tab === "b2b-access" && user?.canAccessHistory !== false && (
+          <Section title="Accès B2B" subtitle="Demandes d’identifiant et comptes agences.">
+            <B2BAccessPage />
+          </Section>
+        )}
+
+        {tab === "b2b-quotes" && user?.canAccessHistory !== false && (
+          <Section title="Devis B2B" subtitle="Demandes envoyées par les agences, sans prix affiché.">
+            <B2BQuotesPage />
           </Section>
         )}
 
