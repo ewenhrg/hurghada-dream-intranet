@@ -29,10 +29,10 @@ import { logger } from "../utils/logger";
 import { formatPhoneWithPlus } from "../utils";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 import {
-  CATALOGUE_STAY_SAME_DAY_MESSAGE,
+  CATALOGUE_STAY_MIN_SPAN_MESSAGE,
   formatCatalogueStaySummary,
   getMinDepartureDate,
-  isSameDayCatalogueStay,
+  isCatalogueStayTooShort,
   isValidCatalogueStay,
   loadPublicCatalogueStay,
   PUBLIC_CATALOGUE_STAY_EVENT,
@@ -578,12 +578,12 @@ export function PublicClientDevisPage() {
       setError("La date de fin de séjour (départ) est obligatoire.");
       return;
     }
-    if (arrival === departure) {
-      setError(CATALOGUE_STAY_SAME_DAY_MESSAGE);
-      return;
-    }
     if (arrival > departure) {
       setError("La date de départ doit être après la date d’arrivée.");
+      return;
+    }
+    if (isCatalogueStayTooShort({ arrivalDate: arrival, departureDate: departure })) {
+      setError(CATALOGUE_STAY_MIN_SPAN_MESSAGE);
       return;
     }
 
@@ -1413,9 +1413,9 @@ export function PublicClientDevisPage() {
                   />
                 </label>
               </div>
-              {isSameDayCatalogueStay(client) ? (
+              {isCatalogueStayTooShort(client) ? (
                 <p className="rounded-2xl bg-catalog-brassSoft px-4 py-3 text-xs font-semibold leading-relaxed text-catalog-ink">
-                  {CATALOGUE_STAY_SAME_DAY_MESSAGE}
+                  {CATALOGUE_STAY_MIN_SPAN_MESSAGE}
                 </p>
               ) : null}
 

@@ -5,9 +5,9 @@ import { ArrowLeft, ArrowRight, CalendarDays, Info, X } from "lucide-react";
 import { Sheet, SheetFooter } from "./PublicUI";
 import { getEarliestBookableActivityDateYmd } from "../../utils/activityAvailableDates";
 import {
-  CATALOGUE_STAY_SAME_DAY_MESSAGE,
+  CATALOGUE_STAY_MIN_SPAN_MESSAGE,
   getMinDepartureDate,
-  isSameDayCatalogueStay,
+  isCatalogueStayTooShort,
   isValidCatalogueStay,
   savePublicCatalogueStay,
 } from "../../utils/publicCatalogueStayStorage";
@@ -63,7 +63,7 @@ export function CatalogueStayGateModal({
     return `${y}-${m}-${d}`;
   })();
   const earliestActivity = getEarliestBookableActivityDateYmd();
-  const sameDaySelected = isSameDayCatalogueStay({ arrivalDate, departureDate });
+  const stayTooShort = isCatalogueStayTooShort({ arrivalDate, departureDate });
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -76,12 +76,12 @@ export function CatalogueStayGateModal({
       setError("Indiquez vos dates d’arrivée et de départ.");
       return;
     }
-    if (isSameDayCatalogueStay(stay)) {
-      setError(CATALOGUE_STAY_SAME_DAY_MESSAGE);
-      return;
-    }
     if (stay.arrivalDate > stay.departureDate) {
       setError("La date de départ doit être après la date d’arrivée.");
+      return;
+    }
+    if (isCatalogueStayTooShort(stay)) {
+      setError(CATALOGUE_STAY_MIN_SPAN_MESSAGE);
       return;
     }
     if (!isValidCatalogueStay(stay)) {
@@ -172,16 +172,18 @@ export function CatalogueStayGateModal({
           </label>
         </div>
 
-        {sameDaySelected ? (
+        {stayTooShort ? (
           <p className="mt-3 rounded-2xl bg-catalog-brassSoft px-4 py-3 text-xs font-semibold leading-relaxed text-catalog-ink">
-            {CATALOGUE_STAY_SAME_DAY_MESSAGE}
+            {CATALOGUE_STAY_MIN_SPAN_MESSAGE}
           </p>
         ) : null}
 
         <ul data-sheet-item className="mt-4 space-y-2.5 rounded-[1.25rem] bg-catalog-bg px-4 py-4 text-xs leading-relaxed text-catalog-body ring-1 ring-catalog-line">
           {[
             <>Les activités se réservent à partir du <strong>lendemain de votre arrivée</strong>.</>,
-            <>Le départ doit être <strong>au moins le lendemain</strong> de l’arrivée.</>,
+            <>
+              Le séjour doit durer <strong>au minimum 2 jours</strong> : arrivée le 18, départ le 20.
+            </>,
             <>
               Pas de réservation pour <strong>aujourd’hui ni demain</strong> (premier jour possible :{" "}
               {new Date(`${earliestActivity}T12:00:00`).toLocaleDateString("fr-FR", {
@@ -208,11 +210,11 @@ export function CatalogueStayGateModal({
         <button
           type="submit"
           data-press
-          disabled={sameDaySelected}
+          disabled={stayTooShort}
           className="hdc-btn hdc-btn-primary w-full min-h-[3.25rem] text-base"
         >
-          {sameDaySelected ? "Indiquez votre vraie date de départ" : "Voir le catalogue avec mes dates"}
-          {!sameDaySelected ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}
+          {stayTooShort ? "Indiquez au moins 2 jours" : "Voir le catalogue avec mes dates"}
+          {!stayTooShort ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}
         </button>
         {!allowDismiss ? (
           <div className="mt-2 flex items-center justify-between gap-3">
