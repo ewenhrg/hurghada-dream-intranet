@@ -200,8 +200,11 @@ export function getQuoteItemExtraLabels(item) {
   const privateLabel = getPrivateTransferLabel(item.privateTransferTier);
   if (privateLabel) labels.push(privateLabel);
 
-  const visitorLabel = formatDivingVisitorLabel(item);
-  if (visitorLabel) labels.push(visitorLabel);
+  const visitorCount = getDivingVisitorCount(item);
+  if (visitorCount > 0 && isDivingActivityName(activityName)) {
+    const word = visitorCount > 1 ? "Visiteurs" : "Visiteur";
+    labels.push(`${word} × ${visitorCount}`);
+  }
 
   const finSizesLabel = formatTurtleFinSizesLabel(item);
   if (finSizesLabel) labels.push(finSizesLabel);
