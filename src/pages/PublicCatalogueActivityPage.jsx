@@ -4,6 +4,7 @@ import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
+import { loadB2BCart, loadB2BSession, saveB2BCart } from "../utils/b2b";
 import {
   isValidCatalogueStay,
   loadPublicCatalogueStay,
@@ -119,6 +120,34 @@ function toNumber(value) {
 
 function formatMoney(value, currency = "EUR") {
   return formatPublicMoney(toNumber(value), currency);
+}
+
+function b2bOptionNote(activity, special) {
+  const bits = [];
+  if (special.extraDolphin) bits.push("Dauphin");
+  for (const id of special.speedBoatExtra || []) {
+    const extra = getSpeedBoatIslandExtras().find((item) => item.id === id);
+    if (extra?.label) bits.push(extra.label);
+  }
+  if (toNumber(special.divingVisitorCount) > 0) bits.push(`Visiteur × ${special.divingVisitorCount}`);
+  if (toNumber(special.buggySimple) > 0) bits.push(`Buggy 2 pers. × ${special.buggySimple}`);
+  if (toNumber(special.buggyFamily) > 0) bits.push(`Buggy 4 pers. × ${special.buggyFamily}`);
+  if (toNumber(special.calecheCount) > 0) bits.push(`Calèche × ${special.calecheCount}`);
+  if (toNumber(special.yamaha250) > 0) bits.push(`Yamaha 250 × ${special.yamaha250}`);
+  if (toNumber(special.ktm640) > 0) bits.push(`KTM 640 × ${special.ktm640}`);
+  if (toNumber(special.ktm530) > 0) bits.push(`KTM 530 × ${special.ktm530}`);
+  if (toNumber(special.boatPartyMen) > 0) bits.push(`Garçons × ${special.boatPartyMen}`);
+  if (toNumber(special.boatPartyWomen) > 0) bits.push(`Filles × ${special.boatPartyWomen}`);
+  if (special.cairePrivatif4pax) bits.push("Privatif 4 pers.");
+  if (special.cairePrivatif5pax) bits.push("Privatif 5 pers.");
+  if (special.cairePrivatif6pax) bits.push("Privatif 6 pers.");
+  if (special.louxorPrivatif4pax) bits.push("Privatif 4 pers.");
+  if (special.louxorPrivatif5pax) bits.push("Privatif 5 pers.");
+  if (special.louxorPrivatif6pax) bits.push("Privatif 6 pers.");
+  if (special.allerSimple) bits.push("Aller simple");
+  if (special.allerRetour) bits.push("Aller-retour");
+  if (Array.isArray(special.finSizes) && special.finSizes.length > 0) bits.push("Tailles de palmes indiquées");
+  return bits.filter(Boolean).join(" · ");
 }
 
 function normalizeCategory(rawCategory) {
@@ -292,6 +321,8 @@ function BookingCardShell({
   adultMax = 10,
   minorMax = 10,
   speedBoatMaxMessage = "",
+  hidePrices = false,
+  allowWithoutStay = false,
 }) {
   const currency = activity.currency || "EUR";
   const ageChild = String(activity.age_child || "").trim();
@@ -305,20 +336,22 @@ function BookingCardShell({
   return (
     <div className="space-y-3 md:space-y-4">
       <div className="hd-booking-pricing-summary rounded-[1.25rem] bg-catalog-bg px-4 py-4 ring-1 ring-catalog-line">
-        <p className="mb-1 text-xs font-medium text-catalog-muted">À partir de (adulte)</p>
+        <p className="mb-1 text-xs font-medium text-catalog-muted">
+          {hidePrices ? "Tarif professionnel" : "À partir de (adulte)"}
+        </p>
         <div className="flex items-baseline gap-2">
           <span className="font-catalog-display text-[1.75rem] leading-none text-catalog-ink tabular-nums">
-            {showSurDevisHeader ? (
-              <span className="text-base font-semibold text-catalog-ink">Tarif sur devis</span>
+            {hidePrices || showSurDevisHeader ? (
+              <span className="text-base font-semibold text-catalog-ink">Sur devis</span>
             ) : (
               formatMoney(resolvedHeader, currency)
             )}
           </span>
         </div>
-        {priceCaption ? (
+        {!hidePrices && priceCaption ? (
           <p className="mt-1 text-xs font-semibold text-catalog-body">{priceCaption}</p>
         ) : null}
-        {replaceParticipantPricingLines ? (
+        {hidePrices ? null : replaceParticipantPricingLines ? (
           <p className="mt-3 whitespace-pre-line text-sm font-semibold leading-relaxed text-catalog-ink">
             {replaceParticipantPricingLines}
           </p>
@@ -398,7 +431,7 @@ function BookingCardShell({
             max={10}
           />
           <p className="mt-1.5 text-xs font-medium text-catalog-muted">
-            Accompagnant qui ne plonge pas · +{DIVING_VISITOR_UNIT_PRICE} € par visiteur.
+            Accompagnant qui ne plonge pas{hidePrices ? "" : ` · +${DIVING_VISITOR_UNIT_PRICE} € par visiteur`}.
           </p>
           {formatDivingVisitorLabel(
             { divingVisitorCount: visitorCount },
@@ -434,7 +467,7 @@ function BookingCardShell({
             Si un voyageur tombe dans la tranche bébé, la réservation sera refusée pour cette activité.
           </p>
         </div>
-      ) : !babyPriceZero ? null : (
+      ) : hidePrices || !babyPriceZero ? null : (
         <p className="text-xs text-catalog-lagoon">Tarif bébé à 0 € — les bébés ne sont pas facturés sur ce tarif.</p>
       )}
 
@@ -449,10 +482,11 @@ function BookingCardShell({
         activity={activity}
         stayArrivalDate={stayArrivalDate}
         stayDepartureDate={stayDepartureDate}
-        disabled={noDatesConfigured || !stayArrivalDate || !stayDepartureDate}
+        disabled={noDatesConfigured || (!allowWithoutStay && (!stayArrivalDate || !stayDepartureDate))}
+        ignoreStay={allowWithoutStay}
         maxDaysAhead={120}
       />
-      {!stayArrivalDate || !stayDepartureDate ? (
+      {!allowWithoutStay && (!stayArrivalDate || !stayDepartureDate) ? (
         <p className="text-sm text-catalog-brass">Indiquez vos dates de séjour pour choisir une date d’activité.</p>
       ) : null}
       {noDatesConfigured ? (
@@ -463,7 +497,9 @@ function BookingCardShell({
         <div className="mb-3 flex items-end justify-between">
           <span className="text-sm font-medium text-catalog-muted">Total</span>
           <span className="font-catalog-display text-[1.625rem] leading-none tabular-nums text-catalog-ink">
-            {codedTotalPending && toNumber(lineTotal) <= 0 ? (
+            {hidePrices ? (
+              <span className="text-base font-semibold text-catalog-ink">Sur devis</span>
+            ) : codedTotalPending && toNumber(lineTotal) <= 0 ? (
               <span className="text-base font-semibold text-catalog-brass">Sélectionnez les options</span>
             ) : (
               formatMoney(lineTotal, currency)
@@ -498,9 +534,9 @@ function BookingCardShell({
 }
 
 /**
- * @param {{ activityId: string }} props
+ * @param {{ activityId: string, b2b?: boolean }} props
  */
-export function PublicCatalogueActivityPage({ activityId }) {
+export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
   const navigate = useNavigate();
   const [activity, setActivity] = useState(null);
   const [loadError, setLoadError] = useState("");
@@ -513,7 +549,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
   const calechePartyRef = useRef(null);
   const [date, setDate] = useState("");
   const [stay, setStay] = useState(() => loadPublicCatalogueStay());
-  const [stayModalOpen, setStayModalOpen] = useState(() => !isValidCatalogueStay(loadPublicCatalogueStay()));
+  const [stayModalOpen, setStayModalOpen] = useState(() => !b2b && !isValidCatalogueStay(loadPublicCatalogueStay()));
   const [stopDateSet, setStopDateSet] = useState(() => new Set());
   const [pushDateSet, setPushDateSet] = useState(() => new Set());
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -550,22 +586,27 @@ export function PublicCatalogueActivityPage({ activityId }) {
       stopDateSet,
       pushDateSet,
       activity,
-      stayBounds,
-      earliestYmd: pinArrival && stay.arrivalDate ? stay.arrivalDate : getEarliestBookableActivityDateYmd(),
-      departureDate: stay.departureDate,
-      requireStay: true,
-      skipEarliestCheck: pinArrival,
+      stayBounds: b2b ? null : stayBounds,
+      earliestYmd: !b2b && pinArrival && stay.arrivalDate ? stay.arrivalDate : getEarliestBookableActivityDateYmd(),
+      departureDate: b2b ? "" : stay.departureDate,
+      requireStay: !b2b,
+      skipEarliestCheck: !b2b && pinArrival,
     });
-  }, [activity, normalizedAvailableDays, stopDateSet, pushDateSet, stayBounds, stay.arrivalDate, stay.departureDate]);
+  }, [activity, b2b, normalizedAvailableDays, stopDateSet, pushDateSet, stayBounds, stay.arrivalDate, stay.departureDate]);
 
   const daysSummary = useMemo(() => (activity ? formatActivityAvailableDaysSummary(activity) : ""), [activity]);
 
   const noDatesConfigured =
     Boolean(activity) &&
-    (dateOptions.length === 0 || (stayBounds != null && stayBounds.empty));
+    (dateOptions.length === 0 || (!b2b && stayBounds != null && stayBounds.empty));
 
   // Tolérant : certaines sources peuvent exposer camelCase au lieu de snake_case.
   const babiesForbidden = Boolean(activity?.babies_forbidden ?? activity?.babiesForbidden);
+
+  useEffect(() => {
+    if (!b2b || loadB2BSession()) return;
+    navigate("/b2b", { replace: true });
+  }, [b2b, navigate]);
 
   useEffect(() => {
     setSpecial({ ...INITIAL_CATALOG_SPECIAL });
@@ -661,6 +702,19 @@ export function PublicCatalogueActivityPage({ activityId }) {
 
   const bookingReplaceChildBaby = useMemo(() => {
     if (!activity) return "";
+    if (b2b) {
+      if (isSpeedBoatActivity(activity.name)) return getSpeedBoatMaxParticipantsMessage();
+      if (isCalecheActivity(activity.name)) {
+        return "Maximum 1 adulte et 2 enfants par calèche. Le nombre de calèches augmente tout seul si le groupe est plus grand.";
+      }
+      if (isTurtleActivity(activity.name)) {
+        return "Indiquez la pointure de chaque participant (pointure EU, ex. 42) — nécessaire pour les palmes.";
+      }
+      if (isArrivalDayServiceActivity(activity.name)) {
+        return "La date est automatiquement fixée au jour d’arrivée.";
+      }
+      return "";
+    }
     if (isSpeedBoatActivity(activity.name)) {
       if (isSpeedBoatSunsetActivity(activity.name)) {
         return `Grille Speed Boat Sunset : base 125 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant (sans extra dauphin ni îles).\n${getSpeedBoatMaxParticipantsMessage()}`;
@@ -700,7 +754,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       return "Indiquez la pointure de chaque participant (pointure EU, ex. 42) — nécessaire pour les palmes.";
     }
     return "";
-  }, [activity]);
+  }, [activity, b2b]);
 
   const bookingPriceCaption = useMemo(() => {
     if (!activity) return "";
@@ -778,7 +832,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 onChange={() => applySpeedBoatPack("none")}
                 className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-catalog-border accent-catalog-ocean focus:outline-none focus:ring-2 focus:ring-catalog-ocean focus:ring-offset-1"
               />
-              <span className="text-sm font-semibold leading-snug text-catalog-ink">Aucune option (prix de base)</span>
+              <span className="text-sm font-semibold leading-snug text-catalog-ink">{b2b ? "Aucune option" : "Aucune option (prix de base)"}</span>
             </label>
             <label className={speedBoatOptionClass(speedBoatPackValue === "dolphin")}>
               <input
@@ -790,7 +844,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-catalog-border accent-catalog-ocean focus:outline-none focus:ring-2 focus:ring-catalog-ocean focus:ring-offset-1"
               />
               <span className="text-sm font-semibold leading-snug text-catalog-ink">
-                Dauphin <span className="font-bold text-catalog-ocean">(+20 € pour la ligne)</span>
+                Dauphin{b2b ? null : <span className="font-bold text-catalog-ocean"> (+20 € pour la ligne)</span>}
               </span>
             </label>
             {allowsSpeedBoatIslandExtras(name) &&
@@ -807,7 +861,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   <span className="text-sm leading-snug text-catalog-ink">
                     <span className="font-semibold">{extra.label}</span>{" "}
                     <span className="text-xs font-medium text-catalog-muted">
-                      (+{extra.priceAdult} € / adulte · +{extra.priceChild} € / enfant)
+                      {b2b ? null : `(+${extra.priceAdult} € / adulte · +${extra.priceChild} € / enfant)`}
                     </span>
                   </span>
                 </label>
@@ -822,7 +876,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       return (
         <div className="grid grid-cols-2 gap-3 rounded-xl border border-cyan-200 bg-cyan-50/80 p-3">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-catalog-body">Garçons ({p.men} €)</label>
+            <label className="mb-1 block text-xs font-semibold text-catalog-body">Garçons{b2b ? "" : ` (${p.men} €)`}</label>
             <select
               className="w-full hdc-input !min-h-11 !rounded-xl !px-3 !py-2 text-sm"
               value={special.boatPartyMen}
@@ -836,7 +890,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-catalog-body">Filles ({p.women} €)</label>
+            <label className="mb-1 block text-xs font-semibold text-catalog-body">Filles{b2b ? "" : ` (${p.women} €)`}</label>
             <select
               className="w-full hdc-input !min-h-11 !rounded-xl !px-3 !py-2 text-sm"
               value={special.boatPartyWomen}
@@ -895,7 +949,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       return (
         <div className="rounded-xl border border-transparent bg-catalog-brassSoft p-3">
           <label className="mb-1 block text-xs font-semibold text-catalog-body">
-            Nombre de calèches ({getCalecheUnitPrice(activity)} € / u.)
+            Nombre de calèches{b2b ? "" : ` (${getCalecheUnitPrice(activity)} € / u.)`}
           </label>
           <select
             className="w-full hdc-input !min-h-11 !rounded-xl !px-3 !py-2 text-sm"
@@ -1059,7 +1113,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                     {label}
                     {simBlocked ? " — indisponible" : ""}
                   </span>
-                  <span className="shrink-0 text-[10px] font-medium text-catalog-muted">{unit} € / u.</span>
+                  {b2b ? null : <span className="shrink-0 text-[10px] font-medium text-catalog-muted">{unit} € / u.</span>}
                   <select
                     className={`w-16 shrink-0 rounded border border-catalog-border py-1.5 text-center text-sm font-semibold ${
                       simBlocked ? "cursor-not-allowed bg-catalog-bg opacity-60" : "bg-white"
@@ -1120,7 +1174,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 className="h-[18px] w-[18px] shrink-0 accent-catalog-lagoon"
               />
               <span className="text-sm font-semibold text-catalog-ink">
-                Aller simple <span className="text-catalog-ocean">({formatMoney(simpleP, activity.currency || "EUR")})</span>
+                Aller simple{b2b ? null : <span className="text-catalog-ocean"> ({formatMoney(simpleP, activity.currency || "EUR")})</span>}
               </span>
             </label>
             <label
@@ -1138,7 +1192,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 className="h-[18px] w-[18px] shrink-0 accent-catalog-lagoon"
               />
               <span className="text-sm font-semibold text-catalog-ink">
-                Aller-retour <span className="text-catalog-ocean">({formatMoney(retourP, activity.currency || "EUR")})</span>
+                Aller-retour{b2b ? null : <span className="text-catalog-ocean"> ({formatMoney(retourP, activity.currency || "EUR")})</span>}
               </span>
             </label>
           </div>
@@ -1147,7 +1201,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
     }
 
     return null;
-  }, [activity, adults, minorsCount, calecheNotice, special, speedBoatPackValue, applySpeedBoatPack]);
+  }, [activity, adults, b2b, minorsCount, calecheNotice, special, speedBoatPackValue, applySpeedBoatPack]);
 
   const codedTotalPending = useMemo(() => {
     if (!activity) return false;
@@ -1520,6 +1574,26 @@ export function PublicCatalogueActivityPage({ activityId }) {
       babies: 0,
       ...lineSpecial,
     };
+    if (b2b) {
+      const session = loadB2BSession();
+      if (!session) {
+        navigate("/b2b");
+        return;
+      }
+      const agencyLine = {
+        id: line.id,
+        activityId: line.activityId,
+        activityName: displayActivityName(activity.name),
+        date,
+        adults: adultCount,
+        children: minors,
+        babies: 0,
+        note: b2bOptionNote(activity, lineSpecial),
+      };
+      saveB2BCart(session.id, [...loadB2BCart(session.id), agencyLine]);
+      navigate("/b2b");
+      return;
+    }
     savePublicCatalogueCart([...prev, line]);
     navigate("/catalogue");
   }
@@ -1572,7 +1646,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
             tone="error"
             title={loadError || "Activité introuvable"}
             action={
-              <Link to="/catalogue" data-press className="hdc-btn hdc-btn-ink">
+              <Link to={b2b ? "/b2b" : "/catalogue"} data-press className="hdc-btn hdc-btn-ink">
                 Voir le catalogue
               </Link>
             }
@@ -1584,8 +1658,11 @@ export function PublicCatalogueActivityPage({ activityId }) {
     );
   }
 
-  const fromLabel =
-    headerPriceHint != null && headerPriceHint > 0 ? formatMoney(headerPriceHint, activity.currency || "EUR") : null;
+  const fromLabel = b2b
+    ? null
+    : headerPriceHint != null && headerPriceHint > 0
+      ? formatMoney(headerPriceHint, activity.currency || "EUR")
+      : null;
 
   return (
     <PublicAppShell title={displayActivityName(activity.name)} wide="xl" revealKey={activity.id}>
@@ -1777,8 +1854,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   normalizedDays={normalizedAvailableDays}
                   stopDateSet={stopDateSet}
                   pushDateSet={pushDateSet}
-                  stayArrivalDate={stay.arrivalDate}
-                  stayDepartureDate={stay.departureDate}
+                  stayArrivalDate={b2b ? "" : stay.arrivalDate}
+                  stayDepartureDate={b2b ? "" : stay.departureDate}
                   lineTotal={lineTotal}
                   canAdd={canAddToCart}
                   onAdd={appendToCartAndReturn}
@@ -1798,6 +1875,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
                   adultMax={adultMax}
                   minorMax={minorMax}
                   speedBoatMaxMessage={speedBoatMaxMessage}
+                  hidePrices={b2b}
+                  allowWithoutStay={b2b}
                 />
               </div>
             </div>
@@ -1835,8 +1914,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 normalizedDays={normalizedAvailableDays}
                 stopDateSet={stopDateSet}
                 pushDateSet={pushDateSet}
-                stayArrivalDate={stay.arrivalDate}
-                stayDepartureDate={stay.departureDate}
+                stayArrivalDate={b2b ? "" : stay.arrivalDate}
+                stayDepartureDate={b2b ? "" : stay.departureDate}
                 lineTotal={lineTotal}
                 canAdd={canAddToCart}
                 onAdd={appendToCartAndReturn}
@@ -1856,6 +1935,8 @@ export function PublicCatalogueActivityPage({ activityId }) {
                 adultMax={adultMax}
                 minorMax={minorMax}
                 speedBoatMaxMessage={speedBoatMaxMessage}
+                hidePrices={b2b}
+                allowWithoutStay={b2b}
               />
             </div>
           </div>
@@ -1902,7 +1983,7 @@ export function PublicCatalogueActivityPage({ activityId }) {
       />
 
       <CatalogueStayGateModal
-        open={stayModalOpen}
+        open={!b2b && stayModalOpen}
         initialStay={stay}
         allowDismiss={false}
         onSaved={(next) => {

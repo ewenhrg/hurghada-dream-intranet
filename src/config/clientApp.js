@@ -16,6 +16,7 @@ export function publicBackPath(path) {
   if (isPublicHomePath(p)) return null;
   if (/^\/hotels\/[^/]+\/?$/.test(p)) return "/hotels";
   if (/^\/catalogue\/activity\/[^/]+\/?$/.test(p)) return "/catalogue";
+  if (/^\/b2b\/activity\/[^/]+\/?$/.test(p)) return "/b2b";
   if (p === "/demande-hotel" || p.startsWith("/demande-hotel/")) return "/hotels";
   return PUBLIC_HOME_PATH;
 }

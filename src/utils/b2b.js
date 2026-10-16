@@ -27,6 +27,20 @@ export function b2bCartKey(accountId) {
   return `hd_b2b_cart_v1_${accountId}`;
 }
 
+export function loadB2BCart(accountId) {
+  try {
+    const raw = sessionStorage.getItem(b2bCartKey(accountId));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveB2BCart(accountId, lines) {
+  sessionStorage.setItem(b2bCartKey(accountId), JSON.stringify(lines));
+}
+
 function missingTable(error) {
   const message = String(error?.message || error || "");
   return /b2b_|schema cache|does not exist|Could not find/i.test(message);

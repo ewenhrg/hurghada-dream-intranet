@@ -6,6 +6,7 @@ import { Sheet, SheetFooter, SheetHeader } from "../components/public/PublicUI";
 import {
   CatalogueActivityCard,
   CatalogueActivityCardSkeleton,
+  CategoryIcon,
 } from "../components/public/CatalogueActivityCard";
 import { displayActivityName, getPublicCategoryLabel } from "../components/public/catalogueDisplay";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
@@ -14,11 +15,12 @@ import { getActivityPublicProse } from "../utils/activityHelpers";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import { getMinDepartureDate, isCatalogueStayTooShort } from "../utils/publicCatalogueStayStorage";
 import {
-  b2bCartKey,
   b2bSetupMessage,
   clearB2BSession,
+  loadB2BCart,
   loadB2BSession,
   loginB2B,
+  saveB2BCart,
   saveB2BSession,
   submitB2BAccessRequest,
   submitB2BQuote,
@@ -44,9 +46,19 @@ const EMPTY_CLIENT = {
   notes: "",
 };
 
+const CATEGORY_ORDER = [...CATEGORIES].sort((a, b) => {
+  if (a.key === "marsa_alam") return 1;
+  if (b.key === "marsa_alam") return -1;
+  return 0;
+});
+
 function normalizeCategory(rawCategory) {
   const value = String(rawCategory || "").trim();
   return CATEGORIES.some((category) => category.key === value) ? value : "desert";
+}
+
+function compareActivityNames(a, b) {
+  return displayActivityName(a.name).localeCompare(displayActivityName(b.name), "fr", { sensitivity: "base" });
 }
 
 function dayAfter(iso) {
@@ -64,16 +76,6 @@ function formatDay(iso) {
   const d = new Date(`${iso}T12:00:00`);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function loadCart(accountId) {
-  try {
-    const raw = sessionStorage.getItem(b2bCartKey(accountId));
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
 }
 
 export function PublicB2BPage() {
@@ -260,16 +262,15 @@ function B2BCatalog({ session, onLogout }) {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
-  const [cart, setCart] = useState(() => loadCart(session.id));
+  const [cart, setCart] = useState(() => loadB2BCart(session.id));
   const [cartOpen, setCartOpen] = useState(false);
-  const [draft, setDraft] = useState(null);
   const [client, setClient] = useState(EMPTY_CLIENT);
   const [checkoutError, setCheckoutError] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
-    sessionStorage.setItem(b2bCartKey(session.id), JSON.stringify(cart));
+    saveB2BCart(session.id, cart);
   }, [cart, session.id]);
 
   useEffect(() => {
@@ -300,33 +301,22 @@ function B2BCatalog({ session, onLogout }) {
     };
   }, []);
 
-  const visible = useMemo(() => {
+  const groups = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("fr");
-    return activities.filter((activity) => {
-      if (category !== "all" && normalizeCategory(activity.category) !== category) return false;
-      if (!needle) return true;
-      return String(activity.name || "").toLocaleLowerCase("fr").includes(needle);
+    const buckets = new Map(CATEGORY_ORDER.map((item) => [item.key, []]));
+    activities.forEach((activity) => {
+      const key = normalizeCategory(activity.category);
+      if (category !== "all" && key !== category) return;
+      if (needle && !String(activity.name || "").toLocaleLowerCase("fr").includes(needle)) return;
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(activity);
     });
+    return CATEGORY_ORDER.map((item) => ({
+      key: item.key,
+      label: getPublicCategoryLabel(item.key),
+      items: (buckets.get(item.key) || []).slice().sort(compareActivityNames),
+    })).filter((group) => group.items.length > 0);
   }, [activities, category, query]);
-
-  function addDraft() {
-    if (!draft?.date) return;
-    setCart((lines) => [
-      ...lines,
-      {
-        id: `${draft.activity.id}-${Date.now()}`,
-        activityId: draft.activity.id,
-        activityName: displayActivityName(draft.activity.name),
-        date: draft.date,
-        adults: Math.max(0, Number(draft.adults) || 0),
-        children: Math.max(0, Number(draft.children) || 0),
-        babies: Math.max(0, Number(draft.babies) || 0),
-        note: String(draft.note || "").trim(),
-      },
-    ]);
-    setDraft(null);
-    setCartOpen(true);
-  }
 
   async function handleSend(e) {
     e.preventDefault();
@@ -423,51 +413,47 @@ function B2BCatalog({ session, onLogout }) {
             {Array.from({ length: 6 }, (_, i) => <CatalogueActivityCardSkeleton key={i} />)}
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-            {visible.map((activity) => (
-              <CatalogueActivityCard
-                key={activity.id}
-                activity={activity}
-                categoryKey={normalizeCategory(activity.category)}
-                coverUrl={normalizeCatalogImageUrlsFromDb(activity.catalog_image_urls)[0] || null}
-                prose={getActivityPublicProse(activity)}
-                onAdd={(item) => setDraft({ activity: item, date: "", adults: 2, children: 0, babies: 0, note: "" })}
-                ctaLabel="Ajouter"
-              />
+          <div className="space-y-14">
+            {groups.map((group) => (
+              <section key={group.key} aria-labelledby={`b2b-univers-${group.key}`}>
+                <div className="mb-5 flex items-end justify-between gap-4 border-b border-catalog-line pb-4">
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-catalog-lagoonSoft text-catalog-lagoon">
+                      <CategoryIcon categoryKey={group.key} className="h-5 w-5" strokeWidth={1.5} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="hdc-eyebrow">Univers</p>
+                      <h2 id={`b2b-univers-${group.key}`} className="mt-1 font-catalog-display text-[1.75rem] leading-tight text-catalog-ink">
+                        {group.label}
+                      </h2>
+                    </div>
+                  </div>
+                  <span className="shrink-0 pb-1 text-sm text-catalog-muted">
+                    {group.items.length} expérience{group.items.length > 1 ? "s" : ""}
+                  </span>
+                </div>
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+                  {group.items.map((activity) => (
+                    <CatalogueActivityCard
+                      key={activity.id}
+                      activity={activity}
+                      categoryKey={group.key}
+                      coverUrl={normalizeCatalogImageUrlsFromDb(activity.catalog_image_urls)[0] || null}
+                      prose={getActivityPublicProse(activity)}
+                      quoteOnly
+                      href={`/b2b/activity/${encodeURIComponent(String(activity.id))}`}
+                      ctaLabel="Réserver"
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}
-        {!loading && visible.length === 0 ? (
+        {!loading && groups.length === 0 ? (
           <p className="mt-8 text-sm text-catalog-muted">Aucune excursion ne correspond à cette recherche.</p>
         ) : null}
       </section>
-
-      {draft ? (
-        <Sheet variant="bottom" onClose={() => setDraft(null)} labelledBy="b2b-add-title">
-          <SheetHeader eyebrow="Sans prix affiché" title={displayActivityName(draft.activity.name)} titleId="b2b-add-title" onClose={() => setDraft(null)} />
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 pb-4 sm:px-6">
-            <p className="text-sm leading-relaxed text-catalog-muted">Le tarif professionnel sera calculé sur le devis, pas ici.</p>
-            <label className="block text-sm font-bold text-catalog-ink">
-              Date de l’activité
-              <input type="date" required value={draft.date} onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))} className="hdc-input mt-1.5" />
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              <CountField label="Adultes" value={draft.adults} onChange={(adults) => setDraft((d) => ({ ...d, adults }))} />
-              <CountField label="Enfants" value={draft.children} onChange={(children) => setDraft((d) => ({ ...d, children }))} />
-              <CountField label="Bébés" value={draft.babies} onChange={(babies) => setDraft((d) => ({ ...d, babies }))} />
-            </div>
-            <label className="block text-sm font-bold text-catalog-ink">
-              Note
-              <input value={draft.note} onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))} className="hdc-input mt-1.5" />
-            </label>
-          </div>
-          <SheetFooter>
-            <button type="button" disabled={!draft.date} onClick={addDraft} className="hdc-btn hdc-btn-primary w-full min-h-[3.25rem]">
-              Ajouter au panier
-            </button>
-          </SheetFooter>
-        </Sheet>
-      ) : null}
 
       {cartOpen ? (
         <Sheet variant="right" onClose={() => { setCartOpen(false); setSent(false); }} labelledBy="b2b-cart-title" as="form" panelProps={{ onSubmit: handleSend }}>
@@ -545,20 +531,5 @@ function FilterChip({ active, onClick, children }) {
     >
       {children}
     </button>
-  );
-}
-
-function CountField({ label, value, onChange }) {
-  return (
-    <label className="block text-sm font-bold text-catalog-ink">
-      {label}
-      <input
-        type="number"
-        min="0"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="hdc-input mt-1.5"
-      />
-    </label>
   );
 }

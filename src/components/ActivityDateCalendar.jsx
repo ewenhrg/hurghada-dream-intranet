@@ -81,6 +81,7 @@ export function ActivityDateCalendar({
   activity = null,
   stayArrivalDate = "",
   stayDepartureDate = "",
+  ignoreStay = false,
 }) {
   const pinToArrival = Boolean(activity && isArrivalDayServiceActivity(activity.name));
   const earliestYmd = useMemo(() => {
@@ -154,16 +155,21 @@ export function ActivityDateCalendar({
       activity,
     });
 
-    const windowOk =
-      Boolean(stayBounds) &&
-      !stayBounds.empty &&
-      isPublicCatalogDateSelectable(iso, {
-        stayBounds,
-        earliestYmd,
-        activity,
-        departureDate: stayDepartureDate,
-        skipEarliestCheck: pinToArrival,
-      });
+    const windowOk = ignoreStay
+      ? isPublicCatalogDateSelectable(iso, {
+          earliestYmd,
+          activity,
+          skipEarliestCheck: pinToArrival,
+        })
+      : Boolean(stayBounds) &&
+        !stayBounds.empty &&
+        isPublicCatalogDateSelectable(iso, {
+          stayBounds,
+          earliestYmd,
+          activity,
+          departureDate: stayDepartureDate,
+          skipEarliestCheck: pinToArrival,
+        });
 
     let blockReason = "";
     if (!windowOk) {

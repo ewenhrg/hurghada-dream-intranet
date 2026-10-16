@@ -49,6 +49,12 @@ function PublicClientPage() {
   ) {
     return <PublicStayPage />;
   }
+  const b2bActivityMatch = pathname.match(/^\/b2b\/activity\/([^/]+)\/?$/);
+  if (b2bActivityMatch) {
+    return (
+      <PublicCatalogueActivityPage activityId={decodeURIComponent(b2bActivityMatch[1])} b2b />
+    );
+  }
   if (pathname === "/b2b" || pathname === "/b2b/") {
     return <PublicB2BPage />;
   }

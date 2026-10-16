@@ -64,15 +64,18 @@ export function CatalogueActivityCard({
   prose,
   priority = false,
   onAdd,
+  href,
+  quoteOnly = false,
   ctaLabel = "Découvrir",
 }) {
-  const quoteOnly = typeof onAdd === "function";
-  const href = `/catalogue/activity/${encodeURIComponent(String(activity.id))}`;
+  const asButton = typeof onAdd === "function";
+  const hidePrice = quoteOnly || asButton;
+  const to = href || `/catalogue/activity/${encodeURIComponent(String(activity.id))}`;
   const rawName = displayActivityName(activity.name) || "Activité";
   const name = quoteOnly ? hideMoney(rawName) || rawName : rawName;
   const days = formatDepartureDays(activity);
   const hook = quoteOnly ? hideMoney(teaser(prose, rawName)) : teaser(prose, rawName);
-  const hasPrice = !quoteOnly && fromPrice != null && fromPrice > 0;
+  const hasPrice = !hidePrice && fromPrice != null && fromPrice > 0;
 
   const onClick = (event) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -135,7 +138,7 @@ export function CatalogueActivityCard({
             ) : (
               <>
                 <span className="block text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-catalog-muted">
-                  {quoteOnly ? "Tarif professionnel" : "Tarif"}
+                  {hidePrice ? "Tarif professionnel" : "Tarif"}
                 </span>
                 <span className="mt-0.5 block text-base font-semibold leading-none text-catalog-brass">Sur devis</span>
               </>
@@ -150,7 +153,7 @@ export function CatalogueActivityCard({
     </>
   );
 
-  if (quoteOnly) {
+  if (asButton) {
     return (
       <button type="button" onClick={() => onAdd(activity)} data-reveal="card" data-press className={shellClass}>
         {inner}
@@ -159,7 +162,7 @@ export function CatalogueActivityCard({
   }
 
   return (
-    <Link to={href} onClick={onClick} data-reveal="card" data-press className={shellClass}>
+    <Link to={to} onClick={onClick} data-reveal="card" data-press className={shellClass}>
       {inner}
     </Link>
   );
