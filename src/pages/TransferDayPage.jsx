@@ -5,6 +5,7 @@ import { getQuoteItemParticipantCells } from "../utils/quoteItemDisplay";
 import { getLocalDateKey } from "../utils/pushSaleExpiry";
 import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
 import { itemWithPickupSchedule, pickupAwaitingNotify, visiblePickupTime } from "../utils/pickupSchedule";
+import { chosenPickupTime, resolveActivityFromList, showsChosenPickupOnSituation } from "../utils/transferPricing";
 import { requestClientStayPush } from "../utils/clientStayPush";
 import { supabase } from "../lib/supabase";
 import { toast } from "../utils/toast.js";
@@ -83,6 +84,17 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
         const activityName = resolveTicketActivityName(item, activitiesById) || String(item.activityName || "").trim();
         const phone = formatPhoneWithPlus(client.phone);
         const phoneKey = cleanPhoneNumber(phone);
+        const publishedPickup = visiblePickupTime(item);
+        const knownPickup =
+          publishedPickup || !showsChosenPickupOnSituation(activityName)
+            ? ""
+            : chosenPickupTime(
+                {
+                  ...item,
+                  neighborhood: item.neighborhood || client.neighborhood || "",
+                },
+                resolveActivityFromList({ ...item, activityName }, activities)
+              );
         list.push({
           key: `${quote.id || "q"}-${idx}-${ticketNumber}`,
           quoteId: quote.id,
@@ -96,7 +108,8 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
           reservationCode: String(quote.reservationCode || "").trim(),
           activityName: activityName || "Activité",
           pax: paxLabel(item),
-          pickup: visiblePickupTime(item),
+          pickup: publishedPickup,
+          knownPickup,
           meetAtHotelMarina: item.meetAtHotelMarina === true,
           notifyPending: pickupAwaitingNotify(item),
         });
@@ -358,7 +371,8 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
                       </th>
                     </tr>
                     {group.rows.map((row) => {
-                      const value = drafts[row.key] ?? row.pickup;
+                      const shownPickup = row.pickup || row.knownPickup || "";
+                      const value = drafts[row.key] ?? shownPickup;
                       return (
                         <tr key={row.key} className="border-t border-slate-100">
                           <td className="px-3 py-2 align-middle text-sm font-bold text-orange-950">{row.ticketNumber}</td>
@@ -383,7 +397,7 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
                                   setDrafts((prev) => ({ ...prev, [row.key]: event.target.value }))
                                 }
                                 onBlur={(event) => {
-                                  if (event.target.value === clockValue(row.pickup) && !(row.key in drafts)) return;
+                                  if (event.target.value === clockValue(shownPickup) && !(row.key in drafts)) return;
                                   void commitPickup(row, event.target.value);
                                 }}
                                 onKeyDown={(event) => {

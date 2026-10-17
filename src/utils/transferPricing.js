@@ -171,6 +171,38 @@ export function getActivityPickupOptions(activity, neighborhoodKey) {
   return getTransferPickupOptions(activity?.transfers?.[nb]);
 }
 
+function normalizePickupActivityName(name) {
+  return String(name || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Speed boat, Panorama et spas : l’heure du devis reste visible sur Situation. */
+export function showsChosenPickupOnSituation(activityName) {
+  const name = normalizePickupActivityName(activityName);
+  return (
+    name.includes("speedboat") ||
+    name.includes("speed boat") ||
+    name.includes("panorama") ||
+    name.includes("spa")
+  );
+}
+
+/** Heure déjà choisie au devis, ou l’unique créneau du quartier si une seule heure existe. */
+export function chosenPickupTime(item, activity) {
+  const stored = String(item?.pickupTime || "").trim();
+  if (stored) return stored;
+  const options = getActivityPickupOptions(activity, item?.neighborhood);
+  const slot = String(item?.slot || "").trim();
+  if (slot) {
+    const match = options.find((option) => option.slot === slot);
+    if (match?.time) return match.time;
+  }
+  if (options.length === 1) return options[0].time || "";
+  return "";
+}
+
 /** Plusieurs créneaux possibles → le choix d’une heure / créneau est obligatoire. */
 export function requiresPickupTimeChoice(transferInfoOrOptions) {
   const options = Array.isArray(transferInfoOrOptions)

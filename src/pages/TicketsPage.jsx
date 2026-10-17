@@ -23,7 +23,10 @@ import {
 import { currencyNoCents, saveLS, saveQuotesCache, loadLS, resolveTicketActivityName, buildActivitiesByIdMap, calculateCardPrice, formatPhoneWithPlus } from "../utils";
 import {
   calculateTransferSurchargeFromItem,
+  chosenPickupTime,
   getPrivateTransferLabel,
+  resolveActivityFromList,
+  showsChosenPickupOnSituation,
 } from "../utils/transferPricing";
 import { generateTicketsHTML } from "../utils/printTemplates";
 import { LS_KEYS, SITE_KEY } from "../constants";
@@ -328,11 +331,22 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         const lineTotal = Math.round(Number(item.lineTotal) || 0);
         // Prix activité hors supp. transfert (évite le double-compte dans Excel)
         const priceValue = Math.max(0, lineTotal - transferValue);
-        const published = item.pickupPublished === true;
-        const pickup = published ? String(item.pickupTime || "").trim() : "";
-
         const boatParty = isBoatPartyActivity(item.activityName);
         const activityDisplayName = resolveTicketActivityName(item, activitiesById);
+        const published = item.pickupPublished === true;
+        const publishedPickup = published ? String(item.pickupTime || "").trim() : "";
+        const pickupName = activityDisplayName || item.activityName;
+        const pickup =
+          publishedPickup ||
+          (showsChosenPickupOnSituation(pickupName)
+            ? chosenPickupTime(
+                {
+                  ...item,
+                  neighborhood: item.neighborhood || client.neighborhood || "",
+                },
+                resolveActivityFromList({ ...item, activityName: pickupName }, activities)
+              )
+            : "");
         const itemForDisplay = {
           ...item,
           activityName: activityDisplayName,
@@ -1452,7 +1466,11 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                             onChange={(e) =>
                               setPickupDrafts((prev) => ({ ...prev, [r.key]: e.target.value }))
                             }
-                            onBlur={(e) => void commitPickup(r, e.target.value)}
+                            onBlur={(e) => {
+                              const shown = pickupDrafts[r.key] ?? r.pickup;
+                              if (e.target.value.trim() === String(shown || "").trim() && !(r.key in pickupDrafts)) return;
+                              void commitPickup(r, e.target.value);
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") e.currentTarget.blur();
                             }}
