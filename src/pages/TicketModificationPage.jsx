@@ -25,12 +25,37 @@ import { saveOpsComment } from "../utils/opsComment";
 function findTicketLine(quotes, rawNumber) {
   const needle = String(rawNumber || "").trim().toLowerCase();
   if (!needle) return null;
+
+  let modificationHit = null;
   for (const quote of quotes || []) {
     const items = quote.items || [];
     for (let index = 0; index < items.length; index += 1) {
-      const ticketNumber = String(items[index]?.ticketNumber || "").trim().toLowerCase();
-      if (ticketNumber && ticketNumber === needle) {
-        return { quote, itemIndex: index, item: items[index] };
+      const item = items[index];
+      if (item?.isCancelled === true) continue;
+      const ticketNumber = String(item?.ticketNumber || "").trim().toLowerCase();
+      if (!ticketNumber || ticketNumber !== needle) continue;
+      if (item?.ticketKind === "modification") {
+        if (!modificationHit) modificationHit = { quote, itemIndex: index, item };
+        continue;
+      }
+      return { quote, itemIndex: index, item };
+    }
+  }
+
+  if (!modificationHit) return null;
+
+  // Ticket spécial de modification / annulation → ouvrir l’activité d’origine.
+  const originNumber = String(modificationHit.item?.modificationOfTicket || "").trim().toLowerCase();
+  if (!originNumber) return null;
+  for (const quote of quotes || []) {
+    if (String(quote.id) !== String(modificationHit.quote.id)) continue;
+    const items = quote.items || [];
+    for (let index = 0; index < items.length; index += 1) {
+      const item = items[index];
+      if (item?.ticketKind === "modification" || item?.isCancelled === true) continue;
+      const ticketNumber = String(item?.ticketNumber || "").trim().toLowerCase();
+      if (ticketNumber && ticketNumber === originNumber) {
+        return { quote, itemIndex: index, item, viaModificationTicket: modificationHit.item };
       }
     }
   }
@@ -139,12 +164,23 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
     });
   };
 
+  const openFoundTicket = (found, { announce = false } = {}) => {
+    if (!found) return;
+    fillForm(found);
+    setQuery(String(found.item?.ticketNumber || "").trim());
+    if (announce && found.viaModificationTicket) {
+      toast.success(
+        `Ticket d’origine ${found.item.ticketNumber} ouvert. Tu peux le modifier à nouveau.`
+      );
+    }
+  };
+
   const search = async () => {
     const found = findTicketLine(quotes, query);
     setSearched(true);
     setDeadNote("");
     if (found) {
-      fillForm(found);
+      openFoundTicket(found, { announce: Boolean(found.viaModificationTicket) });
       return;
     }
     setMatch(null);
@@ -160,6 +196,27 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
     if (data?.status === "void") {
       setDeadNote(`Le ticket ${data.ticket_number} a été annulé. Ce numéro est mort et ne sera plus jamais redonné.`);
     }
+  };
+
+  const reopenOriginalFromLine = (line) => {
+    if (!line || line.cancelled) {
+      toast.warning("Une ligne d’annulation ne peut plus être modifiée.");
+      return;
+    }
+    const originNumber = String(line.item?.modificationOfTicket || "").trim();
+    if (!originNumber) {
+      toast.error("Impossible de retrouver le ticket d’origine.");
+      return;
+    }
+    const found = findTicketLine(quotes, originNumber);
+    if (!found || found.item?.ticketKind === "modification") {
+      toast.error("Le ticket d’origine n’est plus modifiable.");
+      return;
+    }
+    setSearched(true);
+    setDeadNote("");
+    openFoundTicket({ ...found, viaModificationTicket: line.item }, { announce: true });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const setField = (key, value) => {
@@ -235,6 +292,16 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
     if (newPrice != null) patched.lineTotal = newPrice;
     patched.opsComment = String(form.opsComment || "").trim();
 
+    if (original.ticketKind === "modification") {
+      const origin = findTicketLine(quotes, original.modificationOfTicket || "");
+      if (origin && origin.item?.ticketKind !== "modification") {
+        openFoundTicket({ ...origin, viaModificationTicket: original }, { announce: true });
+        return;
+      }
+      toast.warning("Ouvre le ticket d’origine pour le modifier à nouveau.");
+      return;
+    }
+
     const previousActivityName = snapshotLabel(original);
     const nextActivityName = snapshotLabel(patched);
     const createsLine =
@@ -270,12 +337,6 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       updatedQuote.total = nextTotal;
       updatedQuote.totalCash = nextTotal;
       updatedQuote.totalCard = calculateCardPrice(nextTotal);
-    }
-
-    if (createsLine && original.ticketKind === "modification") {
-      popup?.close();
-      toast.warning("Ce ticket est déjà un ticket de modification.");
-      return;
     }
 
     const previous = quotes;
@@ -443,7 +504,12 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       return;
     }
     if (original.ticketKind === "modification") {
-      toast.warning("Ce ticket est déjà une ligne de modification ou d’annulation.");
+      const origin = findTicketLine(quotes, original.modificationOfTicket || "");
+      if (origin && origin.item?.ticketKind !== "modification") {
+        openFoundTicket({ ...origin, viaModificationTicket: original }, { announce: true });
+        return;
+      }
+      toast.warning("Ouvre le ticket d’origine pour l’annuler.");
       return;
     }
     const popup = window.open("about:blank", "_blank");
@@ -847,13 +913,24 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
                       className="mt-2 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500"
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => printCreatedLine(line)}
-                    className="h-10 shrink-0 rounded-xl bg-slate-900 px-3 text-xs font-bold text-white"
-                  >
-                    Imprimer
-                  </button>
+                  <div className="flex shrink-0 flex-col gap-2">
+                    {!line.cancelled ? (
+                      <button
+                        type="button"
+                        onClick={() => reopenOriginalFromLine(line)}
+                        className="h-10 rounded-xl bg-indigo-600 px-3 text-xs font-bold text-white hover:bg-indigo-700"
+                      >
+                        Modifier à nouveau
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => printCreatedLine(line)}
+                      className="h-10 rounded-xl bg-slate-900 px-3 text-xs font-bold text-white"
+                    >
+                      Imprimer
+                    </button>
+                  </div>
                 </div>
               </li>
             ))}
