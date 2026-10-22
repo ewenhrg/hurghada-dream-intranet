@@ -67,6 +67,9 @@ export const PublicDevisPage = lazyWithRetry(() =>
 export const EventsInboxPage = lazyWithRetry(() =>
   import("../pages/EventsInboxPage").then((m) => ({ default: m.EventsInboxPage }))
 );
+export const ModificationRequestsPage = lazyWithRetry(() =>
+  import("../pages/ModificationRequestsPage").then((m) => ({ default: m.ModificationRequestsPage }))
+);
 export const B2BAccessPage = lazyWithRetry(() =>
   import("../pages/B2BAccessPage").then((m) => ({ default: m.B2BAccessPage }))
 );

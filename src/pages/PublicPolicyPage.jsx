@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { PublicAppShell } from "../components/public/PublicAppShell";
 
 const REFUND_ROWS = [
@@ -49,6 +50,9 @@ export function PublicPolicyPage() {
               </li>
             ))}
           </ul>
+          <Link to="/modification" className="hdc-btn hdc-btn-primary mt-4 w-full">
+            Modification / annulation
+          </Link>
         </section>
 
         <section className="mt-10" aria-labelledby="policy-change">

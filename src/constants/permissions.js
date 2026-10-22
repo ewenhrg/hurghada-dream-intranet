@@ -198,6 +198,12 @@ export function canAccessEventsPage(user) {
   return n === "sophia" || n === "ewen" || n === "karim";
 }
 
+/** Page Data entry — comptes Situation, Ewen et Karim uniquement. */
+export function canAccessDataEntryPage(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "situation" || n === "ewen" || n === "karim";
+}
+
 export function dbUserToSessionUser(dbUser) {
   if (!dbUser) return null;
   const session = {

@@ -48,6 +48,7 @@ import { supabase } from "../lib/supabase";
 import { computePaidColumnsFromItems } from "../utils/ticketCollections";
 import { releaseTicketAllocations } from "../utils/ticketSequence";
 import { logger } from "../utils/logger";
+import { saveOpsComment } from "../utils/opsComment";
 
 const paymentText = (method) =>
   method === "cash" ? "Cash" : method === "stripe" ? "Stripe" : "";
@@ -71,8 +72,8 @@ const EXPORT_HEADERS = [
   "Vendeur",
 ];
 
-/** Colonnes tableau Situation (✓ + 15 données). */
-const COL_COUNT = 16;
+/** Colonnes tableau Situation (✓ + 15 données + commentaire interne). */
+const COL_COUNT = 17;
 
 /** Pagination : évite de monter des milliers de lignes d’un coup. */
 const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
@@ -199,7 +200,7 @@ function colLetter(n) {
 /**
  * Registre des tickets — colonnes alignées Excel pour copier/coller direct.
  */
-export function TicketsPage({ quotes = [], setQuotes, activities = [], user = null }) {
+export function TicketsPage({ quotes = [], setQuotes, activities = [], user = null, entryMode = false }) {
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 250);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -209,6 +210,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [editingRow, setEditingRow] = useState(null);
   const [pickupDrafts, setPickupDrafts] = useState({});
+  const [commentDrafts, setCommentDrafts] = useState({});
+  const [savingCommentKey, setSavingCommentKey] = useState("");
   const [savingPickupKey, setSavingPickupKey] = useState("");
   const [savingMarinaKey, setSavingMarinaKey] = useState("");
   const [deletingTicket, setDeletingTicket] = useState(null);
@@ -218,6 +221,82 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     return new Set(Array.isArray(stored) ? stored : []);
   });
   const canManage = canManageTicketLines(user) && typeof setQuotes === "function";
+  const [reviewed, setReviewed] = useState(() => {
+    if (!entryMode) return new Set();
+    const stored = loadLS(LS_KEYS.ticketEntryChecks, []);
+    return new Set(Array.isArray(stored) ? stored.map((value) => String(value || "").trim()).filter(Boolean) : []);
+  });
+  const columnCount = entryMode ? COL_COUNT + 1 : COL_COUNT;
+
+  const reloadReviewed = useCallback(async () => {
+    if (!entryMode || !supabase) return;
+    const { data, error } = await supabase
+      .from("ticket_entry_checks")
+      .select("ticket_number")
+      .eq("site_key", SITE_KEY);
+    if (error) {
+      logger.warn("ticket_entry_checks:", error);
+      return;
+    }
+    const numbers = (data || []).map((row) => String(row.ticket_number || "").trim()).filter(Boolean);
+    setReviewed(new Set(numbers));
+    saveLS(LS_KEYS.ticketEntryChecks, numbers);
+  }, [entryMode]);
+
+  useEffect(() => {
+    if (!entryMode || !supabase) return undefined;
+    void reloadReviewed();
+    const channel = supabase
+      .channel("ticket-entry-checks")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ticket_entry_checks", filter: `site_key=eq.${SITE_KEY}` },
+        () => {
+          void reloadReviewed();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [entryMode, reloadReviewed]);
+
+  const toggleReviewed = useCallback(async (ticketNumber) => {
+    const key = String(ticketNumber || "").trim();
+    if (!key || !entryMode) return;
+    const turningOn = !reviewed.has(key);
+    setReviewed((prev) => {
+      const next = new Set(prev);
+      if (turningOn) next.add(key);
+      else next.delete(key);
+      saveLS(LS_KEYS.ticketEntryChecks, Array.from(next));
+      return next;
+    });
+    if (!supabase) return;
+    const query = turningOn
+      ? supabase.from("ticket_entry_checks").upsert(
+          {
+            site_key: SITE_KEY,
+            ticket_number: key,
+            checked_by: String(user?.name || "").trim(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "site_key,ticket_number" }
+        )
+      : supabase.from("ticket_entry_checks").delete().eq("site_key", SITE_KEY).eq("ticket_number", key);
+    const { error } = await query;
+    if (error) {
+      logger.warn("ticket_entry_checks toggle:", error);
+      setReviewed((prev) => {
+        const next = new Set(prev);
+        if (turningOn) next.delete(key);
+        else next.add(key);
+        saveLS(LS_KEYS.ticketEntryChecks, Array.from(next));
+        return next;
+      });
+      toast.error("La case n’a pas été enregistrée.");
+    }
+  }, [entryMode, reviewed, user?.name]);
 
   useEffect(() => {
     saveLS(LS_KEYS.copiedTickets, Array.from(copied));
@@ -288,6 +367,25 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
       setSavingPickupKey("");
     }
   }, [quotes, setQuotes]);
+
+  const commitOpsComment = useCallback(async (row, rawValue) => {
+    if (typeof setQuotes !== "function") return;
+    const shown = commentDrafts[row.key] ?? row.opsComment;
+    if (String(rawValue ?? "").trim() === String(shown || "").trim() && !(row.key in commentDrafts)) return;
+    setSavingCommentKey(row.key);
+    const saved = await saveOpsComment(quotes, setQuotes, row.quoteId, row.itemIndex, rawValue);
+    setSavingCommentKey("");
+    if (!saved.ok) {
+      toast.error("Le commentaire n’a pas été enregistré.");
+      return;
+    }
+    setCommentDrafts((prev) => {
+      if (!(row.key in prev)) return prev;
+      const copy = { ...prev };
+      delete copy[row.key];
+      return copy;
+    });
+  }, [commentDrafts, quotes, setQuotes]);
 
   const commitMarina = useCallback(async (row, checked) => {
     if (typeof setQuotes !== "function") return;
@@ -384,6 +482,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           pickup: pickup || "",
           meetAtHotelMarina: item.meetAtHotelMarina === true,
           comment: formatSituationComment(item, quote.currency || "EUR"),
+          opsComment: String(item.opsComment || "").trim(),
           restAmount: Math.round(Number(item.restAmount) || 0),
           priceValue: isModification ? 0 : priceValue,
           modificationTicket: isModification,
@@ -399,19 +498,25 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         });
       });
     });
-    // Date croissante → activités regroupées → n° ticket
-    list.sort((a, b) => {
-      const da = a.date || "";
-      const db = b.date || "";
-      if (da !== db) return da.localeCompare(db);
-      const act = String(a.activitySortKey || "").localeCompare(String(b.activitySortKey || ""), "fr", {
-        sensitivity: "base",
+    if (entryMode) {
+      list.sort((a, b) =>
+        String(a.ticketNumber).localeCompare(String(b.ticketNumber), "fr", { numeric: true })
+      );
+    } else {
+      // Date croissante → activités regroupées → n° ticket
+      list.sort((a, b) => {
+        const da = a.date || "";
+        const db = b.date || "";
+        if (da !== db) return da.localeCompare(db);
+        const act = String(a.activitySortKey || "").localeCompare(String(b.activitySortKey || ""), "fr", {
+          sensitivity: "base",
+        });
+        if (act !== 0) return act;
+        return String(a.ticketNumber).localeCompare(String(b.ticketNumber), "fr", { numeric: true });
       });
-      if (act !== 0) return act;
-      return String(a.ticketNumber).localeCompare(String(b.ticketNumber), "fr", { numeric: true });
-    });
+    }
     return list;
-  }, [quotes, activities]);
+  }, [quotes, activities, entryMode]);
 
   const filtered = useMemo(() => {
     const term = debouncedQ.trim().toLowerCase();
@@ -442,6 +547,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.createdByName,
         r.reservationCode,
         r.comment,
+        r.opsComment,
       ].some((v) => String(v || "").toLowerCase().includes(term));
     });
   }, [rows, debouncedQ, statusFilter, copied, filterDate]);
@@ -488,6 +594,17 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     let lastAct = null;
     let toneIdx = 0;
 
+    if (entryMode) {
+      return pageRows.map((r) => ({
+        type: "row",
+        key: r.key,
+        row: r,
+        toneClass: reviewed.has(r.ticketNumber) ? "bg-emerald-50" : "bg-white",
+        accentClass: reviewed.has(r.ticketNumber) ? "border-l-emerald-500" : "border-l-amber-400",
+        toneIdx: 0,
+      }));
+    }
+
     for (const r of pageRows) {
       const dateKey = r.date || "";
       if (dateKey !== lastDate) {
@@ -530,7 +647,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
       });
     }
     return blocks;
-  }, [pageRows]);
+  }, [pageRows, entryMode, reviewed]);
 
   const dateForExport = (d) =>
     d ? new Date(d + "T12:00:00").toLocaleDateString("fr-FR") : "";
@@ -1214,7 +1331,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             ) : (
               "0 ligne"
             )}{" "}
-            · date → activité
+            {entryMode ? "· ordre d’arrivée" : "· date → activité"}
           </span>
         </div>
       </div>
@@ -1252,11 +1369,14 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             className="overflow-hidden rounded-2xl border border-indigo-200/70 bg-white shadow-[0_16px_40px_-24px_rgba(79,70,229,0.35)] ring-1 ring-slate-200/80"
           >
             <div ref={scrollRef} className="max-h-[min(70vh,900px)] overflow-auto">
-            <table className="w-full min-w-[83.5rem] table-fixed border-collapse text-left font-sans">
+            <table className={`w-full table-fixed border-collapse text-left font-sans ${entryMode ? "min-w-[94.5rem]" : "min-w-[91.5rem]"}`}>
               <caption className="sr-only">
-                Tableau tickets : trié par date puis par activité, avec séparateurs colorés.
+                {entryMode
+                  ? "Tableau data entry : tickets dans l’ordre d’arrivée, avec une case Vu."
+                  : "Tableau tickets : trié par date puis par activité, avec séparateurs colorés."}
               </caption>
               <colgroup>
+                {entryMode ? <col style={{ width: "3rem" }} /> : null}
                 <col style={{ width: "9.5rem" }} />
                 <col style={{ width: "5.5rem" }} />
                 <col style={{ width: "4.5rem" }} />
@@ -1273,9 +1393,15 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                 <col style={{ width: "3rem" }} />
                 <col style={{ width: "3.75rem" }} />
                 <col style={{ width: "4.5rem" }} />
+                <col style={{ width: "8rem" }} />
               </colgroup>
               <thead className="sticky top-0 z-10">
                 <tr className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600">
+                  {entryMode ? (
+                    <th scope="col" className={`${TH_BASE} !bg-emerald-700`} title="Déjà vu, tout est bon">
+                      Vu
+                    </th>
+                  ) : null}
                   <th scope="col" className={TH_BASE} title="Copier">
                     ✓
                   </th>
@@ -1324,6 +1450,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                   <th scope="col" className={TH_BASE} title="Vendeur">
                     Vend.
                   </th>
+                  <th scope="col" className={`${TH_BASE} !bg-slate-700`} title="Commentaire interne, non copié">
+                    Note
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -1332,7 +1461,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                     return (
                       <tr key={block.key}>
                         <td
-                          colSpan={COL_COUNT}
+                          colSpan={columnCount}
                           className="border-y-2 border-slate-900 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-800 px-3 py-2 text-[11px] font-bold capitalize tracking-wide text-white shadow-inner"
                         >
                           <span className="inline-flex items-center gap-2">
@@ -1348,7 +1477,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                     return (
                       <tr key={block.key}>
                         <td
-                          colSpan={COL_COUNT}
+                          colSpan={columnCount}
                           className={`border-y border-slate-300/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-800 ${block.toneClass} border-l-4 ${block.accentClass}`}
                         >
                           {block.name}
@@ -1359,6 +1488,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
 
                   const r = block.row;
                   const isCopied = copied.has(r.ticketNumber);
+                  const isReviewed = entryMode && reviewed.has(r.ticketNumber);
                   const rowBg = isCopied ? "bg-slate-100" : block.toneClass;
                   const tdRead = isCopied ? TD_READ_MUTED : TD_READ;
                   const pay = paymentShort(r.paymentMethod);
@@ -1370,6 +1500,18 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                         isCopied ? "border-l-slate-300" : block.accentClass
                       }`}
                     >
+                      {entryMode ? (
+                        <td className={`${TD} text-center`}>
+                          <input
+                            type="checkbox"
+                            checked={isReviewed}
+                            onChange={() => void toggleReviewed(r.ticketNumber)}
+                            aria-label={`Marquer le ticket ${r.ticketNumber} comme vu`}
+                            title={isReviewed ? "Déjà vu" : "À vérifier"}
+                            className="size-5 accent-emerald-600"
+                          />
+                        </td>
+                      ) : null}
                       <td className={`${TD} !overflow-visible whitespace-nowrap px-1 text-center`}>
                         <div className="flex flex-nowrap items-center justify-center gap-0.5">
                           {canManage ? (
@@ -1533,6 +1675,26 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                       </td>
                       <td className={`${TD} truncate text-center`} title={r.createdByName}>
                         {r.createdByName || ""}
+                      </td>
+                      <td className={`${TD} !overflow-visible`}>
+                        <input
+                          type="text"
+                          value={commentDrafts[r.key] ?? r.opsComment}
+                          disabled={savingCommentKey === r.key || typeof setQuotes !== "function"}
+                          aria-label={`Commentaire du ticket ${r.ticketNumber}`}
+                          title="Ce commentaire n’est pas copié"
+                          placeholder="Note"
+                          onChange={(event) =>
+                            setCommentDrafts((prev) => ({ ...prev, [r.key]: event.target.value }))
+                          }
+                          onBlur={(event) => {
+                            void commitOpsComment(r, event.target.value);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") event.currentTarget.blur();
+                          }}
+                          className="w-full rounded-md border border-slate-300 bg-white px-1 py-0.5 text-[10px] font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 disabled:opacity-60"
+                        />
                       </td>
                     </tr>
                   );

@@ -30,6 +30,7 @@ const SOCIALS = [
 ];
 
 const HOME_MENU = [
+  { to: "/modification", label: "Modification / annulation" },
   { to: "/catalogue", label: "Excursions" },
   { to: "/hotels", label: "Hôtels" },
   { to: "/sejour", label: "Mon séjour" },

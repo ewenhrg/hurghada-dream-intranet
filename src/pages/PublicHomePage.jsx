@@ -410,6 +410,7 @@ export function PublicHomePage() {
   const desktopNav = (
     <nav aria-label="Navigation" className="flex items-center gap-1">
       {[
+        ["/modification", "Modification / annulation"],
         ["/catalogue", "Excursions"],
         ["/hotels", "Hôtels"],
         ["/sejour", "Mon séjour"],
@@ -431,6 +432,14 @@ export function PublicHomePage() {
 
   return (
     <PublicAppShell title="Accueil" wide="xl" nav={desktopNav}>
+      <div className="mx-auto flex justify-center px-4 pb-3 lg:hidden">
+        <Link
+          to="/modification"
+          className="inline-flex min-h-11 items-center rounded-full bg-white px-4 text-sm font-semibold text-catalog-ink ring-1 ring-catalog-border"
+        >
+          Modification / annulation
+        </Link>
+      </div>
       {/* ——— Hero « horizon » ——— */}
       <section ref={heroRef} className="hdc-hero-screen relative">
         {/* Grand bleu derrière l’ouverture : l’horizon se trace sur la mer avant que l’image s’ouvre. */}

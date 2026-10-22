@@ -22,6 +22,7 @@ import {
   PublicHotelDetailPage,
   PublicB2BPage,
   PublicEventsPage,
+  PublicModificationPage,
 } from "./config/lazyPublicPages";
 
 function PublicClientPage() {
@@ -80,6 +81,9 @@ function PublicClientPage() {
   }
   if (pathname === "/evenements" || pathname === "/evenements/") {
     return <PublicEventsPage />;
+  }
+  if (pathname === "/modification" || pathname === "/modification/") {
+    return <PublicModificationPage />;
   }
   if (pathname === "/demande-hotel" || pathname === "/demande-hotel/") {
     return <PublicHotelRequestPage />;

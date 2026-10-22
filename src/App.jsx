@@ -9,7 +9,7 @@ import {
   getQuoteSiteKeysForSync,
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
-import { canAccessEventsPage, canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canAccessReceiptPage, canSendStayBroadcast, hasFullIntranetAccess } from "./constants/permissions";
+import { canAccessDataEntryPage, canAccessEventsPage, canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canAccessReceiptPage, canSendStayBroadcast, hasFullIntranetAccess } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, saveQuotesCache, loadLS, normalizeQuoteItemsFromDb } from "./utils";
 import { runWhenIdle } from "./utils/idle";
 import { attachTicketPaymentMetaFromItems } from "./utils/ticketCollections";
@@ -42,6 +42,7 @@ import {
   PublicHotelsAdminPage,
   HotelHistoryPage,
   HotelTarifsPage,
+  ModificationRequestsPage,
 } from "./config/lazyPages";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
@@ -54,6 +55,7 @@ import { toast, clearToasts } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { activitiesCache, createCacheKey } from "./utils/cache";
 import { usePublicQuotesInbox } from "./hooks/usePublicQuotesInbox";
+import { useModificationRequestCount } from "./hooks/useModificationRequestCount";
 import {
   mergeRemoteActivitiesWithLocal,
   saveActivitiesAutoSnapshot,
@@ -88,6 +90,9 @@ export default function App() {
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
   const { pendingCount: pendingPublicQuotesCount } = usePublicQuotesInbox({
+    enabled: Boolean(ok && user && user.canAccessHistory !== false),
+  });
+  const pendingModificationCount = useModificationRequestCount({
     enabled: Boolean(ok && user && user.canAccessHistory !== false),
   });
 
@@ -1181,19 +1186,19 @@ export default function App() {
 
   // Calculer la largeur maximale pour le header et le footer
   const maxWidthClass =
-    tab === "tickets" || tab === "receipt"
+    tab === "tickets" || tab === "receipt" || tab === "data-entry"
       ? "max-w-[min(100%,1600px)]"
       : tab === "devis" || tab === "situation"
         ? "max-w-7xl"
         : "max-w-6xl";
   const mainPaddingClass =
-    tab === "devis" ? "px-0" : tab === "tickets" || tab === "receipt" ? "px-1 md:px-2 lg:px-3" : "px-2 md:px-3 lg:px-6";
+    tab === "devis" ? "px-0" : tab === "tickets" || tab === "receipt" || tab === "data-entry" ? "px-1 md:px-2 lg:px-3" : "px-2 md:px-3 lg:px-6";
   // Construire les className complets
   const headerNavClassName = `glass-nav mx-auto flex flex-col items-stretch gap-3 md:gap-4 ${maxWidthClass} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`;
   const mainClassName = `flex-1 py-4 md:py-10 ${mainPaddingClass} scroll-container`;
   const footerClassName = `mx-auto px-4 py-8 border-t mt-10 font-medium tracking-wide ${maxWidthClass}`;
   const contentContainerClassName =
-    tab === "tickets" || tab === "receipt"
+    tab === "tickets" || tab === "receipt" || tab === "data-entry"
       ? `mx-auto space-y-4 md:space-y-6 ${maxWidthClass} rounded-2xl p-2 md:p-3 lg:p-4`
       : `mx-auto space-y-6 md:space-y-10 ${maxWidthClass} rounded-2xl p-4 md:p-6 lg:p-8`;
   // Construire les className pour les boutons de langue
@@ -1380,6 +1385,11 @@ export default function App() {
                   {t("nav.tickets")}
                 </Pill>
                 )}
+                {canAccessDataEntryPage(user) && (
+                <Pill active={tab === "data-entry"} onClick={() => setTab("data-entry")}>
+                  Data entry
+                </Pill>
+                )}
                 {canAccessReceiptPage(user) && (
                 <Pill active={tab === "receipt"} onClick={() => setTab("receipt")}>
                   Receipt
@@ -1423,6 +1433,21 @@ export default function App() {
                 {user?.canAccessHistory !== false && (
                   <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
                     {t("nav.modifications")}
+                  </Pill>
+                )}
+                {user?.canAccessHistory !== false && (
+                  <Pill active={tab === "modif-demandes"} onClick={() => setTab("modif-demandes")}>
+                    <span className="inline-flex items-center gap-1.5">
+                      Demandes modif
+                      {pendingModificationCount > 0 ? (
+                        <span
+                          className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-black tabular-nums leading-none text-white shadow-[0_0_10px_rgba(244,63,94,0.65)] ring-2 ring-white/80"
+                          aria-label={`${pendingModificationCount} demande${pendingModificationCount > 1 ? "s" : ""} de modification`}
+                        >
+                          {pendingModificationCount > 99 ? "99+" : pendingModificationCount}
+                        </span>
+                      ) : null}
+                    </span>
                   </Pill>
                 )}
                 {!SITUATION_PAGE_STANDBY && (
@@ -1599,6 +1624,16 @@ export default function App() {
           </Section>
         )}
 
+        {tab === "data-entry" && canAccessDataEntryPage(user) && (
+          <Section
+            title="Data entry"
+            subtitle="Même tableau que Situation, dans l’ordre d’arrivée des tickets. La case Vu reste cochée pour Situation, Ewen et Karim."
+            bare
+          >
+            <TicketsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} entryMode />
+          </Section>
+        )}
+
         {tab === "receipt" && canAccessReceiptPage(user) && (
           <Section
             title="Receipt"
@@ -1636,6 +1671,12 @@ export default function App() {
         {tab === "historique-hotel" && canAccessHotelHistoryPage(user) && (
           <Section title="Hotel history" subtitle="Requests from the public form (contact details, hotels, budget).">
             <HotelHistoryPage user={user} />
+          </Section>
+        )}
+
+        {tab === "modif-demandes" && user?.canAccessHistory !== false && (
+          <Section title="Demandes modif" subtitle="Demandes du site client. Valider met à jour Situation, les transferts et Mon séjour.">
+            <ModificationRequestsPage quotes={quotes} setQuotes={setQuotes} activities={activities} />
           </Section>
         )}
 

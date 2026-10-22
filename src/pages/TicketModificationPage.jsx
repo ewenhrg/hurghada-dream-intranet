@@ -15,6 +15,7 @@ import {
 import { itemWithPickupSchedule, visiblePickupTime } from "../utils/pickupSchedule";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
+import { saveOpsComment } from "../utils/opsComment";
 
 function findTicketLine(quotes, rawNumber) {
   const needle = String(rawNumber || "").trim().toLowerCase();
@@ -49,6 +50,17 @@ function parseMoney(value) {
   return Math.round(amount);
 }
 
+function snapshotLabel(item) {
+  const name = String(item?.activityName || "Activité").trim();
+  const date = String(item?.date || "").slice(0, 10);
+  const counts = [
+    Number(item?.adults) ? `${item.adults} ad.` : "",
+    Number(item?.children) ? `${item.children} enf.` : "",
+    Number(item?.babies) ? `${item.babies} bébé` : "",
+  ].filter(Boolean);
+  return [name, date, counts.join(" ")].filter(Boolean).join(" · ");
+}
+
 function showModificationTicket(popup, quote, item) {
   const html = generateTicketsHTML({ ...quote, items: [item] });
   const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
@@ -63,6 +75,34 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
   const [saving, setSaving] = useState(false);
   const [searched, setSearched] = useState(false);
   const [deadNote, setDeadNote] = useState("");
+  const [noteDrafts, setNoteDrafts] = useState({});
+
+  const createdLines = useMemo(() => {
+    const list = [];
+    for (const quote of quotes || []) {
+      (quote.items || []).forEach((item, index) => {
+        if (item?.ticketKind !== "modification") return;
+        const cancelled = item.cancellation === true || String(item.newActivityName || "").startsWith("Annulée");
+        list.push({
+          key: `${quote.id || quote.supabase_id}-${item.ticketNumber}-${index}`,
+          quote,
+          item,
+          ticketNumber: String(item.ticketNumber || "").trim(),
+          before: String(item.previousActivityName || "—").trim(),
+          after: String(item.newActivityName || "—").trim(),
+          client: String(quote.client?.name || "").trim(),
+          hotel: String(quote.client?.hotel || "").trim(),
+          date: String(item.date || "").slice(0, 10),
+          cancelled,
+          quoteId: quote.id,
+          itemIndex: index,
+          opsComment: String(item.opsComment || "").trim(),
+        });
+      });
+    }
+    list.sort((a, b) => b.ticketNumber.localeCompare(a.ticketNumber, "fr", { numeric: true }));
+    return list;
+  }, [quotes]);
 
   const activityOptions = useMemo(() => {
     const list = [...(activities || [])].filter((activity) => activity?.name);
@@ -87,6 +127,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       room: String(client.room || "").trim(),
       pickup: visiblePickupTime(item),
       meetAtHotelMarina: item.meetAtHotelMarina === true,
+      opsComment: String(item.opsComment || "").trim(),
       newPrice: "",
       balanceDue: false,
       balanceAmount: "",
@@ -170,12 +211,6 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       return;
     }
 
-    const popup = balanceDue ? window.open("about:blank", "_blank") : null;
-    if (balanceDue && !popup) {
-      toast.error("Autorisez les fenêtres pop-up pour imprimer le ticket de modification.");
-      return;
-    }
-
     const pickupPatch = itemWithPickupSchedule(original, form.pickup);
     const patched = {
       ...original,
@@ -193,9 +228,25 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       patched.activityNameEn = String(selected.nameEn ?? selected.name_en ?? "").trim();
     }
     if (newPrice != null) patched.lineTotal = newPrice;
+    patched.opsComment = String(form.opsComment || "").trim();
 
-    const previousActivityName = String(original.activityName || "").trim();
-    const nextActivityName = String(patched.activityName || previousActivityName).trim();
+    const previousActivityName = snapshotLabel(original);
+    const nextActivityName = snapshotLabel(patched);
+    const createsLine =
+      activityChanged ||
+      String(original.date || "").slice(0, 10) !== patched.date ||
+      toCount(original.adults) !== patched.adults ||
+      toCount(original.children) !== patched.children ||
+      toCount(original.babies) !== patched.babies ||
+      String(visiblePickupTime(original) || "") !== String(visiblePickupTime(patched) || "").trim() ||
+      Boolean(original.meetAtHotelMarina) !== Boolean(patched.meetAtHotelMarina) ||
+      newPrice != null ||
+      balanceDue;
+    const popup = createsLine ? window.open("about:blank", "_blank") : null;
+    if (createsLine && !popup) {
+      toast.error("Autorisez les fenêtres pop-up pour imprimer le ticket de modification.");
+      return;
+    }
     const items = quote.items.map((item, index) => (index === itemIndex ? patched : item));
     const updatedQuote = {
       ...quote,
@@ -216,7 +267,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       updatedQuote.totalCard = calculateCardPrice(nextTotal);
     }
 
-    if (balanceDue && original.ticketKind === "modification") {
+    if (createsLine && original.ticketKind === "modification") {
       popup?.close();
       toast.warning("Ce ticket est déjà un ticket de modification.");
       return;
@@ -244,7 +295,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       }
 
       let modNumber = "";
-      if (balanceDue) {
+      if (createsLine) {
         if (!supabase) {
           popup?.close();
           toast.error("Connexion indispensable pour créer le ticket de modification.");
@@ -275,7 +326,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
             children: patched.children,
             babies: patched.babies,
             lineTotal: 0,
-            restAmount: balanceAmount,
+            restAmount: balanceDue ? balanceAmount : 0,
             pickupTime: patched.pickupTime,
             pickupPublished: patched.pickupPublished,
             meetAtHotelMarina: patched.meetAtHotelMarina === true,
@@ -344,81 +395,124 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       toast.error("Ce ticket n’est plus dans le devis.");
       return;
     }
+    if (original.ticketKind === "modification") {
+      toast.warning("Ce ticket est déjà une ligne de modification ou d’annulation.");
+      return;
+    }
+    const popup = window.open("about:blank", "_blank");
+    if (!popup) {
+      toast.error("Autorisez les fenêtres pop-up pour imprimer le ticket d’annulation.");
+      return;
+    }
     const activity = String(original.activityName || "cette activité").trim();
     const confirmed = window.confirm(
-      `Annuler le ticket ${ticket} (${activity}) ?\n\nL’activité disparaît de Situation, Transferts et Mon séjour. Le numéro ${ticket} est mort : il ne sera plus jamais redonné.`
+      `Annuler le ticket ${ticket} (${activity}) ?\n\nL’activité disparaît de Situation, Transferts et Mon séjour. Une ligne d’annulation est créée. Le numéro ${ticket} est mort : il ne sera plus jamais redonné.`
     );
-    if (!confirmed) return;
+    if (!confirmed) {
+      popup.close();
+      return;
+    }
 
     const previous = quotes;
-    const nextItems = quote.items.filter((_, index) => index !== match.itemIndex);
-    const nextTotal = nextItems.reduce((sum, item) => sum + (Math.round(Number(item.lineTotal) || 0)), 0);
-    const { paidCash, paidStripe } = computePaidColumnsFromItems(nextItems);
-    const updatedQuote = {
-      ...quote,
-      items: nextItems,
-      total: nextTotal,
-      totalCash: nextTotal,
-      totalCard: calculateCardPrice(nextTotal),
-      paidCash,
-      paidStripe,
-      updated_at: new Date().toISOString(),
-    };
-    const nextQuotes = quotes.map((item) => (String(item.id) === String(quote.id) ? updatedQuote : item));
     const quoteDbId = quote.supabase_id != null ? Number(quote.supabase_id) : null;
     setSaving(true);
+    let reservation = null;
     try {
-      if (supabase) {
-        const burned = await voidTicketAllocations(supabase, [ticket]);
-        if (!burned.ok) {
-          toast.error("Impossible de brûler ce numéro. L’activité n’a pas été annulée.");
-          return;
-        }
+      if (!supabase) {
+        popup.close();
+        toast.error("Connexion indispensable pour créer la ligne d’annulation.");
+        return;
       }
-
+      const reserved = await commitTicketSequenceAfterPayment(supabase, [], { autoCount: 1, quotes });
+      if (!reserved.ok || !reserved.reservedNumbers?.[0]) {
+        popup.close();
+        toast.error("Aucun numéro libre pour la ligne d’annulation.");
+        return;
+      }
+      reservation = reserved.reservation;
+      const kept = quote.items.filter((_, index) => index !== match.itemIndex);
+      const special = {
+        ticketKind: "modification",
+        cancellation: true,
+        ticketNumber: reserved.reservedNumbers[0],
+        date: String(original.date || "").slice(0, 10),
+        activityName: `Annulation · ${activity}`,
+        previousActivityName: snapshotLabel(original),
+        newActivityName: "Annulée",
+        adults: 0,
+        children: 0,
+        babies: 0,
+        lineTotal: 0,
+        restAmount: 0,
+        modificationOfTicket: ticket,
+      };
+      const nextItems = [...kept, special];
+      const billable = nextItems.filter((item) => item?.ticketKind !== "modification");
+      const nextTotal = billable.reduce((sum, item) => sum + Math.round(Number(item.lineTotal) || 0), 0);
+      const { paidCash, paidStripe } = computePaidColumnsFromItems(billable);
+      const updatedQuote = {
+        ...quote,
+        items: nextItems,
+        total: nextTotal,
+        totalCash: nextTotal,
+        totalCard: calculateCardPrice(nextTotal),
+        paidCash,
+        paidStripe,
+        updated_at: new Date().toISOString(),
+      };
+      const nextQuotes = quotes.map((item) => (String(item.id) === String(quote.id) ? updatedQuote : item));
+      const payload = {
+        total: updatedQuote.total,
+        paid_cash: paidCash,
+        paid_stripe: paidStripe,
+        items: nextItems,
+        updated_at: updatedQuote.updated_at,
+      };
+      let updateQuery = supabase.from("quotes").update(payload).eq("site_key", SITE_KEY);
+      if (quote.supabase_id) updateQuery = updateQuery.eq("id", quote.supabase_id);
+      else updateQuery = updateQuery.eq("client_phone", quote.client?.phone || "").eq("created_at", quote.createdAt);
+      const { error } = await updateQuery;
+      if (error) {
+        logger.error("Annulation ticket:", error);
+        await rollbackTicketReservation(supabase, reservation);
+        popup.close();
+        toast.error("L’annulation n’a pas été enregistrée.");
+        return;
+      }
+      const burned = await voidTicketAllocations(supabase, [ticket]);
+      await confirmTicketAllocations(supabase, [special.ticketNumber], quoteDbId);
       setQuotes(nextQuotes);
       saveQuotesCache(nextQuotes);
-
-      if (supabase) {
-        const payload = {
-          total: updatedQuote.total,
-          paid_cash: paidCash,
-          paid_stripe: paidStripe,
-          items: nextItems,
-          updated_at: updatedQuote.updated_at,
-        };
-        let updateQuery = supabase.from("quotes").update(payload).eq("site_key", SITE_KEY);
-        if (quote.supabase_id) updateQuery = updateQuery.eq("id", quote.supabase_id);
-        else updateQuery = updateQuery.eq("client_phone", quote.client?.phone || "").eq("created_at", quote.createdAt);
-        const { error } = await updateQuery;
-        if (error) {
-          logger.error("Annulation ticket:", error);
-          setQuotes(previous);
-          saveQuotesCache(previous);
-          await supabase
-            .from("ticket_allocations")
-            .update({
-              status: "assigned",
-              quote_id: quoteDbId,
-              released_at: null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("site_key", SITE_KEY)
-            .eq("ticket_number", ticket);
-          toast.error("L’annulation n’a pas été enregistrée.");
-          return;
-        }
-      }
-
       setMatch(null);
       setForm(null);
       setQuery("");
       setSearched(true);
-      setDeadNote(`Le ticket ${ticket} est annulé. Ce numéro est mort et ne sera plus jamais redonné.`);
-      toast.success(`Ticket ${ticket} annulé. Le numéro ne sera plus réutilisé.`);
+      setDeadNote(
+        burned.ok
+          ? `Le ticket ${ticket} est annulé. Ligne ${special.ticketNumber} créée. Le numéro ${ticket} ne sera plus jamais redonné.`
+          : `La ligne ${special.ticketNumber} est créée, mais le numéro ${ticket} n’a pas pu être annulé.`
+      );
+      showModificationTicket(popup, updatedQuote, special);
+      toast.success(`Annulation enregistrée. Ligne ${special.ticketNumber} créée.`);
+    } catch (err) {
+      logger.error("Annulation ticket:", err);
+      if (reservation) await rollbackTicketReservation(supabase, reservation);
+      popup.close();
+      setQuotes(previous);
+      saveQuotesCache(previous);
+      toast.error("L’annulation n’a pas abouti.");
     } finally {
       setSaving(false);
     }
+  };
+
+  const printCreatedLine = (line) => {
+    const popup = window.open("about:blank", "_blank");
+    if (!popup) {
+      toast.error("Autorisez les fenêtres pop-up pour imprimer cette ligne.");
+      return;
+    }
+    showModificationTicket(popup, line.quote, line.item);
   };
 
   const hotel = String(match?.quote?.client?.hotel || "").trim();
@@ -615,6 +709,22 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
                 className="mt-1 h-11 w-full rounded-xl border border-slate-300 px-3 outline-none focus:border-indigo-500"
               />
             </label>
+            <label className="text-sm font-semibold text-slate-700 sm:col-span-2">
+              Commentaire
+              <textarea
+                value={form.opsComment}
+                onChange={(event) => setField("opsComment", event.target.value)}
+                onBlur={(event) => {
+                  if (!match) return;
+                  void saveOpsComment(quotes, setQuotes, match.quote.id, match.itemIndex, event.target.value).then((saved) => {
+                    if (!saved.ok) toast.error("Le commentaire n’a pas été enregistré.");
+                  });
+                }}
+                rows={2}
+                placeholder="Visible dans Situation, non copié"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500"
+              />
+            </label>
             <label className="flex items-center gap-2 self-end rounded-xl bg-teal-50 px-3 py-3 text-sm font-bold text-teal-900 ring-1 ring-teal-200">
               <input
                 type="checkbox"
@@ -646,10 +756,63 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
             </button>
           </div>
           <p className="text-xs leading-relaxed text-rose-700">
-            L’annulation retire l’activité de Situation, Transferts et Mon séjour. Le numéro de ticket reste mort : il n’est plus jamais redonné.
+            L’annulation retire l’activité de Situation, Transferts et Mon séjour, et crée une ligne d’annulation. Le numéro d’origine reste mort : il n’est plus jamais redonné.
           </p>
         </form>
       ) : null}
+
+      <section className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-amber-700">Lignes créées</p>
+        <h2 className="mt-1 text-lg font-bold text-slate-900">Activités modifiées ou annulées</h2>
+        {createdLines.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">Aucune ligne de modification ou d’annulation pour le moment.</p>
+        ) : (
+          <ul className="mt-3 max-h-[28rem] space-y-2 overflow-auto">
+            {createdLines.map((line) => (
+              <li key={line.key} className={`rounded-xl px-3 py-3 ring-1 ${line.cancelled ? "bg-rose-50 ring-rose-200" : "bg-amber-50 ring-amber-200"}`}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-extrabold text-slate-900">
+                      {line.cancelled ? "Annulation" : "Modification"} · {line.ticketNumber}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-700">{line.before}</p>
+                    <p className="text-sm font-semibold text-slate-900">→ {line.after}</p>
+                    <p className="mt-1 text-xs text-slate-500">{[line.client, line.hotel, line.date].filter(Boolean).join(" · ")}</p>
+                    <input
+                      type="text"
+                      value={noteDrafts[line.key] ?? line.opsComment}
+                      onChange={(event) => setNoteDrafts((prev) => ({ ...prev, [line.key]: event.target.value }))}
+                      onBlur={(event) => {
+                        void saveOpsComment(quotes, setQuotes, line.quoteId, line.itemIndex, event.target.value).then((saved) => {
+                          if (!saved.ok) toast.error("Le commentaire n’a pas été enregistré.");
+                          else {
+                            setNoteDrafts((prev) => {
+                              if (!(line.key in prev)) return prev;
+                              const copy = { ...prev };
+                              delete copy[line.key];
+                              return copy;
+                            });
+                          }
+                        });
+                      }}
+                      placeholder="Commentaire, visible dans Situation"
+                      aria-label={`Commentaire de la ligne ${line.ticketNumber}`}
+                      className="mt-2 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => printCreatedLine(line)}
+                    className="h-10 shrink-0 rounded-xl bg-slate-900 px-3 text-xs font-bold text-white"
+                  >
+                    Imprimer
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
