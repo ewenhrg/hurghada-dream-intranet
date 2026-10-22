@@ -9,7 +9,7 @@ import {
   getQuoteSiteKeysForSync,
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
-import { canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canSendStayBroadcast, hasFullIntranetAccess } from "./constants/permissions";
+import { canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canAccessReceiptPage, canSendStayBroadcast, hasFullIntranetAccess } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, saveQuotesCache, loadLS, normalizeQuoteItemsFromDb } from "./utils";
 import { runWhenIdle } from "./utils/idle";
 import { attachTicketPaymentMetaFromItems } from "./utils/ticketCollections";
@@ -106,6 +106,14 @@ export default function App() {
   useEffect(() => {
     if (!user || tab !== "historique-hotel") return;
     if (!canAccessHotelHistoryPage(user)) {
+      setTab(user.canAccessHistory !== false ? "history" : "devis");
+    }
+  }, [user, tab]);
+
+  /** Receipt : Ewen, Ramy et Karim uniquement. */
+  useEffect(() => {
+    if (!user || tab !== "receipt") return;
+    if (!canAccessReceiptPage(user)) {
       setTab(user.canAccessHistory !== false ? "history" : "devis");
     }
   }, [user, tab]);
@@ -1369,7 +1377,7 @@ export default function App() {
                   {t("nav.tickets")}
                 </Pill>
                 )}
-                {user?.canAccessHistory !== false && (
+                {canAccessReceiptPage(user) && (
                 <Pill active={tab === "receipt"} onClick={() => setTab("receipt")}>
                   Receipt
                 </Pill>
@@ -1583,10 +1591,10 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "receipt" && user?.canAccessHistory !== false && (
+        {tab === "receipt" && canAccessReceiptPage(user) && (
           <Section
             title="Receipt"
-            subtitle="Tous les tickets du jour, avec les tarifs et les paiements cash ou Stripe."
+            subtitle="Every ticket for the day, with prices and cash or Stripe payments."
             bare
           >
             <ReceiptPage quotes={quotes} activities={activities} />

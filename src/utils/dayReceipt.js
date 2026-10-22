@@ -1,8 +1,6 @@
 import {
   buildActivitiesByIdMap,
-  calculateCardPrice,
   currencyNoCents,
-  formatPhoneWithPlus,
   normalizeTicketsPaymentMethods,
   resolveTicketActivityName,
 } from "../utils.js";
@@ -23,9 +21,9 @@ function lineCash(item) {
 function paxLabel(item) {
   const cells = getQuoteItemParticipantCells(item);
   const parts = [];
-  if (cells.adults > 0) parts.push(`${cells.adults} adulte${cells.adults > 1 ? "s" : ""}`);
-  if (cells.children > 0) parts.push(`${cells.children} enfant${cells.children > 1 ? "s" : ""}`);
-  if (cells.babies > 0) parts.push(`${cells.babies} bébé${cells.babies > 1 ? "s" : ""}`);
+  if (cells.adults > 0) parts.push(`${cells.adults} adult${cells.adults > 1 ? "s" : ""}`);
+  if (cells.children > 0) parts.push(`${cells.children} ${cells.children > 1 ? "children" : "child"}`);
+  if (cells.babies > 0) parts.push(`${cells.babies} ${cells.babies > 1 ? "babies" : "baby"}`);
   return parts.join(" · ") || "—";
 }
 
@@ -65,8 +63,8 @@ function paymentLabel(cashOn, stripeOn, currency) {
 }
 
 /**
- * Tickets d'une date d'activité, avec les encaissements cash (euro ou égyptien)
- * et Stripe (+3 % une fois par devis, pas par ligne).
+ * Tickets for one activity date, with cash (euro or Egyptian) and Stripe.
+ * Stripe is the tariff total, without the 3% card fee.
  */
 export function buildDayReceipt(quotes, dateKey, activities = []) {
   const key = String(dateKey || "").trim();
@@ -111,9 +109,9 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
     const dayCash = cashOn ? shareAmount(cash.amount, daySum, allSum) : 0;
     const dayStripeBase = stripeOn ? shareAmount(stripeBase, daySum, allSum) : 0;
     const dayStripe = stripeOn && !cashOn
-      ? calculateCardPrice(daySum)
+      ? daySum
       : dayStripeBase > 0
-        ? calculateCardPrice(dayStripeBase)
+        ? dayStripeBase
         : 0;
 
     if (cashOn && !stripeOn) {
@@ -157,8 +155,6 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
       rows.push({
         key: `${id}-${line.itemIndex}-${line.ticketNumber}`,
         ticketNumber: line.ticketNumber,
-        clientName: String(client.name || "").trim() || "—",
-        phone: formatPhoneWithPlus(client.phone),
         hotel: String(client.hotel || "").trim() || "—",
         room: String(client.room || "").trim(),
         activity: formatActivityWithExtras({

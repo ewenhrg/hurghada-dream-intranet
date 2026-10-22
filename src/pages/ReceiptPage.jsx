@@ -7,7 +7,7 @@ import { toast } from "../utils/toast.js";
 
 function formatDay(dateKey) {
   if (!dateKey) return "";
-  return new Date(`${dateKey}T12:00:00`).toLocaleDateString("fr-FR", {
+  return new Date(`${dateKey}T12:00:00`).toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -48,7 +48,7 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
     const popup = window.open(url);
     if (!popup) {
       URL.revokeObjectURL(url);
-      toast.error("Autorisez les fenêtres pop-up pour imprimer le reçu.");
+      toast.error("Allow pop-ups to print the receipt.");
       return;
     }
     window.setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -59,8 +59,8 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
       <div className="rounded-2xl border-2 border-indigo-300 bg-white px-4 py-3 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-bold text-indigo-950">Date des tickets</p>
-            <p className="mt-0.5 text-xs font-medium capitalize text-slate-600">
+            <p className="text-sm font-bold text-indigo-950">Ticket date</p>
+            <p className="mt-0.5 text-xs font-medium text-slate-600">
               {dayLabel} — {totals.ticketCount} ticket{totals.ticketCount > 1 ? "s" : ""}
             </p>
           </div>
@@ -70,16 +70,16 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
               onClick={() => setDateKey((current) => shiftDay(current, -1))}
               className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700"
             >
-              Jour précédent
+              Previous day
             </button>
             <label className="inline-flex items-center gap-2 rounded-xl border-2 border-indigo-400 bg-indigo-50 px-3 py-2">
-              <span className="text-xs font-bold uppercase tracking-wide text-indigo-900">Calendrier</span>
+              <span className="text-xs font-bold uppercase tracking-wide text-indigo-900">Calendar</span>
               <input
                 type="date"
                 value={dateKey}
                 onChange={(event) => setDateKey(event.target.value)}
                 className="min-h-10 cursor-pointer rounded-lg border border-indigo-200 bg-white px-2 text-sm font-semibold text-slate-900"
-                aria-label="Choisir la date du reçu"
+                aria-label="Choose the receipt date"
               />
             </label>
             <button
@@ -87,14 +87,14 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
               onClick={() => setDateKey(getLocalDateKey())}
               className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700"
             >
-              Aujourd’hui
+              Today
             </button>
             <button
               type="button"
               onClick={() => setDateKey((current) => shiftDay(current, 1))}
               className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700"
             >
-              Jour suivant
+              Next day
             </button>
             <button
               type="button"
@@ -103,7 +103,7 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
               className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-slate-900 px-3.5 text-sm font-semibold text-white disabled:opacity-40"
             >
               <Printer className="size-4" aria-hidden="true" />
-              Imprimer
+              Print
             </button>
           </div>
         </div>
@@ -113,22 +113,21 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
         <table className="w-full min-w-[920px] border-collapse text-left text-sm">
           <thead className="bg-slate-900 text-[11px] uppercase tracking-wide text-white">
             <tr>
-              <th className="px-2 py-2">N° ticket</th>
-              <th className="px-2 py-2">Client</th>
-              <th className="px-2 py-2">Hôtel</th>
-              <th className="px-2 py-2">Activité</th>
-              <th className="px-2 py-2">Personnes</th>
-              <th className="px-2 py-2 text-right">Tarif</th>
-              <th className="px-2 py-2">Paiement</th>
-              <th className="px-2 py-2 text-right">Encaissé</th>
-              <th className="px-2 py-2 text-right">Reste</th>
+              <th className="px-2 py-2">Ticket no.</th>
+              <th className="px-2 py-2">Hotel</th>
+              <th className="px-2 py-2">Activity</th>
+              <th className="px-2 py-2">Guests</th>
+              <th className="px-2 py-2 text-right">Price</th>
+              <th className="px-2 py-2">Payment</th>
+              <th className="px-2 py-2 text-right">Collected</th>
+              <th className="px-2 py-2 text-right">Balance</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-slate-500">
-                  Aucun ticket pour cette date.
+                <td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">
+                  No tickets for this date.
                 </td>
               </tr>
             ) : (
@@ -136,12 +135,8 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
                 <tr key={row.key} className="border-t border-slate-200 text-slate-900">
                   <td className="px-2 py-2 font-bold tabular-nums">{row.ticketNumber}</td>
                   <td className="px-2 py-2">
-                    <div className="font-semibold">{row.clientName}</div>
-                    {row.phone ? <div className="text-xs text-slate-500">{row.phone}</div> : null}
-                  </td>
-                  <td className="px-2 py-2">
                     <div>{row.hotel}</div>
-                    {row.room ? <div className="text-xs text-slate-500">Ch. {row.room}</div> : null}
+                    {row.room ? <div className="text-xs text-slate-500">Room {row.room}</div> : null}
                   </td>
                   <td className="px-2 py-2">{row.activity}</td>
                   <td className="px-2 py-2 text-xs">{row.pax}</td>
@@ -161,10 +156,10 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
         {totals.cashEur > 0 ? <TotalLine label="Cash" value={totals.cashEurLabel} /> : null}
         {totals.cashEgp > 0 ? <TotalLine label="Cash" value={totals.cashEgpLabel} /> : null}
         {totals.stripe > 0 ? <TotalLine label="Stripe" value={totals.stripeLabel} /> : null}
-        {totals.rest > 0 ? <TotalLine label="Reste à payer" value={totals.restLabel} /> : null}
+        {totals.rest > 0 ? <TotalLine label="Balance due" value={totals.restLabel} /> : null}
         <p className="pt-2 text-[11px] leading-relaxed text-slate-500">
-          Le total est la somme des tarifs, sans les 3 %. Stripe ajoute ces 3 % sur la part carte.
-          Le cash égyptien est le montant saisi en livres.
+          The total is the sum of the ticket prices. Stripe is that card share, without the 3% fee.
+          Egyptian cash is the amount entered in pounds.
         </p>
       </div>
     </div>

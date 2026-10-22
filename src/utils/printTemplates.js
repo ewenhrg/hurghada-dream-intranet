@@ -1334,15 +1334,14 @@ export function generateDayReceiptHTML(receipt, options = {}) {
   if (totals.cashEur > 0) amountRows.push({ label: "Cash", value: totals.cashEurLabel });
   if (totals.cashEgp > 0) amountRows.push({ label: "Cash", value: totals.cashEgpLabel });
   if (totals.stripe > 0) amountRows.push({ label: "Stripe", value: totals.stripeLabel });
-  if (totals.rest > 0) amountRows.push({ label: "Reste à payer", value: totals.restLabel });
+  if (totals.rest > 0) amountRows.push({ label: "Balance due", value: totals.restLabel });
 
   const body = rows.length
     ? rows
         .map(
           (row) => `<tr>
         <td class="num">${esc(row.ticketNumber)}</td>
-        <td>${esc(row.clientName)}${row.phone ? `<div class="sub">${esc(row.phone)}</div>` : ""}</td>
-        <td>${esc(row.hotel)}${row.room ? `<div class="sub">Ch. ${esc(row.room)}</div>` : ""}</td>
+        <td>${esc(row.hotel)}${row.room ? `<div class="sub">Room ${esc(row.room)}</div>` : ""}</td>
         <td>${esc(row.activity)}</td>
         <td>${esc(row.pax)}</td>
         <td class="money">${esc(row.tariffLabel)}</td>
@@ -1352,7 +1351,7 @@ export function generateDayReceiptHTML(receipt, options = {}) {
       </tr>`
         )
         .join("")
-    : `<tr><td colspan="9" class="empty">Aucun ticket pour cette date.</td></tr>`;
+    : `<tr><td colspan="8" class="empty">No tickets for this date.</td></tr>`;
 
   const amounts = amountRows
     .map(
@@ -1364,7 +1363,7 @@ export function generateDayReceiptHTML(receipt, options = {}) {
     .join("");
 
   return `<!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Receipt ${dateLabel}</title>
@@ -1397,21 +1396,20 @@ export function generateDayReceiptHTML(receipt, options = {}) {
 </head>
 <body>
   <div class="sheet">
-    <button class="print-btn" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
     <h1>Receipt</h1>
     <p class="meta">${dateLabel} · ${rows.length} ticket${rows.length > 1 ? "s" : ""}</p>
     <table>
       <thead>
         <tr>
-          <th>N° ticket</th>
-          <th>Client</th>
-          <th>Hôtel</th>
-          <th>Activité</th>
-          <th>Personnes</th>
-          <th class="money">Tarif</th>
-          <th>Paiement</th>
-          <th class="money">Encaissé</th>
-          <th class="money">Reste</th>
+          <th>Ticket no.</th>
+          <th>Hotel</th>
+          <th>Activity</th>
+          <th>Guests</th>
+          <th class="money">Price</th>
+          <th>Payment</th>
+          <th class="money">Collected</th>
+          <th class="money">Balance</th>
         </tr>
       </thead>
       <tbody>${body}</tbody>

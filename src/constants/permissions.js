@@ -186,6 +186,12 @@ export function canViewTicketCollections(user) {
   return n === "ewen" || n === "karim";
 }
 
+/** Page Receipt — Ewen, Ramy et Karim uniquement. */
+export function canAccessReceiptPage(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "ewen" || n === "ramy" || n === "karim";
+}
+
 export function dbUserToSessionUser(dbUser) {
   if (!dbUser) return null;
   const session = {
