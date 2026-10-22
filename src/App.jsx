@@ -36,6 +36,7 @@ import {
   StayBroadcastPage,
   EwenDashboardPage,
   PublicDevisPage,
+  EventsInboxPage,
   B2BAccessPage,
   B2BQuotesPage,
   PublicHotelsAdminPage,
@@ -1393,6 +1394,11 @@ export default function App() {
                 </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
+                <Pill active={tab === "events"} onClick={() => setTab("events")}>
+                  Événementiel
+                </Pill>
+                )}
+                {user?.canAccessHistory !== false && (
                 <Pill active={tab === "public-devis"} onClick={() => setTab("public-devis")}>
                   <span className="inline-flex items-center gap-1.5">
                     {t("nav.publicDevis")}
@@ -1598,6 +1604,12 @@ export default function App() {
             bare
           >
             <ReceiptPage quotes={quotes} activities={activities} />
+          </Section>
+        )}
+
+        {tab === "events" && user?.canAccessHistory !== false && (
+          <Section title="Événementiel" subtitle="Demandes de devis envoyées depuis la page Événements.">
+            <EventsInboxPage />
           </Section>
         )}
 

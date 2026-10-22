@@ -47,6 +47,8 @@ export function isPublicClientPath(path) {
     p.startsWith("/mon-sejour/") ||
     p === "/b2b" ||
     p.startsWith("/b2b/") ||
+    p === "/evenements" ||
+    p.startsWith("/evenements/") ||
     p.startsWith("/request")
   );
 }

@@ -64,6 +64,9 @@ export const EwenDashboardPage = lazyWithRetry(() =>
 export const PublicDevisPage = lazyWithRetry(() =>
   import("../pages/PublicDevisPage").then((m) => ({ default: m.PublicDevisPage }))
 );
+export const EventsInboxPage = lazyWithRetry(() =>
+  import("../pages/EventsInboxPage").then((m) => ({ default: m.EventsInboxPage }))
+);
 export const B2BAccessPage = lazyWithRetry(() =>
   import("../pages/B2BAccessPage").then((m) => ({ default: m.B2BAccessPage }))
 );

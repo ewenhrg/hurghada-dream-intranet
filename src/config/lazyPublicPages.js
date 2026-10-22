@@ -39,6 +39,9 @@ export const PublicHotelsCataloguePage = lazyWithRetry(() =>
 export const PublicB2BPage = lazyWithRetry(() =>
   import("../pages/PublicB2BPage").then((m) => ({ default: m.PublicB2BPage }))
 );
+export const PublicEventsPage = lazyWithRetry(() =>
+  import("../pages/PublicEventsPage").then((m) => ({ default: m.PublicEventsPage }))
+);
 export const PublicHotelDetailPage = lazyWithRetry(() =>
   import("../pages/PublicHotelDetailPage").then((m) => ({ default: m.PublicHotelDetailPage }))
 );

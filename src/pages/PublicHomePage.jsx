@@ -13,6 +13,7 @@ import {
   Hotel,
   MapPin,
   Phone,
+  Sparkles,
   Sun,
   Ticket,
 } from "lucide-react";
@@ -412,6 +413,7 @@ export function PublicHomePage() {
         ["/catalogue", "Excursions"],
         ["/hotels", "Hôtels"],
         ["/sejour", "Mon séjour"],
+        ["/evenements", "Événements"],
         ["/contacts", "Contacts"],
         ["/qui-sommes-nous", "Qui sommes-nous"],
         ["/politique", "Remboursement"],
@@ -598,6 +600,21 @@ export function PublicHomePage() {
             <span className="relative mt-3 hidden h-9 w-9 items-center justify-center rounded-full bg-white/90 text-catalog-ink lg:inline-flex">
               <ArrowRight className="h-4 w-4" aria-hidden />
             </span>
+          </Link>
+          <Link
+            to="/evenements"
+            data-reveal="card"
+            data-press
+            className="relative col-span-2 flex min-h-[6rem] items-center justify-start gap-4 overflow-hidden rounded-[1.25rem] bg-catalog-abyss p-4 text-left lg:col-span-3 lg:min-h-[8.5rem] lg:p-6"
+          >
+            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-catalog-sand text-catalog-abyss">
+              <Sparkles className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+            </span>
+            <span className="relative min-w-0 flex-1">
+              <span className="block font-catalog-display text-[1.375rem] leading-tight text-white lg:text-[2rem] lg:leading-none">Événements</span>
+              <span className="mt-0.5 block text-sm text-white/80">Mariage, demande, anniversaire, séminaire</span>
+            </span>
+            <ChevronRight className="relative h-5 w-5 shrink-0 text-white/80" aria-hidden />
           </Link>
           </div>
         </section>
