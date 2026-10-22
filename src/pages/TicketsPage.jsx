@@ -500,7 +500,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     });
     if (entryMode) {
       list.sort((a, b) =>
-        String(a.ticketNumber).localeCompare(String(b.ticketNumber), "fr", { numeric: true })
+        String(b.ticketNumber).localeCompare(String(a.ticketNumber), "fr", { numeric: true })
       );
     } else {
       // Date croissante → activités regroupées → n° ticket
@@ -1331,7 +1331,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             ) : (
               "0 ligne"
             )}{" "}
-            {entryMode ? "· ordre d’arrivée" : "· date → activité"}
+            {entryMode ? "· n° du plus récent au plus ancien" : "· date → activité"}
           </span>
         </div>
       </div>

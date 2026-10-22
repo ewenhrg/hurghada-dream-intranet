@@ -397,6 +397,14 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   0%, 100% { transform: translate(-50%, 0); }
   50% { transform: translate(-50%, 6px); }
 }
+.hd-public-catalog .hdc-events-hero img {
+  transform-origin: 68% 62%;
+  animation: hdc-events-drift 22s ease-in-out infinite alternate;
+}
+@keyframes hdc-events-drift {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
 .hd-public-catalog [data-veil-top],
 .hd-public-catalog [data-veil-bottom] {
   height: 50%;
@@ -422,7 +430,8 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hd-public-catalog .hdc-hero-cue {
+  .hd-public-catalog .hdc-hero-cue,
+  .hd-public-catalog .hdc-events-hero img {
     animation: none;
   }
   .hd-public-catalog [data-horizon],

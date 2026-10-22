@@ -7,26 +7,38 @@ const OFFERS = [
   {
     title: "Demandes en mariage",
     text: "Une mise en scène romantique et exceptionnelle, sur la plage, dans le désert ou dans un lieu privatisé.",
+    image: "/client/events/events-proposal.jpg",
+    alt: "Couple au bord de la mer Rouge, un cœur de bougies dessiné sur le sable",
   },
   {
     title: "Mariages & cérémonies",
     text: "Célébrez votre union dans un cadre idyllique avec une organisation adaptée à vos souhaits.",
+    image: "/client/events/events-wedding.jpg",
+    alt: "Cérémonie sur la plage, arche fleurie face à la mer",
   },
   {
     title: "Baby showers & Gender Reveals",
     text: "Des décorations personnalisées et une ambiance magique pour célébrer l’arrivée de votre bébé.",
+    image: "/client/events/events-baby.jpg",
+    alt: "Table de baby shower avec gâteau et ballons, face à la mer",
   },
   {
     title: "Dîners romantiques",
     text: "Profitez d’un dîner privé aux chandelles, face à la mer ou dans un décor spécialement imaginé pour vous.",
+    image: "/client/events/events-dinner.jpg",
+    alt: "Dîner aux chandelles installé sur le sable au coucher du soleil",
   },
   {
     title: "Anniversaires & fêtes privées",
     text: "Surprenez vos proches avec une célébration entièrement personnalisée.",
+    image: "/client/events/events-birthday.jpg",
+    alt: "Table d’anniversaire dressée au bord de l’eau, avec des fleurs",
   },
   {
     title: "Séminaires & événements professionnels",
     text: "Réunions d’entreprise, team building, soirées professionnelles et événements de groupe.",
+    image: "/client/events/events-seminar.jpg",
+    alt: "Réunion de travail sur une terrasse face à la mer Rouge",
   },
 ];
 
@@ -191,7 +203,7 @@ export function PublicEventsPage() {
 
   return (
     <PublicAppShell title="Événements" wide>
-      <main className="mx-auto w-full max-w-3xl px-4 pb-16 pt-6">
+      <main className="mx-auto w-full max-w-5xl px-4 pb-16 pt-6">
         <p data-reveal="item" className="hdc-eyebrow">Hurghada Dream</p>
         <h1 data-split className="mt-1.5 font-catalog-display text-[2rem] leading-[1.08] text-catalog-ink lg:text-5xl">
           Organisation d’événements à Hurghada
@@ -199,7 +211,7 @@ export function PublicEventsPage() {
         <p data-reveal="item" className="mt-4 font-catalog-display text-xl leading-snug text-catalog-lagoon">
           Vos plus beaux moments méritent un cadre exceptionnel !
         </p>
-        <div data-reveal="item" className="mt-4 space-y-4 text-[0.975rem] leading-relaxed text-catalog-body">
+        <div data-reveal="item" className="mt-4 max-w-3xl space-y-4 text-[0.975rem] leading-relaxed text-catalog-body">
           <p>
             Vous rêvez d’un événement inoubliable sous le soleil d’Égypte ? Hurghada Dream vous accompagne dans
             l’organisation de vos événements privés et professionnels à Hurghada, avec des prestations personnalisées
@@ -211,16 +223,35 @@ export function PublicEventsPage() {
           </p>
         </div>
 
+        <figure data-reveal="item" className="hdc-events-hero relative mt-6 overflow-hidden rounded-[1.25rem] shadow-[0_18px_40px_-22px_rgba(11,79,92,0.5)]">
+          <img
+            src="/client/events/events-hero.jpg"
+            alt="Table dressée sur la plage de la mer Rouge au coucher du soleil"
+            className="aspect-[16/9] w-full object-cover"
+          />
+        </figure>
+
         <section className="mt-8">
           <h2 data-heading className="font-catalog-display text-2xl text-catalog-ink">Nos événements sur mesure</h2>
-          <ul className="mt-4 space-y-3">
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {OFFERS.map((offer) => (
-              <li key={offer.title} data-reveal="item" className="hdc-card p-4">
-                <p className="font-semibold text-catalog-ink">{offer.title}</p>
-                <p className="mt-1 text-sm leading-relaxed text-catalog-muted">{offer.text}</p>
+              <li key={offer.title} data-reveal="item" className="hdc-card group overflow-hidden">
+                <div className="overflow-hidden">
+                  <img
+                    src={offer.image}
+                    alt={offer.alt}
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-[4/3] w-full object-cover transition duration-700 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                  />
+                </div>
+                <div className="p-4">
+                  <p className="font-semibold text-catalog-ink">{offer.title}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-catalog-muted">{offer.text}</p>
+                </div>
               </li>
             ))}
-            <li data-reveal="item" className="hdc-card p-4">
+            <li data-reveal="item" className="hdc-card p-4 sm:col-span-2">
               <p className="font-semibold text-catalog-ink">Et bien plus encore !</p>
               <p className="mt-1 text-sm leading-relaxed text-catalog-muted">
                 Nous organisons tout type d’événement selon vos idées, même les plus originales.
