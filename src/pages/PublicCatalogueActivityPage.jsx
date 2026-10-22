@@ -66,9 +66,6 @@ import {
   isTurtleActivity,
   hasAllTurtleFinSizes,
   getTurtleFinSizesMissingMessage,
-  isZeroTracasSimOptionKey,
-  clearZeroTracasSimQuantities,
-  ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE,
 } from "../utils/activityHelpers";
 import {
   computePublicCatalogLineTotal,
@@ -756,7 +753,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
       return "Choisissez le forfait robes : 2 robes 60 €, 3 robes 70 € ou 4 robes 80 €.";
     }
     if (isZeroTracasHorsZoneActivity(activity.name) || isZeroTracasActivity(activity.name)) {
-      return `Indiquez le nombre de chaque prestation (même grille que sur le devis intranet). Les tarifs adulte/enfant ci-dessus ne s’appliquent pas à cette fiche.\nLa date est automatiquement fixée au jour d’arrivée.\n${ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE}`;
+      return "Indiquez le nombre de chaque prestation (même grille que sur le devis intranet). Les tarifs adulte/enfant ci-dessus ne s’appliquent pas à cette fiche.\nLa date est automatiquement fixée au jour d’arrivée.";
     }
     if (isPublicCatalogAirportStyleLine(activity)) {
       return "Forfait par trajet : choisissez aller simple ou aller-retour (comme sur le devis intranet). Les tarifs adulte/enfant en base ne s’appliquent pas.";
@@ -1135,32 +1132,21 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
           <p className="text-xs font-bold uppercase tracking-wide text-catalog-body">
             {isZeroTracasHorsZoneActivity(name) ? "Zero Tracas Hors zone" : "Zero Tracas"} — quantités
           </p>
-          <p className="rounded-lg border border-transparent bg-catalog-brassSoft px-3 py-2 text-xs font-semibold text-catalog-ink">
-            {ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE}
-          </p>
           <div className="space-y-2">
             {rows.map(({ key, label, unit }) => {
-              const simBlocked = isZeroTracasSimOptionKey(key);
               return (
                 <div
                   key={key}
-                  className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border border-catalog-line bg-white px-2 py-2 sm:flex-nowrap ${
-                    simBlocked ? "opacity-55" : ""
-                  }`}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-catalog-line bg-white px-2 py-2 sm:flex-nowrap"
                 >
                   <span className="min-w-0 flex-1 text-xs font-semibold leading-snug text-catalog-body">
                     {label}
-                    {simBlocked ? " — indisponible" : ""}
                   </span>
                   {b2b ? null : <span className="shrink-0 text-[10px] font-medium text-catalog-muted">{unit} € / u.</span>}
                   <select
-                    className={`w-16 shrink-0 rounded border border-catalog-border py-1.5 text-center text-sm font-semibold ${
-                      simBlocked ? "cursor-not-allowed bg-catalog-bg opacity-60" : "bg-white"
-                    }`}
-                    value={simBlocked ? 0 : special[key]}
-                    disabled={simBlocked}
+                    className="w-16 shrink-0 rounded border border-catalog-border bg-white py-1.5 text-center text-sm font-semibold"
+                    value={special[key]}
                     onChange={(e) => {
-                      if (simBlocked) return;
                       setSpecial((s) => ({ ...s, [key]: Math.max(0, Math.min(20, toNumber(e.target.value))) }));
                     }}
                     aria-label={`Quantité ${label}`}
@@ -1251,9 +1237,12 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
     }
     if (isZeroTracasHorsZoneActivity(name) || isZeroTracasActivity(name)) {
       const zt =
+        toNumber(special.zeroTracasTransfertVisaSim) +
         toNumber(special.zeroTracasTransfertVisa) +
+        toNumber(special.zeroTracasTransfertSim) +
         toNumber(special.zeroTracasTransfert3Personnes) +
         toNumber(special.zeroTracasTransfertPlus3Personnes) +
+        toNumber(special.zeroTracasVisaSim) +
         toNumber(special.zeroTracasVisaSeul);
       return zt === 0;
     }
@@ -1597,7 +1586,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
     const minors = Math.max(0, toNumber(minorsCount));
     const adultCount = Math.max(0, toNumber(adults));
     const prev = loadPublicCatalogueCart();
-    const lineSpecial = clearZeroTracasSimQuantities(special);
+    const lineSpecial = { ...special };
     if (isCalecheActivity(activity.name)) {
       lineSpecial.calecheCount = Math.max(
         Number(lineSpecial.calecheCount) || 0,

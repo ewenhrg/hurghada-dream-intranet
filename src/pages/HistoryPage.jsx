@@ -10,7 +10,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, isFlyingDressActivity, allowsFlyingDressExtra, getFlyingDressOptions, hasFlyingDressOption, computeFlyingDressLineTotal, flyingDressOptionPatch, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, formatTurtleFinSizesLabel, isArrivalDayServiceActivity, isTransferActivity, ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, computeZeroTracasLineTotal, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, isFlyingDressActivity, allowsFlyingDressExtra, getFlyingDressOptions, hasFlyingDressOption, computeFlyingDressLineTotal, flyingDressOptionPatch, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, formatTurtleFinSizesLabel, isArrivalDayServiceActivity, isTransferActivity} from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -919,13 +919,12 @@ function QuoteCardComponent({
       baseItem.ktm640 = item.ktm640 ?? 0;
       baseItem.ktm530 = item.ktm530 ?? 0;
       
-      // Valeurs string avec valeurs par défaut (SIM Zero Tracas bloquées / remises à vide)
-      baseItem.zeroTracasTransfertVisaSim = "";
+      baseItem.zeroTracasTransfertVisaSim = item.zeroTracasTransfertVisaSim ?? "";
       baseItem.zeroTracasTransfertVisa = item.zeroTracasTransfertVisa ?? "";
-      baseItem.zeroTracasTransfertSim = "";
+      baseItem.zeroTracasTransfertSim = item.zeroTracasTransfertSim ?? "";
       baseItem.zeroTracasTransfert3Personnes = item.zeroTracasTransfert3Personnes ?? "";
       baseItem.zeroTracasTransfertPlus3Personnes = item.zeroTracasTransfertPlus3Personnes ?? "";
-      baseItem.zeroTracasVisaSim = "";
+      baseItem.zeroTracasVisaSim = item.zeroTracasVisaSim ?? "";
       baseItem.zeroTracasVisaSeul = item.zeroTracasVisaSeul ?? "";
       baseItem.cairePrivatif4pax = Boolean(item.cairePrivatif4pax);
       baseItem.cairePrivatif5pax = Boolean(item.cairePrivatif5pax);
@@ -2847,32 +2846,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         lineTotal += computeFlyingDressLineTotal(it);
       } else if (act && isFlyingDressActivity(act.name)) {
         lineTotal = computeFlyingDressLineTotal(it);
-      } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
-        // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
-        const prices = getZeroTracasHorsZonePrices();
-        const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
-        const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
-        const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
-        const visaSeul = Number(it.zeroTracasVisaSeul || 0);
-
-        lineTotal =
-          transfertVisa * prices.transfertVisa +
-          transfert3Personnes * prices.transfert3Personnes +
-          transfertPlus3Personnes * prices.transfertPlus3Personnes +
-          visaSeul * prices.visaSeul;
-      } else if (act && isZeroTracasActivity(act.name)) {
-        // cas spécial ZERO TRACAS : calcul basé sur les différents types de services
-        const prices = getZeroTracasPrices();
-        const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
-        const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
-        const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
-        const visaSeul = Number(it.zeroTracasVisaSeul || 0);
-
-        lineTotal =
-          transfertVisa * prices.transfertVisa +
-          transfert3Personnes * prices.transfert3Personnes +
-          transfertPlus3Personnes * prices.transfertPlus3Personnes +
-          visaSeul * prices.visaSeul;
+      } else if (act && (isZeroTracasHorsZoneActivity(act.name) || isZeroTracasActivity(act.name))) {
+        lineTotal = computeZeroTracasLineTotal(act.name, it);
       } else if (act) {
         lineTotal += Number(it.adults || 0) * Number(act.priceAdult || 0);
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
@@ -3115,12 +3090,12 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           ktm530: Number(c.raw.ktm530 || 0),
           boatPartyMen: Number(c.raw.boatPartyMen || 0),
           boatPartyWomen: Number(c.raw.boatPartyWomen || 0),
-          zeroTracasTransfertVisaSim: 0,
+          zeroTracasTransfertVisaSim: Number(c.raw.zeroTracasTransfertVisaSim || 0),
           zeroTracasTransfertVisa: Number(c.raw.zeroTracasTransfertVisa || 0),
-          zeroTracasTransfertSim: 0,
+          zeroTracasTransfertSim: Number(c.raw.zeroTracasTransfertSim || 0),
           zeroTracasTransfert3Personnes: Number(c.raw.zeroTracasTransfert3Personnes || 0),
           zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
-          zeroTracasVisaSim: 0,
+          zeroTracasVisaSim: Number(c.raw.zeroTracasVisaSim || 0),
           zeroTracasVisaSeul: Number(c.raw.zeroTracasVisaSeul || 0),
           cairePrivatif4pax: Boolean(c.raw.cairePrivatif4pax),
           cairePrivatif5pax: Boolean(c.raw.cairePrivatif5pax),
@@ -3807,17 +3782,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 {/* Champs spécifiques pour ZERO TRACAS et ZERO TRACAS HORS ZONE - Modifiables par tous */}
                 {(c.act && isZeroTracasActivity(c.act.name)) || (c.act && isZeroTracasHorsZoneActivity(c.act.name)) ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 mt-4 bg-indigo-50/60 p-5 md:p-6 rounded-xl border-2 border-indigo-300/70">
-                    <p className="sm:col-span-2 lg:col-span-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
-                      {ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE}
-                    </p>
-                    <div className="opacity-55">
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "55€" : "50€"}) — indisponible</p>
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + Visa + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "55€" : "50€"})</p>
                       <NumberInput 
-                        value="" 
-                        onChange={() => {}}
-                        className="text-base md:text-lg py-3 cursor-not-allowed bg-slate-100"
+                        value={c.raw.zeroTracasTransfertVisaSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertVisaSim: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
                         placeholder="0"
-                        disabled
                       />
                     </div>
                     <div>
@@ -3829,14 +3800,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         placeholder="0"
                       />
                     </div>
-                    <div className="opacity-55">
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "30€" : "25€"}) — indisponible</p>
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">🚗 Transfert + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "30€" : "25€"})</p>
                       <NumberInput 
-                        value="" 
-                        onChange={() => {}}
-                        className="text-base md:text-lg py-3 cursor-not-allowed bg-slate-100"
+                        value={c.raw.zeroTracasTransfertSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertSim: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
                         placeholder="0"
-                        disabled
                       />
                     </div>
                     <div>
@@ -3857,14 +3827,13 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         placeholder="0"
                       />
                     </div>
-                    <div className="opacity-55">
-                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">📱 Visa + SIM (45€) — indisponible</p>
+                    <div>
+                      <p className="text-sm md:text-base font-bold text-slate-800 mb-3">📱 Visa + SIM (45€)</p>
                       <NumberInput 
-                        value="" 
-                        onChange={() => {}}
-                        className="text-base md:text-lg py-3 cursor-not-allowed bg-slate-100"
+                        value={c.raw.zeroTracasVisaSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasVisaSim: e.target.value === "" ? "" : e.target.value })}
+                        className="text-base md:text-lg py-3"
                         placeholder="0"
-                        disabled
                       />
                     </div>
                     <div>

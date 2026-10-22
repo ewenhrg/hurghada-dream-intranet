@@ -498,32 +498,46 @@ export function isTransferActivity(activityName, activityLike = null) {
   return false;
 }
 
-/** Options Zero Tracas incluant une carte SIM (indisponibles pour le moment). */
+/** Options Zero Tracas incluant une carte SIM (de nouveau disponibles). */
 export const ZERO_TRACAS_SIM_OPTION_KEYS = [
   "zeroTracasTransfertVisaSim",
   "zeroTracasTransfertSim",
   "zeroTracasVisaSim",
 ];
 
-export const ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE =
-  "Les cartes SIM ne sont plus disponibles pour le moment.";
+/** @deprecated SIM de nouveau disponibles — conservé pour compat import. */
+export const ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE = "";
 
 export function isZeroTracasSimOptionKey(key) {
   return ZERO_TRACAS_SIM_OPTION_KEYS.includes(String(key || ""));
 }
 
-/** Remet à 0 toutes les quantités d’options SIM Zero Tracas. */
+/** No-op : les SIM sont de nouveau vendables (anciens appels conservés). */
 export function clearZeroTracasSimQuantities(fields = {}) {
-  const next = { ...fields };
-  for (const key of ZERO_TRACAS_SIM_OPTION_KEYS) {
-    next[key] = typeof fields[key] === "string" ? "" : 0;
-  }
-  return next;
+  return { ...fields };
 }
 
-export function zeroTracasItemHasBlockedSimQuantity(item) {
-  if (!item) return false;
-  return ZERO_TRACAS_SIM_OPTION_KEYS.some((key) => Number(item[key] || 0) > 0);
+export function zeroTracasItemHasBlockedSimQuantity() {
+  return false;
+}
+
+/** Total Zero Tracas / Hors zone (toutes options, SIM incluses). */
+export function computeZeroTracasLineTotal(activityName, item) {
+  const prices = isZeroTracasHorsZoneActivity(activityName)
+    ? getZeroTracasHorsZonePrices()
+    : isZeroTracasActivity(activityName)
+      ? getZeroTracasPrices()
+      : null;
+  if (!prices || !item) return 0;
+  return (
+    Number(item.zeroTracasTransfertVisaSim || 0) * prices.transfertVisaSim +
+    Number(item.zeroTracasTransfertVisa || 0) * prices.transfertVisa +
+    Number(item.zeroTracasTransfertSim || 0) * prices.transfertSim +
+    Number(item.zeroTracasTransfert3Personnes || 0) * prices.transfert3Personnes +
+    Number(item.zeroTracasTransfertPlus3Personnes || 0) * prices.transfertPlus3Personnes +
+    Number(item.zeroTracasVisaSim || 0) * prices.visaSim +
+    Number(item.zeroTracasVisaSeul || 0) * prices.visaSeul
+  );
 }
 
 // Helper pour obtenir les prix ZERO TRACAS HORS ZONE (+5€ sur chaque option visa)
@@ -723,11 +737,13 @@ export function getActivityTarifListLines(activityLike) {
     const p = getZeroTracasHorsZonePrices();
     return [
       "Grille Zero Tracas Hors zone (prix unitaire) :",
+      `Transfert + visa + SIM : ${p.transfertVisaSim} €`,
       `Transfert + visa : ${p.transfertVisa} €`,
+      `Transfert + SIM : ${p.transfertSim} €`,
       `Transfert 3 pers. : ${p.transfert3Personnes} €`,
       `Transfert +3 pers. : ${p.transfertPlus3Personnes} €`,
+      `Visa + SIM : ${p.visaSim} €`,
       `Visa seul : ${p.visaSeul} €`,
-      ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE,
     ];
   }
 
@@ -735,11 +751,13 @@ export function getActivityTarifListLines(activityLike) {
     const p = getZeroTracasPrices();
     return [
       "Grille Zero Tracas (prix unitaire) :",
+      `Transfert + visa + SIM : ${p.transfertVisaSim} €`,
       `Transfert + visa : ${p.transfertVisa} €`,
+      `Transfert + SIM : ${p.transfertSim} €`,
       `Transfert 3 pers. : ${p.transfert3Personnes} €`,
       `Transfert +3 pers. : ${p.transfertPlus3Personnes} €`,
+      `Visa + SIM : ${p.visaSim} €`,
       `Visa seul : ${p.visaSeul} €`,
-      ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE,
     ];
   }
 

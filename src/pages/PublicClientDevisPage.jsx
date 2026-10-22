@@ -731,12 +731,12 @@ export function PublicClientDevisPage() {
         flyingDress4Robes: Boolean(line.flyingDress4Robes),
         allerSimple: Boolean(line.allerSimple),
         allerRetour: Boolean(line.allerRetour),
-        zeroTracasTransfertVisaSim: 0,
+        zeroTracasTransfertVisaSim: line.zeroTracasTransfertVisaSim ?? "",
         zeroTracasTransfertVisa: line.zeroTracasTransfertVisa ?? "",
-        zeroTracasTransfertSim: 0,
+        zeroTracasTransfertSim: line.zeroTracasTransfertSim ?? "",
         zeroTracasTransfert3Personnes: line.zeroTracasTransfert3Personnes ?? "",
         zeroTracasTransfertPlus3Personnes: line.zeroTracasTransfertPlus3Personnes ?? "",
-        zeroTracasVisaSim: 0,
+        zeroTracasVisaSim: line.zeroTracasVisaSim ?? "",
         zeroTracasVisaSeul: line.zeroTracasVisaSeul ?? "",
       };
     });

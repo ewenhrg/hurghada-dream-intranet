@@ -4,7 +4,7 @@ import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync }
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveQuotesCache, formatPhoneWithPlus, toBoundedInt10 } from "../utils";
 import { setVisibilityAwareInterval } from "../utils/idle";
 import { generateQuoteHTML } from "../utils/printTemplates";
-import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isArrivalDayServiceActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, isFlyingDressActivity, allowsFlyingDressExtra, getFlyingDressOptions, hasFlyingDressOption, flyingDressOptionPatch, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isArrivalDayServiceActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, isFlyingDressActivity, allowsFlyingDressExtra, getFlyingDressOptions, hasFlyingDressOption, flyingDressOptionPatch, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage} from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -1206,12 +1206,12 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         boatPartyWomen: Number(c.raw.boatPartyWomen || 0),
         allerSimple: c.raw.allerSimple || false,
         allerRetour: c.raw.allerRetour || false,
-        zeroTracasTransfertVisaSim: 0,
+        zeroTracasTransfertVisaSim: Number(c.raw.zeroTracasTransfertVisaSim || 0),
         zeroTracasTransfertVisa: Number(c.raw.zeroTracasTransfertVisa || 0),
-        zeroTracasTransfertSim: 0,
+        zeroTracasTransfertSim: Number(c.raw.zeroTracasTransfertSim || 0),
         zeroTracasTransfert3Personnes: Number(c.raw.zeroTracasTransfert3Personnes || 0),
         zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
-        zeroTracasVisaSim: 0,
+        zeroTracasVisaSim: Number(c.raw.zeroTracasVisaSim || 0),
         zeroTracasVisaSeul: Number(c.raw.zeroTracasVisaSeul || 0),
         cairePrivatif4pax: Boolean(c.raw.cairePrivatif4pax),
         cairePrivatif5pax: Boolean(c.raw.cairePrivatif5pax),
@@ -3270,20 +3270,16 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     <span className="text-xl">🎯</span>
                     <span>Types de services {isZeroTracasHorsZoneActivity(c.act.name) ? "ZERO TRACAS HORS ZONE" : "ZERO TRACAS"}</span>
                   </p>
-                  <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
-                    {ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE}
-                  </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-                    <div className="opacity-55">
+                    <div>
                       <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
-                        🚗 Transfert + Visa + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "55€" : "50€"}) — indisponible
+                        🚗 Transfert + Visa + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "55€" : "50€"})
                       </label>
                       <NumberInput 
-                        value="" 
-                        onChange={() => {}}
+                        value={c.raw.zeroTracasTransfertVisaSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertVisaSim: e.target.value === "" ? "" : e.target.value })}
                         placeholder="0"
-                        disabled
-                        className="text-base md:text-lg py-2 cursor-not-allowed bg-slate-100"
+                        className="text-base md:text-lg py-2"
                       />
                     </div>
                     <div>
@@ -3297,16 +3293,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         className="text-base md:text-lg py-2"
                       />
                     </div>
-                    <div className="opacity-55">
+                    <div>
                       <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
-                        🚗 Transfert + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "30€" : "25€"}) — indisponible
+                        🚗 Transfert + SIM ({isZeroTracasHorsZoneActivity(c.act.name) ? "30€" : "25€"})
                       </label>
                       <NumberInput 
-                        value="" 
-                        onChange={() => {}}
+                        value={c.raw.zeroTracasTransfertSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasTransfertSim: e.target.value === "" ? "" : e.target.value })}
                         placeholder="0"
-                        disabled
-                        className="text-base md:text-lg py-2 cursor-not-allowed bg-slate-100"
+                        className="text-base md:text-lg py-2"
                       />
                     </div>
                     <div>
@@ -3331,16 +3326,15 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         className="text-base md:text-lg py-2"
                       />
                     </div>
-                    <div className="opacity-55">
+                    <div>
                       <label className="block text-xs md:text-sm font-bold text-slate-800 mb-2">
-                        📱 Visa + SIM (45€) — indisponible
+                        📱 Visa + SIM (45€)
                       </label>
                       <NumberInput 
-                        value="" 
-                        onChange={() => {}}
+                        value={c.raw.zeroTracasVisaSim ?? ""} 
+                        onChange={(e) => setItem(idx, { zeroTracasVisaSim: e.target.value === "" ? "" : e.target.value })}
                         placeholder="0"
-                        disabled
-                        className="text-base md:text-lg py-2 cursor-not-allowed bg-slate-100"
+                        className="text-base md:text-lg py-2"
                       />
                     </div>
                     <div>

@@ -12,9 +12,8 @@ import {
   isMotoCrossActivity,
   getMotoCrossPrices,
   isZeroTracasActivity,
-  getZeroTracasPrices,
   isZeroTracasHorsZoneActivity,
-  getZeroTracasHorsZonePrices,
+  computeZeroTracasLineTotal,
   isCairePrivatifActivity,
   getCairePrivatifPrices,
   isLouxorPrivatifActivity,
@@ -125,37 +124,8 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         lineTotal += computeFlyingDressLineTotal(it);
       } else if (act && isFlyingDressActivity(act.name)) {
         lineTotal = computeFlyingDressLineTotal(it);
-      } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
-        // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
-        // Vérifier HORS ZONE en premier car plus spécifique
-        {
-          const prices = getZeroTracasHorsZonePrices();
-          const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
-          const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
-          const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
-          const visaSeul = Number(it.zeroTracasVisaSeul || 0);
-          
-          lineTotal = 
-            transfertVisa * prices.transfertVisa +
-            transfert3Personnes * prices.transfert3Personnes +
-            transfertPlus3Personnes * prices.transfertPlus3Personnes +
-            visaSeul * prices.visaSeul;
-        }
-      } else if (act && isZeroTracasActivity(act.name)) {
-        // cas spécial ZERO TRACAS : calcul basé sur les différents types de services
-        {
-          const prices = getZeroTracasPrices();
-          const transfertVisa = Number(it.zeroTracasTransfertVisa || 0);
-          const transfert3Personnes = Number(it.zeroTracasTransfert3Personnes || 0);
-          const transfertPlus3Personnes = Number(it.zeroTracasTransfertPlus3Personnes || 0);
-          const visaSeul = Number(it.zeroTracasVisaSeul || 0);
-          
-          lineTotal = 
-            transfertVisa * prices.transfertVisa +
-            transfert3Personnes * prices.transfert3Personnes +
-            transfertPlus3Personnes * prices.transfertPlus3Personnes +
-            visaSeul * prices.visaSeul;
-        }
+      } else if (act && (isZeroTracasHorsZoneActivity(act.name) || isZeroTracasActivity(act.name))) {
+        lineTotal = computeZeroTracasLineTotal(act.name, it);
       } else if (act && (act.name.toLowerCase().includes("hurghada") && (act.name.toLowerCase().includes("le caire") || act.name.toLowerCase().includes("louxor")))) {
         // cas spécial HURGHADA - LE CAIRE et HURGHADA - LOUXOR
         // Prix fixe : Aller simple = 150€, Aller retour = 300€

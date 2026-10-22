@@ -3,7 +3,7 @@
  * d’une demande catalogue (table `public_quotes` ou modèle d’affichage équivalent).
  */
 
-import { getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, clearZeroTracasSimQuantities } from "./activityHelpers";
+import { getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote } from "./activityHelpers";
 import { formatPhoneWithPlus } from "../utils.js";
 import { createEmptyAirbnb, pickAirbnbFields } from "./clientAirbnb.js";
 import { createEmptySecondHotel, pickSecondHotelFields } from "./clientSecondHotel.js";
@@ -123,8 +123,6 @@ export function mergePublicSavedLineIntoQuoteItem(line) {
     line.zeroTracasTransfertPlus3Personnes != null ? String(line.zeroTracasTransfertPlus3Personnes) : "";
   base.zeroTracasVisaSim = line.zeroTracasVisaSim != null ? String(line.zeroTracasVisaSim) : "";
   base.zeroTracasVisaSeul = line.zeroTracasVisaSeul != null ? String(line.zeroTracasVisaSeul) : "";
-
-  Object.assign(base, clearZeroTracasSimQuantities(base));
 
   return base;
 }

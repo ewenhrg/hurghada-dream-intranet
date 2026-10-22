@@ -29,6 +29,7 @@ import {
   isZeroTracasHorsZoneActivity,
   getZeroTracasPrices,
   getZeroTracasHorsZonePrices,
+  computeZeroTracasLineTotal,
 } from "./activityHelpers";
 import { computeDivingVisitorSurcharge } from "./divingSafety.js";
 
@@ -106,24 +107,8 @@ function getAirportStyleTransferListAmount(activityName) {
 }
 
 function computeZeroTracasStyleLineTotal(activityName, line) {
-  // SIM indisponibles : quantités ignorées dans le tarif
-  if (isZeroTracasHorsZoneActivity(activityName)) {
-    const p = getZeroTracasHorsZonePrices();
-    return (
-      num(line?.zeroTracasTransfertVisa) * p.transfertVisa +
-      num(line?.zeroTracasTransfert3Personnes) * p.transfert3Personnes +
-      num(line?.zeroTracasTransfertPlus3Personnes) * p.transfertPlus3Personnes +
-      num(line?.zeroTracasVisaSeul) * p.visaSeul
-    );
-  }
-  if (isZeroTracasActivity(activityName)) {
-    const p = getZeroTracasPrices();
-    return (
-      num(line?.zeroTracasTransfertVisa) * p.transfertVisa +
-      num(line?.zeroTracasTransfert3Personnes) * p.transfert3Personnes +
-      num(line?.zeroTracasTransfertPlus3Personnes) * p.transfertPlus3Personnes +
-      num(line?.zeroTracasVisaSeul) * p.visaSeul
-    );
+  if (isZeroTracasHorsZoneActivity(activityName) || isZeroTracasActivity(activityName)) {
+    return computeZeroTracasLineTotal(activityName, line);
   }
   return null;
 }
