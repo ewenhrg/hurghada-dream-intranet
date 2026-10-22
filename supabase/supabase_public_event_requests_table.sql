@@ -10,10 +10,21 @@ CREATE TABLE IF NOT EXISTS public.public_event_requests (
   hotel TEXT DEFAULT '',
   arrival_date TEXT DEFAULT '',
   departure_date TEXT DEFAULT '',
+  event_type TEXT DEFAULT '',
+  event_date TEXT DEFAULT '',
+  guest_count INTEGER,
+  budget TEXT DEFAULT '',
+  wants_photographer BOOLEAN NOT NULL DEFAULT false,
   message TEXT DEFAULT '',
   status TEXT DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.public_event_requests ADD COLUMN IF NOT EXISTS event_type TEXT DEFAULT '';
+ALTER TABLE public.public_event_requests ADD COLUMN IF NOT EXISTS event_date TEXT DEFAULT '';
+ALTER TABLE public.public_event_requests ADD COLUMN IF NOT EXISTS guest_count INTEGER;
+ALTER TABLE public.public_event_requests ADD COLUMN IF NOT EXISTS budget TEXT DEFAULT '';
+ALTER TABLE public.public_event_requests ADD COLUMN IF NOT EXISTS wants_photographer BOOLEAN NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS idx_public_event_requests_site_key ON public.public_event_requests (site_key);
 CREATE INDEX IF NOT EXISTS idx_public_event_requests_created_at ON public.public_event_requests (created_at DESC);

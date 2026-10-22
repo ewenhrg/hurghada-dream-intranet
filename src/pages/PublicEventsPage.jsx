@@ -39,6 +39,17 @@ const EXTRAS = [
   "Privatisation d’un espace ou d’un lieu exceptionnel",
 ];
 
+const EVENT_TYPES = [
+  "Demande en mariage",
+  "Mariage",
+  "Anniversaire",
+  "Baby shower",
+  "Gender reveal",
+  "Dîner romantique",
+  "Séminaire",
+  "Autre",
+];
+
 const EMPTY_FORM = {
   lastName: "",
   firstName: "",
@@ -47,6 +58,11 @@ const EMPTY_FORM = {
   hotel: "",
   arrival: "",
   departure: "",
+  eventType: "",
+  eventDate: "",
+  guestCount: "",
+  budget: "",
+  wantsPhotographer: false,
   message: "",
 };
 
@@ -75,6 +91,11 @@ export function PublicEventsPage() {
     setError("");
   };
 
+  const setChecked = (key) => (event) => {
+    setForm((current) => ({ ...current, [key]: event.target.checked }));
+    setError("");
+  };
+
   const openForm = () => {
     setShowForm(true);
     window.setTimeout(() => {
@@ -89,7 +110,9 @@ export function PublicEventsPage() {
     const phone = form.phone.trim();
     const email = form.email.trim();
     const hotel = form.hotel.trim();
+    const budget = form.budget.trim();
     const message = form.message.trim();
+    const guestCount = Number.parseInt(String(form.guestCount).trim(), 10);
     if (!lastName || !firstName) {
       setError("Indiquez votre nom et votre prénom.");
       return;
@@ -114,6 +137,22 @@ export function PublicEventsPage() {
       setError("La fin du séjour est après le début.");
       return;
     }
+    if (!form.eventType) {
+      setError("Choisissez le type d’événement.");
+      return;
+    }
+    if (!form.eventDate) {
+      setError("Indiquez la date de l’événement.");
+      return;
+    }
+    if (!Number.isInteger(guestCount) || guestCount < 1) {
+      setError("Indiquez le nombre de personnes.");
+      return;
+    }
+    if (!budget) {
+      setError("Indiquez votre budget.");
+      return;
+    }
     if (message.length < 8) {
       setError("Décrivez la demande que vous souhaitez.");
       return;
@@ -133,6 +172,11 @@ export function PublicEventsPage() {
       hotel,
       arrival_date: form.arrival,
       departure_date: form.departure,
+      event_type: form.eventType,
+      event_date: form.eventDate,
+      guest_count: guestCount,
+      budget,
+      wants_photographer: form.wantsPhotographer,
       message,
       status: "pending",
     });
@@ -257,12 +301,40 @@ export function PublicEventsPage() {
                       <input className={inputClass} type="date" value={form.departure} onChange={setField("departure")} required />
                     </Field>
                   </div>
+                  <Field label="Type d’événement">
+                    <select className={inputClass} value={form.eventType} onChange={setField("eventType")} required>
+                      <option value="">Choisir</option>
+                      {EVENT_TYPES.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Date de l’événement">
+                      <input className={inputClass} type="date" value={form.eventDate} onChange={setField("eventDate")} required />
+                    </Field>
+                    <Field label="Nombre de personnes">
+                      <input className={inputClass} type="number" min="1" step="1" inputMode="numeric" value={form.guestCount} onChange={setField("guestCount")} required />
+                    </Field>
+                  </div>
+                  <Field label="Budget">
+                    <input className={inputClass} value={form.budget} onChange={setField("budget")} placeholder="ex. 1500 €" required />
+                  </Field>
+                  <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border border-catalog-border bg-white px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={form.wantsPhotographer}
+                      onChange={setChecked("wantsPhotographer")}
+                      className="h-5 w-5 shrink-0 rounded accent-catalog-lagoon"
+                    />
+                    <span className="text-sm font-semibold text-catalog-ink">Je souhaite un photographe / vidéaste</span>
+                  </label>
                   <Field label="La demande que vous souhaitez">
                     <textarea
                       className={`${inputClass} h-36 py-3`}
                       value={form.message}
                       onChange={setField("message")}
-                      placeholder="Type d’événement, date souhaitée, nombre de participants, idées…"
+                      placeholder="Lieu, décoration, idées, demandes particulières…"
                       required
                     />
                   </Field>

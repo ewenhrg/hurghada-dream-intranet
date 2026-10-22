@@ -35,7 +35,7 @@ export function EventsInboxPage() {
     }
     const { data, error: loadError } = await supabase
       .from("public_event_requests")
-      .select("id, last_name, first_name, phone, email, hotel, arrival_date, departure_date, message, status, created_at")
+      .select("id, last_name, first_name, phone, email, hotel, arrival_date, departure_date, event_type, event_date, guest_count, budget, wants_photographer, message, status, created_at")
       .eq("site_key", SITE_KEY)
       .order("created_at", { ascending: false });
     if (loadError) {
@@ -129,6 +129,7 @@ export function EventsInboxPage() {
                   <p className="text-base font-extrabold">
                     {row.first_name} {row.last_name}
                   </p>
+                  <p className="mt-1 text-sm font-semibold text-indigo-700">{row.event_type || "Type non précisé"}</p>
                   <p className="mt-1 text-sm text-slate-600">{formatWhen(row.created_at)}</p>
                 </div>
                 {row.status !== "treated" ? (
@@ -161,6 +162,22 @@ export function EventsInboxPage() {
                   <dd>
                     {formatDay(row.arrival_date)} — {formatDay(row.departure_date)}
                   </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Date de l’événement</dt>
+                  <dd>{formatDay(row.event_date)}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Personnes</dt>
+                  <dd>{row.guest_count ? row.guest_count : "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Budget</dt>
+                  <dd>{row.budget || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Photographe / vidéaste</dt>
+                  <dd>{row.wants_photographer ? "Oui" : "Non"}</dd>
                 </div>
               </dl>
               <p className="mt-3 whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-sm leading-relaxed text-slate-800">
