@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PublicAppShell } from "../components/public/PublicAppShell";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
@@ -56,6 +56,7 @@ export function PublicModificationPage() {
   const [babies, setBabies] = useState(0);
   const [nextActivityId, setNextActivityId] = useState("");
   const [nextDate, setNextDate] = useState("");
+  const datesRef = useRef(null);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -90,6 +91,13 @@ export function PublicModificationPage() {
   const neighborhood = String(stay?.client?.neighborhood || "").trim();
   const pickupOptions = currentActivity ? getActivityPickupOptions(currentActivity, neighborhood) : [];
   const chosenActivity = activities.find((activity) => String(activity.id) === String(nextActivityId)) || null;
+  const chosenDates = useMemo(() => {
+    if (!chosenActivity) return [];
+    const sameActivity = (row) => String(row.activity_id) === String(chosenActivity.id);
+    const blocked = stops.filter(sameActivity).map((row) => String(row.date || "").slice(0, 10));
+    const pushed = pushes.filter(sameActivity).map((row) => String(row.date || "").slice(0, 10));
+    return upcomingOpenDates(chosenActivity, blocked, new Date(), 18, pushed);
+  }, [chosenActivity, stops, pushes]);
   const tooLate = item ? modificationTooLate(item.date) : false;
   const refund = item ? refundPercent(item.date, item.pickupTime) : 0;
 
@@ -100,6 +108,11 @@ export function PublicModificationPage() {
     const pushed = pushes.filter(sameActivity).map((row) => String(row.date || "").slice(0, 10));
     return upcomingOpenDates(activity, blocked, new Date(), 18, pushed);
   };
+
+  useEffect(() => {
+    if (step !== "detail" || changeType !== "activity" || !chosenActivity) return;
+    datesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [step, changeType, chosenActivity]);
 
   const lookup = async () => {
     setError("");
@@ -324,28 +337,27 @@ export function PublicModificationPage() {
 
         {step === "detail" && changeType === "activity" ? (
           <section className="mt-6 space-y-3">
-            <h2 className="font-catalog-display text-2xl text-catalog-ink">Choisir une activité</h2>
-            {activities.filter((activity) => !activity.catalogPaused).map((activity) => (
-              <button
-                key={activity.id}
-                type="button"
-                onClick={() => {
-                  setNextActivityId(activity.id);
-                  setNextDate("");
-                }}
-                className={`hdc-card w-full p-4 text-left ${String(nextActivityId) === String(activity.id) ? "ring-2 ring-catalog-lagoon" : ""}`}
-              >
-                <span className="block font-semibold text-catalog-ink">{activity.name}</span>
-                <span className="mt-1 block text-sm text-catalog-lagoon">
-                  {activity.priceAdult > 0 ? currencyNoCents(activity.priceAdult, activity.currency) : "Prix sur demande"} / adulte
-                </span>
-              </button>
-            ))}
             {chosenActivity ? (
-              <div className="space-y-2 pt-2">
-                <h3 className="text-sm font-semibold text-catalog-ink">Jours disponibles</h3>
+              <div ref={datesRef} className="scroll-mt-24 space-y-3">
+                <h2 className="font-catalog-display text-2xl text-catalog-ink">Dates disponibles</h2>
+                <div className="hdc-card p-4">
+                  <p className="font-semibold text-catalog-ink">{chosenActivity.name}</p>
+                  <p className="mt-1 text-sm text-catalog-lagoon">
+                    {chosenActivity.priceAdult > 0 ? currencyNoCents(chosenActivity.priceAdult, chosenActivity.currency) : "Prix sur demande"} / adulte
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNextActivityId("");
+                    setNextDate("");
+                  }}
+                  className="text-sm font-semibold text-catalog-lagoon"
+                >
+                  Choisir une autre activité
+                </button>
                 <div className="flex flex-wrap gap-2">
-                  {openDatesFor(chosenActivity).map((day) => (
+                  {chosenDates.map((day) => (
                     <button
                       key={day}
                       type="button"
@@ -356,14 +368,34 @@ export function PublicModificationPage() {
                     </button>
                   ))}
                 </div>
-                {openDatesFor(chosenActivity).length === 0 ? (
+                {chosenDates.length === 0 ? (
                   <p className="text-sm text-catalog-muted">Aucune date ouverte pour cette activité.</p>
                 ) : null}
+                <button type="button" disabled={!nextDate || busy} onClick={() => void submit()} className="hdc-btn hdc-btn-primary w-full">
+                  Valider la demande
+                </button>
               </div>
-            ) : null}
-            <button type="button" disabled={!chosenActivity || !nextDate || busy} onClick={() => void submit()} className="hdc-btn hdc-btn-primary w-full">
-              Valider la demande
-            </button>
+            ) : (
+              <>
+                <h2 className="font-catalog-display text-2xl text-catalog-ink">Choisir une activité</h2>
+                {activities.filter((activity) => !activity.catalogPaused && activity.name !== item?.activityName).map((activity) => (
+                  <button
+                    key={activity.id}
+                    type="button"
+                    onClick={() => {
+                      setNextActivityId(activity.id);
+                      setNextDate("");
+                    }}
+                    className="hdc-card w-full p-4 text-left"
+                  >
+                    <span className="block font-semibold text-catalog-ink">{activity.name}</span>
+                    <span className="mt-1 block text-sm text-catalog-lagoon">
+                      {activity.priceAdult > 0 ? currencyNoCents(activity.priceAdult, activity.currency) : "Prix sur demande"} / adulte
+                    </span>
+                  </button>
+                ))}
+              </>
+            )}
           </section>
         ) : null}
 
