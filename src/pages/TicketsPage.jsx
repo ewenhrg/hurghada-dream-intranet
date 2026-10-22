@@ -1045,7 +1045,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             ) : null}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
             <button
               type="button"
               onClick={() => void handleCopyNew()}
@@ -1133,11 +1133,11 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
           <div
             role="group"
             aria-label="Filtrer les tickets par état"
-            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1"
+            className="inline-flex max-w-full flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1"
           >
             {FILTERS.map(({ value, label, icon: Icon, count }) => {
               const active = statusFilter === value;
@@ -1239,27 +1239,27 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             className="overflow-hidden rounded-2xl border border-indigo-200/70 bg-white shadow-[0_16px_40px_-24px_rgba(79,70,229,0.35)] ring-1 ring-slate-200/80"
           >
             <div ref={scrollRef} className="max-h-[min(70vh,900px)] overflow-auto">
-            <table className="w-full table-fixed border-collapse text-left font-sans">
+            <table className="w-full min-w-[83.5rem] table-fixed border-collapse text-left font-sans">
               <caption className="sr-only">
                 Tableau tickets : trié par date puis par activité, avec séparateurs colorés.
               </caption>
               <colgroup>
-                <col style={{ width: "4.5%" }} />
-                <col style={{ width: "8.5%" }} />
-                <col style={{ width: "5.5%" }} />
-                <col style={{ width: "11%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "4%" }} />
-                <col style={{ width: "2.5%" }} />
-                <col style={{ width: "2.5%" }} />
-                <col style={{ width: "2.5%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "7.5%" }} />
-                <col style={{ width: "6%" }} />
-                <col style={{ width: "4%" }} />
-                <col style={{ width: "4%" }} />
-                <col style={{ width: "5.5%" }} />
+                <col style={{ width: "9.5rem" }} />
+                <col style={{ width: "5.5rem" }} />
+                <col style={{ width: "4.5rem" }} />
+                <col style={{ width: "8.5rem" }} />
+                <col style={{ width: "7.5rem" }} />
+                <col style={{ width: "3.5rem" }} />
+                <col style={{ width: "2.25rem" }} />
+                <col style={{ width: "2.25rem" }} />
+                <col style={{ width: "2.25rem" }} />
+                <col style={{ width: "9rem" }} />
+                <col style={{ width: "7.5rem" }} />
+                <col style={{ width: "6rem" }} />
+                <col style={{ width: "4rem" }} />
+                <col style={{ width: "3rem" }} />
+                <col style={{ width: "3.75rem" }} />
+                <col style={{ width: "4.5rem" }} />
               </colgroup>
               <thead className="sticky top-0 z-10">
                 <tr className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600">
@@ -1357,15 +1357,15 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                         isCopied ? "border-l-slate-300" : block.accentClass
                       }`}
                     >
-                      <td className={`${TD} text-center`}>
-                        <div className="flex items-center justify-center gap-0.5">
+                      <td className={`${TD} !overflow-visible whitespace-nowrap px-1 text-center`}>
+                        <div className="flex flex-nowrap items-center justify-center gap-0.5">
                           {canManage ? (
                             <>
                               <button
                                 type="button"
                                 onClick={() => setEditingRow(r)}
                                 aria-label={`Modifier ${r.ticketNumber}`}
-                                className="grid size-5 place-items-center rounded bg-indigo-600 text-white hover:bg-indigo-700"
+                                className="grid size-6 shrink-0 place-items-center rounded bg-indigo-600 text-white hover:bg-indigo-700"
                                 title="Modifier la ligne"
                               >
                                 <Pencil className="size-2.5" aria-hidden="true" />
@@ -1375,7 +1375,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                                 onClick={() => void handleDeleteTicket(r)}
                                 disabled={deletingTicket === r.ticketNumber}
                                 aria-label={`Supprimer ${r.ticketNumber}`}
-                                className="grid size-5 place-items-center rounded bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50"
+                                className="grid size-6 shrink-0 place-items-center rounded bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50"
                                 title="Supprimer le ticket"
                               >
                                 <Trash2 className="size-2.5" aria-hidden="true" />
@@ -1386,7 +1386,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                             type="button"
                             onClick={() => void handleCopyRow(r)}
                             aria-label={`Copier ${r.ticketNumber}`}
-                            className="grid size-5 place-items-center rounded bg-emerald-600 text-white hover:bg-emerald-700"
+                            className="grid size-6 shrink-0 place-items-center rounded bg-emerald-600 text-white hover:bg-emerald-700"
                             title="Copier la ligne"
                           >
                             <Copy className="size-2.5" aria-hidden="true" />
@@ -1395,7 +1395,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                             type="button"
                             onClick={() => handlePrintTicket(r)}
                             aria-label={`Imprimer ${r.ticketNumber}`}
-                            className="grid size-5 place-items-center rounded bg-violet-600 text-white hover:bg-violet-700"
+                            className="grid size-6 shrink-0 place-items-center rounded bg-violet-600 text-white hover:bg-violet-700"
                             title="Imprimer ce ticket"
                           >
                             <Printer className="size-2.5" aria-hidden="true" />
@@ -1404,7 +1404,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                             type="button"
                             onClick={() => toggleCopied(r.ticketNumber)}
                             aria-pressed={isCopied}
-                            className={`grid size-5 place-items-center rounded border ${
+                            className={`grid size-6 shrink-0 place-items-center rounded border ${
                               isCopied
                                 ? "border-emerald-300 bg-emerald-100 text-emerald-700"
                                 : "border-amber-400 bg-amber-100 text-amber-800"
@@ -1551,7 +1551,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                   <span className="tabular-nums text-slate-800">{totalPages}</span>
                 </p>
 
-                <div className="flex items-center gap-1">
+                <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
                   <button
                     type="button"
                     onClick={() => goToPage(1)}
