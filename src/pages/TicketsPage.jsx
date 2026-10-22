@@ -425,6 +425,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     (quotes || []).forEach((quote) => {
       const client = quote.client || {};
       (quote.items || []).forEach((item, idx) => {
+        if (item?.isCancelled === true) return;
         const ticketNumber = item.ticketNumber ? String(item.ticketNumber).trim() : "";
         if (!ticketNumber) return;
 

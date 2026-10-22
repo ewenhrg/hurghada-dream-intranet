@@ -13,6 +13,11 @@ import {
   voidTicketAllocations,
 } from "../utils/ticketSequence";
 import { itemWithPickupSchedule, visiblePickupTime } from "../utils/pickupSchedule";
+import {
+  computeModifiedLineTotal,
+  getLineAmountPaid,
+  settleTicketAfterChange,
+} from "../utils/ticketSettlement";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { saveOpsComment } from "../utils/opsComment";
@@ -313,8 +318,45 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
         }
         reservation = reserved.reservation;
         modNumber = reserved.reservedNumbers[0];
+        const amountPaid = getLineAmountPaid(original);
+        const selectedActivity =
+          activityOptions.find((activity) => activityOptionId(activity) === String(form.activityId)) || null;
+        const computedPrice =
+          newPrice != null
+            ? newPrice
+            : activityChanged ||
+                toCount(original.adults) !== patched.adults ||
+                toCount(original.children) !== patched.children ||
+                toCount(original.babies) !== patched.babies
+              ? computeModifiedLineTotal({
+                  activity: selectedActivity,
+                  adults: patched.adults,
+                  children: patched.children,
+                  babies: patched.babies,
+                  neighborhood: quote.client?.neighborhood,
+                  privateTransferTier: original.privateTransferTier,
+                  originalItem: original,
+                })
+              : Math.round(Number(original.lineTotal) || 0);
+        const settlement = settleTicketAfterChange({
+          previousItem: original,
+          nextLineTotal: computedPrice,
+          activityName: patched.activityName || original.activityName,
+          activityDate: patched.date,
+          alreadyModified: Array.isArray(original.modifications) && original.modifications.length > 0,
+        });
+        if (newPrice != null || settlement.restAmount > 0 || settlement.refundAmount > 0) {
+          patched.lineTotal = settlement.lineTotal;
+          patched.amountPaid = settlement.amountPaid;
+          patched.restAmount = balanceDue ? balanceAmount : settlement.restAmount;
+          patched.refundAmount = settlement.refundAmount;
+          patched.refundGross = settlement.refundGross;
+          patched.refundLabel = settlement.refundLabel;
+          patched.refundReason = settlement.refundReason;
+          updatedQuote.items = items.map((item, index) => (index === itemIndex ? { ...patched } : item));
+        }
         updatedQuote.items = [
-          ...items,
+          ...updatedQuote.items,
           {
             ticketKind: "modification",
             ticketNumber: modNumber,
@@ -325,8 +367,13 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
             adults: patched.adults,
             children: patched.children,
             babies: patched.babies,
-            lineTotal: 0,
-            restAmount: balanceDue ? balanceAmount : 0,
+            lineTotal: settlement.lineTotal,
+            amountPaid,
+            restAmount: balanceDue ? balanceAmount : settlement.restAmount,
+            refundAmount: settlement.refundAmount,
+            refundGross: settlement.refundGross,
+            refundLabel: settlement.refundLabel || "",
+            refundReason: settlement.refundReason || "",
             pickupTime: patched.pickupTime,
             pickupPublished: patched.pickupPublished,
             meetAtHotelMarina: patched.meetAtHotelMarina === true,

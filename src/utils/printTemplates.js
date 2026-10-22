@@ -30,6 +30,7 @@ import {
   formatStaffPickupLabel,
   formatTicketPickupLabel,
 } from "./transferPricing.js";
+import { getTicketSettlementDisplay } from "./ticketSettlement.js";
 import {
   currencyNoCents,
   formatPhoneWithPlus,
@@ -640,7 +641,9 @@ export function generateTicketsHTML(quote, options = {}) {
           </div>`;
   };
 
-  const sortedItems = [...(quote.items || [])].sort((a, b) => {
+  const sortedItems = [...(quote.items || [])]
+    .filter((item) => item?.isCancelled !== true && String(item?.ticketNumber || "").trim())
+    .sort((a, b) => {
     const na = String(a?.ticketNumber || "").trim();
     const nb = String(b?.ticketNumber || "").trim();
     if (na && nb) {
@@ -808,6 +811,25 @@ export function generateTicketsHTML(quote, options = {}) {
               .join("")}</div>`
           : "";
       const enteredBy = String(item.ticketEnteredByName || quoteTicketsBy || "").trim();
+      const settlement = getTicketSettlementDisplay(item);
+      const curr = quote.currency || "EUR";
+      const settlementRows = [
+        `<div class="ticket-settle-row"><span class="ticket-settle-l">Déjà payé</span><span class="ticket-settle-v">${esc(
+          currencyNoCents(settlement.amountPaid, curr)
+        )}</span></div>`,
+        `<div class="ticket-settle-row ticket-settle-row--rest"><span class="ticket-settle-l">Rest</span><span class="ticket-settle-v">${esc(
+          currencyNoCents(settlement.restAmount, curr)
+        )}</span></div>`,
+      ];
+      if (settlement.refundAmount > 0 || settlement.refundGross > 0) {
+        settlementRows.push(
+          `<div class="ticket-settle-row ticket-settle-row--refund"><span class="ticket-settle-l">À rembourser</span><span class="ticket-settle-v">${esc(
+            currencyNoCents(settlement.refundAmount, curr)
+          )}</span></div>`
+        );
+        const note = [settlement.refundLabel, settlement.refundReason].filter(Boolean).join(" · ");
+        if (note) settlementRows.push(`<div class="ticket-settle-note">${esc(note)}</div>`);
+      }
 
       const activityHtml = isModification
         ? `<div class="ticket-activity ticket-activity-mod">
@@ -849,19 +871,7 @@ export function generateTicketsHTML(quote, options = {}) {
             ${item.ticketNumber ? `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">${esc(item.ticketNumber)}</span></div>` : `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">—</span></div>`}
             ${enteredBy ? `<div class="tf"><span class="tf-l">✍️ Tickets saisis par</span><span class="tf-v">${esc(enteredBy)}</span></div>` : ""}
           </div>
-          ${
-            isModification
-              ? ""
-              : `<div class="ticket-balance${Math.round(Number(item.restAmount) || 0) > 0 ? " ticket-balance--filled" : ""}">
-            <span class="ticket-balance-label">Reste à payer</span>
-            ${
-              Math.round(Number(item.restAmount) || 0) > 0
-                ? `<span class="ticket-balance-value">${esc(currencyNoCents(Math.round(Number(item.restAmount) || 0), quote.currency))}</span>`
-                : `<span class="ticket-balance-write" aria-hidden="true"></span>
-            <span class="ticket-balance-hint">à remplir à la main</span>`
-            }
-          </div>`
-          }
+          <div class="ticket-balance ticket-balance--filled ticket-settle">${settlementRows.join("")}</div>
         </div>
       </div>`;
     })
@@ -1152,41 +1162,43 @@ export function generateTicketsHTML(quote, options = {}) {
       margin-top: 8px;
       padding-top: 6px;
       border-top: 1px dashed #cbd5e1;
-      display: flex;
-      align-items: flex-end;
-      gap: 8px;
-      flex-wrap: wrap;
     }
-    .ticket-balance-label {
+    .ticket-settle {
+      display: grid;
+      gap: 3px;
+    }
+    .ticket-settle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .ticket-settle-l {
       font-size: 9px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.7px;
+      color: #475569;
+    }
+    .ticket-settle-row--rest .ticket-settle-l,
+    .ticket-settle-row--rest .ticket-settle-v {
       color: #b45309;
-      flex-shrink: 0;
-      padding-bottom: 2px;
     }
-    .ticket-balance-write {
-      flex: 1;
-      min-width: 90px;
-      min-height: 18px;
-      border-bottom: 1.5px solid #334155;
+    .ticket-settle-row--refund .ticket-settle-l,
+    .ticket-settle-row--refund .ticket-settle-v {
+      color: #be123c;
     }
-    .ticket-balance-value {
-      font-size: 13px;
+    .ticket-settle-v {
+      font-size: 12px;
       font-weight: 800;
-      color: #b45309;
+      color: #0f172a;
       letter-spacing: 0.2px;
     }
-    .ticket-balance--filled .ticket-balance-label {
-      color: #92400e;
-    }
-    .ticket-balance-hint {
+    .ticket-settle-note {
       font-size: 8px;
       font-weight: 600;
-      color: #94a3b8;
-      flex-shrink: 0;
-      padding-bottom: 2px;
+      color: #64748b;
+      line-height: 1.3;
     }
     .tickets-summary {
       margin-top: 6px;

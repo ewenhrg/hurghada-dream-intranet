@@ -78,6 +78,7 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
     (quotes || []).forEach((quote) => {
       const client = quote.client || {};
       (quote.items || []).forEach((item, idx) => {
+        if (item?.isCancelled === true) return;
         const ticketNumber = String(item.ticketNumber || "").trim();
         if (!ticketNumber || item.ticketKind === "modification") return;
         if (String(item.date || "").trim() !== day) return;

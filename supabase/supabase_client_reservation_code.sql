@@ -50,6 +50,9 @@ BEGIN
     IF coalesce(item->>'ticketKind', '') = 'modification' THEN
       CONTINUE;
     END IF;
+    IF lower(coalesce(item->>'isCancelled', '')) IN ('true', 't', '1') THEN
+      CONTINUE;
+    END IF;
     v_date := trim(coalesce(item->>'date', ''));
     IF v_date ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND v_date::date >= p_today THEN
       RETURN true;
@@ -221,6 +224,9 @@ BEGIN
           CONTINUE;
         END IF;
         IF coalesce(item->>'ticketKind', '') = 'modification' THEN
+          CONTINUE;
+        END IF;
+        IF lower(coalesce(item->>'isCancelled', '')) IN ('true', 't', '1') THEN
           CONTINUE;
         END IF;
         v_name_item := trim(coalesce(item->>'activityName', item->>'activity_name', ''));
