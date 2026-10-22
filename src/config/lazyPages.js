@@ -21,6 +21,9 @@ export const HistoryPage = lazyWithRetry(() =>
 export const TicketsPage = lazyWithRetry(() =>
   import("../pages/TicketsPage").then((module) => ({ default: module.TicketsPage }))
 );
+export const ReceiptPage = lazyWithRetry(() =>
+  import("../pages/ReceiptPage").then((module) => ({ default: module.ReceiptPage }))
+);
 export const UsersPage = lazyWithRetry(() =>
   import("../pages/UsersPage").then((module) => ({ default: module.UsersPage }))
 );

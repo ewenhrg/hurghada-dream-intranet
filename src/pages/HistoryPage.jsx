@@ -111,6 +111,7 @@ function QuoteCardComponent({
   const [payCash, setPayCash] = useState(false);
   const [payStripe, setPayStripe] = useState(false);
   const [payCashAmount, setPayCashAmount] = useState("");
+  const [payCashCurrency, setPayCashCurrency] = useState("EUR");
   const [payStripeAmount, setPayStripeAmount] = useState("");
   const [payRestAmount, setPayRestAmount] = useState("");
   const [payRestItemIndex, setPayRestItemIndex] = useState("");
@@ -224,6 +225,9 @@ function QuoteCardComponent({
   }, [quotes, d]);
 
   const payCoverage = useMemo(() => {
+    if (payCash && payCashCurrency === "EGP") {
+      return { gap: 0 };
+    }
     if (!payCash && !payStripe) {
       return getTicketPaymentCoverage({
         cashTotal: payModalCashTotal,
@@ -243,6 +247,7 @@ function QuoteCardComponent({
   }, [
     payModalCashTotal,
     payCash,
+    payCashCurrency,
     payStripe,
     payCashAmount,
     payStripeAmount,
@@ -365,11 +370,25 @@ function QuoteCardComponent({
       items.reduce((sum, it) => sum + Math.round(Number(it.lineTotal) || 0), 0) ||
       Math.round(Number(rawQuote.totalCash ?? rawQuote.total) || 0);
     const cardTotal = calculateCardPrice(cashTotal);
+    const savedCashCurrency = String(
+      items.find((it) => it?.cashPaidCurrency)?.cashPaidCurrency || ""
+    ).toUpperCase();
+    const cashCurrency = savedCashCurrency === "EGP" ? "EGP" : "EUR";
+    const savedCashAmount = Math.round(
+      Number(items.find((it) => Number(it?.cashPaidAmount) > 0)?.cashPaidAmount) || 0
+    );
     const existingCash = Math.round(Number(rawQuote.paidCash) || 0);
     const existingStripe = Math.round(Number(rawQuote.paidStripe) || 0);
+    setPayCashCurrency(cashCurrency);
     setPayCashAmount(
       methods.cash
-        ? String(existingCash > 0 ? existingCash : cashTotal)
+        ? String(
+            cashCurrency === "EGP" && savedCashAmount > 0
+              ? savedCashAmount
+              : existingCash > 0
+                ? existingCash
+                : cashTotal
+          )
         : ""
     );
     setPayStripeAmount(
@@ -562,7 +581,7 @@ function QuoteCardComponent({
       paidStripe: paidStripeAmount,
       restAmount: restParsed,
     });
-    if (coverage.gap !== 0) {
+    if (payCashCurrency !== "EGP" && coverage.gap !== 0) {
       if (coverage.gap > 0) {
         toast.warning(
           `Il manque ${currencyNoCents(coverage.gap, rawQuote.currency || "EUR")} : ` +
@@ -685,6 +704,13 @@ function QuoteCardComponent({
         .join("+");
       const enteredAt = new Date().toISOString();
       const cardTotal = calculateCardPrice(cashTotal);
+      const cashPaidCurrency = payCash ? (payCashCurrency === "EGP" ? "EGP" : "EUR") : "";
+      const paidCashForAccounts =
+        !payCash
+          ? 0
+          : cashPaidCurrency === "EGP"
+            ? (payStripe ? 0 : cashTotal)
+            : paidCashAmount;
       const updatedItems = items.map((item, idx) => {
         return {
           ...item,
@@ -693,6 +719,8 @@ function QuoteCardComponent({
           pickupPublished: Boolean(item.pickupPublished),
           ticketEnteredByName: agentName || item.ticketEnteredByName || "",
           paymentMethod: paymentMethodLabel || item.paymentMethod || "",
+          cashPaidCurrency,
+          cashPaidAmount: payCash ? paidCashAmount : 0,
           // Conserver la 1re date d’encaissement si déjà payé
           ticketsEnteredAt: item.ticketsEnteredAt || enteredAt,
           restAmount:
@@ -707,7 +735,8 @@ function QuoteCardComponent({
         ticketsEnteredAt: rawQuote.ticketsEnteredAt || enteredAt,
         ticketsPaymentCash: payCash === true,
         ticketsPaymentStripe: payStripe === true,
-        paidCash: paidCashAmount,
+        paidCash: paidCashForAccounts,
+        paidCashCurrency: cashPaidCurrency,
         paidStripe: paidStripeAmount,
         paymentRestAmount: restParsed > 0 ? restParsed : 0,
         paymentRestItemIndex: restParsed > 0 ? restItemIndex : null,
@@ -724,7 +753,7 @@ function QuoteCardComponent({
         try {
           const { ok, data, error } = await persistQuoteItemsToSupabase(rawQuote, updatedItems, {
             updatedAt: updatedQuote.updated_at,
-            paidCash: paidCashAmount,
+            paidCash: paidCashForAccounts,
             paidStripe: paidStripeAmount,
           });
 
@@ -803,7 +832,7 @@ function QuoteCardComponent({
       ticketConfirmLockRef.current = false;
       setTicketGenerating(false);
     }
-  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, user, payCash, payStripe, payCashAmount, payStripeAmount, payRestAmount, payRestItemIndex, needsZeroTracasDocs, activities]);
+  }, [d, quotes, setQuotes, openTicketsWindow, ticketDrafts, user, payCash, payCashCurrency, payStripe, payCashAmount, payStripeAmount, payRestAmount, payRestItemIndex, needsZeroTracasDocs, activities]);
 
   const handleZeroTracasDocPick = useCallback(
     async (docType, file) => {
@@ -1475,6 +1504,7 @@ function QuoteCardComponent({
                         );
                       } else {
                         setPayCashAmount("");
+                        setPayCashCurrency("EUR");
                       }
                     }}
                     disabled={ticketGenerating}
@@ -1513,9 +1543,41 @@ function QuoteCardComponent({
               {payCash || payStripe ? (
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {payCash ? (
-                    <label className="block rounded-xl border border-emerald-200 bg-white px-3 py-2.5">
+                    <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2.5">
                       <span className="text-[11px] font-bold uppercase tracking-wide text-emerald-800">
-                        Total payé en Cash (€)
+                        Cash encaissé en
+                      </span>
+                      <div className="mt-2 flex gap-2">
+                        <label className="inline-flex min-h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-emerald-200 px-2 py-2 text-sm font-bold text-emerald-950 has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50">
+                          <input
+                            type="radio"
+                            name="pay-cash-currency"
+                            checked={payCashCurrency !== "EGP"}
+                            onChange={() => {
+                              setPayCashCurrency("EUR");
+                              setPayCashAmount(String(payModalCashTotal || ""));
+                            }}
+                            disabled={ticketGenerating}
+                          />
+                          Euro
+                        </label>
+                        <label className="inline-flex min-h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-emerald-200 px-2 py-2 text-sm font-bold text-emerald-950 has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50">
+                          <input
+                            type="radio"
+                            name="pay-cash-currency"
+                            checked={payCashCurrency === "EGP"}
+                            onChange={() => {
+                              setPayCashCurrency("EGP");
+                              setPayCashAmount("");
+                            }}
+                            disabled={ticketGenerating}
+                          />
+                          Égyptien
+                        </label>
+                      </div>
+                      <label className="mt-3 block">
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-emerald-800">
+                        {payCashCurrency === "EGP" ? "Total payé en Cash (EGP)" : "Total payé en Cash (€)"}
                       </span>
                       <NumberInput
                         className="mt-1.5"
@@ -1524,11 +1586,12 @@ function QuoteCardComponent({
                         inputMode="decimal"
                         min={0}
                         step={1}
-                        placeholder="ex. 150"
+                        placeholder={payCashCurrency === "EGP" ? "ex. 8000" : "ex. 150"}
                         disabled={ticketGenerating}
                         aria-label="Montant payé en cash"
                       />
-                    </label>
+                      </label>
+                    </div>
                   ) : null}
                   {payStripe ? (
                     <label className="block rounded-xl border border-indigo-200 bg-white px-3 py-2.5">

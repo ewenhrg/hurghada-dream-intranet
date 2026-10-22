@@ -24,6 +24,7 @@ import {
   QuotesPage,
   HistoryPage,
   TicketsPage,
+  ReceiptPage,
   ModificationsPage,
   UsersPage,
   HotelsPage,
@@ -1169,19 +1170,19 @@ export default function App() {
 
   // Calculer la largeur maximale pour le header et le footer
   const maxWidthClass =
-    tab === "tickets"
+    tab === "tickets" || tab === "receipt"
       ? "max-w-[min(100%,1600px)]"
       : tab === "devis" || tab === "situation"
         ? "max-w-7xl"
         : "max-w-6xl";
   const mainPaddingClass =
-    tab === "devis" ? "px-0" : tab === "tickets" ? "px-1 md:px-2 lg:px-3" : "px-2 md:px-3 lg:px-6";
+    tab === "devis" ? "px-0" : tab === "tickets" || tab === "receipt" ? "px-1 md:px-2 lg:px-3" : "px-2 md:px-3 lg:px-6";
   // Construire les className complets
   const headerNavClassName = `glass-nav mx-auto flex flex-col items-stretch gap-3 md:gap-4 ${maxWidthClass} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`;
   const mainClassName = `flex-1 py-4 md:py-10 ${mainPaddingClass} scroll-container`;
   const footerClassName = `mx-auto px-4 py-8 border-t mt-10 font-medium tracking-wide ${maxWidthClass}`;
   const contentContainerClassName =
-    tab === "tickets"
+    tab === "tickets" || tab === "receipt"
       ? `mx-auto space-y-4 md:space-y-6 ${maxWidthClass} rounded-2xl p-2 md:p-3 lg:p-4`
       : `mx-auto space-y-6 md:space-y-10 ${maxWidthClass} rounded-2xl p-4 md:p-6 lg:p-8`;
   // Construire les className pour les boutons de langue
@@ -1366,6 +1367,11 @@ export default function App() {
                 {user?.canAccessHistory !== false && (
                 <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
                   {t("nav.tickets")}
+                </Pill>
+                )}
+                {user?.canAccessHistory !== false && (
+                <Pill active={tab === "receipt"} onClick={() => setTab("receipt")}>
+                  Receipt
                 </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
@@ -1574,6 +1580,16 @@ export default function App() {
             bare
           >
             <TicketsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
+          </Section>
+        )}
+
+        {tab === "receipt" && user?.canAccessHistory !== false && (
+          <Section
+            title="Receipt"
+            subtitle="Tous les tickets du jour, avec les tarifs et les paiements cash ou Stripe."
+            bare
+          >
+            <ReceiptPage quotes={quotes} activities={activities} />
           </Section>
         )}
 

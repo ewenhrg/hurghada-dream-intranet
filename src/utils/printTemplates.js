@@ -856,63 +856,47 @@ export function generateTicketsHTML(quote, options = {}) {
   const paymentMethods = normalizeTicketsPaymentMethods(quote);
   const breakdown = getQuoteCollectionBreakdown(quote);
   const paidCash = Math.round(Number(quote?.paidCash) || 0);
-  const paidStripe = Math.round(Number(quote?.paidStripe) || 0);
   const restTotal =
     Math.round(Number(quote?.paymentRestAmount) || 0) > 0
       ? Math.round(Number(quote.paymentRestAmount) || 0)
       : sortedItems.reduce((sum, item) => sum + Math.round(Number(item?.restAmount) || 0), 0);
   const isSingleTicket = ticketCount === 1;
 
+  const cashPaidItem = (sortedItems || []).find((item) => Number(item?.cashPaidAmount) > 0);
+  const cashPaidCurrency = String(
+    cashPaidItem?.cashPaidCurrency || quote?.paidCashCurrency || ""
+  ).toUpperCase();
   const cashAmount =
-    paidCash > 0
-      ? paidCash
-      : breakdown?.cash > 0
-        ? breakdown.cash
-        : paymentMethods.cash && !paymentMethods.stripe
-          ? totalPrice
-          : 0;
-  const stripeAmount =
-    paidStripe > 0
-      ? paidStripe
-      : breakdown?.stripe > 0
-        ? breakdown.stripe
-        : paymentMethods.stripe && !paymentMethods.cash
-          ? calculateCardPrice(totalPrice)
-          : 0;
+    Number(cashPaidItem?.cashPaidAmount) > 0
+      ? Math.round(Number(cashPaidItem.cashPaidAmount))
+      : paidCash > 0
+        ? paidCash
+        : breakdown?.cash > 0
+          ? breakdown.cash
+          : paymentMethods.cash && !paymentMethods.stripe
+            ? totalPrice
+            : 0;
+  const cashCurrencyCode = cashPaidCurrency === "EGP" ? "EGP" : quote.currency || "EUR";
 
-  const amountSummaryRows = [];
-  if (paymentMethods.cash && paymentMethods.stripe) {
-    if (cashAmount > 0) {
-      amountSummaryRows.push({
-        label: "Total Cash",
-        value: currencyNoCents(cashAmount, quote.currency),
-        tone: "cash",
-      });
-    }
-    if (stripeAmount > 0) {
-      amountSummaryRows.push({
-        label: "Total Stripe",
-        value: currencyNoCents(stripeAmount, quote.currency),
-        tone: "stripe",
-      });
-    }
-  } else if (paymentMethods.stripe) {
+  const amountSummaryRows = [
+    {
+      label: "Total",
+      value: currencyNoCents(totalPrice, quote.currency || "EUR"),
+      tone: "total",
+    },
+  ];
+  if (paymentMethods.cash && cashAmount > 0) {
     amountSummaryRows.push({
-      label: isSingleTicket ? "Prix du ticket (Stripe)" : "Total Stripe",
-      value: currencyNoCents(stripeAmount || calculateCardPrice(totalPrice), quote.currency),
-      tone: "stripe",
-    });
-  } else if (paymentMethods.cash) {
-    amountSummaryRows.push({
-      label: isSingleTicket ? "Prix du ticket (Cash)" : "Total Cash",
-      value: currencyNoCents(cashAmount || totalPrice, quote.currency),
+      label: "Cash",
+      value: currencyNoCents(cashAmount, cashCurrencyCode),
       tone: "cash",
     });
-  } else {
+  }
+  if (paymentMethods.stripe) {
     amountSummaryRows.push({
-      label: isSingleTicket ? "Prix du ticket" : "Prix total",
-      value: currencyNoCents(totalPrice, quote.currency),
-      tone: "total",
+      label: "Stripe",
+      value: currencyNoCents(calculateCardPrice(totalPrice), quote.currency || "EUR"),
+      tone: "stripe",
     });
   }
   if (restTotal > 0) {
@@ -1326,4 +1310,116 @@ export function generateTicketsHTML(quote, options = {}) {
 </body>
 </html>
   `.trim();
+}
+
+function escapeReceiptText(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Reçu du jour : une ligne par ticket, puis le total sans 3 % et chaque mode de paiement.
+ */
+export function generateDayReceiptHTML(receipt, options = {}) {
+  const esc = escapeReceiptText;
+  const dateLabel = esc(options.dateLabel || receipt?.dateKey || "");
+  const rows = Array.isArray(receipt?.rows) ? receipt.rows : [];
+  const totals = receipt?.totals || {};
+  const amountRows = [
+    { label: "Total", value: totals.tariffLabel || "0 €", strong: true },
+  ];
+  if (totals.cashEur > 0) amountRows.push({ label: "Cash", value: totals.cashEurLabel });
+  if (totals.cashEgp > 0) amountRows.push({ label: "Cash", value: totals.cashEgpLabel });
+  if (totals.stripe > 0) amountRows.push({ label: "Stripe", value: totals.stripeLabel });
+  if (totals.rest > 0) amountRows.push({ label: "Reste à payer", value: totals.restLabel });
+
+  const body = rows.length
+    ? rows
+        .map(
+          (row) => `<tr>
+        <td class="num">${esc(row.ticketNumber)}</td>
+        <td>${esc(row.clientName)}${row.phone ? `<div class="sub">${esc(row.phone)}</div>` : ""}</td>
+        <td>${esc(row.hotel)}${row.room ? `<div class="sub">Ch. ${esc(row.room)}</div>` : ""}</td>
+        <td>${esc(row.activity)}</td>
+        <td>${esc(row.pax)}</td>
+        <td class="money">${esc(row.tariffLabel)}</td>
+        <td>${esc(row.paymentLabel)}</td>
+        <td class="money">${esc(row.collectedLabel)}</td>
+        <td class="money">${esc(row.restLabel)}</td>
+      </tr>`
+        )
+        .join("")
+    : `<tr><td colspan="9" class="empty">Aucun ticket pour cette date.</td></tr>`;
+
+  const amounts = amountRows
+    .map(
+      (row) => `<div class="sum-row${row.strong ? " sum-strong" : ""}">
+        <span>${esc(row.label)}</span>
+        <span>${esc(row.value)}</span>
+      </div>`
+    )
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Receipt ${dateLabel}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; color: #0f172a; font-family: "Segoe UI", Tahoma, sans-serif; background: #f8fafc; }
+    .sheet { max-width: 1100px; margin: 0 auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; }
+    h1 { margin: 0; font-size: 22px; letter-spacing: -0.03em; }
+    .meta { margin-top: 4px; color: #475569; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12px; }
+    th, td { border: 1px solid #cbd5e1; padding: 6px 7px; vertical-align: top; text-align: left; }
+    th { background: #0f172a; color: #fff; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; }
+    td.money, th.money { text-align: right; white-space: nowrap; }
+    td.num { font-weight: 700; white-space: nowrap; }
+    .sub { color: #64748b; font-size: 11px; margin-top: 2px; }
+    .empty { text-align: center; color: #64748b; padding: 18px; }
+    .foot { margin-top: 18px; display: flex; justify-content: flex-end; }
+    .sums { width: 280px; border-top: 2px solid #0f172a; }
+    .sum-row { display: flex; justify-content: space-between; gap: 16px; padding: 7px 2px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+    .sum-strong { font-size: 16px; font-weight: 800; }
+    .print-btn { margin: 0 0 12px; padding: 8px 14px; border: 0; border-radius: 8px; background: #0f172a; color: #fff; font-weight: 700; cursor: pointer; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .sheet { border: 0; border-radius: 0; padding: 0; max-width: none; }
+      .print-btn { display: none; }
+      th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    @page { size: A4 landscape; margin: 12mm; }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <button class="print-btn" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+    <h1>Receipt</h1>
+    <p class="meta">${dateLabel} · ${rows.length} ticket${rows.length > 1 ? "s" : ""}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>N° ticket</th>
+          <th>Client</th>
+          <th>Hôtel</th>
+          <th>Activité</th>
+          <th>Personnes</th>
+          <th class="money">Tarif</th>
+          <th>Paiement</th>
+          <th class="money">Encaissé</th>
+          <th class="money">Reste</th>
+        </tr>
+      </thead>
+      <tbody>${body}</tbody>
+    </table>
+    <div class="foot">
+      <div class="sums">${amounts}</div>
+    </div>
+  </div>
+</body>
+</html>`;
 }
