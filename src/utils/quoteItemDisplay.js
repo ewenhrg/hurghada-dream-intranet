@@ -3,6 +3,7 @@ import {
   isSpeedBoatActivity,
   allowsSpeedBoatDolphinExtra,
   allowsSpeedBoatIslandExtras,
+  isFlyingDressActivity,
   formatTurtleFinSizesLabel,
 } from "./activityHelpers";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
@@ -179,6 +180,12 @@ export function getQuoteItemExtraLabels(item) {
   if (item.louxorPrivatif4pax) labels.push("Louxor 4pax");
   if (item.louxorPrivatif5pax) labels.push("Louxor 5pax");
   if (item.louxorPrivatif6pax) labels.push("Louxor 6pax");
+  if (item.flyingDress2Robes || item.flyingDress3Robes || item.flyingDress4Robes) {
+    const dressPrefix = isFlyingDressActivity(activityName) ? "Flying Dress" : "Extra Flying Dress";
+    if (item.flyingDress2Robes) labels.push(`${dressPrefix} — 2 robes`);
+    if (item.flyingDress3Robes) labels.push(`${dressPrefix} — 3 robes`);
+    if (item.flyingDress4Robes) labels.push(`${dressPrefix} — 4 robes`);
+  }
 
   if (item.allerSimple && !item.allerRetour) labels.push("Aller simple");
   if (item.allerRetour) labels.push("Aller-retour");

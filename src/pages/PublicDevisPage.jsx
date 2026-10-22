@@ -107,6 +107,9 @@ function getCatalogLineOptionLines(item) {
   if (item.louxorPrivatif4pax) lines.push("Louxor privatif — 4 personnes");
   if (item.louxorPrivatif5pax) lines.push("Louxor privatif — 5 personnes");
   if (item.louxorPrivatif6pax) lines.push("Louxor privatif — 6 personnes");
+  if (item.flyingDress2Robes) lines.push("Extra Flying Dress — 2 robes");
+  if (item.flyingDress3Robes) lines.push("Extra Flying Dress — 3 robes");
+  if (item.flyingDress4Robes) lines.push("Extra Flying Dress — 4 robes");
 
   if (item.allerSimple && !item.allerRetour) lines.push("Transfert : aller simple");
   if (item.allerRetour) lines.push("Transfert : aller-retour");

@@ -19,6 +19,8 @@ import {
   getCairePrivatifPrices,
   isLouxorPrivatifActivity,
   getLouxorPrivatifPrices,
+  isFlyingDressActivity,
+  computeFlyingDressLineTotal,
 } from "../utils/activityHelpers";
 import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
 import { isActivityBlockedForNeighborhood } from "../utils/activityNeighborhoodRules.js";
@@ -100,7 +102,7 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
       } else if (act && isBoatPartyActivity(act.name)) {
         lineTotal = computeBoatPartyLineTotal(it.boatPartyMen, it.boatPartyWomen);
       } else if (act && isCairePrivatifActivity(act.name)) {
-        // cas spécial CAIRE PRIVATIF : calcul basé sur les cases à cocher (4pax, 5pax, 6pax)
+        // cas spécial CAIRE PRIVATIF : forfait pax + extra Flying Dress optionnel
         const prices = getCairePrivatifPrices();
         if (it.cairePrivatif4pax) {
           lineTotal = prices.pax4;
@@ -109,8 +111,9 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         } else if (it.cairePrivatif6pax) {
           lineTotal = prices.pax6;
         }
+        lineTotal += computeFlyingDressLineTotal(it);
       } else if (act && isLouxorPrivatifActivity(act.name)) {
-        // cas spécial LOUXOR PRIVATIF : calcul basé sur les cases à cocher (4pax, 5pax, 6pax)
+        // cas spécial LOUXOR PRIVATIF : forfait pax + extra Flying Dress optionnel
         const prices = getLouxorPrivatifPrices();
         if (it.louxorPrivatif4pax) {
           lineTotal = prices.pax4;
@@ -119,6 +122,9 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         } else if (it.louxorPrivatif6pax) {
           lineTotal = prices.pax6;
         }
+        lineTotal += computeFlyingDressLineTotal(it);
+      } else if (act && isFlyingDressActivity(act.name)) {
+        lineTotal = computeFlyingDressLineTotal(it);
       } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
         // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
         // Vérifier HORS ZONE en premier car plus spécifique

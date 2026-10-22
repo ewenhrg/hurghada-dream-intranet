@@ -571,6 +571,68 @@ export function getLouxorPrivatifPrices() {
   };
 }
 
+/** Flying Dress : forfait selon le nombre de robes (2 / 3 / 4). */
+export function isFlyingDressActivity(activityName) {
+  const name = normalizeActivityName(activityName);
+  if (!name) return false;
+  return name.includes("flying dress") || name.includes("flyingdress");
+}
+
+/** Extra Flying Dress proposé sur Caire / Louxor privatifs (et activité Flying Dress). */
+export function allowsFlyingDressExtra(activityName) {
+  return (
+    isFlyingDressActivity(activityName) ||
+    isCairePrivatifActivity(activityName) ||
+    isLouxorPrivatifActivity(activityName)
+  );
+}
+
+export function getFlyingDressPrices() {
+  return {
+    robes2: 60,
+    robes3: 70,
+    robes4: 80,
+  };
+}
+
+export function getFlyingDressOptions() {
+  const p = getFlyingDressPrices();
+  return [
+    { key: "flyingDress2Robes", count: 2, price: p.robes2, label: "2 robes" },
+    { key: "flyingDress3Robes", count: 3, price: p.robes3, label: "3 robes" },
+    { key: "flyingDress4Robes", count: 4, price: p.robes4, label: "4 robes" },
+  ];
+}
+
+export function getFlyingDressExtraLines() {
+  return getFlyingDressOptions().map((opt) => `Extra Flying Dress — ${opt.label} : +${opt.price} €`);
+}
+
+export function hasFlyingDressOption(item) {
+  return Boolean(item?.flyingDress2Robes || item?.flyingDress3Robes || item?.flyingDress4Robes);
+}
+
+export function computeFlyingDressLineTotal(item) {
+  const p = getFlyingDressPrices();
+  if (item?.flyingDress2Robes) return p.robes2;
+  if (item?.flyingDress3Robes) return p.robes3;
+  if (item?.flyingDress4Robes) return p.robes4;
+  return 0;
+}
+
+/**
+ * Patch exclusif pour cocher une seule option robes.
+ * `selectedKey` vide / "none" = aucun extra (pour Caire / Louxor).
+ */
+export function flyingDressOptionPatch(selectedKey) {
+  const key = selectedKey && selectedKey !== "none" ? selectedKey : "";
+  return {
+    flyingDress2Robes: key === "flyingDress2Robes",
+    flyingDress3Robes: key === "flyingDress3Robes",
+    flyingDress4Robes: key === "flyingDress4Robes",
+  };
+}
+
 function readStoredListPrices(activityLike) {
   const adult = Number(activityLike?.priceAdult ?? activityLike?.price_adult ?? NaN);
   const child = Number(activityLike?.priceChild ?? activityLike?.price_child ?? NaN);
@@ -635,12 +697,26 @@ export function getActivityTarifListLines(activityLike) {
 
   if (isCairePrivatifActivity(name)) {
     const p = getCairePrivatifPrices();
-    return [`4 personnes : ${p.pax4} €`, `5 personnes : ${p.pax5} €`, `6 personnes : ${p.pax6} €`];
+    return [
+      `4 personnes : ${p.pax4} €`,
+      `5 personnes : ${p.pax5} €`,
+      `6 personnes : ${p.pax6} €`,
+      ...getFlyingDressExtraLines(),
+    ];
   }
 
   if (isLouxorPrivatifActivity(name)) {
     const p = getLouxorPrivatifPrices();
-    return [`4 personnes : ${p.pax4} €`, `5 personnes : ${p.pax5} €`, `6 personnes : ${p.pax6} €`];
+    return [
+      `4 personnes : ${p.pax4} €`,
+      `5 personnes : ${p.pax5} €`,
+      `6 personnes : ${p.pax6} €`,
+      ...getFlyingDressExtraLines(),
+    ];
+  }
+
+  if (isFlyingDressActivity(name)) {
+    return getFlyingDressOptions().map((opt) => `${opt.label} : ${opt.price} €`);
   }
 
   if (isZeroTracasHorsZoneActivity(name)) {

@@ -21,6 +21,9 @@ import {
   getCairePrivatifPrices,
   isLouxorPrivatifActivity,
   getLouxorPrivatifPrices,
+  isFlyingDressActivity,
+  getFlyingDressPrices,
+  computeFlyingDressLineTotal,
   getActivityTarifListLines,
   isZeroTracasActivity,
   isZeroTracasHorsZoneActivity,
@@ -158,11 +161,15 @@ export function computePublicCatalogLineTotal(activity, line) {
     if (line?.cairePrivatif4pax) total = p.pax4;
     else if (line?.cairePrivatif5pax) total = p.pax5;
     else if (line?.cairePrivatif6pax) total = p.pax6;
+    total += computeFlyingDressLineTotal(line);
   } else if (isLouxorPrivatifActivity(name)) {
     const p = getLouxorPrivatifPrices();
     if (line?.louxorPrivatif4pax) total = p.pax4;
     else if (line?.louxorPrivatif5pax) total = p.pax5;
     else if (line?.louxorPrivatif6pax) total = p.pax6;
+    total += computeFlyingDressLineTotal(line);
+  } else if (isFlyingDressActivity(name)) {
+    total = computeFlyingDressLineTotal(line);
   } else {
     const zeroTracasTotal = computeZeroTracasStyleLineTotal(name, line);
     if (zeroTracasTotal !== null) {
@@ -221,6 +228,10 @@ export function getPublicCatalogListFromPrice(activity) {
   if (isLouxorPrivatifActivity(name)) {
     const p = getLouxorPrivatifPrices();
     return { amount: p.pax4, currency: activity.currency || "EUR" };
+  }
+  if (isFlyingDressActivity(name)) {
+    const p = getFlyingDressPrices();
+    return { amount: p.robes2, currency: activity.currency || "EUR" };
   }
 
   if (isZeroTracasHorsZoneActivity(name)) {

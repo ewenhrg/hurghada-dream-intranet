@@ -36,6 +36,11 @@ import {
   calecheCapacityNotice,
   isCairePrivatifActivity,
   isLouxorPrivatifActivity,
+  isFlyingDressActivity,
+  allowsFlyingDressExtra,
+  getFlyingDressOptions,
+  hasFlyingDressOption,
+  flyingDressOptionPatch,
   isMotoCrossActivity,
   isBoatPartyActivity,
   getBoatPartyPrices,
@@ -101,6 +106,9 @@ const INITIAL_CATALOG_SPECIAL = {
   louxorPrivatif4pax: false,
   louxorPrivatif5pax: false,
   louxorPrivatif6pax: false,
+  flyingDress2Robes: false,
+  flyingDress3Robes: false,
+  flyingDress4Robes: false,
   allerSimple: false,
   allerRetour: false,
   zeroTracasTransfertVisaSim: 0,
@@ -144,6 +152,9 @@ function b2bOptionNote(activity, special) {
   if (special.louxorPrivatif4pax) bits.push("Privatif 4 pers.");
   if (special.louxorPrivatif5pax) bits.push("Privatif 5 pers.");
   if (special.louxorPrivatif6pax) bits.push("Privatif 6 pers.");
+  if (special.flyingDress2Robes) bits.push("Flying Dress — 2 robes");
+  if (special.flyingDress3Robes) bits.push("Flying Dress — 3 robes");
+  if (special.flyingDress4Robes) bits.push("Flying Dress — 4 robes");
   if (special.allerSimple) bits.push("Aller simple");
   if (special.allerRetour) bits.push("Aller-retour");
   if (Array.isArray(special.finSizes) && special.finSizes.length > 0) bits.push("Tailles de palmes indiquées");
@@ -739,7 +750,10 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
       return "Sélectionnez le nombre de motos par modèle (prix affiché au total).";
     }
     if (isCairePrivatifActivity(activity.name) || isLouxorPrivatifActivity(activity.name)) {
-      return "Choisissez la taille du groupe (4, 5 ou 6 personnes) — prix forfaitaire.";
+      return "Choisissez la taille du groupe (4, 5 ou 6 personnes) — prix forfaitaire. Extra optionnel Flying Dress : 2 robes +60 €, 3 robes +70 €, 4 robes +80 €.";
+    }
+    if (isFlyingDressActivity(activity.name)) {
+      return "Choisissez le forfait robes : 2 robes 60 €, 3 robes 70 € ou 4 robes 80 €.";
     }
     if (isZeroTracasHorsZoneActivity(activity.name) || isZeroTracasActivity(activity.name)) {
       return `Indiquez le nombre de chaque prestation (même grille que sur le devis intranet). Les tarifs adulte/enfant ci-dessus ne s’appliquent pas à cette fiche.\nLa date est automatiquement fixée au jour d’arrivée.\n${ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE}`;
@@ -1014,67 +1028,92 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
       );
     }
 
-    if (isCairePrivatifActivity(name)) {
+    if (allowsFlyingDressExtra(name)) {
+      const asExtra = !isFlyingDressActivity(name);
       return (
-        <div className="space-y-2 rounded-xl border border-transparent bg-catalog-lagoonSoft p-3">
-          <p className="text-xs font-semibold text-catalog-body">Nombre de personnes (forfait)</p>
-          <div className="flex flex-wrap gap-2">
-            {[
-              ["cairePrivatif4pax", "4 pers."],
-              ["cairePrivatif5pax", "5 pers."],
-              ["cairePrivatif6pax", "6 pers."],
-            ].map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() =>
-                  setSpecial((s) => ({
-                    ...s,
-                    cairePrivatif4pax: key === "cairePrivatif4pax",
-                    cairePrivatif5pax: key === "cairePrivatif5pax",
-                    cairePrivatif6pax: key === "cairePrivatif6pax",
-                  }))
-                }
-                className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-bold transition-colors ${
-                  special[key] ? "bg-catalog-raised text-white" : "bg-white text-catalog-body ring-1 ring-catalog-border"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (isLouxorPrivatifActivity(name)) {
-      return (
-        <div className="space-y-2 rounded-xl border border-catalog-line bg-catalog-lagoonSoft p-3">
-          <p className="text-xs font-semibold text-catalog-body">Nombre de personnes (forfait)</p>
-          <div className="flex flex-wrap gap-2">
-            {[
-              ["louxorPrivatif4pax", "4 pers."],
-              ["louxorPrivatif5pax", "5 pers."],
-              ["louxorPrivatif6pax", "6 pers."],
-            ].map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() =>
-                  setSpecial((s) => ({
-                    ...s,
-                    louxorPrivatif4pax: key === "louxorPrivatif4pax",
-                    louxorPrivatif5pax: key === "louxorPrivatif5pax",
-                    louxorPrivatif6pax: key === "louxorPrivatif6pax",
-                  }))
-                }
-                className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-bold transition-colors ${
-                  special[key] ? "bg-catalog-raised text-white" : "bg-white text-catalog-ink ring-1 ring-catalog-border"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+        <div className="space-y-3">
+          {isCairePrivatifActivity(name) || isLouxorPrivatifActivity(name) ? (
+            <div className="space-y-2 rounded-xl border border-catalog-line bg-catalog-lagoonSoft p-3">
+              <p className="text-xs font-semibold text-catalog-body">Nombre de personnes (forfait)</p>
+              <div className="flex flex-wrap gap-2">
+                {(isCairePrivatifActivity(name)
+                  ? [
+                      ["cairePrivatif4pax", "4 pers."],
+                      ["cairePrivatif5pax", "5 pers."],
+                      ["cairePrivatif6pax", "6 pers."],
+                    ]
+                  : [
+                      ["louxorPrivatif4pax", "4 pers."],
+                      ["louxorPrivatif5pax", "5 pers."],
+                      ["louxorPrivatif6pax", "6 pers."],
+                    ]
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() =>
+                      setSpecial((s) =>
+                        isCairePrivatifActivity(name)
+                          ? {
+                              ...s,
+                              cairePrivatif4pax: key === "cairePrivatif4pax",
+                              cairePrivatif5pax: key === "cairePrivatif5pax",
+                              cairePrivatif6pax: key === "cairePrivatif6pax",
+                            }
+                          : {
+                              ...s,
+                              louxorPrivatif4pax: key === "louxorPrivatif4pax",
+                              louxorPrivatif5pax: key === "louxorPrivatif5pax",
+                              louxorPrivatif6pax: key === "louxorPrivatif6pax",
+                            }
+                      )
+                    }
+                    className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-bold transition-colors ${
+                      special[key]
+                        ? "bg-catalog-raised text-white"
+                        : "bg-white text-catalog-ink ring-1 ring-catalog-border"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <div className="space-y-2 rounded-xl border border-catalog-line bg-catalog-lagoonSoft p-3">
+            <p className="text-xs font-semibold text-catalog-body">
+              {asExtra ? "Extra Flying Dress (optionnel)" : "Options Flying Dress"}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {asExtra ? (
+                <button
+                  type="button"
+                  onClick={() => setSpecial((s) => ({ ...s, ...flyingDressOptionPatch("none") }))}
+                  className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-bold transition-colors ${
+                    !hasFlyingDressOption(special)
+                      ? "bg-catalog-raised text-white"
+                      : "bg-white text-catalog-ink ring-1 ring-catalog-border"
+                  }`}
+                >
+                  Aucun
+                </button>
+              ) : null}
+              {getFlyingDressOptions().map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setSpecial((s) => ({ ...s, ...flyingDressOptionPatch(opt.key) }))}
+                  className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-bold transition-colors ${
+                    special[opt.key]
+                      ? "bg-catalog-raised text-white"
+                      : "bg-white text-catalog-ink ring-1 ring-catalog-border"
+                  }`}
+                >
+                  {opt.label} — {asExtra ? "+" : ""}
+                  {opt.price} €
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       );
@@ -1223,6 +1262,9 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
     }
     if (isLouxorPrivatifActivity(name)) {
       return !special.louxorPrivatif4pax && !special.louxorPrivatif5pax && !special.louxorPrivatif6pax;
+    }
+    if (isFlyingDressActivity(name)) {
+      return !hasFlyingDressOption(special);
     }
     if (isBuggyActivity(name)) {
       return special.buggySimple === 0 && special.buggyFamily === 0;

@@ -49,6 +49,9 @@ export function createBlankQuoteLine() {
     louxorPrivatif4pax: false,
     louxorPrivatif5pax: false,
     louxorPrivatif6pax: false,
+    flyingDress2Robes: false,
+    flyingDress3Robes: false,
+    flyingDress4Robes: false,
   };
 }
 
@@ -104,6 +107,9 @@ export function mergePublicSavedLineIntoQuoteItem(line) {
   base.louxorPrivatif4pax = Boolean(line.louxorPrivatif4pax);
   base.louxorPrivatif5pax = Boolean(line.louxorPrivatif5pax);
   base.louxorPrivatif6pax = Boolean(line.louxorPrivatif6pax);
+  base.flyingDress2Robes = Boolean(line.flyingDress2Robes);
+  base.flyingDress3Robes = Boolean(line.flyingDress3Robes);
+  base.flyingDress4Robes = Boolean(line.flyingDress4Robes);
 
   base.allerSimple = Boolean(line.allerSimple);
   base.allerRetour = Boolean(line.allerRetour);

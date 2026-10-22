@@ -10,7 +10,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, formatTurtleFinSizesLabel, isArrivalDayServiceActivity, isTransferActivity, ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE } from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, isFlyingDressActivity, allowsFlyingDressExtra, getFlyingDressOptions, hasFlyingDressOption, computeFlyingDressLineTotal, flyingDressOptionPatch, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, formatTurtleFinSizesLabel, isArrivalDayServiceActivity, isTransferActivity, ZERO_TRACAS_SIM_UNAVAILABLE_MESSAGE } from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -927,6 +927,15 @@ function QuoteCardComponent({
       baseItem.zeroTracasTransfertPlus3Personnes = item.zeroTracasTransfertPlus3Personnes ?? "";
       baseItem.zeroTracasVisaSim = "";
       baseItem.zeroTracasVisaSeul = item.zeroTracasVisaSeul ?? "";
+      baseItem.cairePrivatif4pax = Boolean(item.cairePrivatif4pax);
+      baseItem.cairePrivatif5pax = Boolean(item.cairePrivatif5pax);
+      baseItem.cairePrivatif6pax = Boolean(item.cairePrivatif6pax);
+      baseItem.louxorPrivatif4pax = Boolean(item.louxorPrivatif4pax);
+      baseItem.louxorPrivatif5pax = Boolean(item.louxorPrivatif5pax);
+      baseItem.louxorPrivatif6pax = Boolean(item.louxorPrivatif6pax);
+      baseItem.flyingDress2Robes = Boolean(item.flyingDress2Robes);
+      baseItem.flyingDress3Robes = Boolean(item.flyingDress3Robes);
+      baseItem.flyingDress4Robes = Boolean(item.flyingDress4Robes);
       
       return baseItem;
     });
@@ -2740,6 +2749,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
     louxorPrivatif4pax: false, // Pour LOUXOR PRIVATIF
     louxorPrivatif5pax: false, // Pour LOUXOR PRIVATIF
     louxorPrivatif6pax: false, // Pour LOUXOR PRIVATIF
+    flyingDress2Robes: false,
+    flyingDress3Robes: false,
+    flyingDress4Robes: false,
     privateTransferTier: "",
   });
 
@@ -2812,7 +2824,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
       } else if (act && isBoatPartyActivity(act.name)) {
         lineTotal = computeBoatPartyLineTotal(it.boatPartyMen, it.boatPartyWomen);
       } else if (act && isCairePrivatifActivity(act.name)) {
-        // cas spécial CAIRE PRIVATIF : calcul basé sur les cases à cocher (4pax, 5pax, 6pax)
+        // cas spécial CAIRE PRIVATIF : forfait pax + extra Flying Dress optionnel
         const prices = getCairePrivatifPrices();
         if (it.cairePrivatif4pax) {
           lineTotal = prices.pax4;
@@ -2821,8 +2833,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         } else if (it.cairePrivatif6pax) {
           lineTotal = prices.pax6;
         }
+        lineTotal += computeFlyingDressLineTotal(it);
       } else if (act && isLouxorPrivatifActivity(act.name)) {
-        // cas spécial LOUXOR PRIVATIF : calcul basé sur les cases à cocher (4pax, 5pax, 6pax)
+        // cas spécial LOUXOR PRIVATIF : forfait pax + extra Flying Dress optionnel
         const prices = getLouxorPrivatifPrices();
         if (it.louxorPrivatif4pax) {
           lineTotal = prices.pax4;
@@ -2831,6 +2844,9 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
         } else if (it.louxorPrivatif6pax) {
           lineTotal = prices.pax6;
         }
+        lineTotal += computeFlyingDressLineTotal(it);
+      } else if (act && isFlyingDressActivity(act.name)) {
+        lineTotal = computeFlyingDressLineTotal(it);
       } else if (act && isZeroTracasHorsZoneActivity(act.name)) {
         // cas spécial ZERO TRACAS HORS ZONE : calcul basé sur les différents types de services
         const prices = getZeroTracasHorsZonePrices();
@@ -3106,6 +3122,15 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           zeroTracasTransfertPlus3Personnes: Number(c.raw.zeroTracasTransfertPlus3Personnes || 0),
           zeroTracasVisaSim: 0,
           zeroTracasVisaSeul: Number(c.raw.zeroTracasVisaSeul || 0),
+          cairePrivatif4pax: Boolean(c.raw.cairePrivatif4pax),
+          cairePrivatif5pax: Boolean(c.raw.cairePrivatif5pax),
+          cairePrivatif6pax: Boolean(c.raw.cairePrivatif6pax),
+          louxorPrivatif4pax: Boolean(c.raw.louxorPrivatif4pax),
+          louxorPrivatif5pax: Boolean(c.raw.louxorPrivatif5pax),
+          louxorPrivatif6pax: Boolean(c.raw.louxorPrivatif6pax),
+          flyingDress2Robes: Boolean(c.raw.flyingDress2Robes),
+          flyingDress3Robes: Boolean(c.raw.flyingDress3Robes),
+          flyingDress4Robes: Boolean(c.raw.flyingDress4Robes),
           neighborhood: client.neighborhood,
           slot: c.raw.slot,
           staffPickup: requiresPickupTimeChoice(c.transferInfo) || Boolean(originalItem?.staffPickup),
@@ -3728,6 +3753,53 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           6 pax - {getLouxorPrivatifPrices().pax6}€
                         </span>
                       </label>
+                    </div>
+                  </div>
+                )}
+
+                {c.act && allowsFlyingDressExtra(c.act.name) && (
+                  <div className="bg-gradient-to-br from-rose-50/80 to-pink-50/70 rounded-xl p-5 md:p-6 border-2 border-rose-300/70 shadow-lg mt-4">
+                    <p className="text-sm md:text-base font-bold text-slate-800 mb-4">
+                      {isFlyingDressActivity(c.act.name) ? "Options Flying Dress" : "Extra Flying Dress"}
+                    </p>
+                    <p className="text-xs text-slate-600 font-medium mb-3">
+                      {isFlyingDressActivity(c.act.name)
+                        ? "Un seul forfait au choix selon le nombre de robes."
+                        : "Optionnel — un seul forfait robes au choix (ajouté au forfait privatif)."}
+                    </p>
+                    <div className="space-y-3">
+                      {!isFlyingDressActivity(c.act.name) ? (
+                        <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-rose-200 hover:border-rose-400 cursor-pointer transition-all">
+                          <input
+                            type="radio"
+                            name={`flying-dress-${idx}`}
+                            checked={!hasFlyingDressOption(c.raw)}
+                            onChange={() => setItem(idx, flyingDressOptionPatch("none"))}
+                            className="w-5 h-5 text-rose-600 border-gray-300 focus:ring-rose-500"
+                          />
+                          <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
+                            Aucun extra Flying Dress
+                          </span>
+                        </label>
+                      ) : null}
+                      {getFlyingDressOptions().map((opt) => (
+                        <label
+                          key={opt.key}
+                          className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-rose-200 hover:border-rose-400 cursor-pointer transition-all"
+                        >
+                          <input
+                            type="radio"
+                            name={`flying-dress-${idx}`}
+                            checked={Boolean(c.raw[opt.key])}
+                            onChange={() => setItem(idx, flyingDressOptionPatch(opt.key))}
+                            className="w-5 h-5 text-rose-600 border-gray-300 focus:ring-rose-500"
+                          />
+                          <span className="text-sm md:text-base font-semibold text-slate-700 flex-1">
+                            {opt.label} — {isFlyingDressActivity(c.act.name) ? "" : "+"}
+                            {opt.price}€
+                          </span>
+                        </label>
+                      ))}
                     </div>
                   </div>
                 )}
