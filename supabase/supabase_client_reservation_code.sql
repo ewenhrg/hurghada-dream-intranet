@@ -47,6 +47,9 @@ BEGIN
   END IF;
   FOR item IN SELECT value FROM jsonb_array_elements(p_items) AS t(value)
   LOOP
+    IF coalesce(item->>'ticketKind', '') = 'modification' THEN
+      CONTINUE;
+    END IF;
     v_date := trim(coalesce(item->>'date', ''));
     IF v_date ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND v_date::date >= p_today THEN
       RETURN true;
@@ -215,6 +218,9 @@ BEGIN
       FOR item IN SELECT value FROM jsonb_array_elements(r.items) AS t(value)
       LOOP
         IF jsonb_typeof(item) <> 'object' THEN
+          CONTINUE;
+        END IF;
+        IF coalesce(item->>'ticketKind', '') = 'modification' THEN
           CONTINUE;
         END IF;
         v_name_item := trim(coalesce(item->>'activityName', item->>'activity_name', ''));

@@ -640,7 +640,7 @@ export function EwenDashboardPage({
               </h2>
               <p className="mt-0.5 text-sm text-slate-500">
                 {messageTargetRow.name}
-                {messageTargetRow.code ? ` · code ${messageTargetRow.code}` : ""} — ~3 secondes.
+                {messageTargetRow.code ? ` · code ${messageTargetRow.code}` : ""} — 20 secondes.
               </p>
             </div>
             <div className="space-y-3 p-5">

@@ -76,7 +76,7 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
     const lines = [];
     items.forEach((item, itemIndex) => {
       const ticketNumber = String(item?.ticketNumber || "").trim();
-      if (!ticketNumber || String(item?.date || "").trim() !== key) return;
+      if (!ticketNumber || item?.ticketKind === "modification" || String(item?.date || "").trim() !== key) return;
       lines.push({ item, itemIndex, ticketNumber });
     });
     if (!lines.length) return;

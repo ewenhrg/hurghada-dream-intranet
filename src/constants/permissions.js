@@ -192,6 +192,12 @@ export function canAccessReceiptPage(user) {
   return n === "ewen" || n === "ramy" || n === "karim";
 }
 
+/** Page Événementiel — Sophia, Ewen et Karim uniquement. */
+export function canAccessEventsPage(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "sophia" || n === "ewen" || n === "karim";
+}
+
 export function dbUserToSessionUser(dbUser) {
   if (!dbUser) return null;
   const session = {

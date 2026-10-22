@@ -792,7 +792,13 @@ export function generateTicketsHTML(quote, options = {}) {
       const pickupText = formatTicketPickupLabel(item);
       const pickup = pickupText ? esc(pickupText) : "";
 
-      const priceText = esc(formatTicketPriceDisplay(item));
+      const isModification = item.ticketKind === "modification";
+      const modificationAmount = Math.round(Number(item.restAmount) || Number(item.lineTotal) || 0);
+      const priceText = esc(
+        isModification
+          ? currencyNoCents(modificationAmount, quote.currency || "EUR")
+          : formatTicketPriceDisplay(item)
+      );
       const extraLines = formatTicketExtraLines(item);
       const divingVisitorBlock = buildDivingVisitorTicketBlock(item);
       const extrasHTML =
@@ -803,8 +809,16 @@ export function generateTicketsHTML(quote, options = {}) {
           : "";
       const enteredBy = String(item.ticketEnteredByName || quoteTicketsBy || "").trim();
 
+      const activityHtml = isModification
+        ? `<div class="ticket-activity ticket-activity-mod">
+            <div class="ticket-mod-kicker">Ticket modification</div>
+            <div class="ticket-mod-old">Avant : ${esc(item.previousActivityName || "—")}</div>
+            <div class="ticket-mod-new">Maintenant : ${esc(item.newActivityName || "—")}</div>
+          </div>`
+        : `<div class="ticket-activity">${esc(resolveTicketActivityName(item, activitiesById))}${formatTurtleFinSizesLabel(item) ? `<div class="ticket-visitor">${esc(formatTurtleFinSizesLabel(item))}</div>` : ""}${extrasHTML}</div>`;
+
       return `
-      <div class="ticket">
+      <div class="ticket${isModification ? " ticket-modification" : ""}">
         <div class="ticket-accent"></div>
         <div class="ticket-body">
           <div class="ticket-head">
@@ -812,15 +826,15 @@ export function generateTicketsHTML(quote, options = {}) {
               <img src="${logoSrc}" alt="Hurghada Dream" class="ticket-logo" />
               <div class="ticket-brand-text">
                 <span class="ticket-brand-name">HURGHADA DREAM</span>
-                <span class="ticket-brand-sub">Bon d'excursion</span>
+                <span class="ticket-brand-sub">${isModification ? "Modification" : "Bon d'excursion"}</span>
               </div>
             </div>
             <div class="ticket-price">
-              <span class="ticket-price-label">Prix</span>
+              <span class="ticket-price-label">${isModification ? "Reste à payer" : "Prix"}</span>
               <span class="ticket-price-value">${priceText}</span>
             </div>
           </div>
-          <div class="ticket-activity">${esc(resolveTicketActivityName(item, activitiesById))}${formatTurtleFinSizesLabel(item) ? `<div class="ticket-visitor">${esc(formatTurtleFinSizesLabel(item))}</div>` : ""}${extrasHTML}</div>
+          ${activityHtml}
           ${divingVisitorBlock}
           <div class="ticket-grid">
             <div class="tf"><span class="tf-l">👤 Nom</span><span class="tf-v">${clientName}</span></div>
@@ -835,7 +849,10 @@ export function generateTicketsHTML(quote, options = {}) {
             ${item.ticketNumber ? `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">${esc(item.ticketNumber)}</span></div>` : `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">—</span></div>`}
             ${enteredBy ? `<div class="tf"><span class="tf-l">✍️ Tickets saisis par</span><span class="tf-v">${esc(enteredBy)}</span></div>` : ""}
           </div>
-          <div class="ticket-balance${Math.round(Number(item.restAmount) || 0) > 0 ? " ticket-balance--filled" : ""}">
+          ${
+            isModification
+              ? ""
+              : `<div class="ticket-balance${Math.round(Number(item.restAmount) || 0) > 0 ? " ticket-balance--filled" : ""}">
             <span class="ticket-balance-label">Reste à payer</span>
             ${
               Math.round(Number(item.restAmount) || 0) > 0
@@ -843,21 +860,31 @@ export function generateTicketsHTML(quote, options = {}) {
                 : `<span class="ticket-balance-write" aria-hidden="true"></span>
             <span class="ticket-balance-hint">à remplir à la main</span>`
             }
-          </div>
+          </div>`
+          }
         </div>
       </div>`;
     })
     .join("");
 
   const ticketCount = sortedItems.length;
-  // Toujours la somme des tickets imprimés (prix espèces, sans +3 %)
-  const totalPrice = sortedItems.reduce((sum, item) => sum + ticketCashTotal(item), 0);
+  const onlyModifications =
+    sortedItems.length > 0 && sortedItems.every((item) => item.ticketKind === "modification");
+  // Toujours la somme des tickets imprimés (prix espèces, sans +3 %).
+  // Un ticket de modification seul affiche le reste à payer comme total.
+  const totalPrice = sortedItems.reduce((sum, item) => {
+    if (item.ticketKind === "modification") {
+      return onlyModifications ? sum + Math.round(Number(item.restAmount) || 0) : sum;
+    }
+    return sum + ticketCashTotal(item);
+  }, 0);
   const paymentLabel = formatTicketsPaymentMethodsLabel(quote);
   const paymentMethods = normalizeTicketsPaymentMethods(quote);
   const breakdown = getQuoteCollectionBreakdown(quote);
   const paidCash = Math.round(Number(quote?.paidCash) || 0);
-  const restTotal =
-    Math.round(Number(quote?.paymentRestAmount) || 0) > 0
+  const restTotal = onlyModifications
+    ? 0
+    : Math.round(Number(quote?.paymentRestAmount) || 0) > 0
       ? Math.round(Number(quote.paymentRestAmount) || 0)
       : sortedItems.reduce((sum, item) => sum + Math.round(Number(item?.restAmount) || 0), 0);
   const isSingleTicket = ticketCount === 1;
@@ -966,6 +993,37 @@ export function generateTicketsHTML(quote, options = {}) {
       width: 6px;
       background: linear-gradient(180deg, #6366f1, #06b6d4);
       flex-shrink: 0;
+    }
+    .ticket-modification {
+      background: #fffbeb;
+      border-color: #d97706;
+    }
+    .ticket-modification .ticket-accent {
+      background: linear-gradient(180deg, #d97706, #f59e0b);
+    }
+    .ticket-modification .ticket-brand-name,
+    .ticket-modification .ticket-price-value,
+    .ticket-mod-kicker { color: #b45309; }
+    .ticket-mod-kicker {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .ticket-mod-old {
+      margin-top: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: none;
+      text-decoration: line-through;
+      color: #92400e;
+    }
+    .ticket-mod-new {
+      margin-top: 2px;
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #9a3412;
     }
     .ticket-body { flex: 1; padding: 10px 12px; }
     .ticket-head {

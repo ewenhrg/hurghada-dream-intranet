@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "@fontsource-variable/figtree";
 import "@fontsource-variable/fraunces/opsz.css";
@@ -6,6 +6,7 @@ import "@fontsource-variable/fraunces/opsz-italic.css";
 import { publicBackPath } from "../../config/clientApp";
 import { PublicBackLink } from "./PublicBackLink";
 import { useHeaderMorph, usePopOnChange, usePressFeedback, useScreenIntro, useScrollMotion } from "./motion";
+import { Sheet, SheetHeader } from "./PublicUI";
 
 /** Couleur des barres système Android / navigateur : identique au fond de l’appli. */
 const APP_CHROME_COLOR = "#FAF6EF";
@@ -26,6 +27,22 @@ const SOCIALS = [
     href: "https://www.instagram.com/hurghada_dream/",
     path: "M12 2.16c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.15 3.23-1.66 4.77-4.92 4.92-1.27.06-1.64.07-4.85.07s-3.58-.01-4.85-.07c-3.26-.15-4.77-1.7-4.92-4.92-.06-1.27-.07-1.64-.07-4.85s.01-3.58.07-4.85C2.38 3.92 3.9 2.38 7.15 2.23 8.42 2.17 8.8 2.16 12 2.16zM12 0C8.74 0 8.33.01 7.05.07 2.7.27.27 2.69.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.2 4.36 2.62 6.78 6.98 6.98C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c4.35-.2 6.78-2.62 6.98-6.98.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95C23.73 2.69 21.31.27 16.95.07 15.67.01 15.26 0 12 0zm0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zM12 16a4 4 0 1 1 4-4 4 4 0 0 1-4 4zm6.41-11.85a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44z",
   },
+];
+
+const HOME_MENU = [
+  { to: "/catalogue", label: "Excursions" },
+  { to: "/hotels", label: "Hôtels" },
+  { to: "/sejour", label: "Mon séjour" },
+  { to: "/evenements", label: "Événements" },
+  { to: "/contacts", label: "Contacts" },
+  { to: "/qui-sommes-nous", label: "Qui sommes-nous" },
+  { to: "/politique", label: "Remboursement" },
+  { to: "/confidentialite", label: "Confidentialité" },
+];
+
+const B2B_MENU = [
+  { to: "/b2b", label: "Connexion B2B" },
+  { to: "/b2b?demande=1", label: "Demander un accès B2B" },
 ];
 
 function SocialMark({ path }) {
@@ -73,6 +90,8 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
   const inner = wide === "xl" ? "max-w-7xl lg:px-8" : wide ? "max-w-6xl" : "max-w-lg";
   const rootRef = useRef(null);
   const headerRef = useRef(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const onHome = !backTo;
 
   usePressFeedback(rootRef);
   useScreenIntro(rootRef, [revealKey, pathname]);
@@ -89,6 +108,24 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
   useEffect(() => {
     document.documentElement.classList.remove("hd-public-boot");
   }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   return (
     <div
@@ -112,13 +149,69 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
 
       <div className="relative flex-1 pb-[env(safe-area-inset-bottom)]">
         {backTo ? null : (
-          <div className={`mx-auto flex items-center justify-center gap-6 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] ${nav ? "hdc-homebar lg:justify-between" : ""} ${inner}`}>
+          <div className={`relative mx-auto flex items-center justify-center gap-6 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] ${nav ? "hdc-homebar lg:justify-between" : ""} ${inner}`}>
             <img src="/client/logo-wordmark.png" alt="Hurghada Dream" className="hdc-wordmark object-contain" />
             {nav ? <div className="hidden lg:block">{nav}</div> : null}
+            {onHome ? (
+              <button
+                type="button"
+                data-press
+                aria-label="Ouvrir le menu"
+                aria-expanded={menuOpen}
+                aria-controls="client-home-menu"
+                onClick={() => setMenuOpen(true)}
+                className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-catalog-ink ring-1 ring-catalog-border lg:static lg:translate-y-0"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <path d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              </button>
+            ) : null}
           </div>
         )}
         {children}
       </div>
+
+      {menuOpen ? (
+        <Sheet variant="right" onClose={() => setMenuOpen(false)} labelledBy="client-home-menu-title">
+          <div id="client-home-menu">
+            <SheetHeader eyebrow="Hurghada Dream" title="Menu" titleId="client-home-menu-title" onClose={() => setMenuOpen(false)} dark />
+          </div>
+          <nav aria-label="Pages" className="min-h-0 flex-1 overflow-y-auto px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+            <ul className="space-y-1">
+              {HOME_MENU.map((item) => (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    data-press
+                    onClick={() => setMenuOpen(false)}
+                    className={`flex min-h-12 items-center rounded-2xl px-3 text-base font-semibold ${
+                      pathname === item.to ? "bg-catalog-lagoonSoft text-catalog-lagoon" : "text-catalog-ink"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p className="mb-1 mt-5 px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-catalog-label">Agences</p>
+            <ul className="space-y-1">
+              {B2B_MENU.map((item) => (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    data-press
+                    onClick={() => setMenuOpen(false)}
+                    className="flex min-h-12 items-center rounded-2xl px-3 text-base font-semibold text-catalog-ink"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </Sheet>
+      ) : null}
 
       <footer className={`mx-auto w-full px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 ${inner}`}>
         <div className="flex flex-col items-center gap-4 border-t border-catalog-line pt-6">

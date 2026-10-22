@@ -9,7 +9,7 @@ import {
   getQuoteSiteKeysForSync,
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
-import { canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canAccessReceiptPage, canSendStayBroadcast, hasFullIntranetAccess } from "./constants/permissions";
+import { canAccessEventsPage, canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canAccessReceiptPage, canSendStayBroadcast, hasFullIntranetAccess } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, saveQuotesCache, loadLS, normalizeQuoteItemsFromDb } from "./utils";
 import { runWhenIdle } from "./utils/idle";
 import { attachTicketPaymentMetaFromItems } from "./utils/ticketCollections";
@@ -119,6 +119,14 @@ export default function App() {
     }
   }, [user, tab]);
 
+  /** Événementiel : Sophia, Ewen et Karim uniquement. */
+  useEffect(() => {
+    if (!user || tab !== "events") return;
+    if (!canAccessEventsPage(user)) {
+      setTab(user.canAccessHistory !== false ? "history" : "devis");
+    }
+  }, [user, tab]);
+
   /** Contenu catalogue public : accès complet (Ewen / Léa / Sophia / Karim) ou éditeurs. */
   useEffect(() => {
     if (!user || tab !== "catalog-admin") return;
@@ -200,7 +208,7 @@ export default function App() {
     toast.success(`Demande de déconnexion envoyée pour ${label}.`);
   }, []);
 
-  /** Tableau de bord Ewen : notification éphémère (toast 3 s) sur l’écran de l’utilisateur ciblé. */
+  /** Tableau de bord Ewen : notification de 20 s sur l’écran de l’utilisateur ciblé. */
   const sendUserScreenMessage = useCallback(async (target, messageText) => {
     const ch = intranetPresenceChannelRef.current;
     if (!ch || !__SUPABASE_DEBUG__.isConfigured) {
@@ -412,13 +420,7 @@ export default function App() {
         const payload = msg?.payload != null ? msg.payload : msg;
         const text = payload?.message != null ? String(payload.message).trim() : "";
         if (!text || !shouldForceLogoutFromPayload(payload)) return;
-        const esc = typeof document !== "undefined" ? document.createElement("div") : null;
-        if (esc) {
-          esc.textContent = text;
-          toast.info(esc.innerHTML, 3000);
-        } else {
-          toast.info(text, 3000);
-        }
+        toast.info(text, { duration: 20000, allowLong: true });
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
@@ -1393,7 +1395,7 @@ export default function App() {
                   Devis B2B
                 </Pill>
                 )}
-                {user?.canAccessHistory !== false && (
+                {canAccessEventsPage(user) && (
                 <Pill active={tab === "events"} onClick={() => setTab("events")}>
                   Événementiel
                 </Pill>
@@ -1607,8 +1609,8 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "events" && user?.canAccessHistory !== false && (
-          <Section title="Événementiel" subtitle="Demandes de devis envoyées depuis la page Événements.">
+        {tab === "events" && canAccessEventsPage(user) && (
+          <Section title="Événementiel" subtitle="Demandes reçues, devis PDF et suivi jusqu’au paiement.">
             <EventsInboxPage />
           </Section>
         )}

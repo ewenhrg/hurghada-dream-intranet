@@ -46,7 +46,9 @@ function lineForItem(item) {
 export function buildStayWhatsAppMessage(quote, { previousItems } = {}) {
   const name = String(quote?.client?.name || "").trim() || "Bonjour";
   const url = getPublicStayUrl();
-  const items = Array.isArray(quote?.items) ? quote.items : [];
+  const items = (Array.isArray(quote?.items) ? quote.items : []).filter(
+    (item) => item?.ticketKind !== "modification"
+  );
   const changes = previousItems ? listPickupChanges(previousItems, items) : [];
 
   if (changes.length > 0) {

@@ -2,8 +2,16 @@ import { useMemo, useState } from "react";
 import { SITE_KEY } from "../constants";
 import { supabase } from "../lib/supabase";
 import { calculateCardPrice, currencyNoCents, formatPhoneWithPlus, saveQuotesCache } from "../utils";
+import { generateTicketsHTML } from "../utils/printTemplates";
 import { computePaidColumnsFromItems, findTicketNumberConflict } from "../utils/ticketCollections";
-import { claimTicketNumbersForQuote, releaseTicketAllocations, voidTicketAllocations } from "../utils/ticketSequence";
+import {
+  claimTicketNumbersForQuote,
+  commitTicketSequenceAfterPayment,
+  confirmTicketAllocations,
+  releaseTicketAllocations,
+  rollbackTicketReservation,
+  voidTicketAllocations,
+} from "../utils/ticketSequence";
 import { itemWithPickupSchedule, visiblePickupTime } from "../utils/pickupSchedule";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
@@ -31,6 +39,21 @@ function toCount(value) {
 
 function activityOptionId(activity) {
   return String(activity?.id ?? activity?.supabase_id ?? "");
+}
+
+function parseMoney(value) {
+  const raw = String(value ?? "").trim().replace(/\s/g, "").replace(",", ".");
+  if (!raw) return null;
+  const amount = Number(raw);
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  return Math.round(amount);
+}
+
+function showModificationTicket(popup, quote, item) {
+  const html = generateTicketsHTML({ ...quote, items: [item] });
+  const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+  popup.location.href = url;
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 export function TicketModificationPage({ quotes = [], setQuotes, activities = [] }) {
@@ -64,6 +87,9 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       room: String(client.room || "").trim(),
       pickup: visiblePickupTime(item),
       meetAtHotelMarina: item.meetAtHotelMarina === true,
+      newPrice: "",
+      balanceDue: false,
+      balanceAmount: "",
     });
   };
 
@@ -131,6 +157,25 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
     const currentActivityId = String(original.activityId ?? original.activity_id ?? "");
     const activityChanged = selected && activityOptionId(selected) !== currentActivityId;
 
+    const typedPrice = String(form.newPrice || "").trim();
+    const newPrice = parseMoney(form.newPrice);
+    if (typedPrice && newPrice == null) {
+      toast.warning("Le nouveau prix n’est pas valide.");
+      return;
+    }
+    const balanceDue = form.balanceDue === true;
+    const balanceAmount = parseMoney(form.balanceAmount);
+    if (balanceDue && (balanceAmount == null || balanceAmount <= 0)) {
+      toast.warning("Indiquez le montant du reste à payer.");
+      return;
+    }
+
+    const popup = balanceDue ? window.open("about:blank", "_blank") : null;
+    if (balanceDue && !popup) {
+      toast.error("Autorisez les fenêtres pop-up pour imprimer le ticket de modification.");
+      return;
+    }
+
     const pickupPatch = itemWithPickupSchedule(original, form.pickup);
     const patched = {
       ...original,
@@ -147,7 +192,10 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       patched.activityName = selected.name;
       patched.activityNameEn = String(selected.nameEn ?? selected.name_en ?? "").trim();
     }
+    if (newPrice != null) patched.lineTotal = newPrice;
 
+    const previousActivityName = String(original.activityName || "").trim();
+    const nextActivityName = String(patched.activityName || previousActivityName).trim();
     const items = quote.items.map((item, index) => (index === itemIndex ? patched : item));
     const updatedQuote = {
       ...quote,
@@ -160,18 +208,32 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       items,
       updated_at: new Date().toISOString(),
     };
+    if (newPrice != null) {
+      const billable = items.filter((item) => item?.ticketKind !== "modification");
+      const nextTotal = billable.reduce((sum, item) => sum + Math.round(Number(item.lineTotal) || 0), 0);
+      updatedQuote.total = nextTotal;
+      updatedQuote.totalCash = nextTotal;
+      updatedQuote.totalCard = calculateCardPrice(nextTotal);
+    }
+
+    if (balanceDue && original.ticketKind === "modification") {
+      popup?.close();
+      toast.warning("Ce ticket est déjà un ticket de modification.");
+      return;
+    }
 
     const previous = quotes;
-    const nextQuotes = quotes.map((item) => (String(item.id) === String(quote.id) ? updatedQuote : item));
     setSaving(true);
     const prevTicket = String(original.ticketNumber || "").trim();
     const ticketChanged = prevTicket.toLowerCase() !== nextTicket.toLowerCase();
     const quoteDbId = quote.supabase_id != null ? Number(quote.supabase_id) : null;
+    let reservation = null;
 
     try {
       if (supabase && ticketChanged) {
         const claim = await claimTicketNumbersForQuote(supabase, quoteDbId, [nextTicket]);
         if (!claim.ok) {
+          popup?.close();
           toast.error(
             claim.conflicts?.length
               ? `Numéro déjà utilisé : ${claim.conflicts.join(", ")}`
@@ -181,6 +243,48 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
         }
       }
 
+      let modNumber = "";
+      if (balanceDue) {
+        if (!supabase) {
+          popup?.close();
+          toast.error("Connexion indispensable pour créer le ticket de modification.");
+          return;
+        }
+        const reserved = await commitTicketSequenceAfterPayment(supabase, [], {
+          autoCount: 1,
+          quotes,
+        });
+        if (!reserved.ok || !reserved.reservedNumbers?.[0]) {
+          popup?.close();
+          if (ticketChanged) await releaseTicketAllocations(supabase, [nextTicket]);
+          toast.error("Aucun numéro libre pour le ticket de modification.");
+          return;
+        }
+        reservation = reserved.reservation;
+        modNumber = reserved.reservedNumbers[0];
+        updatedQuote.items = [
+          ...items,
+          {
+            ticketKind: "modification",
+            ticketNumber: modNumber,
+            date: patched.date,
+            activityName: `Modification · ${previousActivityName || "—"} → ${nextActivityName || "—"}`,
+            previousActivityName: previousActivityName || "—",
+            newActivityName: nextActivityName || "—",
+            adults: patched.adults,
+            children: patched.children,
+            babies: patched.babies,
+            lineTotal: 0,
+            restAmount: balanceAmount,
+            pickupTime: patched.pickupTime,
+            pickupPublished: patched.pickupPublished,
+            meetAtHotelMarina: patched.meetAtHotelMarina === true,
+            modificationOfTicket: nextTicket,
+          },
+        ];
+      }
+
+      const nextQuotes = quotes.map((item) => (String(item.id) === String(quote.id) ? updatedQuote : item));
       setQuotes(nextQuotes);
       saveQuotesCache(nextQuotes);
 
@@ -189,9 +293,10 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
           client_name: updatedQuote.client.name || "",
           client_phone: updatedQuote.client.phone || "",
           client_room: updatedQuote.client.room || "",
-          items,
+          items: updatedQuote.items,
           updated_at: updatedQuote.updated_at,
         };
+        if (newPrice != null) payload.total = updatedQuote.total;
         let updateQuery = supabase.from("quotes").update(payload).eq("site_key", SITE_KEY);
         if (quote.supabase_id) updateQuery = updateQuery.eq("id", quote.supabase_id);
         else updateQuery = updateQuery.eq("client_phone", quote.client?.phone || "").eq("created_at", quote.createdAt);
@@ -202,15 +307,29 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
           setQuotes(previous);
           saveQuotesCache(previous);
           if (ticketChanged) await releaseTicketAllocations(supabase, [nextTicket]);
+          if (reservation) await rollbackTicketReservation(supabase, reservation);
+          popup?.close();
           toast.error("La modification n’a pas été enregistrée.");
           return;
         }
         if (ticketChanged && prevTicket) await releaseTicketAllocations(supabase, [prevTicket]);
+        if (modNumber) await confirmTicketAllocations(supabase, [modNumber], quoteDbId);
       }
 
       setMatch({ quote: updatedQuote, itemIndex, item: patched });
+      setForm((current) =>
+        current
+          ? { ...current, ticketNumber: nextTicket, newPrice: "", balanceDue: false, balanceAmount: "" }
+          : current
+      );
       setQuery(nextTicket);
-      toast.success(`Ticket ${nextTicket} modifié. Situation et Transferts sont à jour.`);
+      if (modNumber) {
+        const special = updatedQuote.items[updatedQuote.items.length - 1];
+        showModificationTicket(popup, updatedQuote, special);
+        toast.success(`Ticket ${nextTicket} modifié. Ticket spécial ${modNumber} créé.`);
+      } else {
+        toast.success(`Ticket ${nextTicket} modifié. Situation et Transferts sont à jour.`);
+      }
     } finally {
       setSaving(false);
     }
@@ -358,7 +477,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
             </p>
           </div>
           <p className="text-xs leading-relaxed text-slate-500">
-            L’hôtel et le prix restent inchangés. Le nom, le téléphone et la chambre sont ceux du client : ils se mettent à jour sur tous ses tickets.
+            L’hôtel reste inchangé. Le nom, le téléphone et la chambre sont ceux du client : ils se mettent à jour sur tous ses tickets.
           </p>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -396,6 +515,43 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
                 ))}
               </select>
             </label>
+            <label className="text-sm font-semibold text-slate-700">
+              Nouveau prix
+              <input
+                inputMode="decimal"
+                value={form.newPrice}
+                onChange={(event) => setField("newPrice", event.target.value)}
+                placeholder={String(price)}
+                className="mt-1 h-11 w-full rounded-xl border border-slate-300 px-3 outline-none focus:border-indigo-500"
+              />
+            </label>
+            <div className="rounded-xl bg-amber-50 px-3 py-3 ring-1 ring-amber-200">
+              <label className="flex items-center gap-2 text-sm font-bold text-amber-950">
+                <input
+                  type="checkbox"
+                  checked={form.balanceDue}
+                  onChange={(event) => setField("balanceDue", event.target.checked)}
+                  className="size-5 accent-amber-700"
+                />
+                Reste à payer
+              </label>
+              {form.balanceDue ? (
+                <label className="mt-3 block text-sm font-semibold text-amber-950">
+                  Montant
+                  <input
+                    inputMode="decimal"
+                    value={form.balanceAmount}
+                    onChange={(event) => setField("balanceAmount", event.target.value)}
+                    placeholder="30"
+                    className="mt-1 h-11 w-full rounded-xl border border-amber-300 bg-white px-3 outline-none focus:border-amber-600"
+                  />
+                </label>
+              ) : (
+                <p className="mt-2 text-xs leading-relaxed text-amber-900">
+                  Cochez pour créer un ticket spécial, d’une autre couleur, avec l’ancienne activité et la nouvelle.
+                </p>
+              )}
+            </div>
             <label className="text-sm font-semibold text-slate-700">
               Adultes
               <input

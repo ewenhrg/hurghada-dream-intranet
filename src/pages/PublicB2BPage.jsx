@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Building2, LogOut, Search, ShoppingBag, Trash2 } from "lucide-react";
 import { GuestHeaderButton, PublicAppShell } from "../components/public/PublicAppShell";
 import { HdLoader } from "../components/public/GuestPageLoader";
@@ -99,14 +100,32 @@ export function PublicB2BPage() {
 }
 
 function B2BLogin({ onLoggedIn }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [requestOpen, setRequestOpen] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(() => searchParams.get("demande") === "1");
   const [request, setRequest] = useState(EMPTY_REQUEST);
   const [requestError, setRequestError] = useState("");
   const [requestSent, setRequestSent] = useState(false);
+
+  function closeRequest() {
+    setRequestOpen(false);
+    if (searchParams.get("demande") !== "1") return;
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("demande");
+      return next;
+    }, { replace: true });
+  }
+
+  useEffect(() => {
+    if (searchParams.get("demande") === "1") {
+      setRequestOpen(true);
+      setRequestSent(false);
+    }
+  }, [searchParams]);
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -197,8 +216,8 @@ function B2BLogin({ onLoggedIn }) {
       </section>
 
       {requestOpen ? (
-        <Sheet variant="bottom" onClose={() => setRequestOpen(false)} labelledBy="b2b-request-title" as="form" panelProps={{ onSubmit: handleRequest }}>
-          <SheetHeader eyebrow="Nouvel accès" title="Demande d’identifiant" titleId="b2b-request-title" onClose={() => setRequestOpen(false)} />
+        <Sheet variant="bottom" onClose={closeRequest} labelledBy="b2b-request-title" as="form" panelProps={{ onSubmit: handleRequest }}>
+          <SheetHeader eyebrow="Nouvel accès" title="Demande d’identifiant" titleId="b2b-request-title" onClose={closeRequest} />
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 pb-4 sm:px-6">
             {requestSent ? (
               <p className="rounded-2xl bg-catalog-lagoonSoft px-4 py-3 text-sm font-semibold text-catalog-ink">

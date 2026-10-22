@@ -79,7 +79,7 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
       const client = quote.client || {};
       (quote.items || []).forEach((item, idx) => {
         const ticketNumber = String(item.ticketNumber || "").trim();
-        if (!ticketNumber) return;
+        if (!ticketNumber || item.ticketKind === "modification") return;
         if (String(item.date || "").trim() !== day) return;
         const activityName = resolveTicketActivityName(item, activitiesById) || String(item.activityName || "").trim();
         const phone = formatPhoneWithPlus(client.phone);

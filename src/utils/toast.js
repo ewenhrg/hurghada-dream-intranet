@@ -115,11 +115,14 @@ function showToast(message, type = "info", durationOrOptions = 2000) {
     if (isInternalOrTechnicalMessage(message)) return null;
   }
 
-  // Cap pour que les notifs intranet ne restent pas collées indéfiniment
+  // Cap pour que les notifs intranet ne restent pas collées indéfiniment.
+  // allowLong sert au message du tableau de bord, qui doit rester 20 s.
   const MAX_TOAST_MS = 5000;
+  const LONG_TOAST_MS = 60000;
   let duration = normalizeDuration(durationOrOptions, 2000);
   if (duration <= 0) duration = 2000;
-  duration = Math.min(duration, MAX_TOAST_MS);
+  const allowLong = typeof durationOrOptions === "object" && durationOrOptions?.allowLong === true;
+  duration = Math.min(duration, allowLong ? LONG_TOAST_MS : MAX_TOAST_MS);
 
   if (!toastContainer) initToast();
 

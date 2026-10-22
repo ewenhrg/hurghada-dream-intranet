@@ -97,6 +97,11 @@ function buildPageItems(current, total) {
 }
 
 /** Teintes légères par bloc d’activité (lisibilité du texte prioritaire). */
+const MODIFICATION_PALETTE = {
+  row: "bg-amber-100",
+  accent: "border-l-amber-600",
+};
+
 const ACTIVITY_PALETTE = [
   { row: "bg-sky-50/70", accent: "border-l-sky-500", excel: "F0F9FF", excelStrong: "7DD3FC" },
   { row: "bg-emerald-50/70", accent: "border-l-emerald-500", excel: "ECFDF5", excelStrong: "6EE7B7" },
@@ -332,7 +337,10 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         // Prix activité hors supp. transfert (évite le double-compte dans Excel)
         const priceValue = Math.max(0, lineTotal - transferValue);
         const boatParty = isBoatPartyActivity(item.activityName);
-        const activityDisplayName = resolveTicketActivityName(item, activitiesById);
+        const isModification = item.ticketKind === "modification";
+        const activityDisplayName = isModification
+          ? `Modification · ${String(item.previousActivityName || "—").trim()} → ${String(item.newActivityName || "—").trim()}`
+          : resolveTicketActivityName(item, activitiesById);
         const published = item.pickupPublished === true;
         const publishedPickup = published ? String(item.pickupTime || "").trim() : "";
         const pickupName = activityDisplayName || item.activityName;
@@ -363,10 +371,10 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           phone: formatPhoneWithPlus(client.phone),
           hotel: client.hotel || "",
           room: client.room || "",
-          adults: pax.adults,
-          adultsBase: paxBase.adults,
-          children: pax.children,
-          babies: pax.babies,
+          adults: isModification ? 0 : pax.adults,
+          adultsBase: isModification ? 0 : paxBase.adults,
+          children: isModification ? 0 : pax.children,
+          babies: isModification ? 0 : pax.babies,
           boatPartyMen: boatParty ? Number(item.boatPartyMen || 0) : 0,
           boatPartyWomen: boatParty ? Number(item.boatPartyWomen || 0) : 0,
           activity: formatActivityWithExtras(itemForDisplay),
@@ -377,7 +385,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           meetAtHotelMarina: item.meetAtHotelMarina === true,
           comment: formatSituationComment(item, quote.currency || "EUR"),
           restAmount: Math.round(Number(item.restAmount) || 0),
-          priceValue,
+          priceValue: isModification ? 0 : priceValue,
+          modificationTicket: isModification,
           priceLabel: currencyNoCents(priceValue, quote.currency || "EUR"),
           transferValue,
           transferLabel:
@@ -494,8 +503,10 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
 
       const actKey = r.activitySortKey || r.activity || "";
       if (actKey !== lastAct) {
-        if (lastAct !== null) toneIdx += 1;
-        const palette = ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
+        if (lastAct !== null && !r.modificationTicket) toneIdx += 1;
+        const palette = r.modificationTicket
+          ? MODIFICATION_PALETTE
+          : ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
         blocks.push({
           type: "activity",
           key: `act-${dateKey}-${actKey}-${blocks.length}`,
@@ -506,7 +517,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         lastAct = actKey;
       }
 
-      const palette = ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
+      const palette = r.modificationTicket
+        ? MODIFICATION_PALETTE
+        : ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
       blocks.push({
         type: "row",
         key: r.key,
