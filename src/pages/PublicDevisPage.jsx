@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY, getQuotesRealtimeSiteKeyFilter } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, formatTurtleFinSizesLabel } from "../utils/activityHelpers";
+import { getAirportOutOfZoneFee } from "../utils/activityNeighborhoodRules.js";
 import { formatDivingVisitorLabel } from "../utils/divingSafety.js";
 import { logger } from "../utils/logger";
 import { formatPhoneWithPlus } from "../utils";
@@ -113,6 +114,8 @@ function getCatalogLineOptionLines(item) {
 
   if (item.allerSimple && !item.allerRetour) lines.push("Transfert : aller simple");
   if (item.allerRetour) lines.push("Transfert : aller-retour");
+  const outOfZoneFee = getAirportOutOfZoneFee(item.activityName, item.neighborhood, item);
+  if (outOfZoneFee > 0) lines.push(`Frais hors zone +${outOfZoneFee} €`);
 
   const zt = [
     [item.zeroTracasTransfertVisaSim, "Zéro tracas — transfert + visa + SIM"],

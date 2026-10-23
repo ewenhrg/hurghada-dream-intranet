@@ -113,6 +113,7 @@ export function mergePublicSavedLineIntoQuoteItem(line) {
 
   base.allerSimple = Boolean(line.allerSimple);
   base.allerRetour = Boolean(line.allerRetour);
+  base.neighborhood = String(line.neighborhood || "").trim();
 
   base.zeroTracasTransfertVisaSim = line.zeroTracasTransfertVisaSim != null ? String(line.zeroTracasTransfertVisaSim) : "";
   base.zeroTracasTransfertVisa = line.zeroTracasTransfertVisa != null ? String(line.zeroTracasTransfertVisa) : "";
@@ -150,7 +151,7 @@ export function buildQuoteDraftFromPublicViewModel(vm) {
       email: vm.client?.email || "",
       hotel: vm.client?.hotel || "",
       room: "",
-      neighborhood: "",
+      neighborhood: items.map((item) => String(item.neighborhood || "").trim()).find(Boolean) || "",
       arrivalDate: vm.client?.arrivalDate || "",
       departureDate: vm.client?.departureDate || "",
       isAirbnb: Boolean(vm.client?.isAirbnb),

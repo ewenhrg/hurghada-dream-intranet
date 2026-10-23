@@ -72,6 +72,7 @@ import {
   getPublicCatalogListFromPrice,
   isPublicCatalogAirportStyleLine,
 } from "../utils/publicCatalogPricing";
+import { isHurghadaAirportHotelTransfer } from "../utils/activityNeighborhoodRules.js";
 import {
   isDivingActivityName,
   DIVING_VISITOR_UNIT_PRICE,
@@ -1221,6 +1222,11 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
               </span>
             </label>
           </div>
+          {isHurghadaAirportHotelTransfer(activity.name) ? (
+            <p className="text-xs font-semibold leading-snug text-catalog-ink">
+              Makadi, Sahl Hasheesh, El Gouna et Soma Bay : +10 € de frais hors zone, selon l’hôtel indiqué.
+            </p>
+          ) : null}
         </div>
       );
     }

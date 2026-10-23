@@ -45,6 +45,7 @@ import {
   formatCatalogueMinorsAgesNote,
 } from "../utils/activityAgePolicy";
 import { computePublicCatalogLineTotal, getPublicCatalogListFromPrice } from "../utils/publicCatalogPricing";
+import { getAirportOutOfZoneFee } from "../utils/activityNeighborhoodRules.js";
 import { formatDivingVisitorLabel } from "../utils/divingSafety.js";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import {
@@ -191,8 +192,16 @@ function CatalogueFooter() {
   );
 }
 
+function neighborhoodForHotelName(hotelName, hotels) {
+  const needle = String(hotelName || "").trim().toLowerCase();
+  if (!needle || !Array.isArray(hotels) || hotels.length === 0) return "";
+  const found = hotels.find((hotel) => String(hotel?.name || "").trim().toLowerCase() === needle);
+  return String(found?.neighborhood_key || "").trim();
+}
+
 export function PublicClientDevisPage() {
   const [activities, setActivities] = useState([]);
+  const [hotels, setHotels] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -319,7 +328,8 @@ export function PublicClientDevisPage() {
           : storedCaleches;
         const calecheCount = Math.max(storedCaleches, neededCaleches);
         const pricedLine = calecheCount === storedCaleches ? forPrice : { ...forPrice, calecheCount };
-        const lineTotal = computePublicCatalogLineTotal(activity, pricedLine);
+        const neighborhood = neighborhoodForHotelName(client.hotel, hotels);
+        const lineTotal = computePublicCatalogLineTotal(activity, { ...pricedLine, neighborhood });
         return {
           ...line,
           calecheCount,
@@ -330,12 +340,14 @@ export function PublicClientDevisPage() {
           babies: derived.babiesCount,
           activity,
           lineTotal,
+          neighborhood,
+          outOfZoneFee: getAirportOutOfZoneFee(activity.name, neighborhood, pricedLine),
           derived,
           adultsBase,
         };
       })
       .filter(Boolean);
-  }, [cart, activityMap, stay.arrivalDate]);
+  }, [cart, activityMap, stay.arrivalDate, client.hotel, hotels]);
 
   const cartNeedsMinorBirthDates = useMemo(
     () => cartLines.some((line) => (line.derived?.minorsCount || 0) > 0),
@@ -399,6 +411,20 @@ export function PublicClientDevisPage() {
 
   useEffect(() => {
     void fetchActivities();
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) return undefined;
+    let cancelled = false;
+    supabase
+      .from("hotels")
+      .select("name, neighborhood_key")
+      .then(({ data }) => {
+        if (!cancelled && Array.isArray(data)) setHotels(data);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -731,6 +757,7 @@ export function PublicClientDevisPage() {
         flyingDress4Robes: Boolean(line.flyingDress4Robes),
         allerSimple: Boolean(line.allerSimple),
         allerRetour: Boolean(line.allerRetour),
+        neighborhood: String(line.neighborhood || "").trim(),
         zeroTracasTransfertVisaSim: line.zeroTracasTransfertVisaSim ?? "",
         zeroTracasTransfertVisa: line.zeroTracasTransfertVisa ?? "",
         zeroTracasTransfertSim: line.zeroTracasTransfertSim ?? "",
@@ -1214,6 +1241,11 @@ export function PublicClientDevisPage() {
                             ) : null}
                       </div>
                     </div>
+                    {line.outOfZoneFee > 0 ? (
+                    <p className="mt-2 text-[11px] font-semibold leading-snug text-catalog-ink" role="status">
+                        Frais hors zone +{line.outOfZoneFee} € (Makadi, Sahl Hasheesh, El Gouna ou Soma Bay)
+                      </p>
+                    ) : null}
                     {line.calecheRaised ? (
                     <p className="mt-2 text-[11px] font-semibold leading-snug text-catalog-ink" role="status">
                         {calecheCapacityNotice(line.calecheCount)}

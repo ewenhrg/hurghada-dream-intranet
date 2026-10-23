@@ -55,6 +55,54 @@ export function isHurghadaNeighborhood(neighborhoodKey) {
   return HURGHADA_NEIGHBORHOOD_KEYS.includes(key);
 }
 
+/** Supplément aéroport ↔ hôtel pour Makadi, Sahl Hasheesh, El Gouna et Soma Bay. */
+export const AIRPORT_OUT_OF_ZONE_FEE_EUR = 10;
+
+const AIRPORT_OUT_OF_ZONE_KEYS = new Set(["makadi", "salh_hasheesh", "el_gouna", "soma_bay"]);
+
+function normalizeNeighborhoodKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\s-]+/g, "_");
+}
+
+/** Quartier hors Hurghada ville : Makadi, Sahl Hasheesh, El Gouna, Soma Bay. */
+export function isAirportOutOfZoneNeighborhood(neighborhoodKey) {
+  const key = normalizeNeighborhoodKey(neighborhoodKey);
+  if (!key) return false;
+  if (AIRPORT_OUT_OF_ZONE_KEYS.has(key)) return true;
+  if (key.includes("makadi")) return true;
+  if (key.includes("hasheesh")) return true;
+  if (key.includes("gouna") || key.includes("goune")) return true;
+  if (key.includes("soma") && key.includes("bay")) return true;
+  return false;
+}
+
+/**
+ * Transfert aéroport ↔ hôtel au tarif Hurghada.
+ * Les forfaits Soma Bay et Hors zone ont déjà leur prix.
+ */
+export function isHurghadaAirportHotelTransfer(activityName) {
+  const n = normalizeActivityName(activityName);
+  if (!n) return false;
+  if (!(n.includes("aeroport") || n.includes("aerport") || n.includes("airport"))) return false;
+  if (n.includes("soma")) return false;
+  if (n.includes("hors") && n.includes("zone")) return false;
+  if (n.includes("caire") || n.includes("louxor") || n.includes("luxor")) return false;
+  return true;
+}
+
+/** 10 € une fois sur la ligne, aller simple ou aller-retour, si le quartier est hors zone. */
+export function getAirportOutOfZoneFee(activityName, neighborhoodKey, line) {
+  if (!isHurghadaAirportHotelTransfer(activityName)) return 0;
+  if (!isAirportOutOfZoneNeighborhood(neighborhoodKey)) return 0;
+  if (!line?.allerSimple && !line?.allerRetour) return 0;
+  return AIRPORT_OUT_OF_ZONE_FEE_EUR;
+}
+
 export function isAutreNeighborhood(neighborhoodKey) {
   return String(neighborhoodKey || "").trim() === "autre";
 }

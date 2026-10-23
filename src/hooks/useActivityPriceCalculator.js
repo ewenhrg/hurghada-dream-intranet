@@ -22,7 +22,7 @@ import {
   computeFlyingDressLineTotal,
 } from "../utils/activityHelpers";
 import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
-import { isActivityBlockedForNeighborhood } from "../utils/activityNeighborhoodRules.js";
+import { getAirportOutOfZoneFee, isActivityBlockedForNeighborhood } from "../utils/activityNeighborhoodRules.js";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge } from "../utils/transferPricing.js";
 import { computeDivingVisitorSurcharge } from "../utils/divingSafety.js";
 
@@ -211,6 +211,10 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
         lineTotal += Number(it.children || 0) * Number(act.priceChild || 0);
         lineTotal += (act.babiesForbidden ? 0 : Number(it.babies || 0) * Number(act.priceBaby || 0));
         
+      }
+
+      if (act) {
+        lineTotal += getAirportOutOfZoneFee(act.name, neighborhoodKey, it);
       }
 
       // supplément transfert (forfait Marsa Alam ou par personne selon la catégorie)

@@ -9,6 +9,7 @@ import {
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import { getPrivateTransferLabel } from "./transferPricing";
 import { formatDivingVisitorLabel, getDivingVisitorCount, isDivingActivityName } from "./divingSafety.js";
+import { getAirportOutOfZoneFee } from "./activityNeighborhoodRules.js";
 import { formatPhoneWithPlus } from "../utils.js";
 
 /** Résumé participants pour cartes / modales (ex. historique). */
@@ -79,6 +80,9 @@ export function getQuoteItemDetailLines(item) {
 
   const tripLabel = formatTransferTripLabel(item);
   if (tripLabel) lines.push(`🚗 ${tripLabel}`);
+
+  const outOfZoneFee = getAirportOutOfZoneFee(name, item?.neighborhood, item);
+  if (outOfZoneFee > 0) lines.push(`Frais hors zone +${outOfZoneFee} €`);
 
   return lines;
 }
@@ -202,6 +206,9 @@ export function getQuoteItemExtraLabels(item) {
 
   const tripLabel = formatTransferTripLabel(item);
   if (tripLabel) labels.push(tripLabel);
+
+  const outOfZoneFee = getAirportOutOfZoneFee(activityName, item?.neighborhood, item);
+  if (outOfZoneFee > 0) labels.push(`Hors zone +${outOfZoneFee} €`);
 
   const zt = [
     [item.zeroTracasTransfertVisaSim, "ZT visa+SIM+transfert"],

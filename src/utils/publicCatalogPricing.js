@@ -32,6 +32,7 @@ import {
   computeZeroTracasLineTotal,
 } from "./activityHelpers";
 import { computeDivingVisitorSurcharge } from "./divingSafety.js";
+import { getAirportOutOfZoneFee } from "./activityNeighborhoodRules.js";
 
 function num(n, fallback = 0) {
   const x = Number(n);
@@ -162,7 +163,7 @@ export function computePublicCatalogLineTotal(activity, line) {
     } else {
       const airportTotal = computeAirportStyleTransferLineTotal(name, line);
       if (airportTotal !== null) {
-        total = airportTotal;
+        total = airportTotal + getAirportOutOfZoneFee(name, line?.neighborhood, line);
       } else {
         const db = readDbPrices(activity);
         if (db.adult > 0 || db.child > 0 || db.baby > 0) {
