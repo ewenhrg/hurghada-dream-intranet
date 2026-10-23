@@ -146,6 +146,14 @@ export function buildUsedTicketNumberMap(quotes, opts = {}) {
       }
       const ticketNumber = String(item?.ticketNumber || "").trim();
       if (!ticketNumber) return;
+      const sourceTicket = String(item?.modificationOfTicket || "").trim();
+      if (
+        item?.ticketKind === "modification" &&
+        sourceTicket &&
+        sourceTicket.toLowerCase() === ticketNumber.toLowerCase()
+      ) {
+        return;
+      }
       const key = normalizeTicketNumberKey(ticketNumber);
       if (!map.has(key)) {
         map.set(key, { quoteId: quote.id, ticketNumber, activityName: item.activityName || "" });

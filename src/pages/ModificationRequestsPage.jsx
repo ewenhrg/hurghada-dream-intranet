@@ -228,13 +228,18 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
       let special = null;
       let reservation = null;
       if (nextItem || row.kind === "cancel") {
-        const reserved = await commitTicketSequenceAfterPayment(supabase, [], { autoCount: 1, quotes });
-        if (!reserved.ok || !reserved.reservedNumbers?.[0]) {
-          popup?.close();
-          setError("Aucun numéro libre pour le ticket modifié.");
-          return;
+        const originalNumber = String(original.ticketNumber || "").trim();
+        let ticketNumber = originalNumber;
+        if (row.kind === "cancel" || !ticketNumber) {
+          const reserved = await commitTicketSequenceAfterPayment(supabase, [], { autoCount: 1, quotes });
+          if (!reserved.ok || !reserved.reservedNumbers?.[0]) {
+            popup?.close();
+            setError(row.kind === "cancel" ? "Aucun numéro libre pour la ligne d’annulation." : "Ce ticket n’a pas de numéro.");
+            return;
+          }
+          reservation = reserved.reservation;
+          ticketNumber = reserved.reservedNumbers[0];
         }
-        reservation = reserved.reservation;
         const source = nextItem || original;
         const difference = nextItem
           ? Math.max(0, Math.round(Number(nextItem.lineTotal) || 0) - Math.round(Number(original.lineTotal) || 0))
@@ -242,7 +247,7 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
         special = {
           ticketKind: "modification",
           cancellation: row.kind === "cancel",
-          ticketNumber: reserved.reservedNumbers[0],
+          ticketNumber,
           date: String(source.date || row.activity_date || "").slice(0, 10),
           activityName: row.kind === "cancel"
             ? `Annulation · ${previousLabel}`
@@ -283,7 +288,9 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
         }
       }
       const quoteDbId = updatedQuote.supabase_id != null ? Number(updatedQuote.supabase_id) : null;
-      if (special) await confirmTicketAllocations(supabase, [special.ticketNumber], Number.isFinite(quoteDbId) ? quoteDbId : null);
+      if (special && reservation) {
+        await confirmTicketAllocations(supabase, [special.ticketNumber], Number.isFinite(quoteDbId) ? quoteDbId : null);
+      }
       const key = String(updatedQuote.supabase_id || updatedQuote.id);
       const base = Array.isArray(quotes) ? quotes : [];
       const exists = base.some((item) => String(item.supabase_id || item.id) === key);
@@ -296,7 +303,11 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
       if (!marked) return;
       if (special && popup) {
         popup.location.href = URL.createObjectURL(new Blob([generateTicketsHTML({ ...updatedQuote, items: [special], paymentRestAmount: 0 })], { type: "text/html;charset=utf-8" }));
-        toast.success(`Demande validée. Ticket spécial ${special.ticketNumber} créé.`);
+        toast.success(
+          reservation
+            ? `Demande validée. Ticket spécial ${special.ticketNumber} créé.`
+            : `Demande validée. Le ticket ${special.ticketNumber} garde son numéro.`
+        );
       } else {
         toast.success("Annulation validée. La ligne d’annulation est créée, et Situation, les transferts et Mon séjour sont à jour.");
       }

@@ -44,7 +44,6 @@ function findTicketLine(quotes, rawNumber) {
 
   if (!modificationHit) return null;
 
-  // Ticket spécial de modification / annulation → ouvrir l’activité d’origine.
   const originNumber = String(modificationHit.item?.modificationOfTicket || "").trim().toLowerCase();
   if (!originNumber) return null;
   for (const quote of quotes || []) {
@@ -247,10 +246,13 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       toast.warning(`Numéro déjà utilisé : ${nextTicket}`);
       return;
     }
-    const duplicateInQuote = (quote.items || []).some(
-      (item, index) =>
-        index !== itemIndex && String(item.ticketNumber || "").trim().toLowerCase() === nextTicket.toLowerCase()
-    );
+    const duplicateInQuote = (quote.items || []).some((item, index) => {
+      if (index === itemIndex) return false;
+      const number = String(item.ticketNumber || "").trim();
+      if (!number || number.toLowerCase() !== nextTicket.toLowerCase()) return false;
+      const source = String(item.modificationOfTicket || "").trim();
+      return !(item.ticketKind === "modification" && source.toLowerCase() === number.toLowerCase());
+    });
     if (duplicateInQuote) {
       toast.warning(`Numéro en double dans le devis : ${nextTicket}`);
       return;
@@ -344,9 +346,13 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
     const prevTicket = String(original.ticketNumber || "").trim();
     const ticketChanged = prevTicket.toLowerCase() !== nextTicket.toLowerCase();
     const quoteDbId = quote.supabase_id != null ? Number(quote.supabase_id) : null;
-    let reservation = null;
 
     try {
+      if (createsLine && !supabase) {
+        popup?.close();
+        toast.error("Connexion indispensable pour créer le ticket de modification.");
+        return;
+      }
       if (supabase && ticketChanged) {
         const claim = await claimTicketNumbersForQuote(supabase, quoteDbId, [nextTicket]);
         if (!claim.ok) {
@@ -362,23 +368,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
 
       let modNumber = "";
       if (createsLine) {
-        if (!supabase) {
-          popup?.close();
-          toast.error("Connexion indispensable pour créer le ticket de modification.");
-          return;
-        }
-        const reserved = await commitTicketSequenceAfterPayment(supabase, [], {
-          autoCount: 1,
-          quotes,
-        });
-        if (!reserved.ok || !reserved.reservedNumbers?.[0]) {
-          popup?.close();
-          if (ticketChanged) await releaseTicketAllocations(supabase, [nextTicket]);
-          toast.error("Aucun numéro libre pour le ticket de modification.");
-          return;
-        }
-        reservation = reserved.reservation;
-        modNumber = reserved.reservedNumbers[0];
+        modNumber = nextTicket;
         const amountPaid = getLineAmountPaid(original);
         const selectedActivity =
           activityOptions.find((activity) => activityOptionId(activity) === String(form.activityId)) || null;
@@ -466,13 +456,11 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
           setQuotes(previous);
           saveQuotesCache(previous);
           if (ticketChanged) await releaseTicketAllocations(supabase, [nextTicket]);
-          if (reservation) await rollbackTicketReservation(supabase, reservation);
           popup?.close();
           toast.error("La modification n’a pas été enregistrée.");
           return;
         }
         if (ticketChanged && prevTicket) await releaseTicketAllocations(supabase, [prevTicket]);
-        if (modNumber) await confirmTicketAllocations(supabase, [modNumber], quoteDbId);
       }
 
       setMatch({ quote: updatedQuote, itemIndex, item: patched });
@@ -485,7 +473,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       if (modNumber) {
         const special = updatedQuote.items[updatedQuote.items.length - 1];
         showModificationTicket(popup, updatedQuote, special);
-        toast.success(`Ticket ${nextTicket} modifié. Ticket spécial ${modNumber} créé.`);
+        toast.success(`Ticket ${nextTicket} modifié. Le numéro reste le même.`);
       } else {
         toast.success(`Ticket ${nextTicket} modifié. Situation et Transferts sont à jour.`);
       }
