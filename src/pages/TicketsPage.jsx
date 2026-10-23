@@ -46,7 +46,7 @@ import { toast } from "../utils/toast.js";
 import { canManageTicketLines } from "../constants/permissions";
 import { supabase } from "../lib/supabase";
 import { computePaidColumnsFromItems } from "../utils/ticketCollections";
-import { releaseTicketAllocations } from "../utils/ticketSequence";
+import { isCurrentCarnetTicketNumber, releaseTicketAllocations } from "../utils/ticketSequence";
 import { logger } from "../utils/logger";
 import { saveOpsComment } from "../utils/opsComment";
 
@@ -446,6 +446,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         if (item?.isCancelled === true) return;
         const ticketNumber = item.ticketNumber ? String(item.ticketNumber).trim() : "";
         if (!ticketNumber) return;
+        // Data entry : carnet en cours seulement. Un ancien essai (167846)
+        // ou deux numéros collés (167849167846) ne doit pas passer devant 187004.
+        if (entryMode && !isCurrentCarnetTicketNumber(ticketNumber)) return;
 
         const pax = getQuoteItemParticipantCells(item);
         const paxBase = getQuoteItemParticipantCells(item, { includeDivingVisitors: false });
@@ -1355,7 +1358,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             ) : (
               "0 ligne"
             )}{" "}
-            {entryMode ? "· n° du plus récent au plus ancien" : "· date → activité"}
+            {entryMode ? "· carnet en cours, du plus récent au plus ancien" : "· date → activité"}
           </span>
         </div>
       </div>

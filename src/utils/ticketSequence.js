@@ -175,6 +175,16 @@ function isInCurrentCarnetZone(n) {
 }
 
 /**
+ * Vrai pour un n° du carnet en cours (6 chiffres, 180000–189999).
+ * Écarte les anciens essais (167846) et les numéros collés (167849167846).
+ * @param {unknown} raw
+ */
+export function isCurrentCarnetTicketNumber(raw) {
+  const n = parseCarnetTicketNumber(raw);
+  return n != null && isInCurrentCarnetZone(n);
+}
+
+/**
  * Avance le compteur uniquement tant que la tête pointe un n° déjà distribué.
  * Ne saute JAMAIS un bloc jusqu’à max(historique) (source classique de trous).
  */
