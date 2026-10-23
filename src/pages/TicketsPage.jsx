@@ -97,6 +97,26 @@ function compareTicketNumbersNewestFirst(a, b) {
   return right.localeCompare(left, "fr", { numeric: true });
 }
 
+/** Saisie Situation : une suite de chiffres est un n° de ticket, pas un texte libre. */
+function ticketNumberQueryDigits(term) {
+  const compact = String(term || "").replace(/\s/g, "");
+  return /^\d{3,}$/.test(compact) ? compact : "";
+}
+
+/**
+ * 2 = le numéro saisi, 1 = un numéro qui commence par la saisie, 0 = autre.
+ * 002233 et 2233 comptent comme le même numéro.
+ */
+function ticketNumberQueryRank(ticketNumber, queryDigits) {
+  const raw = String(ticketNumber || "").trim();
+  const digits = raw.replace(/\D/g, "");
+  if (!digits || !queryDigits) return 0;
+  if (raw === queryDigits || digits === queryDigits) return 2;
+  if (/^\d+$/.test(raw) && Number(raw) === Number(queryDigits)) return 2;
+  if (digits.startsWith(queryDigits)) return 1;
+  return 0;
+}
+
 /**
  * Numéros de pages compacts avec ellipses (1 … 4 5 6 … 20).
  * @returns {(number|'gap-left'|'gap-right')[]}
@@ -540,6 +560,21 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
 
   const filtered = useMemo(() => {
     const term = debouncedQ.trim().toLowerCase();
+    const ticketQuery = entryMode ? "" : ticketNumberQueryDigits(debouncedQ);
+    if (ticketQuery) {
+      const hits = [];
+      for (const r of rows) {
+        const rank = ticketNumberQueryRank(r.ticketNumber, ticketQuery);
+        if (!rank) continue;
+        if (statusFilter === "new" && copied.has(r.ticketNumber)) continue;
+        if (statusFilter === "copied" && !copied.has(r.ticketNumber)) continue;
+        hits.push({ row: r, rank });
+      }
+      const exact = hits.filter((item) => item.rank === 2);
+      const chosen = (exact.length > 0 ? exact : hits).map((item) => item.row);
+      chosen.sort((a, b) => compareTicketNumbersNewestFirst(a.ticketNumber, b.ticketNumber));
+      return chosen;
+    }
     const compactTerm = term.replace(/[^a-z0-9]/g, "");
     const looksLikeReservationCode = /^[a-z]{2}\d{3,}$/.test(compactTerm);
     return rows.filter((r) => {
@@ -580,6 +615,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   // Nouvelle recherche / nouveau filtre / autre taille de page : on repart de la page 1
   useEffect(() => {
     setPage(1);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [debouncedQ, statusFilter, pageSize, filterDate]);
 
   useEffect(() => {
