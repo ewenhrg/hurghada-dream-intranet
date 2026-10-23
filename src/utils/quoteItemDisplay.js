@@ -27,6 +27,16 @@ export function formatQuoteItemParticipantsSummary(item) {
   return `${cells.adults ?? 0} adt / ${cells.children ?? 0} enf / ${cells.babies ?? 0} bébé(s)`;
 }
 
+/** Aller simple ou aller-retour, tel que choisi sur le catalogue ou le devis. */
+export function formatTransferTripLabel(item) {
+  if (!item || typeof item !== "object") return "";
+  const retour = item.allerRetour === true || item.aller_retour === true;
+  const simple = item.allerSimple === true || item.aller_simple === true;
+  if (retour) return "Aller-retour";
+  if (simple) return "Aller simple";
+  return "";
+}
+
 /** Lignes détaillées sous le nom d'activité (devis PDF / impression). */
 export function getQuoteItemDetailLines(item) {
   if (!item) return [];
@@ -66,6 +76,9 @@ export function getQuoteItemDetailLines(item) {
   if (yamaha250 > 0) lines.push(`🏍️ Yamaha 250 × ${yamaha250}`);
   if (ktm640 > 0) lines.push(`🏍️ KTM 640 × ${ktm640}`);
   if (ktm530 > 0) lines.push(`🏍️ KTM 530 × ${ktm530}`);
+
+  const tripLabel = formatTransferTripLabel(item);
+  if (tripLabel) lines.push(`🚗 ${tripLabel}`);
 
   return lines;
 }
@@ -187,8 +200,8 @@ export function getQuoteItemExtraLabels(item) {
     if (item.flyingDress4Robes) labels.push(`${dressPrefix} — 4 robes`);
   }
 
-  if (item.allerSimple && !item.allerRetour) labels.push("Aller simple");
-  if (item.allerRetour) labels.push("Aller-retour");
+  const tripLabel = formatTransferTripLabel(item);
+  if (tripLabel) labels.push(tripLabel);
 
   const zt = [
     [item.zeroTracasTransfertVisaSim, "ZT visa+SIM+transfert"],

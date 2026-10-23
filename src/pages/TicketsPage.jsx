@@ -81,6 +81,23 @@ const DEFAULT_PAGE_SIZE = 100;
 const ENTRY_PAGE_SIZE = 50;
 
 /**
+ * Data entry : carnet numérique du plus récent au plus ancien.
+ * Les anciens n° « HD-… » passent après, sinon ils se classent au-dessus de 187000.
+ */
+function compareTicketNumbersNewestFirst(a, b) {
+  const left = String(a || "").trim();
+  const right = String(b || "").trim();
+  const leftNumeric = /^\d+$/.test(left);
+  const rightNumeric = /^\d+$/.test(right);
+  if (leftNumeric !== rightNumeric) return leftNumeric ? -1 : 1;
+  if (leftNumeric && rightNumeric) {
+    const delta = Number(right) - Number(left);
+    if (delta !== 0) return delta;
+  }
+  return right.localeCompare(left, "fr", { numeric: true });
+}
+
+/**
  * Numéros de pages compacts avec ellipses (1 … 4 5 6 … 20).
  * @returns {(number|'gap-left'|'gap-right')[]}
  */
@@ -501,9 +518,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
       });
     });
     if (entryMode) {
-      list.sort((a, b) =>
-        String(b.ticketNumber).localeCompare(String(a.ticketNumber), "fr", { numeric: true })
-      );
+      list.sort((a, b) => compareTicketNumbersNewestFirst(a.ticketNumber, b.ticketNumber));
     } else {
       // Date croissante → activités regroupées → n° ticket
       list.sort((a, b) => {

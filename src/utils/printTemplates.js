@@ -17,6 +17,7 @@ import {
 } from "./activityHelpers";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 import {
+  formatTransferTripLabel,
   getQuoteItemDetailLines,
   getQuoteItemParticipantCells,
   getZeroTracasServiceCounts,
@@ -566,7 +567,11 @@ export function generateTicketsHTML(quote, options = {}) {
       lines.push(`${label}${amountPart}`);
     }
 
-    getQuoteItemDetailLines(item).forEach((line) => lines.push(line));
+    const tripLabel = formatTransferTripLabel(item);
+    getQuoteItemDetailLines(item).forEach((line) => {
+      if (tripLabel && line === `🚗 ${tripLabel}`) return;
+      lines.push(line);
+    });
     return lines;
   };
 
@@ -794,6 +799,7 @@ export function generateTicketsHTML(quote, options = {}) {
 
       const pickupText = formatTicketPickupLabel(item);
       const pickup = pickupText ? esc(pickupText) : "";
+      const tripLabel = formatTransferTripLabel(item);
 
       const isModification = item.ticketKind === "modification";
       const modificationAmount = Math.round(Number(item.restAmount) || Number(item.lineTotal) || 0);
@@ -866,6 +872,7 @@ export function generateTicketsHTML(quote, options = {}) {
             ${clientAirbnbMaps ? `<div class="tf"><span class="tf-l">📍 Maps</span><span class="tf-v"><a href="${clientAirbnbMaps}" target="_blank" rel="noopener noreferrer">${clientAirbnbMaps}</a></span></div>` : ""}
             <div class="tf"><span class="tf-l">🚪 Chambre</span><span class="tf-v">${clientRoom}</span></div>
             <div class="tf"><span class="tf-l">📅 Date</span><span class="tf-v">${esc(itemDate)}</span></div>
+            ${tripLabel ? `<div class="tf"><span class="tf-l">🚗 Trajet</span><span class="tf-v">${esc(tripLabel)}</span></div>` : ""}
             <div class="tf"><span class="tf-l">⏰ Prise en charge</span><span class="tf-v">${pickup}</span></div>
             <div class="tf"><span class="tf-l">👥 Personnes</span><span class="tf-v">${esc(paxText)}${paxTotal > 0 ? ` (total ${paxTotal})` : ""}</span></div>
             ${item.ticketNumber ? `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">${esc(item.ticketNumber)}</span></div>` : `<div class="tf"><span class="tf-l">🎫 N° Ticket</span><span class="tf-v">—</span></div>`}
