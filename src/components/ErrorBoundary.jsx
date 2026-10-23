@@ -11,32 +11,29 @@ class ErrorBoundary extends Component {
     return { hasError: true, error };
   }
 
+  componentDidUpdate(prevProps) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+
   componentDidCatch(error, errorInfo) {
     logger.error("Erreur capturée par ErrorBoundary:", error, errorInfo);
-    
-    // Si c'est une erreur de chargement de module, essayer de recharger la page
-    if (error?.message?.includes("Failed to fetch dynamically imported module") || 
-        error?.message?.includes("Expected a JavaScript-or-Wasm module script")) {
-      logger.warn("Erreur de chargement de module détectée, rechargement de la page dans 2 secondes...");
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-    }
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-[#070d1f] text-white p-4">
-          <div className="max-w-md w-full bg-gray-800 rounded-lg p-6 shadow-xl">
+        <div className="flex min-h-[40vh] items-center justify-center p-4 text-slate-900">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                 <span className="text-red-400 text-xl">⚠️</span>
               </div>
-              <h2 className="text-xl font-bold">Erreur de chargement</h2>
+              <h2 className="text-xl font-bold text-slate-900">Erreur de chargement</h2>
             </div>
-            <p className="text-gray-300 mb-4">
-              Une erreur s'est produite lors du chargement de la page. La page va se recharger automatiquement...
+            <p className="mb-4 text-slate-600">
+              Cette page n’a pas pu s’afficher. Vous pouvez réessayer, ou ouvrir un autre onglet.
             </p>
             <button
               onClick={() => window.location.reload()}

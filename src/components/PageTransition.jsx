@@ -1,23 +1,11 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 /**
- * Transition entre pages / onglets avec Framer Motion.
- * `transitionKey` : change de valeur => rejoue l'animation (fondu + glissement doux).
+ * Changement d’onglet immédiat. L’ancienne animation (fondu + flou) bloquait
+ * les grandes pages le temps de quitter l’écran.
  */
 export function PageTransition({ children, transitionKey }) {
-  return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={transitionKey ?? "page"}
-        initial={{ opacity: 0, y: 14, filter: "blur(6px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
-  );
+  return <div key={transitionKey ?? "page"}>{children}</div>;
 }
 
 /** Apparition en fondu (montée douce) — pour du contenu ponctuel. */

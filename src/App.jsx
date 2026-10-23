@@ -44,6 +44,7 @@ import {
   HotelTarifsPage,
   ModificationRequestsPage,
   VoidTicketNumbersPage,
+  prefetchIntranetTab,
 } from "./config/lazyPages";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
@@ -54,6 +55,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { PageTransition } from "./components/PageTransition";
 import { toast, clearToasts } from "./utils/toast.js";
 import { logger } from "./utils/logger";
+import { clearChunkReloadGuard } from "./utils/lazyWithRetry";
 import { activitiesCache, createCacheKey } from "./utils/cache";
 import { usePublicQuotesInbox } from "./hooks/usePublicQuotesInbox";
 import { useModificationRequestCount } from "./hooks/useModificationRequestCount";
@@ -66,6 +68,97 @@ import { normalizeCatalogImageUrlsFromDb } from "./utils/catalogContent";
 import { HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, buildQuoteDraftFromExistingQuote } from "./utils/publicQuoteToDraft";
 import { isPublicClientPath } from "./config/clientApp";
 import { PublicClientRoutes } from "./PublicClientRoutes";
+
+const RECEIPT_QUOTE_SELECT =
+  "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, client_has_second_hotel, client_second_hotel, client_second_room, client_second_neighborhood, client_second_arrival_date, client_second_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, source, items, total, currency, paid_stripe, paid_cash, reservation_code, client_documents, client_is_airbnb, client_airbnb_maps_url";
+
+function quoteRowToLocal(row) {
+  const items = normalizeQuoteItemsFromDb(row.items);
+  const createdAt = row.created_at || row.createdAt || new Date().toISOString();
+  const updatedAt = row.updated_at || row.updatedAt || createdAt;
+  const hasQuoteModifications = items.some(
+    (item) => item.modifications && Array.isArray(item.modifications) && item.modifications.length > 0
+  );
+  return attachTicketPaymentMetaFromItems({
+    id: row.id?.toString() || uuid(),
+    supabase_id: row.id,
+    createdAt,
+    updated_at: updatedAt,
+    client: {
+      name: row.client_name || "",
+      phone: row.client_phone || "",
+      emergencyPhone: row.client_emergency_phone || "",
+      email: row.client_email || "",
+      hotel: row.client_hotel || "",
+      room: row.client_room || "",
+      neighborhood: row.client_neighborhood || "",
+      arrivalDate: row.client_arrival_date || "",
+      departureDate: row.client_departure_date || "",
+      hasSecondHotel: Boolean(row.client_has_second_hotel),
+      secondHotel: row.client_second_hotel || "",
+      secondRoom: row.client_second_room || "",
+      secondNeighborhood: row.client_second_neighborhood || "",
+      secondArrivalDate: row.client_second_arrival_date || "",
+      secondDepartureDate: row.client_second_departure_date || "",
+      ...airbnbFieldsFromRow(row),
+    },
+    clientArrivalDate: row.client_arrival_date || "",
+    clientDepartureDate: row.client_departure_date || "",
+    notes: row.notes || "",
+    createdByName: row.created_by_name || "",
+    updatedByName: row.updated_by_name || "",
+    source: normalizeQuoteSource(row.source, row.created_by_name),
+    items,
+    total: row.total || 0,
+    totalCash: Math.round(row.total || 0),
+    totalCard: calculateCardPrice(row.total || 0),
+    currency: row.currency || "EUR",
+    isModified: hasQuoteModifications || false,
+    paidStripe: Number(row.paid_stripe) || 0,
+    paidCash: Number(row.paid_cash) || 0,
+    reservationCode: row.reservation_code || "",
+    clientDocuments: normalizeClientDocuments(row.client_documents),
+  });
+}
+
+function isRemoteQuoteNewer(remoteAt, localAt) {
+  const remote = Date.parse(remoteAt || "");
+  const local = Date.parse(localAt || "");
+  if (!Number.isFinite(remote)) return false;
+  if (!Number.isFinite(local)) return true;
+  return remote > local;
+}
+
+function mergeFresherQuotes(prevQuotes, rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return prevQuotes;
+  const next = prevQuotes.slice();
+  const indexById = new Map();
+  next.forEach((quote, index) => {
+    if (quote?.supabase_id != null) indexById.set(String(quote.supabase_id), index);
+  });
+  const fresh = [];
+  let changed = false;
+  rows.forEach((row) => {
+    const local = quoteRowToLocal(row);
+    const key = local.supabase_id != null ? String(local.supabase_id) : "";
+    const index = key ? indexById.get(key) : undefined;
+    if (index == null || index < 0) {
+      if (index == null) {
+        fresh.push(local);
+        if (key) indexById.set(key, -1);
+        changed = true;
+      }
+      return;
+    }
+    const existing = next[index];
+    if (isRemoteQuoteNewer(local.updated_at, existing.updated_at || existing.createdAt)) {
+      next[index] = local;
+      changed = true;
+    }
+  });
+  if (!changed) return prevQuotes;
+  return fresh.length ? [...fresh, ...next] : next;
+}
 import {
   startPresenceSession,
   touchPresenceSession,
@@ -124,6 +217,49 @@ export default function App() {
       setTab(user.canAccessHistory !== false ? "history" : "devis");
     }
   }, [user, tab]);
+
+  // Receipt : le temps réel seul laisse la page en retard. On relit les devis touchés aujourd'hui.
+  useEffect(() => {
+    if (!supabase || !remoteEnabled || isPublicClientRoute || tab !== "receipt") return undefined;
+    let cancelled = false;
+    let pulling = false;
+
+    const pullTodayQuotes = async () => {
+      if (pulling || cancelled) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      pulling = true;
+      try {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        const { data, error } = await supabase
+          .from("quotes")
+          .select(RECEIPT_QUOTE_SELECT)
+          .in("site_key", getQuoteSiteKeysForSync())
+          .gte("updated_at", start.toISOString())
+          .order("updated_at", { ascending: false })
+          .limit(400);
+        if (cancelled || error || !Array.isArray(data)) {
+          if (error) logger.warn("Receipt sync:", error.message || error);
+          return;
+        }
+        setQuotes((prev) => mergeFresherQuotes(prev, data));
+      } finally {
+        pulling = false;
+      }
+    };
+
+    void pullTodayQuotes();
+    const timer = window.setInterval(pullTodayQuotes, 8000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void pullTodayQuotes();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [remoteEnabled, isPublicClientRoute, tab]);
 
   /** Événementiel : Sophia, Ewen et Karim uniquement. */
   useEffect(() => {
@@ -1172,9 +1308,13 @@ export default function App() {
       }
     };
 
-    const timer = setTimeout(preload, 2500);
+    const timer = setTimeout(preload, 800);
+    const guardTimer = setTimeout(clearChunkReloadGuard, 4000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(guardTimer);
+    };
   }, [ok, isPublicClientRoute]);
 
   if (isPublicClientRoute) {
@@ -1355,64 +1495,72 @@ export default function App() {
               className="w-full min-w-0 border-t border-white/10 pt-3"
               style={{ borderTopColor: "rgba(255,255,255,0.12)" }}
               aria-label="Navigation principale"
+              onMouseOver={(event) => {
+                const id = event.target.closest?.("[data-tab]")?.getAttribute("data-tab");
+                if (id) prefetchIntranetTab(id);
+              }}
+              onFocus={(event) => {
+                const id = event.target.closest?.("[data-tab]")?.getAttribute("data-tab");
+                if (id) prefetchIntranetTab(id);
+              }}
             >
               <div className="flex w-full min-w-0 flex-wrap gap-2 md:gap-2.5">
-                <Pill active={tab === "devis"} onClick={() => setTab("devis")}>
+                <Pill data-tab="devis" active={tab === "devis"} onClick={() => setTab("devis")}>
                   {t("nav.devis")}
                 </Pill>
                 {user?.canAccessActivities !== false && (
-                <Pill active={tab === "activities"} onClick={() => setTab("activities")}>
+                <Pill data-tab="activities" active={tab === "activities"} onClick={() => setTab("activities")}>
                   {t("nav.activities")}
                 </Pill>
                 )}
                 {user?.canAccessActivities !== false && (
-                <Pill active={tab === "planning"} onClick={() => setTab("planning")}>
+                <Pill data-tab="planning" active={tab === "planning"} onClick={() => setTab("planning")}>
                   {t("nav.planning")}
                 </Pill>
                 )}
                 {user?.canAccessActivities !== false &&
                   (user?.canEditActivity === true || hasFullIntranetAccess(user)) && (
-                    <Pill active={tab === "catalog-admin"} onClick={() => setTab("catalog-admin")}>
+                    <Pill data-tab="catalog-admin" active={tab === "catalog-admin"} onClick={() => setTab("catalog-admin")}>
                       {t("nav.catalogAdmin")}
                     </Pill>
                   )}
                 {user?.canAccessHistory !== false && (
-                <Pill active={tab === "history"} onClick={() => setTab("history")}>
+                <Pill data-tab="history" active={tab === "history"} onClick={() => setTab("history")}>
                   {t("nav.history")}
                   </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
-                <Pill active={tab === "tickets"} onClick={() => setTab("tickets")}>
+                <Pill data-tab="tickets" active={tab === "tickets"} onClick={() => setTab("tickets")}>
                   {t("nav.tickets")}
                 </Pill>
                 )}
                 {canAccessDataEntryPage(user) && (
-                <Pill active={tab === "data-entry"} onClick={() => setTab("data-entry")}>
+                <Pill data-tab="data-entry" active={tab === "data-entry"} onClick={() => setTab("data-entry")}>
                   Data entry
                 </Pill>
                 )}
                 {canAccessReceiptPage(user) && (
-                <Pill active={tab === "receipt"} onClick={() => setTab("receipt")}>
+                <Pill data-tab="receipt" active={tab === "receipt"} onClick={() => setTab("receipt")}>
                   Receipt
                 </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
-                <Pill active={tab === "b2b-access"} onClick={() => setTab("b2b-access")}>
+                <Pill data-tab="b2b-access" active={tab === "b2b-access"} onClick={() => setTab("b2b-access")}>
                   Accès B2B
                 </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
-                <Pill active={tab === "b2b-quotes"} onClick={() => setTab("b2b-quotes")}>
+                <Pill data-tab="b2b-quotes" active={tab === "b2b-quotes"} onClick={() => setTab("b2b-quotes")}>
                   Devis B2B
                 </Pill>
                 )}
                 {canAccessEventsPage(user) && (
-                <Pill active={tab === "events"} onClick={() => setTab("events")}>
+                <Pill data-tab="events" active={tab === "events"} onClick={() => setTab("events")}>
                   Événementiel
                 </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
-                <Pill active={tab === "public-devis"} onClick={() => setTab("public-devis")}>
+                <Pill data-tab="public-devis" active={tab === "public-devis"} onClick={() => setTab("public-devis")}>
                   <span className="inline-flex items-center gap-1.5">
                     {t("nav.publicDevis")}
                     {pendingPublicQuotesCount > 0 ? (
@@ -1427,22 +1575,22 @@ export default function App() {
                 </Pill>
                 )}
                 {canAccessHotelHistoryPage(user) && (
-                <Pill active={tab === "historique-hotel"} onClick={() => setTab("historique-hotel")}>
+                <Pill data-tab="historique-hotel" active={tab === "historique-hotel"} onClick={() => setTab("historique-hotel")}>
                   Hotel history
                 </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
-                  <Pill active={tab === "modifications"} onClick={() => setTab("modifications")}>
+                  <Pill data-tab="modifications" active={tab === "modifications"} onClick={() => setTab("modifications")}>
                     {t("nav.modifications")}
                   </Pill>
                 )}
                 {canVoidTicketNumbers(user) && (
-                  <Pill active={tab === "void-tickets"} onClick={() => setTab("void-tickets")}>
+                  <Pill data-tab="void-tickets" active={tab === "void-tickets"} onClick={() => setTab("void-tickets")}>
                     N° annulés
                   </Pill>
                 )}
                 {user?.canAccessHistory !== false && (
-                  <Pill active={tab === "modif-demandes"} onClick={() => setTab("modif-demandes")}>
+                  <Pill data-tab="modif-demandes" active={tab === "modif-demandes"} onClick={() => setTab("modif-demandes")}>
                     <span className="inline-flex items-center gap-1.5">
                       Demandes modif
                       {pendingModificationCount > 0 ? (
@@ -1457,51 +1605,51 @@ export default function App() {
                   </Pill>
                 )}
                 {!SITUATION_PAGE_STANDBY && (
-                  <Pill active={tab === "situation"} onClick={() => setTab("situation")}>
+                  <Pill data-tab="situation" active={tab === "situation"} onClick={() => setTab("situation")}>
                     📱 {t("nav.situation")}
                   </Pill>
                 )}
                 {(user?.canAccessSituation || hasFullIntranetAccess(user) || user?.name === "situation") && (
-                  <Pill active={tab === "stopsale"} onClick={() => setTab("stopsale")}>
+                  <Pill data-tab="stopsale" active={tab === "stopsale"} onClick={() => setTab("stopsale")}>
                     🛑 Stop &amp; Push
                   </Pill>
                 )}
                 {(user?.canResetData || user?.canAccessUsers || hasFullIntranetAccess(user)) && (
-                  <Pill active={tab === "users"} onClick={() => setTab("users")}>
+                  <Pill data-tab="users" active={tab === "users"} onClick={() => setTab("users")}>
                     {t("nav.users")}
                   </Pill>
                 )}
                 {canAccessHotelsPage(user) && (
-                  <Pill active={tab === "hotels"} onClick={() => setTab("hotels")}>
+                  <Pill data-tab="hotels" active={tab === "hotels"} onClick={() => setTab("hotels")}>
                     🏨 Hôtels
                   </Pill>
                 )}
                 {canAccessHotelsPage(user) && (
-                  <Pill active={tab === "hotels-catalog"} onClick={() => setTab("hotels-catalog")}>
+                  <Pill data-tab="hotels-catalog" active={tab === "hotels-catalog"} onClick={() => setTab("hotels-catalog")}>
                     Catalogue hôtels
                   </Pill>
                 )}
                 {canAccessHotelsPage(user) && (
-                  <Pill active={tab === "hotel-tarifs"} onClick={() => setTab("hotel-tarifs")}>
+                  <Pill data-tab="hotel-tarifs" active={tab === "hotel-tarifs"} onClick={() => setTab("hotel-tarifs")}>
                     Tarifs hôtel
                   </Pill>
                 )}
                 {hasFullIntranetAccess(user) && (
-                  <Pill active={tab === "ewen-dashboard"} onClick={() => setTab("ewen-dashboard")}>
+                  <Pill data-tab="ewen-dashboard" active={tab === "ewen-dashboard"} onClick={() => setTab("ewen-dashboard")}>
                     {t("nav.ewenDashboard")}
                   </Pill>
                 )}
                 {canAccessInternsPage(user) && (
-                  <Pill active={tab === "appartements"} onClick={() => setTab("appartements")}>
+                  <Pill data-tab="appartements" active={tab === "appartements"} onClick={() => setTab("appartements")}>
                     Appartement
                   </Pill>
                 )}
                 {canSendStayBroadcast(user) && (
-                  <Pill active={tab === "message-sejour"} onClick={() => setTab("message-sejour")}>
+                  <Pill data-tab="message-sejour" active={tab === "message-sejour"} onClick={() => setTab("message-sejour")}>
                     Message séjour
                   </Pill>
                 )}
-                <Pill active={tab === "documents"} onClick={() => setTab("documents")}>
+                <Pill data-tab="documents" active={tab === "documents"} onClick={() => setTab("documents")}>
                   {t("nav.documents")}
                 </Pill>
               </div>
@@ -1517,8 +1665,8 @@ export default function App() {
           <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
               
               <div className="space-y-6 md:space-y-10 p-1 sm:p-2 md:p-3">
-                <ErrorBoundary>
-                  <Suspense fallback={<PageLoader />}>
+                <ErrorBoundary resetKey={tab} key={tab}>
+                  <Suspense key={tab} fallback={<PageLoader />}>
                     <section className="space-y-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
@@ -1554,8 +1702,8 @@ export default function App() {
               paddingRight: '0.5rem'
             }}
           >
-            <ErrorBoundary>
-              <Suspense fallback={<PageLoader />}>
+            <ErrorBoundary resetKey={tab} key={tab}>
+              <Suspense key={tab} fallback={<PageLoader />}>
 
               {tab === "activities" && user?.canAccessActivities !== false && (
             <Section

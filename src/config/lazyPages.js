@@ -89,3 +89,44 @@ export const HotelHistoryPage = lazyWithRetry(() =>
 export const HotelTarifsPage = lazyWithRetry(() =>
   import("../pages/HotelTarifsPage").then((m) => ({ default: m.HotelTarifsPage }))
 );
+
+const PREFETCH_BY_TAB = {
+  devis: () => import("../pages/QuotesPage"),
+  activities: () => import("../pages/ActivitiesPage"),
+  planning: () => import("../pages/PlanningPage"),
+  "catalog-admin": () => import("../pages/ActivityCatalogAdminPage"),
+  history: () => import("../pages/HistoryPage"),
+  tickets: () => import("../pages/TicketsPage"),
+  "data-entry": () => import("../pages/TicketsPage"),
+  receipt: () => import("../pages/ReceiptPage"),
+  users: () => import("../pages/UsersPage"),
+  hotels: () => import("../pages/HotelsPage"),
+  modifications: () => import("../pages/TicketModificationPage"),
+  situation: () => import("../pages/TransferDayPage"),
+  stopsale: () => import("../pages/StopSalePage"),
+  documents: () => import("../pages/DocumentsPage"),
+  appartements: () => import("../pages/InternsPage"),
+  "message-sejour": () => import("../pages/StayBroadcastPage"),
+  "ewen-dashboard": () => import("../pages/EwenDashboardPage"),
+  "public-devis": () => import("../pages/PublicDevisPage"),
+  events: () => import("../pages/EventsInboxPage"),
+  "modif-demandes": () => import("../pages/ModificationRequestsPage"),
+  "void-tickets": () => import("../pages/VoidTicketNumbersPage"),
+  "b2b-access": () => import("../pages/B2BAccessPage"),
+  "b2b-quotes": () => import("../pages/B2BQuotesPage"),
+  "hotels-catalog": () => import("../pages/PublicHotelsAdminPage"),
+  "historique-hotel": () => import("../pages/HotelHistoryPage"),
+  "hotel-tarifs": () => import("../pages/HotelTarifsPage"),
+};
+
+const prefetchedTabs = new Set();
+
+/** Charge le fichier de la page au survol, pour que le clic s’affiche tout de suite. */
+export function prefetchIntranetTab(tab) {
+  const load = PREFETCH_BY_TAB[tab];
+  if (!load || prefetchedTabs.has(tab)) return;
+  prefetchedTabs.add(tab);
+  load().catch(() => {
+    prefetchedTabs.delete(tab);
+  });
+}
