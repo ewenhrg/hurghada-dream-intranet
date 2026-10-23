@@ -1412,7 +1412,7 @@ export function generateDayReceiptHTML(receipt, options = {}) {
           (row) => `<tr>
         <td class="num">${esc(row.ticketNumber)}</td>
         <td>${esc(row.hotel)}${row.room ? `<div class="sub">Room ${esc(row.room)}</div>` : ""}</td>
-        <td>${esc(row.activity)}</td>
+        <td>${esc(row.activity)}${row.activityDate ? `<div class="sub">${esc(row.activityDate)}</div>` : ""}</td>
         <td>${esc(row.pax)}</td>
         <td class="money">${esc(row.tariffLabel)}</td>
         <td>${esc(row.paymentLabel)}</td>
@@ -1421,7 +1421,7 @@ export function generateDayReceiptHTML(receipt, options = {}) {
       </tr>`
         )
         .join("")
-    : `<tr><td colspan="8" class="empty">No tickets for this date.</td></tr>`;
+    : `<tr><td colspan="8" class="empty">No tickets validated today.</td></tr>`;
 
   const amounts = amountRows
     .map(

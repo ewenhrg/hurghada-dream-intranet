@@ -1633,7 +1633,7 @@ export default function App() {
         {tab === "data-entry" && canAccessDataEntryPage(user) && (
           <Section
             title="Data entry"
-            subtitle="Même tableau que Situation, dans l’ordre d’arrivée des tickets. La case Vu reste cochée pour Situation, Ewen et Karim."
+            subtitle="Numéros du plus récent au plus ancien, 50 par page. La case Vu reste cochée pour Situation, Ewen et Karim."
             bare
           >
             <TicketsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} entryMode />
@@ -1643,7 +1643,7 @@ export default function App() {
         {tab === "receipt" && canAccessReceiptPage(user) && (
           <Section
             title="Receipt"
-            subtitle="Every ticket for the day, with prices and cash or Stripe payments."
+            subtitle="Tickets validated today, whatever the activity date, with prices and cash or Stripe payments."
             bare
           >
             <ReceiptPage quotes={quotes} activities={activities} />

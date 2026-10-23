@@ -78,6 +78,7 @@ const COL_COUNT = 17;
 /** Pagination : évite de monter des milliers de lignes d’un coup. */
 const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
 const DEFAULT_PAGE_SIZE = 100;
+const ENTRY_PAGE_SIZE = 50;
 
 /**
  * Numéros de pages compacts avec ellipses (1 … 4 5 6 … 20).
@@ -528,7 +529,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         .toLowerCase()
         .replace(/[^a-z0-9]/g, "");
       const codeMatch = compactTerm.length >= 3 && codeCompact.includes(compactTerm);
-      if (filterDate && !looksLikeReservationCode && String(r.date || "").trim() !== filterDate) {
+      if (!entryMode && filterDate && !looksLikeReservationCode && String(r.date || "").trim() !== filterDate) {
         return false;
       }
       if (statusFilter === "new" && copied.has(r.ticketNumber)) return false;
@@ -551,9 +552,10 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         r.opsComment,
       ].some((v) => String(v || "").toLowerCase().includes(term));
     });
-  }, [rows, debouncedQ, statusFilter, copied, filterDate]);
+  }, [rows, debouncedQ, statusFilter, copied, filterDate, entryMode]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const effectivePageSize = entryMode ? ENTRY_PAGE_SIZE : pageSize;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / effectivePageSize));
   // Clamp au rendu : la liste peut raccourcir avant que l’effet ne recale `page`
   const currentPage = Math.min(page, totalPages);
 
@@ -566,10 +568,10 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     setPage((p) => Math.min(p, totalPages));
   }, [totalPages]);
 
-  const pageStart = (currentPage - 1) * pageSize;
+  const pageStart = (currentPage - 1) * effectivePageSize;
   const pageRows = useMemo(
-    () => filtered.slice(pageStart, pageStart + pageSize),
-    [filtered, pageStart, pageSize]
+    () => filtered.slice(pageStart, pageStart + effectivePageSize),
+    [filtered, pageStart, effectivePageSize]
   );
 
   const goToPage = useCallback(
@@ -1126,9 +1128,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   };
 
   const rowsForDate = useMemo(() => {
-    if (!filterDate) return rows;
+    if (entryMode || !filterDate) return rows;
     return rows.filter((r) => String(r.date || "").trim() === filterDate);
-  }, [rows, filterDate]);
+  }, [rows, filterDate, entryMode]);
 
   const newCountForDate = useMemo(
     () => rowsForDate.filter((r) => !copied.has(r.ticketNumber)).length,
@@ -1213,6 +1215,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           </div>
         </div>
 
+        {!entryMode ? (
         <div className="rounded-2xl border-2 border-indigo-300 bg-white px-4 py-3 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
@@ -1263,6 +1266,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             </div>
           </div>
         </div>
+        ) : null}
 
         <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
           <div
@@ -1307,6 +1311,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             Réinitialiser les marques
           </button>
 
+          {!entryMode ? (
           <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500">
             Lignes par page
             <select
@@ -1321,12 +1326,15 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
               ))}
             </select>
           </label>
+          ) : (
+            <span className="text-xs font-semibold text-slate-500">50 numéros par page</span>
+          )}
 
           <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
             <CalendarDays className="size-3.5" aria-hidden />
             {filtered.length > 0 ? (
               <>
-                {pageStart + 1}–{Math.min(pageStart + pageSize, filtered.length)} sur{" "}
+                {pageStart + 1}–{Math.min(pageStart + effectivePageSize, filtered.length)} sur{" "}
                 {filtered.length}
               </>
             ) : (
@@ -1373,7 +1381,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             <table className={`w-full table-fixed border-collapse text-left font-sans ${entryMode ? "min-w-[94.5rem]" : "min-w-[91.5rem]"}`}>
               <caption className="sr-only">
                 {entryMode
-                  ? "Tableau data entry : tickets dans l’ordre d’arrivée, avec une case Vu."
+                  ? "Tableau data entry : 50 tickets par page, du numéro le plus récent au plus ancien, avec une case Vu."
                   : "Tableau tickets : trié par date puis par activité, avec séparateurs colorés."}
               </caption>
               <colgroup>

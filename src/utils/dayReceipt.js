@@ -4,6 +4,7 @@ import {
   normalizeTicketsPaymentMethods,
   resolveTicketActivityName,
 } from "../utils.js";
+import { getLocalDateKey } from "./pushSaleExpiry.js";
 import { parseItemPaymentFlags } from "./ticketCollections.js";
 import {
   formatActivityWithExtras,
@@ -62,8 +63,22 @@ function paymentLabel(cashOn, stripeOn, currency) {
   return "Cash";
 }
 
+function validatedOnDay(item, quote, dateKey) {
+  const stamp = String(item?.ticketsEnteredAt || item?.tickets_entered_at || quote?.ticketsEnteredAt || "").trim();
+  if (!stamp) return false;
+  const date = new Date(stamp);
+  if (Number.isNaN(date.getTime())) return false;
+  return getLocalDateKey(date) === dateKey;
+}
+
+function formatActivityDay(dateKey) {
+  const day = String(dateKey || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return "";
+  return new Date(`${day}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
 /**
- * Tickets for one activity date, with cash (euro or Egyptian) and Stripe.
+ * Tickets validated on one calendar day, whatever the activity date.
  * Stripe is the tariff total, without the 3% card fee.
  */
 export function buildDayReceipt(quotes, dateKey, activities = []) {
@@ -76,7 +91,8 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
     const lines = [];
     items.forEach((item, itemIndex) => {
       const ticketNumber = String(item?.ticketNumber || "").trim();
-      if (!ticketNumber || item?.ticketKind === "modification" || String(item?.date || "").trim() !== key) return;
+      if (!ticketNumber || item?.ticketKind === "modification" || item?.isCancelled === true) return;
+      if (!validatedOnDay(item, quote, key)) return;
       lines.push({ item, itemIndex, ticketNumber });
     });
     if (!lines.length) return;
@@ -162,6 +178,7 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
           activityName,
           activityNameFr: String(line.item?.activityName || "").trim(),
         }),
+        activityDate: formatActivityDay(line.item?.date),
         pax: paxLabel(line.item),
         tariff,
         tariffLabel: currencyNoCents(tariff, quote?.currency || "EUR"),
