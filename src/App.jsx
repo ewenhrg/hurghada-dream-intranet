@@ -9,7 +9,7 @@ import {
   getQuoteSiteKeysForSync,
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
-import { canAccessDataEntryPage, canAccessEventsPage, canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canAccessReceiptPage, canSendStayBroadcast, hasFullIntranetAccess } from "./constants/permissions";
+import { canAccessDataEntryPage, canAccessEventsPage, canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canAccessReceiptPage, canSendStayBroadcast, canVoidTicketNumbers, hasFullIntranetAccess } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, saveQuotesCache, loadLS, normalizeQuoteItemsFromDb } from "./utils";
 import { runWhenIdle } from "./utils/idle";
 import { attachTicketPaymentMetaFromItems } from "./utils/ticketCollections";
@@ -43,6 +43,7 @@ import {
   HotelHistoryPage,
   HotelTarifsPage,
   ModificationRequestsPage,
+  VoidTicketNumbersPage,
 } from "./config/lazyPages";
 import { Pill, GhostBtn, Section } from "./components/ui";
 import { LoginPage } from "./pages/LoginPage";
@@ -1435,6 +1436,11 @@ export default function App() {
                     {t("nav.modifications")}
                   </Pill>
                 )}
+                {canVoidTicketNumbers(user) && (
+                  <Pill active={tab === "void-tickets"} onClick={() => setTab("void-tickets")}>
+                    N° annulés
+                  </Pill>
+                )}
                 {user?.canAccessHistory !== false && (
                   <Pill active={tab === "modif-demandes"} onClick={() => setTab("modif-demandes")}>
                     <span className="inline-flex items-center gap-1.5">
@@ -1686,6 +1692,15 @@ export default function App() {
             subtitle={t("page.modifications.subtitle")}
           >
             <ModificationsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
+          </Section>
+        )}
+
+        {tab === "void-tickets" && canVoidTicketNumbers(user) && (
+          <Section
+            title="N° annulés"
+            subtitle="Retire un numéro du carnet pour toujours, même s’il n’a jamais été attribué."
+          >
+            <VoidTicketNumbersPage />
           </Section>
         )}
 

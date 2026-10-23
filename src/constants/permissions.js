@@ -162,6 +162,11 @@ export function canEditAutoAssignedTicketNumbers(user) {
   return n === "ewen" || n === "karim";
 }
 
+/** Annuler définitivement un numéro, même jamais attribué — Ewen et Karim uniquement. */
+export function canVoidTicketNumbers(user) {
+  return canEditAutoAssignedTicketNumbers(user);
+}
+
 /** Page Stagiaires (planning / appartements / CV) — Ewen et Karim uniquement. */
 export function canAccessInternsPage(user) {
   const n = normalizeIntranetUserName(user?.name);

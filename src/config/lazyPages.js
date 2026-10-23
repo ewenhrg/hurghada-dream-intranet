@@ -70,6 +70,9 @@ export const EventsInboxPage = lazyWithRetry(() =>
 export const ModificationRequestsPage = lazyWithRetry(() =>
   import("../pages/ModificationRequestsPage").then((m) => ({ default: m.ModificationRequestsPage }))
 );
+export const VoidTicketNumbersPage = lazyWithRetry(() =>
+  import("../pages/VoidTicketNumbersPage").then((m) => ({ default: m.VoidTicketNumbersPage }))
+);
 export const B2BAccessPage = lazyWithRetry(() =>
   import("../pages/B2BAccessPage").then((m) => ({ default: m.B2BAccessPage }))
 );
