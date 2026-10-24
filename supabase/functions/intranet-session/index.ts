@@ -35,7 +35,16 @@ async function ensureOpsUser(admin: ReturnType<typeof createClient>) {
     const found = (data?.users || []).find(
       (u) => String(u.email || "").toLowerCase() === OPS_EMAIL
     );
-    if (found) return found;
+    if (found) {
+      // is_intranet_authenticated() exige ce marqueur dans le JWT.
+      if (found.app_metadata?.intranet_ops !== true) {
+        const { error: updateError } = await admin.auth.admin.updateUserById(found.id, {
+          app_metadata: { ...found.app_metadata, intranet_ops: true, role: "intranet_ops" },
+        });
+        if (updateError) throw updateError;
+      }
+      return found;
+    }
     if (!data?.users?.length || data.users.length < perPage) break;
     page += 1;
     if (page > 20) break;
@@ -84,8 +93,15 @@ Deno.serve(async (req: Request) => {
   const code = String(body.code || "").trim();
   if (!/^\d{6}$/.test(code)) return json(200, { ok: false });
 
-  const { data: gate, error: gateError } = await admin.rpc("intranet_login", {
+  const clientIp =
+    (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() ||
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+
+  const { data: gate, error: gateError } = await admin.rpc("intranet_login_guarded", {
     p_code: code,
+    p_ip: clientIp,
   });
   if (gateError) return json(500, { ok: false, error: "login" });
 
