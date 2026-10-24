@@ -17,6 +17,7 @@ import { normalizeClientDocuments } from "./utils/hotelRequestDocuments";
 import { airbnbFieldsFromRow } from "./utils/clientAirbnb";
 import { normalizeQuoteSource } from "./utils/quoteOrigin";
 import { loadUserFromSession } from "./utils/userPermissions";
+import { ensureValidIntranetSession } from "./utils/intranetSession.js";
 import {
   ActivitiesPage,
   PlanningPage,
@@ -221,7 +222,7 @@ export default function App() {
 
   // Receipt : le temps réel seul laisse la page en retard. On relit les devis touchés aujourd'hui.
   useEffect(() => {
-    if (!supabase || !remoteEnabled || isPublicClientRoute || tab !== "receipt") return undefined;
+    if (!ok || !supabase || !remoteEnabled || isPublicClientRoute || tab !== "receipt") return undefined;
     let cancelled = false;
     let pulling = false;
 
@@ -260,7 +261,7 @@ export default function App() {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [remoteEnabled, isPublicClientRoute, tab]);
+  }, [ok, remoteEnabled, isPublicClientRoute, tab]);
 
   /** Événementiel : Sophia, Ewen et Karim uniquement. */
   useEffect(() => {
@@ -281,16 +282,53 @@ export default function App() {
     }
   }, [user, tab]);
 
-  // Vérifier si l'utilisateur est déjà connecté
+  // Vérifier si l'utilisateur est déjà connecté (+ session Auth pour RLS devis / Situation)
   useEffect(() => {
-    const already = sessionStorage.getItem("hd_ok") === "1";
-    if (already) {
+    let cancelled = false;
+
+    async function restoreIntranetSession() {
+      const already = sessionStorage.getItem("hd_ok") === "1";
+      if (!already) return;
+
       const userData = loadUserFromSession();
-      if (userData) {
-        setUser(userData);
+      if (!userData) {
+        try {
+          sessionStorage.removeItem("hd_ok");
+          sessionStorage.removeItem("hd_user");
+        } catch {
+          /* ignore */
+        }
+        return;
       }
+
+      const auth = await ensureValidIntranetSession(supabase, userData);
+      if (cancelled) return;
+
+      if (!auth.ok) {
+        try {
+          sessionStorage.removeItem("hd_ok");
+          sessionStorage.removeItem("hd_user");
+        } catch {
+          /* ignore */
+        }
+        setUser(null);
+        setOk(false);
+        if (auth.locked) {
+          toast.error("Trop d’essais. Réessayez dans quelques minutes.");
+        } else {
+          toast.info("Reconnectez-vous pour charger Situation et Data entry.");
+        }
+        return;
+      }
+
+      setUser(userData);
       setOk(true);
     }
+
+    void restoreIntranetSession();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Fonction pour mettre à jour les permissions utilisateur après connexion
@@ -749,10 +787,18 @@ export default function App() {
 
   // Synchronisation initiale unique des devis depuis Supabase au chargement de la page
   useEffect(() => {
-    if (!remoteEnabled || isPublicClientRoute) return;
+    if (!ok || !remoteEnabled || isPublicClientRoute) return;
     
     async function syncQuotesOnce() {
       if (!supabase) return;
+
+      // Certains PC gardent hd_ok sans JWT Auth → RLS renvoie 0 devis (Situation / Data entry vides).
+      const sessionUser = loadUserFromSession() || user;
+      const auth = await ensureValidIntranetSession(supabase, sessionUser);
+      if (!auth.ok) {
+        logger.warn("Sync devis : session Auth intranet absente", auth.reason);
+        return;
+      }
       
       try {
         // Sélection spécifique pour réduire la taille des données transférées.
@@ -951,11 +997,11 @@ export default function App() {
     }
     
     syncQuotesOnce();
-  }, [remoteEnabled, isPublicClientRoute]);
+  }, [ok, remoteEnabled, isPublicClientRoute, user]);
 
   // Synchronisation en temps réel des devis via Supabase Realtime
   useEffect(() => {
-    if (!supabase || !remoteEnabled || isPublicClientRoute) return;
+    if (!ok || !supabase || !remoteEnabled || isPublicClientRoute) return;
 
     // Fonction pour convertir un devis Supabase en format local
     const convertSupabaseQuoteToLocal = (row) => {
@@ -1127,7 +1173,7 @@ export default function App() {
       logger.log('🔌 Déconnexion de l\'abonnement Realtime pour les devis');
       supabase.removeChannel(channel);
     };
-  }, [remoteEnabled, isPublicClientRoute]);
+  }, [ok, remoteEnabled, isPublicClientRoute]);
 
   // Synchronisation en temps réel des activités via Supabase Realtime
   useEffect(() => {

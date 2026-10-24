@@ -14,6 +14,38 @@ function getAnonKey() {
   return "";
 }
 
+function readJwtPayload(accessToken) {
+  try {
+    const part = String(accessToken || "").split(".")[1];
+    if (!part) return null;
+    const json = atob(part.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+/** Session Auth utilisable pour lire/écrire les tables staff (RLS). */
+export function sessionLooksLikeIntranetAuth(session) {
+  if (!session?.access_token) return false;
+  const payload = readJwtPayload(session.access_token);
+  if (!payload) return false;
+  if (payload?.app_metadata?.intranet_ops === true) return true;
+  const email = String(payload?.email || payload?.user_metadata?.email || "").trim();
+  return email.length > 0;
+}
+
+async function quotesReadableWithSession(supabase) {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from("quotes").select("id").limit(1);
+    return !error;
+  } catch (error) {
+    logger.warn("Intranet session : sonde devis échouée", error);
+    return false;
+  }
+}
+
 /**
  * Vérifie le code PIN côté Edge Function et ouvre une session Auth
  * (ops partagée, ou compte rédacteur si intranet_auth_email).
@@ -73,4 +105,46 @@ export async function openIntranetAuthSession(supabase, sixDigitCode) {
     session: data.session,
     sessionEmail: payload.session_email || null,
   };
+}
+
+/**
+ * Au rechargement d’un onglet déjà « connecté » (hd_ok) : réutilise la session Auth
+ * ou la rouvre avec le code stocké. Sinon Situation / Data entry restent vides (RLS).
+ */
+export async function ensureValidIntranetSession(supabase, sessionUser, { force = false } = {}) {
+  if (!supabase?.auth) {
+    return { ok: false, needLogin: true, reason: "no_client" };
+  }
+
+  if (!force) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (sessionLooksLikeIntranetAuth(data?.session) && (await quotesReadableWithSession(supabase))) {
+        return { ok: true, reused: true, session: data.session };
+      }
+    } catch (error) {
+      logger.warn("Intranet session : getSession échoué", error);
+    }
+  }
+
+  const code = sessionUser?.code != null ? String(sessionUser.code).trim() : "";
+  if (!/^\d{6}$/.test(code)) {
+    return { ok: false, needLogin: true, reason: "missing_code" };
+  }
+
+  const opened = await openIntranetAuthSession(supabase, code);
+  if (!opened.ok || !opened.session) {
+    return {
+      ok: false,
+      needLogin: true,
+      reason: opened.locked ? "locked" : opened.error || "auth_failed",
+      locked: opened.locked === true,
+    };
+  }
+
+  if (!(await quotesReadableWithSession(supabase))) {
+    return { ok: false, needLogin: true, reason: "rls_blocked" };
+  }
+
+  return { ok: true, reused: false, session: opened.session, user: opened.user };
 }
