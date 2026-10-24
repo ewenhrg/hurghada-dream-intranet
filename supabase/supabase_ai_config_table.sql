@@ -37,13 +37,13 @@ FOR INSERT
 TO public
 WITH CHECK (true);
 
--- Insérer la clé API Gemini pour le site
--- Utilise la clé de site par défaut 'hurghada_dream_0606'
-INSERT INTO public.ai_config (site_key, gemini_api_key, provider, updated_by)
-VALUES ('hurghada_dream_0606', 'AIzaSyA3u5F90QmxDe-YKvLQy31cfkrC5emuhwM', 'gemini', 'System')
-ON CONFLICT (site_key) DO UPDATE SET
-  gemini_api_key = EXCLUDED.gemini_api_key,
-  provider = EXCLUDED.provider,
-  updated_at = NOW(),
-  updated_by = EXCLUDED.updated_by;
+-- Ne jamais committer une vraie clé Gemini ici.
+-- Après création de la table, renseigner la clé via le SQL Editor / un secret :
+--   update public.ai_config
+--   set gemini_api_key = '<clé>', updated_at = now(), updated_by = 'admin'
+--   where site_key = 'hurghada_dream_0606';
+-- Ou insert initial sans secret :
+-- INSERT INTO public.ai_config (site_key, gemini_api_key, provider, updated_by)
+-- VALUES ('hurghada_dream_0606', '', 'gemini', 'System')
+-- ON CONFLICT (site_key) DO NOTHING;
 
