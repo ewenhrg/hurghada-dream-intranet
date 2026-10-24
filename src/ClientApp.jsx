@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { isPublicClientPath, PUBLIC_HOME_PATH, publicBackPath } from "./config/clientApp";
+import { ClientFlyerPopup } from "./components/public/ClientFlyerPopup";
 import { PublicClientRoutes } from "./PublicClientRoutes";
 import {
   askStayNotificationsOnLaunch,
@@ -46,5 +47,10 @@ export function ClientApp() {
   if (!isPublicClientPath(pathname)) {
     return <Navigate to={PUBLIC_HOME_PATH} replace />;
   }
-  return <PublicClientRoutes />;
+  return (
+    <>
+      <PublicClientRoutes />
+      <ClientFlyerPopup />
+    </>
+  );
 }

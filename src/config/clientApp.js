@@ -1,13 +1,19 @@
 /** Build appli store (Capacitor) : pas d’intranet. */
 export const IS_CLIENT_APP = import.meta.env.VITE_CLIENT_APP === "true";
 
-/** Accueil client. Sur le site, `/` reste l’intranet. */
-export const PUBLIC_HOME_PATH = IS_CLIENT_APP ? "/" : "/accueil";
+/** Accueil public. L’intranet est sur `/intranet`. */
+export const PUBLIC_HOME_PATH = "/";
+export const INTRANET_PATH = "/intranet";
+
+export function isIntranetPath(path) {
+  const p = path || "";
+  return p === INTRANET_PATH || p.startsWith(`${INTRANET_PATH}/`);
+}
 
 export function isPublicHomePath(path) {
   const p = path || "";
-  if (p === "/accueil" || p.startsWith("/accueil/")) return true;
-  return IS_CLIENT_APP && (p === "/" || p === "");
+  if (p === "/" || p === "") return true;
+  return p === "/accueil" || p.startsWith("/accueil/");
 }
 
 /** Page parente, ou `null` si on est déjà à l’accueil. */
@@ -23,6 +29,7 @@ export function publicBackPath(path) {
 
 export function isPublicClientPath(path) {
   const p = path || "";
+  if (isIntranetPath(p)) return false;
   return (
     isPublicHomePath(p) ||
     p === "/tarifs" ||

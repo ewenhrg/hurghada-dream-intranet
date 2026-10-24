@@ -9,7 +9,7 @@ import {
   getQuoteSiteKeysForSync,
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
-import { canAccessDataEntryPage, canAccessEventsPage, canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canAccessReceiptPage, canSendStayBroadcast, canVoidTicketNumbers, hasFullIntranetAccess } from "./constants/permissions";
+import { canAccessDataEntryPage, canAccessEventsPage, canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canAccessReceiptPage, canManageClientFlyer, canSendStayBroadcast, canVoidTicketNumbers, hasFullIntranetAccess } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, saveQuotesCache, loadLS, normalizeQuoteItemsFromDb } from "./utils";
 import { runWhenIdle } from "./utils/idle";
 import { attachTicketPaymentMetaFromItems } from "./utils/ticketCollections";
@@ -34,6 +34,7 @@ import {
   DocumentsPage,
   InternsPage,
   StayBroadcastPage,
+  ClientFlyerPage,
   EwenDashboardPage,
   PublicDevisPage,
   EventsInboxPage,
@@ -1336,7 +1337,7 @@ export default function App() {
     tab === "devis" ? "px-0" : tab === "tickets" || tab === "receipt" || tab === "data-entry" ? "px-1 md:px-2 lg:px-3" : "px-2 md:px-3 lg:px-6";
   // Construire les className complets
   const headerNavClassName = `glass-nav mx-auto flex flex-col items-stretch gap-3 md:gap-4 ${maxWidthClass} px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl`;
-  const mainClassName = `flex-1 py-4 md:py-10 ${mainPaddingClass} scroll-container`;
+  const mainClassName = `flex-1 min-w-0 py-4 md:py-10 ${mainPaddingClass} scroll-container`;
   const footerClassName = `mx-auto px-4 py-8 border-t mt-10 font-medium tracking-wide ${maxWidthClass}`;
   const contentContainerClassName =
     tab === "tickets" || tab === "receipt" || tab === "data-entry"
@@ -1353,7 +1354,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-transparent overflow-x-hidden">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 pt-2 md:pt-4 pb-2 md:pb-3 px-2 md:px-3 lg:px-6" style={{ background: 'linear-gradient(180deg, rgba(13,10,40,0.92) 0%, rgba(9,10,32,0.78) 70%, rgba(9,10,32,0) 100%)', backdropFilter: 'blur(8px) saturate(140%)', WebkitBackdropFilter: 'blur(8px) saturate(140%)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
+      <header className="sticky top-0 z-50 px-2 pb-2 md:px-3 md:pb-3 md:pt-4 lg:px-6" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))", background: 'linear-gradient(180deg, rgba(13,10,40,0.92) 0%, rgba(9,10,32,0.78) 70%, rgba(9,10,32,0) 100%)', backdropFilter: 'blur(8px) saturate(140%)', WebkitBackdropFilter: 'blur(8px) saturate(140%)', boxShadow: '0 24px 60px -32px rgba(7,13,31,0.65)' }}>
         <div className={headerNavClassName}>
           <div className="flex w-full min-w-0 flex-col gap-3">
             {/* Ligne 1 : identité + langue + déconnexion (ne mange pas la largeur des onglets) */}
@@ -1385,7 +1386,7 @@ export default function App() {
             />
             </div>
             <div className="space-y-1 min-w-0 flex-1">
-              <h1 className="hd-text-gradient font-bold truncate leading-tight" style={{ letterSpacing: '-0.035em', fontSize: '1.3rem' }}>
+              <h1 className="hd-text-gradient truncate text-lg font-bold leading-tight md:text-[1.3rem]" style={{ letterSpacing: '-0.035em' }}>
                 {t("header.title")}
               </h1>
               <p className="font-medium hidden md:block" style={{ color: 'rgba(255, 255, 255, 0.62)', fontSize: '0.72rem', letterSpacing: '0.01em' }}>{t("header.subtitle")}</p>
@@ -1482,9 +1483,10 @@ export default function App() {
                 onClick={handleLogout}
                 className="rounded-xl font-semibold !bg-red-500 !text-white !border-red-500 hover:!bg-red-600 flex-shrink-0"
                 style={{ boxShadow: '0 16px 32px -20px rgba(239,68,68,0.55)' }}
+                aria-label="Déconnexion"
               >
-                <span className="hidden md:inline">🚪 Déconnexion</span>
-                <span className="md:hidden">🚪</span>
+                <span className="hidden md:inline">Déconnexion</span>
+                <span className="md:hidden">Sortir</span>
               </GhostBtn>
             )}
               </div>
@@ -1504,7 +1506,7 @@ export default function App() {
                 if (id) prefetchIntranetTab(id);
               }}
             >
-              <div className="flex w-full min-w-0 flex-wrap gap-2 md:gap-2.5">
+              <div className="hd-intranet-nav flex w-full min-w-0 flex-nowrap gap-2 overflow-x-auto pb-1 md:flex-wrap md:gap-2.5 md:overflow-visible md:pb-0">
                 <Pill data-tab="devis" active={tab === "devis"} onClick={() => setTab("devis")}>
                   {t("nav.devis")}
                 </Pill>
@@ -1647,6 +1649,11 @@ export default function App() {
                 {canSendStayBroadcast(user) && (
                   <Pill data-tab="message-sejour" active={tab === "message-sejour"} onClick={() => setTab("message-sejour")}>
                     Message séjour
+                  </Pill>
+                )}
+                {canManageClientFlyer(user) && (
+                  <Pill data-tab="flyer-appli" active={tab === "flyer-appli"} onClick={() => setTab("flyer-appli")}>
+                    Flyer appli
                   </Pill>
                 )}
                 <Pill data-tab="documents" active={tab === "documents"} onClick={() => setTab("documents")}>
@@ -1942,6 +1949,19 @@ export default function App() {
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <StayBroadcastPage user={user} />
+                </Suspense>
+              </ErrorBoundary>
+            </Section>
+          )}
+
+          {tab === "flyer-appli" && canManageClientFlyer(user) && (
+            <Section
+              title="Flyer appli"
+              subtitle="Image et texte affichés à l’ouverture de l’application"
+            >
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>
+                  <ClientFlyerPage user={user} />
                 </Suspense>
               </ErrorBoundary>
             </Section>

@@ -118,7 +118,7 @@ export function LoginPage({ onSuccess }) {
     <div
       ref={pageRef}
       onMouseMove={handlePageMouseMove}
-      className="relative min-h-screen overflow-hidden bg-[#030712] text-white"
+      className="login-stage relative min-h-[100svh] overflow-hidden bg-[#030712] text-white"
     >
       {/* Éclairage qui suit la souris */}
       {hasMouse && (
@@ -305,9 +305,9 @@ export function LoginPage({ onSuccess }) {
         }}
       />
 
-      <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between min-h-screen w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-10 md:py-16 gap-12 lg:gap-20">
-        {/* Hero gauche */}
-        <section className="flex-1 text-center lg:text-left space-y-8 lg:space-y-10 max-w-xl lg:max-w-none">
+      <div className="login-content relative z-10 flex min-h-[100svh] w-full max-w-6xl mx-auto flex-col items-center justify-center gap-8 px-4 py-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 md:px-10 lg:flex-row lg:justify-between lg:gap-20 lg:py-16">
+        {/* Hero : visible sur grand écran. Sur téléphone, le code est tout de suite à l’écran. */}
+        <section className="hidden max-w-xl flex-1 space-y-8 text-center lg:block lg:max-w-none lg:space-y-10 lg:text-left">
           <div className="login-enter-1 inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 backdrop-blur-md px-4 py-2.5 text-xs font-bold uppercase tracking-[0.25em] text-cyan-300">
             <span className="relative flex h-2.5 w-2.5">
               <span className="absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80 animate-ping" />
@@ -362,7 +362,7 @@ export function LoginPage({ onSuccess }) {
               ref={cardRef}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
-              className="login-panel rounded-[1.75rem] p-8 md:p-10 transition-transform duration-300 ease-out"
+              className="login-panel w-full rounded-[1.75rem] p-6 transition-transform duration-300 ease-out sm:p-8 md:p-10"
               style={{
                 transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1, 1, 1)`,
               }}
@@ -427,7 +427,7 @@ export function LoginPage({ onSuccess }) {
                       autoComplete="one-time-code"
                       autoFocus
                       disabled={loading}
-                      className="login-input-dark w-full rounded-2xl border-2 px-5 py-4 pl-12 pr-14 text-center text-xl font-bold tracking-[0.5em] outline-none transition-all duration-300 disabled:opacity-70 placeholder:text-slate-400"
+                      className="login-input-dark w-full rounded-2xl border-2 px-5 py-4 pl-12 pr-14 text-center text-lg font-bold tracking-[0.28em] outline-none transition-all duration-300 disabled:opacity-70 placeholder:text-slate-400 sm:text-xl sm:tracking-[0.5em]"
                       style={{ WebkitTextSecurity: showCode ? "none" : "disc" }}
                       aria-invalid={!!error}
                       aria-describedby={error ? "login-error" : undefined}

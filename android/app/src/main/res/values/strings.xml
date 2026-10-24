@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hurghada Dream</string>
+    <string name="title_activity_main">Hurghada Dream</string>
+    <string name="package_name">com.hurghadadream.client</string>
+    <string name="custom_url_scheme">com.hurghadadream.client</string>
+</resources>

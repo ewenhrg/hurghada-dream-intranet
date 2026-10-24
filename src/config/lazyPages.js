@@ -48,6 +48,9 @@ export const InternsPage = lazyWithRetry(() =>
 export const StayBroadcastPage = lazyWithRetry(() =>
   import("../pages/StayBroadcastPage").then((module) => ({ default: module.StayBroadcastPage }))
 );
+export const ClientFlyerPage = lazyWithRetry(() =>
+  import("../pages/ClientFlyerPage").then((module) => ({ default: module.ClientFlyerPage }))
+);
 export {
   RequestPage,
   PublicTarifsPage,
@@ -107,6 +110,7 @@ const PREFETCH_BY_TAB = {
   documents: () => import("../pages/DocumentsPage"),
   appartements: () => import("../pages/InternsPage"),
   "message-sejour": () => import("../pages/StayBroadcastPage"),
+  "flyer-appli": () => import("../pages/ClientFlyerPage"),
   "ewen-dashboard": () => import("../pages/EwenDashboardPage"),
   "public-devis": () => import("../pages/PublicDevisPage"),
   events: () => import("../pages/EventsInboxPage"),

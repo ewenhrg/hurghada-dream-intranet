@@ -61,7 +61,9 @@
       (function () {
         var p = location.pathname;
         var client = "%VITE_CLIENT_APP%" === "true";
-        if (client || /^\/(accueil|catalogue|hotels|demande-hotel|contacts|politique|confidentialite|qui-sommes-nous|tarifs|sejour|mon-sejour|request)(\/|$)/.test(p)) {
+        var intranet = p === "/intranet" || p.indexOf("/intranet/") === 0;
+        var publicPage = p === "/" || /^\/(accueil|catalogue|hotels|demande-hotel|contacts|politique|confidentialite|qui-sommes-nous|tarifs|sejour|mon-sejour|request|b2b|evenements|modification)(\/|$)/.test(p);
+        if (!intranet && (client || publicPage)) {
           document.documentElement.classList.add("hd-public-boot");
         }
       })();

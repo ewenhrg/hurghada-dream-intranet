@@ -179,6 +179,11 @@ export function canSendStayBroadcast(user) {
   return n === "ewen" || n === "karim";
 }
 
+/** Flyer affiché à l’ouverture de l’application — Ewen et Karim uniquement. */
+export function canManageClientFlyer(user) {
+  return canSendStayBroadcast(user);
+}
+
 /** Supprimer une demande / devis hôtel (historique) — Ewen et Karim uniquement. */
 export function canDeleteHotelRequest(user) {
   const n = normalizeIntranetUserName(user?.name);

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { fetchInstagramReels } from "./components/public/InstagramReelsRail";
 import GuestPageLoader from "./components/public/GuestPageLoader";
@@ -28,6 +28,9 @@ import {
 function PublicClientPage() {
   const { pathname } = useLocation();
 
+  if (pathname === "/accueil" || pathname.startsWith("/accueil/")) {
+    return <Navigate to="/" replace />;
+  }
   if (isPublicHomePath(pathname)) {
     return <PublicHomePage />;
   }
