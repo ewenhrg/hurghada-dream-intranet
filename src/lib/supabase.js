@@ -80,6 +80,7 @@ function makeStubClient() {
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
       getUser: () => Promise.resolve({ data: { user: null }, error: null }),
       signInWithPassword: () => Promise.resolve({ data: { session: null }, error: { message: "Supabase non configuré" } }),
+      verifyOtp: () => Promise.resolve({ data: { session: null }, error: { message: "Supabase non configuré" } }),
       signOut: () => Promise.resolve({ error: null }),
       updateUser: () => Promise.resolve({ data: null, error: { message: "Supabase non configuré" } }),
     },

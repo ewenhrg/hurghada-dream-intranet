@@ -4,6 +4,7 @@ import { logger } from "../utils/logger";
 import { dbUserToSessionUser } from "../constants/permissions";
 import { configureUserPermissions } from "../utils/userPermissions";
 import { establishSupabaseWriterSession, isIntranetDatabaseWriterName } from "../utils/intranetSupabaseWriterAuth.js";
+import { openIntranetAuthSession } from "../utils/intranetSession.js";
 import { toast } from "../utils/toast.js";
 
 /* Comptes réduits (perf) : ~170 éléments animés en continu (particules, étoiles, formes...)
@@ -65,14 +66,18 @@ export function LoginPage({ onSuccess }) {
 
     try {
       if (supabase) {
-        const { data, error: fetchError } = await supabase.rpc("intranet_login", {
-          p_code: code,
-        });
-        const payload = data && typeof data === "object" ? data : {};
-        const dbUser = payload.user && typeof payload.user === "object" ? payload.user : null;
+        const sessionResult = await openIntranetAuthSession(supabase, code);
+        const dbUser =
+          sessionResult.user && typeof sessionResult.user === "object" ? sessionResult.user : null;
 
-        if (fetchError || payload.ok !== true || !dbUser) {
-          setError(payload.locked ? "Trop d’essais. Réessayez dans quelques minutes." : "Code incorrect. Réessayez.");
+        if (sessionResult.locked) {
+          setError("Trop d’essais. Réessayez dans quelques minutes.");
+          setCode("");
+          setLoading(false);
+          return;
+        }
+        if (!sessionResult.ok || !dbUser) {
+          setError("Code incorrect. Réessayez.");
           setCode("");
           setLoading(false);
           return;
@@ -87,15 +92,16 @@ export function LoginPage({ onSuccess }) {
         sessionStorage.setItem("hd_ok", "1");
         sessionStorage.setItem("hd_user", JSON.stringify(userPermissions));
 
-        const writerAuth = await establishSupabaseWriterSession(supabase, { ...dbUser, code }, code);
+        // Rédacteurs : si la session ops a été ouverte (pas encore d’email Auth), tenter le compte dédié.
         if (isIntranetDatabaseWriterName(dbUser.name)) {
+          const writerAuth = await establishSupabaseWriterSession(supabase, { ...dbUser, code }, code);
           if (writerAuth.missingEmail) {
             toast.warning(
-              "Compte Ewen/Léa/Sophia/Karim : définissez intranet_auth_email en base (et un utilisateur Auth Supabase avec le même email, mot de passe = code à 6 chiffres) pour modifier ou supprimer utilisateurs et activités."
+              "Compte Ewen/Léa/Sophia/Karim : définissez intranet_auth_email pour gérer utilisateurs et activités."
             );
           } else if (writerAuth.error) {
             toast.error(
-              "Session administrateur base refusée : vérifiez l’email Auth (colonne intranet_auth_email) et que le mot de passe Auth = le code à 6 chiffres."
+              "Session administrateur base refusée : vérifiez intranet_auth_email et le mot de passe Auth (= code à 6 chiffres)."
             );
           }
         }
