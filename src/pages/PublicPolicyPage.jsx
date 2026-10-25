@@ -10,7 +10,7 @@ const REFUND_ROWS = [
 const SPECIAL_CASES = [
   {
     title: "Excursions au Caire et à Louxor",
-    text: "Ces excursions sont modifiables ou annulables uniquement 48 h à l’avance. Passé ce délai, aucune modification ni aucun remboursement n’est possible, quel que soit le motif (maladie, imprévu de dernière minute…).",
+    text: "Ces excursions sont modifiables ou annulables uniquement 72 h à l’avance. Passé ce délai, aucune modification ni aucun remboursement n’est possible, quel que soit le motif (maladie, imprévu de dernière minute…).",
   },
   {
     title: "Le Caire en avion",

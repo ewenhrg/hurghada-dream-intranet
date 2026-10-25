@@ -1,4 +1,5 @@
 import { isProgrammaticStopSale } from "./activitySalesBlackouts";
+import { isCairoByPlaneActivity, isCairoOrLuxorExcursion } from "./ticketSettlement";
 
 const CAIRO = "Africa/Cairo";
 
@@ -54,11 +55,18 @@ function cairoDateTime(dateKey, timeValue) {
   return new Date(utcGuess - (zonedAsUtc - utcGuess));
 }
 
-/** 100 au-delà de 72 h, 50 entre 48 h et 72 h, 0 en dessous de 48 h. */
-export function refundPercent(activityDate, pickupTime, now = new Date()) {
+/**
+ * Barème général : 100 au-delà de 72 h, 50 entre 48 h et 72 h, 0 en dessous de 48 h.
+ * Caire / Louxor : uniquement 72 h à l’avance (sinon 0). Caire en avion : toujours 0.
+ */
+export function refundPercent(activityDate, pickupTime, now = new Date(), activityName = "") {
   const day = String(activityDate || "").slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return 0;
   const hours = (cairoDateTime(day, pickupTime).getTime() - now.getTime()) / 36e5;
+  if (isCairoByPlaneActivity(activityName)) return 0;
+  if (isCairoOrLuxorExcursion(activityName)) {
+    return hours >= 72 ? 100 : 0;
+  }
   if (hours > 72) return 100;
   if (hours >= 48) return 50;
   return 0;

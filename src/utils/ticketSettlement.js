@@ -74,11 +74,11 @@ export function getModificationRefundPolicy({
     };
   }
 
-  if (isCairoOrLuxorExcursion(activityName) && hours < 48) {
+  if (isCairoOrLuxorExcursion(activityName) && hours < 72) {
     return {
       rate: 0,
       label: "Aucun remboursement",
-      reason: "Caire / Louxor : moins de 48 h avant, aucun remboursement.",
+      reason: "Caire / Louxor : moins de 72 h avant, aucun remboursement.",
     };
   }
 

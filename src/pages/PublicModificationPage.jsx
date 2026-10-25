@@ -99,7 +99,7 @@ export function PublicModificationPage() {
     return upcomingOpenDates(chosenActivity, blocked, new Date(), 18, pushed);
   }, [chosenActivity, stops, pushes]);
   const tooLate = item ? modificationTooLate(item.date) : false;
-  const refund = item ? refundPercent(item.date, item.pickupTime) : 0;
+  const refund = item ? refundPercent(item.date, item.pickupTime, new Date(), item.activityName) : 0;
 
   const openDatesFor = (activity) => {
     if (!activity) return [];
