@@ -3,6 +3,8 @@ import { SITE_KEY, getQuoteSiteKeysForSync } from "../constants";
 import { logger } from "./logger";
 import { normalizeTicketNumberKey } from "./ticketCollections";
 import { requestClientStayPush } from "./clientStayPush";
+import { ensureIntranetAuthForQuoteWrites } from "./intranetSession";
+import { loadUserFromSession } from "./userPermissions";
 
 /**
  * Parse `quotes.items` (JSONB) même si double-encodé en string.
@@ -50,6 +52,11 @@ export async function persistQuoteItemsToSupabase(
 ) {
   if (!supabase || !quote) {
     return { ok: false, error: new Error("Supabase ou devis manquant") };
+  }
+
+  const authGate = await ensureIntranetAuthForQuoteWrites(supabase, loadUserFromSession());
+  if (!authGate.ok) {
+    return { ok: false, error: new Error(authGate.message) };
   }
 
   const payload = {

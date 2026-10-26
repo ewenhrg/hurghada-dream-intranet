@@ -108,6 +108,31 @@ export async function openIntranetAuthSession(supabase, sixDigitCode) {
 }
 
 /**
+ * Avant INSERT/UPDATE devis : garantit un JWT Auth (RLS quotes exige authenticated).
+ * @returns {{ ok: true } | { ok: false, reason: string, message: string }}
+ */
+export async function ensureIntranetAuthForQuoteWrites(supabase, sessionUser) {
+  let auth = await ensureValidIntranetSession(supabase, sessionUser, { force: false });
+  if (!auth.ok) {
+    auth = await ensureValidIntranetSession(supabase, sessionUser, { force: true });
+  }
+  if (auth.ok) return { ok: true, reused: auth.reused === true };
+
+  const reason = auth.reason || "auth_failed";
+  const message =
+    reason === "locked"
+      ? "Trop d’essais de connexion. Réessayez dans quelques minutes, puis reconnectez-vous."
+      : reason === "missing_code"
+        ? "Session Auth expirée. Reconnectez-vous avec votre code à 6 chiffres pour enregistrer les devis."
+        : reason === "rls_blocked"
+          ? "Accès devis refusé (RLS). Reconnectez-vous pour ouvrir une session Auth."
+          : "Session Auth manquante : les devis ne peuvent pas être enregistrés. Reconnectez-vous.";
+
+  logger.warn("Écriture devis bloquée : session Auth intranet absente", reason);
+  return { ok: false, reason, message };
+}
+
+/**
  * Au rechargement d’un onglet déjà « connecté » (hd_ok) : réutilise la session Auth
  * ou la rouvre avec le code stocké. Sinon Situation / Data entry restent vides (RLS).
  */

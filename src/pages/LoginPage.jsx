@@ -92,7 +92,8 @@ export function LoginPage({ onSuccess }) {
         sessionStorage.setItem("hd_ok", "1");
         sessionStorage.setItem("hd_user", JSON.stringify(userPermissions));
 
-        // Rédacteurs : si la session ops a été ouverte (pas encore d’email Auth), tenter le compte dédié.
+        // Rédacteurs : compte Auth dédié (écritures users/activities). Ne pas écraser
+        // la session OTP ops si le mot de passe rédacteur est refusé.
         if (isIntranetDatabaseWriterName(dbUser.name)) {
           const writerAuth = await establishSupabaseWriterSession(supabase, { ...dbUser, code }, code);
           if (writerAuth.missingEmail) {
@@ -100,10 +101,26 @@ export function LoginPage({ onSuccess }) {
               "Compte Ewen/Léa/Sophia/Karim : définissez intranet_auth_email pour gérer utilisateurs et activités."
             );
           } else if (writerAuth.error) {
-            toast.error(
-              "Session administrateur base refusée : vérifiez intranet_auth_email et le mot de passe Auth (= code à 6 chiffres)."
+            toast.warning(
+              "Session admin base refusée (mot de passe Auth ≠ code). La session ops reste active pour les devis."
             );
+            const still = await supabase.auth.getSession();
+            if (!still?.data?.session?.access_token) {
+              const restored = await openIntranetAuthSession(supabase, code);
+              if (!restored.ok) {
+                setError("Session Auth perdue. Réessayez de vous connecter.");
+                setLoading(false);
+                return;
+              }
+            }
           }
+        }
+
+        const { data: liveSession } = await supabase.auth.getSession();
+        if (!liveSession?.session?.access_token) {
+          setError("Session Auth non ouverte : impossible d’enregistrer les devis. Réessayez.");
+          setLoading(false);
+          return;
         }
 
         onSuccess();

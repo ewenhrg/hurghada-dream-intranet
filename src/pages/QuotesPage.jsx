@@ -10,6 +10,8 @@ import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
+import { ensureIntranetAuthForQuoteWrites } from "../utils/intranetSession.js";
+import { loadUserFromSession } from "../utils/userPermissions.js";
 import { StopPushSalesSummary } from "../components/quotes/StopPushSalesSummary";
 import { PaymentModal } from "../components/quotes/PaymentModal";
 import { QuoteSummary } from "../components/quotes/QuoteSummary";
@@ -1266,83 +1268,90 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
     // Envoyer à Supabase si configuré
     if (supabase) {
       try {
-        // Préparer les dates : convertir les chaînes vides en null pour Supabase
-        const arrivalDate = q.clientArrivalDate || q.client?.arrivalDate || "";
-        const departureDate = q.clientDepartureDate || q.client?.departureDate || "";
-        
-        const supabaseData = {
-          site_key: SITE_KEY,
-          client_name: q.client.name || "",
-          client_phone: q.client.phone || "",
-          client_emergency_phone: q.client.emergencyPhone || "",
-          client_email: q.client.email || "",
-          client_hotel: q.client.hotel || "",
-          client_room: q.client.room || "",
-          client_neighborhood: q.client.neighborhood || "",
-          client_arrival_date: arrivalDate || null, // Convertir chaîne vide en null
-          client_departure_date: departureDate || null, // Convertir chaîne vide en null
-          ...buildSecondHotelDbFields(q.client),
-          ...buildAirbnbDbFields(q.client),
-          notes: q.notes || "",
-          total: q.total,
-          currency: q.currency,
-          items: JSON.stringify(q.items),
-          created_by_name: q.createdByName || "",
-          source: q.source || QUOTE_SOURCE_MANUAL,
-          created_at: q.createdAt,
-          updated_at: q.createdAt, // Initialiser updated_at avec la date de création
-        };
-
-        logger.log("🔄 Envoi du devis à Supabase:", supabaseData);
-        let { data, error } = await supabase.from("quotes").insert(supabaseData).select().single();
-
-        if (isMissingSecondHotelColumnError(error)) {
-          logger.warn(
-            "Colonnes double hôtel absentes — insert sans ces champs. Exécutez supabase_quotes_add_second_hotel.sql"
-          );
-          ({ data, error } = await supabase
-            .from("quotes")
-            .insert(stripSecondHotelColumns(supabaseData))
-            .select()
-            .single());
-        }
-
-        if (isMissingAirbnbColumnError(error)) {
-          logger.warn(
-            "Colonnes Airbnb absentes — insert sans ces champs. Exécutez supabase_quotes_add_airbnb_maps.sql"
-          );
-          ({ data, error } = await supabase
-            .from("quotes")
-            .insert(stripAirbnbColumns(stripSecondHotelColumns(supabaseData)))
-            .select()
-            .single());
-        }
-
-        if (isMissingQuoteSourceColumnError(error)) {
-          logger.warn(
-            "Colonne source absente — insert sans ce champ. Exécutez supabase_quotes_add_source.sql"
-          );
-          ({ data, error } = await supabase
-            .from("quotes")
-            .insert(stripQuoteSourceColumn(stripAirbnbColumns(stripSecondHotelColumns(supabaseData))))
-            .select()
-            .single());
-        }
-
-        if (error) {
-          logger.error("❌ ERREUR Supabase (création devis):", error);
-          logger.error("Détails:", JSON.stringify(error, null, 2));
-          
-          // Toujours afficher l'erreur pour le debug
+        const authGate = await ensureIntranetAuthForQuoteWrites(
+          supabase,
+          loadUserFromSession()
+        );
+        if (!authGate.ok) {
           toast.error(
-            "Erreur Supabase (création devis). Vérifiez la console pour plus de détails. Le devis est quand même enregistré en local."
+            `${authGate.message} Le devis est enregistré en local uniquement.`
           );
         } else {
-          logger.log("✅ Devis créé avec succès dans Supabase!");
-          logger.log("Réponse:", data);
-          
-          // Mettre à jour le devis local avec le supabase_id retourné
-          if (data && data.id) {
+          // Préparer les dates : convertir les chaînes vides en null pour Supabase
+          const arrivalDate = q.clientArrivalDate || q.client?.arrivalDate || "";
+          const departureDate = q.clientDepartureDate || q.client?.departureDate || "";
+
+          const supabaseData = {
+            site_key: SITE_KEY,
+            client_name: q.client.name || "",
+            client_phone: q.client.phone || "",
+            client_emergency_phone: q.client.emergencyPhone || "",
+            client_email: q.client.email || "",
+            client_hotel: q.client.hotel || "",
+            client_room: q.client.room || "",
+            client_neighborhood: q.client.neighborhood || "",
+            client_arrival_date: arrivalDate || null, // Convertir chaîne vide en null
+            client_departure_date: departureDate || null, // Convertir chaîne vide en null
+            ...buildSecondHotelDbFields(q.client),
+            ...buildAirbnbDbFields(q.client),
+            notes: q.notes || "",
+            total: q.total,
+            currency: q.currency,
+            items: Array.isArray(q.items) ? q.items : [],
+            created_by_name: q.createdByName || "",
+            source: q.source || QUOTE_SOURCE_MANUAL,
+            created_at: q.createdAt,
+            updated_at: q.createdAt, // Initialiser updated_at avec la date de création
+          };
+
+          logger.log("🔄 Envoi du devis à Supabase:", supabaseData);
+          let { data, error } = await supabase.from("quotes").insert(supabaseData).select().single();
+
+          if (isMissingSecondHotelColumnError(error)) {
+            logger.warn(
+              "Colonnes double hôtel absentes — insert sans ces champs. Exécutez supabase_quotes_add_second_hotel.sql"
+            );
+            ({ data, error } = await supabase
+              .from("quotes")
+              .insert(stripSecondHotelColumns(supabaseData))
+              .select()
+              .single());
+          }
+
+          if (isMissingAirbnbColumnError(error)) {
+            logger.warn(
+              "Colonnes Airbnb absentes — insert sans ces champs. Exécutez supabase_quotes_add_airbnb_maps.sql"
+            );
+            ({ data, error } = await supabase
+              .from("quotes")
+              .insert(stripAirbnbColumns(stripSecondHotelColumns(supabaseData)))
+              .select()
+              .single());
+          }
+
+          if (isMissingQuoteSourceColumnError(error)) {
+            logger.warn(
+              "Colonne source absente — insert sans ce champ. Exécutez supabase_quotes_add_source.sql"
+            );
+            ({ data, error } = await supabase
+              .from("quotes")
+              .insert(stripQuoteSourceColumn(stripAirbnbColumns(stripSecondHotelColumns(supabaseData))))
+              .select()
+              .single());
+          }
+
+          if (error) {
+            logger.error("❌ ERREUR Supabase (création devis):", error);
+            logger.error("Détails:", JSON.stringify(error, null, 2));
+            const rlsHint =
+              error?.code === "42501" || /row-level security/i.test(String(error?.message || ""))
+                ? " Session Auth manquante ou expirée : reconnectez-vous avec votre code."
+                : "";
+            toast.error(
+              `Erreur Supabase (création devis).${rlsHint} Le devis est quand même enregistré en local.`
+            );
+          } else if (data && data.id) {
+            logger.log("✅ Devis créé avec succès dans Supabase!", data);
             setQuotes((prev) => {
               const updated = prev.map((quote) => {
                 if (quote.id === q.id) {
@@ -1350,8 +1359,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                     ...quote,
                     supabase_id: data.id,
                     updated_at: data.updated_at || data.created_at || quote.createdAt,
-                    // Garder l'ID local original pour éviter les problèmes de synchronisation
-                    // Le supabase_id sera utilisé pour les requêtes Supabase
                   };
                 }
                 return quote;
