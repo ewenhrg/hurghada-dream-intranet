@@ -11,7 +11,7 @@ import {
   isAllowedCatalogImageUrl,
   normalizeCatalogImageUrlsFromDb,
 } from "../utils/catalogContent";
-import { canAccessHotelsPage } from "../constants/permissions.js";
+import { hasFullIntranetAccess } from "../constants/permissions.js";
 
 // Bucket principal aligné avec la config Supabase actuelle du projet.
 const CATALOG_IMAGES_BUCKET = "documents";
@@ -21,7 +21,7 @@ const MAX_CATALOG_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_CATALOG_IMAGE_SIZE_MB = 10;
 
 function canEditCatalog(user) {
-  return canAccessHotelsPage(user);
+  return hasFullIntranetAccess(user);
 }
 
 function categoryLabel(key) {

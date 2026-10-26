@@ -1,9 +1,9 @@
-import { canAccessHotelsPage } from "../constants/permissions.js";
+import { hasFullIntranetAccess } from "../constants/permissions.js";
 import { logger } from "./logger.js";
 
 /** Comptes autorisés à ouvrir une session Supabase Auth pour les écritures RLS (users / activities). */
 export function isIntranetDatabaseWriterName(name) {
-  return canAccessHotelsPage({ name });
+  return hasFullIntranetAccess({ name });
 }
 
 /**

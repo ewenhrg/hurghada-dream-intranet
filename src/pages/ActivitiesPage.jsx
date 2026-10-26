@@ -30,7 +30,7 @@ import {
   loadActivitiesAutoSnapshot,
 } from "../utils/activitiesBackup";
 import { activitiesTableHasBabiesForbiddenColumn } from "../config/supabaseActivitiesSchema";
-import { canAccessHotelsPage, hasFullIntranetAccess } from "../constants/permissions.js";
+import { hasFullIntranetAccess } from "../constants/permissions.js";
 
 /**
  * Ligne de table : style épuré.
@@ -158,7 +158,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
   // Écritures activités (RLS Supabase) : Ewen / Léa / Sophia / Karim
-  const canModifyActivities = canAccessHotelsPage(user);
+  const canModifyActivities = hasFullIntranetAccess(user);
   const hasFullAccess = hasFullIntranetAccess(user);
 
   // Map des activités pour des recherches O(1) au lieu de O(n)

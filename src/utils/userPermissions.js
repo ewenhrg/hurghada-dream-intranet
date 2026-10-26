@@ -4,28 +4,11 @@
  */
 
 import { logger } from "./logger";
-import { getDefaultPermissionForm, hasFullIntranetAccess } from "../constants/permissions";
+import { getDefaultPermissionForm } from "../constants/permissions";
 
 /**
- * Accorde tous les droits d’accès (comme Ewen).
- * @param {Object} userData
- */
-function applyFullIntranetPermissions(userData) {
-  userData.canDeleteQuote = true;
-  userData.canAddActivity = true;
-  userData.canEditActivity = true;
-  userData.canDeleteActivity = true;
-  userData.canResetData = true;
-  userData.canAccessActivities = true;
-  userData.canAccessHistory = true;
-  userData.canAccessTickets = true;
-  userData.canAccessModifications = true;
-  userData.canAccessSituation = true;
-  userData.canAccessUsers = true;
-}
-
-/**
- * Applique les valeurs par défaut manquantes puis les overrides accès complet (Ewen / Léa / Sophia / Karim)
+ * Applique les valeurs par défaut manquantes.
+ * Ne force plus tous les accès pour Ewen/Léa/Sophia/Karim : les cases en base font foi.
  * @param {Object} userData - Données utilisateur (session)
  * @returns {Object|null} - Données utilisateur avec permissions configurées
  */
@@ -38,10 +21,6 @@ export function configureUserPermissions(userData) {
       userData[key] = value;
     }
   });
-
-  if (hasFullIntranetAccess(userData)) {
-    applyFullIntranetPermissions(userData);
-  }
 
   return userData;
 }

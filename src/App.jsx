@@ -9,7 +9,30 @@ import {
   getQuoteSiteKeysForSync,
   getQuotesRealtimeSiteKeyFilter,
 } from "./constants";
-import { canAccessDataEntryPage, canAccessEventsPage, canAccessHotelsPage, canAccessHotelHistoryPage, canAccessInternsPage, canAccessReceiptPage, canManageClientFlyer, canSendStayBroadcast, canVoidTicketNumbers, hasFullIntranetAccess } from "./constants/permissions";
+import {
+  canAccessB2bPages,
+  canAccessCatalogAdminPage,
+  canAccessDataEntryPage,
+  canAccessDevisPage,
+  canAccessDocumentsPage,
+  canAccessEventsPage,
+  canAccessEwenDashboardPage,
+  canAccessHotelsPage,
+  canAccessHotelHistoryPage,
+  canAccessInternsPage,
+  canAccessModifDemandesPage,
+  canAccessPlanningPage,
+  canAccessPublicDevisPage,
+  canAccessReceiptPage,
+  canAccessStopSalePage,
+  canAccessTicketsPage,
+  canAccessTransfersPage,
+  canAccessUsersPage,
+  canManageClientFlyer,
+  canSendStayBroadcast,
+  canVoidTicketNumbers,
+  hasFullIntranetAccess,
+} from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, saveQuotesCache, loadLS, normalizeQuoteItemsFromDb } from "./utils";
 import { runWhenIdle } from "./utils/idle";
 import { attachTicketPaymentMetaFromItems } from "./utils/ticketCollections";
@@ -1553,21 +1576,22 @@ export default function App() {
               }}
             >
               <div className="hd-intranet-nav flex w-full min-w-0 flex-nowrap gap-2 overflow-x-auto pb-1 md:flex-wrap md:gap-2.5 md:overflow-visible md:pb-0">
+                {canAccessDevisPage(user) && (
                 <Pill data-tab="devis" active={tab === "devis"} onClick={() => setTab("devis")}>
                   {t("nav.devis")}
                 </Pill>
+                )}
                 {user?.canAccessActivities !== false && (
                 <Pill data-tab="activities" active={tab === "activities"} onClick={() => setTab("activities")}>
                   {t("nav.activities")}
                 </Pill>
                 )}
-                {user?.canAccessActivities !== false && (
+                {canAccessPlanningPage(user) && (
                 <Pill data-tab="planning" active={tab === "planning"} onClick={() => setTab("planning")}>
                   {t("nav.planning")}
                 </Pill>
                 )}
-                {user?.canAccessActivities !== false &&
-                  (user?.canEditActivity === true || hasFullIntranetAccess(user)) && (
+                {canAccessCatalogAdminPage(user) && (
                     <Pill data-tab="catalog-admin" active={tab === "catalog-admin"} onClick={() => setTab("catalog-admin")}>
                       {t("nav.catalogAdmin")}
                     </Pill>
@@ -1577,7 +1601,7 @@ export default function App() {
                   {t("nav.history")}
                   </Pill>
                 )}
-                {user?.canAccessHistory !== false && (
+                {canAccessTicketsPage(user) && (
                 <Pill data-tab="tickets" active={tab === "tickets"} onClick={() => setTab("tickets")}>
                   {t("nav.tickets")}
                 </Pill>
@@ -1592,12 +1616,12 @@ export default function App() {
                   Receipt
                 </Pill>
                 )}
-                {user?.canAccessHistory !== false && (
+                {canAccessB2bPages(user) && (
                 <Pill data-tab="b2b-access" active={tab === "b2b-access"} onClick={() => setTab("b2b-access")}>
                   Accès B2B
                 </Pill>
                 )}
-                {user?.canAccessHistory !== false && (
+                {canAccessB2bPages(user) && (
                 <Pill data-tab="b2b-quotes" active={tab === "b2b-quotes"} onClick={() => setTab("b2b-quotes")}>
                   Devis B2B
                 </Pill>
@@ -1607,7 +1631,7 @@ export default function App() {
                   Événementiel
                 </Pill>
                 )}
-                {user?.canAccessHistory !== false && (
+                {canAccessPublicDevisPage(user) && (
                 <Pill data-tab="public-devis" active={tab === "public-devis"} onClick={() => setTab("public-devis")}>
                   <span className="inline-flex items-center gap-1.5">
                     {t("nav.publicDevis")}
@@ -1627,7 +1651,7 @@ export default function App() {
                   Hotel history
                 </Pill>
                 )}
-                {user?.canAccessHistory !== false && (
+                {user?.canAccessModifications === true && (
                   <Pill data-tab="modifications" active={tab === "modifications"} onClick={() => setTab("modifications")}>
                     {t("nav.modifications")}
                   </Pill>
@@ -1637,7 +1661,7 @@ export default function App() {
                     N° annulés
                   </Pill>
                 )}
-                {user?.canAccessHistory !== false && (
+                {canAccessModifDemandesPage(user) && (
                   <Pill data-tab="modif-demandes" active={tab === "modif-demandes"} onClick={() => setTab("modif-demandes")}>
                     <span className="inline-flex items-center gap-1.5">
                       Demandes modif
@@ -1652,17 +1676,17 @@ export default function App() {
                     </span>
                   </Pill>
                 )}
-                {!SITUATION_PAGE_STANDBY && (
+                        {!SITUATION_PAGE_STANDBY && canAccessTransfersPage(user) && (
                   <Pill data-tab="situation" active={tab === "situation"} onClick={() => setTab("situation")}>
                     📱 {t("nav.situation")}
                   </Pill>
                 )}
-                {(user?.canAccessSituation || hasFullIntranetAccess(user) || user?.name === "situation") && (
+                {canAccessStopSalePage(user) && (
                   <Pill data-tab="stopsale" active={tab === "stopsale"} onClick={() => setTab("stopsale")}>
                     🛑 Stop &amp; Push
                   </Pill>
                 )}
-                {(user?.canResetData || user?.canAccessUsers || hasFullIntranetAccess(user)) && (
+                {canAccessUsersPage(user) && (
                   <Pill data-tab="users" active={tab === "users"} onClick={() => setTab("users")}>
                     {t("nav.users")}
                   </Pill>
@@ -1682,7 +1706,7 @@ export default function App() {
                     Tarifs hôtel
                   </Pill>
                 )}
-                {hasFullIntranetAccess(user) && (
+                {canAccessEwenDashboardPage(user) && (
                   <Pill data-tab="ewen-dashboard" active={tab === "ewen-dashboard"} onClick={() => setTab("ewen-dashboard")}>
                     {t("nav.ewenDashboard")}
                   </Pill>
@@ -1702,9 +1726,11 @@ export default function App() {
                     Flyer appli
                   </Pill>
                 )}
+                {canAccessDocumentsPage(user) && (
                 <Pill data-tab="documents" active={tab === "documents"} onClick={() => setTab("documents")}>
                   {t("nav.documents")}
                 </Pill>
+                )}
               </div>
             </nav>
           </div>
@@ -1714,7 +1740,7 @@ export default function App() {
       {/* CONTENU CENTRÉ */}
       <main className={mainClassName}>
         <PageTransition transitionKey={tab}>
-        {tab === "devis" ? (
+        {tab === "devis" && canAccessDevisPage(user) ? (
           <div className="mx-auto max-w-7xl px-2 md:px-3 lg:px-6">
               
               <div className="space-y-6 md:space-y-10 p-1 sm:p-2 md:p-3">
@@ -1747,7 +1773,7 @@ export default function App() {
                 </ErrorBoundary>
               </div>
           </div>
-        ) : (
+        ) : tab === "devis" ? null : (
           <div
             className={`${contentContainerClassName} animate-page-enter`}
             style={{ 
@@ -1783,19 +1809,17 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "planning" && user?.canAccessActivities !== false && (
+        {tab === "planning" && canAccessPlanningPage(user) && (
           <Section title={t("page.planning.title")} subtitle={t("page.planning.subtitle")}>
             <PlanningPage activities={activities} />
           </Section>
         )}
 
-        {tab === "catalog-admin" &&
-          user?.canAccessActivities !== false &&
-          (user?.canEditActivity === true || hasFullIntranetAccess(user)) && (
+        {tab === "catalog-admin" && canAccessCatalogAdminPage(user) && (
             <Section
               title={t("page.catalogAdmin.title")}
               subtitle={
-                !canAccessHotelsPage(user)
+                !hasFullIntranetAccess(user)
                   ? "Consultation du catalogue public. Seuls Ewen, Léa, Sophia et Karim peuvent enregistrer des changements en base."
                   : t("page.catalogAdmin.subtitle")
               }
@@ -1804,7 +1828,7 @@ export default function App() {
                 activities={activities}
                 setActivities={setActivities}
                 user={user}
-                readOnly={!canAccessHotelsPage(user)}
+                readOnly={!hasFullIntranetAccess(user)}
               />
             </Section>
           )}
@@ -1821,7 +1845,7 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "tickets" && user?.canAccessHistory !== false && (
+        {tab === "tickets" && canAccessTicketsPage(user) && (
           <Section
             title={t("page.tickets.title")}
             subtitle={t("page.tickets.subtitle")}
@@ -1857,19 +1881,19 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "public-devis" && user?.canAccessHistory !== false && (
+        {tab === "public-devis" && canAccessPublicDevisPage(user) && (
           <Section title={t("page.publicDevis.title")} subtitle={t("page.publicDevis.subtitle")}>
             <PublicDevisPage user={user} />
           </Section>
         )}
 
-        {tab === "b2b-access" && user?.canAccessHistory !== false && (
+        {tab === "b2b-access" && canAccessB2bPages(user) && (
           <Section title="Accès B2B" subtitle="Demandes d’identifiant et comptes agences.">
             <B2BAccessPage />
           </Section>
         )}
 
-        {tab === "b2b-quotes" && user?.canAccessHistory !== false && (
+        {tab === "b2b-quotes" && canAccessB2bPages(user) && (
           <Section title="Devis B2B" subtitle="Demandes envoyées par les agences, sans prix affiché.">
             <B2BQuotesPage />
           </Section>
@@ -1881,13 +1905,13 @@ export default function App() {
           </Section>
         )}
 
-        {tab === "modif-demandes" && user?.canAccessHistory !== false && (
+        {tab === "modif-demandes" && canAccessModifDemandesPage(user) && (
           <Section title="Demandes modif" subtitle="Demandes du site client. Valider met à jour Situation, les transferts et Mon séjour.">
             <ModificationRequestsPage quotes={quotes} setQuotes={setQuotes} activities={activities} />
           </Section>
         )}
 
-        {tab === "modifications" && user?.canAccessHistory !== false && (
+        {tab === "modifications" && user?.canAccessModifications === true && (
           <Section
             title={t("page.modifications.title")}
             subtitle={t("page.modifications.subtitle")}
@@ -1905,17 +1929,17 @@ export default function App() {
           </Section>
         )}
 
-        {!SITUATION_PAGE_STANDBY && tab === "situation" && (
+        {!SITUATION_PAGE_STANDBY && tab === "situation" && canAccessTransfersPage(user) && (
           <SituationPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
         )}
 
-        {tab === "stopsale" && (user?.canAccessSituation || hasFullIntranetAccess(user) || user?.name === "situation") && (
+        {tab === "stopsale" && canAccessStopSalePage(user) && (
           <Section title="Stop Sale &amp; Push Sale" subtitle="Gérez les arrêts de vente et les ouvertures exceptionnelles">
             <StopSalePage activities={activities} user={user} />
           </Section>
         )}
 
-          {tab === "users" && (user?.canResetData || user?.canAccessUsers || hasFullIntranetAccess(user)) && (
+          {tab === "users" && canAccessUsersPage(user) && (
             <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")}>
               <UsersPage user={user} />
             </Section>
@@ -1957,7 +1981,7 @@ export default function App() {
             </Section>
           )}
 
-          {tab === "ewen-dashboard" && hasFullIntranetAccess(user) && (
+          {tab === "ewen-dashboard" && canAccessEwenDashboardPage(user) && (
             <Section title={t("page.ewenDashboard.title")} subtitle={t("page.ewenDashboard.subtitle")}>
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
@@ -2013,7 +2037,7 @@ export default function App() {
             </Section>
           )}
 
-          {tab === "documents" && (
+          {tab === "documents" && canAccessDocumentsPage(user) && (
             <Section title={t("page.documents.title")} subtitle={t("page.documents.subtitle")}>
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>

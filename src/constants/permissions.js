@@ -10,12 +10,31 @@ export const PERMISSION_DB_TO_FORM = {
   can_edit_activity: "canEditActivity",
   can_delete_activity: "canDeleteActivity",
   can_reset_data: "canResetData",
+  can_access_devis: "canAccessDevis",
   can_access_activities: "canAccessActivities",
+  can_access_planning: "canAccessPlanning",
+  can_access_catalog_admin: "canAccessCatalogAdmin",
   can_access_history: "canAccessHistory",
   can_access_tickets: "canAccessTickets",
+  can_access_data_entry: "canAccessDataEntry",
+  can_access_receipt: "canAccessReceipt",
+  can_access_b2b: "canAccessB2b",
+  can_access_events: "canAccessEvents",
+  can_access_public_devis: "canAccessPublicDevis",
+  can_access_hotel_history: "canAccessHotelHistory",
   can_access_modifications: "canAccessModifications",
+  can_access_void_tickets: "canAccessVoidTickets",
+  can_access_modif_demandes: "canAccessModifDemandes",
   can_access_situation: "canAccessSituation",
+  can_access_stop_sale: "canAccessStopSale",
   can_access_users: "canAccessUsers",
+  can_access_hotels: "canAccessHotels",
+  can_access_interns: "canAccessInterns",
+  can_access_stay_broadcast: "canAccessStayBroadcast",
+  can_access_flyer: "canAccessFlyer",
+  can_access_documents: "canAccessDocuments",
+  can_access_ewen_dashboard: "canAccessEwenDashboard",
+  can_access_activity_prices: "canAccessActivityPrices",
 };
 
 /** Clé formulaire → clé base */
@@ -31,14 +50,52 @@ export const PERMISSION_GROUPS = [
   {
     id: "page_access",
     label: "Accès aux pages",
-    description: "Pages visibles dans le menu. Si une page est décochée, l’utilisateur ne la verra pas.",
+    description:
+      "Cochez chaque page du menu. Si une case est décochée, l’utilisateur ne la voit pas et ne peut pas y accéder. Il devra se reconnecter après enregistrement.",
     permissions: [
-      { formKey: "canAccessActivities", label: "Page Activités", defaultValue: true },
-      { formKey: "canAccessHistory", label: "Page Historique", defaultValue: true },
-      { formKey: "canAccessTickets", label: "Page Situation", defaultValue: true },
-      { formKey: "canAccessModifications", label: "Page Modifications", defaultValue: false },
-      { formKey: "canAccessSituation", label: "Page Situation", defaultValue: false },
-      { formKey: "canAccessUsers", label: "Page Utilisateurs", defaultValue: false },
+      { formKey: "canAccessDevis", label: "Devis", defaultValue: true },
+      { formKey: "canAccessActivities", label: "Activités", defaultValue: true },
+      { formKey: "canAccessPlanning", label: "Planning", defaultValue: true },
+      { formKey: "canAccessCatalogAdmin", label: "Catalogue admin", defaultValue: false },
+      { formKey: "canAccessHistory", label: "Historique", defaultValue: true },
+      {
+        formKey: "canAccessTickets",
+        label: "Situation (tickets)",
+        description: "Liste des tickets / situation commerciale",
+        defaultValue: true,
+      },
+      { formKey: "canAccessDataEntry", label: "Data entry", defaultValue: false },
+      { formKey: "canAccessReceipt", label: "Receipt", defaultValue: false },
+      { formKey: "canAccessB2b", label: "Accès B2B + Devis B2B", defaultValue: false },
+      { formKey: "canAccessEvents", label: "Événementiel", defaultValue: false },
+      { formKey: "canAccessPublicDevis", label: "Devis web / demandes publiques", defaultValue: false },
+      { formKey: "canAccessHotelHistory", label: "Hotel history", defaultValue: false },
+      { formKey: "canAccessModifications", label: "Modifications tickets", defaultValue: false },
+      { formKey: "canAccessVoidTickets", label: "N° annulés", defaultValue: false },
+      { formKey: "canAccessModifDemandes", label: "Demandes modif", defaultValue: false },
+      {
+        formKey: "canAccessSituation",
+        label: "Transferts",
+        description: "Situation du jour / transferts",
+        defaultValue: false,
+      },
+      { formKey: "canAccessStopSale", label: "Stop & Push", defaultValue: false },
+      { formKey: "canAccessUsers", label: "Utilisateurs", defaultValue: false },
+      {
+        formKey: "canAccessHotels",
+        label: "Hôtels + catalogue + tarifs",
+        defaultValue: false,
+      },
+      { formKey: "canAccessInterns", label: "Appartement / stagiaires", defaultValue: false },
+      { formKey: "canAccessStayBroadcast", label: "Message séjour", defaultValue: false },
+      { formKey: "canAccessFlyer", label: "Flyer appli", defaultValue: false },
+      { formKey: "canAccessDocuments", label: "Documents", defaultValue: true },
+      { formKey: "canAccessEwenDashboard", label: "Tableau de bord Ewen", defaultValue: false },
+      {
+        formKey: "canAccessActivityPrices",
+        label: "Maj prix (dans Activités)",
+        defaultValue: false,
+      },
     ],
   },
   {
@@ -55,12 +112,22 @@ export const PERMISSION_GROUPS = [
   {
     id: "admin",
     label: "Administration",
-    description: "Accès à la gestion des utilisateurs et aux actions sensibles.",
+    description: "Actions sensibles (en plus de la page Utilisateurs).",
     permissions: [
-      { formKey: "canResetData", label: "Réinitialiser les données (accès admin)", defaultValue: false },
+      { formKey: "canResetData", label: "Réinitialiser les données", defaultValue: false },
     ],
   },
 ];
+
+/** Pages à opt-out : true sauf si explicitement false en base */
+const ACCESS_DEFAULT_TRUE = new Set([
+  "canAccessDevis",
+  "canAccessActivities",
+  "canAccessPlanning",
+  "canAccessHistory",
+  "canAccessTickets",
+  "canAccessDocuments",
+]);
 
 /** Valeurs par défaut du formulaire (toutes les clés) */
 export function getDefaultPermissionForm() {
@@ -83,12 +150,21 @@ export function normalizeIntranetUserName(name) {
 }
 
 /**
- * Accès complet type Ewen : mêmes pages, outils et infos
- * (Ewen, Léa / Lea, Sophia, Karim).
+ * Accès « équipe cœur » (écritures Auth users/activités, etc.)
+ * Ne force plus toutes les pages : les cases cochées en base font foi.
  */
 export function hasFullIntranetAccess(user) {
   const n = normalizeIntranetUserName(user?.name);
   return n === "ewen" || n === "lea" || n === "sophia" || n === "karim";
+}
+
+function readAccessFlag(user, formKey) {
+  if (!user) return false;
+  const value = user[formKey];
+  if (ACCESS_DEFAULT_TRUE.has(formKey)) {
+    return value !== false;
+  }
+  return value === true;
 }
 
 /**
@@ -102,8 +178,12 @@ export function dbUserToFormUser(dbUser) {
     ...getDefaultPermissionForm(),
   };
   Object.entries(PERMISSION_DB_TO_FORM).forEach(([dbKey, formKey]) => {
+    if (!(dbKey in dbUser)) {
+      // Colonne absente du SELECT / schéma : garder le défaut formulaire
+      return;
+    }
     const value = dbUser[dbKey];
-    if (dbKey.startsWith("can_access_")) {
+    if (ACCESS_DEFAULT_TRUE.has(formKey)) {
       form[formKey] = value !== false;
     } else {
       form[formKey] = Boolean(value);
@@ -128,26 +208,14 @@ export function formToDbUser(form) {
   return db;
 }
 
-/**
- * Construit l’objet utilisateur pour la session (camelCase) à partir des données Supabase
- * Utilisé après login pour stocker en sessionStorage
- */
-/** Accès page Hôtels (menu + contenu) — Ewen, Léa, Sophia et Karim. */
+/** Accès page Hôtels (menu + contenu). */
 export function canAccessHotelsPage(user) {
-  return hasFullIntranetAccess(user);
+  return readAccessFlag(user, "canAccessHotels");
 }
 
-/** Accès page Historique hôtel — Amr, Karim, Ewen, Sara, Mayar, Léa uniquement. */
+/** Accès page Historique hôtel. */
 export function canAccessHotelHistoryPage(user) {
-  const n = normalizeIntranetUserName(user?.name);
-  return (
-    n === "amr" ||
-    n === "karim" ||
-    n === "ewen" ||
-    n === "sara" ||
-    n === "mayar" ||
-    n === "lea"
-  );
+  return readAccessFlag(user, "canAccessHotelHistory");
 }
 
 /** Modifier / supprimer une ligne ticket (page Tickets) — Ewen, Karim et Léa. */
@@ -162,26 +230,24 @@ export function canEditAutoAssignedTicketNumbers(user) {
   return n === "ewen" || n === "karim";
 }
 
-/** Annuler définitivement un numéro, même jamais attribué — Ewen et Karim uniquement. */
+/** Annuler définitivement un numéro — droit page N° annulés. */
 export function canVoidTicketNumbers(user) {
-  return canEditAutoAssignedTicketNumbers(user);
+  return readAccessFlag(user, "canAccessVoidTickets");
 }
 
-/** Page Stagiaires (planning / appartements / CV) — Ewen et Karim uniquement. */
+/** Page Stagiaires. */
 export function canAccessInternsPage(user) {
-  const n = normalizeIntranetUserName(user?.name);
-  return n === "ewen" || n === "karim";
+  return readAccessFlag(user, "canAccessInterns");
 }
 
-/** Message push aux clients qui ont ouvert Mon séjour — Ewen et Karim uniquement. */
+/** Message push séjour. */
 export function canSendStayBroadcast(user) {
-  const n = normalizeIntranetUserName(user?.name);
-  return n === "ewen" || n === "karim";
+  return readAccessFlag(user, "canAccessStayBroadcast");
 }
 
-/** Flyer affiché à l’ouverture de l’application — Ewen et Karim uniquement. */
+/** Flyer appli. */
 export function canManageClientFlyer(user) {
-  return canSendStayBroadcast(user);
+  return readAccessFlag(user, "canAccessFlyer");
 }
 
 /** Supprimer une demande / devis hôtel (historique) — Ewen et Karim uniquement. */
@@ -190,30 +256,78 @@ export function canDeleteHotelRequest(user) {
   return n === "ewen" || n === "karim";
 }
 
-/** Suivi encaissements cash / Stripe (tableau de bord) — Ewen et Karim uniquement. */
+/** Suivi encaissements cash / Stripe — Ewen et Karim uniquement. */
 export function canViewTicketCollections(user) {
   const n = normalizeIntranetUserName(user?.name);
   return n === "ewen" || n === "karim";
 }
 
-/** Page Receipt — Ewen, Ramy et Karim uniquement. */
+/** Page Receipt. */
 export function canAccessReceiptPage(user) {
-  const n = normalizeIntranetUserName(user?.name);
-  return n === "ewen" || n === "ramy" || n === "karim";
+  return readAccessFlag(user, "canAccessReceipt");
 }
 
-/** Page Événementiel — Sophia, Ewen et Karim uniquement. */
+/** Page Événementiel. */
 export function canAccessEventsPage(user) {
-  const n = normalizeIntranetUserName(user?.name);
-  return n === "sophia" || n === "ewen" || n === "karim";
+  return readAccessFlag(user, "canAccessEvents");
 }
 
-/** Page Data entry — comptes Situation, Ewen et Karim uniquement. */
+/** Page Data entry. */
 export function canAccessDataEntryPage(user) {
-  const n = normalizeIntranetUserName(user?.name);
-  return n === "situation" || n === "ewen" || n === "karim";
+  return readAccessFlag(user, "canAccessDataEntry");
 }
 
+export function canAccessDevisPage(user) {
+  return readAccessFlag(user, "canAccessDevis");
+}
+
+export function canAccessPlanningPage(user) {
+  return readAccessFlag(user, "canAccessPlanning");
+}
+
+export function canAccessCatalogAdminPage(user) {
+  return readAccessFlag(user, "canAccessCatalogAdmin") || user?.canEditActivity === true;
+}
+
+export function canAccessB2bPages(user) {
+  return readAccessFlag(user, "canAccessB2b");
+}
+
+export function canAccessPublicDevisPage(user) {
+  return readAccessFlag(user, "canAccessPublicDevis");
+}
+
+export function canAccessModifDemandesPage(user) {
+  return readAccessFlag(user, "canAccessModifDemandes");
+}
+
+export function canAccessStopSalePage(user) {
+  return readAccessFlag(user, "canAccessStopSale");
+}
+
+export function canAccessDocumentsPage(user) {
+  return readAccessFlag(user, "canAccessDocuments");
+}
+
+export function canAccessEwenDashboardPage(user) {
+  return readAccessFlag(user, "canAccessEwenDashboard");
+}
+
+export function canAccessTicketsPage(user) {
+  return readAccessFlag(user, "canAccessTickets");
+}
+
+export function canAccessTransfersPage(user) {
+  return readAccessFlag(user, "canAccessSituation");
+}
+
+export function canAccessUsersPage(user) {
+  return readAccessFlag(user, "canAccessUsers") || user?.canResetData === true || hasFullIntranetAccess(user);
+}
+
+/**
+ * Construit l’objet utilisateur pour la session (camelCase) à partir des données Supabase
+ */
 export function dbUserToSessionUser(dbUser) {
   if (!dbUser) return null;
   const session = {
@@ -226,16 +340,16 @@ export function dbUserToSessionUser(dbUser) {
         : null,
     ...getDefaultPermissionForm(),
   };
-  session.canAccessActivities = dbUser.can_access_activities !== false;
-  session.canAccessHistory = dbUser.can_access_history !== false;
-  session.canAccessTickets = dbUser.can_access_tickets !== false;
-  session.canAccessModifications = Boolean(dbUser.can_access_modifications);
-  session.canAccessSituation = Boolean(dbUser.can_access_situation);
-  session.canAccessUsers = Boolean(dbUser.can_access_users);
-  session.canDeleteQuote = Boolean(dbUser.can_delete_quote);
-  session.canAddActivity = Boolean(dbUser.can_add_activity);
-  session.canEditActivity = Boolean(dbUser.can_edit_activity);
-  session.canDeleteActivity = Boolean(dbUser.can_delete_activity);
-  session.canResetData = Boolean(dbUser.can_reset_data);
+
+  Object.entries(PERMISSION_DB_TO_FORM).forEach(([dbKey, formKey]) => {
+    if (!(dbKey in dbUser)) return;
+    const value = dbUser[dbKey];
+    if (ACCESS_DEFAULT_TRUE.has(formKey)) {
+      session[formKey] = value !== false;
+    } else {
+      session[formKey] = Boolean(value);
+    }
+  });
+
   return session;
 }

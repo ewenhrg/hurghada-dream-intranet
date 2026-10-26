@@ -17,7 +17,7 @@ import {
   getDefaultPermissionForm,
   dbUserToFormUser,
   formToDbUser,
-  canAccessHotelsPage,
+  hasFullIntranetAccess,
 } from "../constants/permissions";
 
 const LOCAL_ONLY_KEY = "_localOnly";
@@ -50,15 +50,33 @@ function omitActivityPricesColumn(payload) {
   return rest;
 }
 
-/** Colonnes `can_access_*` (pages + Maj prix) — `supabase/supabase_users_add_page_access_columns.sql` + script Maj prix. */
+/** Colonnes `can_access_*` optionnelles — `supabase/supabase_users_expand_page_permissions.sql`. */
 const OPTIONAL_ACCESS_PAGE_DB_KEYS = [
   DB_COL_ACTIVITY_PRICES,
+  "can_access_devis",
   "can_access_activities",
+  "can_access_planning",
+  "can_access_catalog_admin",
   "can_access_history",
   "can_access_tickets",
+  "can_access_data_entry",
+  "can_access_receipt",
+  "can_access_b2b",
+  "can_access_events",
+  "can_access_public_devis",
+  "can_access_hotel_history",
   "can_access_modifications",
+  "can_access_void_tickets",
+  "can_access_modif_demandes",
   "can_access_situation",
+  "can_access_stop_sale",
   "can_access_users",
+  "can_access_hotels",
+  "can_access_interns",
+  "can_access_stay_broadcast",
+  "can_access_flyer",
+  "can_access_documents",
+  "can_access_ewen_dashboard",
 ];
 
 /** Erreur PostgREST / Postgres : colonne absente (corps INSERT/UPDATE ou cache schéma). */
@@ -85,7 +103,7 @@ function omitOptionalPageAccessColumns(payload) {
 }
 
 const MIGRATION_USERS_ACCESS_HINT =
-  "Ouvrez Supabase → SQL Editor et exécutez (fichiers dans le dossier supabase/ du dépôt) : supabase_users_add_page_access_columns.sql puis supabase_users_add_can_access_activity_prices.sql. Ensuite rouvrez la fiche utilisateur pour recocher les accès aux pages.";
+  "Ouvrez Supabase → SQL Editor et exécutez le fichier supabase/supabase_users_expand_page_permissions.sql (ajoute toutes les colonnes d’accès aux pages). Ensuite rouvrez la fiche utilisateur pour recocher les cases, puis reconnectez l’utilisateur.";
 
 function normalizeUserCode(code) {
   if (code == null || code === "") return "";
@@ -183,7 +201,7 @@ export function UsersPage({ user: sessionUser }) {
     return list;
   }, [users]);
 
-  const canManageUsersInDatabase = useMemo(() => canAccessHotelsPage(sessionUser), [sessionUser]);
+  const canManageUsersInDatabase = useMemo(() => hasFullIntranetAccess(sessionUser), [sessionUser]);
 
   const loadUsers = useCallback(async () => {
     if (!supabase) return;
@@ -306,7 +324,7 @@ export function UsersPage({ user: sessionUser }) {
       toast.warning("Aucun compte « cache seul » à réinsérer.");
       return;
     }
-    if (!canAccessHotelsPage(sessionUser)) {
+    if (!hasFullIntranetAccess(sessionUser)) {
       toast.warning("Seuls Ewen, Léa, Sophia et Karim peuvent réinsérer des utilisateurs dans Supabase.");
       return;
     }
