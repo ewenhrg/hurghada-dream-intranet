@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
-import { currencyNoCents, normalizeQuoteItemsFromDb, saveQuotesCache } from "../utils";
+import { currencyNoCents, formatPhoneWithPlus, normalizeQuoteItemsFromDb, saveQuotesCache } from "../utils";
 import { generateTicketsHTML } from "../utils/printTemplates";
 import { normalizeReservationCode } from "../utils/clientStay";
 import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
 import { computeActivityTransferSurcharge } from "../utils/transferPricing";
-import { itemWithPickupSchedule } from "../utils/pickupSchedule";
+import { itemWithPickupSchedule, visiblePickupTime } from "../utils/pickupSchedule";
 import {
   commitTicketSequenceAfterPayment,
   confirmTicketAllocations,
@@ -15,6 +15,7 @@ import {
 } from "../utils/ticketSequence";
 import { formatStayDay, modificationTooLate, paxLabel, refundLabel } from "../utils/modificationRequest";
 import { getLineAmountPaid, settleTicketAfterChange } from "../utils/ticketSettlement";
+import { formatQuoteItemParticipantsSummary } from "../utils/quoteItemDisplay";
 import { Pill } from "../components/ui";
 import { toast } from "../utils/toast";
 import { logger } from "../utils/logger";
@@ -33,7 +34,6 @@ const STATUS = {
 const FILTERS = {
   all: "all",
   pending: "pending",
-  modifications: "modifications",
   toSend: "to_send",
   toRefund: "to_refund",
   treated: "treated",
@@ -98,6 +98,64 @@ function findLocalQuote(quotes, row) {
     if (byActivity >= 0) return { quote, index: byActivity };
   }
   return null;
+}
+
+function formatNeighborhood(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "—";
+  return raw.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function BaseTicketDetails({ quote, item }) {
+  if (!quote || !item) {
+    return (
+      <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600 ring-1 ring-slate-200">
+        Ticket d’origine introuvable dans les devis chargés.
+      </p>
+    );
+  }
+  const client = quote.client || {};
+  const currency = quote.currency || "EUR";
+  const lineTotal = Math.round(Number(item.lineTotal) || 0);
+  const amountPaid = getLineAmountPaid(item);
+  const restAmount = Math.round(Number(item.restAmount) || 0);
+  const pickup = visiblePickupTime(item) || "—";
+  const rows = [
+    ["N° ticket", String(item.ticketNumber || "").trim() || "—"],
+    ["N° réservation", String(quote.reservationCode || "").trim() || "—"],
+    ["Activité", String(item.activityName || "").trim() || "—"],
+    ["Date", formatStayDay(item.date)],
+    ["Personnes", formatQuoteItemParticipantsSummary(item)],
+    ["Prise en charge", pickup],
+    ["Hôtel", String(client.hotel || "").trim() || "—"],
+    ["Chambre", String(client.room || "").trim() || "—"],
+    ["Quartier", formatNeighborhood(client.neighborhood || item.neighborhood)],
+    ["Client", String(client.name || "").trim() || "—"],
+    ["Téléphone", formatPhoneWithPlus(client.phone) || "—"],
+    ["Email", String(client.email || "").trim() || "—"],
+    ["Prix", currencyNoCents(lineTotal, currency)],
+    ["Déjà payé", currencyNoCents(amountPaid, currency)],
+    ["Reste à payer", restAmount > 0 ? currencyNoCents(restAmount, currency) : "—"],
+  ];
+  if (item.meetAtHotelMarina === true) {
+    rows.splice(6, 0, ["Marina hôtel", "Oui — le client se rend à la marina"]);
+  }
+
+  return (
+    <div className="mt-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+      <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-slate-500">
+        Ticket d’origine
+      </p>
+      <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+        {rows.map(([label, value]) => (
+          <div key={label} className="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100">
+            <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</dt>
+            <dd className="mt-0.5 break-words text-sm font-semibold text-slate-900">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }
 
 function quoteFromRow(row) {
@@ -224,23 +282,18 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
   const counts = useMemo(() => {
     const all = rows.length;
     const pending = rows.filter((row) => row.status === STATUS.pending).length;
-    const modifications = rows.filter(
-      (row) => row.status === STATUS.pending && row.kind === "modify"
-    ).length;
     const toSend = rows.filter(
       (row) => row.status === STATUS.toSend || row.status === STATUS.accepted
     ).length;
     const toRefund = rows.filter((row) => row.status === STATUS.toRefund).length;
     const treated = rows.filter((row) => row.status === STATUS.done).length;
-    return { all, pending, modifications, toSend, toRefund, treated };
+    return { all, pending, toSend, toRefund, treated };
   }, [rows]);
 
   const visible = useMemo(() => {
     switch (filter) {
       case FILTERS.pending:
         return rows.filter((row) => row.status === STATUS.pending);
-      case FILTERS.modifications:
-        return rows.filter((row) => row.status === STATUS.pending && row.kind === "modify");
       case FILTERS.toSend:
         return rows.filter((row) => row.status === STATUS.toSend || row.status === STATUS.accepted);
       case FILTERS.toRefund:
@@ -669,15 +722,6 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
           <Pill type="button" tone="light" active={filter === FILTERS.pending} onClick={() => setFilter(FILTERS.pending)} className="!px-3.5 !py-2 !text-xs">
             En attente ({counts.pending})
           </Pill>
-          <Pill
-            type="button"
-            tone="light"
-            active={filter === FILTERS.modifications}
-            onClick={() => setFilter(FILTERS.modifications)}
-            className="!px-3.5 !py-2 !text-xs"
-          >
-            Modifications ({counts.modifications})
-          </Pill>
           <Pill type="button" tone="light" active={filter === FILTERS.toSend} onClick={() => setFilter(FILTERS.toSend)} className="!px-3.5 !py-2 !text-xs">
             Confirmation à envoyer ({counts.toSend})
           </Pill>
@@ -723,6 +767,8 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
             const isToRefund = row.status === STATUS.toRefund;
             const isTreated = row.status === STATUS.done;
             const busy = busyId === row.id;
+            const baseHit = isPending ? findLocalQuote(quotes, row) : null;
+            const baseItem = baseHit ? baseHit.quote.items?.[baseHit.index] : null;
 
             return (
               <li key={row.id} className="rounded-2xl bg-white p-4 text-slate-900 ring-1 ring-slate-200">
@@ -745,7 +791,7 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
                 </div>
 
                 <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950">
-                  {describeRequest(row)}
+                  Demande : {describeRequest(row)}
                 </p>
                 {row.kind === "modify" && modificationTooLate(row.activity_date) ? (
                   <p className="mt-2 text-sm font-semibold text-rose-700">
@@ -753,6 +799,8 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
                   </p>
                 ) : null}
                 {row.hotel ? <p className="mt-2 text-sm text-slate-600">{row.hotel}</p> : null}
+
+                {isPending ? <BaseTicketDetails quote={baseHit?.quote} item={baseItem} /> : null}
 
                 {(refundAmount > 0 || restAmount > 0 || isToSend || isToRefund) && (
                   <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
