@@ -1935,7 +1935,10 @@ export default function App() {
         )}
 
         {tab === "modif-demandes" && canAccessModifDemandesPage(user) && (
-          <Section title="Demandes modif" subtitle="Demandes du site client. Valider met à jour Situation, les transferts et Mon séjour.">
+          <Section
+            title="Demandes modif"
+            subtitle="Acheminement type Hotel History : en attente → validation → confirmation à envoyer → rembourser / reste à payer."
+          >
             <ModificationRequestsPage quotes={quotes} setQuotes={setQuotes} activities={activities} />
           </Section>
         )}

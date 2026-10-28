@@ -17,7 +17,9 @@ CREATE TABLE IF NOT EXISTS public.public_modification_requests (
   status TEXT NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT public_modification_requests_kind_ok CHECK (kind IN ('modify', 'cancel')),
-  CONSTRAINT public_modification_requests_status_ok CHECK (status IN ('pending', 'accepted', 'refused'))
+  CONSTRAINT public_modification_requests_status_ok CHECK (
+    status IN ('pending', 'accepted', 'refused', 'to_send', 'sent', 'to_refund', 'done')
+  )
 );
 
 CREATE INDEX IF NOT EXISTS idx_public_modification_requests_site
