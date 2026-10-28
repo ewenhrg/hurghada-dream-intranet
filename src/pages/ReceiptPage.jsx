@@ -52,7 +52,7 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
           <div>
             <p className="text-sm font-bold text-indigo-950">Validated today</p>
             <p className="mt-0.5 text-xs font-medium text-slate-600">
-              {dayLabel} — {totals.ticketCount} ticket{totals.ticketCount > 1 ? "s" : ""}, whatever the activity date
+              {dayLabel} — {totals.ticketCount} ticket{totals.ticketCount > 1 ? "s" : ""} (incl. cancellations), whatever the activity date
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -70,7 +70,7 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full min-w-[920px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
           <thead className="bg-slate-900 text-[11px] uppercase tracking-wide text-white">
             <tr>
               <th className="px-2 py-2">Ticket no.</th>
@@ -81,18 +81,24 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
               <th className="px-2 py-2">Payment</th>
               <th className="px-2 py-2 text-right">Collected</th>
               <th className="px-2 py-2 text-right">Balance</th>
+              <th className="px-2 py-2 text-right">Refund</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">
+                <td colSpan={9} className="px-3 py-8 text-center text-sm text-slate-500">
                   No tickets validated today.
                 </td>
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={row.key} className="border-t border-slate-200 text-slate-900">
+                <tr
+                  key={row.key}
+                  className={`border-t border-slate-200 text-slate-900 ${
+                    row.cancellation ? "bg-rose-50/80" : row.modification ? "bg-amber-50/70" : ""
+                  }`}
+                >
                   <td className="px-2 py-2 font-bold tabular-nums">{row.ticketNumber}</td>
                   <td className="px-2 py-2">
                     <div>{row.hotel}</div>
@@ -107,6 +113,13 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
                   <td className="px-2 py-2">{row.paymentLabel}</td>
                   <td className="px-2 py-2 text-right tabular-nums">{row.collectedLabel}</td>
                   <td className="px-2 py-2 text-right tabular-nums">{row.restLabel}</td>
+                  <td
+                    className={`px-2 py-2 text-right tabular-nums ${
+                      row.refund > 0 ? "font-bold text-rose-700" : ""
+                    }`}
+                  >
+                    {row.refundLabel}
+                  </td>
                 </tr>
               ))
             )}
@@ -120,9 +133,10 @@ export function ReceiptPage({ quotes = [], activities = [] }) {
         {totals.cashEgp > 0 ? <TotalLine label="Cash" value={totals.cashEgpLabel} /> : null}
         {totals.stripe > 0 ? <TotalLine label="Stripe" value={totals.stripeLabel} /> : null}
         {totals.rest > 0 ? <TotalLine label="Balance due" value={totals.restLabel} /> : null}
+        {totals.refund > 0 ? <TotalLine label="Refunds" value={totals.refundLabel} /> : null}
         <p className="pt-2 text-[11px] leading-relaxed text-slate-500">
-          The total is the sum of the ticket prices. Stripe is that card share, without the 3% fee.
-          Egyptian cash is the amount entered in pounds.
+          The total is the sum of the ticket prices (cancellations excluded). Stripe is that card share, without the 3% fee.
+          Egyptian cash is the amount entered in pounds. Refunds are amounts to return after a modification or cancellation.
         </p>
       </div>
     </div>

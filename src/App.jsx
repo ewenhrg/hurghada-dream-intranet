@@ -83,6 +83,7 @@ import { logger } from "./utils/logger";
 import { clearChunkReloadGuard } from "./utils/lazyWithRetry";
 import { activitiesCache, createCacheKey } from "./utils/cache";
 import { usePublicQuotesInbox } from "./hooks/usePublicQuotesInbox";
+import { primePublicQuoteAlerts } from "./utils/publicQuoteInbox";
 import { useModificationRequestCount } from "./hooks/useModificationRequestCount";
 import {
   mergeRemoteActivitiesWithLocal,
@@ -208,12 +209,40 @@ export default function App() {
   const [showDatesModal, setShowDatesModal] = useState(false);
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
+  const publicQuotesInboxEnabled = Boolean(ok && user && user.canAccessHistory !== false);
   const { pendingCount: pendingPublicQuotesCount } = usePublicQuotesInbox({
-    enabled: Boolean(ok && user && user.canAccessHistory !== false),
+    enabled: publicQuotesInboxEnabled,
   });
   const pendingModificationCount = useModificationRequestCount({
     enabled: Boolean(ok && user && user.canAccessHistory !== false),
   });
+
+  /** Premier geste après login : débloque le son + demande la permission notif bureau. */
+  useEffect(() => {
+    if (!publicQuotesInboxEnabled) return undefined;
+    let done = false;
+    const prime = () => {
+      if (done) return;
+      done = true;
+      void primePublicQuoteAlerts();
+      window.removeEventListener("pointerdown", prime);
+      window.removeEventListener("keydown", prime);
+    };
+    window.addEventListener("pointerdown", prime, { once: true });
+    window.addEventListener("keydown", prime, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", prime);
+      window.removeEventListener("keydown", prime);
+    };
+  }, [publicQuotesInboxEnabled]);
+
+  /** Clic sur la notif bureau → ouvrir l’onglet Devis public. */
+  useEffect(() => {
+    if (!publicQuotesInboxEnabled) return undefined;
+    const openTab = () => setTab("public-devis");
+    window.addEventListener("hd-open-public-devis-tab", openTab);
+    return () => window.removeEventListener("hd-open-public-devis-tab", openTab);
+  }, [publicQuotesInboxEnabled]);
 
   // Réinitialiser les dates utilisées quand on change d'onglet
   useEffect(() => {

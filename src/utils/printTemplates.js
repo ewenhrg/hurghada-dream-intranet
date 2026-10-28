@@ -1411,11 +1411,12 @@ export function generateDayReceiptHTML(receipt, options = {}) {
   if (totals.cashEgp > 0) amountRows.push({ label: "Cash", value: totals.cashEgpLabel });
   if (totals.stripe > 0) amountRows.push({ label: "Stripe", value: totals.stripeLabel });
   if (totals.rest > 0) amountRows.push({ label: "Balance due", value: totals.restLabel });
+  if (totals.refund > 0) amountRows.push({ label: "Refunds", value: totals.refundLabel });
 
   const body = rows.length
     ? rows
         .map(
-          (row) => `<tr>
+          (row) => `<tr class="${row.cancellation ? "row-cancel" : row.modification ? "row-mod" : ""}">
         <td class="num">${esc(row.ticketNumber)}</td>
         <td>${esc(row.hotel)}${row.room ? `<div class="sub">Room ${esc(row.room)}</div>` : ""}</td>
         <td>${esc(row.activity)}${row.activityDate ? `<div class="sub">${esc(row.activityDate)}</div>` : ""}</td>
@@ -1424,10 +1425,11 @@ export function generateDayReceiptHTML(receipt, options = {}) {
         <td>${esc(row.paymentLabel)}</td>
         <td class="money">${esc(row.collectedLabel)}</td>
         <td class="money">${esc(row.restLabel)}</td>
+        <td class="money${row.refund > 0 ? " refund" : ""}">${esc(row.refundLabel)}</td>
       </tr>`
         )
         .join("")
-    : `<tr><td colspan="8" class="empty">No tickets validated today.</td></tr>`;
+    : `<tr><td colspan="9" class="empty">No tickets validated today.</td></tr>`;
 
   const amounts = amountRows
     .map(
@@ -1454,6 +1456,9 @@ export function generateDayReceiptHTML(receipt, options = {}) {
     th { background: #0f172a; color: #fff; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; }
     td.money, th.money { text-align: right; white-space: nowrap; }
     td.num { font-weight: 700; white-space: nowrap; }
+    td.refund { color: #be123c; font-weight: 700; }
+    tr.row-cancel { background: #fff1f2; }
+    tr.row-mod { background: #fffbeb; }
     .sub { color: #64748b; font-size: 11px; margin-top: 2px; }
     .empty { text-align: center; color: #64748b; padding: 18px; }
     .foot { margin-top: 18px; display: flex; justify-content: flex-end; }
@@ -1486,6 +1491,7 @@ export function generateDayReceiptHTML(receipt, options = {}) {
           <th>Payment</th>
           <th class="money">Collected</th>
           <th class="money">Balance</th>
+          <th class="money">Refund</th>
         </tr>
       </thead>
       <tbody>${body}</tbody>

@@ -19,6 +19,18 @@ function lineCash(item) {
   return roundMoney(item?.lineTotal);
 }
 
+function isModificationLine(item) {
+  return item?.ticketKind === "modification";
+}
+
+function isCancellationLine(item) {
+  if (!isModificationLine(item)) return false;
+  return (
+    item?.cancellation === true ||
+    String(item?.newActivityName || "").trim().toLowerCase().startsWith("annul")
+  );
+}
+
 function paxLabel(item) {
   const cells = getQuoteItemParticipantCells(item);
   const parts = [];
@@ -63,12 +75,23 @@ function paymentLabel(cashOn, stripeOn, currency) {
   return "Cash";
 }
 
-function validatedOnDay(item, quote, dateKey) {
-  const stamp = String(item?.ticketsEnteredAt || item?.tickets_entered_at || quote?.ticketsEnteredAt || "").trim();
-  if (!stamp) return false;
-  const date = new Date(stamp);
+function stampMatchesDay(stamp, dateKey) {
+  const raw = String(stamp || "").trim();
+  if (!raw) return false;
+  const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return false;
   return getLocalDateKey(date) === dateKey;
+}
+
+function validatedOnDay(item, quote, dateKey) {
+  if (stampMatchesDay(item?.ticketsEnteredAt || item?.tickets_entered_at, dateKey)) return true;
+  if (stampMatchesDay(item?.createdAt || item?.created_at, dateKey)) return true;
+  // Anciennes annulations sans horodatage : jour de mise à jour du devis (création de la ligne).
+  if (isCancellationLine(item)) {
+    return stampMatchesDay(quote?.updated_at || quote?.updatedAt, dateKey);
+  }
+  if (isModificationLine(item)) return false;
+  return stampMatchesDay(quote?.ticketsEnteredAt, dateKey);
 }
 
 function formatActivityDay(dateKey) {
@@ -77,8 +100,31 @@ function formatActivityDay(dateKey) {
   return new Date(`${day}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+function activityLabel(item, activitiesById) {
+  if (isCancellationLine(item)) {
+    const previous = String(item?.previousActivityName || "").trim();
+    const named = String(item?.activityName || "").trim();
+    if (previous) return `Cancellation · ${previous}`;
+    return named || "Cancellation";
+  }
+  if (isModificationLine(item)) {
+    const named = String(item?.activityName || "").trim();
+    if (named) return named;
+    const before = String(item?.previousActivityName || "").trim();
+    const after = String(item?.newActivityName || "").trim();
+    if (before || after) return `Modification · ${before || "—"} → ${after || "—"}`;
+  }
+  const activityName = resolveTicketActivityName(item, activitiesById);
+  return formatActivityWithExtras({
+    ...item,
+    activityName,
+    activityNameFr: String(item?.activityName || "").trim(),
+  });
+}
+
 /**
  * Tickets validated on one calendar day, whatever the activity date.
+ * Includes cancellation / modification lines created that day.
  * Stripe is the tariff total, without the 3% card fee.
  */
 export function buildDayReceipt(quotes, dateKey, activities = []) {
@@ -91,9 +137,17 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
     const lines = [];
     items.forEach((item, itemIndex) => {
       const ticketNumber = String(item?.ticketNumber || "").trim();
-      if (!ticketNumber || item?.ticketKind === "modification" || item?.isCancelled === true) return;
+      if (!ticketNumber) return;
+      // Ticket d’origine annulé et retiré : on affiche la ligne d’annulation, pas un fantôme.
+      if (item?.isCancelled === true && !isModificationLine(item)) return;
       if (!validatedOnDay(item, quote, key)) return;
-      lines.push({ item, itemIndex, ticketNumber });
+      lines.push({
+        item,
+        itemIndex,
+        ticketNumber,
+        modification: isModificationLine(item),
+        cancellation: isCancellationLine(item),
+      });
     });
     if (!lines.length) return;
     groups.push({
@@ -109,14 +163,18 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
   let cashEgp = 0;
   let stripe = 0;
   let rest = 0;
+  let refund = 0;
 
   groups.forEach(({ id, quote, lines }) => {
     const client = quote?.client || {};
-    const allTicketed = (quote?.items || []).filter((item) => String(item?.ticketNumber || "").trim());
+    const billableDay = lines.filter((line) => !line.modification);
+    const dayItems = billableDay.map((line) => line.item);
+    const allTicketed = (quote?.items || []).filter(
+      (item) => String(item?.ticketNumber || "").trim() && !isModificationLine(item) && item?.isCancelled !== true
+    );
     const allSum = allTicketed.reduce((sum, item) => sum + lineCash(item), 0);
-    const dayItems = lines.map((line) => line.item);
     const daySum = dayItems.reduce((sum, item) => sum + lineCash(item), 0);
-    const flags = paymentFlags(quote, dayItems);
+    const flags = paymentFlags(quote, dayItems.length ? dayItems : lines.map((line) => line.item));
     const cashOn = flags.cash === true;
     const stripeOn = flags.stripe === true;
     const cash = cashSnapshot(quote);
@@ -130,15 +188,17 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
         ? dayStripeBase
         : 0;
 
-    if (cashOn && !stripeOn) {
-      if (currency === "EGP" && dayCash > 0) cashEgp += dayCash;
-      else cashEur += daySum > 0 ? daySum : dayCash;
-    } else if (stripeOn && !cashOn) {
-      stripe += dayStripe;
-    } else if (cashOn && stripeOn) {
-      if (currency === "EGP" && dayCash > 0) cashEgp += dayCash;
-      else if (dayCash > 0) cashEur += dayCash;
-      stripe += dayStripe;
+    if (billableDay.length > 0) {
+      if (cashOn && !stripeOn) {
+        if (currency === "EGP" && dayCash > 0) cashEgp += dayCash;
+        else cashEur += daySum > 0 ? daySum : dayCash;
+      } else if (stripeOn && !cashOn) {
+        stripe += dayStripe;
+      } else if (cashOn && stripeOn) {
+        if (currency === "EGP" && dayCash > 0) cashEgp += dayCash;
+        else if (dayCash > 0) cashEur += dayCash;
+        stripe += dayStripe;
+      }
     }
 
     const dayRest = dayItems.reduce((sum, item) => sum + roundMoney(item?.restAmount), 0);
@@ -150,44 +210,61 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
       a.ticketNumber.localeCompare(b.ticketNumber, "fr", { numeric: true, sensitivity: "base" })
     );
 
-    sorted.forEach((line, index) => {
+    let billableIndex = 0;
+    sorted.forEach((line) => {
       const tariff = lineCash(line.item);
-      const activityName = resolveTicketActivityName(line.item, activitiesById);
+      const refundAmount = roundMoney(line.item?.refundAmount);
+      if (refundAmount > 0) refund += refundAmount;
+
       let collectedLabel = "—";
-      if (cashOn && !stripeOn && currency === "EGP") {
-        collectedLabel = index === 0 && dayCash > 0 ? currencyNoCents(dayCash, "EGP") : "—";
-      } else if (cashOn && !stripeOn) {
-        collectedLabel = currencyNoCents(tariff, "EUR");
-      } else if (stripeOn && !cashOn) {
-        collectedLabel = "Stripe";
-      } else if (index === 0) {
-        const parts = [];
-        if (currency === "EGP" && dayCash > 0) parts.push(`Cash ${currencyNoCents(dayCash, "EGP")}`);
-        else if (dayCash > 0) parts.push(`Cash ${currencyNoCents(dayCash, "EUR")}`);
-        if (dayStripe > 0) parts.push(`Stripe ${currencyNoCents(dayStripe, "EUR")}`);
-        collectedLabel = parts.join(" · ") || label;
+      let rowPaymentLabel = label;
+      if (line.cancellation) {
+        rowPaymentLabel = "Cancellation";
+        collectedLabel = "—";
+      } else if (line.modification) {
+        rowPaymentLabel = "Modification";
+        collectedLabel = "—";
+      } else {
+        const index = billableIndex;
+        billableIndex += 1;
+        if (cashOn && !stripeOn && currency === "EGP") {
+          collectedLabel = index === 0 && dayCash > 0 ? currencyNoCents(dayCash, "EGP") : "—";
+        } else if (cashOn && !stripeOn) {
+          collectedLabel = currencyNoCents(tariff, "EUR");
+        } else if (stripeOn && !cashOn) {
+          collectedLabel = "Stripe";
+        } else if (index === 0) {
+          const parts = [];
+          if (currency === "EGP" && dayCash > 0) parts.push(`Cash ${currencyNoCents(dayCash, "EGP")}`);
+          else if (dayCash > 0) parts.push(`Cash ${currencyNoCents(dayCash, "EUR")}`);
+          if (dayStripe > 0) parts.push(`Stripe ${currencyNoCents(dayStripe, "EUR")}`);
+          collectedLabel = parts.join(" · ") || label;
+        }
       }
 
+      const restAmount = roundMoney(line.item?.restAmount);
       rows.push({
         key: `${id}-${line.itemIndex}-${line.ticketNumber}`,
         ticketNumber: line.ticketNumber,
         hotel: String(client.hotel || "").trim() || "—",
         room: String(client.room || "").trim(),
-        activity: formatActivityWithExtras({
-          ...line.item,
-          activityName,
-          activityNameFr: String(line.item?.activityName || "").trim(),
-        }),
+        activity: activityLabel(line.item, activitiesById),
         activityDate: formatActivityDay(line.item?.date),
-        pax: paxLabel(line.item),
-        tariff,
-        tariffLabel: currencyNoCents(tariff, quote?.currency || "EUR"),
-        paymentLabel: label,
+        pax: line.modification ? "—" : paxLabel(line.item),
+        tariff: line.modification ? 0 : tariff,
+        tariffLabel: line.cancellation
+          ? "—"
+          : line.modification
+            ? currencyNoCents(tariff, quote?.currency || "EUR")
+            : currencyNoCents(tariff, quote?.currency || "EUR"),
+        paymentLabel: rowPaymentLabel,
         collectedLabel,
-        rest: roundMoney(line.item?.restAmount),
-        restLabel: roundMoney(line.item?.restAmount) > 0
-          ? currencyNoCents(roundMoney(line.item.restAmount), quote?.currency || "EUR")
-          : "—",
+        rest: restAmount,
+        restLabel: restAmount > 0 ? currencyNoCents(restAmount, quote?.currency || "EUR") : "—",
+        refund: refundAmount,
+        refundLabel: refundAmount > 0 ? currencyNoCents(refundAmount, quote?.currency || "EUR") : "—",
+        cancellation: line.cancellation,
+        modification: line.modification,
       });
     });
   });
@@ -211,6 +288,8 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
       stripeLabel: currencyNoCents(stripe, "EUR"),
       rest,
       restLabel: currencyNoCents(rest, "EUR"),
+      refund,
+      refundLabel: currencyNoCents(refund, "EUR"),
     },
   };
 }

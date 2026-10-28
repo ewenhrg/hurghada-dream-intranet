@@ -3,34 +3,44 @@ import { supabase } from "../lib/supabase";
 import { setVisibilityAwareInterval } from "../utils/idle";
 import { getQuotesRealtimeSiteKeyFilter } from "../constants";
 import {
+  PUBLIC_QUOTE_ALERT_REPEAT_MS,
+  alertPublicQuotePending,
   fetchPendingPublicQuotesCount,
   isPublicQuotePending,
-  playPublicQuoteChime,
+  pulsePublicQuoteDocumentTitle,
 } from "../utils/publicQuoteInbox";
 
 /**
- * Compte les demandes catalogue encore en attente et joue un son à chaque nouvelle arrivée.
+ * Compte les demandes catalogue encore en attente, notifie à chaque arrivée,
+ * et rejoue l’alarme chaque minute tant qu’il reste des demandes non traitées.
  */
 export function usePublicQuotesInbox({ enabled = false } = {}) {
   const [pendingCount, setPendingCount] = useState(0);
   const knownIdsRef = useRef(new Set());
   const primedRef = useRef(false);
+  const pendingCountRef = useRef(0);
 
   const refresh = useCallback(async () => {
     if (!enabled) {
       setPendingCount(0);
+      pendingCountRef.current = 0;
+      pulsePublicQuoteDocumentTitle(0);
       return;
     }
     const { count, ids } = await fetchPendingPublicQuotesCount();
     ids.forEach((id) => knownIdsRef.current.add(id));
+    pendingCountRef.current = count;
     setPendingCount(count);
+    pulsePublicQuoteDocumentTitle(count);
   }, [enabled]);
 
   useEffect(() => {
     if (!enabled || !supabase) {
       primedRef.current = false;
       knownIdsRef.current = new Set();
+      pendingCountRef.current = 0;
       setPendingCount(0);
+      pulsePublicQuoteDocumentTitle(0);
       return undefined;
     }
 
@@ -38,7 +48,12 @@ export function usePublicQuotesInbox({ enabled = false } = {}) {
 
     const bootstrap = async () => {
       await refresh();
-      if (!cancelled) primedRef.current = true;
+      if (cancelled) return;
+      primedRef.current = true;
+      // Déjà des demandes en attente au chargement → alerter tout de suite.
+      if (pendingCountRef.current > 0) {
+        alertPublicQuotePending(pendingCountRef.current, { urgent: true });
+      }
     };
     bootstrap();
 
@@ -58,7 +73,8 @@ export function usePublicQuotesInbox({ enabled = false } = {}) {
             const isNew = !knownIdsRef.current.has(id);
             knownIdsRef.current.add(id);
             if (primedRef.current && isNew && isPublicQuotePending(payload.new)) {
-              playPublicQuoteChime();
+              const nextCount = Math.max(1, pendingCountRef.current + 1);
+              alertPublicQuotePending(nextCount, { urgent: true });
             }
           }
           if (payload.eventType === "DELETE" && payload.old?.id != null) {
@@ -69,11 +85,18 @@ export function usePublicQuotesInbox({ enabled = false } = {}) {
       )
       .subscribe();
 
-    // Ce hook vit dans App : il tourne en permanence. Onglet caché, on saute
-    // le tour et on rattrape au retour (le Realtime couvre l'immédiat).
+    // Sondage léger : onglet caché → pause (Realtime couvre l’immédiat).
     const stopInterval = setVisibilityAwareInterval(() => {
       void refresh();
     }, 30_000);
+
+    // Alarme répétée même onglet en arrière-plan (setInterval classique).
+    const alertTimer = window.setInterval(() => {
+      const n = pendingCountRef.current;
+      if (n > 0) {
+        alertPublicQuotePending(n, { urgent: true });
+      }
+    }, PUBLIC_QUOTE_ALERT_REPEAT_MS);
 
     const onLocalChange = () => {
       void refresh();
@@ -83,8 +106,10 @@ export function usePublicQuotesInbox({ enabled = false } = {}) {
     return () => {
       cancelled = true;
       stopInterval();
+      window.clearInterval(alertTimer);
       window.removeEventListener("hd-public-quote-inbox-changed", onLocalChange);
       supabase.removeChannel(channel);
+      pulsePublicQuoteDocumentTitle(0);
     };
   }, [enabled, refresh]);
 

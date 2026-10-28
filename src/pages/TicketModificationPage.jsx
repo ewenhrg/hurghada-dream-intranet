@@ -406,6 +406,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
           patched.refundReason = settlement.refundReason;
           updatedQuote.items = items.map((item, index) => (index === itemIndex ? { ...patched } : item));
         }
+        const enteredAt = new Date().toISOString();
         updatedQuote.items = [
           ...updatedQuote.items,
           {
@@ -429,6 +430,8 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
             pickupPublished: patched.pickupPublished,
             meetAtHotelMarina: patched.meetAtHotelMarina === true,
             modificationOfTicket: nextTicket,
+            ticketsEnteredAt: enteredAt,
+            createdAt: enteredAt,
           },
         ];
       }
@@ -532,6 +535,14 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       }
       reservation = reserved.reservation;
       const kept = quote.items.filter((_, index) => index !== match.itemIndex);
+      const enteredAt = new Date().toISOString();
+      const settlement = settleTicketAfterChange({
+        previousItem: original,
+        nextLineTotal: 0,
+        activityName: original.activityName || activity,
+        activityDate: String(original.date || "").slice(0, 10),
+        alreadyModified: Array.isArray(original.modifications) && original.modifications.length > 0,
+      });
       const special = {
         ticketKind: "modification",
         cancellation: true,
@@ -544,8 +555,15 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
         children: 0,
         babies: 0,
         lineTotal: 0,
+        amountPaid: settlement.amountPaid,
         restAmount: 0,
+        refundAmount: settlement.refundAmount,
+        refundGross: settlement.refundGross,
+        refundLabel: settlement.refundLabel || "",
+        refundReason: settlement.refundReason || "",
         modificationOfTicket: ticket,
+        ticketsEnteredAt: enteredAt,
+        createdAt: enteredAt,
       };
       const nextItems = [...kept, special];
       const billable = nextItems.filter((item) => item?.ticketKind !== "modification");
