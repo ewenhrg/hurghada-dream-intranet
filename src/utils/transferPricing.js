@@ -180,6 +180,38 @@ export function getActivityPickupOptions(activity, neighborhoodKey) {
   return getTransferPickupOptions(activity?.transfers?.[nb]);
 }
 
+function normalizePickupActivityName(name) {
+  return String(name || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Speed boat, Panorama et spas : l’heure du devis reste visible sur Situation. */
+export function showsChosenPickupOnSituation(activityName) {
+  const name = normalizePickupActivityName(activityName);
+  return (
+    name.includes("speedboat") ||
+    name.includes("speed boat") ||
+    name.includes("panorama") ||
+    name.includes("spa")
+  );
+}
+
+/** Heure déjà choisie au devis, ou l’unique créneau du quartier si une seule heure existe. */
+export function chosenPickupTime(item, activity) {
+  const stored = String(item?.pickupTime || "").trim();
+  if (stored) return stored;
+  const options = getActivityPickupOptions(activity, item?.neighborhood);
+  const slot = String(item?.slot || "").trim();
+  if (slot) {
+    const match = options.find((option) => option.slot === slot);
+    if (match?.time) return match.time;
+  }
+  if (options.length === 1) return options[0].time || "";
+  return "";
+}
+
 /**
  * Créneaux proposés sur le catalogue public (sans quartier client encore connu) :
  * union des créneaux activés sur au moins un quartier de l’activité.
@@ -253,4 +285,20 @@ export function pickupTimeFromOptionValue(options, selectedValue) {
   const match = (options || []).find((o) => o.value === raw || o.time === raw || o.slot === raw);
   if (!match) return raw;
   return match.time || match.label || raw;
+}
+
+/** Libellé interne devis / ticket quand plusieurs horaires existent. */
+export function formatStaffPickupLabel(item) {
+  if (!item?.staffPickup) return "";
+  const time = String(item.pickupTime || "").trim();
+  const slot = PICKUP_SLOT_LABELS[item.slot] || "";
+  if (slot && time) return `${slot} · ${time}`;
+  return time || slot;
+}
+
+/** Ticket client : rien, sauf le créneau choisi quand l’activité a plusieurs heures. */
+export function formatTicketPickupLabel(item) {
+  const hasSlot = Boolean(PICKUP_SLOT_LABELS[String(item?.slot || "").trim()]);
+  if (!item?.staffPickup && !hasSlot) return "";
+  return formatStaffPickupLabel({ ...item, staffPickup: true });
 }
