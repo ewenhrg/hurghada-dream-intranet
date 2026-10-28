@@ -86,11 +86,10 @@ function stampMatchesDay(stamp, dateKey) {
 function validatedOnDay(item, quote, dateKey) {
   if (stampMatchesDay(item?.ticketsEnteredAt || item?.tickets_entered_at, dateKey)) return true;
   if (stampMatchesDay(item?.createdAt || item?.created_at, dateKey)) return true;
-  // Anciennes annulations sans horodatage : jour de mise à jour du devis (création de la ligne).
-  if (isCancellationLine(item)) {
+  // Anciennes lignes modif / annulation sans horodatage : jour de mise à jour du devis.
+  if (isModificationLine(item)) {
     return stampMatchesDay(quote?.updated_at || quote?.updatedAt, dateKey);
   }
-  if (isModificationLine(item)) return false;
   return stampMatchesDay(quote?.ticketsEnteredAt, dateKey);
 }
 
@@ -219,10 +218,11 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
       let collectedLabel = "—";
       let rowPaymentLabel = label;
       if (line.cancellation) {
-        rowPaymentLabel = "Cancellation";
+        rowPaymentLabel = refundAmount > 0 ? "Cancellation · Refund" : "Cancellation";
         collectedLabel = "—";
       } else if (line.modification) {
-        rowPaymentLabel = "Modification";
+        rowPaymentLabel =
+          refundAmount > 0 ? "Modification · Refund" : line.item?.restAmount > 0 ? "Modification · Due" : "Modification";
         collectedLabel = "—";
       } else {
         const index = billableIndex;

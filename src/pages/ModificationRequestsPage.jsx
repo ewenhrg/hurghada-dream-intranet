@@ -13,7 +13,8 @@ import {
   rollbackTicketReservation,
   voidTicketAllocations,
 } from "../utils/ticketSequence";
-import { formatStayDay, modificationTooLate, paxLabel } from "../utils/modificationRequest";
+import { formatStayDay, modificationTooLate, paxLabel, refundLabel } from "../utils/modificationRequest";
+import { getLineAmountPaid, settleTicketAfterChange } from "../utils/ticketSettlement";
 import { toast } from "../utils/toast";
 import { logger } from "../utils/logger";
 
@@ -222,6 +223,48 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
         nextLabel = nextItem.activityName;
       }
 
+      let settlement;
+      if (row.kind === "cancel") {
+        const amountPaid = getLineAmountPaid(original);
+        const percent = Math.max(0, Math.min(100, Math.round(Number(row.refund_percent) || 0)));
+        const rate = percent / 100;
+        const refundAmount = Math.round(amountPaid * rate);
+        settlement = {
+          amountPaid,
+          lineTotal: 0,
+          restAmount: 0,
+          refundGross: amountPaid,
+          refundAmount,
+          refundLabel: refundLabel(percent),
+          refundReason: `Demande client · ${percent} %`,
+        };
+      } else {
+        settlement = settleTicketAfterChange({
+          previousItem: original,
+          nextLineTotal: nextItem
+            ? Math.round(Number(nextItem.lineTotal) || 0)
+            : Math.round(Number(original.lineTotal) || 0),
+          activityName: String(nextItem?.activityName || original.activityName || row.activity_name || ""),
+          activityDate: String(nextItem?.date || original.date || row.activity_date || "").slice(0, 10),
+          alreadyModified: Array.isArray(original.modifications) && original.modifications.length > 0,
+        });
+        if (
+          nextItem &&
+          (settlement.restAmount > 0 ||
+            settlement.refundAmount > 0 ||
+            settlement.lineTotal !== Math.round(Number(original.lineTotal) || 0))
+        ) {
+          // Prix / reste sur le ticket vivant ; le remboursement figure uniquement
+          // sur la ligne spéciale (évite un double comptage dans Receipt).
+          nextItem = {
+            ...nextItem,
+            lineTotal: settlement.lineTotal,
+            amountPaid: settlement.amountPaid,
+            restAmount: settlement.restAmount,
+          };
+        }
+      }
+
       let items = quote.items.filter((_, index) => index !== found.index);
       if (nextItem) items = [...quote.items.slice(0, found.index), nextItem, ...quote.items.slice(found.index + 1)];
       const billable = items.filter((item) => item?.ticketKind !== "modification");
@@ -241,9 +284,7 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
           ticketNumber = reserved.reservedNumbers[0];
         }
         const source = nextItem || original;
-        const difference = nextItem
-          ? Math.max(0, Math.round(Number(nextItem.lineTotal) || 0) - Math.round(Number(original.lineTotal) || 0))
-          : 0;
+        const enteredAt = new Date().toISOString();
         special = {
           ticketKind: "modification",
           cancellation: row.kind === "cancel",
@@ -257,12 +298,19 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
           adults: row.kind === "cancel" ? 0 : source.adults,
           children: row.kind === "cancel" ? 0 : source.children,
           babies: row.kind === "cancel" ? 0 : source.babies,
-          lineTotal: 0,
-          restAmount: difference,
+          lineTotal: settlement.lineTotal,
+          amountPaid: settlement.amountPaid,
+          restAmount: settlement.restAmount,
+          refundAmount: settlement.refundAmount,
+          refundGross: settlement.refundGross,
+          refundLabel: settlement.refundLabel || "",
+          refundReason: settlement.refundReason || "",
           pickupTime: source.pickupTime,
           pickupPublished: source.pickupPublished,
           meetAtHotelMarina: source.meetAtHotelMarina === true,
           modificationOfTicket: String(original.ticketNumber || ""),
+          ticketsEnteredAt: enteredAt,
+          createdAt: enteredAt,
         };
         items = [...items, special];
       }
