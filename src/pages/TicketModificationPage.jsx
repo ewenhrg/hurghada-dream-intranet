@@ -75,6 +75,23 @@ function activityOptionId(activity) {
   return String(activity?.id ?? activity?.supabase_id ?? "");
 }
 
+function resolveActivityFromList(activities, activityId, activityName = "") {
+  const needle = String(activityId || "").trim();
+  const list = activities || [];
+  if (needle) {
+    const byId = list.find(
+      (activity) =>
+        String(activity?.id ?? "") === needle || String(activity?.supabase_id ?? "") === needle
+    );
+    if (byId) return byId;
+  }
+  const name = String(activityName || "").trim().toLowerCase();
+  if (!name) return null;
+  return (
+    list.find((activity) => String(activity?.name || "").trim().toLowerCase() === name) || null
+  );
+}
+
 function parseMoney(value) {
   const raw = String(value ?? "").trim().replace(/\s/g, "").replace(",", ".");
   if (!raw) return null;
@@ -192,16 +209,25 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
   }, [activities]);
 
   const selectedActivity = useMemo(() => {
-    if (!form?.activityId) return null;
-    return (
-      activityOptions.find((activity) => activityOptionId(activity) === String(form.activityId)) || null
+    if (!form) return null;
+    return resolveActivityFromList(
+      activityOptions,
+      form.activityId,
+      match?.item?.activityName || ""
     );
-  }, [activityOptions, form?.activityId]);
+  }, [activityOptions, form, match?.item?.activityName]);
 
   const fillForm = (found) => {
     const item = found.item;
     const client = found.quote.client || {};
-    const activityId = String(item.activityId ?? item.activity_id ?? "");
+    const resolved = resolveActivityFromList(
+      activityOptions,
+      item.activityId ?? item.activity_id,
+      item.activityName
+    );
+    const activityId = resolved
+      ? activityOptionId(resolved)
+      : String(item.activityId ?? item.activity_id ?? "");
     setMatch(found);
     setForm({
       ticketNumber: String(item.ticketNumber || "").trim(),
@@ -696,9 +722,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
   const hotel = String(match?.quote?.client?.hotel || "").trim();
   const price = Math.round(Number(match?.item?.lineTotal) || 0);
   const currency = match?.quote?.currency || "EUR";
-  const knownActivity = form && activityOptions.some((activity) => activityOptionId(activity) === String(form.activityId));
-  const stayStartDate = String(match?.quote?.client?.arrivalDate || match?.quote?.client?.arrival_date || "").trim();
-  const stayEndDate = String(match?.quote?.client?.departureDate || match?.quote?.client?.departure_date || "").trim();
+  const knownActivity = Boolean(selectedActivity);
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -789,8 +813,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
                   activity={selectedActivity}
                   stopSales={stopSales}
                   pushSales={pushSales}
-                  stayStartDate={stayStartDate}
-                  stayEndDate={stayEndDate}
+                  blockPastDates={false}
                 />
               </div>
               {!selectedActivity ? (

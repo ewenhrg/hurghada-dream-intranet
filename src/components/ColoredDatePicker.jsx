@@ -10,6 +10,27 @@ function dateToYmdLocal(date) {
   return `${y}-${m}-${d}`;
 }
 
+function monthStartFromValue(value) {
+  const date = value ? new Date(`${value}T12:00:00`) : new Date();
+  if (Number.isNaN(date.getTime())) {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function isMonthFullyPast(monthStart) {
+  const now = new Date();
+  const endOfMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
+  return endOfMonth < now;
+}
+
+function isWeekdayOpen(activity, weekday) {
+  const flag = activity?.availableDays?.[weekday];
+  return flag === true || flag === 1 || flag === "1";
+}
+
 // Composant calendrier personnalisé avec jours colorés
 export function ColoredDatePicker({
   value,
@@ -20,20 +41,36 @@ export function ColoredDatePicker({
   /** YYYY-MM-DD : bornes du séjour (inclus). Si les deux sont renseignées et cohérentes, seuls ces jours sont sélectionnables. */
   stayStartDate = "",
   stayEndDate = "",
+  /**
+   * Devis : true (défaut) — jours ≤ aujourd’hui grisés, non cliquables.
+   * Modification ticket : false — couleurs de dispo visibles aussi sur le passé.
+   */
+  blockPastDates = true,
 }) {
   const [showCalendar, setShowCalendar] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    const date = value ? new Date(value + "T12:00:00") : new Date();
-    return new Date(date.getFullYear(), date.getMonth(), 1);
-  });
+  const [currentMonth, setCurrentMonth] = useState(() => monthStartFromValue(value));
 
-  // Mettre à jour le mois affiché quand la valeur change
+  // Mettre à jour le mois affiché quand la valeur change (sauf mois entièrement passé).
   useEffect(() => {
-    if (value) {
-      const date = new Date(value + "T12:00:00");
-      setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    if (!value) return;
+    const month = monthStartFromValue(value);
+    if (isMonthFullyPast(month)) {
+      const now = new Date();
+      setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+      return;
     }
+    setCurrentMonth(month);
   }, [value]);
+
+  // À l’ouverture : ne pas rester coincé sur un mois passé tout gris.
+  useEffect(() => {
+    if (!showCalendar) return;
+    setCurrentMonth((month) => {
+      if (!isMonthFullyPast(month)) return month;
+      const now = new Date();
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+    });
+  }, [showCalendar]);
 
   // Convertir YYYY-MM-DD vers DD/MM/YYYY pour l'affichage
   const formatDateForDisplay = (dateStr) => {
@@ -88,7 +125,7 @@ export function ColoredDatePicker({
     const dateStr = `${year}-${month}-${day}`;
     
     const weekday = date.getDay();
-    const baseAvailable = activity.availableDays?.[weekday] === true;
+    const baseAvailable = isWeekdayOpen(activity, weekday);
     
     // Vérifier stop sales et push sales
     // Vérifier avec l'ID local (id) et l'ID Supabase (supabase_id) car les stop/push sales peuvent utiliser l'un ou l'autre
@@ -177,6 +214,12 @@ export function ColoredDatePicker({
     return checkDate <= today;
   };
 
+  const isDateBlocked = (date) => {
+    if (blockPastDates && isDateInPastOrToday(date)) return true;
+    if (isOutsideStayWindow(date)) return true;
+    return false;
+  };
+
   const handleDateClick = (date, e) => {
     if (e) {
       e.preventDefault();
@@ -187,8 +230,7 @@ export function ColoredDatePicker({
       return;
     }
     
-    // Vérifier si la date est dans le passé ou aujourd'hui
-    if (isDateInPastOrToday(date)) {
+    if (blockPastDates && isDateInPastOrToday(date)) {
       toast.warning("Les activités ne peuvent pas être programmées avant demain.");
       return;
     }
@@ -225,51 +267,52 @@ export function ColoredDatePicker({
     const dayNum = String(day.date.getDate()).padStart(2, '0');
     const dayDateStr = `${year}-${month}-${dayNum}`;
     const isSelected = value && dayDateStr === value;
-    const isPastOrToday = isDateInPastOrToday(day.date);
-    const outsideStay = stayBounds && isOutsideStayWindow(day.date);
+    const blocked = isDateBlocked(day.date);
 
     if (!day.isCurrentMonth) {
       return baseClasses + "text-gray-300 cursor-not-allowed";
     }
-    
-    // Si la date est dans le passé ou aujourd'hui, la désactiver
-    if (isPastOrToday) {
-      return baseClasses + "bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed opacity-50";
-    }
 
-    if (outsideStay) {
-      return baseClasses + "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed opacity-50";
-    }
-    
-    // Ajouter les classes de hover et cursor seulement si la date n'est pas passée
-    const interactiveClasses = "cursor-pointer hover:scale-110 ";
-    
     let colorClasses = "";
     switch (status) {
-      case 'available':
+      case "available":
         colorClasses = "bg-green-100 text-green-800 border-2 border-green-400 hover:bg-green-200";
         break;
-      case 'unavailable':
+      case "unavailable":
         colorClasses = "bg-red-100 text-red-800 border-2 border-red-400 hover:bg-red-200";
         break;
-      case 'stop-sale':
-        colorClasses = "bg-red-500 text-white border-2 border-red-600 hover:bg-red-600 animate-pulse shadow-lg shadow-red-500/80 ring-2 ring-red-400 ring-offset-1 font-bold";
+      case "stop-sale":
+        colorClasses =
+          "bg-red-500 text-white border-2 border-red-600 hover:bg-red-600 animate-pulse shadow-lg shadow-red-500/80 ring-2 ring-red-400 ring-offset-1 font-bold";
         break;
-      case 'push-sale':
-        colorClasses = "bg-green-500 text-white border-2 border-green-600 hover:bg-green-600 shadow-lg shadow-green-500/80 ring-2 ring-green-400 ring-offset-1 font-bold";
+      case "push-sale":
+        colorClasses =
+          "bg-green-500 text-white border-2 border-green-600 hover:bg-green-600 shadow-lg shadow-green-500/80 ring-2 ring-green-400 ring-offset-1 font-bold";
         break;
       default:
         colorClasses = "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200";
     }
-    
+
+    // Devis : jours bloqués restent grisés. Modification : on garde les couleurs de dispo.
+    if (blocked && blockPastDates) {
+      return (
+        baseClasses +
+        "bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed opacity-50"
+      );
+    }
+
+    const interactiveClasses = blocked
+      ? "cursor-not-allowed opacity-70 "
+      : "cursor-pointer hover:scale-110 ";
+
     if (isSelected) {
       colorClasses += " ring-4 ring-blue-400 ring-offset-2";
     }
-    
+
     if (isToday) {
       colorClasses += " font-bold";
     }
-    
+
     return baseClasses + interactiveClasses + colorClasses;
   };
 
@@ -285,7 +328,7 @@ export function ColoredDatePicker({
               // Valider la date avant de l'accepter
               if (parsed) {
                 const dateObj = new Date(parsed + "T12:00:00");
-                if (isDateInPastOrToday(dateObj)) {
+                if (blockPastDates && isDateInPastOrToday(dateObj)) {
                   toast.warning("Les activités ne peuvent pas être programmées avant demain.");
                   return;
                 }
@@ -310,7 +353,13 @@ export function ColoredDatePicker({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              setShowCalendar(!showCalendar);
+              setShowCalendar((open) => {
+                if (!open && isMonthFullyPast(currentMonth)) {
+                  const now = new Date();
+                  setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+                }
+                return !open;
+              });
             }}
             className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-semibold min-h-[44px] min-w-[44px] touch-manipulation"
             title="Ouvrir le calendrier avec disponibilités"
@@ -373,16 +422,17 @@ export function ColoredDatePicker({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (day.isCurrentMonth && !isDateInPastOrToday(day.date) && !isOutsideStayWindow(day.date)) {
+                      if (day.isCurrentMonth && !isDateBlocked(day.date)) {
                         handleDateClick(day.date, e);
                       }
                     }}
                     className={getDayClassName(day, status) + " touch-manipulation"}
-                    disabled={!day.isCurrentMonth || isDateInPastOrToday(day.date) || isOutsideStayWindow(day.date)}
+                    disabled={!day.isCurrentMonth || isDateBlocked(day.date)}
                     style={{ minHeight: '44px', minWidth: '44px' }}
                     title={
                       !day.isCurrentMonth ? "" :
                       stayBounds && isOutsideStayWindow(day.date) ? "Hors séjour (arrivée → départ)" :
+                      blockPastDates && isDateInPastOrToday(day.date) ? "Date passée" :
                       status === 'available' ? "Disponible" :
                       status === 'unavailable' ? "Non disponible" :
                       status === 'stop-sale' ? "STOP SALE" :
