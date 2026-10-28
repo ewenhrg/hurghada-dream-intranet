@@ -15,6 +15,12 @@ type PushRow = {
   last_seen_at?: string | null;
 };
 
+type QuoteStayRow = {
+  reservation_code?: string | null;
+  client_arrival_date?: string | null;
+  client_departure_date?: string | null;
+};
+
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
@@ -24,6 +30,39 @@ function json(status: number, body: unknown) {
       "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     },
   });
+}
+
+/** Jour calendaire à Hurghada (YYYY-MM-DD). */
+function todayCairoYmd(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function dateKey(value: unknown): string {
+  if (value == null) return "";
+  const s = String(value).trim();
+  if (!s) return "";
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : "";
+}
+
+function normalizeReservationCode(raw: unknown): string {
+  return String(raw || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+}
+
+/** Client actuellement à Hurghada : aujourd’hui inclus entre arrivée et départ. */
+function isCurrentlyOnStay(arrivalRaw: unknown, departureRaw: unknown, todayYmd: string): boolean {
+  const arrival = dateKey(arrivalRaw);
+  const departure = dateKey(departureRaw);
+  if (!arrival || !departure || !todayYmd) return false;
+  return arrival <= todayYmd && todayYmd <= departure;
 }
 
 Deno.serve(async (req: Request) => {
@@ -72,6 +111,7 @@ Deno.serve(async (req: Request) => {
   if (allowed.ok !== true) return json(200, { ok: false, error: "Accès refusé." });
 
   const freshAfter = Date.now() - 3 * 60 * 1000;
+  const todayYmd = todayCairoYmd();
   const { data: subs, error: subErr } = await admin
     .from("client_stay_push_subscriptions")
     .select("id, endpoint, p256dh, auth, phone_key, reservation_code, last_seen_at")
@@ -79,14 +119,54 @@ Deno.serve(async (req: Request) => {
     .not("reservation_code", "is", null);
 
   if (subErr) return json(500, { ok: false, error: subErr.message });
-  const rows = ((subs || []) as PushRow[]).filter((row) => {
+  const connectedRows = ((subs || []) as PushRow[]).filter((row) => {
     if (String(row.phone_key || "").length < 10) return false;
-    if (!String(row.reservation_code || "").trim()) return false;
+    if (!normalizeReservationCode(row.reservation_code)) return false;
     const seen = Date.parse(String(row.last_seen_at || ""));
     return Number.isFinite(seen) && seen >= freshAfter;
   });
+
+  const codes = [
+    ...new Set(
+      connectedRows
+        .map((row) => normalizeReservationCode(row.reservation_code))
+        .filter(Boolean)
+    ),
+  ];
+
+  /** @type {Map<string, { arrival: string, departure: string }>} */
+  const stayByCode = new Map();
+  if (codes.length > 0) {
+    const { data: quotes, error: quoteErr } = await admin
+      .from("quotes")
+      .select("reservation_code, client_arrival_date, client_departure_date")
+      .eq("site_key", SITE_KEY)
+      .in("reservation_code", codes);
+
+    if (quoteErr) return json(500, { ok: false, error: quoteErr.message });
+
+    for (const q of (quotes || []) as QuoteStayRow[]) {
+      const code = normalizeReservationCode(q.reservation_code);
+      if (!code) continue;
+      const arrival = dateKey(q.client_arrival_date);
+      const departure = dateKey(q.client_departure_date);
+      const prev = stayByCode.get(code) || { arrival: "", departure: "" };
+      stayByCode.set(code, {
+        arrival: prev.arrival || arrival,
+        departure: prev.departure || departure,
+      });
+    }
+  }
+
+  const rows = connectedRows.filter((row) => {
+    const code = normalizeReservationCode(row.reservation_code);
+    const stay = stayByCode.get(code);
+    if (!stay) return false;
+    return isCurrentlyOnStay(stay.arrival, stay.departure, todayYmd);
+  });
+
   const clients = new Set(rows.map((row) => row.phone_key)).size;
-  if (action === "count") return json(200, { ok: true, clients, sent: 0 });
+  if (action === "count") return json(200, { ok: true, clients, sent: 0, today: todayYmd });
 
   const { data: keysData, error: keysError } = await admin.rpc("get_vapid_keys");
   if (keysError || !keysData?.public || !keysData?.private) {
@@ -128,5 +208,5 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  return json(200, { ok: true, clients, sent });
+  return json(200, { ok: true, clients, sent, today: todayYmd });
 });

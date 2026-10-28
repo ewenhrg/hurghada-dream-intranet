@@ -101,7 +101,9 @@ export function StayBroadcastPage({ user }) {
   return (
     <div className="mx-auto max-w-xl space-y-4">
       <p className="text-sm leading-relaxed text-slate-600">
-        Le message part aux clients connectés à Mon séjour avec leur numéro de réservation. Dès qu’ils se déconnectent, ils ne sont plus comptés.
+        Le message part uniquement aux clients connectés à Mon séjour dont le séjour inclut aujourd’hui
+        (date d’arrivée ≤ aujourd’hui ≤ date de départ, fuseau Hurghada). Les clients hors dates ou
+        déconnectés ne sont pas comptés.
       </p>
       <p className="text-sm font-semibold text-slate-800">
         {loadingCount
@@ -109,8 +111,8 @@ export function StayBroadcastPage({ user }) {
           : audienceError
             ? audienceError
             : audience
-              ? `${audience} client${audience > 1 ? "s" : ""} connecté${audience > 1 ? "s" : ""}.`
-              : "Aucun client n'est connecté à Mon séjour."}
+              ? `${audience} client${audience > 1 ? "s" : ""} actuellement à Hurghada.`
+              : "Aucun client actuellement à Hurghada (connecté à Mon séjour avec séjour en cours)."}
       </p>
       <label className="block">
         <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">Message</span>
