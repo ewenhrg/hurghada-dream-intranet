@@ -10,7 +10,7 @@
 import {
   isSpeedBoatActivity,
   allowsSpeedBoatIslandExtras,
-  allowsSpeedBoatDolphinExtra,
+  includesSpeedBoatDolphinSearch,
   formatTurtleFinSizesLabel,
   isZeroTracasActivity,
   isZeroTracasHorsZoneActivity,
@@ -90,11 +90,10 @@ export function generateQuoteHTML(quote, options = {}) {
     let extrasInfo = [];
     
     if (isSpeedBoat) {
-      // Extra dauphin
-      if (allowsSpeedBoatDolphinExtra(item.activityName) && item.extraDolphin) {
-        extrasInfo.push("🐬 Extra dauphin (+20€)");
+      if (includesSpeedBoatDolphinSearch(item.activityName)) {
+        extrasInfo.push("Recherche dauphins incluse (sous réserve des conditions)");
       }
-      
+
       // Extra Speed Boat îles (pas pour Speedboat Sunset)
       if (allowsSpeedBoatIslandExtras(item.activityName) && item.speedBoatExtra) {
         // Gérer le nouveau format (array) et l'ancien format (string) pour compatibilité
@@ -531,8 +530,8 @@ export function generateTicketsHTML(quote, options = {}) {
     const isSpeedBoat = item.activityName && isSpeedBoatActivity(item.activityName);
 
     if (isSpeedBoat) {
-      if (allowsSpeedBoatDolphinExtra(item.activityName) && item.extraDolphin) {
-        lines.push("Extra dauphin (+20€)");
+      if (includesSpeedBoatDolphinSearch(item.activityName)) {
+        lines.push("Recherche dauphins incluse (sous réserve des conditions)");
       }
       if (allowsSpeedBoatIslandExtras(item.activityName) && item.speedBoatExtra) {
         const extrasArray = Array.isArray(item.speedBoatExtra)

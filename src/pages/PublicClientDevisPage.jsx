@@ -74,6 +74,11 @@ import {
   stripAirbnbColumns,
 } from "../utils/clientAirbnb.js";
 import { isLikelyGoogleMapsUrl } from "../utils/googleMapsUrl.js";
+import {
+  formatPickupSlotLabel,
+  getActivityCatalogPickupOptions,
+  requiresPickupTimeChoice,
+} from "../utils/transferPricing";
 
 /** `*` : toutes les colonnes présentes en base (évite erreur si `babies_forbidden` n’est pas encore migrée). */
 const ACTIVITY_COLUMNS = "*";
@@ -538,6 +543,22 @@ export function PublicClientDevisPage() {
     );
   }
 
+  function updateLinePickupSlot(lineId, nextSlot, options = []) {
+    const chosen = String(nextSlot || "").trim();
+    const matched = (options || []).find((o) => o.slot === chosen);
+    setCart((prev) =>
+      prev.map((line) =>
+        line.id === lineId
+          ? {
+              ...line,
+              slot: chosen,
+              pickupTime: matched?.time || "",
+            }
+          : line
+      )
+    );
+  }
+
   function updateClientField(field, value) {
     setClient((prev) => ({ ...prev, [field]: value }));
   }
@@ -673,6 +694,21 @@ export function PublicClientDevisPage() {
       return;
     }
 
+    const missingPickup = cartLines.filter((line) => {
+      const options = getActivityCatalogPickupOptions(line.activity);
+      if (!requiresPickupTimeChoice(options)) return false;
+      return !String(line.slot || "").trim();
+    });
+    if (missingPickup.length > 0) {
+      const names = missingPickup
+        .map((line) => line.activity?.name || "activité")
+        .join(", ");
+      setError(
+        `${names} : choisissez l’heure / créneau de prise en charge (plusieurs créneaux disponibles).`
+      );
+      return;
+    }
+
     const incompleteAges = cartLines.filter(
       (line) => (line.derived?.minorsCount || 0) > 0 && (line.derived?.missingCount || 0) > 0
     );
@@ -720,6 +756,8 @@ export function PublicClientDevisPage() {
         birthDates: Array.isArray(line.birthDates) ? [...line.birthDates] : [],
         minorsCount: toNumber(line.derived?.minorsCount ?? line.minorsCount),
         lineTotal: toNumber(line.lineTotal),
+        slot: String(line.slot || "").trim(),
+        pickupTime: String(line.pickupTime || "").trim(),
         // Options catalogue (fiche activité / panier) — nécessaire pour « Commencer le devis » côté intranet
         extraDolphin: Boolean(line.extraDolphin),
         divingVisitor: toNumber(line.divingVisitorCount) > 0 || Boolean(line.divingVisitor),
@@ -1210,6 +1248,53 @@ export function PublicClientDevisPage() {
                       <Trash2 className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
+                    {(() => {
+                      const pickupOpts = getActivityCatalogPickupOptions(line.activity);
+                      if (!pickupOpts.length) return null;
+                      const needsPickup = requiresPickupTimeChoice(pickupOpts);
+                      const currentSlot = String(line.slot || "").trim();
+                      const matched = pickupOpts.find((o) => o.slot === currentSlot);
+                      return (
+                        <div className="mt-3 rounded-xl bg-catalog-bg px-3 py-2.5 ring-1 ring-catalog-line">
+                          <label
+                            htmlFor={`cart-pickup-${line.id}`}
+                            className="block text-[0.625rem] font-bold uppercase tracking-[0.12em] text-catalog-muted"
+                          >
+                            Prise en charge
+                            {needsPickup ? <span className="ml-1 text-catalog-coralDeep">*</span> : null}
+                          </label>
+                          {pickupOpts.length === 1 && !needsPickup ? (
+                            <p className="mt-0.5 text-sm font-semibold text-catalog-ink">
+                              {matched?.label ||
+                                formatPickupSlotLabel(currentSlot || pickupOpts[0].slot, line.pickupTime)}
+                            </p>
+                          ) : (
+                            <select
+                              id={`cart-pickup-${line.id}`}
+                              value={currentSlot}
+                              onChange={(e) =>
+                                updateLinePickupSlot(line.id, e.target.value, pickupOpts)
+                              }
+                              className={`mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm font-semibold text-catalog-ink ${
+                                needsPickup && !currentSlot
+                                  ? "border-catalog-coralDeep"
+                                  : "border-catalog-line"
+                              }`}
+                              aria-required={needsPickup ? true : undefined}
+                            >
+                              <option value="">
+                                {needsPickup ? "— Choisir un créneau —" : "— Créneau —"}
+                              </option>
+                              {pickupOpts.map((opt) => (
+                                <option key={opt.slot} value={opt.slot}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="mt-3 grid grid-cols-3 gap-2">
                     <div className="rounded-xl bg-catalog-bg px-2 py-2 text-center">
                       <span className="block text-[0.625rem] font-bold uppercase tracking-[0.12em] text-catalog-muted">Adultes</span>

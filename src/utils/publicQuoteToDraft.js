@@ -3,7 +3,7 @@
  * d’une demande catalogue (table `public_quotes` ou modèle d’affichage équivalent).
  */
 
-import { getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote } from "./activityHelpers";
+import { getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, clearZeroTracasSimQuantities } from "./activityHelpers";
 import { formatPhoneWithPlus } from "../utils.js";
 import { createEmptyAirbnb, pickAirbnbFields } from "./clientAirbnb.js";
 import { createEmptySecondHotel, pickSecondHotelFields } from "./clientSecondHotel.js";
@@ -21,6 +21,7 @@ export function createBlankQuoteLine() {
     extraLabel: "",
     extraAmount: "",
     slot: "",
+    pickupTime: "",
     extraDolphin: false,
     divingVisitor: false,
     divingVisitorCount: "",
@@ -49,9 +50,6 @@ export function createBlankQuoteLine() {
     louxorPrivatif4pax: false,
     louxorPrivatif5pax: false,
     louxorPrivatif6pax: false,
-    flyingDress2Robes: false,
-    flyingDress3Robes: false,
-    flyingDress4Robes: false,
   };
 }
 
@@ -107,13 +105,15 @@ export function mergePublicSavedLineIntoQuoteItem(line) {
   base.louxorPrivatif4pax = Boolean(line.louxorPrivatif4pax);
   base.louxorPrivatif5pax = Boolean(line.louxorPrivatif5pax);
   base.louxorPrivatif6pax = Boolean(line.louxorPrivatif6pax);
-  base.flyingDress2Robes = Boolean(line.flyingDress2Robes);
-  base.flyingDress3Robes = Boolean(line.flyingDress3Robes);
-  base.flyingDress4Robes = Boolean(line.flyingDress4Robes);
 
   base.allerSimple = Boolean(line.allerSimple);
   base.allerRetour = Boolean(line.allerRetour);
-  base.neighborhood = String(line.neighborhood || "").trim();
+
+  base.slot = String(line.slot || "").trim();
+  base.pickupTime = String(line.pickupTime || "").trim();
+  if (line.neighborhood != null) {
+    base.neighborhood = String(line.neighborhood || "").trim();
+  }
 
   base.zeroTracasTransfertVisaSim = line.zeroTracasTransfertVisaSim != null ? String(line.zeroTracasTransfertVisaSim) : "";
   base.zeroTracasTransfertVisa = line.zeroTracasTransfertVisa != null ? String(line.zeroTracasTransfertVisa) : "";
@@ -124,6 +124,8 @@ export function mergePublicSavedLineIntoQuoteItem(line) {
     line.zeroTracasTransfertPlus3Personnes != null ? String(line.zeroTracasTransfertPlus3Personnes) : "";
   base.zeroTracasVisaSim = line.zeroTracasVisaSim != null ? String(line.zeroTracasVisaSim) : "";
   base.zeroTracasVisaSeul = line.zeroTracasVisaSeul != null ? String(line.zeroTracasVisaSeul) : "";
+
+  Object.assign(base, clearZeroTracasSimQuantities(base));
 
   return base;
 }
@@ -151,7 +153,7 @@ export function buildQuoteDraftFromPublicViewModel(vm) {
       email: vm.client?.email || "",
       hotel: vm.client?.hotel || "",
       room: "",
-      neighborhood: items.map((item) => String(item.neighborhood || "").trim()).find(Boolean) || "",
+      neighborhood: "",
       arrivalDate: vm.client?.arrivalDate || "",
       departureDate: vm.client?.departureDate || "",
       isAirbnb: Boolean(vm.client?.isAirbnb),

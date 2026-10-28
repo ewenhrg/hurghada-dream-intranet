@@ -4,7 +4,7 @@ import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, CATEGORIES, getQuoteSiteKeysForSync }
 import { uuid, currency, currencyNoCents, calculateCardPrice, saveQuotesCache, formatPhoneWithPlus, toBoundedInt10 } from "../utils";
 import { setVisibilityAwareInterval } from "../utils/idle";
 import { generateQuoteHTML } from "../utils/printTemplates";
-import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isArrivalDayServiceActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, isFlyingDressActivity, allowsFlyingDressExtra, getFlyingDressOptions, hasFlyingDressOption, flyingDressOptionPatch, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage} from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isCalecheActivity, getCalecheUnitPrice, isSpeedBoatActivity, isSpeedBoatSunsetActivity, allowsSpeedBoatIslandExtras, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, isBoatPartyActivity, getBoatPartyPrices, isMotoCrossActivity, getMotoCrossPrices, isZeroTracasActivity, isZeroTracasHorsZoneActivity, isArrivalDayServiceActivity, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, isFlyingDressActivity, allowsFlyingDressExtra, getFlyingDressOptions, hasFlyingDressOption, flyingDressOptionPatch, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage} from "../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
 import { DateInput } from "../components/DateInput";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
@@ -2155,7 +2155,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                   <div>
                     <label className="block text-xs md:text-sm font-bold text-slate-700 mb-3">Options Speed Boat</label>
                     <p className="text-xs text-slate-600 font-medium mb-2">
-                      Un seul choix possible : dauphin <strong>ou</strong> une île — pas les deux.
+                      Base 150 € jusqu’à 4 personnes, +20 € / personne jusqu’à 7. Recherche dauphins incluse (sous réserve des conditions sur place). Une île / formule optionnelle.
                     </p>
                     {c.raw.slot === "morning" && (
                       <p className="text-xs text-amber-800 font-medium mb-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
@@ -2163,25 +2163,6 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                       </p>
                     )}
                     <div className="space-y-2.5 border-2 border-blue-200/60 rounded-xl p-4 bg-gradient-to-br from-blue-50/60 to-indigo-50/40 backdrop-blur-sm shadow-md">
-                      {allowsSpeedBoatDolphinExtra(c.act.name) && (
-                        <label className="flex items-center gap-2 cursor-pointer hover:bg-blue-50/50 p-2 rounded-lg transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={c.raw.extraDolphin || false}
-                            onChange={(e) =>
-                              setItem(idx, {
-                                extraDolphin: e.target.checked,
-                                ...(e.target.checked ? { speedBoatExtra: [] } : {}),
-                              })
-                            }
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-slate-700 flex-1">
-                            <span className="font-medium">🐬 Extra dauphin</span>
-                            <span className="text-xs text-slate-500 ml-2">(+20€)</span>
-                          </span>
-                        </label>
-                      )}
                       {getSpeedBoatIslandExtrasForSlot(c.raw.slot).map((extra) => {
                         const currentExtras = normalizeSpeedBoatExtrasList(c.raw.speedBoatExtra);
                         const isChecked = currentExtras[0] === extra.id;

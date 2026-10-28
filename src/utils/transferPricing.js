@@ -142,6 +142,15 @@ const PICKUP_SLOT_LABELS = {
   evening: "Soir",
 };
 
+/** Libellé court d’un créneau (Matin / Après-midi / Soir). */
+export function formatPickupSlotLabel(slot, time = "") {
+  const key = String(slot || "").trim();
+  const slotLabel = PICKUP_SLOT_LABELS[key] || key;
+  if (!slotLabel) return "";
+  const t = String(time || "").trim();
+  return t ? `${slotLabel} (${t})` : slotLabel;
+}
+
 /**
  * Créneaux / heures de prise en charge disponibles pour un quartier (transfers activité).
  * @returns {{ slot: string, time: string, value: string, label: string }[]}
@@ -171,36 +180,47 @@ export function getActivityPickupOptions(activity, neighborhoodKey) {
   return getTransferPickupOptions(activity?.transfers?.[nb]);
 }
 
-function normalizePickupActivityName(name) {
-  return String(name || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-/** Speed boat, Panorama et spas : l’heure du devis reste visible sur Situation. */
-export function showsChosenPickupOnSituation(activityName) {
-  const name = normalizePickupActivityName(activityName);
-  return (
-    name.includes("speedboat") ||
-    name.includes("speed boat") ||
-    name.includes("panorama") ||
-    name.includes("spa")
-  );
-}
-
-/** Heure déjà choisie au devis, ou l’unique créneau du quartier si une seule heure existe. */
-export function chosenPickupTime(item, activity) {
-  const stored = String(item?.pickupTime || "").trim();
-  if (stored) return stored;
-  const options = getActivityPickupOptions(activity, item?.neighborhood);
-  const slot = String(item?.slot || "").trim();
-  if (slot) {
-    const match = options.find((option) => option.slot === slot);
-    if (match?.time) return match.time;
+/**
+ * Créneaux proposés sur le catalogue public (sans quartier client encore connu) :
+ * union des créneaux activés sur au moins un quartier de l’activité.
+ * @returns {{ slot: string, time: string, value: string, label: string }[]}
+ */
+export function getActivityCatalogPickupOptions(activity) {
+  if (!activity?.transfers || typeof activity.transfers !== "object") return [];
+  /** @type {Record<string, Set<string>>} */
+  const timesBySlot = {};
+  for (const transferInfo of Object.values(activity.transfers)) {
+    if (!transferInfo || typeof transferInfo !== "object") continue;
+    for (const slot of ["morning", "afternoon", "evening"]) {
+      if (!transferInfo[`${slot}Enabled`]) continue;
+      if (!timesBySlot[slot]) timesBySlot[slot] = new Set();
+      const time = String(transferInfo[`${slot}Time`] || "").trim();
+      if (time) timesBySlot[slot].add(time);
+      else timesBySlot[slot].add("");
+    }
   }
-  if (options.length === 1) return options[0].time || "";
-  return "";
+  const options = [];
+  for (const slot of ["morning", "afternoon", "evening"]) {
+    const times = timesBySlot[slot];
+    if (!times) continue;
+    const nonEmpty = [...times].filter(Boolean);
+    const slotLabel = PICKUP_SLOT_LABELS[slot] || slot;
+    let time = "";
+    let label = slotLabel;
+    if (nonEmpty.length === 1) {
+      time = nonEmpty[0];
+      label = `${slotLabel} (${time})`;
+    } else if (nonEmpty.length > 1) {
+      label = `${slotLabel} (heure selon hôtel)`;
+    }
+    options.push({
+      slot,
+      time,
+      value: slot,
+      label,
+    });
+  }
+  return options;
 }
 
 /** Plusieurs créneaux possibles → le choix d’une heure / créneau est obligatoire. */
@@ -233,26 +253,4 @@ export function pickupTimeFromOptionValue(options, selectedValue) {
   const match = (options || []).find((o) => o.value === raw || o.time === raw || o.slot === raw);
   if (!match) return raw;
   return match.time || match.label || raw;
-}
-
-const STAFF_PICKUP_SLOT_LABELS = {
-  morning: "Matin",
-  afternoon: "Après-midi",
-  evening: "Soir",
-};
-
-/** Libellé interne devis / ticket quand plusieurs horaires existent. */
-export function formatStaffPickupLabel(item) {
-  if (!item?.staffPickup) return "";
-  const time = String(item.pickupTime || "").trim();
-  const slot = STAFF_PICKUP_SLOT_LABELS[item.slot] || "";
-  if (slot && time) return `${slot} · ${time}`;
-  return time || slot;
-}
-
-/** Ticket client : rien, sauf le créneau choisi quand l’activité a plusieurs heures. */
-export function formatTicketPickupLabel(item) {
-  const hasSlot = Boolean(STAFF_PICKUP_SLOT_LABELS[String(item?.slot || "").trim()]);
-  if (!item?.staffPickup && !hasSlot) return "";
-  return formatStaffPickupLabel({ ...item, staffPickup: true });
 }

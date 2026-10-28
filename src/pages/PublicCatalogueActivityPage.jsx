@@ -48,6 +48,7 @@ import {
   isSpeedBoatSunsetActivity,
   allowsSpeedBoatIslandExtras,
   getSpeedBoatIslandExtras,
+  normalizeSpeedBoatExtrasForSlot,
   isZeroTracasActivity,
   isZeroTracasHorsZoneActivity,
   isArrivalDayServiceActivity,
@@ -72,6 +73,10 @@ import {
   getPublicCatalogListFromPrice,
   isPublicCatalogAirportStyleLine,
 } from "../utils/publicCatalogPricing";
+import {
+  getActivityCatalogPickupOptions,
+  requiresPickupTimeChoice,
+} from "../utils/transferPricing";
 import { isHurghadaAirportHotelTransfer } from "../utils/activityNeighborhoodRules.js";
 import {
   isDivingActivityName,
@@ -130,7 +135,7 @@ function formatMoney(value, currency = "EUR") {
 
 function b2bOptionNote(activity, special) {
   const bits = [];
-  if (special.extraDolphin) bits.push("Dauphin");
+  // Dauphin inclus dans le prix de base (plus d’option payante)
   for (const id of special.speedBoatExtra || []) {
     const extra = getSpeedBoatIslandExtras().find((item) => item.id === id);
     if (extra?.label) bits.push(extra.label);
@@ -332,6 +337,10 @@ function BookingCardShell({
   speedBoatMaxMessage = "",
   hidePrices = false,
   allowWithoutStay = false,
+  pickupOptions = null,
+  slot = "",
+  setSlot,
+  pickupRequired = false,
 }) {
   const currency = activity.currency || "EUR";
   const ageChild = String(activity.age_child || "").trim();
@@ -502,7 +511,49 @@ function BookingCardShell({
         <p className="text-sm text-catalog-brass">Aucun jour n&apos;est ouvert pour cette activité en ligne. Écrivez-nous sur WhatsApp pour réserver.</p>
       ) : null}
 
+      {Array.isArray(pickupOptions) && pickupOptions.length > 0 ? (
+        <div>
+          <label
+            htmlFor="catalog-pickup-slot"
+            className="mb-1.5 block text-sm font-bold text-catalog-ink"
+          >
+            Heure de prise en charge
+            {pickupRequired ? <span className="ml-1 text-catalog-coralDeep">*</span> : null}
+          </label>
+          <select
+            id="catalog-pickup-slot"
+            value={slot || ""}
+            onChange={(e) => setSlot?.(e.target.value)}
+            aria-required={pickupRequired ? true : undefined}
+            className={`w-full hdc-input !min-h-11 !rounded-xl !px-3 !py-2 text-sm font-semibold ${
+              pickupRequired && !String(slot || "").trim()
+                ? "!border-catalog-coralDeep"
+                : ""
+            }`}
+          >
+            <option value="">
+              {pickupRequired ? "— Choisir un créneau —" : "— Créneau (optionnel) —"}
+            </option>
+            {pickupOptions.map((opt) => (
+              <option key={opt.slot} value={opt.slot}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-xs font-medium text-catalog-muted">
+            {pickupRequired
+              ? "Plusieurs créneaux sont proposés : choisissez celui qui vous convient. L’heure exacte peut dépendre de votre hôtel."
+              : "L’heure exacte de prise en charge peut être confirmée selon votre hôtel."}
+          </p>
+        </div>
+      ) : null}
+
       <div className="border-t border-catalog-line pt-4">
+        {pickupRequired && !String(slot || "").trim() ? (
+          <p className="mb-2 text-center text-sm font-semibold text-catalog-coralDeep">
+            Choisissez une heure de prise en charge.
+          </p>
+        ) : null}
         <div className="mb-3 flex items-end justify-between">
           <span className="text-sm font-medium text-catalog-muted">Total</span>
           <span className="font-catalog-display text-[1.625rem] leading-none tabular-nums text-catalog-ink">
@@ -557,6 +608,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
   const calecheManualRef = useRef(0);
   const calechePartyRef = useRef(null);
   const [date, setDate] = useState("");
+  const [slot, setSlot] = useState("");
   const [stay, setStay] = useState(() => loadPublicCatalogueStay());
   const [stayModalOpen, setStayModalOpen] = useState(() => !b2b && !isValidCatalogueStay(loadPublicCatalogueStay()));
   const [stopDateSet, setStopDateSet] = useState(() => new Set());
@@ -626,6 +678,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
 
     if (prevActivityIdRef.current !== null && prevActivityIdRef.current !== activityId) {
       setDate("");
+      setSlot("");
       setAdults(1);
       setMinorsCount(0);
     }
@@ -686,12 +739,40 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
     return listFromPrice?.amount ?? (toNumber(activity.price_adult) > 0 ? toNumber(activity.price_adult) : null);
   }, [activity, listFromPrice]);
 
+  const pickupOptions = useMemo(
+    () => (activity ? getActivityCatalogPickupOptions(activity) : []),
+    [activity]
+  );
+  const pickupRequired = requiresPickupTimeChoice(pickupOptions);
+
+  useEffect(() => {
+    if (!activity) return;
+    if (pickupOptions.length === 1) {
+      const only = pickupOptions[0]?.slot || "";
+      if (slot !== only) setSlot(only);
+      return;
+    }
+    if (slot && !pickupOptions.some((o) => o.slot === slot)) {
+      setSlot("");
+    }
+  }, [activity, pickupOptions, slot]);
+
+  useEffect(() => {
+    if (!activity || !isSpeedBoatActivity(activity.name)) return;
+    const filtered = normalizeSpeedBoatExtrasForSlot(special.speedBoatExtra, slot);
+    const current = Array.isArray(special.speedBoatExtra) ? special.speedBoatExtra : [];
+    if (filtered.length !== current.length || filtered[0] !== current[0]) {
+      setSpecial((s) => ({ ...s, speedBoatExtra: filtered }));
+    }
+  }, [activity, slot, special.speedBoatExtra]);
+
   const pricingLine = useMemo(() => {
     const line = {
       adults,
       // Estimation provisoire : tous les mineurs au tarif enfant jusqu’à classification checkout
       children: minorsCount,
       babies: 0,
+      slot,
       ...special,
     };
     if (activity && isCalecheActivity(activity.name)) {
@@ -702,7 +783,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
       );
     }
     return line;
-  }, [activity, adults, minorsCount, special]);
+  }, [activity, adults, minorsCount, slot, special]);
 
   const lineTotal = useMemo(
     () => (activity ? computePublicCatalogLineTotal(activity, pricingLine) : 0),
@@ -726,11 +807,11 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
     }
     if (isSpeedBoatActivity(activity.name)) {
       if (isSpeedBoatSunsetActivity(activity.name)) {
-        return `Grille Speed Boat Sunset : base 125 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant (sans extra dauphin ni îles).\n${getSpeedBoatMaxParticipantsMessage()}`;
+        return `Grille Speed Boat Sunset : base 125 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant (sans îles).\n${getSpeedBoatMaxParticipantsMessage()}`;
       }
       return [
-        "Grille Speed Boat : base 145 € pour 1–2 adultes, +20 € par adulte au-delà de 2, +10 € par enfant.",
-        "Une seule option payante au choix : dauphin (+20 €) ou une île / formule (baie, lunch…).",
+        "Grille Speed Boat : base 150 € pour 1–4 personnes, +20 € par personne supplémentaire jusqu’à 7.",
+        "Recherche dauphins incluse (sous réserve des conditions sur place).",
         getSpeedBoatMaxParticipantsMessage(),
       ].join("\n");
     }
@@ -780,21 +861,17 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
     return "";
   }, [activity]);
 
-  /** Dauphin OU une île — jamais les deux (aligné sur la grille tarifaire). */
+  /** Une île / formule optionnelle (dauphin inclus dans le prix de base). */
   const speedBoatPackValue = useMemo(() => {
-    if (special.extraDolphin) return "dolphin";
     const first = special.speedBoatExtra?.[0];
     if (first) return first;
     return "none";
-  }, [special.extraDolphin, special.speedBoatExtra]);
+  }, [special.speedBoatExtra]);
 
   const applySpeedBoatPack = useCallback((value) => {
     setSpecial((s) => {
       if (value === "none") {
         return { ...s, extraDolphin: false, speedBoatExtra: [] };
-      }
-      if (value === "dolphin") {
-        return { ...s, extraDolphin: true, speedBoatExtra: [] };
       }
       return { ...s, extraDolphin: false, speedBoatExtra: value ? [value] : [] };
     });
@@ -802,10 +879,10 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
 
   useEffect(() => {
     if (!activity || !isSpeedBoatActivity(activity.name)) return;
-    if (special.extraDolphin && (special.speedBoatExtra?.length ?? 0) > 0) {
-      setSpecial((s) => ({ ...s, speedBoatExtra: [] }));
+    if (special.extraDolphin) {
+      setSpecial((s) => ({ ...s, extraDolphin: false }));
     }
-  }, [activity, special.extraDolphin, special.speedBoatExtra]);
+  }, [activity, special.extraDolphin]);
 
   useEffect(() => {
     if (!activity || !isSpeedBoatSunsetActivity(activity.name)) return;
@@ -832,7 +909,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
         <div className="space-y-3 rounded-xl border border-transparent bg-catalog-lagoonSoft p-3">
           <p className="text-xs font-bold uppercase tracking-wide text-catalog-ink">Options Speed Boat</p>
           <p className="text-[11px] font-medium leading-snug text-catalog-body">
-            <strong>Un seul choix possible :</strong> soit l&apos;option dauphin, soit une île / formule — pas les deux.
+            Recherche dauphins <strong>incluse</strong> (sous réserve des conditions sur place). Vous pouvez ajouter une île / formule.
           </p>
           <div className="max-h-[min(70vh,22rem)] space-y-2 overflow-y-auto pr-0.5" role="radiogroup" aria-label="Options Speed Boat">
             <label className={speedBoatOptionClass(speedBoatPackValue === "none")}>
@@ -845,19 +922,6 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
                 className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-catalog-border accent-catalog-ocean focus:outline-none focus:ring-2 focus:ring-catalog-ocean focus:ring-offset-1"
               />
               <span className="text-sm font-semibold leading-snug text-catalog-ink">{b2b ? "Aucune option" : "Aucune option (prix de base)"}</span>
-            </label>
-            <label className={speedBoatOptionClass(speedBoatPackValue === "dolphin")}>
-              <input
-                type="radio"
-                name={radioName}
-                value="dolphin"
-                checked={speedBoatPackValue === "dolphin"}
-                onChange={() => applySpeedBoatPack("dolphin")}
-                className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-catalog-border accent-catalog-ocean focus:outline-none focus:ring-2 focus:ring-catalog-ocean focus:ring-offset-1"
-              />
-              <span className="text-sm font-semibold leading-snug text-catalog-ink">
-                Dauphin{b2b ? null : <span className="font-bold text-catalog-ocean"> (+20 € pour la ligne)</span>}
-              </span>
             </label>
             {allowsSpeedBoatIslandExtras(name) &&
               getSpeedBoatIslandExtras().map((extra) => (
@@ -1330,6 +1394,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
 
   const canAddToCart =
     Boolean(date) &&
+    (!pickupRequired || Boolean(String(slot || "").trim())) &&
     !noDatesConfigured &&
     !codedTotalPending &&
     !stopDateSet.has(date) &&
@@ -1589,6 +1654,9 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
     ) {
       return;
     }
+    if (pickupRequired && !String(slot || "").trim()) {
+      return;
+    }
     const minors = Math.max(0, toNumber(minorsCount));
     const adultCount = Math.max(0, toNumber(adults));
     const prev = loadPublicCatalogueCart();
@@ -1599,6 +1667,8 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
         requiredCalecheCount(adultCount, minors)
       );
     }
+    const chosenSlot = String(slot || "").trim();
+    const matchedPickup = pickupOptions.find((o) => o.slot === chosenSlot);
     const line = {
       id: `${activity.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       activityId: String(activity.id),
@@ -1609,6 +1679,8 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
       // Provisoire jusqu’à classification au checkout
       children: minors,
       babies: 0,
+      slot: chosenSlot,
+      pickupTime: matchedPickup?.time || "",
       ...lineSpecial,
     };
     if (b2b) {
@@ -1914,6 +1986,10 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
                   speedBoatMaxMessage={speedBoatMaxMessage}
                   hidePrices={b2b}
                   allowWithoutStay={b2b}
+                  pickupOptions={pickupOptions}
+                  slot={slot}
+                  setSlot={setSlot}
+                  pickupRequired={pickupRequired}
                 />
               </div>
             </div>
@@ -1974,6 +2050,10 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
                 speedBoatMaxMessage={speedBoatMaxMessage}
                 hidePrices={b2b}
                 allowWithoutStay={b2b}
+                pickupOptions={pickupOptions}
+                slot={slot}
+                setSlot={setSlot}
+                pickupRequired={pickupRequired}
               />
             </div>
           </div>

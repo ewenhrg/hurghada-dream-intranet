@@ -10,7 +10,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, computeZeroTracasLineTotal, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, isFlyingDressActivity, allowsFlyingDressExtra, getFlyingDressOptions, hasFlyingDressOption, computeFlyingDressLineTotal, flyingDressOptionPatch, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, formatTurtleFinSizesLabel, isArrivalDayServiceActivity, isTransferActivity} from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, computeZeroTracasLineTotal, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, isFlyingDressActivity, allowsFlyingDressExtra, getFlyingDressOptions, hasFlyingDressOption, computeFlyingDressLineTotal, flyingDressOptionPatch, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, formatTurtleFinSizesLabel, isArrivalDayServiceActivity, isTransferActivity} from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -2803,7 +2803,8 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
           it.children,
           it.extraDolphin,
           it.speedBoatExtra,
-          it.slot
+          it.slot,
+          it.babies
         );
       } else if (act && isBuggyActivity(act.name)) {
         // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy 2 pers. et 4 pers.
@@ -3968,7 +3969,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           ⚡ Options Speed Boat
                         </p>
                         <p className="text-xs md:text-sm text-slate-600 font-medium mb-3">
-                          Un seul choix possible : dauphin <strong>ou</strong> une île — pas les deux.
+                          Base 150 € jusqu’à 4 personnes, +20 € / personne jusqu’à 7. Recherche dauphins incluse (sous réserve des conditions sur place). Une île / formule optionnelle.
                         </p>
                         {c.raw.slot === "morning" && (
                           <p className="text-xs md:text-sm text-amber-900 font-medium mb-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
@@ -3976,26 +3977,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           </p>
                         )}
                         <div className="space-y-3 border-2 border-blue-200/70 rounded-xl p-4 bg-white/95 shadow-sm">
-                          {allowsSpeedBoatDolphinExtra(c.activityName) && (
-                            <label className="flex items-center gap-3 p-2 rounded-lg transition-colors cursor-pointer hover:bg-cyan-50/50">
-                              <input
-                                type="checkbox"
-                                id={`edit-extraDolphin-${idx}`}
-                                checked={c.raw.extraDolphin || false}
-                                onChange={(e) =>
-                                  setItem(idx, {
-                                    extraDolphin: e.target.checked,
-                                    ...(e.target.checked ? { speedBoatExtra: [] } : {}),
-                                  })
-                                }
-                                className="w-5 h-5 text-blue-600 border-gray-400 rounded focus:ring-blue-500 cursor-pointer"
-                              />
-                              <span className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-2">
-                                <span>🐬</span>
-                                <span>Extra dauphin (+20€)</span>
-                              </span>
-                            </label>
-                          )}
                           {getSpeedBoatIslandExtrasForSlot(c.raw.slot).map((extra) => {
                             const currentExtras = normalizeSpeedBoatExtrasList(c.raw.speedBoatExtra);
                             const isChecked = currentExtras[0] === extra.id;
@@ -4072,7 +4053,6 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                     </div>
                   </div>
                 )}
-                {/* Extra dauphin — géré dans le bloc Speed Boat ci-dessus */}
                 {/* Afficher le numéro de ticket si présent (non modifiable) */}
                 {((c.raw.ticketNumber || quote.items?.find((item) => item.activityId === c.act?.id && item.date === c.raw.date)?.ticketNumber)) && (
                   <div className="mt-4 p-4 md:p-5 bg-emerald-50/80 border-2 border-emerald-300/70 rounded-xl">

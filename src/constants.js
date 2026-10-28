@@ -167,13 +167,13 @@ export function getDefaultActivities() {
       id: uuid(),
       category: "aquatique",
       name: "Speed Boat",
-      // prix de base pour 2 personnes
-      priceAdult: 145,
-      priceChild: 145,
+      // prix de base pour 1–4 personnes (grille codée dans activityHelpers)
+      priceAdult: 150,
+      priceChild: 150,
       priceBaby: 0,
       currency: "EUR",
       availableDays: [true, true, true, true, true, true, true],
-      notes: "Base 145€ pour 2 pers. +20€/adulte sup. +10€/enfant sup.",
+      notes: "Base 150€ pour 1–4 pers. +20€/pers. jusqu’à 7. Recherche dauphins incluse (sous réserve des conditions).",
       transfers: emptyTransfers(),
     },
     {

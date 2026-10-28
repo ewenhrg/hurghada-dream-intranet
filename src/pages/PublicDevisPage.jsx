@@ -3,8 +3,8 @@ import { CheckCircle2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, getQuotesRealtimeSiteKeyFilter } from "../constants";
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
-import { allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, formatTurtleFinSizesLabel } from "../utils/activityHelpers";
-import { getAirportOutOfZoneFee } from "../utils/activityNeighborhoodRules.js";
+import { allowsSpeedBoatIslandExtras, includesSpeedBoatDolphinSearch, formatTurtleFinSizesLabel } from "../utils/activityHelpers";
+import { formatPickupSlotLabel } from "../utils/transferPricing";
 import { formatDivingVisitorLabel } from "../utils/divingSafety.js";
 import { logger } from "../utils/logger";
 import { formatPhoneWithPlus } from "../utils";
@@ -68,8 +68,11 @@ function getCatalogLineOptionLines(item) {
   const finSizesLabel = formatTurtleFinSizesLabel(item, activityName);
   if (finSizesLabel) lines.push(finSizesLabel);
 
-  if (allowsSpeedBoatDolphinExtra(activityName) && item.extraDolphin) {
-    lines.push("Dauphin (+20 € sur la ligne)");
+  const pickupLabel = formatPickupSlotLabel(item.slot, item.pickupTime);
+  if (pickupLabel) lines.push(`Prise en charge : ${pickupLabel}`);
+
+  if (includesSpeedBoatDolphinSearch(activityName)) {
+    lines.push("Recherche dauphins incluse (sous réserve des conditions)");
   }
   if (allowsSpeedBoatIslandExtras(activityName)) {
     for (const id of normalizeSpeedBoatExtras(item)) {
@@ -108,14 +111,9 @@ function getCatalogLineOptionLines(item) {
   if (item.louxorPrivatif4pax) lines.push("Louxor privatif — 4 personnes");
   if (item.louxorPrivatif5pax) lines.push("Louxor privatif — 5 personnes");
   if (item.louxorPrivatif6pax) lines.push("Louxor privatif — 6 personnes");
-  if (item.flyingDress2Robes) lines.push("Extra Flying Dress — 2 robes");
-  if (item.flyingDress3Robes) lines.push("Extra Flying Dress — 3 robes");
-  if (item.flyingDress4Robes) lines.push("Extra Flying Dress — 4 robes");
 
   if (item.allerSimple && !item.allerRetour) lines.push("Transfert : aller simple");
   if (item.allerRetour) lines.push("Transfert : aller-retour");
-  const outOfZoneFee = getAirportOutOfZoneFee(item.activityName, item.neighborhood, item);
-  if (outOfZoneFee > 0) lines.push(`Frais hors zone +${outOfZoneFee} €`);
 
   const zt = [
     [item.zeroTracasTransfertVisaSim, "Zéro tracas — transfert + visa + SIM"],

@@ -1,8 +1,8 @@
 import {
   isBoatPartyActivity,
   isSpeedBoatActivity,
-  allowsSpeedBoatDolphinExtra,
   allowsSpeedBoatIslandExtras,
+  includesSpeedBoatDolphinSearch,
   isFlyingDressActivity,
   formatTurtleFinSizesLabel,
 } from "./activityHelpers";
@@ -158,17 +158,10 @@ export function getQuoteItemExtraLabels(item) {
     String(item.activityNameFr || item.activityName || item.activity_name || "").trim();
   const speedBoatExtras = normalizeSpeedBoatExtras(item);
 
-  if (
-    (allowsSpeedBoatDolphinExtra(activityName) ||
-      (item.extraDolphin && speedBoatExtras.length === 0 && isSpeedBoatActivity(activityName))) &&
-    item.extraDolphin
-  ) {
-    labels.push("Dauphin");
+  if (includesSpeedBoatDolphinSearch(activityName)) {
+    labels.push("Dauphins inclus");
   }
-  if (
-    allowsSpeedBoatIslandExtras(activityName) ||
-    (speedBoatExtras.length > 0 && !item.extraDolphin)
-  ) {
+  if (allowsSpeedBoatIslandExtras(activityName) || speedBoatExtras.length > 0) {
     for (const id of speedBoatExtras) {
       const ex = SPEED_BOAT_EXTRAS.find((e) => e.id === id);
       if (ex?.id) labels.push(ex.label);

@@ -130,7 +130,15 @@ export function computePublicCatalogLineTotal(activity, line) {
   let total = 0;
 
   if (isSpeedBoatActivity(name)) {
-    total = computeSpeedBoatLineTotal(name, ad, ch, line?.extraDolphin, line?.speedBoatExtra);
+    total = computeSpeedBoatLineTotal(
+      name,
+      ad,
+      ch,
+      line?.extraDolphin,
+      line?.speedBoatExtra,
+      line?.slot,
+      bab
+    );
   } else if (isBuggyActivity(name)) {
     const p = getBuggyPrices(name);
     total = num(line?.buggySimple) * p.simple + num(line?.buggyFamily) * p.family;

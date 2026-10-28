@@ -59,7 +59,7 @@ export function isSpeedBoatActivity(activityName) {
   return name.includes("speed boat") || name.includes("speedboat");
 }
 
-/** Variante sunset : base 125 € (1–2 pers.), mêmes extras pax, sans îles ni dauphin. */
+/** Variante sunset : base 125 € (1–2 pers.), +20 €/adt >2, +10 €/enfant, sans îles. */
 export function isSpeedBoatSunsetActivity(activityName) {
   if (!activityName) return false;
   const name = activityName.toLowerCase().trim();
@@ -71,8 +71,16 @@ export function allowsSpeedBoatIslandExtras(activityName) {
   return isSpeedBoatActivity(activityName) && !isSpeedBoatSunsetActivity(activityName);
 }
 
-/** Option dauphin (+20 €) — pas pour Speedboat Sunset. */
-export function allowsSpeedBoatDolphinExtra(activityName) {
+/**
+ * Ancienne option « Extra dauphin » (+20 €) — retirée : recherche dauphins incluse
+ * (sous réserve des conditions sur place). Conservé pour compat lecture d’anciens devis.
+ */
+export function allowsSpeedBoatDolphinExtra(_activityName) {
+  return false;
+}
+
+/** Recherche dauphins incluse sur Speed Boat classique (pas Sunset). */
+export function includesSpeedBoatDolphinSearch(activityName) {
   return isSpeedBoatActivity(activityName) && !isSpeedBoatSunsetActivity(activityName);
 }
 
@@ -109,7 +117,10 @@ export function normalizeSpeedBoatExtrasList(extrasRaw) {
   return [];
 }
 
-export const SPEED_BOAT_BASE_PRICE = 145;
+/** Speed Boat classique : 150 € jusqu’à 4 personnes, +20 € / pers. jusqu’à 7. */
+export const SPEED_BOAT_BASE_PRICE = 150;
+export const SPEED_BOAT_INCLUDED_PARTICIPANTS = 4;
+export const SPEED_BOAT_EXTRA_PERSON_PRICE = 20;
 export const SPEED_BOAT_SUNSET_BASE_PRICE = 125;
 export const SPEED_BOAT_EXTRA_ADULT_PRICE = 20;
 export const SPEED_BOAT_EXTRA_CHILD_PRICE = 10;
@@ -120,14 +131,27 @@ export function getSpeedBoatBasePrice(activityName) {
     : SPEED_BOAT_BASE_PRICE;
 }
 
-/** Grille Speed Boat : base 145 € (sunset 125 €), +20 €/adt >2, +10 €/enfant, option dauphin +20 €. */
-export function computeSpeedBoatBaseLineTotal(adults, children, extraDolphin, activityName) {
+/**
+ * Grille Speed Boat :
+ * - classique : 150 € pour 1–4 pers. (adt+enf+bébés), +20 € / pers. au-delà (max 7), dauphin inclus ;
+ * - sunset : 125 € (1–2 adt), +20 €/adt >2, +10 €/enfant (sans îles).
+ * `extraDolphin` ignoré (compat anciens devis).
+ */
+export function computeSpeedBoatBaseLineTotal(adults, children, extraDolphin, activityName, babies = 0) {
   const ad = Number(adults || 0);
   const ch = Number(children || 0);
-  let lineTotal = getSpeedBoatBasePrice(activityName);
-  if (ad > 2) lineTotal += (ad - 2) * SPEED_BOAT_EXTRA_ADULT_PRICE;
-  lineTotal += ch * SPEED_BOAT_EXTRA_CHILD_PRICE;
-  if (extraDolphin) lineTotal += 20;
+  const bab = Number(babies || 0);
+  if (isSpeedBoatSunsetActivity(activityName)) {
+    let lineTotal = SPEED_BOAT_SUNSET_BASE_PRICE;
+    if (ad > 2) lineTotal += (ad - 2) * SPEED_BOAT_EXTRA_ADULT_PRICE;
+    lineTotal += ch * SPEED_BOAT_EXTRA_CHILD_PRICE;
+    return lineTotal;
+  }
+  const pax = ad + ch + bab;
+  let lineTotal = SPEED_BOAT_BASE_PRICE;
+  if (pax > SPEED_BOAT_INCLUDED_PARTICIPANTS) {
+    lineTotal += (pax - SPEED_BOAT_INCLUDED_PARTICIPANTS) * SPEED_BOAT_EXTRA_PERSON_PRICE;
+  }
   return lineTotal;
 }
 
@@ -148,13 +172,25 @@ export function addSpeedBoatIslandExtrasToLineTotal(lineTotal, activityName, adu
   return total;
 }
 
-/** Total ligne Speed Boat (base + dauphin + îles selon l’activité). */
-export function computeSpeedBoatLineTotal(activityName, adults, children, extraDolphin, speedBoatExtra, slot) {
-  const dolphin = allowsSpeedBoatDolphinExtra(activityName) && extraDolphin;
-  let total = computeSpeedBoatBaseLineTotal(adults, children, dolphin, activityName);
-  if (!dolphin) {
-    total = addSpeedBoatIslandExtrasToLineTotal(total, activityName, adults, children, speedBoatExtra, slot);
-  }
+/** Total ligne Speed Boat (base + îles ; dauphin inclus, plus d’extra payant). */
+export function computeSpeedBoatLineTotal(
+  activityName,
+  adults,
+  children,
+  extraDolphin,
+  speedBoatExtra,
+  slot,
+  babies = 0
+) {
+  let total = computeSpeedBoatBaseLineTotal(adults, children, false, activityName, babies);
+  total = addSpeedBoatIslandExtrasToLineTotal(
+    total,
+    activityName,
+    adults,
+    children,
+    speedBoatExtra,
+    slot
+  );
   return total;
 }
 
@@ -672,14 +708,18 @@ export function getActivityTarifListLines(activityLike) {
   if (adult > 0 || child > 0 || baby > 0) return null;
 
   if (isSpeedBoatActivity(name)) {
-    const lines = [
-      `Base 1–2 adultes : ${getSpeedBoatBasePrice(name)} €`,
-      "Au-delà de 2 adultes : +20 € / adulte supplémentaire",
-      "Enfant : +10 € / enfant",
-    ];
-    if (allowsSpeedBoatDolphinExtra(name)) {
-      lines.push("Option dauphin : +20 €");
+    if (isSpeedBoatSunsetActivity(name)) {
+      return [
+        `Base 1–2 adultes : ${SPEED_BOAT_SUNSET_BASE_PRICE} €`,
+        "Au-delà de 2 adultes : +20 € / adulte supplémentaire",
+        "Enfant : +10 € / enfant",
+      ];
     }
+    const lines = [
+      `Base 1–4 personnes : ${SPEED_BOAT_BASE_PRICE} €`,
+      `Au-delà de 4 personnes : +${SPEED_BOAT_EXTRA_PERSON_PRICE} € / personne (max ${SPEED_BOAT_MAX_PARTICIPANTS})`,
+      "Recherche dauphins incluse (sous réserve des conditions sur place)",
+    ];
     if (allowsSpeedBoatIslandExtras(name)) {
       const extraLines = getSpeedBoatIslandExtras().map(
         (e) => `${e.label} : +${e.priceAdult} € / adulte · +${e.priceChild} € / enfant`

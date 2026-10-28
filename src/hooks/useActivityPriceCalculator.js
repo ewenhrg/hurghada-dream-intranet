@@ -81,7 +81,8 @@ export function useActivityPriceCalculator(items, activitiesMap, neighborhood, s
           it.children,
           it.extraDolphin,
           it.speedBoatExtra,
-          it.slot
+          it.slot,
+          it.babies
         );
       } else if (act && isBuggyActivity(act.name)) {
         // cas spécial BUGGY + SHOW et BUGGY SAFARI MATIN : calcul basé sur buggy 2 pers. et 4 pers.
