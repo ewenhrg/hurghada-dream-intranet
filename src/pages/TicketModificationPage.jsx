@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SITE_KEY } from "../constants";
 import { supabase } from "../lib/supabase";
 import { calculateCardPrice, currencyNoCents, formatPhoneWithPlus, saveQuotesCache } from "../utils";
@@ -21,6 +21,10 @@ import {
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { saveOpsComment } from "../utils/opsComment";
+import { ColoredDatePicker } from "../components/ColoredDatePicker";
+import { salesCache, createCacheKey } from "../utils/cache";
+import { getLocalDateKey } from "../utils/pushSaleExpiry.js";
+import { setVisibilityAwareInterval } from "../utils/idle";
 
 function findTicketLine(quotes, rawNumber) {
   const needle = String(rawNumber || "").trim().toLowerCase();
@@ -105,6 +109,54 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
   const [searched, setSearched] = useState(false);
   const [deadNote, setDeadNote] = useState("");
   const [noteDrafts, setNoteDrafts] = useState({});
+  const [stopSales, setStopSales] = useState([]);
+  const [pushSales, setPushSales] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadStopSalesAndPushSales() {
+      if (!supabase) return;
+      try {
+        const today = getLocalDateKey();
+        const cacheKey = createCacheKey("sales", SITE_KEY, today);
+        const cached = salesCache.get(cacheKey);
+        if (cached?.stopSales && cached?.pushSales) {
+          if (!cancelled) {
+            setStopSales(cached.stopSales);
+            setPushSales(cached.pushSales);
+          }
+          return;
+        }
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = getLocalDateKey(yesterday);
+        const [stopRes, pushRes] = await Promise.all([
+          supabase.from("stop_sales").select("id, activity_id, date").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
+          supabase.from("push_sales").select("id, activity_id, date").eq("site_key", SITE_KEY).gte("date", yesterdayStr),
+        ]);
+        if (cancelled) return;
+        const stopSalesData = !stopRes.error && stopRes.data ? stopRes.data : [];
+        const pushSalesData = !pushRes.error && pushRes.data ? pushRes.data : [];
+        setStopSales(stopSalesData);
+        setPushSales(pushSalesData);
+        salesCache.set(cacheKey, { stopSales: stopSalesData, pushSales: pushSalesData });
+      } catch (err) {
+        logger.warn("Modification : stop/push sales:", err);
+      }
+    }
+
+    void loadStopSalesAndPushSales();
+    const stopInterval = setVisibilityAwareInterval(() => {
+      void loadStopSalesAndPushSales();
+    }, 60_000);
+
+    return () => {
+      cancelled = true;
+      stopInterval();
+    };
+  }, []);
 
   const createdLines = useMemo(() => {
     const list = [];
@@ -138,6 +190,13 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
     list.sort((a, b) => String(a.name).localeCompare(String(b.name), "fr", { sensitivity: "base" }));
     return list;
   }, [activities]);
+
+  const selectedActivity = useMemo(() => {
+    if (!form?.activityId) return null;
+    return (
+      activityOptions.find((activity) => activityOptionId(activity) === String(form.activityId)) || null
+    );
+  }, [activityOptions, form?.activityId]);
 
   const fillForm = (found) => {
     const item = found.item;
@@ -638,6 +697,8 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
   const price = Math.round(Number(match?.item?.lineTotal) || 0);
   const currency = match?.quote?.currency || "EUR";
   const knownActivity = form && activityOptions.some((activity) => activityOptionId(activity) === String(form.activityId));
+  const stayStartDate = String(match?.quote?.client?.arrivalDate || match?.quote?.client?.arrival_date || "").trim();
+  const stayEndDate = String(match?.quote?.client?.departureDate || match?.quote?.client?.departure_date || "").trim();
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -702,15 +763,6 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
                 className="mt-1 h-11 w-full rounded-xl border border-slate-300 px-3 font-bold outline-none focus:border-indigo-500"
               />
             </label>
-            <label className="text-sm font-semibold text-slate-700">
-              Date
-              <input
-                type="date"
-                value={form.date}
-                onChange={(event) => setField("date", event.target.value)}
-                className="mt-1 h-11 w-full rounded-xl border border-slate-300 px-3 outline-none focus:border-indigo-500"
-              />
-            </label>
             <label className="text-sm font-semibold text-slate-700 sm:col-span-2">
               Activité
               <select
@@ -728,6 +780,29 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
                 ))}
               </select>
             </label>
+            <div className="sm:col-span-2">
+              <p className="text-sm font-semibold text-slate-700">Date</p>
+              <div className="mt-1">
+                <ColoredDatePicker
+                  value={form.date}
+                  onChange={(date) => setField("date", date)}
+                  activity={selectedActivity}
+                  stopSales={stopSales}
+                  pushSales={pushSales}
+                  stayStartDate={stayStartDate}
+                  stayEndDate={stayEndDate}
+                />
+              </div>
+              {!selectedActivity ? (
+                <p className="mt-1 text-xs text-slate-500">
+                  Choisissez une activité pour voir les jours ouverts (vert), fermés (rouge), stop sale et push sale.
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-500">
+                  Calendrier selon les dispos de « {selectedActivity.name} » (mêmes couleurs que Devis).
+                </p>
+              )}
+            </div>
             <label className="text-sm font-semibold text-slate-700">
               Nouveau prix
               <input
