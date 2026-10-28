@@ -503,7 +503,7 @@ export function generateQuoteHTML(quote, options = {}) {
 
 /**
  * Génère une page HTML imprimable contenant un « ticket » (bon d'excursion) par activité du devis.
- * Chaque ticket affiche : prénom/nom, téléphone, hôtel, chambre, activité, date, nombre de personnes,
+ * Chaque ticket affiche : prénom/nom, téléphone, e-mail, hôtel, chambre, activité, date, nombre de personnes,
  * heure de prise en charge (pick up) et prix.
  */
 export function generateTicketsHTML(quote, options = {}) {
@@ -578,6 +578,7 @@ export function generateTicketsHTML(quote, options = {}) {
   const clientName = esc(client.name || "—");
   const reservationCode = esc(String(quote.reservationCode || "").trim());
   const clientPhone = esc(formatPhoneWithPlus(client.phone) || "—");
+  const clientEmail = esc(String(client.email || "").trim());
   const clientHotel = esc(
     client.isAirbnb
       ? `Airbnb${client.hotel ? ` — ${client.hotel}` : ""}`
@@ -867,6 +868,7 @@ export function generateTicketsHTML(quote, options = {}) {
             <div class="tf"><span class="tf-l">👤 Nom</span><span class="tf-v">${clientName}</span></div>
             ${reservationCode ? `<div class="tf"><span class="tf-l">🔑 N° réservation</span><span class="tf-v">${reservationCode}</span></div>` : ""}
             <div class="tf"><span class="tf-l">📞 Téléphone</span><span class="tf-v">${clientPhone}</span></div>
+            ${clientEmail ? `<div class="tf"><span class="tf-l">✉️ Email</span><span class="tf-v">${clientEmail}</span></div>` : ""}
             <div class="tf"><span class="tf-l">🏨 Hôtel</span><span class="tf-v">${clientHotel}</span></div>
             ${clientAirbnbMaps ? `<div class="tf"><span class="tf-l">📍 Maps</span><span class="tf-v"><a href="${clientAirbnbMaps}" target="_blank" rel="noopener noreferrer">${clientAirbnbMaps}</a></span></div>` : ""}
             <div class="tf"><span class="tf-l">🚪 Chambre</span><span class="tf-v">${clientRoom}</span></div>
