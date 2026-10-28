@@ -36,6 +36,7 @@ const FILTERS = {
   modifications: "modifications",
   toSend: "to_send",
   toRefund: "to_refund",
+  treated: "treated",
 };
 
 function describeRequest(row) {
@@ -170,7 +171,7 @@ function statusLabel(status) {
     case STATUS.toRefund:
       return "À rembourser";
     case STATUS.done:
-      return "Terminé";
+      return "Traité";
     case STATUS.refused:
       return "Refusé";
     default:
@@ -230,7 +231,8 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
       (row) => row.status === STATUS.toSend || row.status === STATUS.accepted
     ).length;
     const toRefund = rows.filter((row) => row.status === STATUS.toRefund).length;
-    return { all, pending, modifications, toSend, toRefund };
+    const treated = rows.filter((row) => row.status === STATUS.done).length;
+    return { all, pending, modifications, toSend, toRefund, treated };
   }, [rows]);
 
   const visible = useMemo(() => {
@@ -243,6 +245,8 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
         return rows.filter((row) => row.status === STATUS.toSend || row.status === STATUS.accepted);
       case FILTERS.toRefund:
         return rows.filter((row) => row.status === STATUS.toRefund);
+      case FILTERS.treated:
+        return rows.filter((row) => row.status === STATUS.done);
       case FILTERS.all:
       default:
         return rows;
@@ -533,16 +537,38 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
       } else {
         toast.warning("Ticket modifié introuvable dans le devis — statut mis à jour quand même.");
       }
+
+      // Depuis « confirmation à envoyer » : impression = fin de parcours (ou file remboursements).
+      const fromToSend = row.status === STATUS.toSend || row.status === STATUS.accepted;
+      if (!fromToSend) {
+        toast.success("Ticket ouvert.");
+        return;
+      }
+
       const wf = workflowOf(row);
       const refundAmount = Math.round(Number(wf.refundAmount) || 0);
-      const nextStatus = refundAmount > 0 ? STATUS.toSend : STATUS.sent;
+      if (refundAmount > 0) {
+        const nextPayload = withWorkflow(row, {
+          sentToClientAt: new Date().toISOString(),
+          sentToClient: true,
+        });
+        const ok = await patchRow(row.id, { status: STATUS.toRefund, payload: nextPayload });
+        if (!ok) return;
+        setFilter(FILTERS.toRefund);
+        toast.success("Ticket ouvert — demande placée dans « À rembourser ».");
+        return;
+      }
+
       const nextPayload = withWorkflow(row, {
         sentToClientAt: new Date().toISOString(),
         sentToClient: true,
+        treated: true,
+        treatedAt: new Date().toISOString(),
       });
-      const ok = await patchRow(row.id, { status: nextStatus, payload: nextPayload });
+      const ok = await patchRow(row.id, { status: STATUS.done, payload: nextPayload });
       if (!ok) return;
-      toast.success("Ticket ouvert — marqué comme à envoyer / envoyé au client.");
+      setFilter(FILTERS.treated);
+      toast.success("Ticket ouvert — demande placée dans « Demande traité ».");
     } finally {
       setBusyId(null);
     }
@@ -609,14 +635,19 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
     }
   };
 
-  const markRefundDone = async (row) => {
+  const markTreated = async (row) => {
     if (busyId) return;
     setBusyId(row.id);
     try {
-      const nextPayload = withWorkflow(row, { refundedAt: new Date().toISOString() });
+      const nextPayload = withWorkflow(row, {
+        treated: true,
+        treatedAt: new Date().toISOString(),
+        refundedAt: new Date().toISOString(),
+      });
       const ok = await patchRow(row.id, { status: STATUS.done, payload: nextPayload });
       if (!ok) return;
-      toast.success("Remboursement marqué comme fait.");
+      setFilter(FILTERS.treated);
+      toast.success("Demande déplacée dans « Demande traité ».");
     } finally {
       setBusyId(null);
     }
@@ -659,9 +690,19 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
           >
             À rembourser ({counts.toRefund})
           </Pill>
+          <Pill
+            type="button"
+            tone="light"
+            active={filter === FILTERS.treated}
+            onClick={() => setFilter(FILTERS.treated)}
+            className="!px-3.5 !py-2 !text-xs"
+          >
+            Demande traité ({counts.treated})
+          </Pill>
         </div>
         <p className="text-[11px] font-medium text-indigo-900/75">
-          En attente = toutes les demandes client (modif + annulation). Valider → confirmation à envoyer → ticket client → rembourser si besoin.
+          Valider → confirmation à envoyer → cocher « Envoyé au client » (imprime le ticket) → Demande
+          traité. S’il y a un remboursement : À rembourser → case Traité.
         </p>
       </div>
 
@@ -680,6 +721,7 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
             const isPending = row.status === STATUS.pending;
             const isToSend = row.status === STATUS.toSend || row.status === STATUS.accepted;
             const isToRefund = row.status === STATUS.toRefund;
+            const isTreated = row.status === STATUS.done;
             const busy = busyId === row.id;
 
             return (
@@ -758,7 +800,7 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
                         onChange={() => void markSentToClient(row)}
                         className="size-5 accent-indigo-600"
                       />
-                      Envoyé au client (ouvre le ticket modifié)
+                      Envoyé au client (imprime le ticket → Demande traité)
                     </label>
 
                     <div className="flex flex-wrap items-end gap-2">
@@ -799,7 +841,12 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
                 ) : null}
 
                 {isToRefund ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="mt-4 space-y-3 rounded-xl bg-rose-50/70 p-3 ring-1 ring-rose-200">
+                    {refundAmount > 0 ? (
+                      <p className="text-sm font-semibold text-rose-900">
+                        Remboursement : {currencyNoCents(refundAmount, "EUR")}
+                      </p>
+                    ) : null}
                     <button
                       type="button"
                       disabled={busy}
@@ -808,14 +855,36 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
                     >
                       Revoir le ticket
                     </button>
+                    <label className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                      <input
+                        type="checkbox"
+                        disabled={busy}
+                        checked={false}
+                        onChange={() => void markTreated(row)}
+                        className="size-5 accent-emerald-600"
+                      />
+                      Traité
+                      {refundAmount > 0 ? ` · ${currencyNoCents(refundAmount, "EUR")}` : ""}
+                    </label>
+                  </div>
+                ) : null}
+
+                {isTreated ? (
+                  <div className="mt-4 space-y-2 rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-200">
+                    <label className="flex items-center gap-2 text-sm font-bold text-emerald-950">
+                      <input type="checkbox" checked readOnly className="size-5 accent-emerald-600" />
+                      Traité
+                      {wf.treatedAt
+                        ? ` · ${new Date(wf.treatedAt).toLocaleString("fr-FR")}`
+                        : ""}
+                    </label>
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => void markRefundDone(row)}
-                      className="min-h-10 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white disabled:opacity-60"
+                      onClick={() => void markSentToClient(row)}
+                      className="min-h-10 rounded-xl bg-indigo-600 px-3 text-xs font-bold text-white disabled:opacity-60"
                     >
-                      Marquer remboursé
-                      {refundAmount > 0 ? ` · ${currencyNoCents(refundAmount, "EUR")}` : ""}
+                      Revoir le ticket
                     </button>
                   </div>
                 ) : null}
