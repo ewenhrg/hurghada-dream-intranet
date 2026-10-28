@@ -28,7 +28,7 @@ const SPECIAL_CASES = [
 
 export function PublicPolicyPage() {
   return (
-    <PublicAppShell title="Remboursement" wide>
+    <PublicAppShell title="Remboursement" headerTitle="" wide>
       <main className="mx-auto w-full max-w-lg px-4 pb-16 pt-6 lg:max-w-3xl lg:px-0">
         <p data-reveal="item" className="hdc-eyebrow">Avant de réserver</p>
         <h1 data-split className="mt-1.5 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink lg:text-5xl">

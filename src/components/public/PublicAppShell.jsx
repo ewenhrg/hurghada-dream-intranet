@@ -84,7 +84,7 @@ export function GuestHeaderButton({ onClick, count, children, ariaLabel }) {
  * Header fixe sous la barre d’état (padding natif MainActivity + safe-area), fond ivoire.
  * Accueil = logo ; sinon flèche retour en haut à gauche. Pas de barre d’onglets.
  */
-export function PublicAppShell({ title, right, children, wide = false, revealKey, nav = null }) {
+export function PublicAppShell({ title, headerTitle, right, children, wide = false, revealKey, nav = null }) {
   const { pathname } = useLocation();
   const backTo = publicBackPath(pathname);
   // `wide="xl"` : catalogue excursions (contenu en max-w-7xl), aligne le header sur la grille.
@@ -93,6 +93,8 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
   const headerRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const onHome = !backTo;
+  /** Titre sticky : `headerTitle=""` pour le masquer (ex. page politique déjà titrée en H1). */
+  const stickyTitle = headerTitle === undefined ? title : headerTitle;
 
   usePressFeedback(rootRef);
   useScreenIntro(rootRef, [revealKey, pathname]);
@@ -138,9 +140,13 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
           <div aria-hidden className="hdc-header-bg" />
           <div className={`relative mx-auto flex items-center gap-3 px-4 pb-2 pt-[max(0.35rem,env(safe-area-inset-top))] sm:px-6 ${inner}`}>
             <PublicBackLink to={backTo} />
-            <p data-header-title className="min-w-0 flex-1 truncate font-catalog-display text-[1.15rem] leading-none text-catalog-ink">
-              {title}
-            </p>
+            {stickyTitle ? (
+              <p data-header-title className="min-w-0 flex-1 truncate font-catalog-display text-[1.15rem] leading-none text-catalog-ink">
+                {stickyTitle}
+              </p>
+            ) : (
+              <span className="min-w-0 flex-1" aria-hidden />
+            )}
             {right}
           </div>
         </header>
@@ -150,8 +156,14 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
 
       <div className="relative flex-1 pb-[env(safe-area-inset-bottom)]">
         {backTo ? null : (
-          <div className={`relative mx-auto flex items-center justify-center gap-6 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] ${nav ? "hdc-homebar lg:justify-between" : ""} ${inner}`}>
-            <img src="/client/logo-wordmark.png" alt="Hurghada Dream" className="hdc-wordmark object-contain" />
+          <div className={`relative mx-auto flex items-center justify-center gap-3 px-4 pb-1.5 pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-6 ${nav ? "hdc-homebar lg:justify-between" : ""} ${inner}`}>
+            <img
+              src="/client/logo-wordmark.png"
+              alt="Hurghada Dream"
+              width={468}
+              height={158}
+              className="hdc-wordmark h-[1.05rem] w-auto max-w-[5.75rem] object-contain lg:h-[1.65rem] lg:max-w-[9.5rem]"
+            />
             {nav ? <div className="hidden lg:block">{nav}</div> : null}
             {onHome ? (
               <button
@@ -161,7 +173,7 @@ export function PublicAppShell({ title, right, children, wide = false, revealKey
                 aria-expanded={menuOpen}
                 aria-controls="client-home-menu"
                 onClick={() => setMenuOpen(true)}
-                className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-catalog-ink ring-1 ring-catalog-border lg:static lg:translate-y-0"
+                className="absolute right-3 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white text-catalog-ink ring-1 ring-catalog-border sm:right-4 sm:h-11 sm:w-11 lg:static lg:translate-y-0"
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
                   <path d="M4 7h16M4 12h16M4 17h16" />

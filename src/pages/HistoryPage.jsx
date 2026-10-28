@@ -1,8 +1,21 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
-import { SITE_KEY, LS_KEYS, NEIGHBORHOODS } from "../constants";
-import { currencyNoCents, calculateCardPrice, getTicketPaymentCoverage, saveQuotesCache, cleanPhoneNumber, formatPhoneWithPlus, calculateTransferSurcharge, isQuoteFullyPaid, quoteHasAnyTicket, normalizeTicketsPaymentMethods } from "../utils";
+import { SITE_KEY, LS_KEYS, NEIGHBORHOODS, getQuoteSiteKeysForSync } from "../constants";
+import {
+  currencyNoCents,
+  calculateCardPrice,
+  getTicketPaymentCoverage,
+  saveQuotesCache,
+  cleanPhoneNumber,
+  formatPhoneWithPlus,
+  calculateTransferSurcharge,
+  isQuoteFullyPaid,
+  quoteHasAnyTicket,
+  normalizeTicketsPaymentMethods,
+  normalizeQuoteItemsFromDb,
+  uuid,
+} from "../utils";
 import { generateQuoteHTML, generateTicketsHTML } from "../utils/printTemplates";
 import { setVisibilityAwareInterval } from "../utils/idle";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem, requiresPickupTimeChoice, resolveActivityFromList } from "../utils/transferPricing";
@@ -27,6 +40,7 @@ import {
   getEffectiveNeighborhoodForDate,
 } from "../utils/clientSecondHotel.js";
 import {
+  airbnbFieldsFromRow,
   buildAirbnbDbFields,
   isMissingAirbnbColumnError,
   stripAirbnbColumns,
@@ -59,9 +73,11 @@ import {
   isQuoteFromWeb,
   isMissingQuoteSourceColumnError,
   stripQuoteSourceColumn,
+  normalizeQuoteSource,
 } from "../utils/quoteOrigin";
 import { canEditAutoAssignedTicketNumbers } from "../constants/permissions";
 import {
+  attachTicketPaymentMetaFromItems,
   incrementTicketNumber,
   normalizeTicketNumberKey,
   buildUsedTicketNumberMap,
@@ -81,9 +97,77 @@ import {
 const QUOTE_DOC_BUCKET = "documents";
 const QUOTE_DOC_FALLBACK_BUCKET = "Catalogue";
 
+const HISTORY_EMAIL_SEARCH_SELECT =
+  "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, source, items, total, currency, paid_stripe, paid_cash, reservation_code, client_documents, client_is_airbnb, client_airbnb_maps_url";
+
 /** Visible dans l’historique tant que le jour de la dernière activité n’est pas dépassé (payé ou non). Les tickets restent en base. */
 function isQuoteVisibleInHistory(quote) {
   return !isQuoteLastActivityPastRetention(quote);
+}
+
+function historySearchRowToLocal(row) {
+  const items = normalizeQuoteItemsFromDb(row.items);
+  const createdAt = row.created_at || row.createdAt || new Date().toISOString();
+  const updatedAt = row.updated_at || row.updatedAt || createdAt;
+  return attachTicketPaymentMetaFromItems({
+    id: row.id?.toString() || uuid(),
+    supabase_id: row.id,
+    createdAt,
+    updated_at: updatedAt,
+    client: {
+      name: row.client_name || "",
+      phone: row.client_phone || "",
+      emergencyPhone: row.client_emergency_phone || "",
+      email: row.client_email || "",
+      hotel: row.client_hotel || "",
+      room: row.client_room || "",
+      neighborhood: row.client_neighborhood || "",
+      arrivalDate: row.client_arrival_date || "",
+      departureDate: row.client_departure_date || "",
+      ...airbnbFieldsFromRow(row),
+    },
+    clientArrivalDate: row.client_arrival_date || "",
+    clientDepartureDate: row.client_departure_date || "",
+    notes: row.notes || "",
+    createdByName: row.created_by_name || "",
+    updatedByName: row.updated_by_name || "",
+    source: normalizeQuoteSource(row.source, row.created_by_name),
+    items,
+    total: row.total || 0,
+    totalCash: Math.round(row.total || 0),
+    totalCard: calculateCardPrice(row.total || 0),
+    currency: row.currency || "EUR",
+    paidStripe: row.paid_stripe || 0,
+    paidCash: row.paid_cash || 0,
+    reservationCode: row.reservation_code || "",
+    clientDocuments: normalizeClientDocuments(row.client_documents),
+  });
+}
+
+/** Téléphone, e-mail, nom ou n° de réservation. */
+function quoteMatchesHistorySearch(quote, rawQuery) {
+  const q = String(rawQuery || "").trim().toLowerCase();
+  if (!q) return true;
+
+  const phoneNeedle = q.replace(/\D+/g, "");
+  const hasLettersOrAt = /[a-z@]/i.test(q);
+  const phoneOnlyQuery = Boolean(phoneNeedle) && !hasLettersOrAt;
+
+  const phone = String(quote?.client?.phone || "").replace(/\D+/g, "");
+  if (phoneOnlyQuery && phoneNeedle && phone.includes(phoneNeedle)) return true;
+  // Recherche mixte : n’utiliser le téléphone que si assez de chiffres (évite « 123 » dans un mail).
+  if (!phoneOnlyQuery && phoneNeedle.length >= 6 && phone.includes(phoneNeedle)) return true;
+
+  const email = String(quote?.client?.email || "").trim().toLowerCase();
+  if (email && email.includes(q)) return true;
+
+  const name = String(quote?.client?.name || "").trim().toLowerCase();
+  if (name && name.includes(q)) return true;
+
+  const code = String(quote?.reservationCode || "").trim().toLowerCase();
+  if (code && code.includes(q)) return true;
+
+  return false;
 }
 
 // Composant de carte de devis mémorisé pour améliorer les performances
@@ -1068,11 +1152,17 @@ function QuoteCardComponent({
                   N° de réservation {d.reservationCode}
                 </p>
               ) : null}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm md:text-base">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 text-sm md:text-base">
                 <p className="text-slate-700 font-semibold break-words flex items-center gap-2">
                   <span className="text-lg">📞</span>
                   {formatPhoneWithPlus(d.client?.phone) || "Tél ?"}
                 </p>
+                {d.client?.email ? (
+                  <p className="text-slate-700 font-semibold break-all flex items-center gap-2">
+                    <span className="text-lg">✉️</span>
+                    {d.client.email}
+                  </p>
+                ) : null}
                 <p className="text-slate-700 font-semibold break-words flex items-center gap-2">
                   <span className="text-lg">{d.client?.isAirbnb ? "🏡" : "🏨"}</span>
                   {d.client?.isAirbnb ? (
@@ -2038,26 +2128,77 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
       });
     }
     
-    // Filtre par recherche téléphone ou email (utilise la valeur debouncée)
+    // Filtre par téléphone, e-mail, nom ou n° de réservation
     if (debouncedQ.trim()) {
-      const searchTerm = debouncedQ.trim().toLowerCase();
-      const phoneNeedle = debouncedQ.replace(/\D+/g, ""); // Pour la recherche téléphone (chiffres uniquement)
-      
-      result = result.filter((d) => {
-        // Recherche par téléphone (chiffres uniquement)
-        const clientPhone = (d.client?.phone || "").replace(/\D+/g, "");
-        const phoneMatch = phoneNeedle && clientPhone.includes(phoneNeedle);
-        
-        // Recherche par email (texte complet, insensible à la casse)
-        const clientEmail = (d.client?.email || "").toLowerCase();
-        const emailMatch = clientEmail.includes(searchTerm);
-        
-        return phoneMatch || emailMatch;
-      });
+      result = result.filter((d) => quoteMatchesHistorySearch(d, debouncedQ));
     }
     
     return result;
   }, [debouncedQ, historyQuotes, statusFilter, todayOnlyFilter]);
+
+  // Compléter la recherche e-mail / nom via Supabase si le devis n’est pas déjà en mémoire.
+  useEffect(() => {
+    const term = debouncedQ.trim();
+    if (!supabase || !term || term.length < 2) return undefined;
+    if (!/[a-z@]/i.test(term)) return undefined;
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const siteKeys = getQuoteSiteKeysForSync();
+        const pattern = `%${term.replace(/[%_,()]/g, "")}%`;
+        let query = supabase
+          .from("quotes")
+          .select(HISTORY_EMAIL_SEARCH_SELECT)
+          .or(`client_email.ilike."${pattern}",client_name.ilike."${pattern}"`)
+          .order("created_at", { ascending: false })
+          .limit(40);
+        if (siteKeys.length === 1) query = query.eq("site_key", siteKeys[0]);
+        else if (siteKeys.length > 1) query = query.in("site_key", siteKeys);
+
+        const { data, error } = await query;
+        if (cancelled || error || !Array.isArray(data) || data.length === 0) {
+          if (error) logger.warn("Historique recherche e-mail:", error);
+          return;
+        }
+        const incoming = data.map(historySearchRowToLocal);
+        setQuotes((prev) => {
+          const byKey = new Map(
+            (prev || []).map((quote) => [String(quote.supabase_id || quote.id), quote])
+          );
+          let changed = false;
+          for (const quote of incoming) {
+            const key = String(quote.supabase_id || quote.id);
+            if (!byKey.has(key)) {
+              byKey.set(key, quote);
+              changed = true;
+            } else {
+              const existing = byKey.get(key);
+              if (!existing?.client?.email && quote.client?.email) {
+                byKey.set(key, {
+                  ...existing,
+                  client: { ...existing.client, email: quote.client.email },
+                });
+                changed = true;
+              }
+            }
+          }
+          if (!changed) return prev;
+          const merged = Array.from(byKey.values());
+          merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          saveQuotesCache(merged);
+          return merged;
+        });
+      } catch (err) {
+        if (!cancelled) logger.warn("Historique recherche e-mail:", err);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [debouncedQ, setQuotes]);
   
   // Formater UNIQUEMENT la page courante (20 devis) — pas toute la liste filtrée
   const paginatedQuotes = useMemo(() => {
@@ -2346,7 +2487,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
           <div className="flex-1 max-w-md">
               <div className="space-y-3">
               <TextInput
-                placeholder="Rechercher par téléphone ou email..."
+                type="search"
+                inputMode="search"
+                autoComplete="off"
+                placeholder="Téléphone, e-mail, nom ou n° réservation…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                   className="w-full text-base border-2 border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 rounded-xl shadow-sm"

@@ -248,14 +248,15 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 }
 
 .hd-public-catalog .hdc-wordmark {
-  height: 1.4rem;
+  display: block;
+  height: 1.05rem;
   width: auto;
-  max-width: 7.5rem;
+  max-width: 5.75rem;
 }
 @media (min-width: 1024px) {
   .hd-public-catalog .hdc-homebar .hdc-wordmark {
-    height: 1.75rem;
-    max-width: 10rem;
+    height: 1.65rem;
+    max-width: 9.5rem;
   }
 }
 
@@ -377,7 +378,7 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 }
 /* Accueil : le premier écran est une fente de mer tant que l’ouverture n’a pas joué. */
 .hd-public-catalog .hdc-hero-screen {
-  height: calc(100svh - 3.4rem - env(safe-area-inset-top, 0px));
+  height: calc(100svh - 2.75rem - env(safe-area-inset-top, 0px));
   min-height: 34rem;
 }
 @media (min-width: 1024px) {
