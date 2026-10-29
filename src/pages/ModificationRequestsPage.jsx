@@ -11,7 +11,6 @@ import {
   commitTicketSequenceAfterPayment,
   confirmTicketAllocations,
   rollbackTicketReservation,
-  voidTicketAllocations,
 } from "../utils/ticketSequence";
 import { formatStayDay, modificationTooLate, paxLabel, refundLabel } from "../utils/modificationRequest";
 import { getLineAmountPaid, settleTicketAfterChange } from "../utils/ticketSettlement";
@@ -194,25 +193,39 @@ function openSpecialTicket(quote, special) {
 function findSpecialTicket(quotes, row) {
   const wf = workflowOf(row);
   const ticket = String(wf.specialTicketNumber || "").trim().toLowerCase();
+  const originTicket = String(row.ticket_number || "").trim().toLowerCase();
   const quoteKey = String(wf.quoteId || "").trim();
   for (const quote of quotes || []) {
     if (quoteKey && String(quote.supabase_id || quote.id) !== quoteKey) continue;
     const items = quote.items || [];
     if (ticket) {
-      const hit = items.find(
-        (item) =>
-          item?.ticketKind === "modification" &&
-          String(item.ticketNumber || "").trim().toLowerCase() === ticket
-      );
+      const hit = items.find((item) => {
+        const num = String(item.ticketNumber || "").trim().toLowerCase();
+        if (num !== ticket) return false;
+        return (
+          item?.ticketKind === "modification" ||
+          item?.isCancelled === true ||
+          item?.cancellation === true
+        );
+      });
       if (hit) return { quote, special: hit };
+      const any = items.find((item) => String(item.ticketNumber || "").trim().toLowerCase() === ticket);
+      if (any) return { quote, special: any };
     }
     const byOrigin = items.find(
       (item) =>
         item?.ticketKind === "modification" &&
-        String(item.modificationOfTicket || "").trim().toLowerCase() ===
-          String(row.ticket_number || "").trim().toLowerCase()
+        String(item.modificationOfTicket || "").trim().toLowerCase() === originTicket
     );
     if (byOrigin) return { quote, special: byOrigin };
+    if (originTicket) {
+      const cancelledOrigin = items.find(
+        (item) =>
+          item?.isCancelled === true &&
+          String(item.ticketNumber || "").trim().toLowerCase() === originTicket
+      );
+      if (cancelledOrigin) return { quote, special: cancelledOrigin };
+    }
   }
   return null;
 }
@@ -376,7 +389,6 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
       let nextLabel = previousLabel;
 
       if (row.kind === "cancel") {
-        nextItem = null;
         previousLabel = String(original.activityName || row.activity_name || "Activité");
         nextLabel = `Annulée · ${row.refund_percent ?? 0} %`;
       } else if (row.change_type === "pickup") {
@@ -427,6 +439,31 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
           refundLabel: refundLabel(percent),
           refundReason: `Demande client · ${percent} %`,
         };
+        nextItem = {
+          ...original,
+          isCancelled: true,
+          cancellation: true,
+          cancelledDate: new Date().toISOString(),
+          lineTotal: 0,
+          amountPaid,
+          restAmount: 0,
+          refundAmount,
+          refundGross: amountPaid,
+          refundLabel: settlement.refundLabel,
+          refundReason: settlement.refundReason,
+          previousActivityName: previousLabel,
+          newActivityName: nextLabel,
+          modifications: [
+            ...(Array.isArray(original.modifications) ? original.modifications : []),
+            {
+              date: new Date().toISOString(),
+              type: "cancelled",
+              activityName: previousLabel,
+              refundPercent: percent,
+              refundAmount,
+            },
+          ],
+        };
       } else {
         settlement = settleTicketAfterChange({
           previousItem: original,
@@ -452,43 +489,44 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
         }
       }
 
-      let items = quote.items.filter((_, index) => index !== found.index);
-      if (nextItem) items = [...quote.items.slice(0, found.index), nextItem, ...quote.items.slice(found.index + 1)];
-      const billable = items.filter((item) => item?.ticketKind !== "modification");
+      let items = [...(quote.items || [])];
+      if (nextItem) {
+        items = [...quote.items.slice(0, found.index), nextItem, ...quote.items.slice(found.index + 1)];
+      }
+      const billable = items.filter(
+        (item) => item?.ticketKind !== "modification" && item?.isCancelled !== true
+      );
       let special = null;
       let reservation = null;
-      if (nextItem || row.kind === "cancel") {
+
+      // Annulation : garder le même n° ticket, le marquer annulé (pas de void, pas de ticket de remplacement).
+      if (row.kind === "cancel") {
+        special = nextItem;
+      } else if (nextItem) {
         const originalNumber = String(original.ticketNumber || "").trim();
         let ticketNumber = originalNumber;
-        if (row.kind === "cancel" || !ticketNumber) {
+        if (!ticketNumber) {
           const reserved = await commitTicketSequenceAfterPayment(supabase, [], { autoCount: 1, quotes });
           if (!reserved.ok || !reserved.reservedNumbers?.[0]) {
-            setError(
-              row.kind === "cancel"
-                ? "Aucun numéro libre pour la ligne d’annulation."
-                : "Ce ticket n’a pas de numéro."
-            );
+            setError("Ce ticket n’a pas de numéro.");
             return;
           }
           reservation = reserved.reservation;
           ticketNumber = reserved.reservedNumbers[0];
         }
-        const source = nextItem || original;
+        const source = nextItem;
         const enteredAt = new Date().toISOString();
         special = {
           ticketKind: "modification",
-          cancellation: row.kind === "cancel",
+          cancellation: false,
           ticketNumber,
           date: String(source.date || row.activity_date || "").slice(0, 10),
-          activityName:
-            row.kind === "cancel"
-              ? `Annulation · ${previousLabel}`
-              : `Modification · ${previousLabel} → ${nextLabel}`,
+          activityName: `Modification · ${previousLabel} → ${nextLabel}`,
           previousActivityName: previousLabel,
           newActivityName: nextLabel,
-          adults: row.kind === "cancel" ? 0 : source.adults,
-          children: row.kind === "cancel" ? 0 : source.children,
-          babies: row.kind === "cancel" ? 0 : source.babies,
+          adults: source.adults,
+          children: source.children,
+          babies: source.babies,
           lineTotal: settlement.lineTotal,
           amountPaid: settlement.amountPaid,
           restAmount: settlement.restAmount,
@@ -522,13 +560,6 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
           .eq("id", updatedQuote.supabase_id)
           .eq("site_key", SITE_KEY);
       }
-      if (!nextItem) {
-        const ticket = String(original.ticketNumber || "").trim();
-        if (ticket) {
-          const burned = await voidTicketAllocations(supabase, [ticket]);
-          if (!burned.ok) setError("L’activité est retirée, mais le numéro de ticket n’a pas pu être annulé.");
-        }
-      }
       const quoteDbId = updatedQuote.supabase_id != null ? Number(updatedQuote.supabase_id) : null;
       if (special && reservation) {
         await confirmTicketAllocations(supabase, [special.ticketNumber], Number.isFinite(quoteDbId) ? quoteDbId : null);
@@ -542,8 +573,10 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
       if (typeof setQuotes === "function") setQuotes(nextQuotes);
       saveQuotesCache(nextQuotes);
 
+      const trackedTicket =
+        String(special?.ticketNumber || original.ticketNumber || row.ticket_number || "").trim();
       const nextPayload = withWorkflow(row, {
-        specialTicketNumber: special?.ticketNumber || "",
+        specialTicketNumber: trackedTicket,
         quoteId: String(updatedQuote.supabase_id || updatedQuote.id || ""),
         refundAmount: Math.round(Number(settlement.refundAmount) || 0),
         restAmount: Math.round(Number(settlement.restAmount) || 0),
@@ -561,8 +594,8 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
         [row.id]: String(Math.round(Number(settlement.restAmount) || 0) || ""),
       }));
       toast.success(
-        special
-          ? `Demande validée. Confirmation à envoyer (ticket ${special.ticketNumber}).`
+        trackedTicket
+          ? `Demande validée. Confirmation à envoyer (ticket ${trackedTicket}).`
           : "Demande validée. Confirmation à envoyer au client."
       );
     } catch (err) {
@@ -639,10 +672,9 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
 
       const hit = findSpecialTicket(quotes, row);
       if (hit && typeof setQuotes === "function") {
+        const specialNumber = String(hit.special.ticketNumber || "").trim();
         const nextItems = (hit.quote.items || []).map((item) =>
-          item === hit.special ||
-          (item?.ticketKind === "modification" &&
-            String(item.ticketNumber || "") === String(hit.special.ticketNumber || ""))
+          item === hit.special || String(item.ticketNumber || "").trim() === specialNumber
             ? { ...item, restAmount }
             : item
         );
@@ -781,7 +813,7 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
                     <p className="mt-1 text-sm text-slate-600">
                       {row.reservation_code}
                       {row.ticket_number ? ` · ticket ${row.ticket_number}` : ""}
-                      {wf.specialTicketNumber ? ` · spécial ${wf.specialTicketNumber}` : ""}
+                      {wf.specialTicketNumber ? ` · ticket ${wf.specialTicketNumber}` : ""}
                     </p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-700">

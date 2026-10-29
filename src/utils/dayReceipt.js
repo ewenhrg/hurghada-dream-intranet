@@ -24,6 +24,7 @@ function isModificationLine(item) {
 }
 
 function isCancellationLine(item) {
+  if (item?.isCancelled === true) return true;
   if (!isModificationLine(item)) return false;
   return (
     item?.cancellation === true ||
@@ -137,8 +138,6 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
     items.forEach((item, itemIndex) => {
       const ticketNumber = String(item?.ticketNumber || "").trim();
       if (!ticketNumber) return;
-      // Ticket d’origine annulé et retiré : on affiche la ligne d’annulation, pas un fantôme.
-      if (item?.isCancelled === true && !isModificationLine(item)) return;
       if (!validatedOnDay(item, quote, key)) return;
       lines.push({
         item,
@@ -166,7 +165,7 @@ export function buildDayReceipt(quotes, dateKey, activities = []) {
 
   groups.forEach(({ id, quote, lines }) => {
     const client = quote?.client || {};
-    const billableDay = lines.filter((line) => !line.modification);
+    const billableDay = lines.filter((line) => !line.modification && !line.cancellation);
     const dayItems = billableDay.map((line) => line.item);
     const allTicketed = (quote?.items || []).filter(
       (item) => String(item?.ticketNumber || "").trim() && !isModificationLine(item) && item?.isCancelled !== true

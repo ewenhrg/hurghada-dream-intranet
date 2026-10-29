@@ -647,7 +647,15 @@ export function generateTicketsHTML(quote, options = {}) {
   };
 
   const sortedItems = [...(quote.items || [])]
-    .filter((item) => item?.isCancelled !== true && String(item?.ticketNumber || "").trim())
+    .filter((item) => {
+      const hasNumber = String(item?.ticketNumber || "").trim();
+      if (!hasNumber) return false;
+      // Garder les tickets annulés quand on imprime une confirmation d’annulation (liste courte / seule ligne).
+      if (item?.isCancelled === true) {
+        return (quote.items || []).length === 1 || item?.cancellation === true;
+      }
+      return true;
+    })
     .sort((a, b) => {
     const na = String(a?.ticketNumber || "").trim();
     const nb = String(b?.ticketNumber || "").trim();
@@ -802,10 +810,16 @@ export function generateTicketsHTML(quote, options = {}) {
       const tripLabel = formatTransferTripLabel(item);
 
       const isModification = item.ticketKind === "modification";
+      const isCancelled = item?.isCancelled === true || item?.cancellation === true;
       const modificationAmount = Math.round(Number(item.restAmount) || Number(item.lineTotal) || 0);
       const priceText = esc(
-        isModification
-          ? currencyNoCents(modificationAmount, quote.currency || "EUR")
+        isModification || isCancelled
+          ? currencyNoCents(
+              isCancelled
+                ? Math.round(Number(item.refundAmount) || 0)
+                : modificationAmount,
+              quote.currency || "EUR"
+            )
           : formatTicketPriceDisplay(item)
       );
       const extraLines = formatTicketExtraLines(item);
@@ -837,16 +851,22 @@ export function generateTicketsHTML(quote, options = {}) {
         if (note) settlementRows.push(`<div class="ticket-settle-note">${esc(note)}</div>`);
       }
 
-      const activityHtml = isModification
+      const activityHtml = isCancelled
         ? `<div class="ticket-activity ticket-activity-mod">
+            <div class="ticket-mod-kicker">Ticket annulé</div>
+            <div class="ticket-mod-old">${esc(resolveTicketActivityName(item, activitiesById) || item.previousActivityName || "—")}</div>
+            <div class="ticket-mod-new">Statut : Annulé</div>
+          </div>`
+        : isModification
+          ? `<div class="ticket-activity ticket-activity-mod">
             <div class="ticket-mod-kicker">Ticket modification</div>
             <div class="ticket-mod-old">Avant : ${esc(item.previousActivityName || "—")}</div>
             <div class="ticket-mod-new">Maintenant : ${esc(item.newActivityName || "—")}</div>
           </div>`
-        : `<div class="ticket-activity">${esc(resolveTicketActivityName(item, activitiesById))}${formatTurtleFinSizesLabel(item) ? `<div class="ticket-visitor">${esc(formatTurtleFinSizesLabel(item))}</div>` : ""}${extrasHTML}</div>`;
+          : `<div class="ticket-activity">${esc(resolveTicketActivityName(item, activitiesById))}${formatTurtleFinSizesLabel(item) ? `<div class="ticket-visitor">${esc(formatTurtleFinSizesLabel(item))}</div>` : ""}${extrasHTML}</div>`;
 
       return `
-      <div class="ticket${isModification ? " ticket-modification" : ""}">
+      <div class="ticket${isModification || isCancelled ? " ticket-modification" : ""}">
         <div class="ticket-accent"></div>
         <div class="ticket-body">
           <div class="ticket-head">
@@ -854,11 +874,11 @@ export function generateTicketsHTML(quote, options = {}) {
               <img src="${logoSrc}" alt="Hurghada Dream" class="ticket-logo" />
               <div class="ticket-brand-text">
                 <span class="ticket-brand-name">HURGHADA DREAM</span>
-                <span class="ticket-brand-sub">${isModification ? "Modification" : "Bon d'excursion"}</span>
+                <span class="ticket-brand-sub">${isCancelled ? "Annulation" : isModification ? "Modification" : "Bon d'excursion"}</span>
               </div>
             </div>
             <div class="ticket-price">
-              <span class="ticket-price-label">${isModification ? "Reste à payer" : "Prix"}</span>
+              <span class="ticket-price-label">${isCancelled ? "À rembourser" : isModification ? "Reste à payer" : "Prix"}</span>
               <span class="ticket-price-value">${priceText}</span>
             </div>
           </div>

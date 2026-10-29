@@ -44,7 +44,9 @@ export function clearStayCode() {
 
 function stayPayload(data) {
   const payload = data && typeof data === "object" ? data : {};
-  const items = Array.isArray(payload.items) ? payload.items : [];
+  const items = (Array.isArray(payload.items) ? payload.items : []).filter(
+    (item) => item?.ticketKind !== "modification" && item?.isCancelled !== true
+  );
   return {
     ok: payload.ok !== false,
     found: payload.found === true,

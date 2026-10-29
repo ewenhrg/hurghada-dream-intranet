@@ -6,11 +6,7 @@ import { generateTicketsHTML } from "../utils/printTemplates";
 import { computePaidColumnsFromItems, findTicketNumberConflict } from "../utils/ticketCollections";
 import {
   claimTicketNumbersForQuote,
-  commitTicketSequenceAfterPayment,
-  confirmTicketAllocations,
   releaseTicketAllocations,
-  rollbackTicketReservation,
-  voidTicketAllocations,
 } from "../utils/ticketSequence";
 import { itemWithPickupSchedule, visiblePickupTime } from "../utils/pickupSchedule";
 import {
@@ -35,7 +31,6 @@ function findTicketLine(quotes, rawNumber) {
     const items = quote.items || [];
     for (let index = 0; index < items.length; index += 1) {
       const item = items[index];
-      if (item?.isCancelled === true) continue;
       const ticketNumber = String(item?.ticketNumber || "").trim().toLowerCase();
       if (!ticketNumber || ticketNumber !== needle) continue;
       if (item?.ticketKind === "modification") {
@@ -579,6 +574,10 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       toast.error("Ce ticket n’est plus dans le devis.");
       return;
     }
+    if (original.isCancelled === true) {
+      toast.info(`Le ticket ${ticket} est déjà annulé. Il reste visible dans Situation.`);
+      return;
+    }
     if (original.ticketKind === "modification") {
       const origin = findTicketLine(quotes, original.modificationOfTicket || "");
       if (origin && origin.item?.ticketKind !== "modification") {
@@ -595,7 +594,7 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
     }
     const activity = String(original.activityName || "cette activité").trim();
     const confirmed = window.confirm(
-      `Annuler le ticket ${ticket} (${activity}) ?\n\nL’activité disparaît de Situation, Transferts et Mon séjour. Une ligne d’annulation est créée. Le numéro ${ticket} est mort : il ne sera plus jamais redonné.`
+      `Annuler le ticket ${ticket} (${activity}) ?\n\nLe ticket reste le même numéro et apparaît comme annulé dans Situation. Pas de nouveau ticket.`
     );
     if (!confirmed) {
       popup.close();
@@ -603,23 +602,13 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
     }
 
     const previous = quotes;
-    const quoteDbId = quote.supabase_id != null ? Number(quote.supabase_id) : null;
     setSaving(true);
-    let reservation = null;
     try {
       if (!supabase) {
         popup.close();
-        toast.error("Connexion indispensable pour créer la ligne d’annulation.");
+        toast.error("Connexion indispensable pour enregistrer l’annulation.");
         return;
       }
-      const reserved = await commitTicketSequenceAfterPayment(supabase, [], { autoCount: 1, quotes });
-      if (!reserved.ok || !reserved.reservedNumbers?.[0]) {
-        popup.close();
-        toast.error("Aucun numéro libre pour la ligne d’annulation.");
-        return;
-      }
-      reservation = reserved.reservation;
-      const kept = quote.items.filter((_, index) => index !== match.itemIndex);
       const enteredAt = new Date().toISOString();
       const settlement = settleTicketAfterChange({
         previousItem: original,
@@ -628,17 +617,11 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
         activityDate: String(original.date || "").slice(0, 10),
         alreadyModified: Array.isArray(original.modifications) && original.modifications.length > 0,
       });
-      const special = {
-        ticketKind: "modification",
+      const cancelledItem = {
+        ...original,
+        isCancelled: true,
         cancellation: true,
-        ticketNumber: reserved.reservedNumbers[0],
-        date: String(original.date || "").slice(0, 10),
-        activityName: `Annulation · ${activity}`,
-        previousActivityName: snapshotLabel(original),
-        newActivityName: "Annulée",
-        adults: 0,
-        children: 0,
-        babies: 0,
+        cancelledDate: enteredAt,
         lineTotal: 0,
         amountPaid: settlement.amountPaid,
         restAmount: 0,
@@ -646,12 +629,24 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
         refundGross: settlement.refundGross,
         refundLabel: settlement.refundLabel || "",
         refundReason: settlement.refundReason || "",
-        modificationOfTicket: ticket,
-        ticketsEnteredAt: enteredAt,
-        createdAt: enteredAt,
+        previousActivityName: snapshotLabel(original),
+        newActivityName: "Annulée",
+        modifications: [
+          ...(Array.isArray(original.modifications) ? original.modifications : []),
+          {
+            date: enteredAt,
+            type: "cancelled",
+            activityName: activity,
+            refundAmount: settlement.refundAmount,
+          },
+        ],
       };
-      const nextItems = [...kept, special];
-      const billable = nextItems.filter((item) => item?.ticketKind !== "modification");
+      const nextItems = (quote.items || []).map((item, index) =>
+        index === match.itemIndex ? cancelledItem : item
+      );
+      const billable = nextItems.filter(
+        (item) => item?.ticketKind !== "modification" && item?.isCancelled !== true
+      );
       const nextTotal = billable.reduce((sum, item) => sum + Math.round(Number(item.lineTotal) || 0), 0);
       const { paidCash, paidStripe } = computePaidColumnsFromItems(billable);
       const updatedQuote = {
@@ -678,29 +673,21 @@ export function TicketModificationPage({ quotes = [], setQuotes, activities = []
       const { error } = await updateQuery;
       if (error) {
         logger.error("Annulation ticket:", error);
-        await rollbackTicketReservation(supabase, reservation);
         popup.close();
         toast.error("L’annulation n’a pas été enregistrée.");
         return;
       }
-      const burned = await voidTicketAllocations(supabase, [ticket]);
-      await confirmTicketAllocations(supabase, [special.ticketNumber], quoteDbId);
       setQuotes(nextQuotes);
       saveQuotesCache(nextQuotes);
       setMatch(null);
       setForm(null);
       setQuery("");
       setSearched(true);
-      setDeadNote(
-        burned.ok
-          ? `Le ticket ${ticket} est annulé. Ligne ${special.ticketNumber} créée. Le numéro ${ticket} ne sera plus jamais redonné.`
-          : `La ligne ${special.ticketNumber} est créée, mais le numéro ${ticket} n’a pas pu être annulé.`
-      );
-      showModificationTicket(popup, updatedQuote, special);
-      toast.success(`Annulation enregistrée. Ligne ${special.ticketNumber} créée.`);
+      setDeadNote(`Ticket ${ticket} annulé — toujours visible dans Situation sous ce numéro.`);
+      showModificationTicket(popup, updatedQuote, cancelledItem);
+      toast.success(`Annulation enregistrée. Ticket ${ticket} marqué annulé.`);
     } catch (err) {
       logger.error("Annulation ticket:", err);
-      if (reservation) await rollbackTicketReservation(supabase, reservation);
       popup.close();
       setQuotes(previous);
       saveQuotesCache(previous);

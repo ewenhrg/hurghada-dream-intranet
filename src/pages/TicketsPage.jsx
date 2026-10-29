@@ -141,6 +141,11 @@ const MODIFICATION_PALETTE = {
   accent: "border-l-amber-600",
 };
 
+const CANCELLED_PALETTE = {
+  row: "bg-slate-200/80",
+  accent: "border-l-slate-500",
+};
+
 const ACTIVITY_PALETTE = [
   { row: "bg-sky-50/70", accent: "border-l-sky-500", excel: "F0F9FF", excelStrong: "7DD3FC" },
   { row: "bg-emerald-50/70", accent: "border-l-emerald-500", excel: "ECFDF5", excelStrong: "6EE7B7" },
@@ -463,7 +468,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     (quotes || []).forEach((quote) => {
       const client = quote.client || {};
       (quote.items || []).forEach((item, idx) => {
-        if (item?.isCancelled === true) return;
         const ticketNumber = item.ticketNumber ? String(item.ticketNumber).trim() : "";
         if (!ticketNumber) return;
         // Data entry : carnet en cours seulement. Un ancien essai (167846)
@@ -478,9 +482,12 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         const priceValue = Math.max(0, lineTotal - transferValue);
         const boatParty = isBoatPartyActivity(item.activityName);
         const isModification = item.ticketKind === "modification";
-        const activityDisplayName = isModification
-          ? `Modification · ${String(item.previousActivityName || "—").trim()} → ${String(item.newActivityName || "—").trim()}`
-          : resolveTicketActivityName(item, activitiesById);
+        const isCancelled = item?.isCancelled === true;
+        const activityDisplayName = isCancelled
+          ? `Annulé · ${resolveTicketActivityName(item, activitiesById)}`
+          : isModification
+            ? `Modification · ${String(item.previousActivityName || "—").trim()} → ${String(item.newActivityName || "—").trim()}`
+            : resolveTicketActivityName(item, activitiesById);
         const published = item.pickupPublished === true;
         const publishedPickup = published ? String(item.pickupTime || "").trim() : "";
         const pickupName = activityDisplayName || item.activityName;
@@ -526,8 +533,10 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           comment: formatSituationComment(item, quote.currency || "EUR"),
           opsComment: String(item.opsComment || "").trim(),
           restAmount: Math.round(Number(item.restAmount) || 0),
-          priceValue: isModification ? 0 : priceValue,
+          refundAmount: Math.round(Number(item.refundAmount) || 0),
+          priceValue: isModification || isCancelled ? 0 : priceValue,
           modificationTicket: isModification,
+          cancelledTicket: isCancelled,
           priceLabel: currencyNoCents(priceValue, quote.currency || "EUR"),
           transferValue,
           transferLabel:
@@ -677,10 +686,12 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
 
       const actKey = r.activitySortKey || r.activity || "";
       if (actKey !== lastAct) {
-        if (lastAct !== null && !r.modificationTicket) toneIdx += 1;
-        const palette = r.modificationTicket
-          ? MODIFICATION_PALETTE
-          : ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
+        if (lastAct !== null && !r.modificationTicket && !r.cancelledTicket) toneIdx += 1;
+        const palette = r.cancelledTicket
+          ? CANCELLED_PALETTE
+          : r.modificationTicket
+            ? MODIFICATION_PALETTE
+            : ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
         blocks.push({
           type: "activity",
           key: `act-${dateKey}-${actKey}-${blocks.length}`,
@@ -691,9 +702,11 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         lastAct = actKey;
       }
 
-      const palette = r.modificationTicket
-        ? MODIFICATION_PALETTE
-        : ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
+      const palette = r.cancelledTicket
+        ? CANCELLED_PALETTE
+        : r.modificationTicket
+          ? MODIFICATION_PALETTE
+          : ACTIVITY_PALETTE[toneIdx % ACTIVITY_PALETTE.length];
       blocks.push({
         type: "row",
         key: r.key,
@@ -1552,15 +1565,20 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                   const r = block.row;
                   const isCopied = copied.has(r.ticketNumber);
                   const isReviewed = entryMode && reviewed.has(r.ticketNumber);
-                  const rowBg = isCopied ? "bg-slate-100" : block.toneClass;
-                  const tdRead = isCopied ? TD_READ_MUTED : TD_READ;
+                  const isCancelled = r.cancelledTicket === true;
+                  const rowBg = isCancelled ? CANCELLED_PALETTE.row : isCopied ? "bg-slate-100" : block.toneClass;
+                  const tdRead = isCopied || isCancelled ? TD_READ_MUTED : TD_READ;
                   const pay = paymentShort(r.paymentMethod);
 
                   return (
                     <tr
                       key={block.key}
                       className={`transition-colors hover:brightness-[0.97] ${rowBg} border-l-4 ${
-                        isCopied ? "border-l-slate-300" : block.accentClass
+                        isCancelled
+                          ? CANCELLED_PALETTE.accent
+                          : isCopied
+                            ? "border-l-slate-300"
+                            : block.accentClass
                       }`}
                     >
                       {entryMode ? (
@@ -1640,11 +1658,20 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                       <th
                         scope="row"
                         className={`${TD} bg-orange-300/90 text-center font-bold text-orange-950 ${
-                          isCopied ? "!bg-slate-200 text-slate-400" : ""
+                          isCancelled
+                            ? "!bg-slate-400 text-slate-900 line-through"
+                            : isCopied
+                              ? "!bg-slate-200 text-slate-400"
+                              : ""
                         }`}
-                        title={r.ticketNumber}
+                        title={isCancelled ? `${r.ticketNumber} · Annulé` : r.ticketNumber}
                       >
                         <span className="block truncate">{r.ticketNumber}</span>
+                        {isCancelled ? (
+                          <span className="mt-0.5 block text-[8px] font-bold uppercase tracking-wide text-slate-700 no-underline">
+                            Annulé
+                          </span>
+                        ) : null}
                       </th>
                       <td className={`${TD} text-center tabular-nums font-semibold text-indigo-900`} title={formatDateDisplay(r.date)}>
                         {formatDateDisplay(r.date)}
@@ -1669,8 +1696,18 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                       <td className={`${TD} text-center tabular-nums font-bold text-emerald-800`}>{r.adults || ""}</td>
                       <td className={`${TD} text-center tabular-nums font-bold text-sky-800`}>{r.children || ""}</td>
                       <td className={`${TD} text-center tabular-nums font-bold text-pink-800`}>{r.babies || ""}</td>
-                      <td className={`${TD} truncate font-semibold text-slate-800`} title={r.activity}>
+                      <td
+                        className={`${TD} truncate font-semibold ${
+                          isCancelled ? "text-slate-500 line-through" : "text-slate-800"
+                        }`}
+                        title={r.activity}
+                      >
                         {r.activity}
+                        {isCancelled && r.refundAmount > 0 ? (
+                          <span className="ml-1 text-[9px] font-bold text-rose-700 no-underline">
+                            remb. {currencyNoCents(r.refundAmount, "EUR")}
+                          </span>
+                        ) : null}
                       </td>
                       <td className={`${TD} !overflow-visible text-center`} title="Heure, et case si le client va à la marina de son hôtel">
                         <div className="flex items-center justify-center gap-1">
