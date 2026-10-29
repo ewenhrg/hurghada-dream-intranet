@@ -74,6 +74,190 @@ function estimateLineTotal(activity, counts, neighborhood) {
   return total > 0 ? total : null;
 }
 
+function sameActivityRef(item, id, name) {
+  const wantedId = String(id || "").trim();
+  if (wantedId && (String(item?.supabase_id ?? "") === wantedId || String(item?.id ?? "") === wantedId)) {
+    return true;
+  }
+  const wantedName = String(name || "").trim();
+  return wantedName.length > 0 && String(item?.name || "").trim() === wantedName;
+}
+
+/** Écart de prix estimé avant validation (page En attente). */
+function previewRequestPrice(row, quote, original, activities) {
+  if (!row || !original) return null;
+  const currency = quote?.currency || "EUR";
+  const previousTotal = Math.round(Number(original.lineTotal) || 0);
+  const amountPaid = getLineAmountPaid(original);
+  const payload = row.payload && typeof row.payload === "object" ? row.payload : {};
+  const neighborhood = quote?.client?.neighborhood || original.neighborhood || "";
+
+  if (row.kind === "cancel") {
+    const percent = Math.max(0, Math.min(100, Math.round(Number(row.refund_percent) || 0)));
+    const refundAmount = Math.round(amountPaid * (percent / 100));
+    return {
+      kind: "cancel",
+      previousTotal,
+      nextTotal: 0,
+      delta: -previousTotal,
+      amountPaid,
+      restAmount: 0,
+      refundAmount,
+      currency,
+      estimable: true,
+    };
+  }
+
+  const activity = (activities || []).find((item) =>
+    sameActivityRef(item, payload.activityId, payload.activityName)
+  );
+  const currentActivity = (activities || []).find((item) =>
+    sameActivityRef(item, original.activityId, original.activityName)
+  );
+
+  let nextTotal = previousTotal;
+  let estimable = true;
+  let nextDate = String(original.date || row.activity_date || "").slice(0, 10);
+  let nextActivityName = String(original.activityName || row.activity_name || "");
+
+  if (row.change_type === "pickup") {
+    nextTotal = previousTotal;
+  } else if (row.change_type === "pax") {
+    const counts = {
+      adults: Math.round(Number(payload.adults) || 0),
+      children: Math.round(Number(payload.children) || 0),
+      babies: Math.round(Number(payload.babies) || 0),
+    };
+    const priced = estimateLineTotal(currentActivity, counts, neighborhood);
+    if (priced == null) estimable = false;
+    else nextTotal = priced;
+  } else if (row.change_type === "date") {
+    nextDate = String(payload.date || "").slice(0, 10) || nextDate;
+    nextTotal = previousTotal;
+  } else if (row.change_type === "activity") {
+    const counts = {
+      adults: Math.round(Number(original.adults) || 0),
+      children: Math.round(Number(original.children) || 0),
+      babies: Math.round(Number(original.babies) || 0),
+    };
+    const priced = estimateLineTotal(activity || currentActivity, counts, neighborhood);
+    if (priced == null) estimable = false;
+    else nextTotal = priced;
+    nextActivityName = activity?.name || payload.activityName || nextActivityName;
+    nextDate = String(payload.date || original.date || "").slice(0, 10) || nextDate;
+  }
+
+  if (!estimable) {
+    return {
+      kind: "modify",
+      previousTotal,
+      nextTotal: null,
+      delta: null,
+      amountPaid,
+      restAmount: 0,
+      refundAmount: 0,
+      currency,
+      estimable: false,
+    };
+  }
+
+  const settlement = settleTicketAfterChange({
+    previousItem: original,
+    nextLineTotal: nextTotal,
+    activityName: nextActivityName,
+    activityDate: nextDate,
+    alreadyModified: Array.isArray(original.modifications) && original.modifications.length > 0,
+  });
+
+  return {
+    kind: "modify",
+    previousTotal,
+    nextTotal,
+    delta: nextTotal - previousTotal,
+    amountPaid,
+    restAmount: Math.round(Number(settlement.restAmount) || 0),
+    refundAmount: Math.round(Number(settlement.refundAmount) || 0),
+    currency,
+    estimable: true,
+  };
+}
+
+function PriceImpactBanner({ preview }) {
+  if (!preview) return null;
+  const { currency } = preview;
+
+  if (!preview.estimable) {
+    return (
+      <div className="mt-3 rounded-xl bg-slate-100 px-3 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+        Écart de prix : impossible à estimer (tarif activité introuvable).
+      </div>
+    );
+  }
+
+  if (preview.kind === "cancel") {
+    return (
+      <div className="mt-3 rounded-xl bg-rose-50 px-3 py-2.5 text-sm font-semibold text-rose-950 ring-1 ring-rose-200">
+        <p>Annulation · prix passe à 0 (était {currencyNoCents(preview.previousTotal, currency)}).</p>
+        <p className="mt-1">
+          {preview.refundAmount > 0
+            ? `Remboursement estimé : ${currencyNoCents(preview.refundAmount, currency)}`
+            : "Aucun remboursement estimé."}
+        </p>
+      </div>
+    );
+  }
+
+  const delta = Math.round(Number(preview.delta) || 0);
+  if (delta > 0) {
+    return (
+      <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-950 ring-1 ring-amber-300">
+        <p>
+          Différence de prix :{" "}
+          <span className="font-extrabold text-amber-900">
+            +{currencyNoCents(delta, currency)}
+          </span>{" "}
+          (plus cher)
+        </p>
+        <p className="mt-1 text-amber-900/90">
+          Prix actuel {currencyNoCents(preview.previousTotal, currency)} → nouveau{" "}
+          {currencyNoCents(preview.nextTotal, currency)}
+          {preview.restAmount > 0
+            ? ` · reste à payer estimé ${currencyNoCents(preview.restAmount, currency)}`
+            : ""}
+        </p>
+      </div>
+    );
+  }
+
+  if (delta < 0) {
+    const less = Math.abs(delta);
+    return (
+      <div className="mt-3 rounded-xl bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-950 ring-1 ring-emerald-300">
+        <p>
+          Différence de prix :{" "}
+          <span className="font-extrabold text-emerald-800">
+            −{currencyNoCents(less, currency)}
+          </span>{" "}
+          (moins cher)
+        </p>
+        <p className="mt-1 text-emerald-900/90">
+          Prix actuel {currencyNoCents(preview.previousTotal, currency)} → nouveau{" "}
+          {currencyNoCents(preview.nextTotal, currency)}
+          {preview.refundAmount > 0
+            ? ` · remboursement estimé ${currencyNoCents(preview.refundAmount, currency)}`
+            : " · pas de remboursement automatique (selon délai / déjà payé)"}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+      Pas de différence de prix ({currencyNoCents(preview.previousTotal, currency)}).
+    </div>
+  );
+}
+
 function findLocalQuote(quotes, row) {
   const code = normalizeReservationCode(row.reservation_code);
   const ticket = String(row.ticket_number || "").trim().toLowerCase();
@@ -372,17 +556,11 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
       const quote = found.quote;
       const original = quote.items[found.index];
       const payload = row.payload && typeof row.payload === "object" ? row.payload : {};
-      const sameActivity = (item, id, name) => {
-        const wantedId = String(id || "").trim();
-        if (wantedId && (String(item?.supabase_id ?? "") === wantedId || String(item?.id ?? "") === wantedId)) {
-          return true;
-        }
-        const wantedName = String(name || "").trim();
-        return wantedName.length > 0 && String(item?.name || "").trim() === wantedName;
-      };
-      const activity = (activities || []).find((item) => sameActivity(item, payload.activityId, payload.activityName));
+      const activity = (activities || []).find((item) =>
+        sameActivityRef(item, payload.activityId, payload.activityName)
+      );
       const currentActivity = (activities || []).find((item) =>
-        sameActivity(item, original.activityId, original.activityName)
+        sameActivityRef(item, original.activityId, original.activityName)
       );
       let nextItem = { ...original };
       let previousLabel = String(original.activityName || row.activity_name || "Activité");
@@ -833,6 +1011,11 @@ export function ModificationRequestsPage({ quotes = [], setQuotes, activities = 
                 {row.hotel ? <p className="mt-2 text-sm text-slate-600">{row.hotel}</p> : null}
 
                 {isPending ? <BaseTicketDetails quote={baseHit?.quote} item={baseItem} /> : null}
+                {isPending ? (
+                  <PriceImpactBanner
+                    preview={previewRequestPrice(row, baseHit?.quote, baseItem, activities)}
+                  />
+                ) : null}
 
                 {(refundAmount > 0 || restAmount > 0 || isToSend || isToRefund) && (
                   <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">

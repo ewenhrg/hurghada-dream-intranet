@@ -110,3 +110,48 @@ export function paxLabel(adults, children, babies) {
   if (b) parts.push(`${b} bébé${b > 1 ? "s" : ""}`);
   return parts.join(", ") || "0 personne";
 }
+
+/** Demande encore en cours côté staff (pas traité / pas refusé). */
+export function isOpenModificationStatus(status) {
+  const value = String(status || "").trim().toLowerCase();
+  return (
+    value === "pending" ||
+    value === "accepted" ||
+    value === "to_send" ||
+    value === "sent" ||
+    value === "to_refund"
+  );
+}
+
+export function describeOpenModificationRequest(request) {
+  if (!request) return "Demande en cours";
+  if (String(request.kind || "").toLowerCase() === "cancel") return "Demande d’annulation en cours";
+  const change = String(request.change_type || "").trim().toLowerCase();
+  if (change === "pickup") return "Demande de modification d’heure en cours";
+  if (change === "pax") return "Demande de modification de personnes en cours";
+  if (change === "date") return "Demande de modification de date en cours";
+  if (change === "activity") return "Demande de modification d’activité en cours";
+  return "Demande de modification en cours";
+}
+
+/** Associe une demande ouverte au ticket / activité du séjour. */
+export function findOpenModificationForItem(openRequests, item) {
+  const list = Array.isArray(openRequests) ? openRequests : [];
+  if (!item || list.length === 0) return null;
+  const ticket = String(item.ticketNumber || "").trim().toLowerCase();
+  if (ticket) {
+    const byTicket = list.find(
+      (row) => String(row?.ticket_number || "").trim().toLowerCase() === ticket
+    );
+    if (byTicket) return byTicket;
+  }
+  const activity = String(item.activityName || "").trim().toLowerCase();
+  const date = String(item.date || "").slice(0, 10);
+  return (
+    list.find(
+      (row) =>
+        String(row?.activity_name || "").trim().toLowerCase() === activity &&
+        String(row?.activity_date || "").slice(0, 10) === date
+    ) || null
+  );
+}

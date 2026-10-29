@@ -467,9 +467,37 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     const activitiesById = buildActivitiesByIdMap(activities);
     (quotes || []).forEach((quote) => {
       const client = quote.client || {};
-      (quote.items || []).forEach((item, idx) => {
+      const quoteItems = Array.isArray(quote.items) ? quote.items : [];
+      // Ticket d’origine masqué dès qu’une ligne « modification » existe ; seul le dernier ticket modif reste.
+      const supersededTicketNumbers = new Set();
+      const latestModIndexByNumber = new Map();
+      quoteItems.forEach((item, idx) => {
+        if (item?.ticketKind !== "modification" || item?.isCancelled === true) return;
+        const num = String(item.ticketNumber || "").trim().toLowerCase();
+        const origin = String(item.modificationOfTicket || "").trim().toLowerCase();
+        if (origin) supersededTicketNumbers.add(origin);
+        if (!num) return;
+        supersededTicketNumbers.add(num);
+        const stamp = Date.parse(String(item.ticketsEnteredAt || item.createdAt || "")) || idx;
+        const prev = latestModIndexByNumber.get(num);
+        if (!prev || stamp >= prev.stamp) latestModIndexByNumber.set(num, { idx, stamp });
+      });
+
+      quoteItems.forEach((item, idx) => {
         const ticketNumber = item.ticketNumber ? String(item.ticketNumber).trim() : "";
         if (!ticketNumber) return;
+        const ticketKey = ticketNumber.toLowerCase();
+        const isModification = item.ticketKind === "modification";
+        const isCancelled = item?.isCancelled === true;
+
+        if (isModification && !isCancelled) {
+          const latest = latestModIndexByNumber.get(ticketKey);
+          if (latest && latest.idx !== idx) return;
+        } else if (!isCancelled && supersededTicketNumbers.has(ticketKey)) {
+          // L’activité à jour est portée par le ticket modif.
+          return;
+        }
+
         // Data entry : carnet en cours seulement. Un ancien essai (167846)
         // ou deux numéros collés (167849167846) ne doit pas passer devant 187004.
         if (entryMode && !isCurrentCarnetTicketNumber(ticketNumber)) return;
@@ -481,16 +509,16 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         // Prix activité hors supp. transfert (évite le double-compte dans Excel)
         const priceValue = Math.max(0, lineTotal - transferValue);
         const boatParty = isBoatPartyActivity(item.activityName);
-        const isModification = item.ticketKind === "modification";
-        const isCancelled = item?.isCancelled === true;
+        const newActivityLabel = String(item.newActivityName || "").trim();
         const activityDisplayName = isCancelled
           ? `Annulé · ${resolveTicketActivityName(item, activitiesById)}`
           : isModification
-            ? `Modification · ${String(item.previousActivityName || "—").trim()} → ${String(item.newActivityName || "—").trim()}`
+            ? `Modif · ${newActivityLabel || resolveTicketActivityName(item, activitiesById) || "—"}`
             : resolveTicketActivityName(item, activitiesById);
         const published = item.pickupPublished === true;
         const publishedPickup = published ? String(item.pickupTime || "").trim() : "";
-        const pickupName = activityDisplayName || item.activityName;
+        const pickupName =
+          (isModification ? newActivityLabel : "") || activityDisplayName || item.activityName;
         const pickup =
           publishedPickup ||
           (showsChosenPickupOnSituation(pickupName)
@@ -518,10 +546,10 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           phone: formatPhoneWithPlus(client.phone),
           hotel: client.hotel || "",
           room: client.room || "",
-          adults: isModification ? 0 : pax.adults,
-          adultsBase: isModification ? 0 : paxBase.adults,
-          children: isModification ? 0 : pax.children,
-          babies: isModification ? 0 : pax.babies,
+          adults: pax.adults,
+          adultsBase: paxBase.adults,
+          children: pax.children,
+          babies: pax.babies,
           boatPartyMen: boatParty ? Number(item.boatPartyMen || 0) : 0,
           boatPartyWomen: boatParty ? Number(item.boatPartyWomen || 0) : 0,
           activity: formatActivityWithExtras(itemForDisplay),
@@ -534,8 +562,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
           opsComment: String(item.opsComment || "").trim(),
           restAmount: Math.round(Number(item.restAmount) || 0),
           refundAmount: Math.round(Number(item.refundAmount) || 0),
-          priceValue: isModification || isCancelled ? 0 : priceValue,
-          modificationTicket: isModification,
+          priceValue: isCancelled ? 0 : priceValue,
+          modificationTicket: isModification && !isCancelled,
           cancelledTicket: isCancelled,
           priceLabel: currencyNoCents(priceValue, quote.currency || "EUR"),
           transferValue,
@@ -1660,16 +1688,28 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                         className={`${TD} bg-orange-300/90 text-center font-bold text-orange-950 ${
                           isCancelled
                             ? "!bg-slate-400 text-slate-900 line-through"
-                            : isCopied
-                              ? "!bg-slate-200 text-slate-400"
-                              : ""
+                            : r.modificationTicket
+                              ? "!bg-amber-300 text-amber-950"
+                              : isCopied
+                                ? "!bg-slate-200 text-slate-400"
+                                : ""
                         }`}
-                        title={isCancelled ? `${r.ticketNumber} · Annulé` : r.ticketNumber}
+                        title={
+                          isCancelled
+                            ? `${r.ticketNumber} · Annulé`
+                            : r.modificationTicket
+                              ? `${r.ticketNumber} · Ticket modification`
+                              : r.ticketNumber
+                        }
                       >
                         <span className="block truncate">{r.ticketNumber}</span>
                         {isCancelled ? (
                           <span className="mt-0.5 block text-[8px] font-bold uppercase tracking-wide text-slate-700 no-underline">
                             Annulé
+                          </span>
+                        ) : r.modificationTicket ? (
+                          <span className="mt-0.5 block text-[8px] font-bold uppercase tracking-wide text-amber-900">
+                            Modif
                           </span>
                         ) : null}
                       </th>

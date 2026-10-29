@@ -6,6 +6,8 @@ import { currencyNoCents } from "../utils";
 import { fetchClientStayByCode, normalizeReservationCode } from "../utils/clientStay";
 import { getActivityPickupOptions } from "../utils/transferPricing";
 import {
+  describeOpenModificationRequest,
+  findOpenModificationForItem,
   formatStayDay,
   modificationTooLate,
   paxLabel,
@@ -31,9 +33,16 @@ function mapActivity(row) {
   };
 }
 
-function ChoiceButton({ children, onClick }) {
+function ChoiceButton({ children, onClick, disabled = false }) {
   return (
-    <button type="button" onClick={onClick} className="hdc-card w-full p-4 text-left text-base font-semibold text-catalog-ink">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`hdc-card w-full p-4 text-left text-base font-semibold text-catalog-ink disabled:cursor-not-allowed disabled:opacity-60 ${
+        disabled ? "ring-1 ring-amber-300 bg-amber-50/80" : ""
+      }`}
+    >
       {children}
     </button>
   );
@@ -49,6 +58,7 @@ export function PublicModificationPage() {
   const [stops, setStops] = useState([]);
   const [pushes, setPushes] = useState([]);
   const [item, setItem] = useState(null);
+  const [openRequests, setOpenRequests] = useState([]);
   const [changeType, setChangeType] = useState("");
   const [pickup, setPickup] = useState("");
   const [adults, setAdults] = useState(0);
@@ -100,6 +110,17 @@ export function PublicModificationPage() {
   }, [chosenActivity, stops, pushes]);
   const tooLate = item ? modificationTooLate(item.date) : false;
   const refund = item ? refundPercent(item.date, item.pickupTime, new Date(), item.activityName) : 0;
+  const openRequestForItem = item ? findOpenModificationForItem(openRequests, item) : null;
+
+  const loadOpenRequests = async (reservationCode) => {
+    if (!supabase) return [];
+    const { data, error: rpcError } = await supabase.rpc("get_open_modification_requests_by_code", {
+      p_site_key: SITE_KEY,
+      p_code: reservationCode,
+    });
+    if (rpcError) return [];
+    return Array.isArray(data) ? data : [];
+  };
 
   const openDatesFor = (activity) => {
     if (!activity) return [];
@@ -122,7 +143,10 @@ export function PublicModificationPage() {
       return;
     }
     setBusy(true);
-    const result = await fetchClientStayByCode(formatted);
+    const [result, openRows] = await Promise.all([
+      fetchClientStayByCode(formatted),
+      loadOpenRequests(formatted),
+    ]);
     setBusy(false);
     if (!result.found) {
       setError(result.expired ? "Ce séjour est terminé." : "Aucune réservation ne correspond à ce numéro.");
@@ -134,12 +158,24 @@ export function PublicModificationPage() {
       return;
     }
     setStay(result);
+    setOpenRequests(openRows);
     setCode(formatted);
+    setItem(null);
+    setChangeType("");
     setStep("activities");
   };
 
   const submit = async () => {
     if (!item || !stay || !supabase) return;
+    const existing = findOpenModificationForItem(openRequests, item);
+    if (existing) {
+      setError(
+        `${describeOpenModificationRequest(existing)}. Vous ne pouvez pas en refaire une tant qu’elle n’est pas traitée.`
+      );
+      setStep("activities");
+      return;
+    }
+
     const payload = {
       previous: {
         activityName: item.activityName,
@@ -165,6 +201,18 @@ export function PublicModificationPage() {
 
     setBusy(true);
     setError("");
+    const latestOpen = await loadOpenRequests(code);
+    const stillOpen = findOpenModificationForItem(latestOpen, item);
+    if (stillOpen) {
+      setBusy(false);
+      setOpenRequests(latestOpen);
+      setError(
+        `${describeOpenModificationRequest(stillOpen)}. Vous ne pouvez pas en refaire une tant qu’elle n’est pas traitée.`
+      );
+      setStep("activities");
+      return;
+    }
+
     const { error: insertError } = await supabase.from("public_modification_requests").insert({
       site_key: SITE_KEY,
       reservation_code: code,
@@ -185,6 +233,19 @@ export function PublicModificationPage() {
       setError("La demande n’a pas pu être envoyée. Réessayez dans un instant.");
       return;
     }
+    setOpenRequests([
+      {
+        id: `local-${Date.now()}`,
+        ticket_number: String(item.ticketNumber || "").trim(),
+        activity_name: item.activityName,
+        activity_date: String(item.date || "").slice(0, 10),
+        kind: changeType ? "modify" : "cancel",
+        change_type: changeType || "refund",
+        status: "pending",
+        created_at: new Date().toISOString(),
+      },
+      ...latestOpen,
+    ]);
     setStep("done");
   };
 
@@ -225,25 +286,40 @@ export function PublicModificationPage() {
         {step === "activities" ? (
           <section className="mt-6 space-y-3">
             <h2 className="font-catalog-display text-2xl text-catalog-ink">Quelle activité souhaitez-vous modifier ou annuler ?</h2>
-            {(stay?.items || []).map((row, index) => (
-              <ChoiceButton
-                key={`${row.ticketNumber || index}-${row.date}`}
-                onClick={() => {
-                  setItem(row);
-                  setAdults(Math.round(Number(row.adults) || 0));
-                  setChildren(Math.round(Number(row.children) || 0));
-                  setBabies(Math.round(Number(row.babies) || 0));
-                  setError("");
-                  setStep("intent");
-                }}
-              >
-                <span className="block">{row.activityName}</span>
-                <span className="mt-1 block text-sm font-medium text-catalog-muted">
-                  {formatStayDay(row.date)}
-                  {row.ticketNumber ? ` · ticket ${row.ticketNumber}` : ""}
-                </span>
-              </ChoiceButton>
-            ))}
+            {(stay?.items || []).map((row, index) => {
+              const openReq = findOpenModificationForItem(openRequests, row);
+              return (
+                <ChoiceButton
+                  key={`${row.ticketNumber || index}-${row.date}`}
+                  disabled={Boolean(openReq)}
+                  onClick={() => {
+                    if (openReq) {
+                      setError(
+                        `${describeOpenModificationRequest(openReq)} sur ce ticket. Impossible d’en refaire une tant qu’elle n’est pas traitée.`
+                      );
+                      return;
+                    }
+                    setItem(row);
+                    setAdults(Math.round(Number(row.adults) || 0));
+                    setChildren(Math.round(Number(row.children) || 0));
+                    setBabies(Math.round(Number(row.babies) || 0));
+                    setError("");
+                    setStep("intent");
+                  }}
+                >
+                  <span className="block">{row.activityName}</span>
+                  <span className="mt-1 block text-sm font-medium text-catalog-muted">
+                    {formatStayDay(row.date)}
+                    {row.ticketNumber ? ` · ticket ${row.ticketNumber}` : ""}
+                  </span>
+                  {openReq ? (
+                    <span className="mt-2 block rounded-xl bg-amber-100 px-3 py-2 text-sm font-bold text-amber-950">
+                      {describeOpenModificationRequest(openReq)} — nouvelle demande impossible pour le moment.
+                    </span>
+                  ) : null}
+                </ChoiceButton>
+              );
+            })}
           </section>
         ) : null}
 
@@ -251,27 +327,38 @@ export function PublicModificationPage() {
           <section className="mt-6 space-y-3">
             <h2 className="font-catalog-display text-2xl text-catalog-ink">Que souhaitez-vous faire ?</h2>
             <p className="text-sm text-catalog-muted">{item.activityName} · {formatStayDay(item.date)}</p>
-            <ChoiceButton
-              onClick={() => {
-                setError("");
-                if (tooLate) {
-                  setError("Ce n’est pas possible. Une modification ne peut pas être demandée la veille pour le lendemain.");
-                  return;
-                }
-                setStep("change");
-              }}
-            >
-              Modifier
-            </ChoiceButton>
-            <ChoiceButton
-              onClick={() => {
-                setChangeType("");
-                setError("");
-                setStep("refund");
-              }}
-            >
-              Annuler
-            </ChoiceButton>
+            {openRequestForItem ? (
+              <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950 ring-1 ring-amber-200">
+                {describeOpenModificationRequest(openRequestForItem)}. Vous ne pouvez pas en refaire une tant
+                qu’elle n’est pas traitée.
+              </p>
+            ) : (
+              <>
+                <ChoiceButton
+                  onClick={() => {
+                    setError("");
+                    if (tooLate) {
+                      setError(
+                        "Ce n’est pas possible. Une modification ne peut pas être demandée la veille pour le lendemain."
+                      );
+                      return;
+                    }
+                    setStep("change");
+                  }}
+                >
+                  Modifier
+                </ChoiceButton>
+                <ChoiceButton
+                  onClick={() => {
+                    setChangeType("");
+                    setError("");
+                    setStep("refund");
+                  }}
+                >
+                  Annuler
+                </ChoiceButton>
+              </>
+            )}
           </section>
         ) : null}
 
@@ -298,14 +385,29 @@ export function PublicModificationPage() {
         {step === "detail" && changeType === "pickup" ? (
           <section className="mt-6 space-y-3">
             <h2 className="font-catalog-display text-2xl text-catalog-ink">Nouvelle heure</h2>
-            {pickupOptions.map((option) => (
-              <ChoiceButton key={option.value} onClick={() => setPickup(option.time || option.value)}>
-                <span className={pickup === (option.time || option.value) ? "text-catalog-lagoon" : ""}>{option.label}</span>
-              </ChoiceButton>
-            ))}
-            <button type="button" disabled={!pickup || busy} onClick={() => void submit()} className="hdc-btn hdc-btn-primary w-full">
-              Valider la demande
-            </button>
+            {openRequestForItem ? (
+              <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950 ring-1 ring-amber-200">
+                {describeOpenModificationRequest(openRequestForItem)}. Nouvelle demande impossible.
+              </p>
+            ) : (
+              <>
+                {pickupOptions.map((option) => (
+                  <ChoiceButton key={option.value} onClick={() => setPickup(option.time || option.value)}>
+                    <span className={pickup === (option.time || option.value) ? "text-catalog-lagoon" : ""}>
+                      {option.label}
+                    </span>
+                  </ChoiceButton>
+                ))}
+                <button
+                  type="button"
+                  disabled={!pickup || busy}
+                  onClick={() => void submit()}
+                  className="hdc-btn hdc-btn-primary w-full"
+                >
+                  Valider la demande
+                </button>
+              </>
+            )}
           </section>
         ) : null}
 
@@ -436,16 +538,42 @@ export function PublicModificationPage() {
               <li>Entre 48 h et 72 h : remboursement de 50 %</li>
               <li>Moins de 48 h : aucun remboursement</li>
             </ul>
-            <button type="button" disabled={busy} onClick={() => void submit()} className="hdc-btn hdc-btn-primary w-full">
-              Envoyer la demande d’annulation
-            </button>
+            {openRequestForItem ? (
+              <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950 ring-1 ring-amber-200">
+                {describeOpenModificationRequest(openRequestForItem)}. Nouvelle demande impossible.
+              </p>
+            ) : (
+              <button type="button" disabled={busy} onClick={() => void submit()} className="hdc-btn hdc-btn-primary w-full">
+                Envoyer la demande d’annulation
+              </button>
+            )}
           </section>
         ) : null}
 
         {step === "done" ? (
-          <p className="hdc-card mt-6 p-5 text-base leading-relaxed text-catalog-ink">
-            Votre demande est envoyée. Nous revenons vers vous au plus vite.
-          </p>
+          <section className="mt-6 space-y-3">
+            <p className="hdc-card p-5 text-base leading-relaxed text-catalog-ink">
+              Votre demande est envoyée. Nous revenons vers vous au plus vite.
+            </p>
+            <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950 ring-1 ring-amber-200">
+              Une demande est maintenant en cours
+              {item?.ticketNumber ? ` sur le ticket ${item.ticketNumber}` : ""}
+              {item?.activityName ? ` (${item.activityName})` : ""}. Vous ne pourrez pas en refaire une
+              tant qu’elle n’est pas traitée.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setItem(null);
+                setChangeType("");
+                setError("");
+                setStep("activities");
+              }}
+              className="hdc-btn hdc-btn-primary w-full"
+            >
+              Voir mes activités
+            </button>
+          </section>
         ) : null}
       </main>
     </PublicAppShell>
