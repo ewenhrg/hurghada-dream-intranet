@@ -103,6 +103,17 @@ function ticketNumberQueryDigits(term) {
   return /^\d{3,}$/.test(compact) ? compact : "";
 }
 
+/** Data entry : recherche téléphone (au moins 6 chiffres, espaces / + ignorés). */
+function phoneSearchDigits(term) {
+  const digits = String(term || "").replace(/\D/g, "");
+  return digits.length >= 6 ? digits : "";
+}
+
+/** Inverse de newest-first : plus petit n° en haut. */
+function compareTicketNumbersOldestFirst(a, b) {
+  return compareTicketNumbersNewestFirst(b, a);
+}
+
 /**
  * 2 = le numéro saisi, 1 = un numéro qui commence par la saisie, 0 = autre.
  * 002233 et 2233 comptent comme le même numéro.
@@ -598,6 +609,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   const filtered = useMemo(() => {
     const term = debouncedQ.trim().toLowerCase();
     const ticketQuery = entryMode ? "" : ticketNumberQueryDigits(debouncedQ);
+    const phoneQuery = entryMode ? phoneSearchDigits(debouncedQ) : "";
     if (ticketQuery) {
       const hits = [];
       for (const r of rows) {
@@ -611,6 +623,19 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
       const chosen = (exact.length > 0 ? exact : hits).map((item) => item.row);
       chosen.sort((a, b) => compareTicketNumbersNewestFirst(a.ticketNumber, b.ticketNumber));
       return chosen;
+    }
+    if (phoneQuery) {
+      const hits = [];
+      for (const r of rows) {
+        const phoneDigits = String(r.phone || "").replace(/\D/g, "");
+        if (!phoneDigits) continue;
+        if (!(phoneDigits.includes(phoneQuery) || phoneQuery.includes(phoneDigits))) continue;
+        if (statusFilter === "new" && copied.has(r.ticketNumber)) continue;
+        if (statusFilter === "copied" && !copied.has(r.ticketNumber)) continue;
+        hits.push(r);
+      }
+      hits.sort((a, b) => compareTicketNumbersOldestFirst(a.ticketNumber, b.ticketNumber));
+      return hits;
     }
     const compactTerm = term.replace(/[^a-z0-9]/g, "");
     const looksLikeReservationCode = /^[a-z]{2}\d{3,}$/.test(compactTerm);

@@ -66,6 +66,7 @@ async function mapPool(items, limit, fn) {
 
 export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
   const [day, setDay] = useState(tomorrowKey);
+  const [phoneSearch, setPhoneSearch] = useState("");
   const [drafts, setDrafts] = useState({});
   const [savingKey, setSavingKey] = useState("");
   const [savingMarinaKey, setSavingMarinaKey] = useState("");
@@ -126,9 +127,20 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
     return list;
   }, [quotes, activities, day]);
 
+  const phoneSearchDigits = useMemo(() => cleanPhoneNumber(phoneSearch), [phoneSearch]);
+
+  const filteredRows = useMemo(() => {
+    if (!phoneSearchDigits) return rows;
+    return rows.filter((row) => {
+      const digits = row.phoneKey || cleanPhoneNumber(row.phone);
+      if (!digits) return false;
+      return digits.includes(phoneSearchDigits) || phoneSearchDigits.includes(digits);
+    });
+  }, [rows, phoneSearchDigits]);
+
   const groups = useMemo(() => {
     const next = [];
-    for (const row of rows) {
+    for (const row of filteredRows) {
       const last = next[next.length - 1];
       if (!last || last.activityName !== row.activityName) {
         next.push({ activityName: row.activityName, rows: [row] });
@@ -137,7 +149,7 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
       }
     }
     return next;
-  }, [rows]);
+  }, [filteredRows]);
 
   const pendingRows = useMemo(() => rows.filter((row) => row.notifyPending), [rows]);
   const pendingClientCount = useMemo(() => {
@@ -309,10 +321,26 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
             Situation {isTomorrow ? "du lendemain" : "du jour"}
           </h1>
           <p className="mt-1 text-sm capitalize text-slate-600">
-            {formatLongDate(day)} · {rows.length} sortie{rows.length > 1 ? "s" : ""}
+            {formatLongDate(day)} ·{" "}
+            {phoneSearchDigits
+              ? `${filteredRows.length} / ${rows.length} sortie${rows.length > 1 ? "s" : ""}`
+              : `${rows.length} sortie${rows.length > 1 ? "s" : ""}`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex min-w-[12rem] flex-1 items-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 sm:max-w-xs">
+            <span className="shrink-0 text-slate-500">Tél.</span>
+            <input
+              type="search"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="Rechercher un numéro…"
+              value={phoneSearch}
+              onChange={(event) => setPhoneSearch(event.target.value)}
+              aria-label="Rechercher une ligne par numéro de téléphone"
+              className="min-w-0 flex-1 bg-transparent text-sm font-bold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400"
+            />
+          </label>
           <label className="inline-flex items-center gap-2 rounded-xl border-2 border-indigo-400 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-950">
             Date
             <input
@@ -347,6 +375,21 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
           <Clock3 className="mx-auto h-8 w-8 text-slate-400" aria-hidden />
           <p className="mt-3 text-base font-bold text-slate-800">Aucune sortie ce jour-là</p>
           <p className="mt-1 text-sm text-slate-500">Les tickets de la date choisie apparaîtront ici.</p>
+        </div>
+      ) : filteredRows.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+          <Clock3 className="mx-auto h-8 w-8 text-slate-400" aria-hidden />
+          <p className="mt-3 text-base font-bold text-slate-800">Aucun résultat pour ce numéro</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Aucune ligne ne correspond à « {phoneSearch.trim()} » pour cette date.
+          </p>
+          <button
+            type="button"
+            onClick={() => setPhoneSearch("")}
+            className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-bold text-white"
+          >
+            Effacer la recherche
+          </button>
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-indigo-200/70 bg-white shadow-sm">
