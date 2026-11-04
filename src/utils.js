@@ -354,6 +354,38 @@ export function cleanPhoneNumber(phone) {
   return phone.replace(/\D+/g, "");
 }
 
+/** Variantes +20 / 0 / local pour matcher une saisie téléphone partielle. */
+export function phoneMatchKeys(phone) {
+  let d = cleanPhoneNumber(phone);
+  if (!d) return [];
+  const keys = new Set([d]);
+  if (d.startsWith("00")) d = d.slice(2);
+  keys.add(d);
+  if (d.startsWith("20") && d.length >= 10) {
+    keys.add(d.slice(2));
+    keys.add(`0${d.slice(2)}`);
+  }
+  if (d.startsWith("0") && d.length >= 9) keys.add(d.slice(1));
+  else if (!d.startsWith("0")) keys.add(`0${d}`);
+  if (d.length >= 9) keys.add(d.slice(-9));
+  if (d.length >= 8) keys.add(d.slice(-8));
+  return [...keys].filter(Boolean);
+}
+
+/** true si le téléphone stocké correspond à la saisie (espaces, +, indicatif, suffixe). */
+export function phonesMatch(storedPhone, queryRaw) {
+  const queryDigits = cleanPhoneNumber(queryRaw);
+  if (queryDigits.length < 4) return false;
+  const storedDigits = cleanPhoneNumber(storedPhone);
+  if (!storedDigits) return false;
+  if (storedDigits.includes(queryDigits) || queryDigits.includes(storedDigits)) return true;
+  const queryKeys = phoneMatchKeys(queryDigits);
+  const storedKeys = phoneMatchKeys(storedDigits);
+  return queryKeys.some((qk) =>
+    storedKeys.some((sk) => sk === qk || sk.includes(qk) || qk.includes(sk))
+  );
+}
+
 /** À la validation du devis : préfixe international +, sans le doubler. */
 export function formatPhoneWithPlus(phone) {
   const digits = cleanPhoneNumber(phone);

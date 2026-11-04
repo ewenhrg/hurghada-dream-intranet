@@ -20,7 +20,17 @@ import {
   Printer,
   Trash2,
 } from "lucide-react";
-import { currencyNoCents, saveLS, saveQuotesCache, loadLS, resolveTicketActivityName, buildActivitiesByIdMap, calculateCardPrice, formatPhoneWithPlus } from "../utils";
+import {
+  currencyNoCents,
+  saveLS,
+  saveQuotesCache,
+  loadLS,
+  resolveTicketActivityName,
+  buildActivitiesByIdMap,
+  calculateCardPrice,
+  formatPhoneWithPlus,
+  phonesMatch,
+} from "../utils";
 import {
   calculateTransferSurchargeFromItem,
   chosenPickupTime,
@@ -97,16 +107,8 @@ function compareTicketNumbersNewestFirst(a, b) {
   return right.localeCompare(left, "fr", { numeric: true });
 }
 
-/** Saisie Situation : une suite de chiffres est un n° de ticket, pas un texte libre. */
-function ticketNumberQueryDigits(term) {
-  const compact = String(term || "").replace(/\s/g, "");
-  return /^\d{3,}$/.test(compact) ? compact : "";
-}
-
-/** Data entry : recherche téléphone (au moins 6 chiffres, espaces / + ignorés). */
-function phoneSearchDigits(term) {
-  const digits = String(term || "").replace(/\D/g, "");
-  return digits.length >= 6 ? digits : "";
+function onlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
 }
 
 /** Inverse de newest-first : plus petit n° en haut. */
@@ -115,17 +117,67 @@ function compareTicketNumbersOldestFirst(a, b) {
 }
 
 /**
- * 2 = le numéro saisi, 1 = un numéro qui commence par la saisie, 0 = autre.
+ * 4 = exact, 3 = préfixe, 2 = suffixe, 1 = contenu, 0 = aucun.
  * 002233 et 2233 comptent comme le même numéro.
  */
 function ticketNumberQueryRank(ticketNumber, queryDigits) {
   const raw = String(ticketNumber || "").trim();
-  const digits = raw.replace(/\D/g, "");
-  if (!digits || !queryDigits) return 0;
-  if (raw === queryDigits || digits === queryDigits) return 2;
-  if (/^\d+$/.test(raw) && Number(raw) === Number(queryDigits)) return 2;
-  if (digits.startsWith(queryDigits)) return 1;
+  const digits = onlyDigits(raw);
+  const q = onlyDigits(queryDigits);
+  if (!digits || !q) return 0;
+  if (raw === q || digits === q) return 4;
+  if (/^\d+$/.test(raw) && Number(raw) === Number(q)) return 4;
+  if (digits.startsWith(q)) return 3;
+  if (digits.endsWith(q)) return 2;
+  if (digits.includes(q)) return 1;
   return 0;
+}
+
+/**
+ * Classifie la saisie : ticket / téléphone / code résa / texte.
+ * Les recherches ticket & téléphone ignorent le filtre de date.
+ */
+function classifyTicketsSearch(raw) {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) return { type: "empty" };
+
+  const digits = onlyDigits(trimmed);
+  const hasLetter = /[a-zà-ÿ]/i.test(trimmed);
+  const compactAlnum = trimmed.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  if (/^[a-z]{2}\d{3,}$/.test(compactAlnum)) {
+    return { type: "code", compact: compactAlnum, term: trimmed.toLowerCase() };
+  }
+
+  const phonePunctuation = /[+()\s.-]/.test(trimmed);
+  const looksPhone =
+    (!hasLetter && digits.length >= 8) ||
+    (trimmed.startsWith("+") && digits.length >= 6) ||
+    (!hasLetter && digits.length >= 6 && phonePunctuation);
+
+  if (looksPhone) return { type: "phone", digits, term: trimmed.toLowerCase() };
+
+  // Carnets ~6 chiffres : priorité ticket, avec filet téléphone si 6–7 chiffres.
+  if (!hasLetter && digits.length >= 3 && digits.length <= 7) {
+    return {
+      type: "ticket",
+      digits,
+      alsoPhone: digits.length >= 6,
+      term: trimmed.toLowerCase(),
+    };
+  }
+
+  if (!hasLetter && digits.length >= 8) {
+    return { type: "phone", digits, term: trimmed.toLowerCase() };
+  }
+
+  return { type: "text", term: trimmed.toLowerCase(), digits };
+}
+
+function passesStatusFilter(row, statusFilter, copied) {
+  if (statusFilter === "new" && copied.has(row.ticketNumber)) return false;
+  if (statusFilter === "copied" && !copied.has(row.ticketNumber)) return false;
+  return true;
 }
 
 /**
@@ -607,50 +659,80 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   }, [quotes, activities, entryMode]);
 
   const filtered = useMemo(() => {
-    const term = debouncedQ.trim().toLowerCase();
-    const ticketQuery = entryMode ? "" : ticketNumberQueryDigits(debouncedQ);
-    const phoneQuery = entryMode ? phoneSearchDigits(debouncedQ) : "";
-    if (ticketQuery) {
+    const classified = classifyTicketsSearch(debouncedQ);
+    const applyStatus = (list) => list.filter((r) => passesStatusFilter(r, statusFilter, copied));
+
+    if (classified.type === "empty") {
+      return applyStatus(
+        rows.filter((r) => {
+          if (!entryMode && filterDate && String(r.date || "").trim() !== filterDate) return false;
+          return true;
+        })
+      );
+    }
+
+    if (classified.type === "ticket") {
       const hits = [];
+      const seen = new Set();
       for (const r of rows) {
-        const rank = ticketNumberQueryRank(r.ticketNumber, ticketQuery);
+        const rank = ticketNumberQueryRank(r.ticketNumber, classified.digits);
         if (!rank) continue;
-        if (statusFilter === "new" && copied.has(r.ticketNumber)) continue;
-        if (statusFilter === "copied" && !copied.has(r.ticketNumber)) continue;
+        if (!passesStatusFilter(r, statusFilter, copied)) continue;
         hits.push({ row: r, rank });
+        seen.add(r.key);
       }
-      const exact = hits.filter((item) => item.rank === 2);
-      const chosen = (exact.length > 0 ? exact : hits).map((item) => item.row);
-      chosen.sort((a, b) => compareTicketNumbersNewestFirst(a.ticketNumber, b.ticketNumber));
+      if (classified.alsoPhone) {
+        for (const r of rows) {
+          if (seen.has(r.key)) continue;
+          if (!phonesMatch(r.phone, classified.digits)) continue;
+          if (!passesStatusFilter(r, statusFilter, copied)) continue;
+          hits.push({ row: r, rank: 0 });
+          seen.add(r.key);
+        }
+      }
+      const strong = hits.filter((item) => item.rank >= 3);
+      const chosen = (strong.length > 0 ? strong : hits).map((item) => item.row);
+      chosen.sort((a, b) =>
+        entryMode
+          ? compareTicketNumbersOldestFirst(a.ticketNumber, b.ticketNumber)
+          : compareTicketNumbersNewestFirst(a.ticketNumber, b.ticketNumber)
+      );
       return chosen;
     }
-    if (phoneQuery) {
-      const hits = [];
-      for (const r of rows) {
-        const phoneDigits = String(r.phone || "").replace(/\D/g, "");
-        if (!phoneDigits) continue;
-        if (!(phoneDigits.includes(phoneQuery) || phoneQuery.includes(phoneDigits))) continue;
-        if (statusFilter === "new" && copied.has(r.ticketNumber)) continue;
-        if (statusFilter === "copied" && !copied.has(r.ticketNumber)) continue;
-        hits.push(r);
-      }
+
+    if (classified.type === "phone") {
+      const hits = rows.filter(
+        (r) => passesStatusFilter(r, statusFilter, copied) && phonesMatch(r.phone, classified.digits)
+      );
       hits.sort((a, b) => compareTicketNumbersOldestFirst(a.ticketNumber, b.ticketNumber));
       return hits;
     }
+
+    const term = classified.term || "";
     const compactTerm = term.replace(/[^a-z0-9]/g, "");
-    const looksLikeReservationCode = /^[a-z]{2}\d{3,}$/.test(compactTerm);
+    const isCodeSearch = classified.type === "code";
+    const queryDigits = classified.digits || "";
+
     return rows.filter((r) => {
+      if (!passesStatusFilter(r, statusFilter, copied)) return false;
+
       const codeCompact = String(r.reservationCode || "")
         .toLowerCase()
         .replace(/[^a-z0-9]/g, "");
       const codeMatch = compactTerm.length >= 3 && codeCompact.includes(compactTerm);
-      if (!entryMode && filterDate && !looksLikeReservationCode && String(r.date || "").trim() !== filterDate) {
+
+      // Code résa / téléphone partiel dans le texte : toutes dates. Sinon respecter le jour affiché.
+      const crossDate =
+        isCodeSearch ||
+        codeMatch ||
+        (queryDigits.length >= 4 && phonesMatch(r.phone, queryDigits));
+      if (!entryMode && filterDate && !crossDate && String(r.date || "").trim() !== filterDate) {
         return false;
       }
-      if (statusFilter === "new" && copied.has(r.ticketNumber)) return false;
-      if (statusFilter === "copied" && !copied.has(r.ticketNumber)) return false;
       if (!term) return true;
       if (codeMatch) return true;
+      if (queryDigits.length >= 4 && phonesMatch(r.phone, queryDigits)) return true;
+      if (queryDigits.length >= 3 && ticketNumberQueryRank(r.ticketNumber, queryDigits) > 0) return true;
       return [
         r.ticketNumber,
         r.activity,
@@ -1280,7 +1362,7 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
             />
             <TextInput
               type="search"
-              placeholder="Rechercher : n° réservation, ticket, client, tél, hôtel, activité…"
+              placeholder="Ticket, tél (+20…), réservation, client, hôtel…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               aria-label="Rechercher un ticket"
@@ -1485,7 +1567,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                   ? `Aucun ticket pour le ${dateForExport(filterDate)}. Choisissez une autre date ou « Toutes ».`
                 : statusFilter === "new"
                   ? "Aucune nouvelle ligne : tout a déjà été copié."
-                  : "Aucun ticket ne correspond à votre recherche."}
+                  : debouncedQ.trim()
+                    ? "Aucun ticket ne correspond. Ticket et téléphone cherchent sur toutes les dates."
+                    : "Aucun ticket ne correspond à votre recherche."}
             </p>
           </motion.div>
         ) : (

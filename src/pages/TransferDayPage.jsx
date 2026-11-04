@@ -1,6 +1,13 @@
 import { Fragment, useCallback, useMemo, useState } from "react";
 import { BellRing, Clock3 } from "lucide-react";
-import { saveQuotesCache, buildActivitiesByIdMap, resolveTicketActivityName, formatPhoneWithPlus, cleanPhoneNumber } from "../utils";
+import {
+  saveQuotesCache,
+  buildActivitiesByIdMap,
+  resolveTicketActivityName,
+  formatPhoneWithPlus,
+  cleanPhoneNumber,
+  phonesMatch,
+} from "../utils";
 import { getQuoteItemParticipantCells } from "../utils/quoteItemDisplay";
 import { getLocalDateKey } from "../utils/pushSaleExpiry";
 import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
@@ -131,11 +138,7 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
 
   const filteredRows = useMemo(() => {
     if (!phoneSearchDigits) return rows;
-    return rows.filter((row) => {
-      const digits = row.phoneKey || cleanPhoneNumber(row.phone);
-      if (!digits) return false;
-      return digits.includes(phoneSearchDigits) || phoneSearchDigits.includes(digits);
-    });
+    return rows.filter((row) => phonesMatch(row.phoneKey || row.phone, phoneSearchDigits));
   }, [rows, phoneSearchDigits]);
 
   const groups = useMemo(() => {
