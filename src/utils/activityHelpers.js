@@ -1,22 +1,23 @@
 import { SPEED_BOAT_EXTRAS } from "../constants/activityExtras";
 
-// Helper pour vérifier si une activité utilise les champs buggy
+// Helper pour vérifier si une activité utilise les champs buggy (prix à l’unité, pas par personne)
 export function isBuggyActivity(activityName) {
   if (!activityName) return false;
   const name = activityName.toLowerCase();
-  return name.includes("buggy + show") || name.includes("buggy safari matin");
+  // Couvre « BUGGY MATIN », « buggy safari matin », « BUGGY + SHOW », etc.
+  return name.includes("buggy");
 }
 
 // Helper pour obtenir les prix buggy selon l'activité
 export function getBuggyPrices(activityName) {
   if (!activityName) return { simple: 0, family: 0 };
   const name = activityName.toLowerCase();
-  if (name.includes("buggy + show")) {
+  // « BUGGY + SHOW »
+  if (name.includes("show")) {
     return { simple: 120, family: 160 };
-  } else if (name.includes("buggy safari matin")) {
-    return { simple: 110, family: 150 };
   }
-  return { simple: 0, family: 0 };
+  // « BUGGY MATIN », « buggy safari matin », etc.
+  return { simple: 110, family: 150 };
 }
 
 /** Calèche : forfait par calèche (comme buggy = à l’unité), pas par personne. */

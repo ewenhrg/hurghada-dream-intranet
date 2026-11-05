@@ -30,6 +30,7 @@ import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import {
   getActivityPublicProse,
   isBuggyActivity,
+  getBuggyPrices,
   isCalecheActivity,
   getCalecheUnitPrice,
   requiredCalecheCount,
@@ -355,7 +356,11 @@ function BookingCardShell({
     <div className="space-y-3 md:space-y-4">
       <div className="hd-booking-pricing-summary rounded-[1.25rem] bg-catalog-bg px-4 py-4 ring-1 ring-catalog-line">
         <p className="mb-1 text-xs font-medium text-catalog-muted">
-          {hidePrices ? "Tarif professionnel" : "À partir de (adulte)"}
+          {hidePrices
+            ? "Tarif professionnel"
+            : isBuggyActivity(activity?.name)
+              ? "À partir de (par buggy)"
+              : "À partir de (adulte)"}
         </p>
         <div className="flex items-baseline gap-2">
           <span className="font-catalog-display text-[1.75rem] leading-none text-catalog-ink tabular-nums">
@@ -820,7 +825,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
       return `Indiquez le nombre de garçons (${p.men} €) et de filles (${p.women} €) ci-dessous.`;
     }
     if (isBuggyActivity(activity.name)) {
-      return "Indiquez le nombre de buggys 2 personnes / 4 personnes ci-dessous (prix selon grille interne).";
+      return "Choisissez le nombre de buggys (2 ou 4 personnes) ci-dessous — le prix dépend des buggys, pas du nombre d’adultes. Indiquez aussi combien d’adultes / enfants participent.";
     }
     if (isCalecheActivity(activity.name)) {
       return `Maximum 1 adulte et 2 enfants par calèche — ${getCalecheUnitPrice(activity)} € / calèche (pas par personne). Le nombre de calèches augmente tout seul si le groupe est plus grand.`;
@@ -851,6 +856,9 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
 
   const bookingPriceCaption = useMemo(() => {
     if (!activity) return "";
+    if (isBuggyActivity(activity.name)) {
+      return "Prix à l’unité de buggy (pas par adulte). Choisissez les buggys puis le nombre de participants.";
+    }
     if (
       isPublicCatalogAirportStyleLine(activity) ||
       isZeroTracasHorsZoneActivity(activity.name) ||
@@ -984,35 +992,43 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
     }
 
     if (isBuggyActivity(name)) {
+      const prices = getBuggyPrices(name);
       return (
-        <div className="grid grid-cols-2 gap-3 rounded-xl border border-transparent bg-catalog-brassSoft p-3">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-catalog-body">Buggy 2 personnes</label>
-            <select
-              className="w-full hdc-input !min-h-11 !rounded-xl !px-3 !py-2 text-sm"
-              value={special.buggySimple}
-              onChange={(e) => setSpecial((s) => ({ ...s, buggySimple: Number(e.target.value) }))}
-            >
-              {[0, 1, 2, 3, 4, 5].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-catalog-body">Buggy 4 personnes</label>
-            <select
-              className="w-full hdc-input !min-h-11 !rounded-xl !px-3 !py-2 text-sm"
-              value={special.buggyFamily}
-              onChange={(e) => setSpecial((s) => ({ ...s, buggyFamily: Number(e.target.value) }))}
-            >
-              {[0, 1, 2, 3, 4, 5].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
+        <div className="space-y-2 rounded-xl border border-transparent bg-catalog-brassSoft p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-catalog-ink">Nombre de buggys</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-catalog-body">
+                Buggy 2 personnes{b2b ? "" : ` (${prices.simple} €)`}
+              </label>
+              <select
+                className="w-full hdc-input !min-h-11 !rounded-xl !px-3 !py-2 text-sm"
+                value={special.buggySimple}
+                onChange={(e) => setSpecial((s) => ({ ...s, buggySimple: Number(e.target.value) }))}
+              >
+                {[0, 1, 2, 3, 4, 5].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-catalog-body">
+                Buggy 4 personnes{b2b ? "" : ` (${prices.family} €)`}
+              </label>
+              <select
+                className="w-full hdc-input !min-h-11 !rounded-xl !px-3 !py-2 text-sm"
+                value={special.buggyFamily}
+                onChange={(e) => setSpecial((s) => ({ ...s, buggyFamily: Number(e.target.value) }))}
+              >
+                {[0, 1, 2, 3, 4, 5].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       );

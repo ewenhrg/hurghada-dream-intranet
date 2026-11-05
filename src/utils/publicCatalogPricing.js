@@ -198,14 +198,14 @@ export function getPublicCatalogListFromPrice(activity) {
   if (isSpeedBoatActivity(name)) {
     return { amount: getSpeedBoatBasePrice(name), currency: activity.currency || "EUR" };
   }
-  const db = readDbPrices(activity);
-  if (db.adult > 0) {
-    return { amount: db.adult, currency: activity.currency || "EUR" };
-  }
   if (isBuggyActivity(name)) {
     const p = getBuggyPrices(name);
     const cands = [p.simple, p.family].filter((x) => x > 0);
     if (cands.length) return { amount: Math.min(...cands), currency: activity.currency || "EUR" };
+  }
+  const db = readDbPrices(activity);
+  if (db.adult > 0) {
+    return { amount: db.adult, currency: activity.currency || "EUR" };
   }
   if (isMotoCrossActivity(name)) {
     const p = getMotoCrossPrices();
