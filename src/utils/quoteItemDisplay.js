@@ -158,8 +158,8 @@ export function getQuoteItemExtraLabels(item) {
     String(item.activityNameFr || item.activityName || item.activity_name || "").trim();
   const speedBoatExtras = normalizeSpeedBoatExtras(item);
 
-  if (includesSpeedBoatDolphinSearch(activityName)) {
-    labels.push("Dauphins inclus");
+  if (item.extraDolphin === true || includesSpeedBoatDolphinSearch(activityName)) {
+    labels.push(item.extraDolphin === true ? "Recherche dauphins (+20€)" : "Dauphins inclus");
   }
   if (allowsSpeedBoatIslandExtras(activityName) || speedBoatExtras.length > 0) {
     for (const id of speedBoatExtras) {

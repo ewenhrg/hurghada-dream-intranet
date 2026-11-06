@@ -23,7 +23,7 @@ import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../component
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
-import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, computeZeroTracasLineTotal, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, isFlyingDressActivity, allowsFlyingDressExtra, getFlyingDressOptions, hasFlyingDressOption, computeFlyingDressLineTotal, flyingDressOptionPatch, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, formatTurtleFinSizesLabel, isArrivalDayServiceActivity, isTransferActivity} from "../utils/activityHelpers";
+import { isBuggyActivity, getBuggyPrices, isSpeedBoatActivity, allowsSpeedBoatIslandExtras, allowsSpeedBoatDolphinExtra, SPEED_BOAT_DOLPHIN_EXTRA_PRICE, getSpeedBoatIslandExtrasForSlot, normalizeSpeedBoatExtrasForSlot, normalizeSpeedBoatExtrasList, computeSpeedBoatLineTotal, isBoatPartyActivity, getBoatPartyPrices, computeBoatPartyLineTotal, isMotoCrossActivity, getMotoCrossPrices, isCalecheActivity, getCalecheUnitPrice, computeCalecheLineTotal, isZeroTracasActivity, getZeroTracasPrices, isZeroTracasHorsZoneActivity, getZeroTracasHorsZonePrices, computeZeroTracasLineTotal, isCairePrivatifActivity, getCairePrivatifPrices, isLouxorPrivatifActivity, getLouxorPrivatifPrices, isFlyingDressActivity, allowsFlyingDressExtra, getFlyingDressOptions, hasFlyingDressOption, computeFlyingDressLineTotal, flyingDressOptionPatch, requiresMinimumTwoParticipants, hasEnoughParticipantsForActivity, warnsRecommendedTwoParticipants, isBelowRecommendedTwoParticipants, exceedsSpeedBoatMaxParticipants, getSpeedBoatMaxParticipantsMessage, capSpeedBoatParticipantField, getMammaMiaSelfTransferActivityNames, withMammaMiaSelfTransferNote, isTurtleActivity, persistTurtleFinSizes, hasAllTurtleFinSizes, getTurtleFinSizesMissingMessage, formatTurtleFinSizesLabel, isArrivalDayServiceActivity, isTransferActivity} from "../utils/activityHelpers";
 import { ColoredDatePicker } from "../components/ColoredDatePicker";
 import { salesCache, createCacheKey } from "../utils/cache";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -153,10 +153,24 @@ function quoteMatchesHistorySearch(quote, rawQuery) {
   const hasLettersOrAt = /[a-z@]/i.test(q);
   const phoneOnlyQuery = Boolean(phoneNeedle) && !hasLettersOrAt;
 
-  const phone = String(quote?.client?.phone || "").replace(/\D+/g, "");
-  if (phoneOnlyQuery && phoneNeedle && phone.includes(phoneNeedle)) return true;
-  // Recherche mixte : n’utiliser le téléphone que si assez de chiffres (évite « 123 » dans un mail).
-  if (!phoneOnlyQuery && phoneNeedle.length >= 6 && phone.includes(phoneNeedle)) return true;
+  const items = Array.isArray(quote?.items) ? quote.items : [];
+  const ticketDigitsList = items
+    .map((item) => String(item?.ticketNumber || "").replace(/\D+/g, ""))
+    .filter(Boolean);
+
+  // N° ticket carnet (3–7 chiffres) : exact, ou préfixe si saisie encore courte.
+  if (phoneOnlyQuery && phoneNeedle.length >= 3 && phoneNeedle.length <= 7) {
+    const ticketHit = ticketDigitsList.some((digits) => {
+      if (digits === phoneNeedle) return true;
+      return phoneNeedle.length < digits.length && digits.startsWith(phoneNeedle);
+    });
+    if (ticketHit) return true;
+    // Ne pas retomber sur une recherche téléphone pour un n° de carnet.
+  } else {
+    const phone = String(quote?.client?.phone || "").replace(/\D+/g, "");
+    if (phoneOnlyQuery && phoneNeedle.length >= 8 && phone.includes(phoneNeedle)) return true;
+    if (!phoneOnlyQuery && phoneNeedle.length >= 6 && phone.includes(phoneNeedle)) return true;
+  }
 
   const email = String(quote?.client?.email || "").trim().toLowerCase();
   if (email && email.includes(q)) return true;
@@ -166,6 +180,11 @@ function quoteMatchesHistorySearch(quote, rawQuery) {
 
   const code = String(quote?.reservationCode || "").trim().toLowerCase();
   if (code && code.includes(q)) return true;
+
+  // Ticket en recherche mixte (ex. « ticket 187155 ») : exact uniquement.
+  if (!phoneOnlyQuery && phoneNeedle.length >= 3) {
+    if (ticketDigitsList.some((digits) => digits === phoneNeedle)) return true;
+  }
 
   return false;
 }
@@ -4107,13 +4126,14 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                 {/* Speed Boat : extras îles + ajustement manuel (comme page Devis) */}
                 {c.isSpeedBoat ? (
                   <div className="space-y-4 md:space-y-5 rounded-xl border-2 border-blue-300/70 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 p-4 md:p-5">
-                    {allowsSpeedBoatIslandExtras(c.activityName) ? (
+                    {allowsSpeedBoatIslandExtras(c.activityName) || allowsSpeedBoatDolphinExtra(c.activityName) ? (
                       <div>
                         <p className="text-sm md:text-base font-bold text-slate-800 mb-2">
                           ⚡ Options Speed Boat
                         </p>
                         <p className="text-xs md:text-sm text-slate-600 font-medium mb-3">
-                          Base 150 € jusqu’à 4 personnes, +20 € / personne jusqu’à 7. Recherche dauphins incluse (sous réserve des conditions sur place). Une île / formule optionnelle.
+                          Base 150 € jusqu’à 4 personnes, +20 € / personne jusqu’à 7. Un seul choix : recherche dauphins{" "}
+                          <strong>ou</strong> une île / formule.
                         </p>
                         {c.raw.slot === "morning" && (
                           <p className="text-xs md:text-sm text-amber-900 font-medium mb-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
@@ -4121,6 +4141,25 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                           </p>
                         )}
                         <div className="space-y-3 border-2 border-blue-200/70 rounded-xl p-4 bg-white/95 shadow-sm">
+                          {allowsSpeedBoatDolphinExtra(c.activityName) ? (
+                            <label className="flex items-center gap-2 p-2 rounded-lg transition-colors cursor-pointer hover:bg-blue-50/50">
+                              <input
+                                type="checkbox"
+                                checked={c.raw.extraDolphin || false}
+                                onChange={(e) =>
+                                  setItem(idx, {
+                                    extraDolphin: e.target.checked,
+                                    ...(e.target.checked ? { speedBoatExtra: [] } : {}),
+                                  })
+                                }
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-slate-700 flex-1">
+                                <span className="font-medium">Recherche dauphins</span>
+                                <span className="text-xs text-slate-500 ml-2">(+{SPEED_BOAT_DOLPHIN_EXTRA_PRICE}€)</span>
+                              </span>
+                            </label>
+                          ) : null}
                           {getSpeedBoatIslandExtrasForSlot(c.raw.slot).map((extra) => {
                             const currentExtras = normalizeSpeedBoatExtrasList(c.raw.speedBoatExtra);
                             const isChecked = currentExtras[0] === extra.id;

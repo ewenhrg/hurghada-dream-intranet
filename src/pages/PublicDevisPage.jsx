@@ -71,7 +71,9 @@ function getCatalogLineOptionLines(item) {
   const pickupLabel = formatPickupSlotLabel(item.slot, item.pickupTime);
   if (pickupLabel) lines.push(`Prise en charge : ${pickupLabel}`);
 
-  if (includesSpeedBoatDolphinSearch(activityName)) {
+  if (item?.extraDolphin === true) {
+    lines.push("Recherche dauphins (+20 €)");
+  } else if (includesSpeedBoatDolphinSearch(activityName)) {
     lines.push("Recherche dauphins incluse (sous réserve des conditions)");
   }
   if (allowsSpeedBoatIslandExtras(activityName)) {

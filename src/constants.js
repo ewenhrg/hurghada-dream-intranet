@@ -173,7 +173,7 @@ export function getDefaultActivities() {
       priceBaby: 0,
       currency: "EUR",
       availableDays: [true, true, true, true, true, true, true],
-      notes: "Base 150€ pour 1–4 pers. +20€/pers. jusqu’à 7. Recherche dauphins incluse (sous réserve des conditions).",
+      notes: "Base 150€ pour 1–4 pers. +20€/pers. jusqu’à 7. Option recherche dauphins +20€.",
       transfers: emptyTransfers(),
     },
     {

@@ -90,7 +90,9 @@ export function generateQuoteHTML(quote, options = {}) {
     let extrasInfo = [];
     
     if (isSpeedBoat) {
-      if (includesSpeedBoatDolphinSearch(item.activityName)) {
+      if (item.extraDolphin === true) {
+        extrasInfo.push("Recherche dauphins (+20 €)");
+      } else if (includesSpeedBoatDolphinSearch(item.activityName)) {
         extrasInfo.push("Recherche dauphins incluse (sous réserve des conditions)");
       }
 
@@ -530,7 +532,9 @@ export function generateTicketsHTML(quote, options = {}) {
     const isSpeedBoat = item.activityName && isSpeedBoatActivity(item.activityName);
 
     if (isSpeedBoat) {
-      if (includesSpeedBoatDolphinSearch(item.activityName)) {
+      if (item.extraDolphin === true) {
+        lines.push("Recherche dauphins (+20 €)");
+      } else if (includesSpeedBoatDolphinSearch(item.activityName)) {
         lines.push("Recherche dauphins incluse (sous réserve des conditions)");
       }
       if (allowsSpeedBoatIslandExtras(item.activityName) && item.speedBoatExtra) {

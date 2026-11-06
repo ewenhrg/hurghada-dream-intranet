@@ -72,17 +72,20 @@ export function allowsSpeedBoatIslandExtras(activityName) {
   return isSpeedBoatActivity(activityName) && !isSpeedBoatSunsetActivity(activityName);
 }
 
-/**
- * Ancienne option « Extra dauphin » (+20 €) — retirée : recherche dauphins incluse
- * (sous réserve des conditions sur place). Conservé pour compat lecture d’anciens devis.
- */
-export function allowsSpeedBoatDolphinExtra(_activityName) {
-  return false;
+/** Option « Recherche dauphins » (+20 €) — Speed Boat classique uniquement (pas Sunset). */
+export function allowsSpeedBoatDolphinExtra(activityName) {
+  return isSpeedBoatActivity(activityName) && !isSpeedBoatSunsetActivity(activityName);
 }
 
-/** Recherche dauphins incluse sur Speed Boat classique (pas Sunset). */
-export function includesSpeedBoatDolphinSearch(activityName) {
-  return isSpeedBoatActivity(activityName) && !isSpeedBoatSunsetActivity(activityName);
+export const SPEED_BOAT_DOLPHIN_EXTRA_PRICE = 20;
+
+/**
+ * Affichage « dauphins inclus » uniquement pour d’anciens devis où l’option
+ * n’était pas cochée mais le texte catalogue l’annonçait encore.
+ * Préférer `item.extraDolphin` pour les nouveaux devis.
+ */
+export function includesSpeedBoatDolphinSearch(_activityName) {
+  return false;
 }
 
 export function getSpeedBoatIslandExtras() {
@@ -134,9 +137,9 @@ export function getSpeedBoatBasePrice(activityName) {
 
 /**
  * Grille Speed Boat :
- * - classique : 150 € pour 1–4 pers. (adt+enf+bébés), +20 € / pers. au-delà (max 7), dauphin inclus ;
- * - sunset : 125 € (1–2 adt), +20 €/adt >2, +10 €/enfant (sans îles).
- * `extraDolphin` ignoré (compat anciens devis).
+ * - classique : 150 € pour 1–4 pers. (adt+enf+bébés), +20 € / pers. au-delà (max 7),
+ *   option recherche dauphins +20 € ;
+ * - sunset : 125 € (1–2 adt), +20 €/adt >2, +10 €/enfant (sans îles / sans dauphin).
  */
 export function computeSpeedBoatBaseLineTotal(adults, children, extraDolphin, activityName, babies = 0) {
   const ad = Number(adults || 0);
@@ -153,6 +156,7 @@ export function computeSpeedBoatBaseLineTotal(adults, children, extraDolphin, ac
   if (pax > SPEED_BOAT_INCLUDED_PARTICIPANTS) {
     lineTotal += (pax - SPEED_BOAT_INCLUDED_PARTICIPANTS) * SPEED_BOAT_EXTRA_PERSON_PRICE;
   }
+  if (extraDolphin) lineTotal += SPEED_BOAT_DOLPHIN_EXTRA_PRICE;
   return lineTotal;
 }
 
@@ -173,7 +177,7 @@ export function addSpeedBoatIslandExtrasToLineTotal(lineTotal, activityName, adu
   return total;
 }
 
-/** Total ligne Speed Boat (base + îles ; dauphin inclus, plus d’extra payant). */
+/** Total ligne Speed Boat (base + dauphin optionnel + îles selon l’activité). */
 export function computeSpeedBoatLineTotal(
   activityName,
   adults,
@@ -183,7 +187,8 @@ export function computeSpeedBoatLineTotal(
   slot,
   babies = 0
 ) {
-  let total = computeSpeedBoatBaseLineTotal(adults, children, false, activityName, babies);
+  const dolphin = allowsSpeedBoatDolphinExtra(activityName) && Boolean(extraDolphin);
+  let total = computeSpeedBoatBaseLineTotal(adults, children, dolphin, activityName, babies);
   total = addSpeedBoatIslandExtrasToLineTotal(
     total,
     activityName,
@@ -523,9 +528,24 @@ export function isArrivalDayServiceActivity(activityName) {
  * @param {{ category?: string, name?: string }|null} [activityLike]
  */
 export function isTransferActivity(activityName, activityLike = null) {
+  const name = normalizeActivityName(activityName || activityLike?.name);
+  // Excursions (Free Quad, safari, etc.) : jamais traitées comme transfert,
+  // même si la catégorie locale est mal renseignée → ticket auto.
+  if (
+    name &&
+    (name.includes("quad") ||
+      name.includes("safari") ||
+      name.includes("buggy") ||
+      name.includes("speed boat") ||
+      name.includes("speedboat") ||
+      name.includes("boat party") ||
+      name.includes("moto cross") ||
+      name.includes("motocross"))
+  ) {
+    return false;
+  }
   const category = String(activityLike?.category || "").trim().toLowerCase();
   if (category === "transfert") return true;
-  const name = normalizeActivityName(activityName || activityLike?.name);
   if (!name) return false;
   // Zero Tracas a ses propres règles (saisie manuelle) — ne pas les classer ici.
   if (isArrivalDayServiceActivity(name)) return false;
@@ -719,8 +739,10 @@ export function getActivityTarifListLines(activityLike) {
     const lines = [
       `Base 1–4 personnes : ${SPEED_BOAT_BASE_PRICE} €`,
       `Au-delà de 4 personnes : +${SPEED_BOAT_EXTRA_PERSON_PRICE} € / personne (max ${SPEED_BOAT_MAX_PARTICIPANTS})`,
-      "Recherche dauphins incluse (sous réserve des conditions sur place)",
     ];
+    if (allowsSpeedBoatDolphinExtra(name)) {
+      lines.push(`Recherche dauphins : +${SPEED_BOAT_DOLPHIN_EXTRA_PRICE} €`);
+    }
     if (allowsSpeedBoatIslandExtras(name)) {
       const extraLines = getSpeedBoatIslandExtras().map(
         (e) => `${e.label} : +${e.priceAdult} € / adulte · +${e.priceChild} € / enfant`

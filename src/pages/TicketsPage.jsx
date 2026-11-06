@@ -117,19 +117,18 @@ function compareTicketNumbersOldestFirst(a, b) {
 }
 
 /**
- * 4 = exact, 3 = préfixe, 2 = suffixe, 1 = contenu, 0 = aucun.
- * 002233 et 2233 comptent comme le même numéro.
+ * 2 = exact (même n°), 1 = préfixe (saisie en cours plus courte), 0 = aucun.
+ * Pas de suffixe / contenu : trop de faux positifs (ex. 87155 → plein d’autres tickets).
  */
 function ticketNumberQueryRank(ticketNumber, queryDigits) {
-  const raw = String(ticketNumber || "").trim();
-  const digits = onlyDigits(raw);
+  const digits = onlyDigits(ticketNumber);
   const q = onlyDigits(queryDigits);
   if (!digits || !q) return 0;
-  if (raw === q || digits === q) return 4;
-  if (/^\d+$/.test(raw) && Number(raw) === Number(q)) return 4;
-  if (digits.startsWith(q)) return 3;
-  if (digits.endsWith(q)) return 2;
-  if (digits.includes(q)) return 1;
+  if (digits === q) return 2;
+  // Même valeur numérique uniquement si même longueur (évite 0187155 ≈ 187155).
+  if (digits.length === q.length && Number(digits) === Number(q)) return 2;
+  // Préfixe seulement si on tape encore (requête plus courte que le n°).
+  if (q.length >= 3 && q.length < digits.length && digits.startsWith(q)) return 1;
   return 0;
 }
 
@@ -157,14 +156,9 @@ function classifyTicketsSearch(raw) {
 
   if (looksPhone) return { type: "phone", digits, term: trimmed.toLowerCase() };
 
-  // Carnets ~6 chiffres : priorité ticket, avec filet téléphone si 6–7 chiffres.
+  // Carnets ~6 chiffres : recherche ticket pure (sans mélanger le téléphone).
   if (!hasLetter && digits.length >= 3 && digits.length <= 7) {
-    return {
-      type: "ticket",
-      digits,
-      alsoPhone: digits.length >= 6,
-      term: trimmed.toLowerCase(),
-    };
+    return { type: "ticket", digits, term: trimmed.toLowerCase() };
   }
 
   if (!hasLetter && digits.length >= 8) {
@@ -673,30 +667,26 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
 
     if (classified.type === "ticket") {
       const hits = [];
-      const seen = new Set();
       for (const r of rows) {
         const rank = ticketNumberQueryRank(r.ticketNumber, classified.digits);
         if (!rank) continue;
         if (!passesStatusFilter(r, statusFilter, copied)) continue;
         hits.push({ row: r, rank });
-        seen.add(r.key);
       }
-      if (classified.alsoPhone) {
-        for (const r of rows) {
-          if (seen.has(r.key)) continue;
-          if (!phonesMatch(r.phone, classified.digits)) continue;
-          if (!passesStatusFilter(r, statusFilter, copied)) continue;
-          hits.push({ row: r, rank: 0 });
-          seen.add(r.key);
-        }
-      }
-      const strong = hits.filter((item) => item.rank >= 3);
-      const chosen = (strong.length > 0 ? strong : hits).map((item) => item.row);
-      chosen.sort((a, b) =>
-        entryMode
-          ? compareTicketNumbersOldestFirst(a.ticketNumber, b.ticketNumber)
-          : compareTicketNumbersNewestFirst(a.ticketNumber, b.ticketNumber)
-      );
+      // Si le n° exact existe, on n’affiche que lui (pas les préfixes voisins).
+      const exact = hits.filter((item) => item.rank === 2);
+      const chosen = (exact.length > 0 ? exact : hits)
+        .map((item) => item.row)
+        .sort((a, b) => {
+          if (exact.length > 0) {
+            return String(a.ticketNumber).localeCompare(String(b.ticketNumber), "fr", {
+              numeric: true,
+            });
+          }
+          return entryMode
+            ? compareTicketNumbersOldestFirst(a.ticketNumber, b.ticketNumber)
+            : compareTicketNumbersNewestFirst(a.ticketNumber, b.ticketNumber);
+        });
       return chosen;
     }
 
@@ -732,7 +722,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
       if (!term) return true;
       if (codeMatch) return true;
       if (queryDigits.length >= 4 && phonesMatch(r.phone, queryDigits)) return true;
-      if (queryDigits.length >= 3 && ticketNumberQueryRank(r.ticketNumber, queryDigits) > 0) return true;
+      // Texte mixte : n° ticket seulement en exact (évite de noyer le résultat).
+      if (queryDigits.length >= 3 && ticketNumberQueryRank(r.ticketNumber, queryDigits) === 2) return true;
       return [
         r.ticketNumber,
         r.activity,

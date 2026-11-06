@@ -48,6 +48,8 @@ import {
   isSpeedBoatActivity,
   isSpeedBoatSunsetActivity,
   allowsSpeedBoatIslandExtras,
+  allowsSpeedBoatDolphinExtra,
+  SPEED_BOAT_DOLPHIN_EXTRA_PRICE,
   getSpeedBoatIslandExtras,
   normalizeSpeedBoatExtrasForSlot,
   isZeroTracasActivity,
@@ -816,7 +818,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
       }
       return [
         "Grille Speed Boat : base 150 € pour 1–4 personnes, +20 € par personne supplémentaire jusqu’à 7.",
-        "Recherche dauphins incluse (sous réserve des conditions sur place).",
+        `Option recherche dauphins : +${SPEED_BOAT_DOLPHIN_EXTRA_PRICE} €.`,
         getSpeedBoatMaxParticipantsMessage(),
       ].join("\n");
     }
@@ -869,28 +871,25 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
     return "";
   }, [activity]);
 
-  /** Une île / formule optionnelle (dauphin inclus dans le prix de base). */
+  /** Un seul pack : aucune option, dauphins (+20 €), ou une île / formule. */
   const speedBoatPackValue = useMemo(() => {
+    if (special.extraDolphin) return "dolphin";
     const first = special.speedBoatExtra?.[0];
     if (first) return first;
     return "none";
-  }, [special.speedBoatExtra]);
+  }, [special.extraDolphin, special.speedBoatExtra]);
 
   const applySpeedBoatPack = useCallback((value) => {
     setSpecial((s) => {
       if (value === "none") {
         return { ...s, extraDolphin: false, speedBoatExtra: [] };
       }
+      if (value === "dolphin") {
+        return { ...s, extraDolphin: true, speedBoatExtra: [] };
+      }
       return { ...s, extraDolphin: false, speedBoatExtra: value ? [value] : [] };
     });
   }, []);
-
-  useEffect(() => {
-    if (!activity || !isSpeedBoatActivity(activity.name)) return;
-    if (special.extraDolphin) {
-      setSpecial((s) => ({ ...s, extraDolphin: false }));
-    }
-  }, [activity, special.extraDolphin]);
 
   useEffect(() => {
     if (!activity || !isSpeedBoatSunsetActivity(activity.name)) return;
@@ -917,7 +916,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
         <div className="space-y-3 rounded-xl border border-transparent bg-catalog-lagoonSoft p-3">
           <p className="text-xs font-bold uppercase tracking-wide text-catalog-ink">Options Speed Boat</p>
           <p className="text-[11px] font-medium leading-snug text-catalog-body">
-            Recherche dauphins <strong>incluse</strong> (sous réserve des conditions sur place). Vous pouvez ajouter une île / formule.
+            Un seul choix : recherche dauphins (+{SPEED_BOAT_DOLPHIN_EXTRA_PRICE} €) <strong>ou</strong> une île / formule.
           </p>
           <div className="max-h-[min(70vh,22rem)] space-y-2 overflow-y-auto pr-0.5" role="radiogroup" aria-label="Options Speed Boat">
             <label className={speedBoatOptionClass(speedBoatPackValue === "none")}>
@@ -931,6 +930,22 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
               />
               <span className="text-sm font-semibold leading-snug text-catalog-ink">{b2b ? "Aucune option" : "Aucune option (prix de base)"}</span>
             </label>
+            {allowsSpeedBoatDolphinExtra(name) ? (
+              <label className={speedBoatOptionClass(speedBoatPackValue === "dolphin")}>
+                <input
+                  type="radio"
+                  name={radioName}
+                  value="dolphin"
+                  checked={speedBoatPackValue === "dolphin"}
+                  onChange={() => applySpeedBoatPack("dolphin")}
+                  className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer border-2 border-catalog-border accent-catalog-ocean focus:outline-none focus:ring-2 focus:ring-catalog-ocean focus:ring-offset-1"
+                />
+                <span className="text-sm leading-snug text-catalog-ink">
+                  <span className="font-semibold">Recherche dauphins</span>{" "}
+                  <span className="text-xs font-medium text-catalog-muted">+{SPEED_BOAT_DOLPHIN_EXTRA_PRICE} €</span>
+                </span>
+              </label>
+            ) : null}
             {allowsSpeedBoatIslandExtras(name) &&
               getSpeedBoatIslandExtras().map((extra) => (
                 <label key={extra.id} className={speedBoatOptionClass(speedBoatPackValue === extra.id)}>
