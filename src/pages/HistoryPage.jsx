@@ -158,11 +158,19 @@ function quoteMatchesHistorySearch(quote, rawQuery) {
     .map((item) => String(item?.ticketNumber || "").replace(/\D+/g, ""))
     .filter(Boolean);
 
-  // N° ticket carnet (3–7 chiffres) : exact, ou préfixe si saisie encore courte.
+  // N° ticket carnet (3–7 chiffres) : exact, préfixe, ou suffixe (≥4, ex. 4 derniers).
   if (phoneOnlyQuery && phoneNeedle.length >= 3 && phoneNeedle.length <= 7) {
     const ticketHit = ticketDigitsList.some((digits) => {
       if (digits === phoneNeedle) return true;
-      return phoneNeedle.length < digits.length && digits.startsWith(phoneNeedle);
+      if (phoneNeedle.length < digits.length && digits.startsWith(phoneNeedle)) return true;
+      if (
+        phoneNeedle.length >= 4 &&
+        phoneNeedle.length < digits.length &&
+        digits.endsWith(phoneNeedle)
+      ) {
+        return true;
+      }
+      return false;
     });
     if (ticketHit) return true;
     // Ne pas retomber sur une recherche téléphone pour un n° de carnet.
@@ -181,9 +189,20 @@ function quoteMatchesHistorySearch(quote, rawQuery) {
   const code = String(quote?.reservationCode || "").trim().toLowerCase();
   if (code && code.includes(q)) return true;
 
-  // Ticket en recherche mixte (ex. « ticket 187155 ») : exact uniquement.
+  // Ticket en recherche mixte (ex. « ticket 187155 » ou « ticket 7155 »).
   if (!phoneOnlyQuery && phoneNeedle.length >= 3) {
-    if (ticketDigitsList.some((digits) => digits === phoneNeedle)) return true;
+    const ticketHit = ticketDigitsList.some((digits) => {
+      if (digits === phoneNeedle) return true;
+      if (
+        phoneNeedle.length >= 4 &&
+        phoneNeedle.length < digits.length &&
+        digits.endsWith(phoneNeedle)
+      ) {
+        return true;
+      }
+      return false;
+    });
+    if (ticketHit) return true;
   }
 
   return false;
