@@ -1529,3 +1529,130 @@ export function generateDayReceiptHTML(receipt, options = {}) {
 </body>
 </html>`;
 }
+
+function escHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Devis manuel libre : lignes texte + date optionnelle + prix. */
+export function generateManualQuoteHTML(quote) {
+  const createdAt = quote?.createdAt ? new Date(quote.createdAt) : new Date();
+  const dateLabel = createdAt.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const currency = quote?.currency || "EUR";
+  const lines = Array.isArray(quote?.lines) ? quote.lines : [];
+  const total = Number(quote?.total) || lines.reduce((sum, line) => sum + (Number(line.price) || 0), 0);
+  const clientName = String(quote?.clientName || "").trim();
+  const note = String(quote?.note || "").trim();
+  const by = String(quote?.createdByName || "").trim();
+
+  const rows = lines
+    .map((line, index) => {
+      const label = escHtml(line.label || `Ligne ${index + 1}`);
+      const lineDate = line.date
+        ? new Date(`${line.date}T12:00:00`).toLocaleDateString("fr-FR", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          })
+        : "—";
+      const price = currencyNoCents(Math.round(Number(line.price) || 0), currency);
+      return `<tr>
+        <td>${index + 1}</td>
+        <td>${label}</td>
+        <td>${escHtml(lineDate)}</td>
+        <td class="money">${escHtml(price)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Devis manuel — Hurghada Dream</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a; margin: 0; padding: 24px; background: #f8fafc; }
+    .sheet { max-width: 820px; margin: 0 auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 28px; }
+    .top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 24px; }
+    .brand h1 { margin: 0; font-size: 28px; color: #1d4ed8; }
+    .brand p { margin: 4px 0 0; color: #64748b; font-size: 13px; }
+    .doc-title { text-align: right; font-size: 26px; font-weight: 800; color: #1e3a8a; }
+    .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+    .box { background: #f8fafc; border-left: 4px solid #2563eb; border-radius: 8px; padding: 12px 14px; }
+    .box h3 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #2563eb; }
+    .box p { margin: 0; font-size: 14px; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; font-size: 14px; }
+    th { background: #1e40af; color: #fff; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
+    td.money, th.money { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .totals { margin-top: 18px; display: flex; justify-content: flex-end; }
+    .sum { min-width: 240px; border-top: 2px solid #0f172a; padding-top: 10px; }
+    .sum-row { display: flex; justify-content: space-between; gap: 24px; font-size: 16px; font-weight: 800; }
+    .note { margin-top: 18px; padding: 12px 14px; background: #f8fafc; border-radius: 8px; font-size: 13px; color: #334155; }
+    .fine { margin-top: 22px; font-size: 11px; color: #64748b; line-height: 1.45; }
+    .print-btn { margin: 0 0 14px; padding: 8px 14px; border: 0; border-radius: 8px; background: #0f172a; color: #fff; font-weight: 700; cursor: pointer; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .sheet { border: 0; border-radius: 0; padding: 0; max-width: none; }
+      .print-btn { display: none; }
+      th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    @page { size: A4; margin: 14mm; }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+    <div class="top">
+      <div class="brand">
+        <h1>Hurghada Dream</h1>
+        <p>Agence · Mer Rouge</p>
+      </div>
+      <div class="doc-title">DEVIS</div>
+    </div>
+    <div class="meta">
+      <div class="box">
+        <h3>Client</h3>
+        <p>${escHtml(clientName || "—")}</p>
+      </div>
+      <div class="box">
+        <h3>Date du devis</h3>
+        <p>${escHtml(dateLabel)}${by ? `<br/><span style="font-weight:500;color:#64748b">Par ${escHtml(by)}</span>` : ""}</p>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:48px">#</th>
+          <th>Désignation</th>
+          <th style="width:180px">Date</th>
+          <th class="money" style="width:120px">Prix</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows || `<tr><td colspan="4" style="text-align:center;color:#64748b;padding:18px">Aucune ligne</td></tr>`}
+      </tbody>
+    </table>
+    <div class="totals">
+      <div class="sum">
+        <div class="sum-row">
+          <span>Total</span>
+          <span>${escHtml(currencyNoCents(Math.round(total), currency))}</span>
+        </div>
+      </div>
+    </div>
+    ${note ? `<div class="note"><strong>Note :</strong> ${escHtml(note)}</div>` : ""}
+    <p class="fine">Ce devis est fourni à titre informatif. Les horaires sont approximatifs et seront confirmés la veille de votre départ.</p>
+  </div>
+</body>
+</html>`;
+}

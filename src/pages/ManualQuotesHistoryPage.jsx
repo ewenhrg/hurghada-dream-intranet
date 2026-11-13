@@ -1,0 +1,160 @@
+import { useCallback, useEffect, useState } from "react";
+import { Printer, Trash2 } from "lucide-react";
+import { supabase } from "../lib/supabase";
+import { currencyNoCents } from "../utils";
+import { deleteManualQuote, fetchManualQuotes } from "../utils/manualQuotes";
+import { generateManualQuoteHTML } from "../utils/printTemplates";
+import { toast } from "../utils/toast.js";
+
+function formatWhen(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatLineDate(date) {
+  if (!date) return "—";
+  return new Date(`${date}T12:00:00`).toLocaleDateString("fr-FR");
+}
+
+function openPrint(html) {
+  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  const popup = window.open(url);
+  if (!popup) {
+    URL.revokeObjectURL(url);
+    toast.error("Autorisez les pop-ups pour imprimer.");
+    return;
+  }
+  window.setTimeout(() => {
+    try {
+      popup.focus();
+      popup.print();
+    } catch {
+      /* ignore */
+    }
+    URL.revokeObjectURL(url);
+  }, 400);
+}
+
+export function ManualQuotesHistoryPage() {
+  const [quotes, setQuotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    const result = await fetchManualQuotes(supabase);
+    setQuotes(result.quotes || []);
+    setLoading(false);
+    if (!result.ok) toast.error("Impossible de charger l’historique.");
+  }, []);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  const handleDelete = async (quote) => {
+    if (!quote?.id) return;
+    const ok = window.confirm("Supprimer ce devis manuel ?");
+    if (!ok) return;
+    const result = await deleteManualQuote(supabase, quote.id);
+    if (!result.ok) {
+      toast.error("Suppression impossible.");
+      return;
+    }
+    setQuotes((prev) => prev.filter((item) => item.id !== quote.id));
+    toast.success("Devis supprimé.");
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border-2 border-indigo-300 bg-white px-4 py-3 shadow-sm">
+        <p className="text-sm font-bold text-indigo-950">Historique des devis manuels</p>
+        <p className="mt-0.5 text-xs font-medium text-slate-600">
+          Visible uniquement pour Sophia, Ewen et Karim. Réimpression possible à tout moment.
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">
+          Chargement…
+        </div>
+      ) : quotes.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">
+          Aucun devis manuel pour le moment.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {quotes.map((quote) => (
+            <article
+              key={quote.id}
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5"
+            >
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                  <p className="text-base font-extrabold text-slate-950">
+                    {quote.clientName || "Sans nom client"}
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-slate-500">
+                    {formatWhen(quote.createdAt)}
+                    {quote.createdByName ? ` · ${quote.createdByName}` : ""}
+                    {" · "}
+                    {quote.lines.length} ligne{quote.lines.length > 1 ? "s" : ""}
+                  </p>
+                  <ul className="mt-3 space-y-1.5">
+                    {quote.lines.map((line) => (
+                      <li
+                        key={line.id}
+                        className="flex flex-wrap items-baseline justify-between gap-2 text-sm text-slate-800"
+                      >
+                        <span className="min-w-0 font-semibold">
+                          {line.label}
+                          <span className="ml-2 font-medium text-slate-500">
+                            {formatLineDate(line.date)}
+                          </span>
+                        </span>
+                        <span className="font-bold tabular-nums">
+                          {currencyNoCents(Math.round(Number(line.price) || 0), quote.currency)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {quote.note ? (
+                    <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
+                      {quote.note}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row lg:flex-col">
+                  <p className="text-right text-lg font-extrabold tabular-nums text-slate-950 lg:mb-1">
+                    {currencyNoCents(Math.round(Number(quote.total) || 0), quote.currency)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => openPrint(generateManualQuoteHTML(quote))}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-slate-900 px-3.5 text-sm font-semibold text-white"
+                  >
+                    <Printer className="size-4" aria-hidden />
+                    Réimprimer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(quote)}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 text-sm font-semibold text-rose-700 hover:bg-rose-100"
+                  >
+                    <Trash2 className="size-4" aria-hidden />
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

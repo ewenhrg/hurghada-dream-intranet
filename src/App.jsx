@@ -20,6 +20,7 @@ import {
   canAccessHotelsPage,
   canAccessHotelHistoryPage,
   canAccessInternsPage,
+  canAccessManualQuotes,
   canAccessModifDemandesPage,
   canAccessPlanningPage,
   canAccessPublicDevisPage,
@@ -67,6 +68,8 @@ import {
   PublicHotelsAdminPage,
   HotelHistoryPage,
   HotelTarifsPage,
+  ManualQuotePage,
+  ManualQuotesHistoryPage,
   ModificationRequestsPage,
   VoidTicketNumbersPage,
   prefetchIntranetTab,
@@ -319,6 +322,15 @@ export default function App() {
   useEffect(() => {
     if (!user || tab !== "events") return;
     if (!canAccessEventsPage(user)) {
+      setTab(user.canAccessHistory !== false ? "history" : "devis");
+    }
+  }, [user, tab]);
+
+  /** Devis manuels : Sophia, Ewen et Karim uniquement. */
+  useEffect(() => {
+    if (!user) return;
+    if (tab !== "devis-manuel" && tab !== "historique-devis-manuel") return;
+    if (!canAccessManualQuotes(user)) {
       setTab(user.canAccessHistory !== false ? "history" : "devis");
     }
   }, [user, tab]);
@@ -1610,6 +1622,20 @@ export default function App() {
                   {t("nav.devis")}
                 </Pill>
                 )}
+                {canAccessManualQuotes(user) && (
+                <Pill data-tab="devis-manuel" active={tab === "devis-manuel"} onClick={() => setTab("devis-manuel")}>
+                  Devis manuel
+                </Pill>
+                )}
+                {canAccessManualQuotes(user) && (
+                <Pill
+                  data-tab="historique-devis-manuel"
+                  active={tab === "historique-devis-manuel"}
+                  onClick={() => setTab("historique-devis-manuel")}
+                >
+                  Hist. devis manuel
+                </Pill>
+                )}
                 {user?.canAccessActivities !== false && (
                 <Pill data-tab="activities" active={tab === "activities"} onClick={() => setTab("activities")}>
                   {t("nav.activities")}
@@ -1901,6 +1927,26 @@ export default function App() {
             bare
           >
             <ReceiptPage quotes={quotes} activities={activities} />
+          </Section>
+        )}
+
+        {tab === "devis-manuel" && canAccessManualQuotes(user) && (
+          <Section
+            title="Devis manuel"
+            subtitle="Lignes libres (désignation, date optionnelle, prix). Imprimer enregistre aussi l’historique."
+            bare
+          >
+            <ManualQuotePage user={user} />
+          </Section>
+        )}
+
+        {tab === "historique-devis-manuel" && canAccessManualQuotes(user) && (
+          <Section
+            title="Historique devis manuel"
+            subtitle="Tous les devis manuels enregistrés. Réimpression et suppression."
+            bare
+          >
+            <ManualQuotesHistoryPage />
           </Section>
         )}
 
