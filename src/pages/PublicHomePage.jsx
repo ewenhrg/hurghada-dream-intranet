@@ -17,6 +17,7 @@ import {
   Sun,
   Ticket,
 } from "lucide-react";
+import { CatalogPhotoFrame } from "../components/public/CatalogPhotoFrame";
 import { HomeReviewsMarquee } from "../components/public/HomeReviewsMarquee";
 import { fetchInstagramReels, InstagramReelsRail, readCachedReels } from "../components/public/InstagramReelsRail";
 import { PublicAppShell } from "../components/public/PublicAppShell";
@@ -182,6 +183,22 @@ export function PublicHomePage() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Préchauffe les chunks des pages les plus ouvertes (navigation instantanée).
+  useEffect(() => {
+    const run = () => {
+      void import("./PublicClientDevisPage");
+      void import("./PublicHotelsCataloguePage");
+      void import("./PublicCatalogueActivityPage");
+      void import("./PublicStayPage");
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(run, { timeout: 2500 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const timer = window.setTimeout(run, 900);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const hotelsWithPhoto = useMemo(() => hotels.filter((h) => Array.isArray(h.images) && h.images[0]), [hotels]);
@@ -569,7 +586,12 @@ export function PublicHomePage() {
                 className="group relative flex h-56 flex-col items-start justify-end overflow-hidden rounded-[1.25rem] bg-catalog-raised p-4 text-left lg:h-80 lg:p-6"
               >
                 <div data-card-media className="absolute inset-0">
-                  <img src={action.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  <CatalogPhotoFrame
+                    src={action.image}
+                    alt=""
+                    loading="lazy"
+                    sizes="(max-width: 1024px) 50vw, 33vw"
+                  />
                 </div>
                 <div aria-hidden className="absolute inset-0 bg-catalog-photo-fade" />
                 <span className="relative block font-catalog-display text-[1.375rem] leading-none text-white lg:text-[2rem]">{action.title}</span>
@@ -586,7 +608,13 @@ export function PublicHomePage() {
             className="relative col-span-2 flex min-h-[6rem] items-center justify-start gap-4 overflow-hidden rounded-[1.25rem] bg-catalog-raised p-4 text-left lg:col-span-1 lg:h-80 lg:flex-col lg:items-start lg:justify-end lg:p-6"
           >
             <div data-card-media className="absolute inset-0">
-              <img src={TILE_STAY} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60 lg:opacity-100" />
+              <CatalogPhotoFrame
+                src={TILE_STAY}
+                alt=""
+                loading="lazy"
+                sizes="(max-width: 1024px) 100vw, 33vw"
+                imgClassName="opacity-60 lg:opacity-100"
+              />
             </div>
             <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgba(11,79,92,0.92)_0%,rgba(14,124,134,0.45)_100%)] lg:hidden" />
             <div aria-hidden className="absolute inset-0 hidden bg-catalog-photo-fade lg:block" />
@@ -650,7 +678,13 @@ export function PublicHomePage() {
                   className="relative h-72 w-[72%] shrink-0 snap-center overflow-hidden rounded-[1.25rem] bg-catalog-raised p-0 text-left lg:h-80 lg:w-auto"
                   aria-label={`Découvrir ${hotel.name}`}
                 >
-                  <img src={hotel.images[0]} alt="" loading="lazy" decoding="async" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+                  <CatalogPhotoFrame
+                    src={hotel.images[0]}
+                    alt=""
+                    loading="lazy"
+                    sizes="160px"
+                    imgClassName="pointer-events-none"
+                  />
                   <div aria-hidden className="absolute inset-0 bg-catalog-photo-fade" />
                   <span className="absolute inset-x-4 bottom-4">
                     <StarRow count={hotel.stars} />

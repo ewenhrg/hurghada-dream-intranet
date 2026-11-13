@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowUpRight, CalendarDays, Compass, Star } from "lucide-react";
+import { CatalogPhotoFrame } from "./CatalogPhotoFrame";
 import { startPhotoFlight } from "./motion";
 import { CATEGORY_ICONS, displayActivityName, formatMoney, getPublicCategoryLabel } from "./catalogueDisplay";
 import { getActivityDayLabelsList } from "../../utils/activityDaysDisplay";
@@ -87,14 +88,13 @@ export function CatalogueActivityCard({
     <>
       <div data-card-media className="relative aspect-[4/3] w-full overflow-hidden bg-catalog-mist">
         {coverUrl ? (
-          <img
+          <CatalogPhotoFrame
             src={coverUrl}
             alt={name}
-            draggable={false}
             loading={priority ? "eager" : "lazy"}
-            fetchPriority={priority ? "high" : undefined}
-            decoding="async"
-            className="hdc-excursion-img pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+            fetchPriority={priority ? "high" : "auto"}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            imgClassName="hdc-excursion-img pointer-events-none select-none"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(160deg,#DCF0EF_0%,#B9E0DE_100%)]">

@@ -162,6 +162,23 @@ html:has(.hd-public-catalog),
 html:has(.hd-public-catalog) body {
   background: #FAF6EF !important;
   color: #33474D;
+  /* Scroll natif : ne pas lisser via CSS (conflit GSAP / ScrollTrigger). */
+  scroll-behavior: auto;
+  overscroll-behavior-y: none;
+}
+
+/* Sur le site public, ne jamais appliquer les coups de frein intranet `.scrolling`. */
+html:has(.hd-public-catalog) body.scrolling,
+html:has(.hd-public-catalog) body.scrolling *,
+html:has(.hd-public-catalog) body.scrolling *::before,
+html:has(.hd-public-catalog) body.scrolling *::after {
+  transition: revert !important;
+  will-change: revert !important;
+  transform: revert !important;
+  filter: revert !important;
+  backdrop-filter: revert !important;
+  -webkit-backdrop-filter: revert !important;
+  animation: revert !important;
 }
 
 html:has(.hd-public-catalog) body::before,
@@ -547,6 +564,14 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 .hd-public-catalog [data-kenburns],
 .hd-public-catalog [data-parallax] {
   will-change: transform;
+  backface-visibility: hidden;
+}
+
+@media (pointer: coarse) {
+  .hd-public-catalog [data-parallax] {
+    transform: none !important;
+    will-change: auto;
+  }
 }
 
 /* Header : se densifie au scroll (fond animé par GSAP). */

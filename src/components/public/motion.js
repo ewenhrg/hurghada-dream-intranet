@@ -194,6 +194,14 @@ export function useScreenIntro(scopeRef, dependencies = []) {
         });
       }
 
+      // Filet : si une image hors viewport change la hauteur, recalculer les triggers.
+      const imgs = root.querySelectorAll("img");
+      const onImg = () => ScrollTrigger.refresh();
+      imgs.forEach((img) => {
+        if (!img.complete) img.addEventListener("load", onImg, { once: true });
+      });
+      requestAnimationFrame(() => ScrollTrigger.refresh());
+
       headings.forEach((el) => {
         const split = SplitText.create(el, { type: "words", wordsClass: "hdc-w", mask: "words" });
         gsap.fromTo(
@@ -303,6 +311,7 @@ export function useHeroArrival(scopeRef, ready = true) {
 /**
  * Motion lié au scroll, très léger : `data-parallax` (amplitude %, défaut 6) et
  * `data-kenburns` (zoom lent 1 → 1.06 en boucle) sur les photos.
+ * Sur tactile : pas de parallax (évite les à-coups iOS) ; kenburns seulement à l’écran.
  */
 export function useScrollMotion(scopeRef, dependencies = []) {
   useGSAP(
@@ -310,7 +319,8 @@ export function useScrollMotion(scopeRef, dependencies = []) {
       const root = scopeRef.current;
       if (!root) return;
       if (prefersReduced()) return;
-      const parallax = fresh(root, "data-parallax");
+      const coarse = window.matchMedia("(pointer: coarse)").matches;
+      const parallax = coarse ? [] : fresh(root, "data-parallax");
       const kenburns = fresh(root, "data-kenburns");
       parallax.forEach((el) => {
         const amount = Number(el.dataset.parallax) || 6;
@@ -318,12 +328,43 @@ export function useScrollMotion(scopeRef, dependencies = []) {
         gsap.fromTo(
           el,
           { yPercent: -amount },
-          { yPercent: amount, ease: "none", scrollTrigger: { trigger: el.parentElement, start: "top bottom", end: "bottom top", scrub: 0.6 } }
+          {
+            yPercent: amount,
+            ease: "none",
+            scrollTrigger: {
+              trigger: el.parentElement || el,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: 0.6,
+            },
+          }
         );
       });
       kenburns.forEach((el, i) => {
-        gsap.fromTo(el, { scale: 1 }, { scale: 1.06, duration: 16 + (i % 3) * 3, ease: "sine.inOut", repeat: -1, yoyo: true });
+        const tween = gsap.fromTo(
+          el,
+          { scale: 1 },
+          {
+            scale: 1.06,
+            duration: 16 + (i % 3) * 3,
+            ease: "sine.inOut",
+            repeat: -1,
+            yoyo: true,
+            paused: true,
+          }
+        );
+        ScrollTrigger.create({
+          trigger: el,
+          start: "top bottom",
+          end: "bottom top",
+          onEnter: () => tween.play(),
+          onEnterBack: () => tween.play(),
+          onLeave: () => tween.pause(),
+          onLeaveBack: () => tween.pause(),
+        });
       });
+      // Layout + images : un refresh évite les révélations qui restent invisibles après navigation.
+      requestAnimationFrame(() => ScrollTrigger.refresh());
     },
     { scope: scopeRef, dependencies, revertOnUpdate: true }
   );

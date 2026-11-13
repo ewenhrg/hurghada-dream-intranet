@@ -1,5 +1,6 @@
 import { Building2, Star } from "lucide-react";
 import { formatHotelAgePolicyLabel } from "../../utils/publicHotelsCatalog";
+import { CatalogPhotoFrame } from "./CatalogPhotoFrame";
 import { AMENITY_META } from "./hotelAmenities";
 
 /** Couverture de repli (sable doux), sans photo. */
@@ -15,10 +16,19 @@ export function StarRow({ count = 0, className = "" }) {
   );
 }
 
-export function HotelCover({ hotel, className = "", iconClassName = "h-12 w-12" }) {
+export function HotelCover({ hotel, className = "", iconClassName = "h-12 w-12", priority = false }) {
   const firstImage = Array.isArray(hotel.images) ? hotel.images[0] : null;
   if (firstImage) {
-    return <img src={firstImage} alt="" loading="lazy" decoding="async" className={`h-full w-full object-cover ${className}`} />;
+    return (
+      <CatalogPhotoFrame
+        src={firstImage}
+        alt=""
+        className={className}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+      />
+    );
   }
   return (
     <div className={`relative h-full w-full ${className}`} style={{ background: HOTEL_FALLBACK_COVER }}>

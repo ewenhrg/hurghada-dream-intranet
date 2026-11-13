@@ -1825,7 +1825,12 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
                   {slide.kind === "image" ? (
                     <button type="button" onClick={() => openLightboxAt(i)} className="block h-full w-full" aria-label="Agrandir la photo">
                       <div data-kenburns className="h-full w-full">
-                        <CatalogPhotoFrame src={slide.url} />
+                        <CatalogPhotoFrame
+                          src={slide.url}
+                          loading={i === 0 ? "eager" : "lazy"}
+                          fetchPriority={i === 0 ? "high" : "auto"}
+                          sizes="(max-width: 768px) 100vw, 60vw"
+                        />
                       </div>
                     </button>
                   ) : (
