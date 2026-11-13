@@ -133,7 +133,7 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
   return (
     <div
       ref={rootRef}
-      className="hd-public-catalog relative isolate flex min-h-screen flex-col overflow-x-clip bg-catalog-bg font-catalog-sans text-catalog-body antialiased"
+      className="hd-public-catalog relative flex min-h-screen flex-col overflow-x-hidden bg-catalog-bg font-catalog-sans text-catalog-body antialiased"
     >
       {backTo ? (
         <header ref={headerRef} data-solid className="fixed inset-x-0 top-0 z-50">

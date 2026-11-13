@@ -1,5 +1,5 @@
 import { SITE_KEY } from "../constants";
-import { uuid } from "../utils";
+import { formatPhoneWithPlus, uuid } from "../utils";
 import { logger } from "./logger";
 
 export function emptyManualLine() {
@@ -8,6 +8,40 @@ export function emptyManualLine() {
     label: "",
     date: "",
     price: "",
+  };
+}
+
+/** Même base d’infos client que le devis classique. */
+export function emptyManualClient() {
+  return {
+    name: "",
+    phone: "",
+    emergencyPhone: "",
+    email: "",
+    hotel: "",
+    room: "",
+    neighborhood: "",
+    arrivalDate: "",
+    departureDate: "",
+    isAirbnb: false,
+    airbnbMapsUrl: "",
+  };
+}
+
+export function normalizeManualClient(raw) {
+  const base = raw && typeof raw === "object" ? raw : {};
+  return {
+    name: String(base.name || "").trim(),
+    phone: formatPhoneWithPlus(String(base.phone || "").trim()),
+    emergencyPhone: formatPhoneWithPlus(String(base.emergencyPhone || "").trim()),
+    email: String(base.email || "").trim(),
+    hotel: String(base.hotel || "").trim(),
+    room: String(base.room || "").trim(),
+    neighborhood: String(base.neighborhood || "").trim(),
+    arrivalDate: String(base.arrivalDate || "").trim(),
+    departureDate: String(base.departureDate || "").trim(),
+    isAirbnb: Boolean(base.isAirbnb),
+    airbnbMapsUrl: String(base.airbnbMapsUrl || "").trim(),
   };
 }
 
@@ -28,10 +62,13 @@ export function computeManualQuoteTotal(lines) {
 export function rowToManualQuote(row) {
   if (!row) return null;
   const lines = normalizeManualLines(row.lines);
+  const client = normalizeManualClient(row.client);
+  if (!client.name && row.client_name) client.name = String(row.client_name).trim();
   return {
     id: row.id,
     siteKey: row.site_key || SITE_KEY,
-    clientName: String(row.client_name || "").trim(),
+    client,
+    clientName: client.name || String(row.client_name || "").trim(),
     note: String(row.note || "").trim(),
     currency: row.currency || "EUR",
     lines,
@@ -42,12 +79,15 @@ export function rowToManualQuote(row) {
   };
 }
 
+const MANUAL_QUOTE_SELECT =
+  "id, site_key, client_name, client, note, currency, lines, total, created_by_name, created_at, updated_at";
+
 export async function fetchManualQuotes(supabase, { limit = 200 } = {}) {
   if (!supabase) return { ok: false, quotes: [], error: new Error("no supabase") };
   try {
     const { data, error } = await supabase
       .from("manual_quotes")
-      .select("id, site_key, client_name, note, currency, lines, total, created_by_name, created_at, updated_at")
+      .select(MANUAL_QUOTE_SELECT)
       .eq("site_key", SITE_KEY)
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -72,10 +112,12 @@ export async function saveManualQuote(supabase, draft, userName = "") {
   if (lines.length === 0) {
     return { ok: false, quote: null, error: new Error("empty") };
   }
+  const client = normalizeManualClient(draft?.client);
   const total = computeManualQuoteTotal(lines);
   const payload = {
     site_key: SITE_KEY,
-    client_name: String(draft?.clientName || "").trim(),
+    client_name: client.name,
+    client,
     note: String(draft?.note || "").trim(),
     currency: draft?.currency || "EUR",
     lines,
@@ -87,7 +129,7 @@ export async function saveManualQuote(supabase, draft, userName = "") {
     const { data, error } = await supabase
       .from("manual_quotes")
       .insert(payload)
-      .select("id, site_key, client_name, note, currency, lines, total, created_by_name, created_at, updated_at")
+      .select(MANUAL_QUOTE_SELECT)
       .single();
     if (error) {
       logger.warn("saveManualQuote:", error);

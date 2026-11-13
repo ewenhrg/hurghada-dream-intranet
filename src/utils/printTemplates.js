@@ -1549,9 +1549,45 @@ export function generateManualQuoteHTML(quote) {
   const currency = quote?.currency || "EUR";
   const lines = Array.isArray(quote?.lines) ? quote.lines : [];
   const total = Number(quote?.total) || lines.reduce((sum, line) => sum + (Number(line.price) || 0), 0);
-  const clientName = String(quote?.clientName || "").trim();
+  const client = quote?.client && typeof quote.client === "object" ? quote.client : {};
+  const clientName = String(client.name || quote?.clientName || "").trim();
+  const phone = String(client.phone || "").trim();
+  const emergencyPhone = String(client.emergencyPhone || "").trim();
+  const email = String(client.email || "").trim();
+  const hotel = String(client.hotel || "").trim();
+  const room = String(client.room || "").trim();
+  const isAirbnb = Boolean(client.isAirbnb);
+  const airbnbMapsUrl = String(client.airbnbMapsUrl || "").trim();
+  const neighborhoodKey = String(client.neighborhood || "").trim();
+  const neighborhoodLabel =
+    ({
+      soma_bay: "Soma Bay",
+      makadi: "Makadi",
+      salh_hasheesh: "Sahl Hasheesh",
+      el_gouna: "El Gouna",
+      hurghada_cora: "Hurghada Cora",
+      hurghada_kawther: "Hurghada Kawther",
+      hurghada_sheraton: "Hurghada Sheraton",
+      hurghada_arabia: "Hurghada Arabia",
+      hurghada_ahyaa: "Hurghada Ahyaa",
+      autre: "Autre",
+    }[neighborhoodKey] || neighborhoodKey);
+  const formatStayDate = (value) =>
+    value
+      ? new Date(`${value}T12:00:00`).toLocaleDateString("fr-FR", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        })
+      : "";
+  const arrival = formatStayDate(client.arrivalDate);
+  const departure = formatStayDate(client.departureDate);
   const note = String(quote?.note || "").trim();
   const by = String(quote?.createdByName || "").trim();
+
+  const stayBits = [arrival && `Arrivée : ${arrival}`, departure && `Départ : ${departure}`]
+    .filter(Boolean)
+    .join("<br/>");
 
   const rows = lines
     .map((line, index) => {
@@ -1589,7 +1625,8 @@ export function generateManualQuoteHTML(quote) {
     .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
     .box { background: #f8fafc; border-left: 4px solid #2563eb; border-radius: 8px; padding: 12px 14px; }
     .box h3 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #2563eb; }
-    .box p { margin: 0; font-size: 14px; font-weight: 600; }
+    .box p { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.45; }
+    .box .muted { font-weight: 500; color: #64748b; }
     table { width: 100%; border-collapse: collapse; margin-top: 8px; }
     th, td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; font-size: 14px; }
     th { background: #1e40af; color: #fff; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
@@ -1622,11 +1659,22 @@ export function generateManualQuoteHTML(quote) {
     <div class="meta">
       <div class="box">
         <h3>Client</h3>
-        <p>${escHtml(clientName || "—")}</p>
+        <p>
+          ${escHtml(clientName || "—")}<br/>
+          ${phone ? `<span class="muted">Tél. ${escHtml(phone)}</span><br/>` : ""}
+          ${emergencyPhone ? `<span class="muted">Urgence ${escHtml(emergencyPhone)}</span><br/>` : ""}
+          ${email ? `<span class="muted">${escHtml(email)}</span>` : ""}
+        </p>
       </div>
       <div class="box">
-        <h3>Date du devis</h3>
-        <p>${escHtml(dateLabel)}${by ? `<br/><span style="font-weight:500;color:#64748b">Par ${escHtml(by)}</span>` : ""}</p>
+        <h3>Séjour / hébergement</h3>
+        <p>
+          ${hotel ? `${escHtml(isAirbnb ? `Airbnb · ${hotel}` : hotel)}${room ? ` · ch. ${escHtml(room)}` : ""}<br/>` : room ? `Chambre ${escHtml(room)}<br/>` : ""}
+          ${neighborhoodLabel ? `<span class="muted">${escHtml(neighborhoodLabel)}</span><br/>` : ""}
+          ${isAirbnb && airbnbMapsUrl ? `<span class="muted">${escHtml(airbnbMapsUrl)}</span><br/>` : ""}
+          ${stayBits || `<span class="muted">Devis du ${escHtml(dateLabel)}</span>`}
+          ${by ? `<br/><span class="muted">Par ${escHtml(by)}</span>` : ""}
+        </p>
       </div>
     </div>
     <table>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Printer, Trash2 } from "lucide-react";
+import { NEIGHBORHOODS } from "../constants";
 import { supabase } from "../lib/supabase";
 import { currencyNoCents } from "../utils";
 import { deleteManualQuote, fetchManualQuotes } from "../utils/manualQuotes";
@@ -20,6 +21,10 @@ function formatWhen(iso) {
 function formatLineDate(date) {
   if (!date) return "—";
   return new Date(`${date}T12:00:00`).toLocaleDateString("fr-FR");
+}
+
+function neighborhoodLabel(key) {
+  return NEIGHBORHOODS.find((n) => n.key === key)?.label || key || "";
 }
 
 function openPrint(html) {
@@ -97,13 +102,26 @@ export function ManualQuotesHistoryPage() {
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <p className="text-base font-extrabold text-slate-950">
-                    {quote.clientName || "Sans nom client"}
+                    {quote.client?.name || quote.clientName || "Sans nom client"}
                   </p>
                   <p className="mt-1 text-xs font-medium text-slate-500">
                     {formatWhen(quote.createdAt)}
                     {quote.createdByName ? ` · ${quote.createdByName}` : ""}
                     {" · "}
                     {quote.lines.length} ligne{quote.lines.length > 1 ? "s" : ""}
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-slate-700">
+                    {[
+                      quote.client?.phone,
+                      quote.client?.email,
+                      quote.client?.isAirbnb
+                        ? `Airbnb${quote.client?.hotel ? ` · ${quote.client.hotel}` : ""}`
+                        : quote.client?.hotel,
+                      quote.client?.room ? `ch. ${quote.client.room}` : "",
+                      neighborhoodLabel(quote.client?.neighborhood),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                   <ul className="mt-3 space-y-1.5">
                     {quote.lines.map((line) => (

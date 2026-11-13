@@ -158,27 +158,27 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-html:has(.hd-public-catalog),
+/* Un seul scrollport (html) : body n’est plus un 2e conteneur scrollable (ça bloquait la molette). */
+html:has(.hd-public-catalog) {
+  background: #FAF6EF !important;
+  color: #33474D;
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  scroll-behavior: auto;
+}
 html:has(.hd-public-catalog) body {
   background: #FAF6EF !important;
   color: #33474D;
-  /* Scroll natif : ne pas lisser via CSS (conflit GSAP / ScrollTrigger). */
+  height: auto;
+  min-height: 100%;
+  /* Pas de !important : les modales doivent pouvoir poser overflow:hidden en inline. */
+  overflow-x: hidden;
+  overflow-y: visible;
+  overscroll-behavior-y: auto;
   scroll-behavior: auto;
-  overscroll-behavior-y: none;
-}
-
-/* Sur le site public, ne jamais appliquer les coups de frein intranet `.scrolling`. */
-html:has(.hd-public-catalog) body.scrolling,
-html:has(.hd-public-catalog) body.scrolling *,
-html:has(.hd-public-catalog) body.scrolling *::before,
-html:has(.hd-public-catalog) body.scrolling *::after {
-  transition: revert !important;
-  will-change: revert !important;
-  transform: revert !important;
-  filter: revert !important;
-  backdrop-filter: revert !important;
-  -webkit-backdrop-filter: revert !important;
-  animation: revert !important;
 }
 
 html:has(.hd-public-catalog) body::before,
@@ -567,9 +567,10 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   backface-visibility: hidden;
 }
 
+/* Sur tactile : pas de will-change permanent (évite les couches qui freinent le scroll). */
 @media (pointer: coarse) {
-  .hd-public-catalog [data-parallax] {
-    transform: none !important;
+  .hd-public-catalog [data-parallax],
+  .hd-public-catalog [data-kenburns] {
     will-change: auto;
   }
 }
