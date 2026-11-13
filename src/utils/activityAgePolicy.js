@@ -174,7 +174,7 @@ export function deriveCatalogueLineMinors(line, activity, referenceDateIso) {
   if (!Number.isFinite(minorsCount) || minorsCount < 0) {
     minorsCount = legacyChildren + legacyBabies;
   }
-  minorsCount = Math.min(10, Math.max(0, minorsCount || 0));
+  minorsCount = Math.min(999, Math.max(0, minorsCount || 0));
 
   const birthDates = Array.isArray(line?.birthDates)
     ? [...line.birthDates].map((d) => String(d || "").trim())

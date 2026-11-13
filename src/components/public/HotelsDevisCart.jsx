@@ -185,12 +185,12 @@ export function HotelsDevisCart({
     setStayDraft((prev) => {
       const next = { ...normalizeStay(prev), [field]: value };
       if (field === "minorsCount") {
-        const n = Math.min(10, Math.max(0, Number(value) || 0));
+        const n = Math.min(999, Math.max(0, Number(value) || 0));
         next.minorsCount = n;
         next.birthDates = resizeBirthDates(prev.birthDates, n);
       }
       if (field === "adultsCount") {
-        next.adultsCount = Math.min(20, Math.max(1, Number(value) || 1));
+        next.adultsCount = Math.min(999, Math.max(1, Number(value) || 1));
       }
       return next;
     });
@@ -464,7 +464,7 @@ export function HotelsDevisCart({
                 icon={Users}
                 value={stayDraft.adultsCount}
                 min={1}
-                max={10}
+                max={999}
                 onChange={(n) => updateStayField("adultsCount", n)}
               />
               <CountStepper
@@ -472,7 +472,7 @@ export function HotelsDevisCart({
                 icon={Baby}
                 value={stayDraft.minorsCount || 0}
                 min={0}
-                max={10}
+                max={999}
                 onChange={(n) => updateStayField("minorsCount", n)}
               />
             </div>

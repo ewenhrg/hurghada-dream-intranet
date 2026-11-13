@@ -111,7 +111,7 @@ export function normalizeStay(raw) {
     minorsCount = legacyChildren + legacyBabies;
   }
 
-  minorsCount = Math.min(10, Math.max(0, minorsCount || 0));
+  minorsCount = Math.min(999, Math.max(0, minorsCount || 0));
   birthDates = resizeList(birthDates, minorsCount, "");
 
   let agePolicy = null;
@@ -134,7 +134,7 @@ export function normalizeStay(raw) {
   return {
     arrivalDate: String(base.arrivalDate || "").trim(),
     departureDate: String(base.departureDate || "").trim(),
-    adultsCount: Math.min(20, Math.max(1, Number(base.adultsCount) || 2)),
+    adultsCount: Math.min(999, Math.max(1, Number(base.adultsCount) || 2)),
     minorsCount,
     birthDates,
     agePolicy,

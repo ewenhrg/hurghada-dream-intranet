@@ -256,14 +256,6 @@ function IconUsers({ className }) {
   );
 }
 
-function IconChevronDown({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-
 function IconImages({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -275,27 +267,38 @@ function IconImages({ className }) {
   );
 }
 
+/** Plafond UI pratique (pas de limite métier côté client, hors Speed Boat). */
+const PUBLIC_PARTICIPANT_MAX = 999;
+
 function ParticipantSelect({ Icon, label, value, onChange, min, max, pluralize = true }) {
-  const options = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  const displayLabel = `${label}${pluralize && Number(value) > 1 ? "s" : ""}`;
   return (
     <div className="relative">
       <span className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2">
         <Icon className="h-5 w-5 text-catalog-lagoon" />
       </span>
-      <IconChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-catalog-muted" />
-      <select
+      <span className="pointer-events-none absolute right-4 top-1/2 z-[1] -translate-y-1/2 text-sm font-semibold text-catalog-muted">
+        {displayLabel}
+      </span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={min}
+        max={max}
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === "") {
+            onChange(min);
+            return;
+          }
+          const n = Number(raw);
+          if (!Number.isFinite(n)) return;
+          onChange(Math.max(min, Math.min(max, Math.round(n))));
+        }}
         aria-label={label}
-        className="hdc-input appearance-none !pl-12 !pr-10"
-      >
-        {options.map((n) => (
-          <option key={n} value={n}>
-            {n} {label}
-            {pluralize && n > 1 ? "s" : ""}
-          </option>
-        ))}
-      </select>
+        className="hdc-input appearance-none !pl-12 !pr-28"
+      />
     </div>
   );
 }
@@ -335,8 +338,8 @@ function BookingCardShell({
   participantsOk = true,
   warnsRecommendedTwo = false,
   belowRecommendedTwo = false,
-  adultMax = 10,
-  minorMax = 10,
+  adultMax = PUBLIC_PARTICIPANT_MAX,
+  minorMax = PUBLIC_PARTICIPANT_MAX,
   speedBoatMaxMessage = "",
   hidePrices = false,
   allowWithoutStay = false,
@@ -453,7 +456,7 @@ function BookingCardShell({
             value={visitorCount}
             onChange={setVisitorCount}
             min={0}
-            max={10}
+            max={PUBLIC_PARTICIPANT_MAX}
           />
           <p className="mt-1.5 text-xs font-medium text-catalog-muted">
             Accompagnant qui ne plonge pas{hidePrices ? "" : ` · +${DIVING_VISITOR_UNIT_PRICE} € par visiteur`}.
@@ -727,7 +730,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
 
   const visitorCount = Math.max(0, toNumber(special.divingVisitorCount));
   const setVisitorCount = useCallback((n) => {
-    const count = Math.max(0, Math.min(10, toNumber(n)));
+    const count = Math.max(0, Math.min(PUBLIC_PARTICIPANT_MAX, toNumber(n)));
     setSpecial((s) => ({
       ...s,
       divingVisitorCount: count,
@@ -1450,8 +1453,10 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
     children: minorsCount,
   });
   const isSpeedBoat = Boolean(activity && isSpeedBoatActivity(activity.name));
-  const adultMax = isSpeedBoat ? SPEED_BOAT_MAX_PARTICIPANTS : 10;
-  const minorMax = isSpeedBoat ? Math.max(0, SPEED_BOAT_MAX_PARTICIPANTS - adults) : 10;
+  const adultMax = isSpeedBoat ? SPEED_BOAT_MAX_PARTICIPANTS : PUBLIC_PARTICIPANT_MAX;
+  const minorMax = isSpeedBoat
+    ? Math.max(0, SPEED_BOAT_MAX_PARTICIPANTS - adults)
+    : PUBLIC_PARTICIPANT_MAX;
   const speedBoatMaxMessage = isSpeedBoat ? getSpeedBoatMaxParticipantsMessage() : "";
 
   const handleSetAdults = useCallback(

@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import { IS_CLIENT_APP } from "./config/clientApp";
 import { initToast } from "./utils/toast.js";
 import { logger } from "./utils/logger";
@@ -46,6 +47,7 @@ async function boot() {
             <Root />
           </ScrollOptimizer>
         </LanguageProvider>
+        <Analytics />
       </BrowserRouter>
     </React.StrictMode>
   );
