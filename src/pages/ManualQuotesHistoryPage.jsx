@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pencil, Printer, Trash2, X } from "lucide-react";
+import { Copy, Pencil, Printer, Trash2, X } from "lucide-react";
 import {
   isManualQuoteDraftReady,
   ManualQuoteForm,
@@ -15,6 +15,7 @@ import {
   fetchManualQuotes,
   normalizeManualClient,
   normalizeManualLines,
+  saveManualQuote,
   updateManualQuote,
 } from "../utils/manualQuotes";
 import { generateManualQuoteHTML } from "../utils/printTemplates";
@@ -74,7 +75,7 @@ function quoteToDraft(quote) {
   };
 }
 
-export function ManualQuotesHistoryPage() {
+export function ManualQuotesHistoryPage({ user }) {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -82,6 +83,7 @@ export function ManualQuotesHistoryPage() {
   const [note, setNote] = useState("");
   const [lines, setLines] = useState([emptyManualLine()]);
   const [saving, setSaving] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -136,6 +138,30 @@ export function ManualQuotesHistoryPage() {
     cancelEdit();
   };
 
+  const handleDuplicate = async (quote) => {
+    if (!quote?.id || duplicatingId != null) return;
+    setDuplicatingId(quote.id);
+    const draft = quoteToDraft(quote);
+    const result = await saveManualQuote(
+      supabase,
+      {
+        client: draft.client,
+        note: draft.note,
+        currency: quote.currency || "EUR",
+        lines: normalizeManualLines(draft.lines).filter((line) => line.label.trim()),
+      },
+      user?.name || ""
+    );
+    setDuplicatingId(null);
+    if (!result.ok || !result.quote) {
+      toast.error("Impossible de dupliquer le devis.");
+      return;
+    }
+    setQuotes((prev) => [result.quote, ...prev]);
+    toast.success("Devis dupliqué.");
+    startEdit(result.quote);
+  };
+
   const handleDelete = async (quote) => {
     if (!quote?.id) return;
     const ok = window.confirm("Supprimer ce devis manuel ?");
@@ -155,7 +181,8 @@ export function ManualQuotesHistoryPage() {
       <div className="rounded-2xl border-2 border-indigo-300 bg-white px-4 py-3 shadow-sm">
         <p className="text-sm font-bold text-indigo-950">Historique des devis manuels</p>
         <p className="mt-0.5 text-xs font-medium text-slate-600">
-          Visible uniquement pour Sophia, Ewen et Karim. Modification, réimpression et suppression.
+          Visible uniquement pour Sophia, Ewen et Karim. Modification, duplication, réimpression et
+          suppression.
         </p>
       </div>
 
@@ -269,6 +296,15 @@ export function ManualQuotesHistoryPage() {
                   >
                     <Pencil className="size-4" aria-hidden />
                     Modifier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDuplicate(quote)}
+                    disabled={duplicatingId != null}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    <Copy className="size-4" aria-hidden />
+                    {duplicatingId === quote.id ? "Duplication…" : "Dupliquer"}
                   </button>
                   <button
                     type="button"

@@ -1943,10 +1943,10 @@ export default function App() {
         {tab === "historique-devis-manuel" && canAccessManualQuotes(user) && (
           <Section
             title="Historique devis manuel"
-            subtitle="Tous les devis manuels enregistrés. Réimpression et suppression."
+            subtitle="Tous les devis manuels enregistrés. Modification, duplication, réimpression et suppression."
             bare
           >
-            <ManualQuotesHistoryPage />
+            <ManualQuotesHistoryPage user={user} />
           </Section>
         )}
 
