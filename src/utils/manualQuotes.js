@@ -142,6 +142,42 @@ export async function saveManualQuote(supabase, draft, userName = "") {
   }
 }
 
+export async function updateManualQuote(supabase, id, draft) {
+  if (!supabase || id == null) return { ok: false, quote: null, error: new Error("missing") };
+  const lines = normalizeManualLines(draft?.lines).filter((line) => line.label || line.price);
+  if (lines.length === 0) {
+    return { ok: false, quote: null, error: new Error("empty") };
+  }
+  const client = normalizeManualClient(draft?.client);
+  const total = computeManualQuoteTotal(lines);
+  const payload = {
+    client_name: client.name,
+    client,
+    note: String(draft?.note || "").trim(),
+    currency: draft?.currency || "EUR",
+    lines,
+    total,
+    updated_at: new Date().toISOString(),
+  };
+  try {
+    const { data, error } = await supabase
+      .from("manual_quotes")
+      .update(payload)
+      .eq("id", id)
+      .eq("site_key", SITE_KEY)
+      .select(MANUAL_QUOTE_SELECT)
+      .single();
+    if (error) {
+      logger.warn("updateManualQuote:", error);
+      return { ok: false, quote: null, error };
+    }
+    return { ok: true, quote: rowToManualQuote(data), error: null };
+  } catch (err) {
+    logger.warn("updateManualQuote exception:", err);
+    return { ok: false, quote: null, error: err };
+  }
+}
+
 export async function deleteManualQuote(supabase, id) {
   if (!supabase || id == null) return { ok: false, error: new Error("missing") };
   try {

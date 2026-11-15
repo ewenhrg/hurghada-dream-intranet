@@ -1,9 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import { Printer, Trash2 } from "lucide-react";
+import { Pencil, Printer, Trash2, X } from "lucide-react";
+import {
+  isManualQuoteDraftReady,
+  ManualQuoteForm,
+  validateManualQuoteDraft,
+} from "../components/ManualQuoteForm";
 import { NEIGHBORHOODS } from "../constants";
 import { supabase } from "../lib/supabase";
-import { currencyNoCents } from "../utils";
-import { deleteManualQuote, fetchManualQuotes } from "../utils/manualQuotes";
+import { currencyNoCents, uuid } from "../utils";
+import {
+  deleteManualQuote,
+  emptyManualClient,
+  emptyManualLine,
+  fetchManualQuotes,
+  normalizeManualClient,
+  normalizeManualLines,
+  updateManualQuote,
+} from "../utils/manualQuotes";
 import { generateManualQuoteHTML } from "../utils/printTemplates";
 import { toast } from "../utils/toast.js";
 
@@ -46,9 +59,29 @@ function openPrint(html) {
   }, 400);
 }
 
+function quoteToDraft(quote) {
+  const client = normalizeManualClient(quote?.client || emptyManualClient());
+  if (!client.name && quote?.clientName) client.name = String(quote.clientName).trim();
+  const lines = normalizeManualLines(quote?.lines || []).map((line) => ({
+    ...line,
+    id: line.id || uuid(),
+    price: line.price === 0 || line.price ? String(line.price) : "",
+  }));
+  return {
+    client,
+    note: String(quote?.note || ""),
+    lines: lines.length > 0 ? lines : [emptyManualLine()],
+  };
+}
+
 export function ManualQuotesHistoryPage() {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [client, setClient] = useState(() => emptyManualClient());
+  const [note, setNote] = useState("");
+  const [lines, setLines] = useState([emptyManualLine()]);
+  const [saving, setSaving] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -62,6 +95,47 @@ export function ManualQuotesHistoryPage() {
     void reload();
   }, [reload]);
 
+  const startEdit = (quote) => {
+    const draft = quoteToDraft(quote);
+    setEditingId(quote.id);
+    setClient(draft.client);
+    setNote(draft.note);
+    setLines(draft.lines);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setClient(emptyManualClient());
+    setNote("");
+    setLines([emptyManualLine()]);
+  };
+
+  const handleSaveEdit = async () => {
+    if (editingId == null) return;
+    const error = validateManualQuoteDraft(client, lines);
+    if (error) {
+      toast.warning(error);
+      return;
+    }
+    setSaving(true);
+    const draft = {
+      client,
+      note,
+      currency: "EUR",
+      lines: normalizeManualLines(lines).filter((line) => line.label.trim()),
+    };
+    const result = await updateManualQuote(supabase, editingId, draft);
+    setSaving(false);
+    if (!result.ok || !result.quote) {
+      toast.error("Impossible d’enregistrer les modifications.");
+      return;
+    }
+    setQuotes((prev) => prev.map((item) => (item.id === editingId ? result.quote : item)));
+    toast.success("Devis modifié.");
+    cancelEdit();
+  };
+
   const handleDelete = async (quote) => {
     if (!quote?.id) return;
     const ok = window.confirm("Supprimer ce devis manuel ?");
@@ -71,6 +145,7 @@ export function ManualQuotesHistoryPage() {
       toast.error("Suppression impossible.");
       return;
     }
+    if (editingId === quote.id) cancelEdit();
     setQuotes((prev) => prev.filter((item) => item.id !== quote.id));
     toast.success("Devis supprimé.");
   };
@@ -80,9 +155,43 @@ export function ManualQuotesHistoryPage() {
       <div className="rounded-2xl border-2 border-indigo-300 bg-white px-4 py-3 shadow-sm">
         <p className="text-sm font-bold text-indigo-950">Historique des devis manuels</p>
         <p className="mt-0.5 text-xs font-medium text-slate-600">
-          Visible uniquement pour Sophia, Ewen et Karim. Réimpression possible à tout moment.
+          Visible uniquement pour Sophia, Ewen et Karim. Modification, réimpression et suppression.
         </p>
       </div>
+
+      {editingId != null ? (
+        <div className="space-y-3 rounded-2xl border-2 border-amber-300 bg-amber-50/40 p-3 md:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-extrabold text-amber-950">Modification du devis #{editingId}</p>
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"
+            >
+              <X className="size-4" aria-hidden />
+              Annuler
+            </button>
+          </div>
+          <ManualQuoteForm
+            client={client}
+            setClient={setClient}
+            note={note}
+            setNote={setNote}
+            lines={lines}
+            setLines={setLines}
+            footer={
+              <button
+                type="button"
+                onClick={() => void handleSaveEdit()}
+                disabled={!isManualQuoteDraftReady(client, lines) || saving}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 text-sm font-bold text-white disabled:opacity-40"
+              >
+                {saving ? "Enregistrement…" : "Enregistrer"}
+              </button>
+            }
+          />
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">
@@ -97,7 +206,9 @@ export function ManualQuotesHistoryPage() {
           {quotes.map((quote) => (
             <article
               key={quote.id}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5"
+              className={`rounded-2xl border bg-white p-4 shadow-sm md:p-5 ${
+                editingId === quote.id ? "border-amber-400 ring-2 ring-amber-200" : "border-slate-200"
+              }`}
             >
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
@@ -151,6 +262,14 @@ export function ManualQuotesHistoryPage() {
                   <p className="text-right text-lg font-extrabold tabular-nums text-slate-950 lg:mb-1">
                     {currencyNoCents(Math.round(Number(quote.total) || 0), quote.currency)}
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => startEdit(quote)}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 text-sm font-semibold text-indigo-900 hover:bg-indigo-100"
+                  >
+                    <Pencil className="size-4" aria-hidden />
+                    Modifier
+                  </button>
                   <button
                     type="button"
                     onClick={() => openPrint(generateManualQuoteHTML(quote))}
