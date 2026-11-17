@@ -49,6 +49,12 @@ export const CATALOGUE_STAY_MIN_SPAN_MESSAGE =
   "Le séjour doit durer au minimum 2 jours. Exemple : arrivée le 18, départ le 20. Un départ le lendemain de l’arrivée n’affiche aucune disponibilité.";
 
 /**
+ * Message affiché quand arrivée et départ tombent le même jour.
+ */
+export const CATALOGUE_STAY_SAME_DAY_MESSAGE =
+  "Merci d’indiquer votre vraie date de départ : avec une arrivée et un départ le même jour, aucune activité n’est disponible. Les excursions commencent le lendemain de votre arrivée.";
+
+/**
  * Premier départ acceptable : deux jours après l’arrivée (arrivée le 18 → départ le 20).
  * @param {string} arrivalDate YYYY-MM-DD
  * @returns {string} "" si l’arrivée est vide/invalide
@@ -63,6 +69,13 @@ export function getMinDepartureDate(arrivalDate) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/** @param {{ arrivalDate?: string, departureDate?: string }|null|undefined} stay */
+export function isSameDayCatalogueStay(stay) {
+  const arrival = String(stay?.arrivalDate || "").trim();
+  const departure = String(stay?.departureDate || "").trim();
+  return Boolean(arrival && departure && arrival === departure);
 }
 
 /**

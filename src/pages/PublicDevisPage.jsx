@@ -14,8 +14,24 @@ import {
   buildQuoteDraftFromPublicViewModel,
   HD_PUBLIC_QUOTE_TO_DRAFT_EVENT,
 } from "../utils/publicQuoteToDraft";
+import { canViewPublicQuoteTreatmentTiming } from "../constants/permissions";
 import { markPublicQuoteTreated, PUBLIC_QUOTE_TTL_MS, isPublicQuotePending } from "../utils/publicQuoteInbox";
 const PUBLIC_QUOTES_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
+
+function formatTreatmentDelay(createdAt, treatedAt) {
+  const start = createdAt ? new Date(createdAt).getTime() : NaN;
+  const end = treatedAt ? new Date(treatedAt).getTime() : NaN;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+  const mins = Math.round((end - start) / 60000);
+  if (mins < 1) return "< 1 min";
+  if (mins < 60) return `${mins} min`;
+  const hours = Math.floor(mins / 60);
+  const rem = mins % 60;
+  if (hours < 48) return rem ? `${hours} h ${rem} min` : `${hours} h`;
+  const days = Math.floor(hours / 24);
+  const remH = hours % 24;
+  return remH ? `${days} j ${remH} h` : `${days} j`;
+}
 
 function parseItems(rawItems) {
   if (Array.isArray(rawItems)) return rawItems;
@@ -173,6 +189,7 @@ export function PublicDevisPage({ user }) {
   const [error, setError] = useState("");
   const [phoneFilter, setPhoneFilter] = useState("");
   const [pendingOnly, setPendingOnly] = useState(false);
+  const canSeeTreatmentTiming = canViewPublicQuoteTreatmentTiming(user);
 
   const phoneSearchDigits = useMemo(() => digitsOnly(phoneFilter), [phoneFilter]);
 
@@ -451,7 +468,12 @@ export function PublicDevisPage({ user }) {
       )}
 
       <div className="space-y-8">
-        {filteredRows.map((quote) => (
+        {filteredRows.map((quote) => {
+          const treatmentDelay =
+            canSeeTreatmentTiming && quote.treatedByName
+              ? formatTreatmentDelay(quote.createdAt, quote.treatedAt)
+              : null;
+          return (
           <article
             key={quote.id}
             className={`overflow-hidden rounded-2xl border-2 bg-gradient-to-b from-white via-white to-slate-50/90 shadow-[0_12px_40px_-18px_rgba(30,27,75,0.22)] ring-1 ring-slate-200/80 ${
@@ -477,7 +499,7 @@ export function PublicDevisPage({ user }) {
                     <span
                       className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-2 text-sm font-bold text-white shadow-md shadow-emerald-600/20"
                       title={
-                        quote.treatedAt
+                        canSeeTreatmentTiming && quote.treatedAt
                           ? `Prise en charge le ${new Date(quote.treatedAt).toLocaleString("fr-FR")}`
                           : "Demande déjà prise en charge"
                       }
@@ -560,6 +582,24 @@ export function PublicDevisPage({ user }) {
                     {quote.createdAt ? new Date(quote.createdAt).toLocaleString("fr-FR") : "—"}
                   </p>
                 </div>
+                {canSeeTreatmentTiming && quote.treatedByName ? (
+                  <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 px-3 py-2.5 shadow-sm sm:col-span-2 lg:col-span-1">
+                    <span className="text-[11px] font-bold uppercase text-amber-800">
+                      Prise en charge (suivi)
+                    </span>
+                    <p className="mt-0.5 font-semibold text-slate-950">
+                      {quote.treatedAt
+                        ? new Date(quote.treatedAt).toLocaleString("fr-FR")
+                        : "—"}
+                    </p>
+                    {treatmentDelay ? (
+                      <p className="mt-1 text-xs font-bold text-amber-900">
+                        Délai de réponse : {treatmentDelay}
+                        {quote.treatedByName ? ` · ${quote.treatedByName}` : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -623,7 +663,8 @@ export function PublicDevisPage({ user }) {
               </div>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

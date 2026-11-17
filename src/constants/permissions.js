@@ -262,6 +262,12 @@ export function canViewTicketCollections(user) {
   return n === "ewen" || n === "karim";
 }
 
+/** Heure / délai de prise en charge des devis public — Ewen et Karim uniquement. */
+export function canViewPublicQuoteTreatmentTiming(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "ewen" || n === "karim";
+}
+
 /** Page Receipt. */
 export function canAccessReceiptPage(user) {
   return readAccessFlag(user, "canAccessReceipt");
