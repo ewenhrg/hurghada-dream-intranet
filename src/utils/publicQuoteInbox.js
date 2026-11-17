@@ -196,12 +196,36 @@ export async function markPublicQuoteTreated(quoteId, userName) {
   if (!supabase || !quoteId || !name) {
     return { ok: false, error: "Utilisateur ou devis manquant." };
   }
+
+  // Préférer l’heure serveur pour éviter les décalages d’horloge navigateur.
+  const numericId = Number(quoteId);
+  const rpc = await supabase.rpc("mark_public_quote_treated", {
+    p_id: Number.isFinite(numericId) ? numericId : quoteId,
+    p_name: name,
+  });
+  if (!rpc.error) {
+    const treatedAt =
+      rpc.data && typeof rpc.data === "object" ? rpc.data.treated_at || null : null;
+    return { ok: true, treatedAt };
+  }
+
+  const rpcMsg = String(rpc.error.message || "");
+  if (!/mark_public_quote_treated|Could not find the function|PGRST202|404/i.test(rpcMsg)) {
+    logger.error("markPublicQuoteTreated rpc:", rpc.error);
+    return { ok: false, error: rpc.error.message || "Impossible de marquer la demande comme traitée." };
+  }
+
   const payload = {
     treated_by_name: name,
     treated_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
-  const { error } = await supabase.from("public_quotes").update(payload).eq("id", quoteId);
+  const { data, error } = await supabase
+    .from("public_quotes")
+    .update(payload)
+    .eq("id", quoteId)
+    .select("treated_at")
+    .maybeSingle();
   if (error) {
     logger.error("markPublicQuoteTreated:", error);
     const msg = String(error.message || "");
@@ -214,5 +238,5 @@ export async function markPublicQuoteTreated(quoteId, userName) {
     }
     return { ok: false, error: error.message || "Impossible de marquer la demande comme traitée." };
   }
-  return { ok: true };
+  return { ok: true, treatedAt: data?.treated_at || payload.treated_at };
 }

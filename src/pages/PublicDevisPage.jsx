@@ -21,7 +21,9 @@ const PUBLIC_QUOTES_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 function formatTreatmentDelay(createdAt, treatedAt) {
   const start = createdAt ? new Date(createdAt).getTime() : NaN;
   const end = treatedAt ? new Date(treatedAt).getTime() : NaN;
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  // Horloge client parfois en avance : délai négatif = réponse quasi immédiate.
+  if (end <= start) return "< 1 min";
   const mins = Math.round((end - start) / 60000);
   if (mins < 1) return "< 1 min";
   if (mins < 60) return `${mins} min`;
@@ -325,7 +327,11 @@ export function PublicDevisPage({ user }) {
       setRows((prev) =>
         prev.map((row) =>
           row.id === quote.id
-            ? { ...row, treatedByName: agentName, treatedAt: new Date().toISOString() }
+            ? {
+                ...row,
+                treatedByName: agentName,
+                treatedAt: result.treatedAt || new Date().toISOString(),
+              }
             : row
         )
       );

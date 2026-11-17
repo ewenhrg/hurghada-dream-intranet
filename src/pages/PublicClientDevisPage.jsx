@@ -654,7 +654,6 @@ export function PublicClientDevisPage() {
       .filter(Boolean)
       .join("\n");
 
-    const createdAt = new Date().toISOString();
     const items = cartLines.map((line) => {
       const act = line.activity;
       const babiesForbidden = Boolean(act?.babies_forbidden ?? act?.babiesForbidden);
@@ -734,8 +733,8 @@ export function PublicClientDevisPage() {
       total: toNumber(cartTotal),
       currency: "EUR",
       items,
-      created_at: createdAt,
-      updated_at: createdAt,
+      // created_at / updated_at : laissés au serveur (NOW()) —
+      // l’horloge du téléphone client est souvent fausse et faussait le suivi.
     };
 
     setSubmitLoading(true);
