@@ -1953,7 +1953,7 @@ export function SituationPage({ activities = [], user }) {
       {showConfigModal && (
         <Suspense
           fallback={
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl shadow-2xl p-6 text-sm font-medium text-slate-700">
                 Chargement de la configuration...
               </div>
@@ -1974,7 +1974,7 @@ export function SituationPage({ activities = [], user }) {
       {showHotelsModal && (
         <Suspense
           fallback={
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl shadow-2xl p-6 text-sm font-medium text-slate-700">
                 Chargement de la liste des hôtels...
               </div>

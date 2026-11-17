@@ -267,14 +267,14 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
 
       {/* Affichage du lien généré */}
       {generatedLink && (
-        <div className="bg-gradient-to-br from-blue-50/90 to-indigo-50/80 rounded-xl border-2 border-blue-200/60 p-4 md:p-5 shadow-lg backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-blue-50/90 to-indigo-50/80 rounded-xl border-2 border-blue-200/60 p-4 md:p-5 shadow-lg">
           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
             <div className="flex-1 min-w-0">
               <p className="text-sm md:text-base font-bold text-gray-800 mb-2 flex items-center gap-2">
                 <span className="text-lg">🔗</span>
                 Lien générique réutilisable :
               </p>
-              <div className="bg-white/95 backdrop-blur-sm rounded-lg border-2 border-blue-200/60 px-4 py-3 shadow-sm">
+              <div className="bg-white/95 rounded-lg border-2 border-blue-200/60 px-4 py-3 shadow-sm">
                 <code className="text-sm md:text-base text-blue-900 break-all font-medium">{generatedLink}</code>
               </div>
               <p className="text-xs md:text-sm text-gray-600 mt-2 font-medium">
@@ -298,7 +298,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
       )}
 
       {/* Barre de recherche */}
-      <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-blue-100/60 p-4 shadow-md">
+      <div className="bg-white/95 rounded-xl border border-blue-100/60 p-4 shadow-md">
         <TextInput
           placeholder="Rechercher par nom, téléphone, email ou hôtel..."
           value={searchQuery}
@@ -308,7 +308,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
 
       {/* Liste des demandes */}
       {filteredRequests.length === 0 ? (
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200/60 p-8 text-center shadow-sm">
+        <div className="bg-white/95 rounded-xl border border-gray-200/60 p-8 text-center shadow-sm">
           <p className="text-gray-500">
             {searchQuery
               ? "Aucune demande ne correspond à votre recherche."
@@ -320,7 +320,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
           {filteredRequests.map((request) => (
             <div
               key={request.id}
-              className={`bg-white/95 backdrop-blur-sm rounded-xl border-2 shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg ${
+              className={`bg-white/95 rounded-xl border-2 shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg ${
                 request.status === "pending"
                   ? "border-blue-200/60"
                   : request.status === "converted"
@@ -515,7 +515,7 @@ export function DemandesPage({ activities, onRequestStatusChange, onCreateQuoteF
               {historyRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="bg-gradient-to-br from-emerald-50/60 to-teal-50/40 backdrop-blur-sm rounded-xl border-2 border-emerald-200/60 shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg opacity-75"
+                  className="bg-gradient-to-br from-emerald-50/60 to-teal-50/40 rounded-xl border-2 border-emerald-200/60 shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg opacity-75"
                 >
                   <div className="p-4 md:p-6">
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">

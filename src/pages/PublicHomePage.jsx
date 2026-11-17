@@ -150,7 +150,7 @@ function GlassChip({ children }) {
   return (
     <span
       data-hero-chip
-      className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white/15 px-3 text-xs font-semibold text-white ring-1 ring-white/25 backdrop-blur-md"
+      className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white/15 px-3 text-xs font-semibold text-white ring-1 ring-white/25"
     >
       {children}
     </span>
@@ -618,7 +618,7 @@ export function PublicHomePage() {
             </div>
             <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgba(11,79,92,0.92)_0%,rgba(14,124,134,0.45)_100%)] lg:hidden" />
             <div aria-hidden className="absolute inset-0 hidden bg-catalog-photo-fade lg:block" />
-            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-md lg:hidden">
+            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 lg:hidden">
               <CalendarDays className="h-5 w-5" strokeWidth={1.5} aria-hidden />
             </span>
             <span className="relative min-w-0 flex-1 lg:flex-none">

@@ -4,7 +4,7 @@ import { formatPhoneWithPlus } from "../../utils";
 
 export function ClientInfoSection({ client, setClient }) {
   return (
-    <div className="bg-gradient-to-br from-slate-50/80 to-blue-50/60 rounded-2xl border border-slate-200/60 p-5 md:p-6 lg:p-8 shadow-md backdrop-blur-sm">
+    <div className="bg-gradient-to-br from-slate-50/80 to-blue-50/60 rounded-2xl border border-slate-200/60 p-5 md:p-6 lg:p-8 shadow-md">
       <h3 className="text-base md:text-lg font-semibold text-slate-800 mb-4 md:mb-5 flex items-center gap-2">
         <span className="text-xl">👤</span>
         Informations client
@@ -47,7 +47,7 @@ export function ClientInfoSection({ client, setClient }) {
           <select
             value={client.neighborhood}
             onChange={(e) => setClient((c) => ({ ...c, neighborhood: e.target.value }))}
-            className="w-full rounded-xl border border-blue-200/50 bg-white/95 backdrop-blur-sm px-3 py-2.5 text-sm shadow-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
+            className="w-full rounded-xl border border-blue-200/50 bg-white/95 px-3 py-2.5 text-sm shadow-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
           >
             <option value="">— Choisir un quartier —</option>
             {NEIGHBORHOODS.map((n) => (

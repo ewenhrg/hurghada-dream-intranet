@@ -581,8 +581,7 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   inset: 0;
   pointer-events: none;
   background: rgba(250, 246, 239, 0.9);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  backdrop-filter: blur(14px) saturate(160%);
+  /* Pas de backdrop-filter : fond déjà ~90 % opaque, flou recalculé à chaque scroll. */
   box-shadow: 0 1px 0 rgba(15, 42, 51, 0.07);
 }
 
@@ -631,8 +630,7 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 /* Barre de filtres collante sous l’en-tête. */
 .hd-public-catalog .hdc-filterbar {
   background: rgba(250, 246, 239, 0.92);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  backdrop-filter: blur(14px) saturate(160%);
+  /* Pas de backdrop-filter : fond déjà opaque, scroll plus fluide. */
   box-shadow: 0 1px 0 rgba(15, 42, 51, 0.07);
 }
 /* Fondu de bord : signale que la rangée de puces défile sur mobile. */
@@ -1257,8 +1255,8 @@ button {
     0 14px 34px -18px rgba(6, 182, 212, 0.28),
     0 1px 0 rgba(255, 255, 255, 0.9) inset,
     0 0 0 1px rgba(148, 163, 184, 0.12) inset;
-  backdrop-filter: blur(10px) saturate(150%);
-  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  /* Pas de backdrop-filter : le fond est déjà ~90 % opaque, le flou était
+     invisible mais recalculé à chaque image (scroll + aurore animée). */
   transition:
     transform var(--hd-transition-base),
     box-shadow var(--hd-transition-base),
@@ -1358,9 +1356,7 @@ button {
   box-shadow:
     0 24px 50px -26px rgba(7, 13, 31, 0.6),
     0 1px 0 rgba(255, 255, 255, 0.06) inset;
-  backdrop-filter: blur(8px) saturate(140%);
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
-  /* Optimisations de performance sans causer de rollback */
+  /* Pas de backdrop-filter (fond déjà ~85 % opaque) : scroll plus fluide. */
   contain: layout style;
   /* Éviter les problèmes de scroll avec sticky */
   position: sticky;

@@ -120,7 +120,7 @@ export function UserActivityDetailModal({
         >
           <button
             type="button"
-            className="absolute inset-0 bg-slate-950/50 backdrop-blur-[4px]"
+            className="absolute inset-0 bg-slate-950/50-[4px]"
             aria-label="Fermer"
             onClick={onClose}
           />

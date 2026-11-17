@@ -2,7 +2,7 @@ import { NumberInput } from "../ui";
 
 export function GlobalAdultsSection({ globalAdults, setGlobalAdults, onUpdateAllActivities }) {
   return (
-    <div className="mb-4 md:mb-6 p-5 md:p-6 bg-gradient-to-br from-emerald-50/90 to-teal-50/80 rounded-2xl border-2 border-emerald-300/60 shadow-lg backdrop-blur-sm">
+    <div className="mb-4 md:mb-6 p-5 md:p-6 bg-gradient-to-br from-emerald-50/90 to-teal-50/80 rounded-2xl border-2 border-emerald-300/60 shadow-lg">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <div className="flex-1">
           <label className="block text-sm md:text-base font-bold text-slate-800 mb-3 flex items-center gap-2">

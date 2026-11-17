@@ -2104,7 +2104,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
       <WhatsAppFab href={AGENCY_WHATSAPP_URL} label="WhatsApp" className="hidden lg:flex" />
 
       {!bookingInView && !stayModalOpen && !lightboxOpen ? (
-        <div className="hdc-cart-bar fixed inset-x-0 bottom-0 z-40 border-t border-catalog-line bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md lg:hidden">
+        <div className="hdc-cart-bar fixed inset-x-0 bottom-0 z-40 border-t border-catalog-line bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden">
           <div className="mx-auto flex max-w-lg items-center gap-3">
             <div className="min-w-0 flex-1">
               <span className="block text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-catalog-muted">

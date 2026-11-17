@@ -666,7 +666,7 @@ export function PublicHotelsAdminPage() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)]">
         {/* Liste */}
-        <aside className="rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm">
+        <aside className="rounded-2xl border border-white/10 bg-white/5 p-3">
           <TextInput
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -730,7 +730,7 @@ export function PublicHotelsAdminPage() {
         </aside>
 
         {/* Éditeur */}
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm sm:p-6">
+        <section className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6">
           {!selectedId ? (
             <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
               <Building2 className="h-10 w-10 text-slate-500" aria-hidden />

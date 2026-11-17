@@ -106,7 +106,7 @@ LoadingSpinner.displayName = "LoadingSpinner";
  */
 export const LoadingOverlay = memo(({ message = "Chargement..." }) => {
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-fade-in">
       <div className="bg-white rounded-xl p-6 shadow-xl flex flex-col items-center gap-4">
         <LoadingSpinner size="lg" />
         <p className="text-slate-700 font-medium">{message}</p>

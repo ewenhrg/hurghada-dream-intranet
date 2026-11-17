@@ -94,7 +94,7 @@ export function DoubleHotelModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-[2px] md:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3-[2px] md:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="double-hotel-title"
@@ -103,7 +103,7 @@ export function DoubleHotelModal({
       }}
     >
       <div className="max-h-[95vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-indigo-100/80 bg-white shadow-[0_24px_60px_-28px_rgba(79,70,229,0.55)]">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-4 py-3.5 backdrop-blur-md md:px-5">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-4 py-3.5 md:px-5">
           <div className="min-w-0">
             <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-indigo-600">
               <BedDouble className="size-3.5" aria-hidden />
@@ -181,7 +181,7 @@ export function DoubleHotelModal({
           </p>
         </div>
 
-        <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur-md md:px-5">
+        <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 bg-white/95 px-4 py-3 md:px-5">
           <GhostBtn type="button" onClick={() => onClose?.()}>
             Annuler
           </GhostBtn>

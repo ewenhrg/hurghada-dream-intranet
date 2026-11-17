@@ -3,7 +3,7 @@ import { DateInput } from "../DateInput";
 
 export function DatesSection({ client, setClient, onAutoFillDates }) {
   return (
-    <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/60 rounded-2xl border border-indigo-200/60 p-5 md:p-6 lg:p-8 shadow-md backdrop-blur-sm">
+    <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/60 rounded-2xl border border-indigo-200/60 p-5 md:p-6 lg:p-8 shadow-md">
       <h3 className="text-base md:text-lg font-semibold text-slate-800 mb-4 md:mb-5 flex items-center gap-2">
         <span className="text-xl">📅</span>
         Dates du séjour

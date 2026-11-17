@@ -31,7 +31,7 @@ Skeleton.displayName = "Skeleton";
  */
 export const QuoteCardSkeleton = memo(() => {
   return (
-    <div className="rounded-xl border-2 border-white/80 bg-white/95 backdrop-blur-sm p-4 md:p-5 shadow-lg animate-fade-in">
+    <div className="rounded-xl border-2 border-white/80 bg-white/95 p-4 md:p-5 shadow-lg animate-fade-in">
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <Skeleton width="120px" height="24px" />

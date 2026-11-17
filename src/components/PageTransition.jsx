@@ -1,11 +1,25 @@
 import { motion } from "framer-motion";
 
 /**
- * Changement d’onglet immédiat. L’ancienne animation (fondu + flou) bloquait
- * les grandes pages le temps de quitter l’écran.
+ * Transition entre pages / onglets.
+ * `transitionKey` : change de valeur => rejoue l'animation (fondu + léger glissement).
+ *
+ * Perf : pas de `filter: blur()` (re-rasterisait toute la page à chaque image)
+ * et pas d'AnimatePresence mode="wait" (l'ancienne page devait finir de
+ * disparaître avant que la nouvelle n'apparaisse : ~0,4 s de latence par onglet).
+ * Uniquement opacity + transform => animé par le compositeur, 60 fps.
  */
 export function PageTransition({ children, transitionKey }) {
-  return <div key={transitionKey ?? "page"}>{children}</div>;
+  return (
+    <motion.div
+      key={transitionKey ?? "page"}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
 }
 
 /** Apparition en fondu (montée douce) — pour du contenu ponctuel. */

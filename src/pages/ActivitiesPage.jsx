@@ -1476,7 +1476,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       {/* Modal doublons */}
       {duplicatesModalOpen && (
         <div
-          className="fixed inset-0 bg-indigo-900/30 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 bg-indigo-900/30 z-50 flex items-center justify-center p-4"
           onClick={() => setDuplicatesModalOpen(false)}
         >
           <div
@@ -1931,7 +1931,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
       {descriptionModal.isOpen && descriptionModal.activity && (
         <div
           ref={descriptionModalRef}
-          className="fixed inset-0 bg-indigo-900/30 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 bg-indigo-900/30 z-50 flex items-center justify-center p-4"
           onClick={handleCloseDescriptionModal}
         >
           <div

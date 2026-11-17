@@ -36,7 +36,7 @@ export const MessagePreviewSection = memo(({ previewMessages, onMessageChange, o
   if (!previewMessages || previewMessages.length === 0) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-slate-900/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-slate-900/70">
       <div className="flex min-h-0 flex-1 flex-col bg-white shadow-2xl">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-4 py-4 md:px-6 md:py-5 text-white">
           <div>

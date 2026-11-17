@@ -125,7 +125,7 @@ export function CatalogPhotoLightbox({
         className="relative z-30 flex shrink-0 items-center justify-between px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 sm:px-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold tabular-nums text-white backdrop-blur-sm sm:text-sm">
+        <p className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold tabular-nums text-white sm:text-sm">
           {safeIndex + 1} / {count}
         </p>
         <button
@@ -175,7 +175,7 @@ export function CatalogPhotoLightbox({
               data-lightbox-nav
               onClick={prevImg}
               onPointerDown={(e) => e.stopPropagation()}
-              className="absolute left-2 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/30 backdrop-blur-md transition active:scale-95 hover:bg-black/70 sm:left-4 sm:h-14 sm:w-14"
+              className="absolute left-2 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/30 transition active:scale-95 hover:bg-black/70 sm:left-4 sm:h-14 sm:w-14"
               aria-label="Photo précédente"
             >
               <ChevronLeft className="h-7 w-7" aria-hidden />
@@ -185,7 +185,7 @@ export function CatalogPhotoLightbox({
               data-lightbox-nav
               onClick={nextImg}
               onPointerDown={(e) => e.stopPropagation()}
-              className="absolute right-2 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/30 backdrop-blur-md transition active:scale-95 hover:bg-black/70 sm:right-4 sm:h-14 sm:w-14"
+              className="absolute right-2 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/30 transition active:scale-95 hover:bg-black/70 sm:right-4 sm:h-14 sm:w-14"
               aria-label="Photo suivante"
             >
               <ChevronRight className="h-7 w-7" aria-hidden />

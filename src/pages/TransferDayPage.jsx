@@ -317,7 +317,7 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-0 z-20 flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-indigo-200/80 bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
+      <div className="sticky top-0 z-20 flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-indigo-200/80 bg-white/95 px-4 py-3 shadow-sm">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-600">Transferts</p>
           <h1 className="mt-0.5 text-xl font-black text-slate-900">

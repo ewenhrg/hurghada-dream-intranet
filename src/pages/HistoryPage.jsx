@@ -1176,7 +1176,7 @@ function QuoteCardComponent({
         </div>
         
         {/* Informations client améliorées */}
-        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-slate-200/60 p-4 md:p-5 shadow-sm">
+        <div className="bg-white/70 rounded-xl border border-slate-200/60 p-4 md:p-5 shadow-sm">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
             <div className="flex-1 space-y-2 min-w-0">
               {d.client?.name && (
@@ -1254,7 +1254,7 @@ function QuoteCardComponent({
               {d.itemsWithFormattedDates.map((li, i) => (
                 <div
                   key={i}
-                  className="flex flex-col gap-3 md:flex-row md:items-stretch md:gap-4 rounded-xl border border-slate-200/70 bg-white/90 backdrop-blur-sm px-4 md:px-5 py-3 md:py-4 shadow-md transition-all duration-200 hover:shadow-lg hover:border-blue-300/70 hover:bg-white animate-fade-in"
+                  className="flex flex-col gap-3 md:flex-row md:items-stretch md:gap-4 rounded-xl border border-slate-200/70 bg-white/90 px-4 md:px-5 py-3 md:py-4 shadow-md transition-all duration-200 hover:shadow-lg hover:border-blue-300/70 hover:bg-white animate-fade-in"
                   style={{ animationDelay: `${i * 50}ms` }}
                 >
                   <div className="min-w-0 w-full flex-1 flex flex-col gap-2">
@@ -1303,7 +1303,7 @@ function QuoteCardComponent({
               ))}
             </div>
             {d.notes && d.notes.trim() !== "" && (
-              <div className="bg-gradient-to-r from-amber-50/80 to-orange-50/60 backdrop-blur-sm border-2 border-amber-200/70 rounded-xl px-4 md:px-5 py-3 md:py-4 shadow-md">
+              <div className="bg-gradient-to-r from-amber-50/80 to-orange-50/60 border-2 border-amber-200/70 rounded-xl px-4 md:px-5 py-3 md:py-4 shadow-md">
                 <p className="text-xs md:text-sm text-slate-700 font-medium flex items-start gap-2">
                   <span className="text-base mt-0.5">📝</span>
                   <span><span className="font-semibold text-slate-900">Notes :</span> {d.notes}</span>
@@ -1340,7 +1340,7 @@ function QuoteCardComponent({
           </div>
           
           {/* Colonne totaux : largeur bornée pour laisser toute la place au texte des activités à gauche */}
-          <div className="w-full max-w-full shrink-0 lg:w-[min(100%,20.5rem)] lg:max-w-[20.5rem] self-stretch flex flex-col items-stretch gap-4 bg-gradient-to-br from-white/90 to-blue-50/50 backdrop-blur-sm rounded-xl p-4 md:p-5 border-2 border-blue-200/60 shadow-lg">
+          <div className="w-full max-w-full shrink-0 lg:w-[min(100%,20.5rem)] lg:max-w-[20.5rem] self-stretch flex flex-col items-stretch gap-4 bg-gradient-to-br from-white/90 to-blue-50/50 rounded-xl p-4 md:p-5 border-2 border-blue-200/60 shadow-lg">
             <div className="text-left lg:text-right w-full">
               <p className="text-xs md:text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wider">Total du devis</p>
               <div className="space-y-1.5">
@@ -1417,7 +1417,7 @@ function QuoteCardComponent({
 
       {showTicketModal && createPortal(
         <div
-          className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4 bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4 bg-black/50"
           onClick={() => !ticketGenerating && !ticketAllocating && setShowTicketModal(false)}
         >
           <div
@@ -2667,7 +2667,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
       {showScrollToTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 z-40 w-14 h-14 md:w-16 md:h-16 rounded-full shadow-2xl flex items-center justify-center transition-opacity duration-150 hover:opacity-90 active:opacity-75 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-2 border-white/20 backdrop-blur-sm"
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 md:w-16 md:h-16 rounded-full shadow-2xl flex items-center justify-center transition-opacity duration-150 hover:opacity-90 active:opacity-75 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-2 border-white/20"
           style={{
             boxShadow: '0 8px 24px rgba(79, 70, 229, 0.6)',
           }}
@@ -3319,7 +3319,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
   return (
     <div 
       ref={editModalContainerRef} 
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 md:p-4"
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 md:p-4"
       style={{ 
         position: 'fixed',
         top: 0,
@@ -3494,7 +3494,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                       return next;
                     });
                   }}
-                  className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
+                  className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                 >
                   <option value="">— Choisir un quartier —</option>
                   {NEIGHBORHOODS.map((n) => (
@@ -3555,7 +3555,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
               <span>Activités</span>
             </h4>
             {computed.map((c, idx) => (
-              <div key={idx} className="bg-gradient-to-br from-white/98 to-slate-50/90 backdrop-blur-sm border-2 border-blue-300/70 rounded-2xl p-6 md:p-7 lg:p-8 space-y-5 md:space-y-6 shadow-lg transition-all duration-200 hover:shadow-xl hover:border-blue-400/80">
+              <div key={idx} className="bg-gradient-to-br from-white/98 to-slate-50/90 border-2 border-blue-300/70 rounded-2xl p-6 md:p-7 lg:p-8 space-y-5 md:space-y-6 shadow-lg transition-all duration-200 hover:shadow-xl hover:border-blue-400/80">
                 <div className="flex items-center justify-between pb-4 border-b-2 border-blue-200/70">
                   <p className="text-base md:text-lg lg:text-xl font-bold text-slate-900 flex items-center gap-2">
                     <span className="text-xl md:text-2xl">🎯</span>
@@ -3589,7 +3589,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                             : {}),
                         });
                       }}
-                      className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
+                      className="w-full rounded-xl border-2 border-blue-300/70 bg-white/99 px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                     >
                       <option value="">— Choisir une activité —</option>
                       {sortedActivities.map((a) => {
@@ -4058,7 +4058,7 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
                         setItem(idx, patch);
                       }}
                       aria-required={requiresPickupTimeChoice(c.transferInfo) ? true : undefined}
-                      className={`w-full rounded-xl border-2 bg-white/99 backdrop-blur-sm px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all ${
+                      className={`w-full rounded-xl border-2 bg-white/99 px-4 py-3 md:py-4 text-base md:text-lg font-medium text-slate-900 shadow-md focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all ${
                         requiresPickupTimeChoice(c.transferInfo) && !String(c.raw.slot || "").trim()
                           ? "border-rose-400"
                           : "border-blue-300/70"

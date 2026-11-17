@@ -472,7 +472,7 @@ function PublicStayPageLive() {
                 ) : null}
                 <div className="mt-4 flex flex-wrap gap-2">
                   {hotel ? (
-                    <span className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-full bg-white/15 px-3 text-xs font-semibold ring-1 ring-white/25 backdrop-blur-md">
+                    <span className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-full bg-white/15 px-3 text-xs font-semibold ring-1 ring-white/25">
                       <Hotel className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
                       <span className="truncate">
                         {hotel}
@@ -481,7 +481,7 @@ function PublicStayPageLive() {
                     </span>
                   ) : null}
                   {activityCount ? (
-                    <span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white/15 px-3 text-xs font-semibold ring-1 ring-white/25 backdrop-blur-md">
+                    <span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white/15 px-3 text-xs font-semibold ring-1 ring-white/25">
                       <MapPin className="h-4 w-4" strokeWidth={1.75} aria-hidden />
                       {activityCount} sortie{activityCount > 1 ? "s" : ""}
                     </span>
@@ -489,7 +489,7 @@ function PublicStayPageLive() {
                 </div>
 
                 {(stay.client?.arrivalDate || stay.client?.departureDate) && (
-                  <div className="mt-5 rounded-[1rem] bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur-md">
+                  <div className="mt-5 rounded-[1rem] bg-white/10 p-4 ring-1 ring-white/15">
                     <div className="flex items-end justify-between gap-3">
                       <p className="flex min-w-0 items-center gap-2 text-xs capitalize text-white/85">
                         <CalendarDays className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />

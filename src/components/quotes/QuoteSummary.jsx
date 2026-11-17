@@ -14,7 +14,7 @@ export const QuoteSummary = memo(function QuoteSummary({
   canAutoFillDates = false,
 }) {
   return (
-    <div className="bg-slate-900/95 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-sm p-6 md:p-8 animate-scale-in">
+    <div className="bg-slate-900/95 rounded-2xl border border-slate-800 shadow-2xl p-6 md:p-8 animate-scale-in">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap lg:w-auto">
           <GhostBtn
@@ -52,7 +52,7 @@ export const QuoteSummary = memo(function QuoteSummary({
             ➕ Ajouter une activité
           </GhostBtn>
         </div>
-        <div className="w-full lg:w-auto bg-slate-900/60 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-slate-700 shadow-lg">
+        <div className="w-full lg:w-auto bg-slate-900/60 rounded-2xl p-6 md:p-8 border border-slate-700 shadow-lg">
           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-700/80">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
               <span className="text-white text-sm">💰</span>

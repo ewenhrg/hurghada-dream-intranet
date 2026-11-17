@@ -53,7 +53,7 @@ export default function MessageTemplatesModal({
   const hasTemplate = Boolean(template.trim());
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-3 backdrop-blur-sm md:p-6">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-3 md:p-6">
       <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-blue-700 px-4 py-4 text-white md:px-6">
           <div>

@@ -743,7 +743,7 @@ export function UsersPage({ user: sessionUser }) {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white/95 backdrop-blur-sm rounded-2xl border-2 border-violet-100 p-6 space-y-6 shadow-xl shadow-violet-500/10"
+          className="bg-white/95 rounded-2xl border-2 border-violet-100 p-6 space-y-6 shadow-xl shadow-violet-500/10"
         >
           <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
             <span className="text-violet-500">✏️</span>

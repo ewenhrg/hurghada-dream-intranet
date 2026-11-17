@@ -373,7 +373,7 @@ export function RequestPage() {
             <div className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 px-6 md:px-8 py-12 text-center text-white relative overflow-hidden">
               <div className="absolute inset-0 opacity-20" style={{backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.1\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"}}></div>
               <div className="relative z-10">
-                <div className="inline-flex items-center justify-center w-20 h-20 mb-6 bg-white/20 backdrop-blur-sm rounded-full border-4 border-white/30 animate-bounce">
+                <div className="inline-flex items-center justify-center w-20 h-20 mb-6 bg-white/20 rounded-full border-4 border-white/30 animate-bounce">
                   <span className="text-4xl">✅</span>
                 </div>
                 <h1 className="text-3xl md:text-4xl font-bold mb-3 drop-shadow-lg">
@@ -417,7 +417,7 @@ export function RequestPage() {
           <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-2xl shadow-2xl overflow-hidden border border-blue-500/20 mb-8 relative">
           <div className="absolute inset-0 opacity-30" style={{backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.05\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"}}></div>
           <div className="relative z-10 px-6 md:px-10 py-10 md:py-12 text-center text-white">
-            <div className="inline-flex items-center justify-center w-20 h-20 mb-6 bg-white/20 backdrop-blur-sm rounded-full border-4 border-white/30 shadow-lg">
+            <div className="inline-flex items-center justify-center w-20 h-20 mb-6 bg-white/20 rounded-full border-4 border-white/30 shadow-lg">
               <span className="text-4xl">📋</span>
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 drop-shadow-lg">
@@ -452,7 +452,7 @@ export function RequestPage() {
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200/50">
             <div className="bg-gradient-to-r from-blue-500 to-indigo-500 px-6 md:px-8 py-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white border-2 border-white/30">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-white border-2 border-white/30">
                   <span className="text-2xl">👤</span>
                 </div>
                 <div>
@@ -578,7 +578,7 @@ export function RequestPage() {
                     min={new Date().toISOString().split('T')[0]}
                     aria-required="true"
                     aria-describedby="tooltip-arrival"
-                    className="w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] backdrop-blur-sm px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">
@@ -603,7 +603,7 @@ export function RequestPage() {
                     aria-required="true"
                     aria-describedby="tooltip-departure"
                     aria-invalid={formData.departureDate && formData.arrivalDate && formData.departureDate < formData.arrivalDate}
-                    className="w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] backdrop-blur-sm px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -615,7 +615,7 @@ export function RequestPage() {
             <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 md:px-8 py-6">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white border-2 border-white/30">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-white border-2 border-white/30">
                     <span className="text-2xl">🎯</span>
                   </div>
                   <div>
@@ -628,7 +628,7 @@ export function RequestPage() {
                   </div>
                 </div>
                 {selectedCount > 0 && (
-                  <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl border-2 border-white/30">
+                  <div className="bg-white/20 px-4 py-2 rounded-xl border-2 border-white/30">
                     <span className="text-white font-bold text-sm">
                       {selectedCount} activité{selectedCount > 1 ? "s" : ""} sélectionnée{selectedCount > 1 ? "s" : ""}
                     </span>

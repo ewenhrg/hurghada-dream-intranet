@@ -73,7 +73,7 @@ export const StopPushSalesSummary = memo(function StopPushSalesSummary({ stopSal
                 {Object.entries(stopSalesByDate)
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([date, stops]) => (
-                    <div key={date} className="bg-white/95 backdrop-blur-sm rounded-lg p-3 border-2 border-red-500/70 shadow-md hover:shadow-lg hover:border-red-500 transition-all duration-200">
+                    <div key={date} className="bg-white/95 rounded-lg p-3 border-2 border-red-500/70 shadow-md hover:shadow-lg hover:border-red-500 transition-all duration-200">
                       <p className="text-sm font-bold text-red-900 mb-2">
                         {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
                           weekday: "short",
@@ -104,7 +104,7 @@ export const StopPushSalesSummary = memo(function StopPushSalesSummary({ stopSal
                 {Object.entries(pushSalesByDate)
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([date, pushes]) => (
-                    <div key={date} className="bg-white/95 backdrop-blur-sm rounded-lg p-3 border-2 border-green-500/70 shadow-md hover:shadow-lg hover:border-green-500 transition-all duration-200">
+                    <div key={date} className="bg-white/95 rounded-lg p-3 border-2 border-green-500/70 shadow-md hover:shadow-lg hover:border-green-500 transition-all duration-200">
                       <p className="text-sm font-bold text-green-900 mb-2">
                         {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
                           weekday: "short",

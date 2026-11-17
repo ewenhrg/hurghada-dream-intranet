@@ -7,7 +7,7 @@ export const Pill = memo(({ active, children, onClick, tone = "dark", className 
   const inactiveClass =
     tone === "light"
       ? "bg-[var(--hd-surface)] text-[#1e293b] border border-[rgba(148,163,184,0.35)] hover:border-[rgba(79,70,229,0.55)] hover:text-[#4338ca] hover:bg-[var(--hd-surface-strong)] hover:shadow-[0_14px_24px_-20px_rgba(79,70,229,0.45)] hover:-translate-y-[1px] active:scale-[0.98]"
-      : "bg-white/10 text-white/85 border border-white/20 backdrop-blur-md hover:border-[rgba(139,92,246,0.6)] hover:text-white hover:bg-white/15 hover:shadow-[0_0_18px_-4px_rgba(139,92,246,0.55)] hover:-translate-y-[1px] active:scale-[0.98]";
+      : "bg-white/10 text-white/85 border border-white/20 hover:border-[rgba(139,92,246,0.6)] hover:text-white hover:bg-white/15 hover:shadow-[0_0_18px_-4px_rgba(139,92,246,0.55)] hover:-translate-y-[1px] active:scale-[0.98]";
   
   return (
     <button

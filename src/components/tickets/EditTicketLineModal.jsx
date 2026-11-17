@@ -245,7 +245,7 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/50 p-0-[2px] sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="edit-ticket-title"

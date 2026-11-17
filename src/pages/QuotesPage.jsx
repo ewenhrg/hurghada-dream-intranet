@@ -1422,7 +1422,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
               e.preventDefault();
             }
           }}
-          className="space-y-5 md:space-y-6 lg:space-y-8 bg-slate-950/90 rounded-[2.25rem] border border-cyan-400/40 shadow-[0_0_70px_rgba(56,189,248,0.45)] backdrop-blur-2xl p-4 md:p-6 lg:p-8"
+          className="space-y-5 md:space-y-6 lg:space-y-8 bg-slate-950/90 rounded-[2.25rem] border border-cyan-400/40 shadow-[0_0_70px_rgba(56,189,248,0.45)] p-4 md:p-6 lg:p-8"
         >
         {/* Barre d'information et actions */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 md:p-6 rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900/80 via-slate-950/90 to-slate-900/80 shadow-[0_0_40px_rgba(15,23,42,0.9)] animate-fade-in">
@@ -1458,7 +1458,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
         
         {/* Infos client */}
-        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
+        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl p-5 md:p-7 lg:p-9 animate-slide-up">
           <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-blue-200/40">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
               <span className="text-2xl">👤</span>
@@ -1725,7 +1725,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Dates séjour */}
-        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
+        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl p-5 md:p-7 lg:p-9 animate-slide-up">
           <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-indigo-200/40">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
               <span className="text-2xl">📅</span>
@@ -1784,7 +1784,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
         </div>
 
         {/* Champ global pour le nombre d'adultes */}
-        <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-2xl border-2 border-emerald-200/60 shadow-xl backdrop-blur-sm p-5 md:p-7 lg:p-9 animate-slide-up">
+        <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-2xl border-2 border-emerald-200/60 shadow-xl p-5 md:p-7 lg:p-9 animate-slide-up">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
@@ -2163,7 +2163,7 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
                         Les formules avec repas ne sont pas disponibles le matin.
                       </p>
                     )}
-                    <div className="space-y-2.5 border-2 border-blue-200/60 rounded-xl p-4 bg-gradient-to-br from-blue-50/60 to-indigo-50/40 backdrop-blur-sm shadow-md">
+                    <div className="space-y-2.5 border-2 border-blue-200/60 rounded-xl p-4 bg-gradient-to-br from-blue-50/60 to-indigo-50/40 shadow-md">
                       {allowsSpeedBoatDolphinExtra(c.act.name) ? (
                         <label className="flex items-center gap-2 cursor-pointer hover:bg-blue-50/50 p-2 rounded-lg transition-colors">
                           <input

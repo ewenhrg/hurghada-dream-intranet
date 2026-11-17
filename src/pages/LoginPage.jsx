@@ -331,7 +331,7 @@ export function LoginPage({ onSuccess }) {
       <div className="login-content relative z-10 flex min-h-[100svh] w-full max-w-6xl mx-auto flex-col items-center justify-center gap-8 px-4 py-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 md:px-10 lg:flex-row lg:justify-between lg:gap-20 lg:py-16">
         {/* Hero : visible sur grand écran. Sur téléphone, le code est tout de suite à l’écran. */}
         <section className="hidden max-w-xl flex-1 space-y-8 text-center lg:block lg:max-w-none lg:space-y-10 lg:text-left">
-          <div className="login-enter-1 inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 backdrop-blur-md px-4 py-2.5 text-xs font-bold uppercase tracking-[0.25em] text-cyan-300">
+          <div className="login-enter-1 inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-2.5 text-xs font-bold uppercase tracking-[0.25em] text-cyan-300">
             <span className="relative flex h-2.5 w-2.5">
               <span className="absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80 animate-ping" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]" />
@@ -362,7 +362,7 @@ export function LoginPage({ onSuccess }) {
             {FEATURES.map((f) => (
               <li
                 key={f.label}
-                className="flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/5 backdrop-blur-sm px-4 py-2.5 text-sm font-semibold text-cyan-100/90 transition-all duration-300 hover:bg-cyan-500/15 hover:border-cyan-400/40 hover:scale-105 hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.4)]"
+                className="flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/5 px-4 py-2.5 text-sm font-semibold text-cyan-100/90 transition-all duration-300 hover:bg-cyan-500/15 hover:border-cyan-400/40 hover:scale-105 hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.4)]"
               >
                 <span className="text-lg opacity-90">{f.icon}</span>
                 {f.label}
@@ -493,7 +493,7 @@ export function LoginPage({ onSuccess }) {
                   <div
                     id="login-error"
                     role="alert"
-                    className="login-error-shake flex items-center gap-3 rounded-xl border-2 border-red-500/50 bg-red-950/80 backdrop-blur-sm px-4 py-3 text-sm font-semibold text-red-200"
+                    className="login-error-shake flex items-center gap-3 rounded-xl border-2 border-red-500/50 bg-red-950/80 px-4 py-3 text-sm font-semibold text-red-200"
                   >
                     <span className="text-xl" aria-hidden>⚠️</span>
                     {error}
