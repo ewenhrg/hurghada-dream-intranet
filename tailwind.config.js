@@ -131,6 +131,26 @@ export default {
         "catalog-footer-fade":
           "linear-gradient(180deg, rgba(250, 246, 239, 0) 0%, rgba(250, 246, 239, 0.96) 100%)",
       },
+      keyframes: {
+        /** Entrées pages catalogue public (légères, GPU-friendly) */
+        catalogInUp: {
+          "0%": { opacity: "0", transform: "translateY(14px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        catalogInFade: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        catalogInSoft: {
+          "0%": { opacity: "0", transform: "scale(0.98)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+      },
+      animation: {
+        "catalog-in-up": "catalogInUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "catalog-in-fade": "catalogInFade 0.45s ease-out both",
+        "catalog-in-soft": "catalogInSoft 0.5s cubic-bezier(0.22, 1, 0.36, 1) both",
+      },
     },
   },
   plugins: [],
