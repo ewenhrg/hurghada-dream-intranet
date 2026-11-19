@@ -53,11 +53,11 @@ export const PERMISSION_GROUPS = [
     description:
       "Cochez chaque page du menu. Si une case est décochée, l’utilisateur ne la voit pas et ne peut pas y accéder. Il devra se reconnecter après enregistrement.",
     permissions: [
-      { formKey: "canAccessDevis", label: "Devis manuel", defaultValue: true },
+      { formKey: "canAccessDevis", label: "Devis manuels", defaultValue: true },
       { formKey: "canAccessActivities", label: "Activités", defaultValue: true },
       { formKey: "canAccessPlanning", label: "Planning", defaultValue: true },
       { formKey: "canAccessCatalogAdmin", label: "Catalogue admin", defaultValue: false },
-      { formKey: "canAccessHistory", label: "Devis", defaultValue: true },
+      { formKey: "canAccessHistory", label: "Tous les devis", defaultValue: true },
       {
         formKey: "canAccessTickets",
         label: "Situation (tickets)",
@@ -68,7 +68,7 @@ export const PERMISSION_GROUPS = [
       { formKey: "canAccessReceipt", label: "Receipt", defaultValue: false },
       { formKey: "canAccessB2b", label: "Accès B2B + Devis B2B", defaultValue: false },
       { formKey: "canAccessEvents", label: "Événementiel", defaultValue: false },
-      { formKey: "canAccessPublicDevis", label: "Demande de devis", defaultValue: false },
+      { formKey: "canAccessPublicDevis", label: "Demandes de devis", defaultValue: false },
       { formKey: "canAccessHotelHistory", label: "Hotel history", defaultValue: false },
       { formKey: "canAccessModifications", label: "Modifications tickets", defaultValue: false },
       { formKey: "canAccessVoidTickets", label: "N° annulés", defaultValue: false },
@@ -89,7 +89,7 @@ export const PERMISSION_GROUPS = [
       { formKey: "canAccessInterns", label: "Appartement / stagiaires", defaultValue: false },
       { formKey: "canAccessStayBroadcast", label: "Message séjour", defaultValue: false },
       { formKey: "canAccessFlyer", label: "Flyer appli", defaultValue: false },
-      { formKey: "canAccessDocuments", label: "Lien utile", defaultValue: true },
+      { formKey: "canAccessDocuments", label: "Liens utiles", defaultValue: true },
       { formKey: "canAccessEwenDashboard", label: "Tableau de bord Ewen", defaultValue: false },
       {
         formKey: "canAccessActivityPrices",
