@@ -81,17 +81,6 @@ const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canMo
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex gap-2 justify-end flex-wrap">
-          <button
-            type="button"
-            onClick={() => onOpenDescription(activity)}
-            className={`text-xs font-semibold px-3 py-2 rounded-lg transition-colors ${
-              hasDescription
-                ? "bg-emerald-200 text-emerald-800 hover:bg-emerald-300 border border-emerald-300"
-                : "bg-slate-200 text-slate-700 hover:bg-slate-300 border border-slate-300"
-            }`}
-          >
-            📝 Description{hasDescription ? " ✓" : ""}
-          </button>
           {canModify && (
             <>
               <button

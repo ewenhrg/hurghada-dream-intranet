@@ -278,10 +278,16 @@ export function canAccessEventsPage(user) {
   return readAccessFlag(user, "canAccessEvents");
 }
 
-/** Devis manuels + historique — Sophia, Ewen et Karim uniquement. */
+/** Devis personnalisés + historique — Sophia, Ewen et Karim uniquement. */
 export function canAccessManualQuotes(user) {
   const n = normalizeIntranetUserName(user?.name);
   return n === "sophia" || n === "ewen" || n === "karim";
+}
+
+/** Dashboard ultra admin — general managers (Ewen / Karim). */
+export function canAccessUltraAdmin(user) {
+  const n = normalizeIntranetUserName(user?.name);
+  return n === "ewen" || n === "karim";
 }
 
 /** Page Data entry. */

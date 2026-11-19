@@ -328,6 +328,8 @@ export function PublicHotelRequestPage() {
                 <input
                   id="hd-arrival"
                   type="date"
+                  lang="fr-FR"
+                  min={new Date().toISOString().slice(0, 10)}
                   value={form.arrivalDate}
                   onChange={(e) => updateField("arrivalDate", e.target.value)}
                   className={inputClass}
@@ -341,8 +343,9 @@ export function PublicHotelRequestPage() {
                 <input
                   id="hd-departure"
                   type="date"
+                  lang="fr-FR"
                   value={form.departureDate}
-                  min={form.arrivalDate || undefined}
+                  min={form.arrivalDate || new Date().toISOString().slice(0, 10)}
                   onChange={(e) => updateField("departureDate", e.target.value)}
                   className={inputClass}
                   required

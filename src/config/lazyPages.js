@@ -98,6 +98,9 @@ export const ManualQuotePage = lazyWithRetry(() =>
 export const ManualQuotesHistoryPage = lazyWithRetry(() =>
   import("../pages/ManualQuotesHistoryPage").then((m) => ({ default: m.ManualQuotesHistoryPage }))
 );
+export const UltraAdminPage = lazyWithRetry(() =>
+  import("../pages/UltraAdminPage").then((m) => ({ default: m.UltraAdminPage }))
+);
 
 const PREFETCH_BY_TAB = {
   devis: () => import("../pages/QuotesPage"),
@@ -129,6 +132,7 @@ const PREFETCH_BY_TAB = {
   "hotel-tarifs": () => import("../pages/HotelTarifsPage"),
   "devis-manuel": () => import("../pages/ManualQuotePage"),
   "historique-devis-manuel": () => import("../pages/ManualQuotesHistoryPage"),
+  "ultra-admin": () => import("../pages/UltraAdminPage"),
 };
 
 const prefetchedTabs = new Set();

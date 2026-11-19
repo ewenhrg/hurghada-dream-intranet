@@ -120,6 +120,7 @@ export function DateInput({ value = "", onChange, className = "", min, max }) {
       <input
         ref={nativeRef}
         type="date"
+        lang="fr-FR"
         value={value || ""}
         onChange={handleNativeChange}
         min={min}

@@ -1070,6 +1070,14 @@ function QuoteCardComponent({
   }, [d, setSelectedQuote, setEditClient, setEditItems, setEditNotes, setShowEditModal]);
 
   const handleDeleteClick = useCallback(async () => {
+    const isPaid =
+      allTicketsFilled ||
+      Math.round(Number(d.paidCash) || 0) > 0 ||
+      Math.round(Number(d.paidStripe) || 0) > 0;
+    if (isPaid) {
+      toast.error("Impossible de supprimer un devis payé.");
+      return;
+    }
     const clientInfo = d.client?.name ? `${d.client.name}${d.client?.phone ? ` (${formatPhoneWithPlus(d.client.phone)})` : ''}` : 'ce devis';
     const totalInfo = d.total ? ` (Total: ${Math.round(d.total)}€)` : '';
     
@@ -1105,14 +1113,30 @@ function QuoteCardComponent({
         }
       }
     }
-  }, [d, quotes, setQuotes]);
+  }, [d, quotes, setQuotes, allTicketsFilled]);
+
+  const handleDownloadClick = useCallback(() => {
+    const htmlContent = generateQuoteHTML(d);
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const safeName = String(d.client?.name || d.reservationCode || d.id || "devis")
+      .replace(/[^\w\-]+/g, "_")
+      .slice(0, 40);
+    a.href = url;
+    a.download = `devis-${safeName}.html`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, [d]);
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border transition-shadow duration-200 p-5 md:p-6 lg:p-7 shadow-lg hover:shadow-xl cursor-pointer bg-[#f7f9fc] ${
+      className={`relative overflow-hidden rounded-2xl border p-5 md:p-6 lg:p-7 shadow-sm bg-[#f7f9fc] ${
         allTicketsFilled
-          ? "border-emerald-200/70 hover:border-emerald-300/90"
-          : "border-amber-200/70 hover:border-amber-300/90"
+          ? "border-emerald-200"
+          : "border-amber-200"
       }`}
     >
       {/* Barre latérale colorée */}
@@ -1130,35 +1154,35 @@ function QuoteCardComponent({
         {/* En-tête avec statut et métadonnées */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 md:gap-3">
-            <span className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 transition-all duration-200 ${
+            <span className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold border ${
               allTicketsFilled
-                ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-emerald-600 shadow-emerald-200/50"
-                : "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-600 shadow-amber-200/50"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                : "bg-amber-50 text-amber-900 border-amber-200"
             }`}>
-              {allTicketsFilled ? "✅ Payé" : "⏳ En attente"}
+              {allTicketsFilled ? "Payé" : "En attente"}
             </span>
             {d.isModified && (
-              <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-purple-600 shadow-purple-200/50">
-                🔄 Modifié
+              <span className="px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold border bg-slate-50 text-slate-800 border-slate-200">
+                Modifié
               </span>
             )}
             {hasTickets && (
-              <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-600 shadow-blue-200/50">
-                🎫 Tickets : {ticketsCount}/{d.items.length}
+              <span className="px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold border bg-slate-50 text-slate-800 border-slate-200">
+                Tickets : {ticketsCount}/{d.items.length}
               </span>
             )}
             {clientDocuments.length > 0 ? (
-              <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-slate-700 to-slate-900 text-white border-slate-800 shadow-slate-200/50">
-                📎 {clientDocuments.length} document{clientDocuments.length > 1 ? "s" : ""}
+              <span className="px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold border bg-slate-50 text-slate-800 border-slate-200">
+                {clientDocuments.length} document{clientDocuments.length > 1 ? "s" : ""}
               </span>
             ) : null}
             {isQuoteFromWeb(d) ? (
-              <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white border-violet-600 shadow-violet-200/50">
-                🌐 Demande web
+              <span className="px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold border bg-violet-50 text-violet-900 border-violet-200">
+                Demande web
               </span>
             ) : (
-              <span className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-md border-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white border-slate-600 shadow-slate-200/50">
-                ✍️ Devis manuel
+              <span className="px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold border bg-slate-50 text-slate-800 border-slate-200">
+                Personnalisé
               </span>
             )}
           </div>
@@ -1290,13 +1314,21 @@ function QuoteCardComponent({
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-slate-200/50 pt-3 md:border-t-0 md:pt-0 md:flex-col md:items-end md:justify-center md:min-w-[7.5rem]">
-                    <span className="text-base md:text-lg font-bold tabular-nums bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent whitespace-nowrap">
-                      💵 {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
+                    <span className="text-base md:text-lg font-bold tabular-nums text-slate-900 whitespace-nowrap">
+                      Espèce {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
                     </span>
                     {li.ticketNumber && li.ticketNumber.trim() !== "" && (
-                      <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-2 border-emerald-600 shadow-md whitespace-nowrap max-w-full truncate">
-                        🎫 {li.ticketNumber}
-                      </span>
+                      <button
+                        type="button"
+                        className="text-xs font-bold text-slate-900 underline underline-offset-2 whitespace-nowrap max-w-full truncate bg-transparent border-0 p-0 hover:text-slate-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openTicketModal();
+                        }}
+                        title="Ouvrir le ticket"
+                      >
+                        {li.ticketNumber}
+                      </button>
                     )}
                   </div>
                 </div>
@@ -1344,70 +1376,81 @@ function QuoteCardComponent({
             <div className="text-left lg:text-right w-full">
               <p className="text-xs md:text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wider">Total du devis</p>
               <div className="space-y-1.5">
-                <p className="text-2xl md:text-3xl font-bold tabular-nums bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent [overflow-wrap:anywhere]">
-                  💵 {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
+                <p className="text-2xl md:text-3xl font-bold tabular-nums text-slate-900 [overflow-wrap:anywhere]">
+                  Espèce {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
                 </p>
                 <p className="text-lg md:text-xl font-semibold text-slate-700 tabular-nums [overflow-wrap:anywhere]">
-                  💳 {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
+                  Carte {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
                 </p>
               </div>
             </div>
             <div className="grid w-full grid-cols-1 min-[400px]:grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 auto-rows-min">
               <button
-                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 border border-slate-300 bg-white hover:bg-slate-50 min-h-[44px] min-w-0"
                 onClick={handlePrintClick}
                 type="button"
               >
-                🖨️ Imprimer
+                Imprimer
               </button>
               <button
                 type="button"
-                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-slate-600 bg-gradient-to-r from-slate-600 to-slate-800 hover:from-slate-700 hover:to-slate-900 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 border border-slate-300 bg-white hover:bg-slate-50 min-h-[44px] min-w-0"
                 onClick={handleInvoiceClick}
               >
-                📄 Facture
+                Imprimer facture
               </button>
               <button
                 type="button"
-                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-violet-500 bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 border border-slate-300 bg-white hover:bg-slate-50 min-h-[44px] min-w-0"
+                onClick={handleDownloadClick}
+              >
+                Télécharger
+              </button>
+              <button
+                type="button"
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 border border-slate-300 bg-white hover:bg-slate-50 min-h-[44px] min-w-0"
                 onClick={() => onDocuments?.(d)}
               >
-                📎 Document
+                Document
                 {clientDocuments.length > 0 ? ` (${clientDocuments.length})` : ""}
               </button>
               <button
                 type="button"
-                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-teal-500 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                className={
+                  allTicketsFilled
+                    ? "flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border border-emerald-600 bg-emerald-600 hover:bg-emerald-700 min-h-[44px] min-w-0"
+                    : "flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border border-slate-900 bg-slate-900 hover:bg-slate-800 min-h-[44px] min-w-0"
+                }
                 onClick={openTicketModal}
               >
-                💳 Payer
+                {allTicketsFilled ? "Ticket" : "Payer"}
               </button>
               {typeof onReuseClient === "function" && (
                 <button
                   type="button"
-                  className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-sky-500 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                  className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 border border-slate-300 bg-white hover:bg-slate-50 min-h-[44px] min-w-0"
                   onClick={() => onReuseClient(d)}
                   title="Créer un nouveau devis avec les infos client déjà saisies"
                 >
-                  ➕ Nouveau devis
+                  Nouveau devis
                 </button>
               )}
               {!allTicketsFilled && (
                 <button
                   type="button"
-                  className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-amber-500 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                  className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 border border-slate-300 bg-white hover:bg-slate-50 min-h-[44px] min-w-0"
                   onClick={handleEditClick}
                 >
-                  ✏️ Modifier
+                  Modifier
                 </button>
               )}
-              {user?.canDeleteQuote && (
+              {user?.canDeleteQuote && !allTicketsFilled && (
                 <button
                   type="button"
-                  className="min-[400px]:col-span-2 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-red-500 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                  className="min-[400px]:col-span-2 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-rose-700 border border-rose-300 bg-white hover:bg-rose-50 min-h-[44px] min-w-0"
                   onClick={handleDeleteClick}
                 >
-                  🗑️ Supprimer
+                  Supprimer
                 </button>
               )}
             </div>
@@ -1433,7 +1476,7 @@ function QuoteCardComponent({
               </span>
               <div className="min-w-0 flex-1">
                 <h3 id="history-pay-tickets-title" className="text-lg font-bold text-slate-900">
-                  Payer — numéros de ticket
+                  {allTicketsFilled ? "Modifier le ticket" : "Payer — numéros de ticket"}
                 </h3>
                 <p className="text-sm text-slate-600 mt-1">
                   Les n° sont attribués automatiquement (sans doublon entre PC). Zero Tracas et
@@ -1917,6 +1960,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
   const [todayOnlyFilter, setTodayOnlyFilter] = useState(false);
+  const [dateFromFilter, setDateFromFilter] = useState("");
+  const [dateToFilter, setDateToFilter] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [docsQuote, setDocsQuote] = useState(null);
@@ -2155,6 +2200,20 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
     if (todayOnlyFilter) {
       result = result.filter((d) => isQuoteCreatedToday(d.createdAt));
     }
+
+    if (dateFromFilter || dateToFilter) {
+      result = result.filter((d) => {
+        const created = d.createdAt ? new Date(d.createdAt) : null;
+        if (!created || Number.isNaN(created.getTime())) return false;
+        const y = created.getFullYear();
+        const m = String(created.getMonth() + 1).padStart(2, "0");
+        const day = String(created.getDate()).padStart(2, "0");
+        const key = `${y}-${m}-${day}`;
+        if (dateFromFilter && key < dateFromFilter) return false;
+        if (dateToFilter && key > dateToFilter) return false;
+        return true;
+      });
+    }
     
     // Filtre par statut (payé / en attente) — calcul rapide sans formatage
     if (statusFilter !== "all") {
@@ -2172,7 +2231,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
     }
     
     return result;
-  }, [debouncedQ, historyQuotes, statusFilter, todayOnlyFilter]);
+  }, [debouncedQ, historyQuotes, statusFilter, todayOnlyFilter, dateFromFilter, dateToFilter]);
 
   // Compléter la recherche e-mail / nom via Supabase si le devis n’est pas déjà en mémoire.
   useEffect(() => {
@@ -2533,9 +2592,36 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
                 onChange={(e) => setQ(e.target.value)}
                   className="w-full text-base border-2 border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 rounded-xl shadow-sm"
               />
-                <p className="text-xs md:text-sm text-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-2.5 rounded-xl border-2 border-amber-200/70 flex items-center gap-2 font-medium shadow-sm">
-                <span className="text-base">⚠️</span>
-                <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <label className="block text-xs font-bold uppercase tracking-wide text-white/80">
+                  Du
+                  <input
+                    type="date"
+                    lang="fr-FR"
+                    value={dateFromFilter}
+                    onChange={(e) => {
+                      setTodayOnlyFilter(false);
+                      setDateFromFilter(e.target.value);
+                    }}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                  />
+                </label>
+                <label className="block text-xs font-bold uppercase tracking-wide text-white/80">
+                  Au
+                  <input
+                    type="date"
+                    lang="fr-FR"
+                    value={dateToFilter}
+                    onChange={(e) => {
+                      setTodayOnlyFilter(false);
+                      setDateToFilter(e.target.value);
+                    }}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                  />
+                </label>
+              </div>
+                <p className="text-xs md:text-sm text-amber-800 bg-amber-50 px-4 py-2.5 rounded-xl border border-amber-200 flex items-center gap-2 font-medium">
+                <span>N&apos;oubliez pas d&apos;actualiser la page pour voir les dernières informations</span>
               </p>
             </div>
           </div>

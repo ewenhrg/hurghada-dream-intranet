@@ -441,6 +441,8 @@ export function HotelsDevisCart({
                 Arrivée <span className="text-catalog-coral">*</span>
                 <input
                   type="date"
+                  lang="fr-FR"
+                  min={new Date().toISOString().slice(0, 10)}
                   value={stayDraft.arrivalDate}
                   onChange={(e) => updateStayField("arrivalDate", e.target.value)}
                   className={fieldClass}
@@ -450,8 +452,9 @@ export function HotelsDevisCart({
                 Départ <span className="text-catalog-coral">*</span>
                 <input
                   type="date"
+                  lang="fr-FR"
                   value={stayDraft.departureDate}
-                  min={stayDraft.arrivalDate || undefined}
+                  min={stayDraft.arrivalDate || new Date().toISOString().slice(0, 10)}
                   onChange={(e) => updateStayField("departureDate", e.target.value)}
                   className={fieldClass}
                 />

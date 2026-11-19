@@ -1,22 +1,21 @@
 import { memo } from "react";
-import { motion } from "framer-motion";
 import { getTouchHandlers } from "../utils/touchHandler";
 
 export const Pill = memo(({ active, children, onClick, tone = "dark", className = "", ...props }) => {
   const touchHandlers = getTouchHandlers(onClick);
   const inactiveClass =
     tone === "light"
-      ? "bg-[var(--hd-surface)] text-[#1e293b] border border-[rgba(148,163,184,0.35)] hover:border-[rgba(79,70,229,0.55)] hover:text-[#4338ca] hover:bg-[var(--hd-surface-strong)] hover:shadow-[0_14px_24px_-20px_rgba(79,70,229,0.45)] hover:-translate-y-[1px] active:scale-[0.98]"
-      : "bg-white/10 text-white/85 border border-white/20 hover:border-[rgba(139,92,246,0.6)] hover:text-white hover:bg-white/15 hover:shadow-[0_0_18px_-4px_rgba(139,92,246,0.55)] hover:-translate-y-[1px] active:scale-[0.98]";
+      ? "bg-[var(--hd-surface)] text-[#1e293b] border border-slate-300 hover:bg-slate-50"
+      : "bg-white/10 text-white/85 border border-white/20 hover:bg-white/15";
   
   return (
     <button
       {...props}
       {...touchHandlers}
       className={
-        "px-4 md:px-6 py-2.5 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-transform duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8b5cf6]/50 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation " +
+        "px-4 md:px-6 py-2.5 md:py-2.5 rounded-xl text-xs md:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400/50 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation " +
         (active
-          ? "hd-shine bg-gradient-to-r from-[#a855f7] via-[#6366f1] to-[#06b6d4] text-white shadow-[0_0_22px_-2px_rgba(139,92,246,0.7),0_16px_34px_-14px_rgba(124,58,237,0.8)] hover:shadow-[0_0_28px_-2px_rgba(139,92,246,0.85),0_20px_40px_-16px_rgba(124,58,237,0.85)] hover:-translate-y-[1px] active:scale-[0.98]"
+          ? "bg-slate-900 text-white border border-slate-900"
           : inactiveClass) +
         " " +
         className
@@ -133,36 +132,36 @@ export const GhostBtn = memo(({ className = "", size, variant = "neutral", onCli
 
 GhostBtn.displayName = "GhostBtn";
 
-export const Section = memo(({ title, subtitle, right, children, bare = false }) => (
-  <motion.section
-    className="space-y-4 md:space-y-6"
-    initial={{ opacity: 0, y: 18 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
-  >
+export const Section = memo(({ title, subtitle, right, children, bare = false, onBack }) => (
+  <section className="space-y-4 md:space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3 md:gap-4">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3 mb-1 md:mb-1.5">
-          <span
-            aria-hidden
-            className="hidden sm:block h-6 md:h-7 w-1.5 rounded-full bg-gradient-to-b from-[#a855f7] via-[#6366f1] to-[#06b6d4] shadow-[0_0_16px_rgba(139,92,246,0.7)]"
-          />
-          <h2 className="hd-text-gradient text-xl md:text-[1.75rem] font-bold tracking-[-0.03em]">
+        <div className="mb-1 flex items-center gap-2 md:mb-1.5 md:gap-3">
+          {typeof onBack === "function" ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/10 text-white hover:bg-white/20"
+              aria-label="Retour"
+              title="Retour"
+            >
+              <span aria-hidden className="text-lg leading-none">
+                ←
+              </span>
+            </button>
+          ) : null}
+          <h2 className="text-xl font-bold tracking-[-0.03em] text-white md:text-[1.75rem]">
             {title}
           </h2>
         </div>
-        {subtitle && <p className="text-xs md:text-sm font-medium text-white/90 leading-relaxed drop-shadow-[0_6px_12px_rgba(7,13,31,0.55)]">{subtitle}</p>}
+        {subtitle && (
+          <p className="text-xs font-medium leading-relaxed text-white/85 md:text-sm">{subtitle}</p>
+        )}
       </div>
-      {right && <div className="flex-shrink-0 w-full md:w-auto">{right}</div>}
+      {right && <div className="w-full flex-shrink-0 md:w-auto">{right}</div>}
     </div>
-    {bare ? (
-      children
-    ) : (
-      <div className="hd-card hd-border-gradient p-4 md:p-6 lg:p-8">
-        {children}
-      </div>
-    )}
-  </motion.section>
+    {bare ? children : <div className="hd-card p-4 md:p-6 lg:p-8">{children}</div>}
+  </section>
 ));
 
 Section.displayName = "Section";

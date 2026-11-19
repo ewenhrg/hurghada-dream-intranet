@@ -101,8 +101,8 @@ export function showPublicQuoteDesktopNotification(pendingCount = 1) {
   const title = n > 1 ? `${n} demandes de devis en attente` : "Nouvelle demande de devis";
   const body =
     n > 1
-      ? "Des clients attendent une réponse sur Devis public. Ouvrez l’intranet."
-      : "Un client a envoyé une demande depuis le catalogue. Ouvrez Devis public.";
+      ? "Des clients attendent une réponse sur Demande devis. Ouvrez l’intranet."
+      : "Un client a envoyé une demande depuis le catalogue. Ouvrez Demande devis.";
   try {
     const notif = new Notification(title, {
       body,
