@@ -3390,22 +3390,40 @@ export function QuotesPage({ activities, quotes, setQuotes, user, draft, setDraf
 
         {/* Boutons de soumission */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-          <GhostBtn
+          <PrimaryBtn
             type="submit"
-            className="w-full flex-1 border border-slate-300 bg-white text-base font-semibold py-3 text-slate-900 hover:bg-slate-50"
+            className="w-full flex-1 text-base font-semibold py-3"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Création en cours..." : "Créer le devis"}
-          </GhostBtn>
-          <GhostBtn
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin">⏳</span>
+                Création en cours...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                ✨ Créer le devis
+              </span>
+            )}
+          </PrimaryBtn>
+          <PrimaryBtn
             type="button"
-            className="w-full flex-1 border border-slate-300 bg-white text-base font-semibold py-3 text-slate-900 hover:bg-slate-50"
+            className="w-full flex-1 text-base font-semibold py-3"
             disabled={isSubmitting}
             onClick={(e) => void handleCreateQuote(e, { download: true })}
             title="Crée le devis puis ouvre l’impression / enregistrement PDF (comme Imprimer dans Historique)"
           >
-            {isSubmitting ? "Création en cours..." : "Créer le devis et télécharger"}
-          </GhostBtn>
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin">⏳</span>
+                Création en cours...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                🖨️ Créer le devis et télécharger
+              </span>
+            )}
+          </PrimaryBtn>
         </div>
       </form>
 

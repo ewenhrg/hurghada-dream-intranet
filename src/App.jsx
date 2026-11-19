@@ -21,7 +21,6 @@ import {
   canAccessHotelHistoryPage,
   canAccessInternsPage,
   canAccessManualQuotes,
-  canAccessUltraAdmin,
   canAccessModifDemandesPage,
   canAccessPlanningPage,
   canAccessPublicDevisPage,
@@ -71,7 +70,6 @@ import {
   HotelTarifsPage,
   ManualQuotePage,
   ManualQuotesHistoryPage,
-  UltraAdminPage,
   ModificationRequestsPage,
   VoidTicketNumbersPage,
   prefetchIntranetTab,
@@ -200,25 +198,7 @@ export default function App() {
   const location = useLocation();
   const isPublicClientRoute = isPublicClientPath(location.pathname);
   const [ok, setOk] = useState(false);
-  const [tab, setTabState] = useState("devis");
-  const [tabHistory, setTabHistory] = useState([]);
-  const setTab = useCallback((next) => {
-    setTabState((prev) => {
-      if (prev && prev !== next) {
-        setTabHistory((h) => [...h.slice(-19), prev]);
-      }
-      return next;
-    });
-  }, []);
-  const goBackTab = useCallback(() => {
-    setTabHistory((h) => {
-      if (h.length === 0) return h;
-      const prev = h[h.length - 1];
-      setTabState(prev);
-      return h.slice(0, -1);
-    });
-  }, []);
-  const sectionBack = tabHistory.length > 0 ? goBackTab : undefined;
+  const [tab, setTab] = useState("devis");
   // Source de vérité: Supabase (les données locales servent seulement de cache temporaire d'affichage).
   const [activities, setActivities] = useState(() => loadLS(LS_KEYS.activities, getDefaultActivities()));
   const [quotes, setQuotes] = useState(() => loadLS(LS_KEYS.quotes, []));
@@ -1644,7 +1624,7 @@ export default function App() {
                 )}
                 {canAccessManualQuotes(user) && (
                 <Pill data-tab="devis-manuel" active={tab === "devis-manuel"} onClick={() => setTab("devis-manuel")}>
-                  {t("nav.manualQuote")}
+                  Devis manuel
                 </Pill>
                 )}
                 {canAccessManualQuotes(user) && (
@@ -1653,7 +1633,7 @@ export default function App() {
                   active={tab === "historique-devis-manuel"}
                   onClick={() => setTab("historique-devis-manuel")}
                 >
-                  {t("nav.manualQuoteHistory")}
+                  Hist. devis manuel
                 </Pill>
                 )}
                 {user?.canAccessActivities !== false && (
@@ -1786,11 +1766,6 @@ export default function App() {
                     {t("nav.ewenDashboard")}
                   </Pill>
                 )}
-                {canAccessUltraAdmin(user) && (
-                  <Pill data-tab="ultra-admin" active={tab === "ultra-admin"} onClick={() => setTab("ultra-admin")}>
-                    {t("nav.ultraAdmin")}
-                  </Pill>
-                )}
                 {canAccessInternsPage(user) && (
                   <Pill data-tab="appartements" active={tab === "appartements"} onClick={() => setTab("appartements")}>
                     Appartement
@@ -1868,7 +1843,6 @@ export default function App() {
             <Section
               title={t("page.activities.title")}
               subtitle={t("page.activities.subtitle")}
-              onBack={sectionBack}
               right={
                 user?.canResetData ? (
                 <GhostBtn
@@ -1891,7 +1865,7 @@ export default function App() {
         )}
 
         {tab === "planning" && canAccessPlanningPage(user) && (
-          <Section title={t("page.planning.title")} subtitle={t("page.planning.subtitle")} onBack={sectionBack}>
+          <Section title={t("page.planning.title")} subtitle={t("page.planning.subtitle")}>
             <PlanningPage activities={activities} />
           </Section>
         )}
@@ -1904,7 +1878,7 @@ export default function App() {
                   ? "Consultation du catalogue public. Seuls Ewen, Léa, Sophia et Karim peuvent enregistrer des changements en base."
                   : t("page.catalogAdmin.subtitle")
               }
-             onBack={sectionBack}>
+            >
               <ActivityCatalogAdminPage
                 activities={activities}
                 setActivities={setActivities}
@@ -1915,7 +1889,7 @@ export default function App() {
           )}
 
         {tab === "history" && user?.canAccessHistory !== false && (
-          <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")} bare onBack={sectionBack}>
+          <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")} bare>
             <HistoryPage
               quotes={quotes}
               setQuotes={setQuotes}
@@ -1931,7 +1905,7 @@ export default function App() {
             title={t("page.tickets.title")}
             subtitle={t("page.tickets.subtitle")}
             bare
-           onBack={sectionBack}>
+          >
             <TicketsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
           </Section>
         )}
@@ -1941,7 +1915,7 @@ export default function App() {
             title="Data entry"
             subtitle="Numéros du plus récent au plus ancien, 50 par page. La case Vu reste cochée pour Situation, Ewen et Karim."
             bare
-           onBack={sectionBack}>
+          >
             <TicketsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} entryMode />
           </Section>
         )}
@@ -1951,17 +1925,16 @@ export default function App() {
             title="Receipt"
             subtitle="Tickets validated today, whatever the activity date, with prices and cash or Stripe payments."
             bare
-           onBack={sectionBack}>
+          >
             <ReceiptPage quotes={quotes} activities={activities} />
           </Section>
         )}
 
         {tab === "devis-manuel" && canAccessManualQuotes(user) && (
           <Section
-            title={t("page.manualQuote.title")}
-            subtitle={t("page.manualQuote.subtitle")}
+            title="Devis manuel"
+            subtitle="Lignes libres (désignation, date optionnelle, prix). Imprimer enregistre aussi l’historique."
             bare
-            onBack={sectionBack}
           >
             <ManualQuotePage user={user} />
           </Section>
@@ -1969,52 +1942,40 @@ export default function App() {
 
         {tab === "historique-devis-manuel" && canAccessManualQuotes(user) && (
           <Section
-            title={t("page.manualQuoteHistory.title")}
-            subtitle={t("page.manualQuoteHistory.subtitle")}
+            title="Historique devis manuel"
+            subtitle="Tous les devis manuels enregistrés. Modification, duplication, réimpression et suppression."
             bare
-            onBack={sectionBack}
           >
             <ManualQuotesHistoryPage user={user} />
           </Section>
         )}
 
-        {tab === "ultra-admin" && canAccessUltraAdmin(user) && (
-          <Section
-            title={t("page.ultraAdmin.title")}
-            subtitle={t("page.ultraAdmin.subtitle")}
-            bare
-            onBack={sectionBack}
-          >
-            <UltraAdminPage onNavigate={setTab} />
-          </Section>
-        )}
-
         {tab === "events" && canAccessEventsPage(user) && (
-          <Section title="Événementiel" subtitle="Demandes reçues, devis PDF et suivi jusqu’au paiement." onBack={sectionBack}>
+          <Section title="Événementiel" subtitle="Demandes reçues, devis PDF et suivi jusqu’au paiement.">
             <EventsInboxPage />
           </Section>
         )}
 
         {tab === "public-devis" && canAccessPublicDevisPage(user) && (
-          <Section title={t("page.publicDevis.title")} subtitle={t("page.publicDevis.subtitle")} onBack={sectionBack}>
+          <Section title={t("page.publicDevis.title")} subtitle={t("page.publicDevis.subtitle")}>
             <PublicDevisPage user={user} />
           </Section>
         )}
 
         {tab === "b2b-access" && canAccessB2bPages(user) && (
-          <Section title="Accès B2B" subtitle="Demandes d’identifiant et comptes agences." onBack={sectionBack}>
+          <Section title="Accès B2B" subtitle="Demandes d’identifiant et comptes agences.">
             <B2BAccessPage />
           </Section>
         )}
 
         {tab === "b2b-quotes" && canAccessB2bPages(user) && (
-          <Section title="Devis B2B" subtitle="Demandes envoyées par les agences, sans prix affiché." onBack={sectionBack}>
+          <Section title="Devis B2B" subtitle="Demandes envoyées par les agences, sans prix affiché.">
             <B2BQuotesPage />
           </Section>
         )}
 
         {tab === "historique-hotel" && canAccessHotelHistoryPage(user) && (
-          <Section title="Hotel history" subtitle="Requests from the public form (contact details, hotels, budget)." onBack={sectionBack}>
+          <Section title="Hotel history" subtitle="Requests from the public form (contact details, hotels, budget).">
             <HotelHistoryPage user={user} />
           </Section>
         )}
@@ -2023,7 +1984,7 @@ export default function App() {
           <Section
             title="Demandes modif"
             subtitle="Acheminement type Hotel History : en attente → validation → confirmation à envoyer → rembourser / reste à payer."
-           onBack={sectionBack}>
+          >
             <ModificationRequestsPage quotes={quotes} setQuotes={setQuotes} activities={activities} />
           </Section>
         )}
@@ -2032,7 +1993,7 @@ export default function App() {
           <Section
             title={t("page.modifications.title")}
             subtitle={t("page.modifications.subtitle")}
-           onBack={sectionBack}>
+          >
             <ModificationsPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
           </Section>
         )}
@@ -2041,7 +2002,7 @@ export default function App() {
           <Section
             title="N° annulés"
             subtitle="Retire un numéro du carnet pour toujours, même s’il n’a jamais été attribué."
-           onBack={sectionBack}>
+          >
             <VoidTicketNumbersPage />
           </Section>
         )}
@@ -2051,19 +2012,19 @@ export default function App() {
         )}
 
         {tab === "stopsale" && canAccessStopSalePage(user) && (
-          <Section title="Stop Sale &amp; Push Sale" subtitle="Gérez les arrêts de vente et les ouvertures exceptionnelles" onBack={sectionBack}>
+          <Section title="Stop Sale &amp; Push Sale" subtitle="Gérez les arrêts de vente et les ouvertures exceptionnelles">
             <StopSalePage activities={activities} user={user} />
           </Section>
         )}
 
           {tab === "users" && canAccessUsersPage(user) && (
-            <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")} onBack={sectionBack}>
+            <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")}>
               <UsersPage user={user} />
             </Section>
           )}
 
           {tab === "hotels" && canAccessHotelsPage(user) && (
-            <Section title="Gestion des hôtels" subtitle="Associez les hôtels à leurs quartiers" onBack={sectionBack}>
+            <Section title="Gestion des hôtels" subtitle="Associez les hôtels à leurs quartiers">
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <HotelsPage user={user} />
@@ -2076,7 +2037,7 @@ export default function App() {
             <Section
               title="Catalogue hôtels"
               subtitle="Ajoutez et gérez les fiches publiques : description, inclus, photos et carte"
-             onBack={sectionBack}>
+            >
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <PublicHotelsAdminPage />
@@ -2089,7 +2050,7 @@ export default function App() {
             <Section
               title="Tarifs hôtel"
               subtitle="Contrats : prix par catégorie de chambre et période (pour le calcul automatique des devis)"
-             onBack={sectionBack}>
+            >
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <HotelTarifsPage />
@@ -2099,7 +2060,7 @@ export default function App() {
           )}
 
           {tab === "ewen-dashboard" && canAccessEwenDashboardPage(user) && (
-            <Section title={t("page.ewenDashboard.title")} subtitle={t("page.ewenDashboard.subtitle")} onBack={sectionBack}>
+            <Section title={t("page.ewenDashboard.title")} subtitle={t("page.ewenDashboard.subtitle")}>
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <EwenDashboardPage
@@ -2119,7 +2080,7 @@ export default function App() {
             <Section
               title="Appartement"
               subtitle="Planning des venues, appartements colloc et CV"
-             onBack={sectionBack}>
+            >
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <InternsPage user={user} />
@@ -2132,7 +2093,7 @@ export default function App() {
             <Section
               title="Message séjour"
               subtitle="Notification à tous les clients qui ont ouvert Mon séjour"
-             onBack={sectionBack}>
+            >
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <StayBroadcastPage user={user} />
@@ -2145,7 +2106,7 @@ export default function App() {
             <Section
               title="Flyer appli"
               subtitle="Image et texte affichés à l’ouverture de l’application"
-             onBack={sectionBack}>
+            >
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <ClientFlyerPage user={user} />
@@ -2155,7 +2116,7 @@ export default function App() {
           )}
 
           {tab === "documents" && canAccessDocumentsPage(user) && (
-            <Section title={t("page.documents.title")} subtitle={t("page.documents.subtitle")} onBack={sectionBack}>
+            <Section title={t("page.documents.title")} subtitle={t("page.documents.subtitle")}>
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <DocumentsPage user={user} />

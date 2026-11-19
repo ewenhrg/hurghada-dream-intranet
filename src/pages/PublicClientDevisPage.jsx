@@ -792,7 +792,7 @@ export function PublicClientDevisPage() {
       />
 
       <header className="sticky top-0 z-30 border-b border-violet-500/25 bg-catalog-night/95 text-white shadow-[0_16px_48px_-12px_rgba(15,8,32,0.65)]">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3.5 opacity-100 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1440px] animate-catalog-in-fade items-center justify-between gap-4 px-4 py-3.5 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3.5">
             <div className="relative flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-orange-600 p-1.5 shadow-xl shadow-violet-950/50 ring-2 ring-orange-300/50 ring-offset-2 ring-offset-catalog-night">
               <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/25 to-transparent" />
@@ -836,7 +836,7 @@ export function PublicClientDevisPage() {
               className="group relative inline-flex min-h-[44px] items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-orange-500 to-amber-400 px-3.5 py-2.5 pl-3.5 text-sm font-extrabold tracking-tight text-slate-950 shadow-[0_4px_22px_-4px_rgba(234,88,12,0.55),0_2px_8px_-2px_rgba(0,0,0,0.35)] ring-2 ring-orange-200/90 transition hover:from-orange-400 hover:to-amber-300 hover:shadow-[0_8px_30px_-6px_rgba(234,88,12,0.5)] active:scale-[0.98] sm:gap-2.5 sm:px-5 sm:py-2.5"
             >
               <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-              <span className="pointer-events-none absolute inset-0 opacity-100 transition group-hover:opacity-100">
+              <span className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100">
                 <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition duration-700 group-hover:translate-x-full" />
               </span>
               <svg className="relative h-5 w-5 shrink-0 text-slate-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden>
@@ -857,11 +857,11 @@ export function PublicClientDevisPage() {
 
       <section className="catalog-shell relative z-10 border-b border-violet-200/50 bg-white">
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-12 text-center sm:px-6 sm:pb-20 sm:pt-16 lg:max-w-7xl">
-          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-300/70 bg-gradient-to-r from-white via-violet-50/95 to-orange-50/90 px-5 py-2 text-[10px] font-bold uppercase tracking-[0.26em] text-violet-950 opacity-100 shadow-md shadow-violet-900/15 sm:text-[11px]">
+          <span className="mb-6 inline-flex animate-catalog-in-up items-center gap-2 rounded-full border border-violet-300/70 bg-gradient-to-r from-white via-violet-50/95 to-orange-50/90 px-5 py-2 text-[10px] font-bold uppercase tracking-[0.26em] text-violet-950 opacity-0 shadow-md shadow-violet-900/15 motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[11px]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500 shadow-[0_0_12px_rgba(234,88,12,0.85)]" aria-hidden />
             Catalogue en direct
           </span>
-          <h1 className="catalog-title-glow mx-auto max-w-4xl font-catalog-display text-[2rem] font-semibold leading-[1.08] tracking-tight text-catalog-ink opacity-100 sm:text-[2.35rem] md:text-5xl md:leading-[1.06]" style={{ animationDelay: "70ms" }}>
+          <h1 className="catalog-title-glow mx-auto max-w-4xl animate-catalog-in-up font-catalog-display text-[2rem] font-semibold leading-[1.08] tracking-tight text-catalog-ink opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:text-[2.35rem] md:text-5xl md:leading-[1.06]" style={{ animationDelay: "70ms" }}>
             Votre prochaine{" "}
             <span className="relative inline-block">
               <span className="relative z-10 font-semibold text-violet-700 [text-shadow:0_1px_0_rgba(255,255,255,0.95),0_2px_14px_rgba(109,40,217,0.28)]">
@@ -874,13 +874,13 @@ export function PublicClientDevisPage() {
             </span>{" "}
             à Hurghada
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-[15px] font-semibold leading-relaxed text-catalog-body opacity-100 sm:text-lg sm:leading-relaxed" style={{ animationDelay: "130ms" }}>
+          <p className="mx-auto mt-6 max-w-2xl animate-catalog-in-up text-[15px] font-semibold leading-relaxed text-catalog-body opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:text-lg sm:leading-relaxed" style={{ animationDelay: "130ms" }}>
             Désert, mer, Louxor &amp; Caires — parcourez le catalogue, composez votre panier et recevez une proposition claire, sans engagement.
           </p>
 
           {isValidCatalogueStay(stay) ? (
             <div
-              className="mx-auto mt-8 flex max-w-xl flex-col items-center gap-2 rounded-2xl border border-violet-200/90 bg-white/90 px-4 py-3 shadow-sm opacity-100 sm:flex-row sm:justify-between"
+              className="mx-auto mt-8 flex max-w-xl animate-catalog-in-up flex-col items-center gap-2 rounded-2xl border border-violet-200/90 bg-white/90 px-4 py-3 shadow-sm opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:flex-row sm:justify-between"
               style={{ animationDelay: "160ms" }}
             >
               <p className="text-sm font-semibold text-catalog-ink">
@@ -897,7 +897,7 @@ export function PublicClientDevisPage() {
             </div>
           ) : null}
 
-          <div className="mx-auto mt-12 max-w-xl opacity-100" style={{ animationDelay: "190ms" }}>
+          <div className="mx-auto mt-12 max-w-xl animate-catalog-in-up opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "190ms" }}>
             <label className="relative block text-left" htmlFor="public-search">
               <span className="mb-2.5 block text-center text-[10px] font-extrabold uppercase tracking-[0.28em] text-catalog-label">
                 Recherche instantanée
@@ -926,7 +926,7 @@ export function PublicClientDevisPage() {
             </label>
           </div>
 
-          <div className="mx-auto mt-12 max-w-5xl opacity-100 sm:max-w-none" style={{ animationDelay: "240ms" }}>
+          <div className="mx-auto mt-12 max-w-5xl animate-catalog-in-up opacity-0 motion-reduce:animate-none motion-reduce:opacity-100 sm:max-w-none" style={{ animationDelay: "240ms" }}>
             <p className="mb-3 text-center text-xs font-bold uppercase tracking-[0.12em] text-slate-900 sm:text-sm sm:tracking-[0.14em]">
               Filtrer par univers
             </p>
@@ -1027,7 +1027,7 @@ export function PublicClientDevisPage() {
             {groupedActivities.map((group, groupIndex) => (
               <section
                 key={group.key}
-                className="animate-catalog-in-fade space-y-8 opacity-100"
+                className="animate-catalog-in-fade space-y-8 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100"
                 style={{ animationDelay: `${Math.min(groupIndex, 12) * 50}ms` }}
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
@@ -1075,7 +1075,7 @@ export function PublicClientDevisPage() {
                             navigate(`/catalogue/activity/${encodeURIComponent(String(activity.id))}`);
                           }
                         }}
-                        className="public-catalog-grid-card catalog-float-soft group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-violet-200/80 bg-white opacity-100 shadow-catalog-premium ring-1 ring-violet-900/[0.06] transition-all duration-300 ease-out hover:-translate-y-2 hover:border-orange-400/70 hover:shadow-catalog-premium-hover hover:ring-orange-400/25 active:scale-[0.99]"
+                        className="public-catalog-grid-card catalog-float-soft group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-[1.85rem] border-2 border-violet-200/80 bg-white opacity-0 shadow-catalog-premium ring-1 ring-violet-900/[0.06] transition-all duration-300 ease-out animate-catalog-in-fade motion-reduce:animate-none motion-reduce:opacity-100 hover:-translate-y-2 hover:border-orange-400/70 hover:shadow-catalog-premium-hover hover:ring-orange-400/25 active:scale-[0.99]"
                         style={{ animationDelay: `${catalogCardEnterDelayMsById.get(activity.id) ?? 0}ms` }}
                       >
                         <div className="relative aspect-[5/4] w-full overflow-hidden bg-slate-100 sm:aspect-[5/4]">
@@ -1145,7 +1145,7 @@ export function PublicClientDevisPage() {
       </main>
 
       <footer className="relative z-10 border-t-2 border-violet-200/60 bg-gradient-to-b from-white via-violet-50/40 to-catalog-bg py-16 text-center">
-        <div className="mx-auto max-w-lg px-4 opacity-100" style={{ animationDelay: "320ms" }}>
+        <div className="mx-auto max-w-lg animate-catalog-in-fade px-4 opacity-0 motion-reduce:animate-none motion-reduce:opacity-100" style={{ animationDelay: "320ms" }}>
           <p className="font-catalog-display text-sm font-semibold tracking-wide text-catalog-ink">Hurghada Dream</p>
           <p className="mt-3 text-sm font-semibold leading-relaxed text-catalog-muted">
             Excursions sur-mesure · Mer Rouge, désert &amp; temples — une équipe locale à votre écoute.
