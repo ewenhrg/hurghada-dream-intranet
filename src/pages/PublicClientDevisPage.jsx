@@ -1436,8 +1436,9 @@ export function PublicClientDevisPage() {
               />
               <input
                 data-sheet-item
-                value={formatPhoneWithPlus(client.phone)}
-                onChange={(e) => updateClientField("phone", formatPhoneWithPlus(e.target.value))}
+                value={client.phone}
+                onChange={(e) => updateClientField("phone", e.target.value)}
+                onBlur={(e) => updateClientField("phone", formatPhoneWithPlus(e.target.value))}
                 placeholder={t("public.catalogue.checkout.phonePh")}
                 required
                 inputMode="tel"

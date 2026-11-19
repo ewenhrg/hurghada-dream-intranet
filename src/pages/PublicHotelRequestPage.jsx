@@ -301,8 +301,9 @@ export function PublicHotelRequestPage() {
                   id="hd-phone"
                   type="tel"
                   autoComplete="tel"
-                  value={formatPhoneWithPlus(form.phone)}
-                  onChange={(e) => updateField("phone", formatPhoneWithPlus(e.target.value))}
+                  value={form.phone}
+                  onChange={(e) => updateField("phone", e.target.value)}
+                  onBlur={(e) => updateField("phone", formatPhoneWithPlus(e.target.value))}
                   className={inputClass}
                   required
                 />

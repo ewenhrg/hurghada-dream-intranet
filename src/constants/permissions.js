@@ -89,7 +89,7 @@ export const PERMISSION_GROUPS = [
       { formKey: "canAccessInterns", label: "Appartement / stagiaires", defaultValue: false },
       { formKey: "canAccessStayBroadcast", label: "Message séjour", defaultValue: false },
       { formKey: "canAccessFlyer", label: "Flyer appli", defaultValue: false },
-      { formKey: "canAccessDocuments", label: "Documents", defaultValue: true },
+      { formKey: "canAccessDocuments", label: "Lien utile", defaultValue: true },
       { formKey: "canAccessEwenDashboard", label: "Tableau de bord Ewen", defaultValue: false },
       {
         formKey: "canAccessActivityPrices",

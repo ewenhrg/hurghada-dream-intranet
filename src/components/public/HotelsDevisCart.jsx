@@ -676,8 +676,9 @@ export function HotelsDevisCart({
                   type="tel"
                   autoComplete="tel"
                   inputMode="tel"
-                  value={formatPhoneWithPlus(client.phone)}
-                  onChange={(e) => setClient((p) => ({ ...p, phone: formatPhoneWithPlus(e.target.value) }))}
+                  value={client.phone}
+                  onChange={(e) => setClient((p) => ({ ...p, phone: e.target.value }))}
+                  onBlur={(e) => setClient((p) => ({ ...p, phone: formatPhoneWithPlus(e.target.value) }))}
                   className={fieldClass}
                 />
               </label>

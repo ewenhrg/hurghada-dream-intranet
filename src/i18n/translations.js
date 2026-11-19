@@ -15,7 +15,7 @@ export const translations = {
     "nav.modifications": "Modifications",
     "nav.situation": "Transferts",
     "nav.users": "Utilisateurs",
-    "nav.documents": "Documents",
+    "nav.documents": "Lien utile",
     "nav.ewenDashboard": "Tableau de bord",
 
     // Header
@@ -55,7 +55,7 @@ export const translations = {
     "page.modifications.subtitle": "Saisissez un numéro de ticket pour modifier ou annuler. La liste du bas montre l’historique.",
     "page.users.title": "Gestion des utilisateurs",
     "page.users.subtitle": "Créez et gérez les utilisateurs avec leurs codes d'accès et permissions.",
-    "page.documents.title": "Documents",
+    "page.documents.title": "Lien utile",
     "page.documents.subtitle": "Liens, fichiers et notes partagés.",
     "page.ewenDashboard.title": "Tableau de bord (Ewen)",
     "page.ewenDashboard.subtitle": "Indicateurs internes et présence en temps réel.",
@@ -105,7 +105,7 @@ export const translations = {
     "nav.modifications": "Modifications",
     "nav.situation": "Transfers",
     "nav.users": "Users",
-    "nav.documents": "Documents",
+    "nav.documents": "Useful link",
     "nav.ewenDashboard": "Dashboard",
 
     // Header
@@ -145,7 +145,7 @@ export const translations = {
     "page.modifications.subtitle": "Enter a ticket number to edit or cancel. The list below shows the history.",
     "page.users.title": "Users management",
     "page.users.subtitle": "Create and manage users with their access codes and permissions.",
-    "page.documents.title": "Documents",
+    "page.documents.title": "Useful link",
     "page.documents.subtitle": "Shared links, files and notes.",
     "page.ewenDashboard.title": "Dashboard (Ewen)",
     "page.ewenDashboard.subtitle": "Internal indicators and live presence.",
