@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import "@fontsource-variable/figtree";
+import "@fontsource-variable/figtree/wght-italic.css";
 import "@fontsource-variable/fraunces/opsz.css";
 import "@fontsource-variable/fraunces/opsz-italic.css";
 import { gsap, useGSAP } from "./motion";

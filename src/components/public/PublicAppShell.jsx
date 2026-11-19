@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "@fontsource-variable/figtree";
+import "@fontsource-variable/figtree/wght-italic.css";
 import "@fontsource-variable/fraunces/opsz.css";
 import "@fontsource-variable/fraunces/opsz-italic.css";
 import { publicBackPath } from "../../config/clientApp";

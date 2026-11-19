@@ -201,9 +201,11 @@ html :where(.hd-public-catalog) :is(h1, h2, h3) {
   text-wrap: balance;
 }
 
-/* Accueil : le salut sur la photo reste en sans, pas en Fraunces. */
+/* Accueil : le salut sur la photo reste en sans, pas en Fraunces.
+   Figtree italic doit être importé (wght-italic.css) sinon le « n » de n°1
+   retombe sur Fraunces / Georgia. */
 html :where(.hd-public-catalog) h1.hdc-hero-title,
-html :where(.hd-public-catalog) h1.hdc-hero-title .hdc-hero-accent {
+html :where(.hd-public-catalog) h1.hdc-hero-title * {
   font-family: "Figtree Variable", "Figtree", ui-sans-serif, system-ui, sans-serif;
   font-optical-sizing: none;
   font-style: normal;
@@ -212,7 +214,8 @@ html :where(.hd-public-catalog) h1.hdc-hero-title .hdc-hero-accent {
   line-height: 1.08;
   text-wrap: wrap;
 }
-html :where(.hd-public-catalog) h1.hdc-hero-title .hdc-hero-accent {
+html :where(.hd-public-catalog) h1.hdc-hero-title .hdc-hero-accent,
+html :where(.hd-public-catalog) h1.hdc-hero-title .hdc-hero-accent * {
   font-style: italic;
   font-weight: 550;
 }

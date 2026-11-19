@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { NEIGHBORHOODS } from "../constants";
 import { currencyNoCents, formatPhoneWithPlus } from "../utils";
 import {
@@ -11,6 +11,8 @@ import { DateInput } from "./DateInput";
 
 const fieldClass =
   "w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-base font-medium text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30";
+
+const INTERACTIVE_DRAG_BLOCKER = "input, textarea, select, button, a, label, [contenteditable='true']";
 
 /**
  * Formulaire partagé création / édition devis personnalisé.
@@ -24,7 +26,10 @@ export function ManualQuoteForm({
   setLines,
   footer,
 }) {
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
   const total = useMemo(() => computeManualQuoteTotal(lines), [lines]);
+  const canReorderLines = lines.length > 1;
   const updateClient = (patch) => setClient((prev) => ({ ...prev, ...patch }));
   const updateLine = (id, patch) => {
     setLines((prev) => prev.map((line) => (line.id === id ? { ...line, ...patch } : line)));
@@ -36,17 +41,51 @@ export function ManualQuoteForm({
       return prev.filter((line) => line.id !== id);
     });
   };
-  const moveLine = (id, direction) => {
+  const reorderLines = (from, to) => {
     setLines((prev) => {
-      const index = prev.findIndex((line) => line.id === id);
-      if (index < 0) return prev;
-      const target = index + direction;
-      if (target < 0 || target >= prev.length) return prev;
+      if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
       const next = [...prev];
-      const [item] = next.splice(index, 1);
-      next.splice(target, 0, item);
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
       return next;
     });
+  };
+  const handleLineDragStart = (e, index) => {
+    if (!canReorderLines) {
+      e.preventDefault();
+      return;
+    }
+    if (e.target instanceof Element && e.target.closest(INTERACTIVE_DRAG_BLOCKER)) {
+      e.preventDefault();
+      return;
+    }
+    setDragIndex(index);
+    setDragOverIndex(null);
+    try {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", String(index));
+    } catch {
+      /* ignore */
+    }
+  };
+  const handleLineDragOver = (e, index) => {
+    if (!canReorderLines || dragIndex === null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIndex !== index) setDragOverIndex(index);
+  };
+  const handleLineDrop = (e, index) => {
+    if (!canReorderLines || dragIndex === null) return;
+    e.preventDefault();
+    const from = dragIndex;
+    setDragIndex(null);
+    setDragOverIndex(null);
+    if (from === index) return;
+    reorderLines(from, index);
+  };
+  const handleLineDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   return (
@@ -231,40 +270,46 @@ export function ManualQuoteForm({
       </div>
 
       <div className="space-y-3">
-        {lines.map((line, index) => (
-          <div key={line.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        {lines.map((line, index) => {
+          const isDragging = dragIndex === index;
+          const isOver = dragOverIndex === index && dragIndex !== null && dragIndex !== index;
+          return (
+          <div
+            key={line.id}
+            draggable={canReorderLines}
+            onDragStart={(e) => handleLineDragStart(e, index)}
+            onDragOver={(e) => handleLineDragOver(e, index)}
+            onDrop={(e) => handleLineDrop(e, index)}
+            onDragEnd={handleLineDragEnd}
+            className={`rounded-2xl border bg-white p-4 shadow-sm transition md:p-5 ${
+              isDragging
+                ? "border-indigo-400 opacity-55 ring-2 ring-indigo-300/60"
+                : isOver
+                  ? "border-indigo-500 ring-2 ring-indigo-400/50"
+                  : "border-slate-200"
+            } ${canReorderLines ? "cursor-grab active:cursor-grabbing" : ""}`}
+          >
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-extrabold text-slate-900">Ligne {index + 1}</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => moveLine(line.id, -1)}
-                  disabled={index === 0}
-                  title="Monter la ligne"
-                  aria-label={`Monter la ligne ${index + 1}`}
-                  className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronUp className="size-4" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveLine(line.id, 1)}
-                  disabled={index === lines.length - 1}
-                  title="Descendre la ligne"
-                  aria-label={`Descendre la ligne ${index + 1}`}
-                  className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronDown className="size-4" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeLine(line.id)}
-                  className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 hover:bg-rose-100"
-                >
-                  <Trash2 className="size-4" aria-hidden />
-                  Retirer
-                </button>
+              <div className="flex min-w-0 items-center gap-2">
+                {canReorderLines ? (
+                  <span
+                    className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
+                    title="Glisser pour réordonner"
+                    aria-hidden
+                  >
+                    <GripVertical className="size-4" />
+                  </span>
+                ) : null}
+                <p className="text-sm font-extrabold text-slate-900">Ligne {index + 1}</p>
               </div>
+              <button
+                type="button"
+                onClick={() => removeLine(line.id)}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 hover:bg-rose-100"
+              >
+                <Trash2 className="size-4" aria-hidden />
+                Retirer
+              </button>
             </div>
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_11rem_9rem]">
               <label className="block md:col-span-1">
@@ -306,7 +351,8 @@ export function ManualQuoteForm({
               </label>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
