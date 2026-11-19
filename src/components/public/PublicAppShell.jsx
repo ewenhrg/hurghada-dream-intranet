@@ -137,9 +137,11 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
   }, []);
 
   // Le fond ivoire de démarrage (index.html) passe la main au scope `.hd-public-catalog`.
+  // Image de démarrage de l’accueil : retirée tout de suite sur les autres pages.
   useEffect(() => {
     document.documentElement.classList.remove("hd-public-boot");
-  }, []);
+    if (!onHome) document.getElementById("hd-boot-hero")?.remove();
+  }, [onHome]);
 
   useEffect(() => {
     setMenuOpen(false);

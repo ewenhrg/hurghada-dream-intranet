@@ -53,7 +53,7 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=604800, stale-while-revalidate=2592000"
+          "value": "public, max-age=2592000, stale-while-revalidate=31536000"
         }
       ]
     },
@@ -117,6 +117,15 @@
         {
           "key": "X-Robots-Tag",
           "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Link",
+          "value": "</client/hero-boot.webp>; rel=preload; as=image; fetchpriority=high"
         }
       ]
     }

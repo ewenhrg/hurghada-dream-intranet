@@ -41,9 +41,24 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+/** CSS chargé sans bloquer (voir vite.config.js) : React attend qu’il soit prêt (8 s max). */
+function stylesheetsReady() {
+  const pending = [...document.querySelectorAll("link[data-hd-css]")].filter((link) => !link.sheet || link.media !== "all");
+  if (!pending.length) return Promise.resolve();
+  const loaded = pending.map(
+    (link) =>
+      new Promise((resolve) => {
+        link.addEventListener("load", resolve, { once: true });
+        link.addEventListener("error", resolve, { once: true });
+      })
+  );
+  return Promise.race([Promise.all(loaded), new Promise((resolve) => setTimeout(resolve, 8000))]);
+}
+
 async function boot() {
   // Chargement séparé : le build client (Capacitor) n’embarque pas l’intranet.
   const Root = IS_CLIENT_APP ? (await import("./ClientApp.jsx")).ClientApp : WebRoot;
+  await stylesheetsReady();
 
   ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>

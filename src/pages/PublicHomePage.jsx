@@ -277,6 +277,16 @@ export function PublicHomePage() {
 
   useHeroArrival(heroRef);
 
+  // Image de démarrage (index.html) : l’animation d’entrée la retire ; sinon (mouvement réduit…)
+  // on la retire ici, sans laisser une image figée par-dessus la page.
+  useEffect(() => {
+    const timer = window.setTimeout(() => document.getElementById("hd-boot-hero")?.remove(), 1500);
+    return () => {
+      window.clearTimeout(timer);
+      document.getElementById("hd-boot-hero")?.remove();
+    };
+  }, []);
+
   /* ——— Carrousel « Nos adresses » : parallaxe horizontale dans chaque photo ——— */
   useGSAP(
     () => {

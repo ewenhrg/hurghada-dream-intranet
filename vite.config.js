@@ -48,8 +48,63 @@ function seoHtml(env) {
       order: "pre",
       handler(html) {
         let out = html.replaceAll("%SITE_URL%", siteUrl);
-        // Pas d’URL Supabase (build local) : pas de preconnect vers une adresse vide.
-        if (!env.VITE_SUPABASE_URL) out = out.replace(/\s*<link rel="preconnect" href="%VITE_SUPABASE_URL%"[^>]*>/, "");
+        return out;
+      },
+    },
+  };
+}
+
+/**
+ * Premier affichage rapide (build seulement) :
+ * - liste les fichiers JS du site public et de l’accueil + la police principale dans
+ *   `window.__HD_PRELOAD` ; le script de démarrage de index.html les précharge selon la page
+ *   (casse la chaîne entrée → site public → accueil, téléchargée sinon l’un après l’autre) ;
+ * - CSS non bloquant : l’image de démarrage s’affiche sans attendre la feuille de style.
+ *   main.jsx attend ces feuilles (`data-hd-css`) avant le rendu React (jamais de page sans style).
+ */
+function fastBootHtml(env = {}) {
+  const posix = (id) => String(id || "").split(String.fromCharCode(92)).join("/");
+  return {
+    name: "hd-fast-boot",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(html, ctx) {
+        const bundle = ctx.bundle;
+        if (!bundle) return html;
+        const chunks = Object.values(bundle).filter((item) => item.type === "chunk");
+        const byModule = (suffix) =>
+          chunks.find(
+            (chunk) =>
+              posix(chunk.facadeModuleId).endsWith(suffix) ||
+              (chunk.moduleIds || Object.keys(chunk.modules || {})).some((id) => posix(id).endsWith(suffix))
+          );
+        const entry = chunks.find((chunk) => chunk.isEntry);
+        const inEntry = new Set();
+        const walk = (chunk, seen) => {
+          if (!chunk || seen.has(chunk.fileName)) return;
+          seen.add(chunk.fileName);
+          chunk.imports.forEach((file) => walk(bundle[file], seen));
+        };
+        walk(entry, inEntry);
+        const graph = (chunk) => {
+          const seen = new Set();
+          walk(chunk, seen);
+          return [...seen].filter((file) => !inEntry.has(file)).map((file) => `/${file}`);
+        };
+        const routes = graph(byModule("/src/PublicClientRoutes.jsx"));
+        const home = graph(byModule("/src/pages/PublicHomePage.jsx")).filter((file) => !routes.includes(file));
+        const font = Object.values(bundle).find(
+          (item) => item.type === "asset" && /figtree-latin-wght-normal-[\w-]+\.woff2$/.test(item.fileName)
+        );
+        const supabase = /^https:\/\//.test(env.VITE_SUPABASE_URL || "") ? env.VITE_SUPABASE_URL : "";
+        const manifest = JSON.stringify({ routes, home, font: font ? `/${font.fileName}` : "", supabase });
+
+        let out = html.replace("<head>", `<head>\n    <script>window.__HD_PRELOAD=${manifest};</script>`);
+        out = out.replace(/<link rel="stylesheet"([^>]*?)href="([^"]+\.css)"([^>]*)>/g, (_m, before, href, after) =>
+          `<link rel="stylesheet"${before}href="${href}"${after} media="print" data-hd-css onload="this.media='all'">` +
+          `<noscript><link rel="stylesheet" href="${href}"></noscript>`
+        );
         return out;
       },
     },
@@ -57,7 +112,7 @@ function seoHtml(env) {
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), instagramReelsDevApi(), seoHtml(loadEnv(mode, process.cwd(), ""))],
+  plugins: [react(), instagramReelsDevApi(), seoHtml(loadEnv(mode, process.cwd(), "")), fastBootHtml(loadEnv(mode, process.cwd(), ""))],
 
   resolve: {
     alias: {

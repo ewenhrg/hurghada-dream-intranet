@@ -75,8 +75,6 @@
     <!-- Apple Touch Icon (pour iOS) -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     
-    <!-- Données du catalogue : connexion ouverte d’avance. -->
-    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
     <title>Hurghada Dream | Excursions, hôtels et séjours à Hurghada – Agence n°1</title>
     <!--
       Pages clients : fond ivoire dès le premier rendu (sinon le fond intranet sombre flashe
@@ -94,14 +92,28 @@
         var publicPage = p === "/" || /^\/(accueil|catalogue|hotels|demande-hotel|contacts|politique|confidentialite|qui-sommes-nous|tarifs|sejour|mon-sejour|request|b2b|evenements|modification)(\/|$)/.test(p);
         if (!intranet && (client || publicPage)) {
           document.documentElement.classList.add("hd-public-boot");
-          // Accueil : l’image de la vidéo s’affiche avant que la vidéo arrive.
+          // Précharge en parallèle le code du site public (+ de l’accueil) et la police principale,
+          // au lieu de les découvrir l’un après l’autre (liste générée au build, vite.config.js).
+          var pre = window.__HD_PRELOAD || {};
+          var addLink = function (rel, href, as) {
+            if (!href) return;
+            var link = document.createElement("link");
+            link.rel = rel;
+            link.href = href;
+            if (as) link.as = as;
+            if (rel === "modulepreload" || as === "font") link.crossOrigin = "";
+            if (as === "font") link.type = "font/woff2";
+            document.head.appendChild(link);
+          };
+          addLink("preload", pre.font, "font");
+          (pre.routes || []).forEach(function (href) { addLink("modulepreload", href); });
           if (p === "/" || p === "/accueil") {
-            var poster = document.createElement("link");
-            poster.rel = "preload";
-            poster.as = "image";
-            poster.href = "/client/hero-reel-poster.webp";
-            poster.setAttribute("fetchpriority", "high");
-            document.head.appendChild(poster);
+            window.__HD_HOME_BOOT = true;
+            (pre.home || []).forEach(function (href) { addLink("modulepreload", href); });
+          } else if (pre.supabase) {
+            // Catalogue, hôtels… : données lues tout de suite, connexion ouverte d’avance.
+            addLink("preconnect", pre.supabase);
+            document.head.lastChild.crossOrigin = "";
           }
         } else {
           // Intranet seulement : polices Google (Literata, Outfit, Plus Jakarta Sans), non bloquantes.
@@ -124,6 +136,26 @@
     </script>
   </head>
   <body>
+    <script>
+      // Accueil : l’image de la vidéo s’affiche tout de suite, sans attendre le JavaScript
+      // (version légère, préchargée par l’en-tête Link de vercel.json). La page d’accueil la retire en fondu.
+      if (window.__HD_HOME_BOOT) {
+        document.body.insertAdjacentHTML(
+          "afterbegin",
+          '<div id="hd-boot-hero" aria-hidden="true" style="position:fixed;inset:0;z-index:45;background:#0b3a4a;pointer-events:none">' +
+            // 2 px de moins que l’écran : Chrome ignore les images plein écran (vues comme un fond)
+            // pour le LCP ; la bande est invisible (même couleur que le bas de l’image).
+            '<img src="/client/hero-boot.webp" alt="" fetchpriority="high" style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 2px);object-fit:cover">' +
+            '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,42,51,.45) 0%,rgba(4,20,28,.22) 35%,rgba(8,36,46,.9) 100%)"></div>' +
+          "</div>"
+        );
+        // Filet de sécurité : jamais plus de 15 s, même si la page n’a pas pu démarrer.
+        setTimeout(function () {
+          var boot = document.getElementById("hd-boot-hero");
+          if (boot) boot.remove();
+        }, 15000);
+      }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

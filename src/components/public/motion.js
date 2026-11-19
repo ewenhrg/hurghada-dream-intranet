@@ -288,6 +288,13 @@ export function useHeroArrival(scopeRef, ready = true) {
       scrollTweens.forEach((tween) => tween.scrollTrigger?.disable());
 
       const tl = gsap.timeline({ defaults: { ease: MOTION.out } });
+      // Image de démarrage (index.html) déjà à l’écran : pas de rideau, elle s’efface en fondu
+      // sur la vidéo pendant que le titre monte.
+      const boot = document.getElementById("hd-boot-hero");
+      if (boot) {
+        gsap.set("[data-horizon], [data-veil-top], [data-veil-bottom]", { autoAlpha: 0 });
+        tl.to(boot, { autoAlpha: 0, duration: 0.6, ease: "power1.out", onComplete: () => boot.remove() }, 0.1);
+      }
       tl.to("[data-horizon]", { scaleX: 1, duration: 0.55, ease: "power2.inOut" }, 0)
         .to("[data-veil-top]", { scaleY: 0, duration: 1.15, ease: "power3.inOut" }, 0.2)
         .to("[data-veil-bottom]", { scaleY: 0, duration: 1.15, ease: "power3.inOut" }, 0.2)
