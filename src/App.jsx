@@ -1496,18 +1496,15 @@ export default function App() {
             {/* Ligne 1 : identité + langue + déconnexion (ne mange pas la largeur des onglets) */}
             <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-3">
               <div className="flex min-w-0 max-w-full flex-1 items-center gap-3 md:gap-4">
-            <div
-              className="relative flex-shrink-0 rounded-2xl p-[2px]"
-              style={{
-                background: 'linear-gradient(135deg, rgba(168,85,247,0.9), rgba(99,102,241,0.75), rgba(34,211,238,0.85))',
-                boxShadow: '0 0 24px -6px rgba(139,92,246,0.6), 0 12px 28px -18px rgba(7,13,31,0.7)'
-              }}
-            >
-            <img 
-              src="/logo.png" 
-              alt="Hurghada Dream Logo" 
-              className="w-12 h-12 md:w-14 md:h-14 object-contain rounded-[0.85rem] block"
-              style={{ background: 'rgba(9,10,32,0.85)' }}
+            <div className="relative flex-shrink-0">
+            <img
+              src="/logo-header.png"
+              alt="Hurghada Dream"
+              width={900}
+              height={260}
+              className="block h-11 w-auto md:h-14 select-none"
+              style={{ filter: 'drop-shadow(0 4px 14px rgba(0,0,0,0.35))' }}
+              draggable={false}
               onError={(e) => {
                 // Fallback si le logo n'existe pas - afficher HD
                 e.target.style.display = 'none';
