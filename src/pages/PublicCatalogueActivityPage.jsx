@@ -23,6 +23,7 @@ import { isProgrammaticStopSale } from "../utils/activitySalesBlackouts.js";
 import { ActivityDateCalendar } from "../components/ActivityDateCalendar";
 import { CatalogueStayGateModal } from "../components/public/CatalogueStayGateModal";
 import { PublicAppShell } from "../components/public/PublicAppShell";
+import { seoExcerpt } from "../components/public/seo";
 import { StateCard, WhatsAppFab, WhatsAppGlyph } from "../components/public/PublicUI";
 import { displayActivityName, getPublicCategoryLabel, formatMoney as formatPublicMoney } from "../components/public/catalogueDisplay";
 import { CatalogPhotoLightbox } from "../components/public/CatalogPhotoLightbox";
@@ -1813,7 +1814,16 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
       : null;
 
   return (
-    <PublicAppShell title={displayActivityName(activity.name)} wide="xl" revealKey={activity.id}>
+    <PublicAppShell
+      title={displayActivityName(activity.name)}
+      wide="xl"
+      revealKey={activity.id}
+      seo={{
+        title: `${displayActivityName(activity.name)} à Hurghada`,
+        description: seoExcerpt(activity.description) || undefined,
+        image: catalogUrls[0] || undefined,
+      }}
+    >
       <main className="relative z-10 pb-32 lg:pb-28">
         {/* ——— Galerie mobile (cible du vol photo depuis le catalogue) ——— */}
         <div className="px-4 md:hidden">

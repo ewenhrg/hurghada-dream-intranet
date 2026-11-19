@@ -1,5 +1,5 @@
 import path from "path";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { INSTAGRAM_HANDLE, loadInstagramReels } from "./api/instagramReels.js";
 
@@ -34,8 +34,30 @@ function instagramReelsDevApi() {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), instagramReelsDevApi()],
+/**
+ * Adresse publique du site pour les balises SEO statiques de index.html (Open Graph, JSON-LD).
+ * Le jour du passage sur hurghadadream.com : définir VITE_SITE_URL=https://hurghadadream.com sur Vercel.
+ */
+const DEFAULT_SITE_URL = "https://hurghada-dream-intranet.vercel.app";
+
+function seoHtml(env) {
+  const siteUrl = String(env.VITE_SITE_URL || DEFAULT_SITE_URL).replace(/\/+$/, "");
+  return {
+    name: "hd-seo-html",
+    transformIndexHtml: {
+      order: "pre",
+      handler(html) {
+        let out = html.replaceAll("%SITE_URL%", siteUrl);
+        // Pas d’URL Supabase (build local) : pas de preconnect vers une adresse vide.
+        if (!env.VITE_SUPABASE_URL) out = out.replace(/\s*<link rel="preconnect" href="%VITE_SUPABASE_URL%"[^>]*>/, "");
+        return out;
+      },
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), instagramReelsDevApi(), seoHtml(loadEnv(mode, process.cwd(), ""))],
 
   resolve: {
     alias: {
@@ -59,6 +81,10 @@ export default defineConfig({
           // tout le code partagé dans le graphe statique de l'entrée : le
           // code-splitting était annulé et ~2 Mo de JS étaient préchargés
           // avant le premier rendu.
+          // Utilitaires Rollup / Vite (CommonJS, préchargement) : avec les autres libs, sinon ils atterrissent dans
+          // « supabase » et créent une boucle supabase ⇄ vendor (erreur « before initialization »).
+          if (normalized.includes("commonjsHelpers") || normalized.includes("vite/preload-helper")) return "vendor";
+
           if (!normalized.includes("node_modules")) return;
 
           // React DOIT être dans un seul chunk nommé (pas undefined)
@@ -72,6 +98,25 @@ export default defineConfig({
           }
           if (/\/xlsx\//.test(normalized)) {
             return "xlsx-vendor";
+          }
+          // PDF (html2pdf + html2canvas + jsPDF, ~2 Mo) : pas de chunk manuel. Importé
+          // dynamiquement au clic (quotePdfDownload.js), Rollup le range seul dans un fichier à part.
+          // Rangé dans « vendor », il était téléchargé par toutes les pages, site public compris.
+          if (
+            normalized.includes("html2pdf") ||
+            normalized.includes("html2canvas") ||
+            normalized.includes("jspdf") ||
+            normalized.includes("canvg") ||
+            normalized.includes("dompurify") ||
+            normalized.includes("core-js") ||
+            normalized.includes("fflate") ||
+            normalized.includes("rgbcolor") ||
+            normalized.includes("stackblur") ||
+            normalized.includes("svg-pathdata") ||
+            normalized.includes("raf/") ||
+            normalized.includes("performance-now")
+          ) {
+            return undefined;
           }
 
           if (
@@ -115,4 +160,4 @@ export default defineConfig({
 
   assetsInclude: ["**/*.xlsx"],
   publicDir: "public",
-});
+}));

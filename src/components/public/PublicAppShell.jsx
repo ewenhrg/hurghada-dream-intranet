@@ -17,6 +17,7 @@ import {
   useScrollMotion,
 } from "./motion";
 import { Sheet, SheetHeader } from "./PublicUI";
+import { usePageSeo } from "./seo";
 
 /** Couleur des barres système Android / navigateur : identique au fond de l’appli. */
 const APP_CHROME_COLOR = "#FAF6EF";
@@ -94,7 +95,7 @@ export function GuestHeaderButton({ onClick, count, children, ariaLabel }) {
  * Header fixe sous la barre d’état (padding natif MainActivity + safe-area), fond ivoire.
  * Accueil = logo ; sinon flèche retour en haut à gauche. Pas de barre d’onglets.
  */
-export function PublicAppShell({ title, headerTitle, right, children, wide = false, revealKey, nav = null }) {
+export function PublicAppShell({ title, headerTitle, right, children, wide = false, revealKey, nav = null, seo = null }) {
   const { pathname } = useLocation();
   const { t, language } = useTranslation();
   const backTo = publicBackPath(pathname);
@@ -127,11 +128,13 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
   useAutoHideHeader(headerRef, Boolean(backTo));
   useAutoHideHeader(homebarRef, onHome);
 
+  // `seo` : { fullTitle, description, image, noindex } — sinon valeurs par défaut de la route.
+  usePageSeo({ title, pathname, ...(seo || {}) });
+
   useEffect(() => {
-    document.title = title ? `${title} · Hurghada Dream` : "Hurghada Dream";
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", APP_CHROME_COLOR);
-  }, [title]);
+  }, []);
 
   // Le fond ivoire de démarrage (index.html) passe la main au scope `.hd-public-catalog`.
   useEffect(() => {
@@ -199,14 +202,14 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
               </button>
             ) : null}
             <img
-              src="/client/logo-wordmark-light.png"
+              src="/client/logo-wordmark-light.webp"
               alt="Hurghada Dream"
-              width={900}
-              height={260}
+              width={600}
+              height={173}
               className="hdc-wordmark hdc-wordmark-light object-contain"
             />
             <img
-              src="/client/logo-wordmark.png"
+              src="/client/logo-wordmark.webp"
               alt=""
               width={468}
               height={158}

@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 import { IS_CLIENT_APP } from "./config/clientApp";
+import { WebRoot } from "./WebRoot.jsx";
 import { initToast } from "./utils/toast.js";
 import { logger } from "./utils/logger";
 import { LanguageProvider } from "./contexts/LanguageContext";
@@ -42,9 +43,7 @@ if ("serviceWorker" in navigator) {
 
 async function boot() {
   // Chargement séparé : le build client (Capacitor) n’embarque pas l’intranet.
-  const Root = IS_CLIENT_APP
-    ? (await import("./ClientApp.jsx")).ClientApp
-    : (await import("./App.jsx")).default;
+  const Root = IS_CLIENT_APP ? (await import("./ClientApp.jsx")).ClientApp : WebRoot;
 
   ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>

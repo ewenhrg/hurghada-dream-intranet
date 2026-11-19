@@ -8,7 +8,7 @@ export const HOTEL_FALLBACK_COVER = "linear-gradient(160deg, #EFE9DF 0%, #E4ECE9
 
 export function StarRow({ count = 0, className = "" }) {
   return (
-    <span className={`inline-flex items-center gap-0.5 ${className}`} aria-label={`${count} étoiles`}>
+    <span role="img" className={`inline-flex items-center gap-0.5 ${className}`} aria-label={`${count} étoiles`}>
       {Array.from({ length: count }).map((_, i) => (
         <Star key={i} className="h-3 w-3 fill-catalog-sand text-catalog-sand" aria-hidden />
       ))}

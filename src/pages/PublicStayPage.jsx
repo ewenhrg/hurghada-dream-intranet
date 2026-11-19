@@ -29,8 +29,8 @@ import { requiresMammaMiaSelfTransfer } from "../utils/activityHelpers";
 
 const AGENCY_WHATSAPP = "201062002850";
 const STAY_PAGE_PAUSED = false;
-const STAY_HERO_IMAGE = "/client/home-hero-red-sea.jpg";
-const STAY_FORM_IMAGE = "/client/home-tile-stay-calendar.jpg";
+const STAY_HERO_IMAGE = "/client/home-hero-red-sea.webp";
+const STAY_FORM_IMAGE = "/client/home-tile-stay-calendar.webp";
 const DAY_MS = 86400000;
 
 function keyToTime(key) {

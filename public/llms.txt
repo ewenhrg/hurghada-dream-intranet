@@ -1,0 +1,19 @@
+# Hurghada Dream
+
+> Agence française d’excursions et d’hôtels à Hurghada (mer Rouge, Égypte). Équipe française sur place 7j/7, devis gratuit.
+
+Hurghada Dream propose des excursions en mer Rouge (îles, snorkeling, dauphins, catamaran), dans le désert (quad, buggy, dromadaire), à Louxor, au Caire et à Marsa Alam, ainsi qu’une sélection d’hôtels. Agence à l’Esplanada mall, Hurghada. Téléphone / WhatsApp : +20 10 62002850.
+
+## Pages principales
+
+- [Accueil](/): présentation de l’agence, avis Google, accès rapide
+- [Excursions](/catalogue): catalogue complet des activités avec prix et jours de départ
+- [Hôtels](/hotels): sélection d’hôtels à Hurghada et sur la mer Rouge
+- [Événements](/evenements): mariages, demandes en mariage, anniversaires, séminaires
+- [Contacts](/contacts): téléphones et WhatsApp de l’équipe
+- [Qui sommes-nous](/qui-sommes-nous): l’agence et son équipe
+
+## Informations
+
+- [Politique de remboursement](/politique)
+- [Confidentialité](/confidentialite)

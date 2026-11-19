@@ -1,4 +1,3 @@
-import html2pdf from "html2pdf.js";
 
 function waitForDocumentReady(doc, iframe) {
   return new Promise((resolve) => {
@@ -114,6 +113,8 @@ export async function quoteHtmlToPdfBlob(htmlContent) {
       pagebreak: { mode: ["css", "legacy"] },
     };
 
+    // Chargé au clic seulement (~2 Mo) : jamais embarqué dans les pages publiques.
+    const { default: html2pdf } = await import("html2pdf.js");
     const worker = html2pdf().set(opt).from(source);
     const blob = await worker.outputPdf("blob");
     if (!blob || !(blob instanceof Blob)) {

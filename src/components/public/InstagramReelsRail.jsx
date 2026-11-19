@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { IS_CLIENT_APP } from "../../config/clientApp";
 import { prefersReducedMotion } from "./motion";
+import { isSlowConnection } from "../../utils/network";
 
 const PROFILE_URL = "https://www.instagram.com/hurghada_dream/";
 const REELS_URL = IS_CLIENT_APP
@@ -33,29 +34,6 @@ function rememberReels(reels) {
   }
 }
 
-/** Précharge les 3 réels du hero sans ouvrir de lecteur caché (un téléphone n’en décode qu’un ou deux). */
-function warmReels(reels) {
-  if (typeof document === "undefined") return;
-  reels.filter((reel) => reel?.video).slice(0, 3).forEach((reel, index) => {
-    const href = String(reel.video || "");
-    if (!/^https?:\/\//.test(href)) return;
-    const id = `hd-preload-reel-${index}`;
-    let link = document.getElementById(id);
-    if (link?.getAttribute("href") === href) return;
-    if (!link) {
-      link = document.createElement("link");
-      link.id = id;
-      link.rel = "preload";
-      link.as = "fetch";
-      link.crossOrigin = "anonymous";
-      link.href = href;
-      document.head.appendChild(link);
-      return;
-    }
-    link.href = href;
-  });
-}
-
 export function fetchInstagramReels() {
   if (!reelsRequest) {
     reelsRequest = (async () => {
@@ -65,7 +43,6 @@ export function fetchInstagramReels() {
         const payload = await response.json();
         const reels = Array.isArray(payload?.reels) ? payload.reels : [];
         rememberReels(reels);
-        warmReels(reels);
         return reels;
       } catch {
         return [];
@@ -75,7 +52,7 @@ export function fetchInstagramReels() {
   return reelsRequest;
 }
 
-warmReels(readCachedReels());
+// Liste seule (quelques Ko) : les vidéos ne se chargent qu’à l’arrivée de chaque carte à l’écran.
 fetchInstagramReels();
 
 function ReelCard({ reel, onError, still, lazy = false }) {
@@ -127,7 +104,7 @@ function ReelCard({ reel, onError, still, lazy = false }) {
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="none"
           referrerPolicy="no-referrer"
           className="pointer-events-none h-full w-full object-cover"
           onError={() => setVideoFailed(true)}
@@ -137,6 +114,7 @@ function ReelCard({ reel, onError, still, lazy = false }) {
           src={reel.image}
           alt=""
           referrerPolicy="no-referrer"
+          loading="lazy"
           decoding="async"
           className="pointer-events-none h-full w-full object-cover"
           onError={onError}
@@ -153,8 +131,8 @@ export function InstagramReelsRail({ videos = true }) {
   const trackRef = useRef(null);
   const pausedRef = useRef(false);
   // Mouvement réduit : ni défilement ni lecture automatiques.
-  const [still] = useState(() => prefersReducedMotion());
-  const [phone] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches);
+  // Mouvement réduit ou connexion lente : images seules.
+  const [still] = useState(() => prefersReducedMotion() || isSlowConnection());
   const showVideo = videos && !still;
 
   useEffect(() => {
@@ -287,7 +265,7 @@ export function InstagramReelsRail({ videos = true }) {
                   <ReelCard
                     reel={reel}
                     still={!showVideo}
-                    lazy={phone && showVideo}
+                    lazy={showVideo}
                     onError={() => {
                       setReels((prev) => prev.filter((item) => item.id !== reel.id));
                     }}

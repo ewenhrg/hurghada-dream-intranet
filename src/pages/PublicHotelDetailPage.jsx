@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { seoExcerpt, usePageSeo } from "../components/public/seo";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -43,6 +44,11 @@ export function PublicHotelDetailPage({ hotelId }) {
 
   const images = useMemo(() => (Array.isArray(hotel?.images) ? hotel.images : []), [hotel]);
   const hasImages = images.length > 0;
+  usePageSeo({
+    title: hotel?.name ? `${hotel.name} – Hôtel à Hurghada` : "Hôtel à Hurghada",
+    description: hotel?.description ? seoExcerpt(hotel.description) : undefined,
+    image: images[0] || undefined,
+  });
   const mapEmbedUrl = useMemo(() => (hotel ? getHotelMapEmbedUrl(hotel) : null), [hotel]);
   const mapsOpenUrl = useMemo(() => (hotel ? getHotelMapsOpenUrl(hotel) : null), [hotel]);
   const [lightboxOpen, setLightboxOpen] = useState(false);

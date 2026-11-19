@@ -33,7 +33,7 @@ const WORDMARK = [
 ];
 export function GoogleWordmark({ className = "" }) {
   return (
-    <span className={`font-bold tracking-[-0.01em] ${className}`} aria-hidden>
+    <span className={`font-bold tracking-[-0.01em] ${className}`}>
       {WORDMARK.map(([letter, color], i) => (
         <span key={i} style={{ color }}>
           {letter}

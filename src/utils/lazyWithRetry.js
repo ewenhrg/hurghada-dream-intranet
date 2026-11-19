@@ -2,7 +2,6 @@ import { lazy } from "react";
 import { logger } from "./logger";
 
 const CHUNK_RELOAD_KEY = "hd_chunk_reload";
-const ATTEMPT_TIMEOUT_MS = 4000;
 
 function isStaleChunkError(error) {
   const message = String(error?.message || error || "");
@@ -10,25 +9,8 @@ function isStaleChunkError(error) {
     message.includes("Failed to fetch dynamically imported module") ||
     message.includes("error loading dynamically imported module") ||
     message.includes("Importing a module script failed") ||
-    message.includes("Expected a JavaScript-or-Wasm module script") ||
-    message.includes("chunk-timeout")
+    message.includes("Expected a JavaScript-or-Wasm module script")
   );
-}
-
-function withTimeout(promise, ms) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("chunk-timeout")), ms);
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        reject(error);
-      }
-    );
-  });
 }
 
 /** Un seul rechargement par session : un chunk périmé après déploiement. */
@@ -52,12 +34,14 @@ export function clearChunkReloadGuard() {
 }
 
 /**
- * lazy() avec un délai court, un second essai, puis un rechargement unique si le chunk est périmé.
+ * lazy() avec un second essai, puis un rechargement unique si le chunk est périmé (déploiement).
+ * Pas de délai maximal : sur connexion lente un chunk peut mettre 10 s ou plus. L’ancien délai
+ * de 4 s faisait recharger toute la page en boucle puis afficher une erreur (3G, campagne…).
  */
 export function lazyWithRetry(importFn, retries = 1) {
   return lazy(() => {
     const loadModule = (attempt = 0) =>
-      withTimeout(importFn(), ATTEMPT_TIMEOUT_MS).catch((error) => {
+      importFn().catch((error) => {
         logger.warn(`Erreur de chargement du module (tentative ${attempt + 1}/${retries + 1})...`, error);
         if (attempt < retries) {
           return new Promise((resolve) => {

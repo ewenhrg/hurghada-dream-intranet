@@ -8,14 +8,66 @@
     <!-- Prévenir le zoom automatique sur focus input iOS -->
     <meta name="format-detection" content="telephone=no" />
     <meta name="theme-color" content="#1e0b4a" />
-    <meta name="description" content="Système de gestion des devis et activités pour Hurghada Dream" />
-    <meta name="keywords" content="hurghada, dream, devis, activités, gestion" />
+    <meta name="description" content="Hurghada Dream, agence française n°1 des activités à Hurghada : excursions mer Rouge, snorkeling, quad, Louxor, Le Caire et hôtels sélectionnés. Devis gratuit 7j/7." />
     <meta name="author" content="Hurghada Dream" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Hurghada Dream" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="robots" content="noindex, nofollow" />
+    <!-- Indexation : pages publiques ouvertes ; intranet bloqué (X-Robots-Tag dans vercel.json + meta posée par l’app). -->
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+
+    <!-- Aperçu de partage (WhatsApp, Facebook…) ; chaque page le complète au chargement. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Hurghada Dream" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:title" content="Hurghada Dream | Excursions, hôtels et séjours à Hurghada – Agence n°1" />
+    <meta property="og:description" content="Agence française n°1 des activités à Hurghada : excursions mer Rouge, désert, Louxor, Le Caire et hôtels sélectionnés. Devis gratuit, équipe française 7j/7." />
+    <meta property="og:url" content="%SITE_URL%/" />
+    <meta property="og:image" content="%SITE_URL%/client/home-hero-red-sea.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "TravelAgency",
+            "@id": "%SITE_URL%/#agency",
+            "name": "Hurghada Dream",
+            "url": "%SITE_URL%/",
+            "logo": "%SITE_URL%/logo.png",
+            "image": "%SITE_URL%/client/home-hero-red-sea.jpg",
+            "description": "Agence française d’excursions et d’hôtels à Hurghada (mer Rouge, Égypte) : snorkeling, îles, désert, Louxor, Le Caire, Marsa Alam.",
+            "telephone": "+201062002850",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "Esplanada Mall, villages touristiques",
+              "addressLocality": "Hurghada",
+              "addressRegion": "Mer Rouge",
+              "addressCountry": "EG"
+            },
+            "geo": { "@type": "GeoCoordinates", "latitude": 27.1893675, "longitude": 33.8324796 },
+            "hasMap": "https://maps.app.goo.gl/qcx9LvVG3QwKUWyWA",
+            "areaServed": ["Hurghada", "Mer Rouge", "Marsa Alam", "Louxor", "Le Caire"],
+            "knowsLanguage": ["fr", "en"],
+            "sameAs": [
+              "https://www.instagram.com/hurghada_dream/",
+              "https://www.tiktok.com/@hurghadadream",
+              "https://www.snapchat.com/@hdreamtours"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "%SITE_URL%/#website",
+            "url": "%SITE_URL%/",
+            "name": "Hurghada Dream",
+            "inLanguage": "fr-FR",
+            "publisher": { "@id": "%SITE_URL%/#agency" }
+          }
+        ]
+      }
+    </script>
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
@@ -23,32 +75,9 @@
     <!-- Apple Touch Icon (pour iOS) -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     
-    <!--
-      Polices Google : UNE seule requête (Literata + Plus Jakarta Sans + Outfit),
-      chargée en non bloquant. Inter est servie en local par le bundle.
-      Le `media="print"` puis `onload` évite de retarder le premier rendu ;
-      `display=swap` affiche immédiatement le texte avec la police de repli.
-    -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="preload"
-      as="style"
-      href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,500;0,7..72,600;0,7..72,700;0,7..72,800;1,7..72,500&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap"
-    />
-    <link
-      rel="stylesheet"
-      media="print"
-      onload="this.media='all';this.onload=null"
-      href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,500;0,7..72,600;0,7..72,700;0,7..72,800;1,7..72,500&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap"
-    />
-    <noscript>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,500;0,7..72,600;0,7..72,700;0,7..72,800;1,7..72,500&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap"
-      />
-    </noscript>
-    <title>Hurghada Dream - Gestion des devis</title>
+    <!-- Données du catalogue : connexion ouverte d’avance. -->
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
+    <title>Hurghada Dream | Excursions, hôtels et séjours à Hurghada – Agence n°1</title>
     <!--
       Pages clients : fond ivoire dès le premier rendu (sinon le fond intranet sombre flashe
       avant React). Classe retirée par PublicAppShell, l’intranet n’est jamais concerné.
@@ -65,6 +94,31 @@
         var publicPage = p === "/" || /^\/(accueil|catalogue|hotels|demande-hotel|contacts|politique|confidentialite|qui-sommes-nous|tarifs|sejour|mon-sejour|request|b2b|evenements|modification)(\/|$)/.test(p);
         if (!intranet && (client || publicPage)) {
           document.documentElement.classList.add("hd-public-boot");
+          // Accueil : l’image de la vidéo s’affiche avant que la vidéo arrive.
+          if (p === "/" || p === "/accueil") {
+            var poster = document.createElement("link");
+            poster.rel = "preload";
+            poster.as = "image";
+            poster.href = "/client/hero-reel-poster.webp";
+            poster.setAttribute("fetchpriority", "high");
+            document.head.appendChild(poster);
+          }
+        } else {
+          // Intranet seulement : polices Google (Literata, Outfit, Plus Jakarta Sans), non bloquantes.
+          // Les pages publiques ont leurs propres polices, servies par le site.
+          var fonts = "https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,500;0,7..72,600;0,7..72,700;0,7..72,800;1,7..72,500&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap";
+          var gs = document.createElement("link");
+          gs.rel = "preconnect";
+          gs.href = "https://fonts.gstatic.com";
+          gs.crossOrigin = "";
+          document.head.appendChild(gs);
+          var css = document.createElement("link");
+          css.rel = "stylesheet";
+          css.href = fonts;
+          document.head.appendChild(css);
+          var robots = document.querySelector('meta[name="robots"]');
+          if (robots) robots.setAttribute("content", "noindex, nofollow");
+          document.title = "Hurghada Dream - Gestion des devis";
         }
       })();
     </script>

@@ -117,7 +117,7 @@ function normalizeCategory(rawCategory) {
   return exists ? value : "desert";
 }
 
-const HERO_IMAGE = "/client/home-tile-excursions.jpg";
+const HERO_IMAGE = "/client/home-tile-excursions.webp";
 
 function agencyWhatsappUrl(language = "fr") {
   const text =
@@ -190,7 +190,7 @@ function CatalogueFooter() {
       </section>
 
       <div className="mt-10 flex flex-col items-center gap-4 border-t border-catalog-line pt-8 sm:flex-row sm:justify-between">
-        <img src="/client/logo-wordmark.png" alt="Hurghada Dream" className="h-5 w-auto object-contain" loading="lazy" />
+        <img src="/client/logo-wordmark.webp" alt="Hurghada Dream" className="h-5 w-auto object-contain" loading="lazy" />
         <nav
           aria-label={t("public.catalogue.footer.linksAria")}
           className="flex flex-wrap justify-center gap-1 text-sm font-medium text-catalog-muted"

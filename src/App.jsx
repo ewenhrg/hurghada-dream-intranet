@@ -198,6 +198,19 @@ import {
 export default function App() {
   const location = useLocation();
   const isPublicClientRoute = isPublicClientPath(location.pathname);
+  // Intranet : jamais indexé, titre « outil » (les pages publiques posent leur propre SEO).
+  useEffect(() => {
+    if (isPublicClientRoute) return;
+    document.title = "Hurghada Dream - Gestion des devis";
+    let robots = document.head.querySelector('meta[name="robots"]');
+    if (!robots) {
+      robots = document.createElement("meta");
+      robots.setAttribute("name", "robots");
+      document.head.appendChild(robots);
+    }
+    robots.setAttribute("content", "noindex, nofollow");
+    document.head.querySelector('link[rel="canonical"]')?.remove();
+  }, [isPublicClientRoute]);
   const [ok, setOk] = useState(false);
   const [tab, setTabState] = useState("devis");
   const [tabHistory, setTabHistory] = useState([]);
