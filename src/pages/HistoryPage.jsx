@@ -1258,9 +1258,7 @@ function QuoteCardComponent({
                   {formatPhoneWithPlus(d.client?.phone) ? (
                     <button
                       type="button"
-                      title="Copier le téléphone"
-                      aria-label="Copier le téléphone"
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                      className="inline-flex shrink-0 items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
                       onClick={(e) => {
                         e.stopPropagation();
                         void (async () => {
@@ -1271,7 +1269,7 @@ function QuoteCardComponent({
                         })();
                       }}
                     >
-                      <span aria-hidden className="text-sm leading-none">📋</span>
+                      Copier
                     </button>
                   ) : null}
                 </p>
@@ -1281,9 +1279,7 @@ function QuoteCardComponent({
                     <span className="min-w-0">{d.client.email}</span>
                     <button
                       type="button"
-                      title="Copier l'e-mail"
-                      aria-label="Copier l'e-mail"
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                      className="inline-flex shrink-0 items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
                       onClick={(e) => {
                         e.stopPropagation();
                         void (async () => {
@@ -1294,7 +1290,7 @@ function QuoteCardComponent({
                         })();
                       }}
                     >
-                      <span aria-hidden className="text-sm leading-none">📋</span>
+                      Copier
                     </button>
                   </p>
                 ) : null}
