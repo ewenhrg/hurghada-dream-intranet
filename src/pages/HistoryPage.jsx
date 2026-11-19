@@ -2029,7 +2029,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
-  const [todayOnlyFilter, setTodayOnlyFilter] = useState(false);
+  const [todayOnlyFilter, setTodayOnlyFilter] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [docsQuote, setDocsQuote] = useState(null);
@@ -2037,10 +2037,10 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
   /** Miroir synchrone des docs (évite d’écraser lors d’uploads enchaînés / drag & drop). */
   const clientDocsDraftRef = useRef({});
 
-  // Toujours repartir sur « Tous » à l’ouverture de l’historique
+  // À l’ouverture : « Tous les devis » + filtre Aujourd’hui
   useEffect(() => {
     setStatusFilter("all");
-    setTodayOnlyFilter(false);
+    setTodayOnlyFilter(true);
     setQ("");
   }, []);
   
