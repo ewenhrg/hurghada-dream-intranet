@@ -11,7 +11,7 @@ import {
 import { DateInput } from "../DateInput";
 
 const fieldClass =
-  "mt-1.5 w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25";
+  "mt-1.5 w-full rounded-2xl border border-catalog-border bg-white px-4 py-3 text-sm font-semibold text-catalog-ink outline-none transition focus:border-catalog-lagoon focus:ring-4 focus:ring-catalog-lagoon/20";
 
 /**
  * Modale obligatoire : dates d’arrivée / départ avant navigation catalogue.
@@ -108,23 +108,23 @@ export function CatalogueStayGateModal({
 
       <form
         onSubmit={handleSubmit}
-        className="relative z-10 flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-[1.75rem] border border-violet-200/80 bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl"
+        className="relative z-10 flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-[1.75rem] border border-catalog-border bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-slate-200 sm:hidden" aria-hidden />
+        <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-catalog-line sm:hidden" aria-hidden />
         <div className="flex items-start justify-between gap-3 px-5 pb-2 pt-4 sm:px-6 sm:pt-6">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-700">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-catalog-lagoon">
               Étape 1 · Votre séjour
             </p>
             <h2
               id="catalogue-stay-title"
               className="mt-1 flex items-center gap-2 font-catalog-display text-xl font-semibold text-catalog-ink sm:text-2xl"
             >
-              <CalendarDays className="h-6 w-6 shrink-0 text-violet-600" aria-hidden />
+              <CalendarDays className="h-6 w-6 shrink-0 text-catalog-lagoon" aria-hidden />
               Dates de séjour
             </h2>
-            <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+            <p className="mt-2 text-sm font-medium leading-relaxed text-catalog-muted">
               Pour afficher uniquement les dates possibles pendant votre voyage — et bloquer demain ainsi
               que les plongées trop proches du départ.
             </p>
@@ -152,7 +152,7 @@ export function CatalogueStayGateModal({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm font-semibold text-catalog-ink">
-              Arrivée <span className="text-orange-500">*</span>
+              Arrivée <span className="text-catalog-coral">*</span>
               <DateInput
                 value={arrivalDate}
                 min={todayYmd}
@@ -168,7 +168,7 @@ export function CatalogueStayGateModal({
               />
             </label>
             <label className="block text-sm font-semibold text-catalog-ink">
-              Départ <span className="text-orange-500">*</span>
+              Départ <span className="text-catalog-coral">*</span>
               <DateInput
                 value={departureDate}
                 min={getMinDepartureDate(arrivalDate) || todayYmd}
@@ -185,7 +185,7 @@ export function CatalogueStayGateModal({
             </p>
           ) : null}
 
-          <ul className="mt-4 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium leading-relaxed text-slate-700">
+          <ul className="mt-4 space-y-2 rounded-2xl border border-catalog-line bg-catalog-bg px-4 py-3 text-xs font-medium leading-relaxed text-catalog-body">
             <li>Les activités se réservent à partir du <strong>lendemain de votre arrivée</strong>.</li>
             <li>Le départ doit être <strong>au moins le lendemain</strong> de l’arrivée.</li>
             <li>
@@ -204,11 +204,11 @@ export function CatalogueStayGateModal({
           </ul>
         </div>
 
-        <div className="shrink-0 border-t border-slate-100 px-5 py-4 sm:px-6">
+        <div className="shrink-0 border-t border-catalog-line px-5 py-4 sm:px-6">
           <button
             type="submit"
             disabled={sameDaySelected}
-            className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-800 to-orange-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-900/25 transition hover:from-violet-900 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="hdc-btn hdc-btn-primary w-full min-h-[3.25rem] text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
             {sameDaySelected
               ? "Indiquez votre vraie date de départ"
