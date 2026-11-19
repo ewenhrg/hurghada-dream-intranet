@@ -177,10 +177,10 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
         <header className="hdc-homebar fixed inset-x-0 top-0 z-50">
           <div className={`relative mx-auto flex w-full items-center justify-center gap-3 px-4 pb-3 pt-[max(0.85rem,env(safe-area-inset-top))] sm:gap-6 sm:pb-4 lg:justify-between ${inner}`}>
             <img
-              src="/client/logo-wordmark.png"
+              src="/client/logo-wordmark-light.png"
               alt="Hurghada Dream"
-              width={468}
-              height={158}
+              width={900}
+              height={260}
               className="hdc-wordmark object-contain"
             />
             {nav ? <div className="hdc-homebar-nav hidden lg:block">{nav}</div> : null}

@@ -282,15 +282,17 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 .hd-public-catalog .hdc-homebar > * {
   pointer-events: auto;
 }
+/* Logo couleur, sans fond, texte clair prévu pour la vidéo : pas de filtre
+   qui le blanchirait (sinon la bande « DREAM » et ses lettres disparaissent). */
 .hd-public-catalog .hdc-homebar .hdc-wordmark {
-  height: 1.55rem;
-  max-width: 8.5rem;
-  filter: brightness(0) invert(1) drop-shadow(0 1px 8px rgba(8, 36, 46, 0.35));
+  height: 2.4rem;
+  max-width: 9rem;
+  filter: drop-shadow(0 2px 10px rgba(8, 36, 46, 0.45));
 }
 @media (min-width: 1024px) {
   .hd-public-catalog .hdc-homebar .hdc-wordmark {
-    height: 2.15rem;
-    max-width: 12rem;
+    height: 3rem;
+    max-width: 11rem;
   }
 }
 .hd-public-catalog .hdc-homebar-menu {
