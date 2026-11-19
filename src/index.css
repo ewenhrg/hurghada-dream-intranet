@@ -541,6 +541,42 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   height: 100%;
   width: 100%;
 }
+/* Ordinateur : la vidéo verticale 720p n’est plus étirée (floue) mais posée nette à sa
+   taille réelle, en carte à droite, devant un fond pré-flouté (fichier déjà flou : aucun
+   filtre calculé en direct). */
+.hd-public-catalog .hdc-hero-ambient {
+  transform: scale(1.08);
+}
+@media (min-width: 1024px) {
+  .hd-public-catalog .hdc-hero-reels {
+    left: 50%;
+    right: auto;
+    width: min(100%, 80rem);
+    transform: translateX(-50%);
+    overflow: visible;
+  }
+  .hd-public-catalog .hdc-hero-reel {
+    position: absolute;
+    right: 2rem;
+    top: calc(50% + 2.25rem);
+    width: auto;
+    height: min(70vh, 720px);
+    aspect-ratio: 9 / 16;
+    transform: translateY(-50%);
+    border-radius: 1.75rem;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.28),
+      0 30px 80px -24px rgba(4, 20, 26, 0.75);
+  }
+  /* Assombrit à gauche (lisibilité du titre), laisse la carte vidéo claire à droite. */
+  .hd-public-catalog .hdc-hero-shade {
+    background: linear-gradient(90deg, rgba(8, 36, 46, 0.78) 0%, rgba(8, 36, 46, 0.5) 45%, rgba(8, 36, 46, 0.12) 75%, rgba(8, 36, 46, 0.05) 100%) !important;
+  }
+  /* Le texte s’arrête avant la carte vidéo. */
+  .hd-public-catalog .hdc-hero-copy-inner {
+    padding-right: calc(min(70vh, 720px) * 0.5625 + 5rem);
+  }
+}
 .hd-public-catalog .hdc-reel-marquee {
   overflow-x: auto;
   overflow-y: hidden;
@@ -691,8 +727,7 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
 .hd-public-catalog .hdc-liquid-glass {
   position: relative;
   isolation: isolate;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.5) 100%);
+  background: rgba(255, 255, 255, 0.7);
   -webkit-backdrop-filter: blur(18px) saturate(180%);
   backdrop-filter: blur(18px) saturate(180%);
   box-shadow:

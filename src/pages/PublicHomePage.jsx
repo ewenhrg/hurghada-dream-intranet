@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { CatalogPhotoFrame } from "../components/public/CatalogPhotoFrame";
 import { HomeReviewsMarquee } from "../components/public/HomeReviewsMarquee";
-import { fetchInstagramReels, InstagramReelsRail, readCachedReels } from "../components/public/InstagramReelsRail";
+import { InstagramReelsRail } from "../components/public/InstagramReelsRail";
 import { PublicAppShell } from "../components/public/PublicAppShell";
 import { StarRow } from "../components/public/HotelUI";
 import { WhatsAppGlyph } from "../components/public/PublicUI";
@@ -32,7 +32,7 @@ import {
 import { useHurghadaWeather } from "../hooks/useHurghadaWeather";
 import { useTranslation } from "../hooks/useTranslation";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
-import { GOOGLE_MAPS_PLACE_URL, GoogleG, GoogleWordmark } from "../components/public/GoogleIcon";
+import { GOOGLE_MAPS_PLACE_URL, GoogleWordmark } from "../components/public/GoogleIcon";
 
 const AGENCY_WHATSAPP_URL = "https://wa.me/201062002850?text=Bonjour%20Hurghada%20Dream%2C%20";
 const AGENCY_MAPS_URL = "https://maps.app.goo.gl/qcx9LvVG3QwKUWyWA";
@@ -40,11 +40,18 @@ const AGENCY_MAP_EMBED = "https://www.google.com/maps?q=27.1893675,33.8324796&z=
 const HERO_IMAGE = "/client/home-hero-red-sea.jpg";
 const TILE_EXCURSIONS = "/client/home-tile-excursions.jpg";
 const TILE_STAY = "/client/home-tile-stay-calendar.jpg";
-const heroReelsPromise = fetchInstagramReels();
-
-function playableReels(list) {
-  return (Array.isArray(list) ? list : []).filter((reel) => reel.video).slice(0, 1);
-}
+/**
+ * Vidéo du hero hébergée sur le site (720×1280, verticale) : plus de dépendance aux liens
+ * Instagram qui expirent. Téléphone : plein écran. Ordinateur : affichée nette à sa taille
+ * réelle (carte verticale à droite) devant une copie pré-floutée qui remplit l’écran —
+ * l’étirer sur 1900 px de large la rendait floue.
+ */
+const HERO_REEL = {
+  id: "hero-local",
+  video: "/client/hero-reel.mp4",
+  image: "/client/hero-reel-poster.jpg",
+};
+const HERO_AMBIENT = "/client/hero-reel-ambient.mp4";
 const PHONE_QUERY = "(max-width: 1023px)";
 const pendingPlays = new WeakMap();
 
@@ -138,8 +145,6 @@ export function PublicHomePage() {
   const navigate = useNavigate();
   const { t, language } = useTranslation();
   const [hotels, setHotels] = useState([]);
-  const [heroReels, setHeroReels] = useState(() => playableReels(readCachedReels()));
-  const [reelsSettled, setReelsSettled] = useState(() => playableReels(readCachedReels()).length >= 1);
   const weather = useHurghadaWeather();
   const heroRef = useRef(null);
   const heroScrollRef = useRef(null);
@@ -147,7 +152,8 @@ export function PublicHomePage() {
   const railDragRef = useRef(false);
   const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia(PHONE_QUERY).matches);
   const [heroClear, setHeroClear] = useState(false);
-  const heroReel = heroReels[0] || null;
+  const heroReel = HERO_REEL;
+  const ambientRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -179,18 +185,27 @@ export function PublicHomePage() {
   const hotelsWithPhoto = useMemo(() => hotels.filter((h) => Array.isArray(h.images) && h.images[0]), [hotels]);
   const hotelPhoto = hotelsWithPhoto[0]?.images[0] || null;
 
+  // Ordinateur : le fond flouté suit la vidéo nette (mêmes plans au même moment).
   useEffect(() => {
-    let cancelled = false;
-    heroReelsPromise.then((list) => {
-      if (cancelled) return;
-      const next = playableReels(list);
-      if (next.length >= 1) setHeroReels(next);
-      setReelsSettled(true);
-    });
-    return () => {
-      cancelled = true;
+    if (phone) return undefined;
+    const main = heroScrollRef.current?.querySelector("video");
+    const ambient = ambientRef.current;
+    if (!main || !ambient) return undefined;
+    armVideo(ambient);
+    const sync = () => {
+      if (Math.abs(ambient.currentTime - main.currentTime) > 0.25) ambient.currentTime = main.currentTime;
+      if (main.paused) ambient.pause();
+      else if (ambient.paused) playMuted(ambient);
     };
-  }, []);
+    main.addEventListener("timeupdate", sync);
+    main.addEventListener("play", sync);
+    main.addEventListener("pause", sync);
+    return () => {
+      main.removeEventListener("timeupdate", sync);
+      main.removeEventListener("play", sync);
+      main.removeEventListener("pause", sync);
+    };
+  }, [phone]);
 
   useEffect(() => {
     const media = window.matchMedia(PHONE_QUERY);
@@ -398,29 +413,38 @@ export function PublicHomePage() {
           className="relative h-full overflow-hidden bg-catalog-raised"
         >
           <div data-hero-stage className="absolute inset-0 bg-catalog-abyss">
-            {heroReel ? (
-              <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Réel Instagram">
-                <HeroReel key={heroReel.id} reel={heroReel} playing={!phone || !heroClear} />
-              </div>
-            ) : reelsSettled ? (
-              <img src={HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            {!phone ? (
+              <video
+                ref={ambientRef}
+                aria-hidden
+                src={HERO_AMBIENT}
+                poster={HERO_IMAGE}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                className="hdc-hero-ambient pointer-events-none absolute inset-0 h-full w-full object-cover"
+              />
             ) : null}
+            <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Vidéo Hurghada">
+              <HeroReel key={heroReel.id} reel={heroReel} playing={!phone || !heroClear} />
+            </div>
           </div>
           <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[4] h-1/2" data-veil-top />
           <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[4] h-1/2" data-veil-bottom />
-          <div aria-hidden className="pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(10,42,51,0.32)_0%,rgba(10,42,51,0)_30%,rgba(11,79,92,0.18)_55%,rgba(8,36,46,0.88)_100%)]" />
+          <div aria-hidden className="hdc-hero-shade pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(10,42,51,0.32)_0%,rgba(10,42,51,0)_30%,rgba(11,79,92,0.18)_55%,rgba(8,36,46,0.88)_100%)]" />
 
           <div data-hero-copy className="pointer-events-none absolute inset-x-5 bottom-16 z-[5] lg:inset-x-0 lg:bottom-20">
-            <div className="lg:mx-auto lg:max-w-7xl lg:px-8">
+            <div className="hdc-hero-copy-inner lg:mx-auto lg:max-w-7xl lg:px-8">
             <p data-hero-eyebrow className="mb-2 flex lg:mb-3">
               <a
                 href={GOOGLE_MAPS_PLACE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`Google ${t("public.home.rating")}/5 · ${t("public.home.eyebrow")}`}
-                className="hdc-liquid-glass pointer-events-auto inline-flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-full py-1.5 pl-2.5 pr-4 text-sm font-bold text-catalog-ink sm:text-[0.9375rem]"
+                className="hdc-liquid-glass pointer-events-auto inline-flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-full px-4 py-1.5 text-sm font-bold text-catalog-ink sm:text-[0.9375rem]"
               >
-                <GoogleG className="h-5 w-5 shrink-0" />
                 <GoogleWordmark />
                 <span className="tabular-nums">{t("public.home.rating")}</span>
                 <span aria-hidden className="tracking-[0.05em] text-[#FBBC04]">★★★★★</span>
