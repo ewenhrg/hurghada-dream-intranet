@@ -102,11 +102,6 @@ const QUOTE_DOC_FALLBACK_BUCKET = "Catalogue";
 const HISTORY_EMAIL_SEARCH_SELECT =
   "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, source, items, total, currency, paid_stripe, paid_cash, reservation_code, client_documents, client_is_airbnb, client_airbnb_maps_url";
 
-/** Visible dans l’historique tant que le jour de la dernière activité n’est pas dépassé (payé ou non). Les tickets restent en base. */
-function isQuoteVisibleInHistory(quote) {
-  return !isQuoteLastActivityPastRetention(quote);
-}
-
 function historySearchRowToLocal(row) {
   const items = normalizeQuoteItemsFromDb(row.items);
   const createdAt = row.created_at || row.createdAt || new Date().toISOString();
@@ -1992,28 +1987,12 @@ function isQuoteCreatedToday(createdAt) {
   return getLocalDateKey(date) === getLocalDateKey();
 }
 
-/** Date de création du devis = jour local AAAA-MM-JJ. */
-function isQuoteCreatedOnDay(createdAt, dayKey) {
-  if (!createdAt || !dayKey) return false;
-  const date = new Date(createdAt);
-  if (Number.isNaN(date.getTime())) return false;
-  return getLocalDateKey(date) === dayKey;
-}
-
-function formatDayKeyFr(dayKey) {
-  if (!dayKey) return "";
-  const [y, m, d] = String(dayKey).split("-");
-  if (!y || !m || !d) return dayKey;
-  return `${d}/${m}/${y}`;
-}
-
 // Exporter HistoryPage après la déclaration de QuoteCard
 export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient }) {
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
   const [todayOnlyFilter, setTodayOnlyFilter] = useState(false);
-  const [dateFilter, setDateFilter] = useState(""); // AAAA-MM-JJ — devis créés ce jour
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [docsQuote, setDocsQuote] = useState(null);
@@ -2025,7 +2004,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
   useEffect(() => {
     setStatusFilter("all");
     setTodayOnlyFilter(false);
-    setDateFilter("");
     setQ("");
   }, []);
   
@@ -2033,14 +2011,14 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20; // Nombre de devis par page
 
+  // Tous les devis : plus de masquage après la dernière activité
+  // (sinon « Tous » / « Payés » / « En attente » ne correspondaient pas).
   const historyStats = useMemo(() => {
-    const historyQuotes = [];
+    const historyQuotes = Array.isArray(quotes) ? quotes : [];
     let todayQuotesCount = 0;
     let paidQuotesCount = 0;
     let pendingQuotesCount = 0;
-    for (const d of quotes || []) {
-      if (!isQuoteVisibleInHistory(d)) continue;
-      historyQuotes.push(d);
+    for (const d of historyQuotes) {
       if (isQuoteCreatedToday(d.createdAt)) todayQuotesCount += 1;
       if (isQuoteFullyPaid(d)) paidQuotesCount += 1;
       else pendingQuotesCount += 1;
@@ -2247,12 +2225,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
   // Optimisation majeure : Filtrer D'ABORD, puis calculer les statuts uniquement pour les devis filtrés
   // Cela évite de calculer les dates formatées pour TOUS les devis quand on n'affiche que 20
   const filtered = useMemo(() => {
-    // Masque les devis dont la dernière activité est passée (sans supprimer — Tickets conserve tout).
     let result = historyQuotes;
 
-    if (dateFilter) {
-      result = result.filter((d) => isQuoteCreatedOnDay(d.createdAt, dateFilter));
-    } else if (todayOnlyFilter) {
+    if (todayOnlyFilter) {
       result = result.filter((d) => isQuoteCreatedToday(d.createdAt));
     }
     
@@ -2272,7 +2247,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
     }
     
     return result;
-  }, [debouncedQ, historyQuotes, statusFilter, todayOnlyFilter, dateFilter]);
+  }, [debouncedQ, historyQuotes, statusFilter, todayOnlyFilter]);
 
   // Compléter la recherche e-mail / nom via Supabase si le devis n’est pas déjà en mémoire.
   useEffect(() => {
@@ -2380,13 +2355,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
   // Réinitialiser la page quand les filtres changent
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedQ, statusFilter, todayOnlyFilter, dateFilter]);
+  }, [debouncedQ, statusFilter, todayOnlyFilter]);
 
-  const dayFilterLabel = dateFilter
-    ? ` du ${formatDayKeyFr(dateFilter)}`
-    : todayOnlyFilter
-      ? " aujourd'hui"
-      : "";
+  const dayFilterLabel = todayOnlyFilter ? " aujourd'hui" : "";
 
   // Réinitialiser le scroll interne de la modale quand elle s'ouvre (sans déplacer la page)
   useEffect(() => {
@@ -2647,11 +2618,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
           </div>
           <div className="flex flex-wrap gap-2 md:gap-3 justify-start md:justify-end">
             <Pill
-              active={todayOnlyFilter && !dateFilter}
-              onClick={() => {
-                setDateFilter("");
-                setTodayOnlyFilter((prev) => !prev);
-              }}
+              active={todayOnlyFilter}
+              onClick={() => setTodayOnlyFilter((prev) => !prev)}
               tone="dark"
               className="transition-opacity duration-150 hover:opacity-80"
             >
@@ -2663,7 +2631,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
               tone="dark"
               className="transition-opacity duration-150 hover:opacity-80"
             >
-              📊 Tous{quotes.length > 0 ? ` (${quotes.length})` : ""}
+              📊 Tous les devis{historyQuotes.length > 0 ? ` (${historyQuotes.length})` : ""}
             </Pill>
             <Pill
               active={statusFilter === "paid"}
@@ -2683,30 +2651,6 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
             </Pill>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
-          <span className="text-xs font-semibold uppercase tracking-wide text-white/70">
-            Jour
-          </span>
-          <div className="w-[12.5rem] max-w-full shrink-0">
-            <DateInput
-              value={dateFilter}
-              onChange={(next) => {
-                setDateFilter(next || "");
-                setTodayOnlyFilter(false);
-              }}
-              className="rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm"
-            />
-          </div>
-          {dateFilter ? (
-            <button
-              type="button"
-              onClick={() => setDateFilter("")}
-              className="text-sm font-semibold text-sky-200 underline underline-offset-2 hover:text-white"
-            >
-              Effacer
-            </button>
-          ) : null}
-        </div>
       </div>
       </div>
       
@@ -2717,7 +2661,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
           <div>
             {filtered.length === 0 ? (
               <p className="text-amber-300 font-bold text-base md:text-lg">
-                {dateFilter || todayOnlyFilter
+                {todayOnlyFilter
                   ? `Aucun devis créé${dayFilterLabel}`
                   : "Aucun devis trouvé"}
               </p>
@@ -2763,13 +2707,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
             <div className="flex flex-col items-center gap-4">
               <span className="text-5xl md:text-6xl">📭</span>
               <p className="text-lg md:text-xl font-bold text-slate-700">
-                {dateFilter || todayOnlyFilter
+                {todayOnlyFilter
                   ? `Aucun devis créé${dayFilterLabel}`
                   : "Aucun devis trouvé"}
               </p>
               <p className="text-sm md:text-base text-slate-500">
-                {dateFilter || todayOnlyFilter
-                  ? "Choisissez un autre jour ou effacez le filtre"
+                {todayOnlyFilter
+                  ? "Désactivez le filtre Aujourd'hui ou élargissez la recherche"
                   : "Essayez de modifier vos critères de recherche"}
               </p>
             </div>

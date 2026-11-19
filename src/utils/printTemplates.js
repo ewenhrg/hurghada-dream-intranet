@@ -1538,7 +1538,7 @@ function escHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
-/** Devis manuel libre : lignes texte + date optionnelle + prix. */
+/** Devis personnalisé libre : lignes texte + date optionnelle + prix. */
 export function generateManualQuoteHTML(quote) {
   const createdAt = quote?.createdAt ? new Date(quote.createdAt) : new Date();
   const dateLabel = createdAt.toLocaleDateString("fr-FR", {
@@ -1613,7 +1613,7 @@ export function generateManualQuoteHTML(quote) {
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Devis manuel — Hurghada Dream</title>
+  <title>Devis personnalisé — Hurghada Dream</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a; margin: 0; padding: 24px; background: #f8fafc; }

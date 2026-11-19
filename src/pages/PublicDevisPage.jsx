@@ -260,7 +260,7 @@ export function PublicDevisPage({ user }) {
           }
         }
         logger.error("PublicDevisPage load:", loadError);
-        setError(loadError.message || "Impossible de charger les devis publics.");
+        setError(loadError.message || "Impossible de charger les demandes de devis.");
         setRows([]);
         return;
       }

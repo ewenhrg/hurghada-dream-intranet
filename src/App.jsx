@@ -258,7 +258,7 @@ export default function App() {
     };
   }, [publicQuotesInboxEnabled]);
 
-  /** Clic sur la notif bureau → ouvrir l’onglet Devis public. */
+  /** Clic sur la notif bureau → ouvrir l’onglet Demande de devis. */
   useEffect(() => {
     if (!publicQuotesInboxEnabled) return undefined;
     const openTab = () => setTab("public-devis");
@@ -345,7 +345,7 @@ export default function App() {
     }
   }, [user, tab]);
 
-  /** Devis manuels : Sophia, Ewen et Karim uniquement. */
+  /** Devis personnalisés : Sophia, Ewen et Karim uniquement. */
   useEffect(() => {
     if (!user) return;
     if (tab !== "devis-manuel" && tab !== "historique-devis-manuel") return;
@@ -1650,7 +1650,7 @@ export default function App() {
                 )}
                 {canAccessManualQuotes(user) && (
                 <Pill data-tab="devis-manuel" active={tab === "devis-manuel"} onClick={() => setTab("devis-manuel")}>
-                  Devis manuel
+                  Devis personnalisé
                 </Pill>
                 )}
                 {canAccessManualQuotes(user) && (
@@ -1659,7 +1659,7 @@ export default function App() {
                   active={tab === "historique-devis-manuel"}
                   onClick={() => setTab("historique-devis-manuel")}
                 >
-                  Hist. devis manuel
+                  Hist. devis personnalisé
                 </Pill>
                 )}
                 {user?.canAccessActivities !== false && (
@@ -1979,7 +1979,7 @@ export default function App() {
         {tab === "devis-manuel" && canAccessManualQuotes(user) && (
           <Section
               onBack={sectionBack}
-            title="Devis manuel"
+            title="Devis personnalisé"
             subtitle="Lignes libres (désignation, date optionnelle, prix). Imprimer enregistre aussi l’historique."
             bare
           >
@@ -1990,8 +1990,8 @@ export default function App() {
         {tab === "historique-devis-manuel" && canAccessManualQuotes(user) && (
           <Section
               onBack={sectionBack}
-            title="Historique devis manuel"
-            subtitle="Tous les devis manuels enregistrés. Modification, duplication, réimpression et suppression."
+            title="Historique devis personnalisé"
+            subtitle="Tous les devis personnalisés enregistrés. Modification, duplication, réimpression et suppression."
             bare
           >
             <ManualQuotesHistoryPage user={user} />

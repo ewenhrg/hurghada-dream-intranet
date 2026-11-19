@@ -164,7 +164,7 @@ export function ManualQuotesHistoryPage({ user }) {
 
   const handleDelete = async (quote) => {
     if (!quote?.id) return;
-    const ok = window.confirm("Supprimer ce devis manuel ?");
+    const ok = window.confirm("Supprimer ce devis personnalisé ?");
     if (!ok) return;
     const result = await deleteManualQuote(supabase, quote.id);
     if (!result.ok) {
@@ -179,7 +179,7 @@ export function ManualQuotesHistoryPage({ user }) {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border-2 border-indigo-300 bg-white px-4 py-3 shadow-sm">
-        <p className="text-sm font-bold text-indigo-950">Historique des devis manuels</p>
+        <p className="text-sm font-bold text-indigo-950">Historique des devis personnalisés</p>
         <p className="mt-0.5 text-xs font-medium text-slate-600">
           Visible uniquement pour Sophia, Ewen et Karim. Modification, duplication, réimpression et
           suppression.
@@ -226,7 +226,7 @@ export function ManualQuotesHistoryPage({ user }) {
         </div>
       ) : quotes.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">
-          Aucun devis manuel pour le moment.
+          Aucun devis personnalisé pour le moment.
         </div>
       ) : (
         <div className="space-y-3">

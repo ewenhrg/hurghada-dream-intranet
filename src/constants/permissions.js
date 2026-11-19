@@ -68,7 +68,7 @@ export const PERMISSION_GROUPS = [
       { formKey: "canAccessReceipt", label: "Receipt", defaultValue: false },
       { formKey: "canAccessB2b", label: "Accès B2B + Devis B2B", defaultValue: false },
       { formKey: "canAccessEvents", label: "Événementiel", defaultValue: false },
-      { formKey: "canAccessPublicDevis", label: "Devis web / demandes publiques", defaultValue: false },
+      { formKey: "canAccessPublicDevis", label: "Demande de devis", defaultValue: false },
       { formKey: "canAccessHotelHistory", label: "Hotel history", defaultValue: false },
       { formKey: "canAccessModifications", label: "Modifications tickets", defaultValue: false },
       { formKey: "canAccessVoidTickets", label: "N° annulés", defaultValue: false },
@@ -285,7 +285,7 @@ export function canAccessEventsPage(user) {
   return readAccessFlag(user, "canAccessEvents");
 }
 
-/** Devis manuels + historique — Sophia, Ewen et Karim uniquement. */
+/** Devis personnalisés + historique — Sophia, Ewen et Karim uniquement. */
 export function canAccessManualQuotes(user) {
   const n = normalizeIntranetUserName(user?.name);
   return n === "sophia" || n === "ewen" || n === "karim";
