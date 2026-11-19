@@ -82,7 +82,6 @@ function formatDay(iso) {
 }
 
 export function PublicB2BPage() {
-  const { t } = useTranslation();
   const [session, setSession] = useState(() => loadB2BSession());
 
   function handleLoggedIn(next) {
