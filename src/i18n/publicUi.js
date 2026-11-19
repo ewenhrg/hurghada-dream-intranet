@@ -42,6 +42,7 @@ export const publicUiFr = {
     "Pour afficher uniquement les dates possibles pendant votre voyage — et bloquer demain ainsi que les plongées trop proches du départ.",
   "public.stayGate.err.missing": "Indiquez vos dates d’arrivée et de départ.",
   "public.stayGate.err.order": "La date de départ doit être après la date d’arrivée.",
+  "public.stayGate.err.past": "Les dates antérieures à aujourd’hui ne sont pas autorisées.",
   "public.stayGate.err.invalid": "Dates de séjour invalides.",
   "public.stayGate.err.sameDay":
     "Merci d’indiquer votre vraie date de départ : avec une arrivée et un départ le même jour, aucune activité n’est disponible. Les excursions commencent le lendemain de votre arrivée.",
@@ -276,6 +277,7 @@ export const publicUiEn = {
     "So we only show dates possible during your trip — and block tomorrow plus dives too close to departure.",
   "public.stayGate.err.missing": "Enter your arrival and departure dates.",
   "public.stayGate.err.order": "Departure must be after arrival.",
+  "public.stayGate.err.past": "Dates before today are not allowed.",
   "public.stayGate.err.invalid": "Invalid stay dates.",
   "public.stayGate.err.sameDay":
     "Please enter your real departure date: with arrival and departure on the same day, no activities are available. Excursions start the day after you arrive.",

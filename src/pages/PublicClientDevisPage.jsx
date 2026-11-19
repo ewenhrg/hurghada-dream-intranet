@@ -32,6 +32,7 @@ import { formatPhoneWithPlus } from "../utils";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 import {
   formatCatalogueStaySummary,
+  getCatalogueTodayYmd,
   getMinDepartureDate,
   isCatalogueStayTooShort,
   isValidCatalogueStay,
@@ -639,6 +640,11 @@ export function PublicClientDevisPage() {
     }
     if (!departure) {
       setError("La date de fin de séjour (départ) est obligatoire.");
+      return;
+    }
+    const todayYmd = getCatalogueTodayYmd();
+    if (arrival < todayYmd || departure < todayYmd) {
+      setError(t("public.stayGate.err.past"));
       return;
     }
     if (arrival > departure) {
@@ -1508,6 +1514,7 @@ export function PublicClientDevisPage() {
                   <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">{t("public.common.arrival")} *</span>
                   <DateInput
                     value={client.arrivalDate}
+                    min={getCatalogueTodayYmd()}
                     onChange={(nextArrival) => {
                       const minDep = getMinDepartureDate(nextArrival);
                       const nextDeparture =
@@ -1534,7 +1541,7 @@ export function PublicClientDevisPage() {
                   <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">{t("public.common.departure")} *</span>
                   <DateInput
                     value={client.departureDate}
-                    min={getMinDepartureDate(client.arrivalDate) || undefined}
+                    min={getMinDepartureDate(client.arrivalDate) || getCatalogueTodayYmd()}
                     onChange={(v) => {
                       updateClientField("departureDate", v);
                       if (isValidCatalogueStay({ arrivalDate: client.arrivalDate, departureDate: v })) {

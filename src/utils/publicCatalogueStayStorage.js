@@ -71,6 +71,14 @@ export function getMinDepartureDate(arrivalDate) {
   return `${y}-${m}-${day}`;
 }
 
+/** Date locale du jour en YYYY-MM-DD. */
+export function getCatalogueTodayYmd(now = new Date()) {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 /** @param {{ arrivalDate?: string, departureDate?: string }|null|undefined} stay */
 export function isSameDayCatalogueStay(stay) {
   const arrival = String(stay?.arrivalDate || "").trim();
@@ -92,12 +100,13 @@ export function isCatalogueStayTooShort(stay) {
   return departure < min;
 }
 
-/** Séjour exploitable : au moins 2 jours (arrivée le 18, départ au plus tôt le 20). */
+/** Séjour exploitable : arrivée ≥ aujourd’hui, départ au moins 2 jours après l’arrivée. */
 export function isValidCatalogueStay(stay) {
   const arrival = String(stay?.arrivalDate || "").trim();
   const departure = String(stay?.departureDate || "").trim();
+  const today = getCatalogueTodayYmd();
   const min = getMinDepartureDate(arrival);
-  return Boolean(arrival && departure && min && departure >= min);
+  return Boolean(arrival && departure && min && arrival >= today && departure >= min);
 }
 
 /**

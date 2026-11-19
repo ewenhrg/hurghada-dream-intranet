@@ -1826,8 +1826,21 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
               {gallerySlides.map((slide, i) => (
                 <div key={i} data-hero-img={i === 0 ? "" : undefined} className="relative h-full min-w-full shrink-0 snap-center overflow-hidden bg-catalog-mist">
                   {slide.kind === "image" ? (
-                    <button type="button" onClick={() => openLightboxAt(i)} className="block h-full w-full" aria-label="Agrandir la photo">
-                      <div data-kenburns className="h-full w-full">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openLightboxAt(i)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openLightboxAt(i);
+                        }
+                      }}
+                      className="block h-full w-full cursor-pointer"
+                      style={{ touchAction: "pan-x pan-y" }}
+                      aria-label="Agrandir la photo"
+                    >
+                      <div data-kenburns className="h-full w-full pointer-events-none">
                         <CatalogPhotoFrame
                           src={slide.url}
                           loading={i === 0 ? "eager" : "lazy"}
@@ -1835,7 +1848,7 @@ export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
                           sizes="(max-width: 768px) 100vw, 60vw"
                         />
                       </div>
-                    </button>
+                    </div>
                   ) : (
                     <div className="h-full w-full bg-catalog-lagoonSoft" />
                   )}

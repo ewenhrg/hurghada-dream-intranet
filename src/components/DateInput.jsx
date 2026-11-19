@@ -39,6 +39,14 @@ function parseTypedDate(input) {
   return "";
 }
 
+/** true si YYYY-MM-DD est dans [min, max] (bornes optionnelles). */
+function isWithinDateBounds(ymd, min, max) {
+  if (!ymd) return false;
+  if (min && ymd < min) return false;
+  if (max && ymd > max) return false;
+  return true;
+}
+
 /**
  * Champ date : saisie au clavier (JJ/MM/AAAA ou AAAA-MM-JJ) OU sélection via le calendrier.
  * La valeur est toujours stockée en AAAA-MM-JJ pour que le bouton Auto-dates fonctionne.
@@ -78,9 +86,9 @@ export function DateInput({
         return;
       }
       const parsed = parseTypedDate(formatted);
-      if (parsed) emit(parsed);
+      if (parsed && isWithinDateBounds(parsed, min, max)) emit(parsed);
     },
-    [emit]
+    [emit, min, max]
   );
 
   const handleBlur = useCallback(
@@ -91,25 +99,25 @@ export function DateInput({
         return;
       }
       const parsed = parseTypedDate(raw);
-      if (parsed) {
+      if (parsed && isWithinDateBounds(parsed, min, max)) {
         emit(parsed);
         setText(formatForDisplay(parsed));
       } else {
         setText(value ? formatForDisplay(value) : "");
       }
     },
-    [emit, value]
+    [emit, value, min, max]
   );
 
   const handleNativeChange = useCallback(
     (e) => {
       const v = e.target.value;
-      if (v) {
+      if (v && isWithinDateBounds(v, min, max)) {
         emit(v);
         setText(formatForDisplay(v));
       }
     },
-    [emit]
+    [emit, min, max]
   );
 
   const openCalendar = useCallback(() => {

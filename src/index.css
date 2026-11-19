@@ -379,15 +379,20 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   touch-action: manipulation;
   scale: var(--hdc-press, 1);
 }
-/* Le bandeau d’hôtels ne doit pas avaler le scroll vertical de la page. */
-.hd-public-catalog .hdc-hotel-rail {
-  touch-action: pan-y;
+/* Rails / carrousels : le swipe doit passer à travers les boutons (chips, hôtels, galerie). */
+.hd-public-catalog .hdc-chip-rail,
+.hd-public-catalog .hdc-hotel-rail,
+.hd-public-catalog [data-hero-media] .overflow-x-auto {
+  touch-action: pan-x pan-y;
   overscroll-behavior-x: contain;
-  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
+.hd-public-catalog .hdc-chip-rail button,
+.hd-public-catalog .hdc-chip-rail [data-press],
+.hd-public-catalog .hdc-hotel-rail button,
 .hd-public-catalog .hdc-hotel-rail [data-press],
-.hd-public-catalog .hdc-hotel-rail button {
-  touch-action: pan-y;
+.hd-public-catalog [data-hero-media] button {
+  touch-action: pan-x pan-y;
 }
 .hd-public-catalog .hdc-hotel-rail button:active {
   transform: none;

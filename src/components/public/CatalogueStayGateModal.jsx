@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { getEarliestBookableActivityDateYmd } from "../../utils/activityAvailableDates";
 import {
+  getCatalogueTodayYmd,
   getMinDepartureDate,
   isSameDayCatalogueStay,
   isValidCatalogueStay,
@@ -54,13 +55,7 @@ export function CatalogueStayGateModal({
 
   if (!open) return null;
 
-  const todayYmd = (() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  })();
+  const todayYmd = getCatalogueTodayYmd();
   const earliestActivity = getEarliestBookableActivityDateYmd();
   const sameDaySelected = isSameDayCatalogueStay({ arrivalDate, departureDate });
   const earliestLabel = new Date(`${earliestActivity}T12:00:00`).toLocaleDateString(publicLocale(language), {
@@ -78,6 +73,10 @@ export function CatalogueStayGateModal({
     };
     if (!stay.arrivalDate || !stay.departureDate) {
       setError(t("public.stayGate.err.missing"));
+      return;
+    }
+    if (stay.arrivalDate < todayYmd || stay.departureDate < todayYmd) {
+      setError(t("public.stayGate.err.past"));
       return;
     }
     if (isSameDayCatalogueStay(stay)) {
