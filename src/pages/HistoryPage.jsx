@@ -17,7 +17,7 @@ import {
   uuid,
 } from "../utils";
 import { generateQuoteHTML, generateTicketsHTML } from "../utils/printTemplates";
-import { quoteHtmlToPdfBlob, savePdfBlob } from "../utils/quotePdfDownload";
+import { openQuotePrintDocument } from "../utils/quotePdfDownload";
 import { setVisibilityAwareInterval } from "../utils/idle";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem, requiresPickupTimeChoice, resolveActivityFromList } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
@@ -436,37 +436,25 @@ function QuoteCardComponent({
     const htmlContent = generateQuoteHTML(d);
     const clientPhone = formatPhoneWithPlus(d.client?.phone);
     const fileName = `Devis - ${clientPhone}`;
-    const newWindow = window.open();
-    if (newWindow) {
-      newWindow.document.write(htmlContent);
-      newWindow.document.title = fileName;
-      newWindow.document.close();
-      setTimeout(() => {
-        newWindow.print();
-      }, 500);
+    const result = openQuotePrintDocument(htmlContent, fileName);
+    if (result.blocked) {
+      toast.error("Autorisez les pop-ups pour imprimer le devis.");
     }
   }, [d]);
 
-  /** Enregistre le devis en PDF via l’explorateur (sans ouvrir d’autre page). */
-  const handleDownloadClick = useCallback(async () => {
-    const phone = String(formatPhoneWithPlus(d.client?.phone) || "")
-      .replace(/[^\d+]/g, "")
-      .slice(0, 20);
-    const namePart = String(d.client?.name || d.reservationCode || d.id || "devis")
-      .replace(/[^\w\-]+/g, "_")
-      .slice(0, 40);
-    const suggestedName = `Devis-${phone || namePart}.pdf`;
-
-    try {
-      const htmlContent = generateQuoteHTML(d);
-      const blob = await quoteHtmlToPdfBlob(htmlContent);
-      const result = await savePdfBlob(blob, suggestedName);
-      if (result.aborted) return;
-      if (result.ok) toast.success("PDF enregistré.");
-    } catch (err) {
-      logger.warn("HistoryPage download PDF:", err);
-      toast.error("Impossible de générer le PDF du devis.");
+  /**
+   * Même document et même impression que le bouton Imprimer.
+   * Destination « Enregistrer au format PDF » = fichier strictement identique.
+   */
+  const handleDownloadClick = useCallback(() => {
+    const htmlContent = generateQuoteHTML(d);
+    const clientPhone = formatPhoneWithPlus(d.client?.phone);
+    const result = openQuotePrintDocument(htmlContent, `Devis - ${clientPhone}`);
+    if (result.blocked) {
+      toast.error("Autorisez les pop-ups pour télécharger le devis.");
+      return;
     }
+    toast.info("Choisissez « Enregistrer au format PDF » — même devis que Imprimer.");
   }, [d]);
 
   const openTicketsWindow = useCallback((quoteForTickets) => {
@@ -480,6 +468,59 @@ function QuoteCardComponent({
       newWindow.document.close();
     }
   }, [activities]);
+
+  /** Ouvre la page ticket (HTML imprimable / PDF) pour une seule ligne. */
+  const openSingleTicketWindow = useCallback(
+    (lineItem, lineIndex) => {
+      const rawQuote = resolveQuoteById(quotes, d.id) || d;
+      const items = Array.isArray(rawQuote.items) ? rawQuote.items : [];
+      const wanted = String(lineItem?.ticketNumber || "").trim().toLowerCase();
+      if (!wanted) {
+        toast.error("Numéro de ticket manquant.");
+        return;
+      }
+
+      let item = null;
+      if (
+        Number.isInteger(lineIndex) &&
+        lineIndex >= 0 &&
+        lineIndex < items.length &&
+        String(items[lineIndex]?.ticketNumber || "").trim().toLowerCase() === wanted
+      ) {
+        item = items[lineIndex];
+      }
+      if (!item) {
+        item = items.find(
+          (it) => String(it?.ticketNumber || "").trim().toLowerCase() === wanted
+        );
+      }
+      if (!item && lineItem) {
+        item = lineItem;
+      }
+      if (!item) {
+        toast.error("Ligne ticket introuvable sur le devis.");
+        return;
+      }
+
+      const htmlContent = generateTicketsHTML(
+        {
+          ...rawQuote,
+          items: [item],
+        },
+        { activities }
+      );
+      const fileName = `Ticket - ${String(item.ticketNumber || wanted).trim()}`;
+      const newWindow = window.open();
+      if (!newWindow) {
+        toast.error("Impossible d’ouvrir le ticket (popup bloquée).");
+        return;
+      }
+      newWindow.document.write(htmlContent);
+      newWindow.document.title = fileName;
+      newWindow.document.close();
+    },
+    [quotes, d, activities]
+  );
 
   const openTicketModal = useCallback(async () => {
     const rawQuote = resolveQuoteById(quotes, d.id) || d;
@@ -1313,24 +1354,21 @@ function QuoteCardComponent({
                       ) : null}
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-slate-200/50 pt-3 md:border-t-0 md:pt-0 md:flex-col md:items-end md:justify-center md:min-w-[7.5rem]">
-                    <span className="text-base md:text-lg font-bold tabular-nums bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent whitespace-nowrap">
-                      Espèce {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
-                    </span>
-                    {li.ticketNumber && li.ticketNumber.trim() !== "" && (
+                  {li.ticketNumber && li.ticketNumber.trim() !== "" ? (
+                    <div className="flex shrink-0 flex-row items-center justify-end gap-3 border-t border-slate-200/50 pt-3 md:border-t-0 md:pt-0 md:flex-col md:items-end md:justify-center">
                       <button
                         type="button"
-                        className="max-w-full truncate whitespace-nowrap border-0 bg-transparent p-0 text-xs font-bold text-slate-900 underline underline-offset-2 hover:text-slate-700"
+                        className="max-w-full truncate whitespace-nowrap border-0 bg-transparent p-0 text-sm font-bold text-slate-900 underline underline-offset-2 hover:text-indigo-700"
                         onClick={(e) => {
                           e.stopPropagation();
-                          openTicketModal();
+                          openSingleTicketWindow(li, i);
                         }}
-                        title="Ouvrir le ticket"
+                        title="Ouvrir / imprimer ce ticket"
                       >
                         {li.ticketNumber}
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
