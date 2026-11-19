@@ -172,19 +172,19 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
 
       {backTo ? <div aria-hidden className="h-[calc(max(0.35rem,env(safe-area-inset-top))+3.25rem)] shrink-0" /> : null}
 
-      <div className="relative flex-1 pb-[env(safe-area-inset-bottom)]">
-        {backTo ? null : (
-          <div className={`relative mx-auto flex items-center justify-center gap-3 px-4 pb-1.5 pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-6 ${nav ? "hdc-homebar lg:justify-between" : ""} ${inner}`}>
+      {backTo ? null : (
+        <header className="hdc-homebar fixed inset-x-0 top-0 z-50">
+          <div className={`relative mx-auto flex w-full items-center justify-center gap-3 px-4 pb-3 pt-[max(0.85rem,env(safe-area-inset-top))] sm:gap-6 sm:pb-4 lg:justify-between ${inner}`}>
             <img
               src="/client/logo-wordmark.png"
               alt="Hurghada Dream"
               width={468}
               height={158}
-              className="hdc-wordmark h-[1.05rem] w-auto max-w-[5.75rem] object-contain lg:h-[1.65rem] lg:max-w-[9.5rem]"
+              className="hdc-wordmark object-contain"
             />
-            {nav ? <div className="hidden lg:block">{nav}</div> : null}
+            {nav ? <div className="hdc-homebar-nav hidden lg:block">{nav}</div> : null}
             <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-2 sm:right-4 lg:static lg:translate-y-0">
-              <PublicLanguageToggle compact />
+              <PublicLanguageToggle compact className="hdc-homebar-lang" />
               {onHome ? (
                 <button
                   type="button"
@@ -193,16 +193,19 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
                   aria-expanded={menuOpen}
                   aria-controls="client-home-menu"
                   onClick={() => setMenuOpen(true)}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-catalog-ink ring-1 ring-catalog-border sm:h-11 sm:w-11"
+                  className="hdc-homebar-menu inline-flex h-12 w-12 items-center justify-center rounded-full text-white sm:h-12 sm:w-12"
                 >
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
                     <path d="M4 7h16M4 12h16M4 17h16" />
                   </svg>
                 </button>
               ) : null}
             </div>
           </div>
-        )}
+        </header>
+      )}
+
+      <div className="relative flex-1 pb-[env(safe-area-inset-bottom)]">
         {children}
       </div>
 

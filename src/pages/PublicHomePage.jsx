@@ -102,11 +102,6 @@ function HeroReel({ reel, playing }) {
   );
 }
 
-function greeting(t) {
-  const h = new Date().getHours();
-  return h < 5 || h >= 18 ? t("public.home.helloEvening") : t("public.home.helloMorning");
-}
-
 function WeatherIcon({ code, className }) {
   const c = Number(code);
   if (c === 0) return <Sun className={className} strokeWidth={1.75} aria-hidden />;
@@ -118,10 +113,10 @@ function WeatherIcon({ code, className }) {
 }
 
 /** Le titre ne doit pas être réécrit par React pendant que GSAP le découpe en mots. */
-const HeroTitle = memo(function HeroTitle({ hello, welcome, titleEnd }) {
+const HeroTitle = memo(function HeroTitle({ before, accent, after }) {
   return (
     <h1 data-hero-title className="hdc-hero-title mt-3 text-[2.85rem] leading-[1.05] !text-white sm:text-6xl lg:max-w-5xl lg:text-[5.25rem]">
-      {hello}, <span className="hdc-hero-accent text-catalog-sand">{welcome}</span> {titleEnd}
+      {before} <span className="hdc-hero-accent text-catalog-sand">{accent}</span> {after}
     </h1>
   );
 });
@@ -145,7 +140,6 @@ export function PublicHomePage() {
   const [heroReels, setHeroReels] = useState(() => playableReels(readCachedReels()));
   const [reelsSettled, setReelsSettled] = useState(() => playableReels(readCachedReels()).length >= 1);
   const weather = useHurghadaWeather();
-  const hello = useMemo(() => greeting(t), [language, t]);
   const heroRef = useRef(null);
   const heroScrollRef = useRef(null);
   const railRef = useRef(null);
@@ -384,7 +378,7 @@ export function PublicHomePage() {
         <Link
           key={to}
           to={to}
-          className="inline-flex min-h-11 items-center rounded-full px-3.5 text-sm font-semibold text-catalog-ink hover:bg-white"
+          className="inline-flex min-h-12 items-center rounded-full px-3.5 text-[0.9375rem] font-semibold"
         >
           {t(labelKey)}
         </Link>
@@ -422,9 +416,10 @@ export function PublicHomePage() {
               {t("public.home.eyebrow")}
             </p>
             <HeroTitle
-              hello={hello}
-              welcome={t("public.home.welcome")}
-              titleEnd={t("public.home.heroTitleEnd")}
+              key={language}
+              before={t("public.home.heroTitleBefore")}
+              accent={t("public.home.heroTitleAccent")}
+              after={t("public.home.heroTitleAfter")}
             />
             <p data-hero-sub className="mt-3 max-w-xs text-[0.9375rem] leading-relaxed text-white/85 lg:max-w-xl lg:text-lg">
               {t("public.home.heroSub")}

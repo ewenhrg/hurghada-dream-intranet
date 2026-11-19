@@ -270,11 +270,51 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   width: auto;
   max-width: 5.75rem;
 }
+
+/* Accueil : header plus grand, transparent, posé sur la vidéo. */
+.hd-public-catalog .hdc-homebar {
+  background: transparent;
+  pointer-events: none;
+}
+.hd-public-catalog .hdc-homebar > * {
+  pointer-events: auto;
+}
+.hd-public-catalog .hdc-homebar .hdc-wordmark {
+  height: 1.55rem;
+  max-width: 8.5rem;
+  filter: brightness(0) invert(1) drop-shadow(0 1px 8px rgba(8, 36, 46, 0.35));
+}
 @media (min-width: 1024px) {
   .hd-public-catalog .hdc-homebar .hdc-wordmark {
-    height: 1.65rem;
-    max-width: 9.5rem;
+    height: 2.15rem;
+    max-width: 12rem;
   }
+}
+.hd-public-catalog .hdc-homebar-menu {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.hd-public-catalog .hdc-homebar-lang {
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.hd-public-catalog .hdc-homebar-lang button {
+  color: rgba(255, 255, 255, 0.78);
+}
+.hd-public-catalog .hdc-homebar-lang button[aria-pressed="true"] {
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #0f2a33 !important;
+}
+.hd-public-catalog .hdc-homebar-nav a {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+.hd-public-catalog .hdc-homebar-nav a:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
 }
 
 .hd-public-catalog .hdc-btn {
@@ -398,14 +438,13 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   transform: none;
   opacity: 1;
 }
-/* Accueil : le premier écran est une fente de mer tant que l’ouverture n’a pas joué. */
+/* Accueil : hero plein écran sous le header transparent. */
 .hd-public-catalog .hdc-hero-screen {
-  height: calc(100svh - 2.75rem - env(safe-area-inset-top, 0px));
+  height: 100svh;
   min-height: 34rem;
 }
 @media (min-width: 1024px) {
   .hd-public-catalog .hdc-hero-screen {
-    height: calc(100svh - 4rem);
     min-height: 40rem;
   }
 }

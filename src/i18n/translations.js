@@ -205,6 +205,9 @@ export const translations = {
     "public.home.helloEvening": "Good evening",
     "public.home.welcome": "welcome",
     "public.home.heroTitleEnd": "to the Red Sea.",
+    "public.home.heroTitleBefore": "Hurghada's",
+    "public.home.heroTitleAccent": "#1",
+    "public.home.heroTitleAfter": "activities agency",
     "public.home.heroSub":
       "Exceptional hotels, private excursions and your stay orchestrated by the local reference.",
     "public.home.eyebrow": "Hurghada · Red Sea",
@@ -248,6 +251,9 @@ Object.assign(translations.fr, {
   "public.home.helloEvening": "Bonsoir",
   "public.home.welcome": "bienvenue",
   "public.home.heroTitleEnd": "en mer Rouge.",
+  "public.home.heroTitleBefore": "Agence",
+  "public.home.heroTitleAccent": "n°1",
+  "public.home.heroTitleAfter": "des activités à Hurghada",
   "public.home.heroSub":
     "Hôtels d’exception, excursions privées et votre séjour orchestré par la référence locale.",
   "public.home.eyebrow": "Hurghada · Mer Rouge",
