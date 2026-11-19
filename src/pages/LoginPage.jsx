@@ -98,7 +98,7 @@ export function LoginPage({ onSuccess }) {
           const writerAuth = await establishSupabaseWriterSession(supabase, { ...dbUser, code }, code);
           if (writerAuth.missingEmail) {
             toast.warning(
-              "Compte Ewen/Léa/Sophia/Karim : définissez intranet_auth_email pour gérer utilisateurs et activités."
+              "Compte Ewen/Sophia/Karim : définissez intranet_auth_email pour gérer utilisateurs et activités."
             );
           } else if (writerAuth.error) {
             toast.warning(

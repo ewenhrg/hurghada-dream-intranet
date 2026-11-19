@@ -7,7 +7,7 @@ export function isIntranetDatabaseWriterName(name) {
 }
 
 /**
- * Après login par code sur public.users : ouvre une session JWT pour Ewen/Léa/Sophia/Karim si intranet_auth_email est défini.
+ * Après login par code sur public.users : ouvre une session JWT pour Ewen/Sophia/Karim si intranet_auth_email est défini.
  * Mot de passe Auth = code à 6 chiffres (à synchroniser avec Supabase Dashboard si le code change).
  */
 export async function establishSupabaseWriterSession(supabase, dbUserRow, sixDigitCode) {
@@ -20,7 +20,7 @@ export async function establishSupabaseWriterSession(supabase, dbUserRow, sixDig
   const email = String(dbUserRow.intranet_auth_email || "").trim();
   if (!email) {
     logger.warn(
-      "Intranet : Ewen/Léa/Sophia/Karim sans colonne intranet_auth_email — pas de session Auth (écritures users/activities bloquées par RLS)."
+      "Intranet : Ewen/Sophia/Karim sans colonne intranet_auth_email — pas de session Auth (écritures users/activities bloquées par RLS)."
     );
     return { ok: true, skipped: true, missingEmail: true };
   }
@@ -80,13 +80,13 @@ export async function ensureIntranetWriterSession(supabase, sessionUser, { force
 export function writerSessionFailureToast(reason) {
   switch (reason) {
     case "missing_email":
-      return "Suppression impossible : compte sans intranet_auth_email. Configurez l’email Auth Supabase pour Ewen/Léa/Sophia/Karim.";
+      return "Suppression impossible : compte sans intranet_auth_email. Configurez l’email Auth Supabase pour Ewen/Sophia/Karim.";
     case "missing_code":
       return "Suppression impossible : code session manquant. Reconnectez-vous.";
     case "auth_failed":
       return "Session admin base refusée : vérifiez que le mot de passe Auth Supabase = le code à 6 chiffres, puis reconnectez-vous.";
     case "not_writer":
-      return "Seuls Ewen, Léa, Sophia et Karim peuvent supprimer les activités.";
+      return "Seuls Ewen, Sophia et Karim peuvent supprimer les activités.";
     default:
       return "Suppression impossible : session administrateur base indisponible. Reconnectez-vous.";
   }

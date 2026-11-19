@@ -155,15 +155,14 @@ export function normalizeIntranetUserName(name) {
  */
 export function hasFullIntranetAccess(user) {
   const n = normalizeIntranetUserName(user?.name);
-  return n === "ewen" || n === "lea" || n === "sophia" || n === "karim";
+  return n === "ewen" || n === "sophia" || n === "karim";
 }
 
 /**
- * Console secrète `/superadmin` — pas de case Users, pas de bouton nav.
- * Réservée à l’équipe cœur (général managers / ultra admin).
+ * @deprecated Accès SuperAdmin = Auth e-mail/mot de passe (voir SuperAdminGate), plus le PIN intranet.
  */
-export function canAccessSuperAdminPage(user) {
-  return hasFullIntranetAccess(user);
+export function canAccessSuperAdminPage(_user) {
+  return false;
 }
 
 function readAccessFlag(user, formKey) {
@@ -226,10 +225,10 @@ export function canAccessHotelHistoryPage(user) {
   return readAccessFlag(user, "canAccessHotelHistory");
 }
 
-/** Modifier / supprimer une ligne ticket (page Tickets) — Ewen, Karim et Léa. */
+/** Modifier / supprimer une ligne ticket (page Tickets) — Ewen et Karim. */
 export function canManageTicketLines(user) {
   const n = normalizeIntranetUserName(user?.name);
-  return n === "ewen" || n === "karim" || n === "lea";
+  return n === "ewen" || n === "karim";
 }
 
 /** Modifier les n° de ticket auto-attribués au paiement — Ewen et Karim uniquement. */

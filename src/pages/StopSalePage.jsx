@@ -119,7 +119,7 @@ export function StopSalePage({ activities, user }) {
 
   async function handleAdd() {
     if (!canEdit) {
-      toast.warning("Seuls Ewen, Léa, Sophia, Karim et Situation peuvent ajouter des stop sales/push sales.");
+      toast.warning("Seuls Ewen, Sophia, Karim et Situation peuvent ajouter des stop sales/push sales.");
       return;
     }
 
@@ -261,7 +261,7 @@ export function StopSalePage({ activities, user }) {
 
   async function handleDelete(id, isStopSale) {
     if (!canEdit) {
-      toast.warning("Seuls Ewen, Léa, Sophia, Karim et Situation peuvent supprimer des stop sales/push sales.");
+      toast.warning("Seuls Ewen, Sophia, Karim et Situation peuvent supprimer des stop sales/push sales.");
       return;
     }
 

@@ -9,9 +9,14 @@ export function LanguageProvider({ children }) {
     return loadLS("hd_language", "fr");
   });
 
-  // Sauvegarder la langue dans localStorage quand elle change
+  // Sauvegarder la langue + attribut HTML (SEO / accessibilité)
   useEffect(() => {
     saveLS("hd_language", language);
+    try {
+      document.documentElement.lang = language === "en" ? "en" : "fr";
+    } catch {
+      /* ignore */
+    }
   }, [language]);
 
   const value = {

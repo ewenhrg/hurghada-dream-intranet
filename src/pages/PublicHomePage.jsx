@@ -31,6 +31,7 @@ import {
   useHeroArrival,
 } from "../components/public/motion";
 import { useHurghadaWeather } from "../hooks/useHurghadaWeather";
+import { useTranslation } from "../hooks/useTranslation";
 import { normalizeReservationCode, saveStayCode } from "../utils/clientStay";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
 
@@ -121,9 +122,9 @@ function reservationCodeFromInput(raw) {
   return match ? `${match[1]}-${match[2]}` : normalizeReservationCode(raw);
 }
 
-function greeting() {
+function greeting(t) {
   const h = new Date().getHours();
-  return h < 5 || h >= 18 ? "Bonsoir" : "Bonjour";
+  return h < 5 || h >= 18 ? t("public.home.helloEvening") : t("public.home.helloMorning");
 }
 
 function WeatherIcon({ code, className }) {
@@ -137,10 +138,10 @@ function WeatherIcon({ code, className }) {
 }
 
 /** Le titre ne doit pas être réécrit par React pendant que GSAP le découpe en mots. */
-const HeroTitle = memo(function HeroTitle({ hello }) {
+const HeroTitle = memo(function HeroTitle({ hello, welcome, titleEnd }) {
   return (
     <h1 data-hero-title className="hdc-hero-title mt-3 text-[2.85rem] leading-[1.05] !text-white sm:text-6xl lg:max-w-5xl lg:text-[5.25rem]">
-      {hello}, <span className="hdc-hero-accent text-catalog-sand">bienvenue</span> en mer Rouge.
+      {hello}, <span className="hdc-hero-accent text-catalog-sand">{welcome}</span> {titleEnd}
     </h1>
   );
 });
@@ -159,11 +160,12 @@ function GlassChip({ children }) {
 
 export function PublicHomePage() {
   const navigate = useNavigate();
+  const { t, language } = useTranslation();
   const [hotels, setHotels] = useState([]);
   const [heroReels, setHeroReels] = useState(() => playableReels(readCachedReels()));
   const [reelsSettled, setReelsSettled] = useState(() => playableReels(readCachedReels()).length >= 3);
   const weather = useHurghadaWeather();
-  const hello = useMemo(() => greeting(), []);
+  const hello = useMemo(() => greeting(t), [language, t]);
   const [stayCode, setStayCode] = useState("");
   const [stayCodeError, setStayCodeError] = useState("");
   const heroRef = useRef(null);
@@ -332,10 +334,23 @@ export function PublicHomePage() {
     };
   }, [heroClear, phone]);
 
-  const actions = [
-    { to: "/catalogue", title: "Excursions", subtitle: "Mer, désert, Louxor", image: TILE_EXCURSIONS },
-    { to: "/hotels", title: "Hôtels", subtitle: "All inclusive, en bord de mer", image: hotelPhoto || HERO_IMAGE },
-  ];
+  const actions = useMemo(
+    () => [
+      {
+        to: "/catalogue",
+        title: t("public.home.tileExcursions"),
+        subtitle: t("public.home.tileExcursionsSub"),
+        image: TILE_EXCURSIONS,
+      },
+      {
+        to: "/hotels",
+        title: t("public.home.tileHotels"),
+        subtitle: t("public.home.tileHotelsSub"),
+        image: hotelPhoto || HERO_IMAGE,
+      },
+    ],
+    [t, language, hotelPhoto]
+  );
 
   useHeroArrival(heroRef);
 
@@ -425,30 +440,30 @@ export function PublicHomePage() {
   };
 
   const desktopNav = (
-    <nav aria-label="Navigation" className="flex items-center gap-1">
+    <nav aria-label={t("public.home.navigation")} className="flex items-center gap-1">
       {[
-        ["/modification", "Modification / annulation"],
-        ["/catalogue", "Excursions"],
-        ["/hotels", "Hôtels"],
-        ["/sejour", "Mon séjour"],
-        ["/evenements", "Événements"],
-        ["/contacts", "Contacts"],
-        ["/qui-sommes-nous", "Qui sommes-nous"],
-        ["/politique", "Remboursement"],
-      ].map(([to, label]) => (
+        ["/modification", "public.nav.modification"],
+        ["/catalogue", "public.nav.excursions"],
+        ["/hotels", "public.nav.hotels"],
+        ["/sejour", "public.nav.stay"],
+        ["/evenements", "public.nav.events"],
+        ["/contacts", "public.nav.contacts"],
+        ["/qui-sommes-nous", "public.nav.about"],
+        ["/politique", "public.nav.refund"],
+      ].map(([to, labelKey]) => (
         <Link
           key={to}
           to={to}
           className="inline-flex min-h-11 items-center rounded-full px-3.5 text-sm font-semibold text-catalog-ink hover:bg-white"
         >
-          {label}
+          {t(labelKey)}
         </Link>
       ))}
     </nav>
   );
 
   return (
-    <PublicAppShell title="Accueil" wide="xl" nav={desktopNav}>
+    <PublicAppShell title={t("public.home")} wide="xl" nav={desktopNav}>
       {/* ——— Hero « horizon » ——— */}
       <section ref={heroRef} className="hdc-hero-screen relative">
         {/* Grand bleu derrière l’ouverture : l’horizon se trace sur la mer avant que l’image s’ouvre. */}
@@ -481,25 +496,31 @@ export function PublicHomePage() {
             <div className="lg:mx-auto lg:max-w-7xl lg:px-8">
             <p data-hero-eyebrow className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-white/85">
               <span data-hero-rule className="h-px w-6 origin-left bg-catalog-sand" />
-              Hurghada · Mer Rouge
+              {t("public.home.eyebrow")}
             </p>
-            <HeroTitle hello={hello} />
+            <HeroTitle
+              hello={hello}
+              welcome={t("public.home.welcome")}
+              titleEnd={t("public.home.heroTitleEnd")}
+            />
             <p data-hero-sub className="mt-3 max-w-xs text-[0.9375rem] leading-relaxed text-white/85 lg:max-w-xl lg:text-lg">
-              Hôtels d’exception, excursions privées et votre séjour orchestré par la référence locale.
+              {t("public.home.heroSub")}
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <GlassChip>
                 <WeatherIcon code={weather?.code ?? 1} className="h-4 w-4" />
                 <span className="tabular-nums">{weather ? `${weather.celsius}°` : "—"}</span>
-                <span className="font-medium text-white/80">{weather?.label ?? "Météo"}</span>
+                <span className="font-medium text-white/80">{weather?.label ?? t("public.home.weather")}</span>
               </GlassChip>
               <GlassChip>
                 <Hotel className="h-4 w-4" strokeWidth={1.75} aria-hidden />
-                {hotels.length ? `${hotels.length} hôtels sélectionnés` : "Hôtels sélectionnés"}
+                {hotels.length
+                  ? t("public.home.hotelsSelected", { count: hotels.length })
+                  : t("public.home.hotelsSelectedFallback")}
               </GlassChip>
               <GlassChip>
                 <Headset className="h-4 w-4" strokeWidth={1.75} aria-hidden />
-                Équipe française 7j/7
+                {t("public.home.frenchTeam")}
               </GlassChip>
             </div>
             <form
@@ -508,7 +529,7 @@ export function PublicHomePage() {
                 event.preventDefault();
                 const formatted = reservationCodeFromInput(stayCode);
                 if (!/^[A-Z]{2}-\d{3,}$/.test(formatted)) {
-                  setStayCodeError("Exemple : HU-10042");
+                  setStayCodeError(t("public.home.stayCodeError"));
                   return;
                 }
                 setStayCodeError("");
@@ -517,7 +538,7 @@ export function PublicHomePage() {
               }}
             >
               <label className="block text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-white/80">
-                Numéro de réservation
+                {t("public.home.stayCodeLabel")}
               </label>
               <div className="mt-2 flex gap-2">
                 <span className="relative min-w-0 flex-1">
@@ -534,7 +555,7 @@ export function PublicHomePage() {
                       setStayCodeError("");
                     }}
                     placeholder="HU-10042"
-                    aria-label="Numéro de réservation"
+                    aria-label={t("public.home.stayCodeLabel")}
                     className="h-12 w-full rounded-full border border-white/30 bg-white/95 pl-10 pr-4 text-base font-semibold uppercase tracking-wide text-catalog-ink outline-none placeholder:font-medium placeholder:normal-case placeholder:tracking-normal placeholder:text-catalog-muted focus:border-white"
                   />
                 </span>
@@ -543,7 +564,7 @@ export function PublicHomePage() {
                   data-press
                   className="inline-flex h-12 shrink-0 items-center rounded-full bg-catalog-sand px-4 text-sm font-semibold text-catalog-abyss"
                 >
-                  Voir
+                  {t("public.home.stayCodeView")}
                 </button>
               </div>
               <p className={`mt-2 text-xs ${stayCodeError ? "text-catalog-sand" : "text-white/75"}`} role={stayCodeError ? "alert" : undefined}>

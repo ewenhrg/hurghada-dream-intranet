@@ -32,7 +32,6 @@ import {
   canManageClientFlyer,
   canSendStayBroadcast,
   canVoidTicketNumbers,
-  canAccessSuperAdminPage,
   hasFullIntranetAccess,
 } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, saveQuotesCache, loadLS, normalizeQuoteItemsFromDb } from "./utils";
@@ -73,7 +72,6 @@ import {
   ManualQuotesHistoryPage,
   ModificationRequestsPage,
   VoidTicketNumbersPage,
-  SuperAdminPage,
   prefetchIntranetTab,
 } from "./config/lazyPages";
 import { Pill, GhostBtn, Section } from "./components/ui";
@@ -99,7 +97,7 @@ import { normalizeCatalogImageUrlsFromDb } from "./utils/catalogContent";
 import { HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, buildQuoteDraftFromExistingQuote } from "./utils/publicQuoteToDraft";
 import { isPublicClientPath, isSuperAdminPath } from "./config/clientApp";
 import { PublicClientRoutes } from "./PublicClientRoutes";
-import { SuperAdminForbidden } from "./pages/SuperAdminForbidden";
+import { SuperAdminGate } from "./pages/SuperAdminGate";
 
 const RECEIPT_QUOTE_SELECT =
   "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, client_has_second_hotel, client_second_hotel, client_second_room, client_second_neighborhood, client_second_arrival_date, client_second_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, source, items, total, currency, paid_stripe, paid_cash, reservation_code, client_documents, client_is_airbnb, client_airbnb_maps_url";
@@ -280,7 +278,7 @@ export default function App() {
     if (isPublicClientRoute) clearToasts();
   }, [isPublicClientRoute, location.pathname]);
 
-  /** Historique hôtel : Amr, Karim, Ewen, Sara, Mayar, Léa uniquement. */
+  /** Historique hôtel : Amr, Karim, Ewen, Sara, Mayar. */
   useEffect(() => {
     if (!user || tab !== "historique-hotel") return;
     if (!canAccessHotelHistoryPage(user)) {
@@ -356,7 +354,7 @@ export default function App() {
     }
   }, [user, tab]);
 
-  /** Contenu catalogue public : accès complet (Ewen / Léa / Sophia / Karim) ou éditeurs. */
+  /** Contenu catalogue public : accès complet (Ewen / Sophia / Karim) ou éditeurs. */
   useEffect(() => {
     if (!user || tab !== "catalog-admin") return;
     if (
@@ -1454,23 +1452,9 @@ export default function App() {
   }
 
   if (isSuperAdminPath(location.pathname)) {
-    if (!ok) {
-      return <LoginPage onSuccess={handleLoginSuccess} />;
-    }
-    if (!canAccessSuperAdminPage(user)) {
-      return <SuperAdminForbidden user={user} onLogout={handleLogout} />;
-    }
+    // Accès indépendant du PIN intranet : e-mail + mot de passe Supabase Auth uniquement.
     return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoader />}>
-          <SuperAdminPage
-            user={user}
-            activities={activities}
-            setActivities={setActivities}
-            onLogout={handleLogout}
-          />
-        </Suspense>
-      </ErrorBoundary>
+      <SuperAdminGate activities={activities} setActivities={setActivities} />
     );
   }
 
@@ -1934,7 +1918,7 @@ export default function App() {
               title={t("page.catalogAdmin.title")}
               subtitle={
                 !hasFullIntranetAccess(user)
-                  ? "Consultation du catalogue public. Seuls Ewen, Léa, Sophia et Karim peuvent enregistrer des changements en base."
+                  ? "Consultation du catalogue public. Seuls Ewen, Sophia et Karim peuvent enregistrer des changements en base."
                   : t("page.catalogAdmin.subtitle")
               }
             >

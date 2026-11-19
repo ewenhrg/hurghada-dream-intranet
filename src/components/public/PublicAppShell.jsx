@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "@fontsource-variable/figtree";
 import "@fontsource-variable/fraunces/opsz.css";
 import "@fontsource-variable/fraunces/opsz-italic.css";
 import { publicBackPath } from "../../config/clientApp";
+import { useTranslation } from "../../hooks/useTranslation";
 import { PublicBackLink } from "./PublicBackLink";
+import { PublicLanguageToggle } from "./PublicLanguageToggle";
 import { useHeaderMorph, usePopOnChange, usePressFeedback, useScreenIntro, useScrollMotion } from "./motion";
 import { Sheet, SheetHeader } from "./PublicUI";
 
@@ -29,21 +31,21 @@ const SOCIALS = [
   },
 ];
 
-const HOME_MENU = [
-  { to: "/modification", label: "Modification / annulation" },
-  { to: "/catalogue", label: "Excursions" },
-  { to: "/hotels", label: "Hôtels" },
-  { to: "/sejour", label: "Mon séjour" },
-  { to: "/evenements", label: "Événements" },
-  { to: "/contacts", label: "Contacts" },
-  { to: "/qui-sommes-nous", label: "Qui sommes-nous" },
-  { to: "/politique", label: "Remboursement" },
-  { to: "/confidentialite", label: "Confidentialité" },
+const HOME_MENU_KEYS = [
+  { to: "/modification", labelKey: "public.nav.modification" },
+  { to: "/catalogue", labelKey: "public.nav.excursions" },
+  { to: "/hotels", labelKey: "public.nav.hotels" },
+  { to: "/sejour", labelKey: "public.nav.stay" },
+  { to: "/evenements", labelKey: "public.nav.events" },
+  { to: "/contacts", labelKey: "public.nav.contacts" },
+  { to: "/qui-sommes-nous", labelKey: "public.nav.about" },
+  { to: "/politique", labelKey: "public.nav.refund" },
+  { to: "/confidentialite", labelKey: "public.nav.privacy" },
 ];
 
-const B2B_MENU = [
-  { to: "/b2b", label: "Connexion B2B" },
-  { to: "/b2b?demande=1", label: "Demander un accès B2B" },
+const B2B_MENU_KEYS = [
+  { to: "/b2b", labelKey: "public.nav.b2bLogin" },
+  { to: "/b2b?demande=1", labelKey: "public.nav.b2bRequest" },
 ];
 
 function SocialMark({ path }) {
@@ -86,6 +88,7 @@ export function GuestHeaderButton({ onClick, count, children, ariaLabel }) {
  */
 export function PublicAppShell({ title, headerTitle, right, children, wide = false, revealKey, nav = null }) {
   const { pathname } = useLocation();
+  const { t, language } = useTranslation();
   const backTo = publicBackPath(pathname);
   // `wide="xl"` : catalogue excursions (contenu en max-w-7xl), aligne le header sur la grille.
   const inner = wide === "xl" ? "max-w-7xl lg:px-8" : wide ? "max-w-6xl" : "max-w-lg";
@@ -95,6 +98,18 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
   const onHome = !backTo;
   /** Titre sticky : `headerTitle=""` pour le masquer (ex. page politique déjà titrée en H1). */
   const stickyTitle = headerTitle === undefined ? title : headerTitle;
+  const homeMenu = useMemo(
+    () => HOME_MENU_KEYS.map((item) => ({ ...item, label: t(item.labelKey) })),
+    // language change recreates labels; t is stable enough per language
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [language]
+  );
+  const b2bMenu = useMemo(
+    () => B2B_MENU_KEYS.map((item) => ({ ...item, label: t(item.labelKey) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [language]
+  );
+  const year = new Date().getFullYear();
 
   usePressFeedback(rootRef);
   useScreenIntro(rootRef, [revealKey, pathname]);
@@ -147,7 +162,10 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
             ) : (
               <span className="min-w-0 flex-1" aria-hidden />
             )}
-            {right}
+            <div className="flex shrink-0 items-center gap-2">
+              <PublicLanguageToggle compact />
+              {right}
+            </div>
           </div>
         </header>
       ) : null}
@@ -165,21 +183,24 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
               className="hdc-wordmark h-[1.05rem] w-auto max-w-[5.75rem] object-contain lg:h-[1.65rem] lg:max-w-[9.5rem]"
             />
             {nav ? <div className="hidden lg:block">{nav}</div> : null}
-            {onHome ? (
-              <button
-                type="button"
-                data-press
-                aria-label="Ouvrir le menu"
-                aria-expanded={menuOpen}
-                aria-controls="client-home-menu"
-                onClick={() => setMenuOpen(true)}
-                className="absolute right-3 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white text-catalog-ink ring-1 ring-catalog-border sm:right-4 sm:h-11 sm:w-11 lg:static lg:translate-y-0"
-              >
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                  <path d="M4 7h16M4 12h16M4 17h16" />
-                </svg>
-              </button>
-            ) : null}
+            <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-2 sm:right-4 lg:static lg:translate-y-0">
+              <PublicLanguageToggle compact />
+              {onHome ? (
+                <button
+                  type="button"
+                  data-press
+                  aria-label={t("public.menuOpen")}
+                  aria-expanded={menuOpen}
+                  aria-controls="client-home-menu"
+                  onClick={() => setMenuOpen(true)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-catalog-ink ring-1 ring-catalog-border sm:h-11 sm:w-11"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                    <path d="M4 7h16M4 12h16M4 17h16" />
+                  </svg>
+                </button>
+              ) : null}
+            </div>
           </div>
         )}
         {children}
@@ -188,11 +209,20 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
       {menuOpen ? (
         <Sheet variant="right" onClose={() => setMenuOpen(false)} labelledBy="client-home-menu-title">
           <div id="client-home-menu">
-            <SheetHeader eyebrow="Hurghada Dream" title="Menu" titleId="client-home-menu-title" onClose={() => setMenuOpen(false)} dark />
+            <SheetHeader
+              eyebrow="Hurghada Dream"
+              title={t("public.menu")}
+              titleId="client-home-menu-title"
+              onClose={() => setMenuOpen(false)}
+              dark
+            />
           </div>
-          <nav aria-label="Pages" className="min-h-0 flex-1 overflow-y-auto px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <div className="px-3 pb-3">
+            <PublicLanguageToggle className="w-full justify-center" />
+          </div>
+          <nav aria-label={t("public.navAria")} className="min-h-0 flex-1 overflow-y-auto px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             <ul className="space-y-1">
-              {HOME_MENU.map((item) => (
+              {homeMenu.map((item) => (
                 <li key={item.to}>
                   <Link
                     to={item.to}
@@ -207,9 +237,11 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
                 </li>
               ))}
             </ul>
-            <p className="mb-1 mt-5 px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-catalog-label">Agences</p>
+            <p className="mb-1 mt-5 px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-catalog-label">
+              {t("public.agencies")}
+            </p>
             <ul className="space-y-1">
-              {B2B_MENU.map((item) => (
+              {b2bMenu.map((item) => (
                 <li key={item.to}>
                   <Link
                     to={item.to}
@@ -243,22 +275,22 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
               </a>
             ))}
           </div>
-          <nav aria-label="Mentions légales" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-semibold text-catalog-lagoon">
+          <nav aria-label={t("public.legalAria")} className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-semibold text-catalog-lagoon">
             <Link to="/qui-sommes-nous" data-press className="min-h-11 inline-flex items-center">
-              Qui sommes-nous
+              {t("public.nav.about")}
             </Link>
             <Link to="/politique" data-press className="min-h-11 inline-flex items-center">
-              Remboursement
+              {t("public.nav.refund")}
             </Link>
             <Link to="/confidentialite" data-press className="min-h-11 inline-flex items-center">
-              Confidentialité
+              {t("public.nav.privacy")}
             </Link>
             <Link to="/b2b" data-press className="min-h-11 inline-flex items-center">
-              Espace agences
+              {t("public.nav.b2b")}
             </Link>
           </nav>
           <p className="text-center text-xs leading-relaxed text-catalog-muted">
-            © {new Date().getFullYear()} Hurghada Dream. Tous droits réservés.
+            {t("public.footer.rights", { year })}
           </p>
         </div>
       </footer>

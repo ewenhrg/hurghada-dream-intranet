@@ -8,7 +8,7 @@ import { getDefaultPermissionForm } from "../constants/permissions";
 
 /**
  * Applique les valeurs par défaut manquantes.
- * Ne force plus tous les accès pour Ewen/Léa/Sophia/Karim : les cases en base font foi.
+ * Ne force plus tous les accès pour Ewen/Sophia/Karim : les cases en base font foi.
  * @param {Object} userData - Données utilisateur (session)
  * @returns {Object|null} - Données utilisateur avec permissions configurées
  */

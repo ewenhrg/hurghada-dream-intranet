@@ -325,7 +325,7 @@ export function UsersPage({ user: sessionUser }) {
       return;
     }
     if (!hasFullIntranetAccess(sessionUser)) {
-      toast.warning("Seuls Ewen, Léa, Sophia et Karim peuvent réinsérer des utilisateurs dans Supabase.");
+      toast.warning("Seuls Ewen, Sophia et Karim peuvent réinsérer des utilisateurs dans Supabase.");
       return;
     }
     if (
@@ -401,7 +401,7 @@ export function UsersPage({ user: sessionUser }) {
 
     try {
       if (!canManageUsersInDatabase) {
-        toast.warning("Seuls Ewen, Léa, Sophia et Karim peuvent créer ou modifier les utilisateurs en base.");
+        toast.warning("Seuls Ewen, Sophia et Karim peuvent créer ou modifier les utilisateurs en base.");
         setLoading(false);
         return;
       }
@@ -558,7 +558,7 @@ export function UsersPage({ user: sessionUser }) {
     }
 
     if (!canManageUsersInDatabase) {
-      toast.warning("Seuls Ewen, Léa, Sophia et Karim peuvent supprimer des utilisateurs en base.");
+      toast.warning("Seuls Ewen, Sophia et Karim peuvent supprimer des utilisateurs en base.");
       return;
     }
 
@@ -691,7 +691,7 @@ export function UsersPage({ user: sessionUser }) {
               Codes d'accès et permissions par catégorie.
               {!canManageUsersInDatabase && (
                 <span className="block mt-1 text-amber-800 font-medium">
-                  Lecture seule : seuls Ewen, Léa, Sophia et Karim peuvent créer, modifier ou supprimer des comptes en base.
+                  Lecture seule : seuls Ewen, Sophia et Karim peuvent créer, modifier ou supprimer des comptes en base.
                 </span>
               )}
             </p>
@@ -700,7 +700,7 @@ export function UsersPage({ user: sessionUser }) {
         <PrimaryBtn
           onClick={() => canManageUsersInDatabase && setShowForm(!showForm)}
           disabled={!canManageUsersInDatabase}
-          title={!canManageUsersInDatabase ? "Réservé à Ewen, Léa, Sophia et Karim" : undefined}
+          title={!canManageUsersInDatabase ? "Réservé à Ewen, Sophia et Karim" : undefined}
           className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 border-0 shadow-lg shadow-violet-500/25 disabled:opacity-50 disabled:pointer-events-none"
         >
           {showForm ? "Annuler" : "➕ Nouvel utilisateur"}
@@ -721,7 +721,7 @@ export function UsersPage({ user: sessionUser }) {
             <PrimaryBtn
               type="button"
               disabled={restoring || loading || !canManageUsersInDatabase}
-              title={!canManageUsersInDatabase ? "Réservé à Ewen, Léa, Sophia et Karim" : undefined}
+              title={!canManageUsersInDatabase ? "Réservé à Ewen, Sophia et Karim" : undefined}
               onClick={handleRestoreMissingToSupabase}
               className="bg-amber-600 hover:bg-amber-700 border-0 text-white disabled:opacity-50"
             >

@@ -26,7 +26,6 @@ AS $$
         AND LOWER(TRIM(u.intranet_auth_email)) = LOWER(TRIM((auth.jwt() ->> 'email')))
         AND (
           LOWER(BTRIM(u.name)) = 'ewen'
-          OR LOWER(BTRIM(u.name)) IN ('léa', 'lea')
           OR LOWER(BTRIM(u.name)) = 'sophia'
           OR LOWER(BTRIM(u.name)) = 'karim'
         )

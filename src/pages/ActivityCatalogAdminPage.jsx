@@ -679,7 +679,7 @@ function CatalogActivityEditor({ activity, canEdit, patchActivity }) {
 
 export function ActivityCatalogAdminPage({ activities, setActivities, user, readOnly = false }) {
   const hasEditPermission = canEditCatalog(user);
-  /** Édition réelle : permission + pas de mode lecture seule (ex. compte Léa sur ce catalogue). */
+  /** Édition réelle : permission + pas de mode lecture seule (mode lecture seule). */
   const canMutate = hasEditPermission && !readOnly;
   const [search, setSearch] = useState("");
   const [restoringBuiltin, setRestoringBuiltin] = useState(false);

@@ -132,8 +132,7 @@ function OverviewPanel({ user }) {
           <div className="min-w-0">
             <h2 className="text-lg font-extrabold text-slate-900">Console ultra-admin</h2>
             <p className="mt-1 text-sm leading-relaxed text-slate-600">
-              Espace réservé aux general managers pour piloter le site (utilisateurs, catalogues, messages,
-              B2B…). Il n’apparaît dans aucun menu — uniquement via l’URL{" "}
+              Espace ultra-sécurisé (e-mail + mot de passe). Invisible dans la navigation — uniquement via{" "}
               <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[12px] font-semibold text-slate-800">
                 /superadmin
               </code>
@@ -166,7 +165,7 @@ function OverviewPanel({ user }) {
         <p className="font-semibold">Conseil</p>
         <p className="mt-0.5 leading-relaxed opacity-90">
           Choisissez un module à gauche pour modifier le site. Les changements sensibles (users, catalogue)
-          restent limités à Ewen, Léa, Sophia et Karim.
+          restent limités à Ewen et Karim.
         </p>
       </div>
     </div>

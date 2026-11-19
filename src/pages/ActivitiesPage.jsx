@@ -143,7 +143,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   // Debounce de la recherche pour améliorer les performances
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
-  // Écritures activités (RLS Supabase) : Ewen / Léa / Sophia / Karim
+  // Écritures activités (RLS Supabase) : Ewen / Sophia / Karim
   const canModifyActivities = hasFullIntranetAccess(user);
   const hasFullAccess = hasFullIntranetAccess(user);
 
@@ -351,7 +351,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   const handleEdit = useCallback((activity) => {
     if (!canModifyActivities) {
-      toast.warning("Seuls Ewen, Léa, Sophia et Karim peuvent modifier les activités.");
+      toast.warning("Seuls Ewen, Sophia et Karim peuvent modifier les activités.");
       return;
     }
     setForm({
@@ -389,7 +389,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     
     // Vérifier les permissions
     if (isEditing && !canModifyActivities) {
-      toast.warning("Seuls Ewen, Léa, Sophia et Karim peuvent modifier les activités.");
+      toast.warning("Seuls Ewen, Sophia et Karim peuvent modifier les activités.");
       return;
     }
     if (!isEditing && !user?.canAddActivity) {
@@ -1088,7 +1088,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
 
   const handleDelete = useCallback(async (id) => {
     if (!canModifyActivities) {
-      toast.warning("Seuls Ewen, Léa, Sophia et Karim peuvent supprimer les activités.");
+      toast.warning("Seuls Ewen, Sophia et Karim peuvent supprimer les activités.");
       return;
     }
     const activityToDelete = activitiesMap.get(id);

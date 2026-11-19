@@ -3,12 +3,12 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 /**
  * Après un code PIN valide, délivre une session Supabase Auth « ops »
- * (ou la session rédacteur Ewen/Léa/Sophia/Karim si intranet_auth_email est renseigné).
+ * (ou la session rédacteur Ewen/Sophia/Karim si intranet_auth_email est renseigné).
  * Les politiques RLS d’écriture exigent auth.uid() — la clé anon seule ne suffit plus.
  */
 
 const OPS_EMAIL = "intranet-ops@hurghada-dream.internal";
-const WRITER_NAMES = new Set(["ewen", "léa", "lea", "sophia", "karim"]);
+const WRITER_NAMES = new Set(["ewen", "sophia", "karim"]);
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
