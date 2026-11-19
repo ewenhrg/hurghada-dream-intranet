@@ -23,13 +23,14 @@ import {
 } from "../components/public/CatalogueActivityCard";
 import { displayActivityName, getPublicCategoryLabel, formatMoney as formatPublicMoney } from "../components/public/catalogueDisplay";
 import { PUBLIC_HOME_PATH } from "../config/clientApp";
+import { useTranslation } from "../hooks/useTranslation";
+import { publicLocale } from "../i18n/translations";
 import { supabase, __SUPABASE_DEBUG__ } from "../lib/supabase";
 import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { formatPhoneWithPlus } from "../utils";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 import {
-  CATALOGUE_STAY_MIN_SPAN_MESSAGE,
   formatCatalogueStaySummary,
   getMinDepartureDate,
   isCatalogueStayTooShort,
@@ -91,17 +92,17 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function formatMoney(value, currency = "EUR") {
-  return formatPublicMoney(toNumber(value), currency);
+function formatMoney(value, currency = "EUR", language = "fr") {
+  return formatPublicMoney(toNumber(value), currency, language);
 }
 
 /** Affichage lisible de la date d’excursion dans le panier (lecture seule). */
-function formatCartLineDate(iso) {
+function formatCartLineDate(iso, language = "fr") {
   const s = String(iso ?? "").trim();
   if (!s) return "—";
   const d = new Date(`${s}T12:00:00`);
   if (Number.isNaN(d.getTime())) return s;
-  return d.toLocaleDateString("fr-FR", {
+  return d.toLocaleDateString(publicLocale(language), {
     weekday: "short",
     day: "numeric",
     month: "long",
@@ -116,27 +117,28 @@ function normalizeCategory(rawCategory) {
 }
 
 const HERO_IMAGE = "/client/home-tile-excursions.jpg";
-const AGENCY_WHATSAPP_URL = "https://wa.me/201062002850?text=Bonjour%20Hurghada%20Dream%2C%20";
 
-function getCategoryPublicNotice(categoryKey) {
-  if (categoryKey === "marsa_alam") {
-    return "Si vous ne logez pas à Marsa Alam, des frais de transfert d’environ 100 € peuvent s’ajouter.";
-  }
-  return "";
+function agencyWhatsappUrl(language = "fr") {
+  const text =
+    language === "en"
+      ? "Hello%20Hurghada%20Dream%2C%20"
+      : "Bonjour%20Hurghada%20Dream%2C%20";
+  return `https://wa.me/201062002850?text=${text}`;
 }
-
-const REASSURANCES = [
-  { Icon: ShieldCheck, title: "Devis gratuit", text: "Sans engagement ni paiement en ligne." },
-  { Icon: CalendarDays, title: "Selon vos dates", text: "Le calendrier ne propose que les jours disponibles pendant votre séjour." },
-  { Icon: Headset, title: "Équipe française 7j/7", text: "Nous confirmons chaque détail avec vous sur WhatsApp." },
-];
 
 /** Pied de page du catalogue : réassurance, contact direct, liens de l’appli client. */
 function CatalogueFooter() {
+  const { t, language } = useTranslation();
+  const reassurances = [
+    { Icon: ShieldCheck, title: t("public.catalogue.footer.r1.title"), text: t("public.catalogue.footer.r1.text") },
+    { Icon: CalendarDays, title: t("public.catalogue.footer.r2.title"), text: t("public.catalogue.footer.r2.text") },
+    { Icon: Headset, title: t("public.catalogue.footer.r3.title"), text: t("public.catalogue.footer.r3.text") },
+  ];
+
   return (
     <footer className="mx-auto w-full max-w-7xl px-4 pb-32 pt-6 sm:px-6 lg:px-8">
       <ul data-reveal="item" className="grid gap-3 sm:grid-cols-3">
-        {REASSURANCES.map(({ Icon, title, text }) => (
+        {reassurances.map(({ Icon, title, text }) => (
           <li key={title} className="flex items-start gap-3.5 rounded-[1.25rem] bg-white p-5 ring-1 ring-catalog-line">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-catalog-lagoonSoft text-catalog-lagoon">
               <Icon className="h-5 w-5" strokeWidth={1.5} aria-hidden />
@@ -157,21 +159,30 @@ function CatalogueFooter() {
         <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(227,174,85,0.4)_0%,rgba(227,174,85,0)_70%)]" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-xl">
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-catalog-sand">Conciergerie</p>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-catalog-sand">
+              {t("public.catalogue.footer.helpEyebrow")}
+            </p>
             <h2 id="catalogue-help-title" className="mt-2 font-catalog-display text-[1.75rem] leading-snug !text-white sm:text-[2rem]">
-              Une question avant de choisir&nbsp;? <span className="hdc-serif text-catalog-sand">Parlons-en.</span>
+              {t("public.catalogue.footer.helpTitle")}{" "}
+              <span className="hdc-serif text-catalog-sand">{t("public.catalogue.footer.helpAccent")}</span>
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-white/75 sm:text-[0.9375rem]">
-              Niveau de difficulté, âge des enfants, prise en charge à l’hôtel : notre équipe vous conseille.
+              {t("public.catalogue.footer.helpSub")}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
-            <a href={AGENCY_WHATSAPP_URL} target="_blank" rel="noopener noreferrer" data-press className="hdc-btn hdc-btn-ghost">
+            <a
+              href={agencyWhatsappUrl(language)}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-press
+              className="hdc-btn hdc-btn-ghost"
+            >
               <WhatsAppGlyph className="h-5 w-5 text-[#1F8F55]" />
-              Écrire sur WhatsApp
+              {t("public.common.whatsapp")}
             </a>
             <Link to="/contacts" data-press className="hdc-btn border border-white/30 text-white hover:bg-white/10">
-              Nos contacts
+              {t("public.catalogue.footer.contacts")}
             </Link>
           </div>
         </div>
@@ -179,18 +190,21 @@ function CatalogueFooter() {
 
       <div className="mt-10 flex flex-col items-center gap-4 border-t border-catalog-line pt-8 sm:flex-row sm:justify-between">
         <img src="/client/logo-wordmark.png" alt="Hurghada Dream" className="h-5 w-auto object-contain" loading="lazy" />
-        <nav aria-label="Liens du catalogue" className="flex flex-wrap justify-center gap-1 text-sm font-medium text-catalog-muted">
+        <nav
+          aria-label={t("public.catalogue.footer.linksAria")}
+          className="flex flex-wrap justify-center gap-1 text-sm font-medium text-catalog-muted"
+        >
           <Link to={PUBLIC_HOME_PATH} className="inline-flex min-h-11 items-center rounded-full px-3 hover:text-catalog-ink">
-            Accueil
+            {t("public.home")}
           </Link>
           <Link to="/hotels" className="inline-flex min-h-11 items-center rounded-full px-3 hover:text-catalog-ink">
-            Hôtels
+            {t("public.nav.hotels")}
           </Link>
           <Link to="/sejour" className="inline-flex min-h-11 items-center rounded-full px-3 hover:text-catalog-ink">
-            Mon séjour
+            {t("public.nav.stay")}
           </Link>
           <Link to="/contacts" className="inline-flex min-h-11 items-center rounded-full px-3 hover:text-catalog-ink">
-            Contacts
+            {t("public.nav.contacts")}
           </Link>
         </nav>
       </div>
@@ -206,6 +220,7 @@ function neighborhoodForHotelName(hotelName, hotels) {
 }
 
 export function PublicClientDevisPage() {
+  const { t, language } = useTranslation();
   const [activities, setActivities] = useState([]);
   const [hotels, setHotels] = useState([]);
   const [search, setSearch] = useState("");
@@ -631,7 +646,7 @@ export function PublicClientDevisPage() {
       return;
     }
     if (isCatalogueStayTooShort({ arrivalDate: arrival, departureDate: departure })) {
-      setError(CATALOGUE_STAY_MIN_SPAN_MESSAGE);
+      setError(t("public.stayGate.err.minSpan"));
       return;
     }
 
@@ -714,7 +729,7 @@ export function PublicClientDevisPage() {
       (line) => (line.derived?.minorsCount || 0) > 0 && (line.derived?.missingCount || 0) > 0
     );
     if (incompleteAges.length > 0) {
-      setError("Indiquez la date de naissance de chaque enfant / bébé pour finaliser le devis.");
+      setError(t("public.catalogue.checkout.dobHint"));
       return;
     }
 
@@ -905,11 +920,11 @@ export function PublicClientDevisPage() {
 
   return (
     <PublicAppShell
-      title="Excursions"
+      title={t("public.catalogue.title")}
       wide="xl"
       revealKey={revealKey}
       right={
-        <GuestHeaderButton onClick={openCart} count={cartLines.length} ariaLabel="Panier">
+        <GuestHeaderButton onClick={openCart} count={cartLines.length} ariaLabel={t("public.common.cart")}>
           <ShoppingBag className="h-4 w-4" aria-hidden />
         </GuestHeaderButton>
       }
@@ -933,29 +948,28 @@ export function PublicClientDevisPage() {
             className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(10,42,51,0.1)_0%,rgba(10,42,51,0.25)_40%,rgba(8,36,46,0.88)_100%)] lg:bg-[linear-gradient(90deg,rgba(8,36,46,0.86)_0%,rgba(10,42,51,0.55)_45%,rgba(10,42,51,0)_80%)]"
           />
           <div className="w-full max-w-2xl p-5 sm:p-8 lg:p-12">
-            <p data-reveal="item" className="hdc-eyebrow hdc-eyebrow-light">Excursions · Mer Rouge</p>
+            <p data-reveal="item" className="hdc-eyebrow hdc-eyebrow-light">{t("public.catalogue.heroEyebrow")}</p>
             <h1
               id="catalogue-title"
               data-split
               className="mt-3 font-catalog-display text-[2.25rem] leading-[1.04] !text-white sm:text-[2.75rem] lg:text-[3.5rem]"
             >
-              Votre prochaine <span className="hdc-serif text-catalog-sand">escapade</span> commence ici.
+              {t("public.catalogue.heroTitleBefore")} <span className="hdc-serif text-catalog-sand">{t("public.catalogue.heroTitleAccent")}</span> {t("public.catalogue.heroTitleAfter")}
             </h1>
             <p data-reveal="item" className="mt-3 max-w-lg text-[0.9375rem] leading-relaxed text-white/85 sm:text-base">
-              Désert, récifs, îles, Louxor &amp; Le Caire : composez votre sélection et recevez une proposition claire,
-              sans engagement.
+              {t("public.catalogue.heroSub")}
             </p>
             {!loading && publicActivities.length > 0 ? (
               <ul data-reveal="item" className="mt-5 flex flex-wrap gap-2 text-xs font-semibold text-white">
                 <li className="inline-flex min-h-8 items-center rounded-full bg-white/15 px-3 ring-1 ring-white/25 backdrop-blur-md">
-                  {publicActivities.length} expériences
+                  {t("public.catalogue.badge.experiences", { count: publicActivities.length })}
                 </li>
                 <li className="inline-flex min-h-8 items-center rounded-full bg-white/15 px-3 ring-1 ring-white/25 backdrop-blur-md">
-                  {universeCount} univers
+                  {t("public.catalogue.badge.universes", { count: universeCount })}
                 </li>
                 <li className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-white/15 px-3 ring-1 ring-white/25 backdrop-blur-md">
                   <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                  Devis gratuit
+                  {t("public.catalogue.badge.freeQuote")}
                 </li>
               </ul>
             ) : null}
@@ -965,14 +979,14 @@ export function PublicClientDevisPage() {
         {/* ——— Recherche + séjour ——— */}
         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <label data-reveal="item" className="relative block" htmlFor="public-search">
-            <span className="sr-only">Rechercher une excursion</span>
+            <span className="sr-only">{t("public.catalogue.search.aria")}</span>
             <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-catalog-subtle" aria-hidden />
             <input
               id="public-search"
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher une excursion, un lieu…"
+              placeholder={t("public.catalogue.search.ph")}
               autoComplete="off"
               enterKeyHint="search"
               className="hdc-input hdc-search !min-h-[3.25rem] !rounded-full !pl-12 !pr-14"
@@ -982,7 +996,7 @@ export function PublicClientDevisPage() {
                 type="button"
                 onClick={() => setSearch("")}
                 className="absolute right-1.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-catalog-muted hover:bg-catalog-bg hover:text-catalog-ink"
-                aria-label="Effacer la recherche"
+                aria-label={t("public.catalogue.search.clear")}
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
@@ -992,8 +1006,8 @@ export function PublicClientDevisPage() {
             <div data-reveal="item" className="flex min-h-[3.25rem] items-center gap-3 rounded-full bg-white py-1 pl-4 pr-1 ring-1 ring-catalog-border">
               <CalendarDays className="h-5 w-5 shrink-0 text-catalog-lagoon" strokeWidth={1.5} aria-hidden />
               <p className="min-w-0 flex-1 truncate text-sm font-medium text-catalog-ink">
-                <span className="sr-only">Votre séjour : </span>
-                {formatCatalogueStaySummary(stay)}
+                <span className="sr-only">{t("public.catalogue.stay.summaryAria")}</span>
+                {formatCatalogueStaySummary(stay, language)}
               </p>
               <button
                 type="button"
@@ -1001,7 +1015,7 @@ export function PublicClientDevisPage() {
                 onClick={openStayEditor}
                 className="inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-catalog-lagoon hover:bg-catalog-lagoonSoft"
               >
-                Modifier
+                {t("public.catalogue.stay.edit")}
               </button>
             </div>
           ) : null}
@@ -1013,7 +1027,7 @@ export function PublicClientDevisPage() {
         <div
           className="hdc-chip-rail mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 scrollbar-hide sm:px-6 lg:flex-wrap lg:gap-1.5 lg:px-8 xl:justify-between"
           role="group"
-          aria-label="Filtrer par univers"
+          aria-label={t("public.catalogue.filter.aria")}
         >
           <button
             type="button"
@@ -1022,7 +1036,7 @@ export function PublicClientDevisPage() {
             onClick={() => selectCategory("all")}
             className="hdc-chip shrink-0"
           >
-            Toutes
+            {t("public.catalogue.filter.all")}
             <span className="hdc-chip-count">{categoryCounts.all || 0}</span>
           </button>
           {publicDisplayCategories.map((category) => (
@@ -1035,7 +1049,7 @@ export function PublicClientDevisPage() {
               className="hdc-chip shrink-0"
             >
               <CategoryIcon categoryKey={category.key} className="h-4 w-4 lg:hidden" />
-              {getPublicCategoryLabel(category.key)}
+              {getPublicCategoryLabel(category.key, language)}
               <span className="hdc-chip-count">{categoryCounts[category.key] || 0}</span>
             </button>
           ))}
@@ -1046,19 +1060,20 @@ export function PublicClientDevisPage() {
         ref={resultsRef}
         className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-[calc(max(0.35rem,env(safe-area-inset-top))+7.5rem)] px-4 pb-10 pt-6 sm:px-6 lg:px-8"
       >
-        {getCategoryPublicNotice(selectedCategory) ? (
+        {selectedCategory === "marsa_alam" ? (
           <p className="mb-6 flex items-start gap-2.5 rounded-[1rem] bg-catalog-brassSoft px-4 py-3 text-sm leading-relaxed text-catalog-body" role="note">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-catalog-brass" aria-hidden />
-            {getCategoryPublicNotice(selectedCategory)}
+            {t("public.catalogue.notice.marsa")}
           </p>
         ) : null}
 
         {!loading && !error ? (
           <div className="mb-6 flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1">
             <p className="text-sm text-catalog-muted" aria-live="polite">
-              <span className="font-semibold text-catalog-ink">{filteredActivities.length}</span>{" "}
-              expérience{filteredActivities.length > 1 ? "s" : ""}
-              {selectedCategory !== "all" ? ` · ${getPublicCategoryLabel(selectedCategory)}` : ""}
+              {filteredActivities.length > 1
+                ? t("public.catalogue.results.count_plural", { count: filteredActivities.length })
+                : t("public.catalogue.results.count", { count: filteredActivities.length })}
+              {selectedCategory !== "all" ? ` · ${getPublicCategoryLabel(selectedCategory, language)}` : ""}
               {search.trim() ? ` · « ${search.trim()} »` : ""}
             </p>
             {hasActiveFilters ? (
@@ -1069,7 +1084,7 @@ export function PublicClientDevisPage() {
                 className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-catalog-lagoon hover:bg-catalog-lagoonSoft"
               >
                 <RotateCcw className="h-4 w-4" aria-hidden />
-                Effacer les filtres
+                {t("public.catalogue.filter.clear")}
               </button>
             ) : null}
           </div>
@@ -1078,11 +1093,11 @@ export function PublicClientDevisPage() {
         {error && !loading ? (
           <StateCard
             tone="error"
-            title="Catalogue momentanément indisponible"
+            title={t("public.catalogue.error.title")}
             action={
               <button type="button" data-press onClick={retryFetch} className="hdc-btn hdc-btn-ink">
                 <RotateCcw className="h-4 w-4" aria-hidden />
-                Réessayer
+                {t("public.common.retry")}
               </button>
             }
           >
@@ -1092,7 +1107,7 @@ export function PublicClientDevisPage() {
 
         {loading ? (
           <div role="status" aria-live="polite">
-            <span className="sr-only">Chargement du catalogue…</span>
+            <span className="sr-only">{t("public.catalogue.loadingAria")}</span>
             <div className="hdc-skeleton mb-6 h-5 w-40 rounded-md" aria-hidden />
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 2xl:grid-cols-4">
               {Array.from({ length: 6 }, (_, i) => (
@@ -1104,18 +1119,17 @@ export function PublicClientDevisPage() {
 
         {!loading && !error && filteredActivities.length === 0 ? (
           <StateCard
-            title="Aucune excursion ne correspond"
+            title={t("public.catalogue.empty.title")}
             action={
               hasActiveFilters ? (
                 <button type="button" data-press onClick={resetFilters} className="hdc-btn hdc-btn-ink">
                   <RotateCcw className="h-4 w-4" aria-hidden />
-                  Voir toutes les excursions
+                  {t("public.catalogue.filter.seeAll")}
                 </button>
               ) : null
             }
           >
-            Essayez un autre mot-clé ou un autre univers. Une envie précise ? Écrivez-nous, nous trouverons la sortie qui
-            vous ressemble.
+            {t("public.catalogue.empty.body")}
           </StateCard>
         ) : null}
 
@@ -1128,20 +1142,22 @@ export function PublicClientDevisPage() {
                     <CategoryIcon categoryKey={group.key} className="h-5 w-5" strokeWidth={1.5} />
                   </span>
                   <div className="min-w-0">
-                    <p className="hdc-eyebrow">Univers</p>
+<p className="hdc-eyebrow">{t("public.catalogue.universe")}</p>
                     <h2 id={`univers-${group.key}`} data-heading className="mt-1 font-catalog-display text-[1.75rem] leading-tight text-catalog-ink lg:text-[2rem]">
-                      {getPublicCategoryLabel(group.key)}
+                      {getPublicCategoryLabel(group.key, language)}
                     </h2>
                   </div>
                 </div>
                 <span className="shrink-0 pb-1 text-sm text-catalog-muted">
-                  {group.items.length} expérience{group.items.length > 1 ? "s" : ""}
+                  {group.items.length > 1
+                    ? t("public.catalogue.results.count_plural", { count: group.items.length })
+                    : t("public.catalogue.results.count", { count: group.items.length })}
                 </span>
               </div>
               {group.key === "marsa_alam" && selectedCategory !== "marsa_alam" ? (
                 <p className="mb-5 flex items-start gap-2.5 rounded-[1rem] bg-catalog-brassSoft px-4 py-3 text-sm leading-relaxed text-catalog-body" role="note">
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-catalog-brass" aria-hidden />
-                  {getCategoryPublicNotice("marsa_alam")}
+                  {t("public.catalogue.notice.marsa")}
                 </p>
               ) : null}
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 2xl:grid-cols-4">
@@ -1183,14 +1199,16 @@ export function PublicClientDevisPage() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-xs text-white/70">
-                {cartLines.length} excursion{cartLines.length > 1 ? "s" : ""} sélectionnée{cartLines.length > 1 ? "s" : ""}
+                {cartLines.length > 1
+                  ? t("public.catalogue.cartBar.selected_plural", { count: cartLines.length })
+                  : t("public.catalogue.cartBar.selected", { count: cartLines.length })}
               </span>
               <span className="block text-base font-semibold tabular-nums">
-                {cartTotal > 0 ? formatMoney(cartTotal, "EUR") : "Total sur devis"}
+                {cartTotal > 0 ? formatMoney(cartTotal, "EUR", language) : t("public.catalogue.cartBar.totalOnQuote")}
               </span>
             </span>
             <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold">
-              Mon panier
+              {t("public.catalogue.cartBar.open")}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </span>
           </button>
@@ -1202,13 +1220,13 @@ export function PublicClientDevisPage() {
           variant="right"
           zClass="z-[110]"
           onClose={() => setCartDrawerOpen(false)}
-          closeLabel="Fermer le panier"
+          closeLabel={t("public.catalogue.cart.close")}
           labelledBy="cart-drawer-title"
         >
           <SheetHeader
             dark
-            eyebrow="Excursions"
-            title={`Votre panier · ${cartLines.length}`}
+            eyebrow={t("public.catalogue.cart.eyebrow")}
+            title={t("public.catalogue.cart.title", { count: cartLines.length })}
             titleId="cart-drawer-title"
             onClose={() => setCartDrawerOpen(false)}
           />
@@ -1216,8 +1234,8 @@ export function PublicClientDevisPage() {
             {cartLines.length === 0 ? (
               <div data-sheet-item className="rounded-[1.4rem] bg-white px-5 py-12 text-center ring-1 ring-catalog-line">
                 <ShoppingBag className="mx-auto h-8 w-8 text-catalog-subtle" aria-hidden />
-                <p className="mt-3 font-catalog-display text-lg font-medium text-catalog-ink">Votre panier est vide</p>
-                <p className="mt-1 text-sm text-catalog-muted">Ajoutez des activités depuis le catalogue.</p>
+                <p className="mt-3 font-catalog-display text-lg font-medium text-catalog-ink">{t("public.catalogue.cart.emptyTitle")}</p>
+                <p className="mt-1 text-sm text-catalog-muted">{t("public.catalogue.cart.emptyHint")}</p>
             </div>
             ) : null}
               {cartLines.map((line) => {
@@ -1235,7 +1253,7 @@ export function PublicClientDevisPage() {
                       </p>
                       <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold capitalize text-catalog-muted">
                         <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                        {formatCartLineDate(line.date)}
+                        {formatCartLineDate(line.date, language)}
                       </p>
                     </div>
                       <button
@@ -1260,7 +1278,7 @@ export function PublicClientDevisPage() {
                             htmlFor={`cart-pickup-${line.id}`}
                             className="block text-[0.625rem] font-bold uppercase tracking-[0.12em] text-catalog-muted"
                           >
-                            Prise en charge
+                            {t("public.catalogue.cart.pickup")}
                             {needsPickup ? <span className="ml-1 text-catalog-coralDeep">*</span> : null}
                           </label>
                           {pickupOpts.length === 1 && !needsPickup ? (
@@ -1283,7 +1301,7 @@ export function PublicClientDevisPage() {
                               aria-required={needsPickup ? true : undefined}
                             >
                               <option value="">
-                                {needsPickup ? "— Choisir un créneau —" : "— Créneau —"}
+                                {needsPickup ? t("public.catalogue.cart.slotRequired") : t("public.catalogue.cart.slot")}
                               </option>
                               {pickupOpts.map((opt) => (
                                 <option key={opt.slot} value={opt.slot}>
@@ -1297,7 +1315,7 @@ export function PublicClientDevisPage() {
                     })()}
                     <div className="mt-3 grid grid-cols-3 gap-2">
                     <div className="rounded-xl bg-catalog-bg px-2 py-2 text-center">
-                      <span className="block text-[0.625rem] font-bold uppercase tracking-[0.12em] text-catalog-muted">Adultes</span>
+                      <span className="block text-[0.625rem] font-bold uppercase tracking-[0.12em] text-catalog-muted">{t("public.common.adults")}</span>
                       <span className="mt-0.5 block text-base font-extrabold tabular-nums text-catalog-ink">
                           {line.adultsBase ?? line.adults ?? 0}
                           {classified && (line.derived?.upgradedAdultsCount || 0) > 0
@@ -1307,7 +1325,7 @@ export function PublicClientDevisPage() {
                         </div>
                     <div className="rounded-xl bg-catalog-bg px-2 py-2 text-center">
                       <span className="block text-[0.625rem] font-bold uppercase tracking-[0.12em] text-catalog-muted">
-                        {classified ? "Enfants" : "Enf. / bébés"}
+                        {classified ? t("public.common.children") : t("public.catalogue.cart.childrenShort")}
                         </span>
                       <span className="mt-0.5 block text-base font-extrabold tabular-nums text-catalog-ink">
                           {classified ? line.derived.childrenCount : minors}
@@ -1315,12 +1333,12 @@ export function PublicClientDevisPage() {
                       {ageChild ? <span className="block text-[0.625rem] font-semibold text-catalog-muted">{ageChild}</span> : null}
                         </div>
                     <div className={`rounded-xl px-2 py-2 text-center ${babiesForbiddenLine ? "bg-catalog-brassSoft" : "bg-catalog-bg"}`}>
-                      <span className="block text-[0.625rem] font-bold uppercase tracking-[0.12em] text-catalog-muted">Bébés</span>
+                      <span className="block text-[0.625rem] font-bold uppercase tracking-[0.12em] text-catalog-muted">{t("public.common.babies")}</span>
                       <span className="mt-0.5 block text-base font-extrabold tabular-nums text-catalog-ink">
                         {babiesForbiddenLine ? 0 : classified ? line.derived.babiesCount : "—"}
                       </span>
                       {babiesForbiddenLine ? (
-                        <span className="block text-[0.625rem] font-semibold text-catalog-ink">Non autorisés</span>
+                        <span className="block text-[0.625rem] font-semibold text-catalog-ink">{t("public.catalogue.cart.babiesForbidden")}</span>
                       ) : ageBaby ? (
                         <span className="block text-[0.625rem] font-semibold text-catalog-muted">{ageBaby}</span>
                             ) : null}
@@ -1338,7 +1356,7 @@ export function PublicClientDevisPage() {
                     ) : null}
                     {minors > 0 && !classified ? (
                     <p className="mt-2 text-[11px] font-semibold text-catalog-lagoon">
-                        Dates de naissance demandées à l’étape suivante pour classer bébé / enfant.
+                        {t("public.catalogue.checkout.dobEyebrow")}
                       </p>
                     ) : null}
                     {formatDivingVisitorLabel(line, line.activity?.name) ? (
@@ -1353,10 +1371,10 @@ export function PublicClientDevisPage() {
                     ) : null}
                   <div className="mt-3 flex items-center justify-between border-t border-catalog-line pt-3">
                     <p className="text-[11px] leading-snug text-catalog-muted">
-                      Pour modifier, retirez la ligne puis rouvrez la fiche.
+                      {t("public.catalogue.cart.editHint")}
                     </p>
                     <p className="shrink-0 font-catalog-display text-lg tabular-nums text-catalog-ink">
-                        {formatMoney(line.lineTotal, line.activity.currency)}
+                        {formatMoney(line.lineTotal, line.activity.currency, language)}
                       </p>
                     </div>
                   </div>
@@ -1365,9 +1383,9 @@ export function PublicClientDevisPage() {
             </div>
           <SheetFooter>
             <div className="mb-3 flex items-end justify-between gap-3">
-              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-catalog-muted">Total estimé</span>
+              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-catalog-muted">{t("public.catalogue.cart.totalEstimated")}</span>
               <span className="font-catalog-display text-[1.75rem] leading-none tabular-nums text-catalog-ink">
-                  {formatMoney(cartTotal, "EUR")}
+                  {formatMoney(cartTotal, "EUR", language)}
                 </span>
               </div>
               <button
@@ -1382,7 +1400,7 @@ export function PublicClientDevisPage() {
                 }}
               className="hdc-btn hdc-btn-primary w-full min-h-[3.25rem] text-base"
               >
-              Finaliser mon devis
+              {t("public.catalogue.cart.checkout")}
               <ArrowRight className="h-4 w-4" aria-hidden />
               </button>
           </SheetFooter>
@@ -1396,7 +1414,7 @@ export function PublicClientDevisPage() {
           panelProps={{ onSubmit: submitPublicQuote, onClick: (e) => e.stopPropagation() }}
           labelledBy="checkout-title"
         >
-          <SheetHeader eyebrow="Devis" title="Vos coordonnées" titleId="checkout-title" onClose={() => setCheckoutOpen(false)} />
+          <SheetHeader eyebrow={t("public.catalogue.checkout.eyebrow")} title={t("public.catalogue.checkout.title")} titleId="checkout-title" onClose={() => setCheckoutOpen(false)} />
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4 sm:px-6">
             {error ? (
               <div className="mb-4 rounded-2xl bg-catalog-coralSoft px-4 py-3 text-sm font-semibold text-catalog-coralDeep" role="alert">
@@ -1404,14 +1422,14 @@ export function PublicClientDevisPage() {
               </div>
             ) : null}
             <p className="mb-3 text-xs font-semibold leading-relaxed text-catalog-muted">
-              Tous les champs ci-dessous sont <strong className="text-catalog-ink">obligatoires</strong> pour envoyer votre demande.
+              {t("public.catalogue.checkout.requiredHint")}
             </p>
             <div className="space-y-3.5">
               <input
                 data-sheet-item
                 value={client.name}
                 onChange={(e) => updateClientField("name", e.target.value)}
-                placeholder="Nom complet *"
+                placeholder={t("public.catalogue.checkout.namePh")}
                 required
                 className="hdc-input"
                 autoComplete="name"
@@ -1420,7 +1438,7 @@ export function PublicClientDevisPage() {
                 data-sheet-item
                 value={formatPhoneWithPlus(client.phone)}
                 onChange={(e) => updateClientField("phone", formatPhoneWithPlus(e.target.value))}
-                placeholder="Téléphone WhatsApp *"
+                placeholder={t("public.catalogue.checkout.phonePh")}
                 required
                 inputMode="tel"
                 className="hdc-input"
@@ -1431,14 +1449,14 @@ export function PublicClientDevisPage() {
                 type="email"
                 value={client.email}
                 onChange={(e) => updateClientField("email", e.target.value)}
-                placeholder="E-mail *"
+                placeholder={t("public.catalogue.checkout.emailPh")}
                 required
                 className="hdc-input"
                 autoComplete="email"
               />
               <div data-sheet-item className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">Hôtel / lieu *</span>
+                  <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">{t("public.catalogue.checkout.hotelLabel")}</span>
                   <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full bg-catalog-coralSoft px-3 text-xs font-bold text-catalog-coralDeep">
                     <input
                       type="checkbox"
@@ -1453,13 +1471,13 @@ export function PublicClientDevisPage() {
                         }));
                       }}
                     />
-                    Airbnb
+                    {t("public.catalogue.checkout.airbnb")}
                   </label>
                 </div>
                 <input
                   value={client.hotel}
                   onChange={(e) => updateClientField("hotel", e.target.value)}
-                  placeholder={client.isAirbnb ? "Nom / libellé Airbnb (optionnel)" : "Hôtel ou lieu de prise en charge *"}
+                  placeholder={client.isAirbnb ? t("public.catalogue.checkout.airbnbPh") : t("public.catalogue.checkout.hotelPh")}
                   required={!client.isAirbnb}
                   className="hdc-input"
                 />
@@ -1467,26 +1485,26 @@ export function PublicClientDevisPage() {
                   <div className="space-y-2 rounded-2xl bg-catalog-coralSoft p-3">
                     <label className="block space-y-1">
                       <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-coralDeep">
-                        Lien Google Maps *
+                        {t("public.catalogue.checkout.mapsLabel")}
                       </span>
                       <input
                         type="url"
                         value={client.airbnbMapsUrl || ""}
                         onChange={(e) => updateClientField("airbnbMapsUrl", e.target.value)}
-                        placeholder="https://maps.google.com/... ou maps.app.goo.gl/..."
+                        placeholder={t("public.catalogue.checkout.mapsPh")}
                         required
                         className="hdc-input !bg-white"
                       />
                     </label>
                     <p className="text-[11px] font-medium text-catalog-coralDeep">
-                      Collez le lien Maps du logement pour organiser le transfert.
+                      {t("public.catalogue.checkout.mapsHint")}
                     </p>
                   </div>
                 ) : null}
               </div>
               <div data-sheet-item className="grid grid-cols-2 gap-3">
                 <label className="block space-y-1">
-                  <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">Arrivée *</span>
+                  <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">{t("public.common.arrival")} *</span>
                   <DateInput
                     value={client.arrivalDate}
                     onChange={(nextArrival) => {
@@ -1512,7 +1530,7 @@ export function PublicClientDevisPage() {
                   />
                 </label>
                 <label className="block space-y-1">
-                  <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">Départ *</span>
+                  <span className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-catalog-muted">{t("public.common.departure")} *</span>
                   <DateInput
                     value={client.departureDate}
                     min={getMinDepartureDate(client.arrivalDate) || undefined}
@@ -1532,17 +1550,16 @@ export function PublicClientDevisPage() {
               </div>
               {isCatalogueStayTooShort(client) ? (
                 <p className="rounded-2xl bg-catalog-brassSoft px-4 py-3 text-xs font-semibold leading-relaxed text-catalog-ink">
-                  {CATALOGUE_STAY_MIN_SPAN_MESSAGE}
+                  {t("public.stayGate.err.minSpan")}
                 </p>
               ) : null}
 
               {cartNeedsMinorBirthDates ? (
                 <div className="space-y-3 rounded-[1.25rem] bg-catalog-bg p-4 ring-1 ring-catalog-line">
                   <div>
-                    <p className="hdc-eyebrow">Dates de naissance</p>
+                    <p className="hdc-eyebrow">{t("public.catalogue.checkout.dobEyebrow")}</p>
                     <p className="mt-1 text-xs leading-relaxed text-catalog-muted">
-                      Indiquez la date de naissance de chaque enfant / bébé : le tarif enfant ou bébé est calculé
-                      automatiquement selon la grille de l’activité (âge au jour de l’excursion).
+                      {t("public.catalogue.checkout.dobHint")}
                     </p>
                   </div>
                   {cartLines
@@ -1555,7 +1572,7 @@ export function PublicClientDevisPage() {
                         <div key={`dob-${line.id}`} className="rounded-2xl bg-white p-3.5 ring-1 ring-catalog-line">
                           <p className="text-sm font-bold text-catalog-ink">{displayActivityName(line.activity?.name)}</p>
                           <p className="mt-0.5 text-[11px] font-semibold text-catalog-muted">
-                            {formatCartLineDate(line.date)}
+                            {formatCartLineDate(line.date, language)}
                             {ageChild || ageBaby
                               ? ` · enfant ${ageChild || "—"} · bébé ${babiesForbidden ? "interdit" : ageBaby || "—"}`
                               : ""}
@@ -1565,7 +1582,7 @@ export function PublicClientDevisPage() {
                               const detail = line.derived.details[i];
                               return (
                                 <label key={`${line.id}-dob-${i}`} className="block text-xs font-bold text-catalog-body">
-                                  Voyageur {i + 1}
+                                  {t("public.catalogue.checkout.traveler", { n: i + 1 })}
                                   <DateInput
                                     value={line.birthDates?.[i] || ""}
                                     max={line.date || client.arrivalDate || undefined}
@@ -1646,7 +1663,7 @@ export function PublicClientDevisPage() {
               <span>
               {cartLines.length} ligne{cartLines.length > 1 ? "s" : ""}
               </span>
-              <span className="font-catalog-display text-xl tabular-nums text-catalog-ink">{formatMoney(cartTotal, "EUR")}</span>
+              <span className="font-catalog-display text-xl tabular-nums text-catalog-ink">{formatMoney(cartTotal, "EUR", language)}</span>
             </div>
             <button
               type="submit"
@@ -1654,7 +1671,7 @@ export function PublicClientDevisPage() {
               disabled={submitLoading}
               className="hdc-btn hdc-btn-primary w-full min-h-[3.25rem] text-base"
             >
-              {submitLoading ? "Envoi en cours…" : "Envoyer ma demande"}
+              {submitLoading ? t("public.common.sending") : t("public.common.sendRequest")}
             </button>
           </SheetFooter>
         </Sheet>
@@ -1665,7 +1682,7 @@ export function PublicClientDevisPage() {
           variant="center"
           zClass="z-[130]"
           onClose={() => setSuccessModalOpen(false)}
-          closeLabel="Fermer la confirmation"
+          closeLabel={t("public.catalogue.success.close")}
           labelledBy="public-quote-success-title"
         >
           <div className="p-7 text-center">
@@ -1673,7 +1690,7 @@ export function PublicClientDevisPage() {
               <CheckCircle2 className="h-8 w-8" aria-hidden />
             </span>
             <h3 data-sheet-item id="public-quote-success-title" className="mt-4 font-catalog-display text-[1.75rem] font-normal text-catalog-ink">
-              Demande envoyée
+              {t("public.common.requestSent")}
             </h3>
             <p data-sheet-item className="mt-2 text-sm leading-relaxed text-catalog-muted">
               {success}
@@ -1685,7 +1702,7 @@ export function PublicClientDevisPage() {
               onClick={() => setSuccessModalOpen(false)}
               className="hdc-btn hdc-btn-ink mt-6 w-full"
             >
-              Parfait
+              {t("public.catalogue.success.ok")}
             </button>
           </div>
         </Sheet>

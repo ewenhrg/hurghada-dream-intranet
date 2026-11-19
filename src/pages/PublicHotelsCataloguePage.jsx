@@ -9,6 +9,7 @@ import { startPhotoFlight } from "../components/public/motion";
 import { WHATSAPP_BASE } from "../components/public/hotelAmenities";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
 import { loadPublicHotelsCart } from "../utils/publicHotelsCartStorage";
+import { useTranslation } from "../hooks/useTranslation";
 
 function HotelCardSkeleton() {
   return (
@@ -28,6 +29,7 @@ function HotelCardSkeleton() {
 }
 
 const PublicHotelCatalogueCard = memo(function PublicHotelCatalogueCard({ hotel, onOpen, onAddToCart }) {
+  const { t } = useTranslation();
   const open = (event) => {
     startPhotoFlight(event.currentTarget.closest("article")?.querySelector("[data-card-media] img"));
     onOpen(hotel.slug || hotel.id);
@@ -73,11 +75,11 @@ const PublicHotelCatalogueCard = memo(function PublicHotelCatalogueCard({ hotel,
         <HotelAgePolicyBadge hotel={hotel} className="mt-4" />
         <div className="mt-5 grid grid-cols-2 gap-2">
           <button type="button" data-press onClick={open} className="hdc-btn hdc-btn-ghost">
-            Voir la fiche
+            {t("public.hotels.seeDetail")}
           </button>
           <button type="button" data-press onClick={() => onAddToCart(hotel)} className="hdc-btn hdc-btn-primary">
             <Plus className="h-4 w-4" aria-hidden />
-            Ajouter
+            {t("public.hotels.add")}
           </button>
         </div>
       </div>
@@ -86,6 +88,7 @@ const PublicHotelCatalogueCard = memo(function PublicHotelCatalogueCard({ hotel,
 });
 
 export function PublicHotelsCataloguePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +129,7 @@ export function PublicHotelsCataloguePage() {
 
   return (
     <PublicAppShell
-      title="Hôtels"
+      title={t("public.hotels.title")}
       wide
       revealKey={loading ? "loading" : hotels.length}
       right={

@@ -1,17 +1,18 @@
 import { Bus, Fish, Landmark, Mountain, Sparkles, Waves } from "lucide-react";
 import { CATEGORIES } from "../../constants";
+import { publicLocale, t } from "../../i18n/translations";
 
 /**
  * Libellés clients des univers. `CATEGORIES` (intranet) contient des libellés en capitales
  * (« LOUXOR & LE CAIRE », « TRANSFERT ») : on les adoucit ici sans toucher aux constantes partagées.
  */
-const PUBLIC_CATEGORY_LABELS = {
-  desert: "Désert",
-  aquatique: "Aquatique",
-  exploration_bien_etre: "Exploration & bien-être",
-  luxor_caire: "Louxor & Le Caire",
-  marsa_alam: "Marsa Alam",
-  transfert: "Transferts",
+const PUBLIC_CATEGORY_KEYS = {
+  desert: "public.category.desert",
+  aquatique: "public.category.aquatique",
+  exploration_bien_etre: "public.category.exploration_bien_etre",
+  luxor_caire: "public.category.luxor_caire",
+  marsa_alam: "public.category.marsa_alam",
+  transfert: "public.category.transfert",
 };
 
 export const CATEGORY_ICONS = {
@@ -23,9 +24,10 @@ export const CATEGORY_ICONS = {
   transfert: Bus,
 };
 
-export function getPublicCategoryLabel(categoryKey) {
-  if (PUBLIC_CATEGORY_LABELS[categoryKey]) return PUBLIC_CATEGORY_LABELS[categoryKey];
-  return CATEGORIES.find((c) => c.key === categoryKey)?.label || "Activité";
+export function getPublicCategoryLabel(categoryKey, language = "fr") {
+  const key = PUBLIC_CATEGORY_KEYS[categoryKey];
+  if (key) return t(key, language);
+  return CATEGORIES.find((c) => c.key === categoryKey)?.label || t("public.category.fallback", language);
 }
 
 const MINOR_WORDS = new Set(["de", "du", "des", "la", "le", "les", "et", "à", "a", "en", "au", "aux", "sur", "avec", "ou"]);
@@ -52,12 +54,12 @@ export function displayActivityName(name) {
     .join("");
 }
 
-export function formatMoney(value, currency = "EUR") {
+export function formatMoney(value, currency = "EUR", language = "fr") {
   const parsed = Number(value);
   const safeValue = Number.isFinite(parsed) ? parsed : 0;
   const digits = Number.isInteger(safeValue) ? 0 : 2;
   try {
-    return new Intl.NumberFormat("fr-FR", {
+    return new Intl.NumberFormat(publicLocale(language), {
       style: "currency",
       currency: String(currency || "EUR").toUpperCase(),
       minimumFractionDigits: digits,

@@ -1,4 +1,5 @@
 import { PublicAppShell } from "../components/public/PublicAppShell";
+import { useTranslation } from "../hooks/useTranslation";
 
 function Section({ id, title, children }) {
   return (
@@ -33,8 +34,9 @@ function BulletList({ items }) {
 }
 
 export function PublicPrivacyPage() {
+  const { t } = useTranslation();
   return (
-    <PublicAppShell title="Confidentialité" wide>
+    <PublicAppShell title={t("public.privacy.title")} wide>
       <main className="mx-auto w-full max-w-lg px-4 pb-16 pt-6 lg:max-w-3xl lg:px-0">
         <p data-reveal="item" className="hdc-eyebrow">Vos données</p>
         <h1 data-split className="mt-1.5 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink lg:text-5xl">

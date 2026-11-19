@@ -100,12 +100,16 @@ export function isValidCatalogueStay(stay) {
   return Boolean(arrival && departure && min && departure >= min);
 }
 
-/** @param {{ arrivalDate?: string, departureDate?: string }|null|undefined} stay */
-export function formatCatalogueStaySummary(stay) {
+/**
+ * @param {{ arrivalDate?: string, departureDate?: string }|null|undefined} stay
+ * @param {string} [language="fr"]
+ */
+export function formatCatalogueStaySummary(stay, language = "fr") {
   if (!isValidCatalogueStay(stay)) return "";
+  const locale = language === "en" ? "en-GB" : "fr-FR";
   const fmt = (iso) => {
     try {
-      return new Intl.DateTimeFormat("fr-FR", {
+      return new Intl.DateTimeFormat(locale, {
         day: "numeric",
         month: "short",
         year: "numeric",

@@ -5,6 +5,7 @@ import { SITE_KEY } from "../constants";
 import { currencyNoCents } from "../utils";
 import { fetchClientStayByCode, normalizeReservationCode } from "../utils/clientStay";
 import { getActivityPickupOptions } from "../utils/transferPricing";
+import { useTranslation } from "../hooks/useTranslation";
 import {
   describeOpenModificationRequest,
   findOpenModificationForItem,
@@ -49,6 +50,7 @@ function ChoiceButton({ children, onClick, disabled = false }) {
 }
 
 export function PublicModificationPage() {
+  const { t } = useTranslation();
   const [step, setStep] = useState("code");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -250,7 +252,7 @@ export function PublicModificationPage() {
   };
 
   return (
-    <PublicAppShell title="Modification / annulation">
+    <PublicAppShell title={t("public.modification.title")}>
       <main className="mx-auto w-full max-w-lg px-4 pb-16 pt-6">
         <p className="hdc-eyebrow">Votre séjour</p>
         <h1 className="mt-1.5 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink">

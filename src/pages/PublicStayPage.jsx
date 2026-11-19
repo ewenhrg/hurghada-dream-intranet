@@ -4,6 +4,7 @@ import { Bell, BellRing, CalendarDays, Clock, Hotel, LogOut, MapPin, RefreshCw, 
 import { PublicAppShell } from "../components/public/PublicAppShell";
 import { HdLoader } from "../components/public/GuestPageLoader";
 import { StateCard, WhatsAppGlyph } from "../components/public/PublicUI";
+import { useTranslation } from "../hooks/useTranslation";
 import {
   clearStayCode,
   fetchClientStayByCode,
@@ -148,8 +149,9 @@ function formatUpdatedAt(iso) {
 }
 
 function StayMaintenance() {
+  const { t } = useTranslation();
   return (
-    <PublicAppShell title="Mon séjour">
+    <PublicAppShell title={t("public.stay.title")}>
       <main className="mx-auto w-full max-w-lg px-4 pb-14 pt-8">
         <p data-reveal="item" className="hdc-eyebrow">Maintenance</p>
         <h1 data-split className="mt-1.5 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink">
@@ -167,7 +169,7 @@ function StayMaintenance() {
           className="hdc-btn hdc-btn-ink mt-6 w-full sm:w-auto"
         >
           <WhatsAppGlyph className="h-5 w-5 text-[#1F8F55]" />
-          Écrire sur WhatsApp
+          {t("public.common.whatsapp")}
         </a>
       </main>
     </PublicAppShell>
@@ -180,6 +182,7 @@ export function PublicStayPage() {
 }
 
 function PublicStayPageLive() {
+  const { t } = useTranslation();
   const [code, setCode] = useState(() => loadSavedStayCode());
   const [inputCode, setInputCode] = useState(() => loadSavedStayCode());
   const [loading, setLoading] = useState(() => Boolean(loadSavedStayCode()));
@@ -350,7 +353,7 @@ function PublicStayPageLive() {
 
   return (
     <PublicAppShell
-      title="Mon séjour"
+      title={t("public.stay.title")}
       revealKey={`${loading ? "l" : "r"}-${stay ? (stay.found === false ? "none" : days.length) : "form"}`}
       right={
         code ? (

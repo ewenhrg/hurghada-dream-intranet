@@ -4,6 +4,7 @@ import { Building2, LogOut, Search, ShoppingBag, Trash2 } from "lucide-react";
 import { GuestHeaderButton, PublicAppShell } from "../components/public/PublicAppShell";
 import { HdLoader } from "../components/public/GuestPageLoader";
 import { Sheet, SheetFooter, SheetHeader } from "../components/public/PublicUI";
+import { useTranslation } from "../hooks/useTranslation";
 import {
   CatalogueActivityCard,
   CatalogueActivityCardSkeleton,
@@ -81,6 +82,7 @@ function formatDay(iso) {
 }
 
 export function PublicB2BPage() {
+  const { t } = useTranslation();
   const [session, setSession] = useState(() => loadB2BSession());
 
   function handleLoggedIn(next) {
@@ -167,7 +169,7 @@ function B2BLogin({ onLoggedIn }) {
   }
 
   return (
-    <PublicAppShell title="Agences" revealKey="b2b-login">
+    <PublicAppShell title={t("public.b2b.title")} revealKey="b2b-login">
       <section className="px-4 pb-16 pt-6">
         <p className="hdc-eyebrow">Espace agences</p>
         <h1 className="mt-2 font-catalog-display text-[2.4rem] leading-[1.05] text-catalog-ink">

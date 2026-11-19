@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { getEarliestBookableActivityDateYmd } from "../../utils/activityAvailableDates";
 import {
-  CATALOGUE_STAY_SAME_DAY_MESSAGE,
   getMinDepartureDate,
   isSameDayCatalogueStay,
   isValidCatalogueStay,
   savePublicCatalogueStay,
 } from "../../utils/publicCatalogueStayStorage";
 import { DateInput } from "../DateInput";
+import { useTranslation } from "../../hooks/useTranslation";
+import { publicLocale } from "../../i18n/translations";
 
 const fieldClass =
   "mt-1.5 w-full rounded-2xl border border-catalog-border bg-white px-4 py-3 text-sm font-semibold text-catalog-ink outline-none transition focus:border-catalog-lagoon focus:ring-4 focus:ring-catalog-lagoon/20";
@@ -30,6 +31,7 @@ export function CatalogueStayGateModal({
   onClose,
   onSaved,
 }) {
+  const { t, language } = useTranslation();
   const [arrivalDate, setArrivalDate] = useState("");
   const [departureDate, setDepartureDate] = useState("");
   const [error, setError] = useState("");
@@ -53,14 +55,19 @@ export function CatalogueStayGateModal({
   if (!open) return null;
 
   const todayYmd = (() => {
-    const t = new Date();
-    const y = t.getFullYear();
-    const m = String(t.getMonth() + 1).padStart(2, "0");
-    const d = String(t.getDate()).padStart(2, "0");
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   })();
   const earliestActivity = getEarliestBookableActivityDateYmd();
   const sameDaySelected = isSameDayCatalogueStay({ arrivalDate, departureDate });
+  const earliestLabel = new Date(`${earliestActivity}T12:00:00`).toLocaleDateString(publicLocale(language), {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -70,19 +77,19 @@ export function CatalogueStayGateModal({
       departureDate: String(departureDate || "").trim(),
     };
     if (!stay.arrivalDate || !stay.departureDate) {
-      setError("Indiquez vos dates d’arrivée et de départ.");
+      setError(t("public.stayGate.err.missing"));
       return;
     }
     if (isSameDayCatalogueStay(stay)) {
-      setError(CATALOGUE_STAY_SAME_DAY_MESSAGE);
+      setError(t("public.stayGate.err.sameDay"));
       return;
     }
     if (stay.arrivalDate > stay.departureDate) {
-      setError("La date de départ doit être après la date d’arrivée.");
+      setError(t("public.stayGate.err.order"));
       return;
     }
     if (!isValidCatalogueStay(stay)) {
-      setError("Dates de séjour invalides.");
+      setError(t("public.stayGate.err.invalid"));
       return;
     }
     const saved = savePublicCatalogueStay(stay);
@@ -101,7 +108,7 @@ export function CatalogueStayGateModal({
         <button
           type="button"
           className="absolute inset-0 cursor-default"
-          aria-label="Fermer"
+          aria-label={t("public.common.close")}
           onClick={() => onClose?.()}
         />
       ) : null}
@@ -115,26 +122,23 @@ export function CatalogueStayGateModal({
         <div className="flex items-start justify-between gap-3 px-5 pb-2 pt-4 sm:px-6 sm:pt-6">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-catalog-lagoon">
-              Étape 1 · Votre séjour
+              {t("public.stayGate.eyebrow")}
             </p>
             <h2
               id="catalogue-stay-title"
               className="mt-1 flex items-center gap-2 font-catalog-display text-xl font-semibold text-catalog-ink sm:text-2xl"
             >
               <CalendarDays className="h-6 w-6 shrink-0 text-catalog-lagoon" aria-hidden />
-              Dates de séjour
+              {t("public.stayGate.title")}
             </h2>
-            <p className="mt-2 text-sm font-medium leading-relaxed text-catalog-muted">
-              Pour afficher uniquement les dates possibles pendant votre voyage — et bloquer demain ainsi
-              que les plongées trop proches du départ.
-            </p>
+            <p className="mt-2 text-sm font-medium leading-relaxed text-catalog-muted">{t("public.stayGate.intro")}</p>
           </div>
           {allowDismiss ? (
             <button
               type="button"
               onClick={() => onClose?.()}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600"
-              aria-label="Fermer"
+              aria-label={t("public.common.close")}
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -152,7 +156,7 @@ export function CatalogueStayGateModal({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm font-semibold text-catalog-ink">
-              Arrivée <span className="text-catalog-coral">*</span>
+              {t("public.common.arrival")} <span className="text-catalog-coral">*</span>
               <DateInput
                 value={arrivalDate}
                 min={todayYmd}
@@ -168,7 +172,7 @@ export function CatalogueStayGateModal({
               />
             </label>
             <label className="block text-sm font-semibold text-catalog-ink">
-              Départ <span className="text-catalog-coral">*</span>
+              {t("public.common.departure")} <span className="text-catalog-coral">*</span>
               <DateInput
                 value={departureDate}
                 min={getMinDepartureDate(arrivalDate) || todayYmd}
@@ -181,26 +185,15 @@ export function CatalogueStayGateModal({
 
           {sameDaySelected ? (
             <p className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-900">
-              {CATALOGUE_STAY_SAME_DAY_MESSAGE}
+              {t("public.stayGate.err.sameDay")}
             </p>
           ) : null}
 
           <ul className="mt-4 space-y-2 rounded-2xl border border-catalog-line bg-catalog-bg px-4 py-3 text-xs font-medium leading-relaxed text-catalog-body">
-            <li>Les activités se réservent à partir du <strong>lendemain de votre arrivée</strong>.</li>
-            <li>Le départ doit être <strong>au moins le lendemain</strong> de l’arrivée.</li>
-            <li>
-              Pas de réservation pour <strong>aujourd’hui ni demain</strong> (premier jour possible :{" "}
-              {new Date(`${earliestActivity}T12:00:00`).toLocaleDateString("fr-FR", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
-              ).
-            </li>
-            <li>
-              <strong>Plongée</strong> : au moins <strong>2 jours</strong> avant votre date de départ
-              (sécurité décompression).
-            </li>
+            <li>{t("public.stayGate.rule.nextDayBook")}</li>
+            <li>{t("public.stayGate.rule.depNextDay")}</li>
+            <li>{t("public.stayGate.rule.noTodayTomorrow", { date: earliestLabel })}</li>
+            <li>{t("public.stayGate.rule.diving")}</li>
           </ul>
         </div>
 
@@ -210,14 +203,10 @@ export function CatalogueStayGateModal({
             disabled={sameDaySelected}
             className="hdc-btn hdc-btn-primary w-full min-h-[3.25rem] text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {sameDaySelected
-              ? "Indiquez votre vraie date de départ"
-              : "Voir le catalogue avec mes dates"}
+            {sameDaySelected ? t("public.stayGate.ctaBlocked") : t("public.stayGate.cta")}
           </button>
           {!allowDismiss ? (
-            <p className="mt-2 text-center text-[11px] font-medium text-slate-500">
-              Obligatoire pour continuer
-            </p>
+            <p className="mt-2 text-center text-[11px] font-medium text-slate-500">{t("public.stayGate.requiredHint")}</p>
           ) : null}
         </div>
       </form>

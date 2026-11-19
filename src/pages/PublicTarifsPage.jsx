@@ -5,6 +5,7 @@ import { SITE_KEY, CATEGORIES } from "../constants";
 import { logger } from "../utils/logger";
 import { getActivityTarifListLines } from "../utils/activityHelpers";
 import { formatActivityAvailableDaysSummary, getActivityDayLabelsList } from "../utils/activityDaysDisplay";
+import { useTranslation } from "../hooks/useTranslation";
 
 /** Même jeu de colonnes que la gestion interne (App.jsx) pour les prix / catégorie. */
 const SELECT_COLUMNS =
@@ -252,6 +253,7 @@ async function fetchActivityRowsBestSource(client) {
 }
 
 export function PublicTarifsPage() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

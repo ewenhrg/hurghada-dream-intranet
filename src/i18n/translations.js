@@ -1,3 +1,5 @@
+import { publicUiEn, publicUiFr } from "./publicUi";
+
 // Traductions français/anglais
 export const translations = {
   fr: {
@@ -259,7 +261,17 @@ Object.assign(translations.fr, {
   "public.home.stayCodeError": "Exemple : HU-10042",
   "public.home.stayCodeView": "Voir",
   "public.home.navigation": "Navigation",
+  ...publicUiFr,
 });
+
+Object.assign(translations.en, {
+  ...publicUiEn,
+});
+
+/** Locale BCP 47 pour dates / montants côté site client. */
+export function publicLocale(language = "fr") {
+  return language === "en" ? "en-GB" : "fr-FR";
+}
 
 // Fonction helper pour traduire avec support des variables
 export function t(key, language = "fr", variables = {}) {

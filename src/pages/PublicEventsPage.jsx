@@ -3,6 +3,7 @@ import { PublicAppShell } from "../components/public/PublicAppShell";
 import { DateInput } from "../components/DateInput";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
+import { useTranslation } from "../hooks/useTranslation";
 
 const OFFERS = [
   {
@@ -92,6 +93,7 @@ const inputClass =
   "mt-1.5 h-12 w-full rounded-2xl border border-catalog-border bg-white px-4 text-base text-catalog-ink outline-none focus:border-catalog-lagoon";
 
 export function PublicEventsPage() {
+  const { t } = useTranslation();
   const formRef = useRef(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -208,7 +210,7 @@ export function PublicEventsPage() {
   };
 
   return (
-    <PublicAppShell title="Événements" wide>
+    <PublicAppShell title={t("public.events.title")} wide>
       <main className="mx-auto w-full max-w-5xl px-4 pb-16 pt-6">
         <p data-reveal="item" className="hdc-eyebrow">Hurghada Dream</p>
         <h1 data-split className="mt-1.5 font-catalog-display text-[2rem] leading-[1.08] text-catalog-ink lg:text-5xl">

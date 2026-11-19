@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { PublicAppShell } from "../components/public/PublicAppShell";
+import { useTranslation } from "../hooks/useTranslation";
 
 const REFUND_ROWS = [
   { when: "Plus de 72 h avant l’activité", amount: "Remboursement intégral" },
@@ -27,8 +28,9 @@ const SPECIAL_CASES = [
 ];
 
 export function PublicPolicyPage() {
+  const { t } = useTranslation();
   return (
-    <PublicAppShell title="Remboursement" headerTitle="" wide>
+    <PublicAppShell title={t("public.policy.title")} headerTitle="" wide>
       <main className="mx-auto w-full max-w-lg px-4 pb-16 pt-6 lg:max-w-3xl lg:px-0">
         <p data-reveal="item" className="hdc-eyebrow">Avant de réserver</p>
         <h1 data-split className="mt-1.5 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink lg:text-5xl">

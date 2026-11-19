@@ -2,28 +2,29 @@ import { Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PublicAppShell } from "../components/public/PublicAppShell";
 import { WhatsAppGlyph } from "../components/public/PublicUI";
+import { useTranslation } from "../hooks/useTranslation";
 
-const CONTACTS = [
+const CONTACT_ROWS = [
   {
-    title: "Service réservation",
+    titleKey: "public.contacts.service.booking",
     display: "+20 10 62002850",
     tel: "+201062002850",
     whatsapp: "201062002850",
   },
   {
-    title: "Service hôtel",
+    titleKey: "public.contacts.service.hotel",
     display: "+20 12 71756017",
     tel: "+201271756017",
     whatsapp: "201271756017",
   },
   {
-    title: "Service transfert de jour",
+    titleKey: "public.contacts.service.dayTransfer",
     display: "+20 10 06346043",
     tel: "+201006346043",
     whatsapp: "201006346043",
   },
   {
-    title: "Transfert de nuit",
+    titleKey: "public.contacts.service.nightTransfer",
     display: "+20 12 73333545",
     tel: "+201273333545",
     whatsapp: "201273333545",
@@ -31,28 +32,29 @@ const CONTACTS = [
 ];
 
 export function PublicContactsPage() {
+  const { t } = useTranslation();
+
   return (
-    <PublicAppShell title="Contacts">
+    <PublicAppShell title={t("public.contacts.title")}>
       <main className="mx-auto w-full max-w-lg px-4 pb-12 pt-6">
-        <p data-reveal="item" className="hdc-eyebrow">Nous joindre</p>
+        <p data-reveal="item" className="hdc-eyebrow">
+          {t("public.contacts.eyebrow")}
+        </p>
         <h1 data-split className="mt-1.5 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink">
-          Nos <span className="hdc-serif">contacts</span>
+          {t("public.contacts.headingBefore")}{" "}
+          <span className="hdc-serif">{t("public.contacts.headingAccent")}</span>
         </h1>
         <p data-reveal="item" className="mt-3 max-w-sm text-[0.9375rem] leading-relaxed text-catalog-muted">
-          Une équipe française vous répond, 7 jours sur 7. Appuyez sur un numéro pour appeler.
+          {t("public.contacts.intro")}
         </p>
 
         <ul className="mt-6 space-y-3">
-          {CONTACTS.map((contact) => (
+          {CONTACT_ROWS.map((contact) => (
             <li key={contact.tel} data-reveal="item" className="hdc-card p-4">
               <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-catalog-label">
-                {contact.title}
+                {t(contact.titleKey)}
               </p>
-              <a
-                href={`tel:${contact.tel}`}
-                data-press
-                className="mt-2 flex min-h-11 items-center gap-3 text-catalog-ink"
-              >
+              <a href={`tel:${contact.tel}`} data-press className="mt-2 flex min-h-11 items-center gap-3 text-catalog-ink">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-catalog-mist text-catalog-lagoon">
                   <Phone className="h-5 w-5" strokeWidth={1.75} aria-hidden />
                 </span>
@@ -66,42 +68,25 @@ export function PublicContactsPage() {
                 className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-catalog-lagoon"
               >
                 <WhatsAppGlyph className="h-4 w-4 text-[#1F8F55]" />
-                Écrire sur WhatsApp
+                {t("public.common.whatsapp")}
               </a>
             </li>
           ))}
         </ul>
 
         <div className="mt-6 space-y-3">
-          <Link
-            to="/qui-sommes-nous"
-            data-press
-            data-reveal="item"
-            className="hdc-card block p-4 text-catalog-ink"
-          >
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-catalog-label">L’agence</p>
-            <p className="mt-1 font-catalog-display text-[1.25rem] leading-tight">Qui sommes-nous</p>
-            <p className="mt-1 text-sm text-catalog-muted">Notre histoire, nos expériences et notre engagement.</p>
+          <Link to="/qui-sommes-nous" data-press data-reveal="item" className="hdc-card block p-4 text-catalog-ink">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-catalog-label">
+              {t("public.about.eyebrow")}
+            </p>
+            <p className="mt-1 font-catalog-display text-[1.25rem] leading-tight">{t("public.about.title")}</p>
+            <p className="mt-1 text-sm text-catalog-muted">{t("public.about.intro")}</p>
           </Link>
-          <Link
-            to="/politique"
-            data-press
-            data-reveal="item"
-            className="hdc-card block p-4 text-catalog-ink"
-          >
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-catalog-label">Avant de réserver</p>
-            <p className="mt-1 font-catalog-display text-[1.25rem] leading-tight">Remboursement et modification</p>
-            <p className="mt-1 text-sm text-catalog-muted">Délais, Caire, Louxor et montgolfière.</p>
+          <Link to="/politique" data-press data-reveal="item" className="hdc-card block p-4 text-catalog-ink">
+            <p className="mt-1 font-catalog-display text-[1.25rem] leading-tight">{t("public.policy.title")}</p>
           </Link>
-          <Link
-            to="/confidentialite"
-            data-press
-            data-reveal="item"
-            className="hdc-card block p-4 text-catalog-ink"
-          >
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-catalog-label">Vos données</p>
-            <p className="mt-1 font-catalog-display text-[1.25rem] leading-tight">Politique de confidentialité</p>
-            <p className="mt-1 text-sm text-catalog-muted">Collecte, conservation et droits RGPD.</p>
+          <Link to="/confidentialite" data-press data-reveal="item" className="hdc-card block p-4 text-catalog-ink">
+            <p className="mt-1 font-catalog-display text-[1.25rem] leading-tight">{t("public.privacy.title")}</p>
           </Link>
         </div>
       </main>

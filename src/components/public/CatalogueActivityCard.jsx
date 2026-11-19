@@ -4,6 +4,7 @@ import { CatalogPhotoFrame } from "./CatalogPhotoFrame";
 import { startPhotoFlight } from "./motion";
 import { CATEGORY_ICONS, displayActivityName, formatMoney, getPublicCategoryLabel } from "./catalogueDisplay";
 import { getActivityDayLabelsList } from "../../utils/activityDaysDisplay";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export function CategoryIcon({ categoryKey, className = "h-4 w-4", strokeWidth = 1.75 }) {
   const Icon = CATEGORY_ICONS[categoryKey] || Compass;
@@ -11,11 +12,11 @@ export function CategoryIcon({ categoryKey, className = "h-4 w-4", strokeWidth =
 }
 
 /** Jours de départ réels de l’activité, en clair ; rien si la donnée manque. */
-function formatDepartureDays(activity) {
+function formatDepartureDays(activity, t) {
   const labels = getActivityDayLabelsList(activity);
   if (!labels || labels.length === 0) return "";
-  if (labels.length === 7) return "Tous les jours";
-  if (labels.length >= 5) return `${labels.length} jours / 7`;
+  if (labels.length === 7) return t("public.activity.card.everyDay");
+  if (labels.length >= 5) return t("public.activity.card.daysOf7", { count: labels.length });
   return labels.join(" · ");
 }
 
@@ -67,16 +68,18 @@ export function CatalogueActivityCard({
   onAdd,
   href,
   quoteOnly = false,
-  ctaLabel = "Découvrir",
+  ctaLabel,
 }) {
+  const { t, language } = useTranslation();
   const asButton = typeof onAdd === "function";
   const hidePrice = quoteOnly || asButton;
   const to = href || `/catalogue/activity/${encodeURIComponent(String(activity.id))}`;
-  const rawName = displayActivityName(activity.name) || "Activité";
+  const rawName = displayActivityName(activity.name) || t("public.category.fallback");
   const name = quoteOnly ? hideMoney(rawName) || rawName : rawName;
-  const days = formatDepartureDays(activity);
+  const days = formatDepartureDays(activity, t);
   const hook = quoteOnly ? hideMoney(teaser(prose, rawName)) : teaser(prose, rawName);
   const hasPrice = !hidePrice && fromPrice != null && fromPrice > 0;
+  const resolvedCta = ctaLabel || t("public.activity.card.discover");
 
   const onClick = (event) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -105,12 +108,12 @@ export function CatalogueActivityCard({
         <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
           <span className="inline-flex min-h-7 items-center gap-1.5 rounded-full bg-white/95 px-2.5 text-[0.6875rem] font-semibold text-catalog-ink shadow-sm">
             <CategoryIcon categoryKey={categoryKey} className="h-3.5 w-3.5 text-catalog-lagoon" />
-            {getPublicCategoryLabel(categoryKey)}
+            {getPublicCategoryLabel(categoryKey, language)}
           </span>
           {activity.popular === true ? (
             <span className="inline-flex min-h-7 items-center gap-1 rounded-full bg-catalog-ink/85 px-2.5 text-[0.6875rem] font-semibold text-white">
               <Star className="h-3 w-3 fill-catalog-sand text-catalog-sand" aria-hidden />
-              Populaire
+              {t("public.common.popular")}
             </span>
           ) : null}
         </div>
@@ -130,22 +133,26 @@ export function CatalogueActivityCard({
           <div className="min-w-0">
             {hasPrice ? (
               <>
-                <span className="block text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-catalog-muted">À partir de</span>
+                <span className="block text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-catalog-muted">
+                  {t("public.common.fromPrice")}
+                </span>
                 <span className="mt-0.5 block text-[1.375rem] font-semibold leading-none tabular-nums text-catalog-ink">
-                  {formatMoney(fromPrice, activity.currency || "EUR")}
+                  {formatMoney(fromPrice, activity.currency || "EUR", language)}
                 </span>
               </>
             ) : (
               <>
                 <span className="block text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-catalog-muted">
-                  {hidePrice ? "Tarif professionnel" : "Tarif"}
+                  {hidePrice ? t("public.activity.card.proRate") : t("public.activity.card.rate")}
                 </span>
-                <span className="mt-0.5 block text-base font-semibold leading-none text-catalog-brass">Sur devis</span>
+                <span className="mt-0.5 block text-base font-semibold leading-none text-catalog-brass">
+                  {t("public.common.onQuote")}
+                </span>
               </>
             )}
           </div>
           <span className="hdc-excursion-cta inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full pl-4 pr-3 text-sm font-semibold">
-            {ctaLabel}
+            {resolvedCta}
             <ArrowUpRight className="h-4 w-4" aria-hidden />
           </span>
         </div>

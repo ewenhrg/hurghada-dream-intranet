@@ -10,6 +10,7 @@ import { formatPhoneWithPlus } from "../utils";
 import { boardFieldsToPayload } from "../constants/hotelRequestBoardOptions";
 import { getLocalDateKey } from "../utils/pushSaleExpiry.js";
 import { DateInput } from "../components/DateInput";
+import { useTranslation } from "../hooks/useTranslation";
 
 const EMPTY_FORM = {
   firstName: "",
@@ -63,6 +64,7 @@ function FieldLabel({ children, required, htmlFor }) {
 }
 
 export function PublicHotelRequestPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const wantsProposition = useMemo(() => {
     const raw = String(searchParams.get("proposition") || searchParams.get("offre") || "")
@@ -220,7 +222,7 @@ export function PublicHotelRequestPage() {
 
   if (submitted) {
     return (
-      <PublicAppShell title="Demande hôtel" revealKey="sent">
+      <PublicAppShell title={t("public.hotelRequest.title")} revealKey="sent">
         <div data-reveal="item" className="mx-auto max-w-md px-4 py-14 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-catalog-lagoonSoft text-catalog-lagoon">
             <CheckCircle2 className="h-8 w-8" aria-hidden />

@@ -5,6 +5,7 @@ import { CATEGORIES, SITE_KEY } from "../constants";
 import { logger } from "../utils/logger";
 import { loadPublicCatalogueCart, savePublicCatalogueCart } from "../utils/publicCatalogueCartStorage";
 import { loadB2BCart, loadB2BSession, saveB2BCart } from "../utils/b2b";
+import { useTranslation } from "../hooks/useTranslation";
 import {
   isValidCatalogueStay,
   loadPublicCatalogueStay,
@@ -348,6 +349,7 @@ function BookingCardShell({
   setSlot,
   pickupRequired = false,
 }) {
+  const { t } = useTranslation();
   const currency = activity.currency || "EUR";
   const ageChild = String(activity.age_child || "").trim();
   const ageBaby = String(activity.age_baby || "").trim();
@@ -362,15 +364,15 @@ function BookingCardShell({
       <div className="hd-booking-pricing-summary rounded-[1.25rem] bg-catalog-bg px-4 py-4 ring-1 ring-catalog-line">
         <p className="mb-1 text-xs font-medium text-catalog-muted">
           {hidePrices
-            ? "Tarif professionnel"
+            ? t("public.activity.card.proRate")
             : isBuggyActivity(activity?.name)
-              ? "À partir de (par buggy)"
-              : "À partir de (adulte)"}
+              ? `${t("public.common.fromPrice")} (buggy)`
+              : `${t("public.common.fromPrice")} (${t("public.common.adults").toLowerCase()})`}
         </p>
         <div className="flex items-baseline gap-2">
           <span className="font-catalog-display text-[1.75rem] leading-none text-catalog-ink tabular-nums">
             {hidePrices || showSurDevisHeader ? (
-              <span className="text-base font-semibold text-catalog-ink">Sur devis</span>
+              <span className="text-base font-semibold text-catalog-ink">{t("public.common.onQuote")}</span>
             ) : (
               formatMoney(resolvedHeader, currency)
             )}
@@ -565,10 +567,10 @@ function BookingCardShell({
           </p>
         ) : null}
         <div className="mb-3 flex items-end justify-between">
-          <span className="text-sm font-medium text-catalog-muted">Total</span>
+          <span className="text-sm font-medium text-catalog-muted">{t("public.activity.page.total")}</span>
           <span className="font-catalog-display text-[1.625rem] leading-none tabular-nums text-catalog-ink">
             {hidePrices ? (
-              <span className="text-base font-semibold text-catalog-ink">Sur devis</span>
+              <span className="text-base font-semibold text-catalog-ink">{t("public.common.onQuote")}</span>
             ) : codedTotalPending && toNumber(lineTotal) <= 0 ? (
               <span className="text-base font-semibold text-catalog-brass">Sélectionnez les options</span>
             ) : (
@@ -583,7 +585,7 @@ function BookingCardShell({
           data-press
           className="hdc-btn hdc-btn-primary w-full"
         >
-          Ajouter au panier
+          {t("public.activity.page.add")}
         </button>
         {dateError ? (
           <p className="mt-2 text-center text-sm text-catalog-coralDeep">Veuillez sélectionner une date</p>
@@ -607,6 +609,7 @@ function BookingCardShell({
  * @param {{ activityId: string, b2b?: boolean }} props
  */
 export function PublicCatalogueActivityPage({ activityId, b2b = false }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [activity, setActivity] = useState(null);
   const [loadError, setLoadError] = useState("");

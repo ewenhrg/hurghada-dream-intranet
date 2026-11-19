@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { PublicAppShell } from "../components/public/PublicAppShell";
+import { useTranslation } from "../hooks/useTranslation";
 
 const EXPERIENCES = [
   {
@@ -48,8 +49,9 @@ const REASONS = [
 ];
 
 export function PublicAboutPage() {
+  const { t } = useTranslation();
   return (
-    <PublicAppShell title="Qui sommes-nous" wide>
+    <PublicAppShell title={t("public.about.title")} wide>
       <main className="mx-auto w-full max-w-lg px-4 pb-16 pt-6 lg:max-w-3xl lg:px-0">
         <p data-reveal="item" className="hdc-eyebrow">Hurghada Dream</p>
         <h1 data-split className="mt-1.5 font-catalog-display text-[2rem] leading-[1.1] text-catalog-ink lg:text-5xl">
