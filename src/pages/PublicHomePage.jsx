@@ -15,7 +15,6 @@ import {
   Phone,
   Sparkles,
   Sun,
-  Ticket,
 } from "lucide-react";
 import { CatalogPhotoFrame } from "../components/public/CatalogPhotoFrame";
 import { HomeReviewsMarquee } from "../components/public/HomeReviewsMarquee";
@@ -32,7 +31,6 @@ import {
 } from "../components/public/motion";
 import { useHurghadaWeather } from "../hooks/useHurghadaWeather";
 import { useTranslation } from "../hooks/useTranslation";
-import { normalizeReservationCode, saveStayCode } from "../utils/clientStay";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
 
 const AGENCY_WHATSAPP_URL = "https://wa.me/201062002850?text=Bonjour%20Hurghada%20Dream%2C%20";
@@ -44,7 +42,7 @@ const TILE_STAY = "/client/home-tile-stay-calendar.jpg";
 const heroReelsPromise = fetchInstagramReels();
 
 function playableReels(list) {
-  return (Array.isArray(list) ? list : []).filter((reel) => reel.video).slice(0, 12);
+  return (Array.isArray(list) ? list : []).filter((reel) => reel.video).slice(0, 1);
 }
 const PHONE_QUERY = "(max-width: 1023px)";
 const pendingPlays = new WeakMap();
@@ -70,56 +68,38 @@ function playMuted(video) {
   return job;
 }
 
-/**
- * Réel du hero. Sur téléphone, seules les colonnes à l’écran ont un lecteur :
- * une douzaine de `<video>` sature le décodeur et fige les trois visibles.
- */
-function HeroReel({ reel, active, eager }) {
+/** Une seule vidéo reel en fond du hero. */
+function HeroReel({ reel, playing }) {
   const videoRef = useRef(null);
 
   useLayoutEffect(() => {
     const node = videoRef.current;
-    if (!node || !eager) return undefined;
+    if (!node) return undefined;
     armVideo(node);
     node.autoplay = true;
     node.setAttribute("autoplay", "");
     if (node.getAttribute("src") !== reel.video) node.src = reel.video;
-    playMuted(node);
+    if (playing) playMuted(node);
+    else node.pause();
     return undefined;
-  }, [reel.video, eager]);
+  }, [reel.video, playing]);
 
   return (
-    <div className="hdc-hero-reel relative h-full shrink-0 snap-start overflow-hidden">
-      {active ? (
-        <video
-          ref={videoRef}
-          data-src={reel.video}
-          poster={reel.image}
-          autoPlay={eager}
-          muted
-          loop
-          playsInline
-          preload={eager ? "auto" : "none"}
-          referrerPolicy="no-referrer"
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-        />
-      ) : (
-        <img
-          src={reel.image}
-          alt=""
-          referrerPolicy="no-referrer"
-          decoding="async"
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-        />
-      )}
+    <div className="hdc-hero-reel relative h-full w-full overflow-hidden">
+      <video
+        ref={videoRef}
+        data-src={reel.video}
+        poster={reel.image}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        referrerPolicy="no-referrer"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+      />
     </div>
   );
-}
-
-function reservationCodeFromInput(raw) {
-  const compact = normalizeReservationCode(raw).replace(/-/g, "");
-  const match = compact.match(/^([A-Z]{2})(\d{3,})$/);
-  return match ? `${match[1]}-${match[2]}` : normalizeReservationCode(raw);
 }
 
 function greeting(t) {
@@ -163,18 +143,16 @@ export function PublicHomePage() {
   const { t, language } = useTranslation();
   const [hotels, setHotels] = useState([]);
   const [heroReels, setHeroReels] = useState(() => playableReels(readCachedReels()));
-  const [reelsSettled, setReelsSettled] = useState(() => playableReels(readCachedReels()).length >= 3);
+  const [reelsSettled, setReelsSettled] = useState(() => playableReels(readCachedReels()).length >= 1);
   const weather = useHurghadaWeather();
   const hello = useMemo(() => greeting(t), [language, t]);
-  const [stayCode, setStayCode] = useState("");
-  const [stayCodeError, setStayCodeError] = useState("");
   const heroRef = useRef(null);
   const heroScrollRef = useRef(null);
   const railRef = useRef(null);
   const railDragRef = useRef(false);
   const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia(PHONE_QUERY).matches);
-  const [visibleReels, setVisibleReels] = useState([0, 1, 2]);
   const [heroClear, setHeroClear] = useState(false);
+  const heroReel = heroReels[0] || null;
 
   useEffect(() => {
     let cancelled = false;
@@ -211,7 +189,7 @@ export function PublicHomePage() {
     heroReelsPromise.then((list) => {
       if (cancelled) return;
       const next = playableReels(list);
-      if (next.length >= 3) setHeroReels(next);
+      if (next.length >= 1) setHeroReels(next);
       setReelsSettled(true);
     });
     return () => {
@@ -239,85 +217,41 @@ export function PublicHomePage() {
 
   useEffect(() => {
     const root = heroScrollRef.current;
-    if (!root || heroReels.length < 3) return undefined;
+    if (!root || !heroReel) return undefined;
 
-    const syncVisible = () => {
-      if (!window.matchMedia(PHONE_QUERY).matches) return;
-      const rootBox = root.getBoundingClientRect();
-      const next = [];
-      [...root.children].forEach((child, index) => {
-        const box = child.getBoundingClientRect();
-        if (box.width > 8 && box.right > rootBox.left + 12 && box.left < rootBox.right - 12) next.push(index);
-      });
-      if (!next.length) return;
-      setVisibleReels((prev) => (prev.length === next.length && prev.every((value, index) => value === next[index]) ? prev : next));
-    };
-
-    const syncDesktop = () => {
-      if (window.matchMedia(PHONE_QUERY).matches) return;
-      const rootBox = root.getBoundingClientRect();
-      [...root.querySelectorAll("video")].forEach((node, index) => {
-        const source = node.dataset.src;
-        const box = node.getBoundingClientRect();
-        const visible = index < 3 || (box.width > 8 && box.left < rootBox.right - 24 && box.right > rootBox.left + 24);
-        if (!visible) {
-          if (!node.paused) node.pause();
-          return;
-        }
-        if (source && !node.getAttribute("src")) node.src = source;
-        if (node.paused) playMuted(node);
-      });
-    };
-
-    let kicking = false;
-    const kick = async () => {
-      if (kicking) return;
-      kicking = true;
-      try {
-        const nodes = [...root.querySelectorAll("video")].filter((node) => node.getAttribute("src"));
-        nodes.forEach((node) => {
-          if (node.paused) playMuted(node);
-        });
-      } finally {
-        kicking = false;
-      }
+    const kick = () => {
+      const node = root.querySelector("video");
+      if (!node) return;
+      if (node.dataset.src && !node.getAttribute("src")) node.src = node.dataset.src;
+      if (node.paused) playMuted(node);
     };
     kick();
 
-    const retry = () => {
-      kick();
-    };
     const onCanPlay = (event) => {
       const node = event.target;
       if (!(node instanceof HTMLVideoElement) || !node.paused || !node.getAttribute("src")) return;
       playMuted(node);
     };
     const interval = window.setInterval(() => {
-      const first = [...root.querySelectorAll("video")].filter((node) => node.getAttribute("src")).slice(0, 3);
-      if (first.length >= 3 && first.every((node) => !node.paused && node.currentTime > 0.05)) {
+      const node = root.querySelector("video");
+      if (node && !node.paused && node.currentTime > 0.05) {
         window.clearInterval(interval);
         return;
       }
       kick();
     }, 900);
     const stop = window.setTimeout(() => window.clearInterval(interval), 12000);
-    const onScroll = () => {
-      syncVisible();
-      syncDesktop();
-    };
-    root.addEventListener("scroll", onScroll, { passive: true });
     root.addEventListener("canplay", onCanPlay, true);
-    window.addEventListener("touchstart", retry, { passive: true });
-    window.addEventListener("pageshow", retry);
+    window.addEventListener("touchstart", kick, { passive: true });
+    window.addEventListener("pageshow", kick);
     return () => {
       window.clearInterval(interval);
       window.clearTimeout(stop);
-      root.removeEventListener("scroll", onScroll);
       root.removeEventListener("canplay", onCanPlay, true);
-      window.removeEventListener("touchstart", retry);
-      window.removeEventListener("pageshow", retry);
+      window.removeEventListener("touchstart", kick);
+      window.removeEventListener("pageshow", kick);
     };
-  }, [heroReels, visibleReels, phone]);
+  }, [heroReel]);
 
   useEffect(() => {
     if (!phone || !heroClear) return undefined;
@@ -325,12 +259,8 @@ export function PublicHomePage() {
     if (!root) return undefined;
     root.querySelectorAll("video").forEach((node) => node.pause());
     return () => {
-      const nodes = [...root.querySelectorAll("video")];
-      (async () => {
-        for (const node of nodes) {
-          if (node.isConnected && node.getAttribute("src") && node.paused) await playMuted(node);
-        }
-      })();
+      const node = root.querySelector("video");
+      if (node?.isConnected && node.getAttribute("src") && node.paused) playMuted(node);
     };
   }, [heroClear, phone]);
 
@@ -473,16 +403,9 @@ export function PublicHomePage() {
           className="relative h-full overflow-hidden bg-catalog-raised"
         >
           <div data-hero-stage className="absolute inset-0 bg-catalog-abyss">
-            {heroReels.length >= 3 ? (
-              <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Réels Instagram">
-                {heroReels.map((reel, index) => (
-                  <HeroReel
-                    key={reel.id}
-                    reel={reel}
-                    active={!phone || visibleReels.includes(index)}
-                    eager={phone ? visibleReels.includes(index) : index < 3}
-                  />
-                ))}
+            {heroReel ? (
+              <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Réel Instagram">
+                <HeroReel key={heroReel.id} reel={heroReel} playing={!phone || !heroClear} />
               </div>
             ) : reelsSettled ? (
               <img src={HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
@@ -523,54 +446,6 @@ export function PublicHomePage() {
                 {t("public.home.frenchTeam")}
               </GlassChip>
             </div>
-            <form
-              className="pointer-events-auto mt-5 max-w-md"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const formatted = reservationCodeFromInput(stayCode);
-                if (!/^[A-Z]{2}-\d{3,}$/.test(formatted)) {
-                  setStayCodeError(t("public.home.stayCodeError"));
-                  return;
-                }
-                setStayCodeError("");
-                saveStayCode(formatted);
-                navigate("/sejour");
-              }}
-            >
-              <label className="block text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-white/80">
-                {t("public.home.stayCodeLabel")}
-              </label>
-              <div className="mt-2 flex gap-2">
-                <span className="relative min-w-0 flex-1">
-                  <Ticket className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-catalog-lagoon" aria-hidden />
-                  <input
-                    type="text"
-                    inputMode="text"
-                    autoCapitalize="characters"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={stayCode}
-                    onChange={(event) => {
-                      setStayCode(normalizeReservationCode(event.target.value));
-                      setStayCodeError("");
-                    }}
-                    placeholder="HU-10042"
-                    aria-label={t("public.home.stayCodeLabel")}
-                    className="h-12 w-full rounded-full border border-white/30 bg-white/95 pl-10 pr-4 text-base font-semibold uppercase tracking-wide text-catalog-ink outline-none placeholder:font-medium placeholder:normal-case placeholder:tracking-normal placeholder:text-catalog-muted focus:border-white"
-                  />
-                </span>
-                <button
-                  type="submit"
-                  data-press
-                  className="inline-flex h-12 shrink-0 items-center rounded-full bg-catalog-sand px-4 text-sm font-semibold text-catalog-abyss"
-                >
-                  {t("public.home.stayCodeView")}
-                </button>
-              </div>
-              <p className={`mt-2 text-xs ${stayCodeError ? "text-catalog-sand" : "text-white/75"}`} role={stayCodeError ? "alert" : undefined}>
-                {stayCodeError || "Remis au paiement du devis. Ouvre Mon séjour."}
-              </p>
-            </form>
             </div>
           </div>
         </div>

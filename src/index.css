@@ -464,29 +464,13 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   }
 }
 .hd-public-catalog .hdc-hero-reels {
-  display: flex;
   height: 100%;
   width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  overscroll-behavior-x: contain;
-  touch-action: pan-x pan-y;
-  -webkit-overflow-scrolling: touch;
-}
-.hd-public-catalog .hdc-hero-reels::-webkit-scrollbar {
-  display: none;
-}
-@media (max-width: 1023px) {
-  .hd-public-catalog .hdc-hero-reels {
-    -webkit-overflow-scrolling: auto;
-    scroll-snap-type: none;
-  }
+  overflow: hidden;
 }
 .hd-public-catalog .hdc-hero-reel {
-  flex: 0 0 33.333%;
-  width: 33.333%;
+  height: 100%;
+  width: 100%;
 }
 .hd-public-catalog .hdc-reel-marquee {
   overflow-x: auto;
