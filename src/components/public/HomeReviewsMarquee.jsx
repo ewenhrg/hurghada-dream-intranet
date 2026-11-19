@@ -1,7 +1,14 @@
 import { useLayoutEffect, useRef } from "react";
 import { StarRow } from "./HotelUI";
+import { GOOGLE_MAPS_PLACE_URL, GOOGLE_WRITE_REVIEW_URL, GoogleG } from "./GoogleIcon";
 
-const GOOGLE_REVIEWS_URL = "https://www.trustindex.io/reviews/hurghadadream.com";
+/** Couleurs d’avatar façon Google : une par auteur, stable d’une visite à l’autre. */
+const AVATAR_COLORS = ["#1A73E8", "#D93025", "#188038", "#E37400", "#9334E6", "#007B83", "#C5221F", "#5F6368"];
+function avatarColor(name) {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
 
 /** Avis Google 5 étoiles de Hurghada Dream, mars 2025 (Trustindex, hurghadadream.com). */
 const ROW_ONE = [
@@ -73,14 +80,27 @@ const ROW_TWO = [
 function ReviewCard({ review }) {
   return (
     <figure className="flex w-[18.5rem] shrink-0 flex-col rounded-[1.15rem] bg-white px-4 py-3.5 shadow-catalog-card ring-1 ring-catalog-line lg:w-[22rem]">
-      <StarRow count={5} />
-      <blockquote className="mt-2 text-sm leading-snug text-catalog-ink lg:text-[0.9375rem]">
-        <p>“{review.text}”</p>
-      </blockquote>
-      <figcaption className="mt-3 text-xs text-catalog-muted">
-        <span className="font-semibold text-catalog-ink">{review.name}</span>
-        <span> · Google · {review.date}</span>
+      <figcaption className="flex items-center gap-2.5">
+        <span
+          aria-hidden
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase text-white"
+          style={{ background: avatarColor(review.name) }}
+        >
+          {review.name.trim().charAt(0)}
+        </span>
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="block truncate text-sm font-semibold text-catalog-ink">{review.name}</span>
+          <span className="block text-xs text-catalog-muted">{review.date}</span>
+        </span>
+        <GoogleG className="h-5 w-5 shrink-0" />
       </figcaption>
+      <div className="mt-2.5 flex items-center gap-1.5">
+        <StarRow count={5} />
+        <span className="text-[0.6875rem] text-catalog-muted">Avis Google</span>
+      </div>
+      <blockquote className="mt-1.5 text-sm leading-snug text-catalog-ink lg:text-[0.9375rem]">
+        <p>{review.text}</p>
+      </blockquote>
     </figure>
   );
 }
@@ -160,21 +180,33 @@ function ReviewLine({ reviews, reverse = false }) {
 export function HomeReviewsMarquee() {
   return (
     <section className="pt-10 lg:pt-16" aria-labelledby="home-reviews-title">
-      <div className="flex items-end justify-between gap-3 px-4 lg:px-0">
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-4 px-4 lg:px-0">
         <div>
           <p data-reveal="item" className="hdc-eyebrow">Avis Google</p>
           <h2 id="home-reviews-title" data-heading className="mt-1.5 font-catalog-display text-[1.625rem] leading-tight text-catalog-ink lg:text-5xl">
             Cinq étoiles, <span className="hdc-serif">mot pour mot</span>
           </h2>
+          <a
+            href={GOOGLE_MAPS_PLACE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2.5 inline-flex min-h-11 items-center gap-2 text-sm text-catalog-muted hover:text-catalog-ink"
+          >
+            <GoogleG className="h-5 w-5 shrink-0" />
+            <span>
+              7&nbsp;972 avis vérifiés sur <span className="font-semibold text-catalog-ink">Google</span>
+            </span>
+          </a>
         </div>
         <a
-          href={GOOGLE_REVIEWS_URL}
+          href={GOOGLE_WRITE_REVIEW_URL}
           target="_blank"
           rel="noopener noreferrer"
           data-press
-          className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-catalog-lagoon"
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-catalog-ink shadow-catalog-card ring-1 ring-catalog-line hover:ring-catalog-border"
         >
-          7&nbsp;800 avis
+          <GoogleG className="h-5 w-5 shrink-0" />
+          Donner votre avis
         </a>
       </div>
       <div className="mt-4 grid gap-3 lg:mt-8">

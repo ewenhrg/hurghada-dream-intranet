@@ -32,6 +32,7 @@ import {
 import { useHurghadaWeather } from "../hooks/useHurghadaWeather";
 import { useTranslation } from "../hooks/useTranslation";
 import { loadPublicHotelsCatalog } from "../utils/publicHotelsCatalog";
+import { GOOGLE_MAPS_PLACE_URL, GoogleG, GoogleWordmark } from "../components/public/GoogleIcon";
 
 const AGENCY_WHATSAPP_URL = "https://wa.me/201062002850?text=Bonjour%20Hurghada%20Dream%2C%20";
 const AGENCY_MAPS_URL = "https://maps.app.goo.gl/qcx9LvVG3QwKUWyWA";
@@ -411,9 +412,21 @@ export function PublicHomePage() {
 
           <div data-hero-copy className="pointer-events-none absolute inset-x-5 bottom-16 z-[5] lg:inset-x-0 lg:bottom-20">
             <div className="lg:mx-auto lg:max-w-7xl lg:px-8">
-            <p data-hero-eyebrow className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-white/85">
-              <span data-hero-rule className="h-px w-6 origin-left bg-catalog-sand" />
-              {t("public.home.eyebrow")}
+            <p data-hero-eyebrow className="mb-2 flex lg:mb-3">
+              <a
+                href={GOOGLE_MAPS_PLACE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Google ${t("public.home.rating")}/5 · ${t("public.home.eyebrow")}`}
+                className="pointer-events-auto inline-flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-full bg-white py-1.5 pl-2.5 pr-4 text-sm font-bold text-catalog-ink shadow-[0_8px_24px_-8px_rgba(8,36,46,0.45)] sm:text-[0.9375rem]"
+              >
+                <GoogleG className="h-5 w-5 shrink-0" />
+                <GoogleWordmark />
+                <span className="tabular-nums">{t("public.home.rating")}</span>
+                <span aria-hidden className="tracking-[0.05em] text-[#FBBC04]">★★★★★</span>
+                <span className="font-semibold text-catalog-muted">·</span>
+                <span>{t("public.home.eyebrow")}</span>
+              </a>
             </p>
             <HeroTitle
               key={language}

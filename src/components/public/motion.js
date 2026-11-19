@@ -257,7 +257,6 @@ export function useHeroArrival(scopeRef, ready = true) {
       gsap.set("[data-horizon]", { scaleX: 0, autoAlpha: 1 });
       gsap.set("[data-veil-top], [data-veil-bottom]", { scaleY: 1, autoAlpha: 1 });
       gsap.set("[data-hero-eyebrow]", { y: 14, autoAlpha: 0 });
-      gsap.set("[data-hero-rule]", { scaleX: 0 });
       gsap.set("[data-hero-title]", { autoAlpha: 1 });
       gsap.set(split.words, { yPercent: 110 });
       gsap.set("[data-hero-sub]", { y: 16, autoAlpha: 0 });
@@ -295,7 +294,6 @@ export function useHeroArrival(scopeRef, ready = true) {
         .to("[data-horizon]", { autoAlpha: 0, duration: 0.35, ease: "power1.out" }, 0.7)
         .set("[data-veil-top], [data-veil-bottom]", { autoAlpha: 0 }, 1.4)
         .to("[data-hero-eyebrow]", { y: 0, autoAlpha: 1, duration: 0.55 }, 0.55)
-        .to("[data-hero-rule]", { scaleX: 1, duration: 0.5, ease: "power2.out" }, 0.55)
         .to(split.words, { yPercent: 0, duration: 0.7, stagger: 0.04, ease: MOTION.out }, 0.62)
         .to("[data-hero-sub]", { y: 0, autoAlpha: 1, duration: 0.55 }, 0.95)
         .to("[data-hero-chip]", { y: 0, autoAlpha: 1, duration: 0.5, stagger: 0.05 }, 1.05)

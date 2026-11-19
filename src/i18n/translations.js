@@ -210,7 +210,8 @@ export const translations = {
     "public.home.heroTitleAfter": "activities agency",
     "public.home.heroSub":
       "Exceptional hotels, private excursions and your stay orchestrated by the local reference.",
-    "public.home.eyebrow": "Hurghada · Red Sea",
+    "public.home.eyebrow": "7,972 verified reviews",
+    "public.home.rating": "4.9",
     "public.home.weather": "Weather",
     "public.home.hotelsSelected": "{count} selected hotels",
     "public.home.hotelsSelectedFallback": "Selected hotels",
@@ -256,7 +257,8 @@ Object.assign(translations.fr, {
   "public.home.heroTitleAfter": "des activités à Hurghada",
   "public.home.heroSub":
     "Hôtels d’exception, excursions privées et votre séjour orchestré par la référence locale.",
-  "public.home.eyebrow": "Hurghada · Mer Rouge",
+  "public.home.eyebrow": "7 972 avis vérifiés",
+  "public.home.rating": "4,9",
   "public.home.weather": "Météo",
   "public.home.hotelsSelected": "{count} hôtels sélectionnés",
   "public.home.hotelsSelectedFallback": "Hôtels sélectionnés",
