@@ -20,6 +20,7 @@ import { generateQuoteHTML, generateTicketsHTML } from "../utils/printTemplates"
 import { setVisibilityAwareInterval } from "../utils/idle";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem, requiresPickupTimeChoice, resolveActivityFromList } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
+import { DateInput } from "../components/DateInput";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
@@ -443,6 +444,52 @@ function QuoteCardComponent({
         newWindow.print();
       }, 500);
     }
+  }, [d]);
+
+  /** Enregistre le devis via l’explorateur (sans ouvrir d’autre page). */
+  const handleDownloadClick = useCallback(async () => {
+    const htmlContent = generateQuoteHTML(d);
+    const phone = String(formatPhoneWithPlus(d.client?.phone) || "")
+      .replace(/[^\d+]/g, "")
+      .slice(0, 20);
+    const namePart = String(d.client?.name || d.reservationCode || d.id || "devis")
+      .replace(/[^\w\-]+/g, "_")
+      .slice(0, 40);
+    const suggestedName = `Devis-${phone || namePart}.html`;
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+
+    try {
+      if (typeof window.showSaveFilePicker === "function") {
+        const handle = await window.showSaveFilePicker({
+          suggestedName,
+          types: [
+            {
+              description: "Devis HTML",
+              accept: { "text/html": [".html"] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        toast.success("Devis enregistré.");
+        return;
+      }
+    } catch (err) {
+      if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
+        return;
+      }
+      logger.warn("HistoryPage download showSaveFilePicker:", err);
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = suggestedName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
   }, [d]);
 
   const openTicketsWindow = useCallback((quoteForTickets) => {
@@ -1362,10 +1409,17 @@ function QuoteCardComponent({
               </button>
               <button
                 type="button"
-                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-slate-600 bg-gradient-to-r from-slate-600 to-slate-800 hover:from-slate-700 hover:to-slate-900 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-cyan-500 bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                onClick={() => void handleDownloadClick()}
+              >
+                ⬇️ Télécharger
+              </button>
+              <button
+                type="button"
+                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 border-2 border-slate-300 bg-white hover:bg-slate-50 min-h-[44px] min-w-0 transition-colors duration-150"
                 onClick={handleInvoiceClick}
               >
-                📄 Facture
+                Imprimer facture
               </button>
               <button
                 type="button"
@@ -1377,19 +1431,23 @@ function QuoteCardComponent({
               </button>
               <button
                 type="button"
-                className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-teal-500 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                className={
+                  allTicketsFilled
+                    ? "flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-emerald-600 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                    : "flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-teal-500 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                }
                 onClick={openTicketModal}
               >
-                💳 Payer
+                {allTicketsFilled ? "🎫 Ticket" : "💳 Payer"}
               </button>
               {typeof onReuseClient === "function" && (
                 <button
                   type="button"
-                  className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-white border-2 border-sky-500 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 shadow-lg transition-opacity duration-150 min-h-[44px] min-w-0 hover:opacity-90 active:opacity-75 hover:shadow-xl"
+                  className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 border-2 border-slate-300 bg-white hover:bg-slate-50 min-h-[44px] min-w-0 transition-colors duration-150"
                   onClick={() => onReuseClient(d)}
                   title="Créer un nouveau devis avec les infos client déjà saisies"
                 >
-                  ➕ Nouveau devis
+                  Nouveau devis
                 </button>
               )}
               {!allTicketsFilled && (
@@ -1429,11 +1487,11 @@ function QuoteCardComponent({
           >
             <div className="flex items-start gap-3">
               <span className="text-3xl" aria-hidden>
-                💳
+                {allTicketsFilled ? "🎫" : "💳"}
               </span>
               <div className="min-w-0 flex-1">
                 <h3 id="history-pay-tickets-title" className="text-lg font-bold text-slate-900">
-                  Payer — numéros de ticket
+                  {allTicketsFilled ? "Modifier le ticket" : "Payer — numéros de ticket"}
                 </h3>
                 <p className="text-sm text-slate-600 mt-1">
                   Les n° sont attribués automatiquement (sans doublon entre PC). Zero Tracas et
@@ -1911,12 +1969,28 @@ function isQuoteCreatedToday(createdAt) {
   return getLocalDateKey(date) === getLocalDateKey();
 }
 
+/** Date de création du devis = jour local AAAA-MM-JJ. */
+function isQuoteCreatedOnDay(createdAt, dayKey) {
+  if (!createdAt || !dayKey) return false;
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return false;
+  return getLocalDateKey(date) === dayKey;
+}
+
+function formatDayKeyFr(dayKey) {
+  if (!dayKey) return "";
+  const [y, m, d] = String(dayKey).split("-");
+  if (!y || !m || !d) return dayKey;
+  return `${d}/${m}/${y}`;
+}
+
 // Exporter HistoryPage après la déclaration de QuoteCard
 export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient }) {
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300); // Debounce de 300ms pour la recherche
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "paid", "pending"
   const [todayOnlyFilter, setTodayOnlyFilter] = useState(false);
+  const [dateFilter, setDateFilter] = useState(""); // AAAA-MM-JJ — devis créés ce jour
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [docsQuote, setDocsQuote] = useState(null);
@@ -1928,6 +2002,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
   useEffect(() => {
     setStatusFilter("all");
     setTodayOnlyFilter(false);
+    setDateFilter("");
     setQ("");
   }, []);
   
@@ -2152,7 +2227,9 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
     // Masque les devis dont la dernière activité est passée (sans supprimer — Tickets conserve tout).
     let result = historyQuotes;
 
-    if (todayOnlyFilter) {
+    if (dateFilter) {
+      result = result.filter((d) => isQuoteCreatedOnDay(d.createdAt, dateFilter));
+    } else if (todayOnlyFilter) {
       result = result.filter((d) => isQuoteCreatedToday(d.createdAt));
     }
     
@@ -2172,7 +2249,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
     }
     
     return result;
-  }, [debouncedQ, historyQuotes, statusFilter, todayOnlyFilter]);
+  }, [debouncedQ, historyQuotes, statusFilter, todayOnlyFilter, dateFilter]);
 
   // Compléter la recherche e-mail / nom via Supabase si le devis n’est pas déjà en mémoire.
   useEffect(() => {
@@ -2280,7 +2357,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
   // Réinitialiser la page quand les filtres changent
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedQ, statusFilter, todayOnlyFilter]);
+  }, [debouncedQ, statusFilter, todayOnlyFilter, dateFilter]);
+
+  const dayFilterLabel = dateFilter
+    ? ` du ${formatDayKeyFr(dateFilter)}`
+    : todayOnlyFilter
+      ? " aujourd'hui"
+      : "";
 
   // Réinitialiser le scroll interne de la modale quand elle s'ouvre (sans déplacer la page)
   useEffect(() => {
@@ -2539,10 +2622,33 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 md:gap-3">
+          <div className="flex flex-wrap items-end gap-2 md:gap-3">
+            <label className="flex flex-col gap-1 text-xs font-semibold text-white/80">
+              Jour
+              <DateInput
+                value={dateFilter}
+                onChange={(next) => {
+                  setDateFilter(next || "");
+                  setTodayOnlyFilter(false);
+                }}
+                className="min-w-[10.5rem] rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm"
+              />
+            </label>
+            {dateFilter ? (
+              <GhostBtn
+                type="button"
+                onClick={() => setDateFilter("")}
+                className="border border-white/20 bg-white/10 text-white hover:bg-white/20"
+              >
+                Effacer la date
+              </GhostBtn>
+            ) : null}
             <Pill
-              active={todayOnlyFilter}
-              onClick={() => setTodayOnlyFilter((prev) => !prev)}
+              active={todayOnlyFilter && !dateFilter}
+              onClick={() => {
+                setDateFilter("");
+                setTodayOnlyFilter((prev) => !prev);
+              }}
               tone="dark"
               className="transition-opacity duration-150 hover:opacity-80"
             >
@@ -2584,15 +2690,17 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
           <div>
             {filtered.length === 0 ? (
               <p className="text-amber-300 font-bold text-base md:text-lg">
-                {todayOnlyFilter ? "Aucun devis créé aujourd'hui" : "Aucun devis trouvé"}
+                {dateFilter || todayOnlyFilter
+                  ? `Aucun devis créé${dayFilterLabel}`
+                  : "Aucun devis trouvé"}
               </p>
             ) : filtered.length === 1 ? (
               <p className="text-sky-200 font-bold text-base md:text-lg">
-                1 devis{todayOnlyFilter ? " aujourd'hui" : " trouvé"}
+                1 devis{dayFilterLabel || " trouvé"}
               </p>
             ) : (
               <p className="text-sky-200 font-bold text-base md:text-lg">
-                {filtered.length} devis{todayOnlyFilter ? " aujourd'hui" : " trouvés"}
+                {filtered.length} devis{dayFilterLabel || " trouvés"}
               </p>
             )}
             {historyQuotes.length !== filtered.length && (
@@ -2628,11 +2736,13 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
             <div className="flex flex-col items-center gap-4">
               <span className="text-5xl md:text-6xl">📭</span>
               <p className="text-lg md:text-xl font-bold text-slate-700">
-                {todayOnlyFilter ? "Aucun devis créé aujourd'hui" : "Aucun devis trouvé"}
+                {dateFilter || todayOnlyFilter
+                  ? `Aucun devis créé${dayFilterLabel}`
+                  : "Aucun devis trouvé"}
               </p>
               <p className="text-sm md:text-base text-slate-500">
-                {todayOnlyFilter
-                  ? "Les devis créés aujourd'hui apparaîtront ici"
+                {dateFilter || todayOnlyFilter
+                  ? "Choisissez un autre jour ou effacez le filtre"
                   : "Essayez de modifier vos critères de recherche"}
               </p>
             </div>
