@@ -8,7 +8,14 @@ import { publicBackPath } from "../../config/clientApp";
 import { useTranslation } from "../../hooks/useTranslation";
 import { PublicBackLink } from "./PublicBackLink";
 import { PublicLanguageToggle } from "./PublicLanguageToggle";
-import { useHeaderMorph, usePopOnChange, usePressFeedback, useScreenIntro, useScrollMotion } from "./motion";
+import {
+  useAutoHideHeader,
+  useHeaderMorph,
+  usePopOnChange,
+  usePressFeedback,
+  useScreenIntro,
+  useScrollMotion,
+} from "./motion";
 import { Sheet, SheetHeader } from "./PublicUI";
 
 /** Couleur des barres système Android / navigateur : identique au fond de l’appli. */
@@ -95,6 +102,7 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
   const inner = wide === "xl" ? "max-w-7xl lg:px-8" : wide ? "max-w-6xl" : "max-w-lg";
   const rootRef = useRef(null);
   const headerRef = useRef(null);
+  const homebarRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const onHome = !backTo;
   /** Titre sticky : `headerTitle=""` pour le masquer (ex. page politique déjà titrée en H1). */
@@ -116,6 +124,8 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
   useScreenIntro(rootRef, [revealKey, pathname]);
   useScrollMotion(rootRef, [revealKey, pathname]);
   useHeaderMorph(headerRef, Boolean(backTo));
+  useAutoHideHeader(headerRef, Boolean(backTo));
+  useAutoHideHeader(homebarRef, onHome);
 
   useEffect(() => {
     document.title = title ? `${title} · Hurghada Dream` : "Hurghada Dream";
@@ -163,10 +173,7 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
             ) : (
               <span className="min-w-0 flex-1" aria-hidden />
             )}
-            <div className="flex shrink-0 items-center gap-2">
-              <PublicLanguageToggle compact />
-              {right}
-            </div>
+            {right ? <div className="flex shrink-0 items-center gap-2">{right}</div> : null}
           </div>
         </header>
       ) : null}
@@ -174,34 +181,31 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
       {backTo ? <div aria-hidden className="h-[calc(max(0.35rem,env(safe-area-inset-top))+3.25rem)] shrink-0" /> : null}
 
       {backTo ? null : (
-        <header className="hdc-homebar fixed inset-x-0 top-0 z-50">
+        <header ref={homebarRef} className="hdc-homebar fixed inset-x-0 top-0 z-50">
           <div className={`relative mx-auto flex w-full items-center justify-center gap-3 px-4 pb-3 pt-[max(0.85rem,env(safe-area-inset-top))] sm:gap-6 sm:pb-4 lg:justify-between ${inner}`}>
+            {onHome ? (
+              <button
+                type="button"
+                data-press
+                aria-label={t("public.menuOpen")}
+                aria-expanded={menuOpen}
+                aria-controls="client-home-menu"
+                onClick={() => setMenuOpen(true)}
+                className="hdc-homebar-menu absolute left-3 top-1/2 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full sm:left-4 lg:hidden"
+              >
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <path d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              </button>
+            ) : null}
             <img
-              src="/client/logo-wordmark-light.png"
+              src="/client/logo-wordmark.png"
               alt="Hurghada Dream"
-              width={900}
-              height={260}
+              width={468}
+              height={158}
               className="hdc-wordmark object-contain"
             />
             {nav ? <div className="hdc-homebar-nav hidden lg:block">{nav}</div> : null}
-            <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-2 sm:right-4 lg:static lg:translate-y-0">
-              <PublicLanguageToggle compact className="hdc-homebar-lang" />
-              {onHome ? (
-                <button
-                  type="button"
-                  data-press
-                  aria-label={t("public.menuOpen")}
-                  aria-expanded={menuOpen}
-                  aria-controls="client-home-menu"
-                  onClick={() => setMenuOpen(true)}
-                  className="hdc-homebar-menu inline-flex h-12 w-12 items-center justify-center rounded-full text-white sm:h-12 sm:w-12"
-                >
-                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                    <path d="M4 7h16M4 12h16M4 17h16" />
-                  </svg>
-                </button>
-              ) : null}
-            </div>
           </div>
         </header>
       )}

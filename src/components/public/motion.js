@@ -398,6 +398,54 @@ export function useHeaderMorph(headerRef, active = true) {
 }
 
 /**
+ * Header fixe : disparaît en scrollant vers le bas, réapparaît en scrollant vers le haut.
+ * Toujours visible près du haut de page.
+ */
+export function useAutoHideHeader(headerRef, active = true) {
+  useEffect(() => {
+    if (!active) return undefined;
+    const header = headerRef.current;
+    if (!header) return undefined;
+
+    let lastY = window.scrollY;
+    let ticking = false;
+    const TOP_ALWAYS_SHOW = 24;
+    const DELTA = 8;
+
+    const apply = (hidden) => {
+      header.classList.toggle("hdc-header-away", hidden);
+      header.setAttribute("data-away", hidden ? "true" : "false");
+    };
+
+    apply(false);
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        ticking = false;
+        const y = window.scrollY;
+        const delta = y - lastY;
+        if (y <= TOP_ALWAYS_SHOW) {
+          apply(false);
+        } else if (delta > DELTA) {
+          apply(true);
+        } else if (delta < -DELTA) {
+          apply(false);
+        }
+        lastY = y;
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      apply(false);
+    };
+  }, [headerRef, active]);
+}
+
+/**
  * Pression discrète déléguée sur tout `data-press` : scale 0.98 puis retour doux.
  * `scale` CSS (indépendant de `transform`, que le CSS global intranet force à none au survol).
  */
