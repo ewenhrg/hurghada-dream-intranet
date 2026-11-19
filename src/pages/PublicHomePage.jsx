@@ -539,7 +539,7 @@ export function PublicHomePage() {
 
         <HomeReviewsMarquee />
 
-        <InstagramReelsRail videos={!phone || heroClear} />
+        <InstagramReelsRail />
 
         {/* ——— Nos adresses ——— */}
         {hotelsWithPhoto.length ? (

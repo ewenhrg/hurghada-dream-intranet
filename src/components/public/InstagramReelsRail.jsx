@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { IS_CLIENT_APP } from "../../config/clientApp";
 import { prefersReducedMotion } from "./motion";
 
@@ -82,15 +82,15 @@ function ReelCard({ reel, onError, still, lazy = false }) {
   const cardRef = useRef(null);
   const videoRef = useRef(null);
   const [near, setNear] = useState(!lazy);
+  const [videoFailed, setVideoFailed] = useState(false);
 
   useEffect(() => {
     if (!lazy) return undefined;
     const node = cardRef.current;
     if (!node) return undefined;
-    const root = node.closest(".hdc-reel-marquee");
     const observer = new IntersectionObserver(
       ([entry]) => setNear(entry.isIntersecting),
-      { root, threshold: 0.45 }
+      { root: null, rootMargin: "80px 40px", threshold: 0.2 }
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -104,9 +104,9 @@ function ReelCard({ reel, onError, still, lazy = false }) {
     node.setAttribute("muted", "");
     node.setAttribute("playsinline", "");
     return undefined;
-  }, [reel.video, near, still]);
+  }, [reel.video, near, still, videoFailed]);
 
-  const showVideo = Boolean(reel.video) && !still && near;
+  const showVideo = Boolean(reel.video) && !still && !videoFailed && near;
 
   return (
     <a
@@ -127,10 +127,10 @@ function ReelCard({ reel, onError, still, lazy = false }) {
           muted
           loop
           playsInline
-          preload="auto"
+          preload="metadata"
           referrerPolicy="no-referrer"
           className="pointer-events-none h-full w-full object-cover"
-          onError={onError}
+          onError={() => setVideoFailed(true)}
         />
       ) : (
         <img
@@ -148,11 +148,11 @@ function ReelCard({ reel, onError, still, lazy = false }) {
 }
 
 export function InstagramReelsRail({ videos = true }) {
-  const [reels, setReels] = useState([]);
+  const [reels, setReels] = useState(() => readCachedReels().slice(0, 12));
   const marqueeRef = useRef(null);
-  const halfRef = useRef(null);
+  const trackRef = useRef(null);
   const pausedRef = useRef(false);
-  // Mouvement réduit : ni défilement ni lecture automatiques, la bande reste balayable.
+  // Mouvement réduit : ni défilement ni lecture automatiques.
   const [still] = useState(() => prefersReducedMotion());
   const [phone] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches);
   const showVideo = videos && !still;
@@ -162,9 +162,9 @@ export function InstagramReelsRail({ videos = true }) {
     (async () => {
       try {
         const list = await fetchInstagramReels();
-        if (!cancelled) setReels(list.slice(0, 12));
+        if (!cancelled && list.length >= 2) setReels(list.slice(0, 12));
       } catch {
-        /* La bande reste masquée si Instagram ne répond pas. */
+        /* garde le cache éventuel */
       }
     })();
     return () => {
@@ -172,62 +172,58 @@ export function InstagramReelsRail({ videos = true }) {
     };
   }, []);
 
-  useEffect(() => {
+  // Même principe que les avis Google : translate3d (fiable sur téléphone sous overflow-x: clip).
+  useLayoutEffect(() => {
     const root = marqueeRef.current;
-    const half = halfRef.current;
-    if (!root || !half || reels.length < 2) return undefined;
+    const track = trackRef.current;
+    const half = track?.firstElementChild;
+    if (!root || !track || !half || reels.length < 2) return undefined;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
 
+    let offset = 0;
     let last = 0;
     let frame = 0;
-    let writing = false;
     let resumeTimer = 0;
-    let speed = 0.016;
 
     const readSpeed = () => {
       const raw = parseFloat(window.getComputedStyle(root).getPropertyValue("--hdc-reel-speed"));
-      speed = Number.isFinite(raw) && raw > 0 ? raw : 0.016;
+      return Number.isFinite(raw) && raw > 0 ? raw : 0.028;
     };
-    readSpeed();
 
-    const onScroll = () => {
-      if (writing) return;
+    const tick = (now) => {
+      if (!last) last = now;
+      const dt = Math.min(40, now - last);
+      last = now;
+      const width = half.offsetWidth;
+      if (!pausedRef.current && width > 1) {
+        offset -= dt * readSpeed();
+        if (offset <= -width) offset += width;
+        track.style.transform = `translate3d(${offset}px,0,0)`;
+      }
+      frame = requestAnimationFrame(tick);
+    };
+
+    const pauseBriefly = () => {
       pausedRef.current = true;
       window.clearTimeout(resumeTimer);
       resumeTimer = window.setTimeout(() => {
         pausedRef.current = false;
       }, 1600);
     };
-    const onResize = () => readSpeed();
-    root.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onResize);
 
-    const tick = (now) => {
-      if (!last) last = now;
-      const dt = Math.min(32, now - last);
-      last = now;
-      if (!pausedRef.current) {
-        const width = half.offsetWidth;
-        writing = true;
-        root.scrollLeft += dt * speed;
-        if (width > 1 && root.scrollLeft >= width) root.scrollLeft -= width;
-        writing = false;
-      }
-      frame = requestAnimationFrame(tick);
-    };
-
+    root.addEventListener("pointerdown", pauseBriefly, { passive: true });
     frame = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(frame);
       window.clearTimeout(resumeTimer);
-      root.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onResize);
+      root.removeEventListener("pointerdown", pauseBriefly);
+      track.style.transform = "";
     };
   }, [reels]);
 
   useEffect(() => {
     const root = marqueeRef.current;
-    if (!root || still) return undefined;
+    if (!root || !showVideo) return undefined;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -241,11 +237,11 @@ export function InstagramReelsRail({ videos = true }) {
           }
         });
       },
-      { root, rootMargin: "0px 120px", threshold: 0.35 }
+      { root: null, rootMargin: "120px 80px", threshold: 0.2 }
     );
     root.querySelectorAll("video").forEach((video) => observer.observe(video));
     return () => observer.disconnect();
-  }, [reels, still]);
+  }, [reels, showVideo]);
 
   if (reels.length < 2) return null;
 
@@ -278,22 +274,12 @@ export function InstagramReelsRail({ videos = true }) {
         onPointerLeave={(event) => {
           if (event.pointerType === "mouse") pausedRef.current = false;
         }}
-        onPointerDown={(event) => {
-          if (event.pointerType !== "mouse") pausedRef.current = true;
-        }}
-        onPointerUp={(event) => {
-          if (event.pointerType !== "mouse") pausedRef.current = false;
-        }}
-        onPointerCancel={() => {
-          pausedRef.current = false;
-        }}
       >
-        <div className="hdc-reel-track">
+        <div ref={trackRef} className="hdc-reel-track">
           {[0, 1].map((copy) => (
             <ul
               key={copy}
-              ref={copy === 0 ? halfRef : undefined}
-              className="flex gap-3 pr-3"
+              className="flex gap-3 pr-3 pl-4 lg:pl-0"
               aria-hidden={copy === 1 ? true : undefined}
             >
               {reels.map((reel) => (
