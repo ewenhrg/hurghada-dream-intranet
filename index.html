@@ -87,33 +87,50 @@
     <script>
       (function () {
         var p = location.pathname;
+        var pre = window.__HD_PRELOAD || {};
+        var home = p === "/" || p === "/accueil";
+        var addLink = function (rel, href, as) {
+          if (!href) return null;
+          var link = document.createElement("link");
+          link.rel = rel;
+          link.href = href;
+          if (as) link.as = as;
+          if (rel === "modulepreload" || as === "font") link.crossOrigin = "";
+          if (as === "font") link.type = "font/woff2";
+          document.head.appendChild(link);
+          return link;
+        };
+        // Démarrage de l’appli (build : liste générée par vite.config.js ; en dev, rien à faire).
+        // Accueil : appelé une fois l’image de démarrage arrivée, pour qu’elle passe en premier.
+        var started = false;
+        window.__hdStart = function () {
+          if (started || !pre.entry) return;
+          started = true;
+          (pre.css || []).forEach(function (href) {
+            var sheet = addLink("stylesheet", href);
+            sheet.media = "all";
+            sheet.setAttribute("data-hd-css", "");
+          });
+          addLink("preload", pre.font, "font");
+          (pre.entryDeps || []).concat(pre.routes || [], home ? pre.home || [] : []).forEach(function (href) {
+            addLink("modulepreload", href);
+          });
+          var entry = document.createElement("script");
+          entry.type = "module";
+          entry.crossOrigin = "";
+          entry.src = pre.entry;
+          document.head.appendChild(entry);
+        };
         var client = "%VITE_CLIENT_APP%" === "true";
         var intranet = p === "/intranet" || p.indexOf("/intranet/") === 0;
         var publicPage = p === "/" || /^\/(accueil|catalogue|hotels|demande-hotel|contacts|politique|confidentialite|qui-sommes-nous|tarifs|sejour|mon-sejour|request|b2b|evenements|modification)(\/|$)/.test(p);
         if (!intranet && (client || publicPage)) {
           document.documentElement.classList.add("hd-public-boot");
-          // Précharge en parallèle le code du site public (+ de l’accueil) et la police principale,
-          // au lieu de les découvrir l’un après l’autre (liste générée au build, vite.config.js).
-          var pre = window.__HD_PRELOAD || {};
-          var addLink = function (rel, href, as) {
-            if (!href) return;
-            var link = document.createElement("link");
-            link.rel = rel;
-            link.href = href;
-            if (as) link.as = as;
-            if (rel === "modulepreload" || as === "font") link.crossOrigin = "";
-            if (as === "font") link.type = "font/woff2";
-            document.head.appendChild(link);
-          };
-          addLink("preload", pre.font, "font");
-          (pre.routes || []).forEach(function (href) { addLink("modulepreload", href); });
-          if (p === "/" || p === "/accueil") {
+          if (home) {
             window.__HD_HOME_BOOT = true;
-            (pre.home || []).forEach(function (href) { addLink("modulepreload", href); });
-          } else if (pre.supabase) {
-            // Catalogue, hôtels… : données lues tout de suite, connexion ouverte d’avance.
-            addLink("preconnect", pre.supabase);
-            document.head.lastChild.crossOrigin = "";
+          } else {
+            if (pre.supabase) addLink("preconnect", pre.supabase).crossOrigin = "";
+            window.__hdStart();
           }
         } else {
           // Intranet seulement : polices Google (Literata, Outfit, Plus Jakarta Sans), non bloquantes.
@@ -131,6 +148,7 @@
           var robots = document.querySelector('meta[name="robots"]');
           if (robots) robots.setAttribute("content", "noindex, nofollow");
           document.title = "Hurghada Dream - Gestion des devis";
+          window.__hdStart();
         }
       })();
     </script>
@@ -149,6 +167,16 @@
             '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,42,51,.45) 0%,rgba(4,20,28,.22) 35%,rgba(8,36,46,.9) 100%)"></div>' +
           "</div>"
         );
+        // L’appli démarre dès l’image arrivée (ou au bout de 1,5 s au plus tard).
+        var bootImg = document.querySelector("#hd-boot-hero img");
+        if (bootImg) {
+          if (bootImg.complete) window.__hdStart();
+          else {
+            bootImg.addEventListener("load", window.__hdStart);
+            bootImg.addEventListener("error", window.__hdStart);
+          }
+        }
+        setTimeout(window.__hdStart, 1500);
         // Filet de sécurité : jamais plus de 15 s, même si la page n’a pas pu démarrer.
         setTimeout(function () {
           var boot = document.getElementById("hd-boot-hero");

@@ -59,8 +59,9 @@ function seoHtml(env) {
  * - liste les fichiers JS du site public et de l’accueil + la police principale dans
  *   `window.__HD_PRELOAD` ; le script de démarrage de index.html les précharge selon la page
  *   (casse la chaîne entrée → site public → accueil, téléchargée sinon l’un après l’autre) ;
- * - CSS non bloquant : l’image de démarrage s’affiche sans attendre la feuille de style.
- *   main.jsx attend ces feuilles (`data-hd-css`) avant le rendu React (jamais de page sans style).
+ * - script d’entrée + CSS lancés par le script de démarrage : sur l’accueil, seulement après
+ *   l’image de démarrage (rien ne lui dispute le réseau ni le processeur). main.jsx attend les
+ *   feuilles (`data-hd-css`) avant le rendu React (jamais de page sans style).
  */
 function fastBootHtml(env = {}) {
   const posix = (id) => String(id || "").split(String.fromCharCode(92)).join("/");
@@ -98,13 +99,32 @@ function fastBootHtml(env = {}) {
           (item) => item.type === "asset" && /figtree-latin-wght-normal-[\w-]+\.woff2$/.test(item.fileName)
         );
         const supabase = /^https:\/\//.test(env.VITE_SUPABASE_URL || "") ? env.VITE_SUPABASE_URL : "";
-        const manifest = JSON.stringify({ routes, home, font: font ? `/${font.fileName}` : "", supabase });
-
-        let out = html.replace("<head>", `<head>\n    <script>window.__HD_PRELOAD=${manifest};</script>`);
-        out = out.replace(/<link rel="stylesheet"([^>]*?)href="([^"]+\.css)"([^>]*)>/g, (_m, before, href, after) =>
-          `<link rel="stylesheet"${before}href="${href}"${after} media="print" data-hd-css onload="this.media='all'">` +
-          `<noscript><link rel="stylesheet" href="${href}"></noscript>`
-        );
+        // Script d’entrée, ses préchargements et le CSS : retirés du HTML, lancés par le script
+        // de démarrage de index.html (tout de suite, sauf sur l’accueil : après l’image).
+        const entryDeps = [];
+        const css = [];
+        let out = html
+          .replace(/\s*<script type="module"[^>]*src="[^"]+"[^>]*><\/script>/, "")
+          .replace(/\s*<link rel="modulepreload"[^>]*href="([^"]+)"[^>]*>/g, (_m, href) => {
+            entryDeps.push(href);
+            return "";
+          })
+          .replace(/\s*<link rel="stylesheet"[^>]*href="([^"]+\.css)"[^>]*>/g, (_m, href) => {
+            css.push(href);
+            return `
+    <noscript><link rel="stylesheet" href="${href}"></noscript>`;
+          });
+        const manifest = JSON.stringify({
+          entry: entry ? `/${entry.fileName}` : "",
+          entryDeps,
+          css,
+          routes,
+          home,
+          font: font ? `/${font.fileName}` : "",
+          supabase,
+        });
+        out = out.replace("<head>", `<head>
+    <script>window.__HD_PRELOAD=${manifest};</script>`);
         return out;
       },
     },

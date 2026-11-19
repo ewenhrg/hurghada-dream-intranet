@@ -83,20 +83,16 @@ function playMuted(video) {
 const HERO_BOOT_IMAGE = "/client/hero-boot.webp";
 
 /**
- * La vidéo (4 à 7 Mo) ne démarre qu’une fois la page chargée et le navigateur au repos :
- * elle ne prend plus la bande passante du code et du texte (premier affichage plus rapide,
- * surtout sur mobile). L’image de démarrage reste affichée en attendant.
+ * La vidéo (4 à 7 Mo) démarre une fois la page chargée : elle ne dispute pas le réseau au code
+ * et au texte, mais arrive assez tôt pour que la page soit vite « complète ».
+ * L’image de démarrage reste affichée en attendant.
  */
 let pageSettled = null;
 function afterPageSettled() {
   if (!pageSettled) {
     pageSettled = new Promise((resolve) => {
-      const idle = () =>
-        typeof window.requestIdleCallback === "function"
-          ? window.requestIdleCallback(() => resolve(), { timeout: 2500 })
-          : window.setTimeout(resolve, 600);
-      if (document.readyState === "complete") idle();
-      else window.addEventListener("load", idle, { once: true });
+      if (document.readyState === "complete") resolve();
+      else window.addEventListener("load", () => resolve(), { once: true });
     });
   }
   return pageSettled;

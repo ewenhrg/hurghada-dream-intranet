@@ -43,7 +43,7 @@ if ("serviceWorker" in navigator) {
 
 /** CSS chargé sans bloquer (voir vite.config.js) : React attend qu’il soit prêt (8 s max). */
 function stylesheetsReady() {
-  const pending = [...document.querySelectorAll("link[data-hd-css]")].filter((link) => !link.sheet || link.media !== "all");
+  const pending = [...document.querySelectorAll("link[data-hd-css]")].filter((link) => !link.sheet);
   if (!pending.length) return Promise.resolve();
   const loaded = pending.map(
     (link) =>
