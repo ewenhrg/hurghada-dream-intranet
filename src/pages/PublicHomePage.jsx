@@ -418,7 +418,7 @@ export function PublicHomePage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`Google ${t("public.home.rating")}/5 · ${t("public.home.eyebrow")}`}
-                className="pointer-events-auto inline-flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-full bg-white py-1.5 pl-2.5 pr-4 text-sm font-bold text-catalog-ink shadow-[0_8px_24px_-8px_rgba(8,36,46,0.45)] sm:text-[0.9375rem]"
+                className="hdc-liquid-glass pointer-events-auto inline-flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-full py-1.5 pl-2.5 pr-4 text-sm font-bold text-catalog-ink sm:text-[0.9375rem]"
               >
                 <GoogleG className="h-5 w-5 shrink-0" />
                 <GoogleWordmark />

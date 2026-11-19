@@ -685,6 +685,38 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   outline-offset: 3px;
 }
 
+/* Badge avis Google du hero : verre « liquid glass » posé sur la vidéo.
+   Verre clair (texte foncé + couleurs Google lisibles), flou + saturation,
+   reflet en haut, liseré lumineux et ombre douce. */
+.hd-public-catalog .hdc-liquid-glass {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.5) 100%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    0 10px 30px -10px rgba(8, 36, 46, 0.45);
+}
+.hd-public-catalog .hdc-liquid-glass::before {
+  content: "";
+  position: absolute;
+  inset: 1px 10% auto;
+  height: 40%;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0));
+  pointer-events: none;
+  z-index: -1;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .hd-public-catalog .hdc-liquid-glass {
+    background: rgba(255, 255, 255, 0.92);
+  }
+}
+
 /* Barre de filtres collante sous l’en-tête. */
 .hd-public-catalog .hdc-filterbar {
   background: rgba(250, 246, 239, 0.92);
