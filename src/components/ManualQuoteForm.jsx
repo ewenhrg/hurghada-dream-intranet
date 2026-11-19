@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import { NEIGHBORHOODS } from "../constants";
 import { currencyNoCents, formatPhoneWithPlus } from "../utils";
 import {
@@ -34,6 +34,18 @@ export function ManualQuoteForm({
     setLines((prev) => {
       if (prev.length <= 1) return [emptyManualLine()];
       return prev.filter((line) => line.id !== id);
+    });
+  };
+  const moveLine = (id, direction) => {
+    setLines((prev) => {
+      const index = prev.findIndex((line) => line.id === id);
+      if (index < 0) return prev;
+      const target = index + direction;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.splice(target, 0, item);
+      return next;
     });
   };
 
@@ -221,16 +233,38 @@ export function ManualQuoteForm({
       <div className="space-y-3">
         {lines.map((line, index) => (
           <div key={line.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-            <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-extrabold text-slate-900">Ligne {index + 1}</p>
-              <button
-                type="button"
-                onClick={() => removeLine(line.id)}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 hover:bg-rose-100"
-              >
-                <Trash2 className="size-4" aria-hidden />
-                Retirer
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => moveLine(line.id, -1)}
+                  disabled={index === 0}
+                  title="Monter la ligne"
+                  aria-label={`Monter la ligne ${index + 1}`}
+                  className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronUp className="size-4" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveLine(line.id, 1)}
+                  disabled={index === lines.length - 1}
+                  title="Descendre la ligne"
+                  aria-label={`Descendre la ligne ${index + 1}`}
+                  className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronDown className="size-4" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeLine(line.id)}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 hover:bg-rose-100"
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                  Retirer
+                </button>
+              </div>
             </div>
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_11rem_9rem]">
               <label className="block md:col-span-1">
