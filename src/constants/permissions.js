@@ -53,11 +53,11 @@ export const PERMISSION_GROUPS = [
     description:
       "Cochez chaque page du menu. Si une case est décochée, l’utilisateur ne la voit pas et ne peut pas y accéder. Il devra se reconnecter après enregistrement.",
     permissions: [
-      { formKey: "canAccessDevis", label: "Devis", defaultValue: true },
+      { formKey: "canAccessDevis", label: "Devis manuel", defaultValue: true },
       { formKey: "canAccessActivities", label: "Activités", defaultValue: true },
       { formKey: "canAccessPlanning", label: "Planning", defaultValue: true },
       { formKey: "canAccessCatalogAdmin", label: "Catalogue admin", defaultValue: false },
-      { formKey: "canAccessHistory", label: "Historique", defaultValue: true },
+      { formKey: "canAccessHistory", label: "Devis", defaultValue: true },
       {
         formKey: "canAccessTickets",
         label: "Situation (tickets)",

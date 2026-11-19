@@ -2,11 +2,11 @@
 export const translations = {
   fr: {
     // Navigation
-    "nav.devis": "Devis",
+    "nav.devis": "Devis manuel",
     "nav.activities": "Activités",
     "nav.planning": "Planning",
     "nav.catalogAdmin": "Catalogue public",
-    "nav.history": "Historique",
+    "nav.history": "Devis",
     "nav.tickets": "Situation",
     "nav.publicDevis": "Devis public",
     "nav.hotelHistory": "Historique hôtel",
@@ -41,7 +41,7 @@ export const translations = {
     "page.planning.subtitle": "Vue semaine : quelles activités sont ouvertes chaque jour (selon les jours cochés).",
     "page.catalogAdmin.title": "Contenu catalogue (public)",
     "page.catalogAdmin.subtitle": "Texte affiché sur la fiche activité et URLs des photos (HTTPS). Réservé aux comptes autorisés à modifier les activités.",
-    "page.history.title": "Historique des devis",
+    "page.history.title": "Devis",
     "page.history.subtitle": "Recherchez un devis par numéro de téléphone.",
     "page.tickets.title": "Situation",
     "page.tickets.subtitle": "Vue compacte — toutes les colonnes visibles. Copie directe vers Excel.",
@@ -90,11 +90,11 @@ export const translations = {
   
   en: {
     // Navigation
-    "nav.devis": "Quotes",
+    "nav.devis": "Manual quote",
     "nav.activities": "Activities",
     "nav.planning": "Schedule",
     "nav.catalogAdmin": "Public catalogue",
-    "nav.history": "History",
+    "nav.history": "Quotes",
     "nav.tickets": "Situation",
     "nav.publicDevis": "Public quotes",
     "nav.hotelHistory": "Hotel history",
@@ -129,7 +129,7 @@ export const translations = {
     "page.planning.subtitle": "Week view: which activities are open each day (from checked weekdays).",
     "page.catalogAdmin.title": "Public catalogue content",
     "page.catalogAdmin.subtitle": "Text shown on the public activity page and photo URLs (HTTPS). For accounts allowed to edit activities only.",
-    "page.history.title": "Quotes history",
+    "page.history.title": "Quotes",
     "page.history.subtitle": "Search for a quote by phone number.",
     "page.tickets.title": "Situation",
     "page.tickets.subtitle": "Compact view — all columns visible. Direct copy to Excel.",
