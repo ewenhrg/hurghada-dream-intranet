@@ -2081,30 +2081,28 @@ function HotelResponseModal({
                       <span className="text-[11px] font-bold uppercase text-slate-500">
                         Du (check-in)
                       </span>
-                                <input
-                        type="date"
+                      <DateInput
                         className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
                         value={item.stayFrom || ""}
                         min={request.arrivalDate || undefined}
                         max={item.stayTo || request.departureDate || undefined}
-                        onChange={(e) => updateProposal(index, { stayFrom: e.target.value })}
+                        onChange={(v) => updateProposal(index, { stayFrom: v })}
                         disabled={saving || !hotelChosen}
-                        aria-label={`Start date option ${index + 1}`}
+                        id={`hotel-stay-from-${index}`}
                       />
                     </label>
                     <label className="block">
                       <span className="text-[11px] font-bold uppercase text-slate-500">
                         Au (check-out)
                       </span>
-                      <input
-                        type="date"
+                      <DateInput
                         className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
                         value={item.stayTo || ""}
                         min={item.stayFrom || request.arrivalDate || undefined}
                         max={request.departureDate || undefined}
-                        onChange={(e) => updateProposal(index, { stayTo: e.target.value })}
+                        onChange={(v) => updateProposal(index, { stayTo: v })}
                         disabled={saving || !hotelChosen}
-                        aria-label={`End date option ${index + 1}`}
+                        id={`hotel-stay-to-${index}`}
                       />
                     </label>
                     {(() => {
@@ -2416,21 +2414,19 @@ function HotelConfirmModal({
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-bold text-slate-600">
               Arrival date
-              <input
-                type="date"
+              <DateInput
                 value={flightValues.arrivalDate || ""}
-                onChange={(e) => updateFlight("arrivalDate", e.target.value)}
+                onChange={(v) => updateFlight("arrivalDate", v)}
                 className={fieldClass}
                 disabled={saving}
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
               Departure date
-              <input
-                type="date"
+              <DateInput
                 value={flightValues.departureDate || ""}
                 min={flightValues.arrivalDate || undefined}
-                onChange={(e) => updateFlight("departureDate", e.target.value)}
+                onChange={(v) => updateFlight("departureDate", v)}
                 className={fieldClass}
                 disabled={saving}
               />
@@ -2645,21 +2641,19 @@ function EditHotelRequestModal({ draft, setDraft, onClose, onSave, saving }) {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-bold text-slate-600">
               Check-in
-              <input
-                type="date"
+              <DateInput
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 value={draft.arrivalDate || ""}
-                onChange={(e) => setDraft((d) => ({ ...d, arrivalDate: e.target.value }))}
+                onChange={(v) => setDraft((d) => ({ ...d, arrivalDate: v }))}
               />
             </label>
             <label className="block text-xs font-bold text-slate-600">
               Check-out
-              <input
-                type="date"
+              <DateInput
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 value={draft.departureDate || ""}
                 min={draft.arrivalDate || undefined}
-                onChange={(e) => setDraft((d) => ({ ...d, departureDate: e.target.value }))}
+                onChange={(v) => setDraft((d) => ({ ...d, departureDate: v }))}
               />
             </label>
           </div>

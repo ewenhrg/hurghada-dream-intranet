@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback, Suspense, lazy } from "react";
 import { PrimaryBtn, GhostBtn, Section } from "../components/ui";
+import { DateInput } from "../components/DateInput";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { LS_KEYS, SITE_KEY } from "../constants";
@@ -69,7 +70,7 @@ function formatSituationYmdDisplay(ymd) {
   return `${d}/${m}/${y}`;
 }
 
-export function SituationPage({ activities = [], user }) {
+export function SituationPage({ activities = [], user, onBack }) {
   const [excelData, setExcelData] = useState(() =>
     (loadLS(LS_KEYS.situationTransferRows, []) || []).map((row) => ({
       ...row,
@@ -1790,12 +1791,11 @@ export function SituationPage({ activities = [], user }) {
             <span className="text-xs font-bold uppercase tracking-wide text-indigo-900">
               Calendrier
             </span>
-            <input
-              type="date"
+            <DateInput
               value={filterDate || ""}
-              onChange={(e) => setFilterDate(String(e.target.value || "").trim())}
+              onChange={(v) => setFilterDate(String(v || "").trim())}
               className="min-h-[40px] min-w-[10.5rem] cursor-pointer rounded-lg border border-indigo-200 bg-white px-2 py-1.5 text-sm font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25"
-              aria-label="Choisir une date de situation"
+              id="situation-filter-date"
             />
           </label>
 
@@ -2007,6 +2007,7 @@ export function SituationPage({ activities = [], user }) {
             : "Importez le fichier Excel du jour pour envoyer les messages de prise en charge."
         }
         right={headerButtons}
+        onBack={onBack}
       >
         {!hasWorkData && (
           <div className="transfer-content">

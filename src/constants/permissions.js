@@ -158,6 +158,14 @@ export function hasFullIntranetAccess(user) {
   return n === "ewen" || n === "lea" || n === "sophia" || n === "karim";
 }
 
+/**
+ * Console secrète `/superadmin` — pas de case Users, pas de bouton nav.
+ * Réservée à l’équipe cœur (général managers / ultra admin).
+ */
+export function canAccessSuperAdminPage(user) {
+  return hasFullIntranetAccess(user);
+}
+
 function readAccessFlag(user, formKey) {
   if (!user) return false;
   const value = user[formKey];

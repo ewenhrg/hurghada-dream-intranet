@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { canAccessInternsPage } from "../constants/permissions";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../components/ui";
+import { DateInput } from "../components/DateInput";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 
@@ -767,21 +768,19 @@ export function InternsPage({ user }) {
               </label>
               <label className="block text-xs font-medium text-slate-600">
                 Début de stage *
-                <TextInput
-                  type="date"
+                <DateInput
                   className="mt-1"
                   value={internForm.stage_start}
-                  onChange={(e) => setInternForm((f) => ({ ...f, stage_start: e.target.value }))}
+                  onChange={(v) => setInternForm((f) => ({ ...f, stage_start: v }))}
                   required
                 />
               </label>
               <label className="block text-xs font-medium text-slate-600">
                 Fin de stage *
-                <TextInput
-                  type="date"
+                <DateInput
                   className="mt-1"
                   value={internForm.stage_end}
-                  onChange={(e) => setInternForm((f) => ({ ...f, stage_end: e.target.value }))}
+                  onChange={(v) => setInternForm((f) => ({ ...f, stage_end: v }))}
                   required
                 />
               </label>

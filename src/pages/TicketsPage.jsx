@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Search,
   X,
@@ -49,6 +48,7 @@ import {
 import { isBoatPartyActivity, formatTurtleFinSizesLabel } from "../utils/activityHelpers";
 import { getLocalDateKey } from "../utils/pushSaleExpiry.js";
 import { TextInput } from "../components/ui";
+import { DateInput } from "../components/DateInput";
 import { EditTicketLineModal } from "../components/tickets/EditTicketLineModal.jsx";
 import { persistQuoteItemsToSupabase } from "../utils/persistQuoteItems";
 import { itemWithPickupSchedule } from "../utils/pickupSchedule";
@@ -1312,14 +1312,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
     [filtered]
   );
 
-  const reduceMotion = useReducedMotion();
-  const fade = {
-    initial: reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 },
-    animate: { opacity: 1, y: 0 },
-    exit: reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 },
-    transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
-  };
-
   const rowsForDate = useMemo(() => {
     if (entryMode || !filterDate) return rows;
     return rows.filter((r) => String(r.date || "").trim() === filterDate);
@@ -1338,11 +1330,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
   ];
 
   return (
-    <motion.div
+    <div
       className="space-y-5"
-      initial={fade.initial}
-      animate={fade.animate}
-      transition={fade.transition}
     >
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1426,12 +1415,11 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                 <span className="text-xs font-bold uppercase tracking-wide text-indigo-900">
                   Calendrier
                 </span>
-                <input
-                  type="date"
+                <DateInput
                   value={filterDate || ""}
-                  onChange={(e) => setFilterDate(String(e.target.value || "").trim())}
+                  onChange={(v) => setFilterDate(String(v || "").trim())}
                   className="min-h-[40px] min-w-[10.5rem] cursor-pointer rounded-lg border border-indigo-200 bg-white px-2 py-1.5 text-sm font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25"
-                  aria-label="Choisir la date de la Situation"
+                  id="tickets-filter-date"
                 />
               </label>
               <button
@@ -1538,14 +1526,9 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         </div>
       </div>
 
-      <AnimatePresence mode="wait" initial={false}>
-        {filtered.length === 0 ? (
-          <motion.div
+      {filtered.length === 0 ? (
+          <div
             key="empty"
-            initial={fade.initial}
-            animate={fade.animate}
-            exit={fade.exit}
-            transition={fade.transition}
             className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/70 p-10 text-center"
           >
             <span className="mx-auto mb-3 grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 text-indigo-500">
@@ -1562,14 +1545,10 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                     ? "Aucun ticket ne correspond. Ticket et téléphone cherchent sur toutes les dates."
                     : "Aucun ticket ne correspond à votre recherche."}
             </p>
-          </motion.div>
+          </div>
         ) : (
-          <motion.div
+          <div
             key="table"
-            initial={fade.initial}
-            animate={fade.animate}
-            exit={fade.exit}
-            transition={fade.transition}
             className="overflow-hidden rounded-2xl border border-indigo-200/70 bg-white shadow-[0_16px_40px_-24px_rgba(79,70,229,0.35)] ring-1 ring-slate-200/80"
           >
             <div ref={scrollRef} className="max-h-[min(70vh,900px)] overflow-auto">
@@ -2038,9 +2017,8 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
                 </p>
               </nav>
             ) : null}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
 
       <EditTicketLineModal
         open={Boolean(editingRow)}
@@ -2049,6 +2027,6 @@ export function TicketsPage({ quotes = [], setQuotes, activities = [], user = nu
         setQuotes={setQuotes}
         onClose={() => setEditingRow(null)}
       />
-    </motion.div>
+    </div>
   );
 }

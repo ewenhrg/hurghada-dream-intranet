@@ -1,4 +1,6 @@
 /** Panier devis hôtels (catalogue public) — sessionStorage. */
+import { getLocalDateKey } from "./pushSaleExpiry.js";
+
 export const PUBLIC_HOTELS_CART_KEY = "hd_public_hotels_cart_v2";
 export const MAX_HOTELS_CART_ITEMS = 3;
 
@@ -240,6 +242,7 @@ export function validateHotelStay(stay, policy = null) {
   const s = normalizeStay(stay);
   if (!s.arrivalDate) return "Indiquez la date d’arrivée.";
   if (!s.departureDate) return "Indiquez la date de départ.";
+  if (s.arrivalDate < getLocalDateKey()) return "La date d’arrivée ne peut pas être avant aujourd’hui.";
   if (s.departureDate < s.arrivalDate) return "La date de départ doit être après l’arrivée.";
   if (s.adultsCount < 1) return "Indiquez au moins 1 adulte.";
 

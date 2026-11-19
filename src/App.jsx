@@ -32,6 +32,7 @@ import {
   canManageClientFlyer,
   canSendStayBroadcast,
   canVoidTicketNumbers,
+  canAccessSuperAdminPage,
   hasFullIntranetAccess,
 } from "./constants/permissions";
 import { uuid, mergeTransfers, calculateCardPrice, saveLS, saveQuotesCache, loadLS, normalizeQuoteItemsFromDb } from "./utils";
@@ -72,6 +73,7 @@ import {
   ManualQuotesHistoryPage,
   ModificationRequestsPage,
   VoidTicketNumbersPage,
+  SuperAdminPage,
   prefetchIntranetTab,
 } from "./config/lazyPages";
 import { Pill, GhostBtn, Section } from "./components/ui";
@@ -95,8 +97,9 @@ import {
 } from "./utils/activitiesBackup";
 import { normalizeCatalogImageUrlsFromDb } from "./utils/catalogContent";
 import { HD_PUBLIC_QUOTE_TO_DRAFT_EVENT, buildQuoteDraftFromExistingQuote } from "./utils/publicQuoteToDraft";
-import { isPublicClientPath } from "./config/clientApp";
+import { isPublicClientPath, isSuperAdminPath } from "./config/clientApp";
 import { PublicClientRoutes } from "./PublicClientRoutes";
+import { SuperAdminForbidden } from "./pages/SuperAdminForbidden";
 
 const RECEIPT_QUOTE_SELECT =
   "id, client_name, client_phone, client_emergency_phone, client_email, client_hotel, client_room, client_neighborhood, client_arrival_date, client_departure_date, client_has_second_hotel, client_second_hotel, client_second_room, client_second_neighborhood, client_second_arrival_date, client_second_departure_date, notes, created_at, updated_at, created_by_name, updated_by_name, source, items, total, currency, paid_stripe, paid_cash, reservation_code, client_documents, client_is_airbnb, client_airbnb_maps_url";
@@ -198,7 +201,25 @@ export default function App() {
   const location = useLocation();
   const isPublicClientRoute = isPublicClientPath(location.pathname);
   const [ok, setOk] = useState(false);
-  const [tab, setTab] = useState("devis");
+  const [tab, setTabState] = useState("devis");
+  const [tabHistory, setTabHistory] = useState([]);
+  const setTab = useCallback((next) => {
+    setTabState((prev) => {
+      if (prev && prev !== next) {
+        setTabHistory((h) => [...h.slice(-19), prev]);
+      }
+      return next;
+    });
+  }, []);
+  const goBackTab = useCallback(() => {
+    setTabHistory((h) => {
+      if (h.length === 0) return h;
+      const prev = h[h.length - 1];
+      setTabState(prev);
+      return h.slice(0, -1);
+    });
+  }, []);
+  const sectionBack = tabHistory.length > 0 ? goBackTab : undefined;
   // Source de vérité: Supabase (les données locales servent seulement de cache temporaire d'affichage).
   const [activities, setActivities] = useState(() => loadLS(LS_KEYS.activities, getDefaultActivities()));
   const [quotes, setQuotes] = useState(() => loadLS(LS_KEYS.quotes, []));
@@ -1432,6 +1453,27 @@ export default function App() {
     return <PublicClientRoutes />;
   }
 
+  if (isSuperAdminPath(location.pathname)) {
+    if (!ok) {
+      return <LoginPage onSuccess={handleLoginSuccess} />;
+    }
+    if (!canAccessSuperAdminPage(user)) {
+      return <SuperAdminForbidden user={user} onLogout={handleLogout} />;
+    }
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <SuperAdminPage
+            user={user}
+            activities={activities}
+            setActivities={setActivities}
+            onLogout={handleLogout}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
   if (!ok) {
         return <LoginPage onSuccess={handleLoginSuccess} />;
   }
@@ -1804,9 +1846,24 @@ export default function App() {
                     <section className="space-y-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <h2 className="hd-text-gradient font-bold mb-1.5" style={{ fontSize: '1.75rem', letterSpacing: '-0.03em' }}>
-                            {t("page.devis.title")}
-                          </h2>
+                          <div className="mb-1.5 flex items-center gap-3">
+                            {typeof sectionBack === "function" ? (
+                              <button
+                                type="button"
+                                onClick={sectionBack}
+                                className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/10 text-white hover:bg-white/20"
+                                aria-label="Retour"
+                                title="Retour"
+                              >
+                                <span aria-hidden className="text-lg leading-none">
+                                  ←
+                                </span>
+                              </button>
+                            ) : null}
+                            <h2 className="hd-text-gradient font-bold" style={{ fontSize: '1.75rem', letterSpacing: '-0.03em' }}>
+                              {t("page.devis.title")}
+                            </h2>
+                          </div>
                           <p className="text-sm font-medium leading-relaxed" style={{ color: 'rgba(226, 232, 240, 0.75)' }}>
                             {t("page.devis.subtitle")}
                           </p>
@@ -1830,7 +1887,7 @@ export default function App() {
           </div>
         ) : tab === "devis" ? null : (
           <div
-            className={`${contentContainerClassName} animate-page-enter`}
+            className={`${contentContainerClassName}`}
             style={{ 
               paddingLeft: '0.5rem', 
               paddingRight: '0.5rem'
@@ -1841,6 +1898,7 @@ export default function App() {
 
               {tab === "activities" && user?.canAccessActivities !== false && (
             <Section
+              onBack={sectionBack}
               title={t("page.activities.title")}
               subtitle={t("page.activities.subtitle")}
               right={
@@ -1865,13 +1923,14 @@ export default function App() {
         )}
 
         {tab === "planning" && canAccessPlanningPage(user) && (
-          <Section title={t("page.planning.title")} subtitle={t("page.planning.subtitle")}>
+          <Section title={t("page.planning.title")} subtitle={t("page.planning.subtitle")} onBack={sectionBack}>
             <PlanningPage activities={activities} />
           </Section>
         )}
 
         {tab === "catalog-admin" && canAccessCatalogAdminPage(user) && (
             <Section
+              onBack={sectionBack}
               title={t("page.catalogAdmin.title")}
               subtitle={
                 !hasFullIntranetAccess(user)
@@ -1889,7 +1948,7 @@ export default function App() {
           )}
 
         {tab === "history" && user?.canAccessHistory !== false && (
-          <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")} bare>
+          <Section title={t("page.history.title")} subtitle={t("page.history.subtitle")} bare onBack={sectionBack}>
             <HistoryPage
               quotes={quotes}
               setQuotes={setQuotes}
@@ -1902,6 +1961,7 @@ export default function App() {
 
         {tab === "tickets" && canAccessTicketsPage(user) && (
           <Section
+              onBack={sectionBack}
             title={t("page.tickets.title")}
             subtitle={t("page.tickets.subtitle")}
             bare
@@ -1912,6 +1972,7 @@ export default function App() {
 
         {tab === "data-entry" && canAccessDataEntryPage(user) && (
           <Section
+              onBack={sectionBack}
             title="Data entry"
             subtitle="Numéros du plus récent au plus ancien, 50 par page. La case Vu reste cochée pour Situation, Ewen et Karim."
             bare
@@ -1922,6 +1983,7 @@ export default function App() {
 
         {tab === "receipt" && canAccessReceiptPage(user) && (
           <Section
+              onBack={sectionBack}
             title="Receipt"
             subtitle="Tickets validated today, whatever the activity date, with prices and cash or Stripe payments."
             bare
@@ -1932,6 +1994,7 @@ export default function App() {
 
         {tab === "devis-manuel" && canAccessManualQuotes(user) && (
           <Section
+              onBack={sectionBack}
             title="Devis manuel"
             subtitle="Lignes libres (désignation, date optionnelle, prix). Imprimer enregistre aussi l’historique."
             bare
@@ -1942,6 +2005,7 @@ export default function App() {
 
         {tab === "historique-devis-manuel" && canAccessManualQuotes(user) && (
           <Section
+              onBack={sectionBack}
             title="Historique devis manuel"
             subtitle="Tous les devis manuels enregistrés. Modification, duplication, réimpression et suppression."
             bare
@@ -1951,37 +2015,38 @@ export default function App() {
         )}
 
         {tab === "events" && canAccessEventsPage(user) && (
-          <Section title="Événementiel" subtitle="Demandes reçues, devis PDF et suivi jusqu’au paiement.">
+          <Section title="Événementiel" subtitle="Demandes reçues, devis PDF et suivi jusqu’au paiement." onBack={sectionBack}>
             <EventsInboxPage />
           </Section>
         )}
 
         {tab === "public-devis" && canAccessPublicDevisPage(user) && (
-          <Section title={t("page.publicDevis.title")} subtitle={t("page.publicDevis.subtitle")}>
+          <Section title={t("page.publicDevis.title")} subtitle={t("page.publicDevis.subtitle")} onBack={sectionBack}>
             <PublicDevisPage user={user} />
           </Section>
         )}
 
         {tab === "b2b-access" && canAccessB2bPages(user) && (
-          <Section title="Accès B2B" subtitle="Demandes d’identifiant et comptes agences.">
+          <Section title="Accès B2B" subtitle="Demandes d’identifiant et comptes agences." onBack={sectionBack}>
             <B2BAccessPage />
           </Section>
         )}
 
         {tab === "b2b-quotes" && canAccessB2bPages(user) && (
-          <Section title="Devis B2B" subtitle="Demandes envoyées par les agences, sans prix affiché.">
+          <Section title="Devis B2B" subtitle="Demandes envoyées par les agences, sans prix affiché." onBack={sectionBack}>
             <B2BQuotesPage />
           </Section>
         )}
 
         {tab === "historique-hotel" && canAccessHotelHistoryPage(user) && (
-          <Section title="Hotel history" subtitle="Requests from the public form (contact details, hotels, budget).">
+          <Section title="Hotel history" subtitle="Requests from the public form (contact details, hotels, budget)." onBack={sectionBack}>
             <HotelHistoryPage user={user} />
           </Section>
         )}
 
         {tab === "modif-demandes" && canAccessModifDemandesPage(user) && (
           <Section
+              onBack={sectionBack}
             title="Demandes modif"
             subtitle="Acheminement type Hotel History : en attente → validation → confirmation à envoyer → rembourser / reste à payer."
           >
@@ -1991,6 +2056,7 @@ export default function App() {
 
         {tab === "modifications" && user?.canAccessModifications === true && (
           <Section
+              onBack={sectionBack}
             title={t("page.modifications.title")}
             subtitle={t("page.modifications.subtitle")}
           >
@@ -2000,6 +2066,7 @@ export default function App() {
 
         {tab === "void-tickets" && canVoidTicketNumbers(user) && (
           <Section
+              onBack={sectionBack}
             title="N° annulés"
             subtitle="Retire un numéro du carnet pour toujours, même s’il n’a jamais été attribué."
           >
@@ -2008,23 +2075,23 @@ export default function App() {
         )}
 
         {!SITUATION_PAGE_STANDBY && tab === "situation" && canAccessTransfersPage(user) && (
-          <SituationPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} />
+          <SituationPage quotes={quotes} setQuotes={setQuotes} activities={activities} user={user} onBack={sectionBack} />
         )}
 
         {tab === "stopsale" && canAccessStopSalePage(user) && (
-          <Section title="Stop Sale &amp; Push Sale" subtitle="Gérez les arrêts de vente et les ouvertures exceptionnelles">
+          <Section title="Stop Sale &amp; Push Sale" subtitle="Gérez les arrêts de vente et les ouvertures exceptionnelles" onBack={sectionBack}>
             <StopSalePage activities={activities} user={user} />
           </Section>
         )}
 
           {tab === "users" && canAccessUsersPage(user) && (
-            <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")}>
+            <Section title={t("page.users.title")} subtitle={t("page.users.subtitle")} onBack={sectionBack}>
               <UsersPage user={user} />
             </Section>
           )}
 
           {tab === "hotels" && canAccessHotelsPage(user) && (
-            <Section title="Gestion des hôtels" subtitle="Associez les hôtels à leurs quartiers">
+            <Section title="Gestion des hôtels" subtitle="Associez les hôtels à leurs quartiers" onBack={sectionBack}>
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <HotelsPage user={user} />
@@ -2035,6 +2102,7 @@ export default function App() {
 
           {tab === "hotels-catalog" && canAccessHotelsPage(user) && (
             <Section
+              onBack={sectionBack}
               title="Catalogue hôtels"
               subtitle="Ajoutez et gérez les fiches publiques : description, inclus, photos et carte"
             >
@@ -2048,6 +2116,7 @@ export default function App() {
 
           {tab === "hotel-tarifs" && canAccessHotelsPage(user) && (
             <Section
+              onBack={sectionBack}
               title="Tarifs hôtel"
               subtitle="Contrats : prix par catégorie de chambre et période (pour le calcul automatique des devis)"
             >
@@ -2060,7 +2129,7 @@ export default function App() {
           )}
 
           {tab === "ewen-dashboard" && canAccessEwenDashboardPage(user) && (
-            <Section title={t("page.ewenDashboard.title")} subtitle={t("page.ewenDashboard.subtitle")}>
+            <Section title={t("page.ewenDashboard.title")} subtitle={t("page.ewenDashboard.subtitle")} onBack={sectionBack}>
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <EwenDashboardPage
@@ -2078,6 +2147,7 @@ export default function App() {
 
           {tab === "appartements" && canAccessInternsPage(user) && (
             <Section
+              onBack={sectionBack}
               title="Appartement"
               subtitle="Planning des venues, appartements colloc et CV"
             >
@@ -2091,6 +2161,7 @@ export default function App() {
 
           {tab === "message-sejour" && canSendStayBroadcast(user) && (
             <Section
+              onBack={sectionBack}
               title="Message séjour"
               subtitle="Notification à tous les clients qui ont ouvert Mon séjour"
             >
@@ -2104,6 +2175,7 @@ export default function App() {
 
           {tab === "flyer-appli" && canManageClientFlyer(user) && (
             <Section
+              onBack={sectionBack}
               title="Flyer appli"
               subtitle="Image et texte affichés à l’ouverture de l’application"
             >
@@ -2116,7 +2188,7 @@ export default function App() {
           )}
 
           {tab === "documents" && canAccessDocumentsPage(user) && (
-            <Section title={t("page.documents.title")} subtitle={t("page.documents.subtitle")}>
+            <Section title={t("page.documents.title")} subtitle={t("page.documents.subtitle")} onBack={sectionBack}>
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>
                   <DocumentsPage user={user} />
@@ -2148,7 +2220,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setShowDatesModal(true)}
-            className="relative w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+            className="relative w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all"
             style={{
               backgroundColor: "rgba(251, 191, 36, 0.95)",
               boxShadow: "0 8px 24px -8px rgba(180, 83, 9, 0.6)",

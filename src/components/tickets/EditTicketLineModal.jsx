@@ -8,6 +8,7 @@ import { computePaidColumnsFromItems, findTicketNumberConflict, resolveQuoteById
 import { claimTicketNumbersForQuote, releaseTicketAllocations } from "../../utils/ticketSequence";
 import { isBoatPartyActivity } from "../../utils/activityHelpers";
 import { TextInput, NumberInput, PrimaryBtn, GhostBtn } from "../ui";
+import { DateInput } from "../DateInput";
 import { toast } from "../../utils/toast.js";
 import { logger } from "../../utils/logger";
 import { requestClientStayPush } from "../../utils/clientStayPush";
@@ -289,10 +290,9 @@ export function EditTicketLineModal({ open, row, quotes, setQuotes, onClose }) {
             </label>
             <label className="block space-y-1.5">
               <span className="text-xs font-semibold text-slate-600">Date</span>
-              <TextInput
-                type="date"
+              <DateInput
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={setDate}
                 className="!py-2.5"
               />
             </label>

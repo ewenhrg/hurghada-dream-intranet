@@ -2533,3 +2533,13 @@ button, a, [role="button"] {
     --sidebar-ring: oklch(0.556 0 0);
   }
 }
+/* ===== Intranet uniquement : animations lourdes désactivées (pas le site client) ===== */
+.hd-shine::after,
+.hd-shine:hover::after {
+  animation: none !important;
+  opacity: 0 !important;
+}
+[class*="login-enter"],
+.login-error-shake {
+  animation: none !important;
+}

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 import { TextInput, PrimaryBtn, GhostBtn } from "../components/ui";
+import { DateInput } from "../components/DateInput";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { getLocalDateKey, isPushSaleExpired } from "../utils/pushSaleExpiry.js";
@@ -388,10 +389,9 @@ export function StopSalePage({ activities, user }) {
             {/* Date */}
             <div>
               <p className="text-xs text-gray-500 mb-1">Date</p>
-              <TextInput
-                type="date"
+              <DateInput
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                onChange={setSelectedDate}
                 className="w-full"
               />
             </div>

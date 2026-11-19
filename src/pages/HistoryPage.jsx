@@ -17,6 +17,7 @@ import {
   uuid,
 } from "../utils";
 import { generateQuoteHTML, generateTicketsHTML } from "../utils/printTemplates";
+import { quoteHtmlToPdfBlob, savePdfBlob } from "../utils/quotePdfDownload";
 import { setVisibilityAwareInterval } from "../utils/idle";
 import { computeActivityTransferSurcharge, computePrivateTransferSurcharge, getTransferSurchargeFieldsForQuoteItem, requiresPickupTimeChoice, resolveActivityFromList } from "../utils/transferPricing";
 import { TextInput, NumberInput, GhostBtn, PrimaryBtn, Pill } from "../components/ui";
@@ -446,50 +447,26 @@ function QuoteCardComponent({
     }
   }, [d]);
 
-  /** Enregistre le devis via l’explorateur (sans ouvrir d’autre page). */
+  /** Enregistre le devis en PDF via l’explorateur (sans ouvrir d’autre page). */
   const handleDownloadClick = useCallback(async () => {
-    const htmlContent = generateQuoteHTML(d);
     const phone = String(formatPhoneWithPlus(d.client?.phone) || "")
       .replace(/[^\d+]/g, "")
       .slice(0, 20);
     const namePart = String(d.client?.name || d.reservationCode || d.id || "devis")
       .replace(/[^\w\-]+/g, "_")
       .slice(0, 40);
-    const suggestedName = `Devis-${phone || namePart}.html`;
-    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+    const suggestedName = `Devis-${phone || namePart}.pdf`;
 
     try {
-      if (typeof window.showSaveFilePicker === "function") {
-        const handle = await window.showSaveFilePicker({
-          suggestedName,
-          types: [
-            {
-              description: "Devis HTML",
-              accept: { "text/html": [".html"] },
-            },
-          ],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        toast.success("Devis enregistré.");
-        return;
-      }
+      const htmlContent = generateQuoteHTML(d);
+      const blob = await quoteHtmlToPdfBlob(htmlContent);
+      const result = await savePdfBlob(blob, suggestedName);
+      if (result.aborted) return;
+      if (result.ok) toast.success("PDF enregistré.");
     } catch (err) {
-      if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
-        return;
-      }
-      logger.warn("HistoryPage download showSaveFilePicker:", err);
+      logger.warn("HistoryPage download PDF:", err);
+      toast.error("Impossible de générer le PDF du devis.");
     }
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = suggestedName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
   }, [d]);
 
   const openTicketsWindow = useCallback((quoteForTickets) => {
@@ -1338,12 +1315,20 @@ function QuoteCardComponent({
                   </div>
                   <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-slate-200/50 pt-3 md:border-t-0 md:pt-0 md:flex-col md:items-end md:justify-center md:min-w-[7.5rem]">
                     <span className="text-base md:text-lg font-bold tabular-nums bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent whitespace-nowrap">
-                      💵 {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
+                      Espèce {currencyNoCents(Math.round(li.lineTotal || 0), d.currency || "EUR")}
                     </span>
                     {li.ticketNumber && li.ticketNumber.trim() !== "" && (
-                      <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-2 border-emerald-600 shadow-md whitespace-nowrap max-w-full truncate">
-                        🎫 {li.ticketNumber}
-                      </span>
+                      <button
+                        type="button"
+                        className="max-w-full truncate whitespace-nowrap border-0 bg-transparent p-0 text-xs font-bold text-slate-900 underline underline-offset-2 hover:text-slate-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openTicketModal();
+                        }}
+                        title="Ouvrir le ticket"
+                      >
+                        {li.ticketNumber}
+                      </button>
                     )}
                   </div>
                 </div>
@@ -1392,10 +1377,10 @@ function QuoteCardComponent({
               <p className="text-xs md:text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wider">Total du devis</p>
               <div className="space-y-1.5">
                 <p className="text-2xl md:text-3xl font-bold tabular-nums bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent [overflow-wrap:anywhere]">
-                  💵 {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
+                  Espèce {currencyNoCents(d.totalCash || Math.round(d.total || 0), d.currency || "EUR")}
                 </p>
                 <p className="text-lg md:text-xl font-semibold text-slate-700 tabular-nums [overflow-wrap:anywhere]">
-                  💳 {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
+                  Carte {currencyNoCents(d.totalCard || calculateCardPrice(d.total || 0), d.currency || "EUR")}
                 </p>
               </div>
             </div>
@@ -1419,7 +1404,7 @@ function QuoteCardComponent({
                 className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 border-2 border-slate-300 bg-white hover:bg-slate-50 min-h-[44px] min-w-0 transition-colors duration-150"
                 onClick={handleInvoiceClick}
               >
-                Imprimer facture
+                Facture
               </button>
               <button
                 type="button"
@@ -2605,8 +2590,8 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
       <div className="rounded-2xl border border-white/10 shadow-[0_20px_45px_-25px_rgba(7,13,31,0.8)] p-5 md:p-6 lg:p-7" style={{ background: "linear-gradient(135deg, rgba(23,17,48,0.96), rgba(12,13,38,0.94))" }}>
       <div className="flex flex-col gap-5 md:gap-6">
         <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-start md:items-center justify-between">
-          <div className="flex-1 max-w-md">
-              <div className="space-y-3">
+          <div className="flex-1 max-w-md w-full">
+            <div className="space-y-3">
               <TextInput
                 type="search"
                 inputMode="search"
@@ -2614,35 +2599,15 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
                 placeholder="Téléphone, e-mail, nom ou n° réservation…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                  className="w-full text-base border-2 border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 rounded-xl shadow-sm"
+                className="w-full text-base border-2 border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 rounded-xl shadow-sm"
               />
-                <p className="text-xs md:text-sm text-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-2.5 rounded-xl border-2 border-amber-200/70 flex items-center gap-2 font-medium shadow-sm">
+              <p className="text-xs md:text-sm text-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-2.5 rounded-xl border-2 border-amber-200/70 flex items-center gap-2 font-medium shadow-sm">
                 <span className="text-base">⚠️</span>
                 <span>N'oubliez pas d'actualiser la page pour voir les dernières informations</span>
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-end gap-2 md:gap-3">
-            <label className="flex flex-col gap-1 text-xs font-semibold text-white/80">
-              Jour
-              <DateInput
-                value={dateFilter}
-                onChange={(next) => {
-                  setDateFilter(next || "");
-                  setTodayOnlyFilter(false);
-                }}
-                className="min-w-[10.5rem] rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm"
-              />
-            </label>
-            {dateFilter ? (
-              <GhostBtn
-                type="button"
-                onClick={() => setDateFilter("")}
-                className="border border-white/20 bg-white/10 text-white hover:bg-white/20"
-              >
-                Effacer la date
-              </GhostBtn>
-            ) : null}
+          <div className="flex flex-wrap gap-2 md:gap-3 justify-start md:justify-end">
             <Pill
               active={todayOnlyFilter && !dateFilter}
               onClick={() => {
@@ -2658,7 +2623,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
               active={statusFilter === "all"}
               onClick={() => setStatusFilter("all")}
               tone="dark"
-                className="transition-opacity duration-150 hover:opacity-80"
+              className="transition-opacity duration-150 hover:opacity-80"
             >
               📊 Tous{quotes.length > 0 ? ` (${quotes.length})` : ""}
             </Pill>
@@ -2666,7 +2631,7 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
               active={statusFilter === "paid"}
               onClick={() => setStatusFilter("paid")}
               tone="dark"
-                className="transition-opacity duration-150 hover:opacity-80"
+              className="transition-opacity duration-150 hover:opacity-80"
             >
               ✅ Payés{paidQuotesCount > 0 ? ` (${paidQuotesCount})` : ""}
             </Pill>
@@ -2674,19 +2639,43 @@ export function HistoryPage({ quotes, setQuotes, user, activities, onReuseClient
               active={statusFilter === "pending"}
               onClick={() => setStatusFilter("pending")}
               tone="dark"
-                className="transition-opacity duration-150 hover:opacity-80"
+              className="transition-opacity duration-150 hover:opacity-80"
             >
               ⏳ En attente{pendingQuotesCount > 0 ? ` (${pendingQuotesCount})` : ""}
             </Pill>
-            </div>
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/70">
+            Jour
+          </span>
+          <div className="w-[12.5rem] max-w-full shrink-0">
+            <DateInput
+              value={dateFilter}
+              onChange={(next) => {
+                setDateFilter(next || "");
+                setTodayOnlyFilter(false);
+              }}
+              className="rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm"
+            />
+          </div>
+          {dateFilter ? (
+            <button
+              type="button"
+              onClick={() => setDateFilter("")}
+              className="text-sm font-semibold text-sky-200 underline underline-offset-2 hover:text-white"
+            >
+              Effacer
+            </button>
+          ) : null}
+        </div>
+      </div>
       </div>
       
       {/* Indicateur du nombre de résultats amélioré */}
       <div className="flex items-center justify-between rounded-xl border border-white/10 p-4 md:p-5 shadow-[0_18px_40px_-28px_rgba(7,13,31,0.8)] transition-all duration-200 hover:shadow-xl" style={{ background: "linear-gradient(135deg, rgba(23,17,48,0.94), rgba(12,13,38,0.9))" }}>
         <div className="flex items-center gap-3">
-          <span className="text-2xl md:text-3xl animate-bounce">📊</span>
+          <span className="text-2xl md:text-3xl ">📊</span>
           <div>
             {filtered.length === 0 ? (
               <p className="text-amber-300 font-bold text-base md:text-lg">
@@ -3618,20 +3607,18 @@ function EditQuoteModal({ quote, client, setClient, items, setItems, notes, setN
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6 mt-5 md:mt-6">
               <div>
                 <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">📅 Date d'arrivée</label>
-                <TextInput 
-                  type="date"
-                  value={client.arrivalDate || ""} 
-                  onChange={(e) => setClient((c) => ({ ...c, arrivalDate: e.target.value }))} 
+                <DateInput
+                  value={client.arrivalDate || ""}
+                  onChange={(v) => setClient((c) => ({ ...c, arrivalDate: v }))}
                   className="text-base md:text-lg py-3"
                 />
               </div>
               <div>
                 <label className="block text-sm md:text-base font-bold text-slate-800 mb-3">📅 Date de départ</label>
                 <div className="flex gap-2 items-stretch">
-                  <TextInput 
-                    type="date"
-                    value={client.departureDate || ""} 
-                    onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))} 
+                  <DateInput
+                    value={client.departureDate || ""}
+                    onChange={(v) => setClient((c) => ({ ...c, departureDate: v }))}
                     className="text-base md:text-lg py-3 flex-1"
                   />
                   <GhostBtn

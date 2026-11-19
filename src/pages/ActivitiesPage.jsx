@@ -37,8 +37,7 @@ import { hasFullIntranetAccess } from "../constants/permissions.js";
  * Doit rester au niveau module — déclarée dans `ActivitiesPage`, elle formait un
  * nouveau type de composant à chaque rendu et React remontait toutes les lignes.
  */
-const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canModify, showCacheOnlyBadge }) => {
-  const hasDescription = !!activity.description;
+const ActivityRow = memo(({ activity, onEdit, onDelete, canModify, showCacheOnlyBadge }) => {
   const availableDaysList = useMemo(() => {
     return WEEKDAYS.filter((d, dayIdx) => activity.availableDays?.[dayIdx]);
   }, [activity.availableDays]);
@@ -81,17 +80,6 @@ const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canMo
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex gap-2 justify-end flex-wrap">
-          <button
-            type="button"
-            onClick={() => onOpenDescription(activity)}
-            className={`text-xs font-semibold px-3 py-2 rounded-lg transition-colors ${
-              hasDescription
-                ? "bg-emerald-200 text-emerald-800 hover:bg-emerald-300 border border-emerald-300"
-                : "bg-slate-200 text-slate-700 hover:bg-slate-300 border border-slate-300"
-            }`}
-          >
-            📝 Description{hasDescription ? " ✓" : ""}
-          </button>
           {canModify && (
             <>
               <button
@@ -120,7 +108,6 @@ const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canMo
   // closure obsolète (handleDelete capture la map des activités).
   if (prevProps.onEdit !== nextProps.onEdit) return false;
   if (prevProps.onDelete !== nextProps.onDelete) return false;
-  if (prevProps.onOpenDescription !== nextProps.onOpenDescription) return false;
   if (prevProps.activity.id !== nextProps.activity.id) return false;
   if (prevProps.showCacheOnlyBadge !== nextProps.showCacheOnlyBadge) return false;
   if (prevProps.activity.supabase_id !== nextProps.activity.supabase_id) return false;
@@ -133,7 +120,6 @@ const ActivityRow = memo(({ activity, onEdit, onDelete, onOpenDescription, canMo
   if (Boolean(prevProps.activity.babiesForbidden) !== Boolean(nextProps.activity.babiesForbidden))
     return false;
   if (prevProps.activity.notes !== nextProps.activity.notes) return false;
-  if (prevProps.activity.description !== nextProps.activity.description) return false;
   if (prevProps.canModify !== nextProps.canModify) return false;
 
   // Comparaison optimisée des availableDays sans JSON.stringify
@@ -226,11 +212,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
   const [editingId, setEditingId] = useState(savedForm?.editingId || null);
   const saveTimeoutRef = useRef(null);
   const formRef = useRef(null);
-  const descriptionModalRef = useRef(null);
   const restoreFileInputRef = useRef(null);
-  
-  // État pour la modal de description
-  const [descriptionModal, setDescriptionModal] = useState({ isOpen: false, activity: null, description: "" });
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [syncingCacheToSupabase, setSyncingCacheToSupabase] = useState(false);
   /** IDs d’activités réellement présents dans Supabase (même logique multi-source que « Vérifier ») — pour afficher le bandeau même si le cache garde d’anciens supabase_id. */
@@ -399,66 +381,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     }, 100);
   }, [canModifyActivities]);
   
-  const handleOpenDescriptionModal = useCallback((activity) => {
-    // Scroll vers le haut avant d'ouvrir la modale pour une meilleure UX
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    setDescriptionModal({
-      isOpen: true,
-      activity: activity,
-      description: activity.description || "",
-    });
-  }, []);
-  
-  const handleSaveDescription = useCallback(async () => {
-    if (!descriptionModal.activity) return;
-    
-    const activityId = descriptionModal.activity.id;
-    const supabaseId = descriptionModal.activity.supabase_id;
-    const description = descriptionModal.description;
-    
-    // Mettre à jour l'activité dans le state local
-    setActivities((prevActivities) => {
-      const updated = prevActivities.map((a) =>
-        a.id === activityId ? { ...a, description } : a
-      );
-      saveLS(LS_KEYS.activities, updated);
-      return updated;
-    });
-    
-    // Mettre à jour dans Supabase si configuré et si supabaseId existe
-    if (supabase && supabaseId) {
-      try {
-        const { error } = await supabase
-          .from("activities")
-          .update({ description: description || "" })
-          .eq("id", supabaseId);
-        
-        if (error) {
-          // Si l'erreur est 400 (Bad Request), c'est probablement que la colonne n'existe pas encore
-          if (error.code === "PGRST204" || error.message?.includes("column") || error.message?.includes("description")) {
-            logger.warn("⚠️ La colonne 'description' n'existe peut-être pas encore dans Supabase. La description est sauvegardée localement.");
-            toast.warning("La colonne description n'existe pas encore dans Supabase. Exécutez le script SQL pour l'ajouter. La description est sauvegardée localement.");
-          } else {
-            logger.error("❌ Erreur lors de la mise à jour de la description dans Supabase:", error);
-            toast.error("Erreur lors de la sauvegarde dans Supabase. La description est sauvegardée localement.");
-          }
-        } else {
-          toast.success("Description sauvegardée avec succès.");
-        }
-      } catch (err) {
-        logger.error("❌ Exception lors de la mise à jour de la description dans Supabase:", err);
-        toast.error("Exception lors de la sauvegarde dans Supabase. La description est sauvegardée localement.");
-      }
-    } else if (!supabaseId) {
-      // Pas de supabase_id, donc l'activité n'est pas encore dans Supabase
-      toast.success("Description sauvegardée localement. L'activité sera synchronisée avec Supabase lors de sa prochaine modification.");
-    } else {
-      toast.success("Description sauvegardée avec succès.");
-    }
-    
-    setDescriptionModal({ isOpen: false, activity: null, description: "" });
-  }, [descriptionModal.activity, descriptionModal.description]);
-
   const handleCreate = useCallback(async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return;
@@ -1355,17 +1277,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
     setShowForm((s) => !s);
   }, [showForm]);
   
-  const handleCloseDescriptionModal = useCallback(() => {
-    setDescriptionModal({ isOpen: false, activity: null, description: "" });
-  }, []);
-  
-  // Ref callback optimisé pour le textarea
-  const textareaRefCallback = useCallback((el) => {
-    if (el && descriptionModal.isOpen && hasFullAccess) {
-      setTimeout(() => el.focus(), 100);
-    }
-  }, [descriptionModal.isOpen, hasFullAccess]);
-
   // Toutes les catégories sont maintenant toujours visibles pour éviter les carrés blancs
 
   const totalActivities = activities.length;
@@ -1584,7 +1495,7 @@ export function ActivitiesPage({ activities, setActivities, user }) {
               Recherche
             </label>
             <TextInput
-              placeholder="Nom, notes ou description..."
+              placeholder="Nom ou notes…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="text-sm rounded-lg border-indigo-200 focus:ring-indigo-500/30 focus:border-indigo-400"
@@ -1906,7 +1817,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
                             }
                             onEdit={handleEdit}
                             onDelete={handleDelete}
-                            onOpenDescription={handleOpenDescriptionModal}
                             canModify={canModifyActivities}
                           />
                         ))}
@@ -1927,65 +1837,6 @@ export function ActivitiesPage({ activities, setActivities, user }) {
         </div>
       </section>
 
-      {/* Modal description */}
-      {descriptionModal.isOpen && descriptionModal.activity && (
-        <div
-          ref={descriptionModalRef}
-          className="fixed inset-0 bg-indigo-900/30 z-50 flex items-center justify-center p-4"
-          onClick={handleCloseDescriptionModal}
-        >
-          <div
-            className="bg-white rounded-xl border-2 border-indigo-300 shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-6 py-4 border-b-2 border-indigo-200 bg-gradient-to-r from-indigo-500 to-violet-600 flex items-center justify-between">
-              <h3 className="text-base font-bold text-white">
-                📝 Description · {descriptionModal.activity.name}
-              </h3>
-              <button
-                type="button"
-                onClick={handleCloseDescriptionModal}
-                className="p-2 rounded-lg text-white/90 hover:text-white hover:bg-white/20 transition-colors"
-                aria-label="Fermer"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-5 flex-1 overflow-y-auto bg-slate-50/50">
-              <textarea
-                ref={textareaRefCallback}
-                value={descriptionModal.description}
-                onChange={(e) => setDescriptionModal((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="Description de l'activité..."
-                disabled={!hasFullAccess}
-                readOnly={!hasFullAccess}
-                className={`w-full h-40 rounded-xl border-2 border-indigo-200 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 resize-none ${
-                  !hasFullAccess ? "bg-amber-50/50 cursor-not-allowed" : ""
-                }`}
-              />
-              {!hasFullAccess && (
-                <p className="text-xs font-medium text-amber-700 mt-2 bg-amber-100 px-2 py-1.5 rounded-lg">Seuls Ewen, Léa, Sophia et Karim peuvent modifier la description.</p>
-              )}
-            </div>
-            <div className="px-6 py-4 border-t-2 border-indigo-200 flex gap-3 justify-end bg-gradient-to-r from-indigo-50 to-violet-50">
-              <button
-                type="button"
-                onClick={handleCloseDescriptionModal}
-                className="text-sm font-semibold px-4 py-2.5 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors"
-              >
-                Fermer
-              </button>
-              {hasFullAccess && (
-                <PrimaryBtn onClick={handleSaveDescription} className="text-sm font-semibold px-5 py-2.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 border-0 shadow-md">
-                  💾 Enregistrer
-                </PrimaryBtn>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

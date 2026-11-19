@@ -8,6 +8,8 @@ import { logger } from "../utils/logger";
 import { toast } from "../utils/toast.js";
 import { formatPhoneWithPlus } from "../utils";
 import { boardFieldsToPayload } from "../constants/hotelRequestBoardOptions";
+import { getLocalDateKey } from "../utils/pushSaleExpiry.js";
+import { DateInput } from "../components/DateInput";
 
 const EMPTY_FORM = {
   firstName: "",
@@ -110,6 +112,11 @@ export function PublicHotelRequestPage() {
     }
     if (!form.departureDate) {
       toast.error("Veuillez indiquer votre date de départ.");
+      return;
+    }
+    const todayKey = getLocalDateKey();
+    if (form.arrivalDate < todayKey) {
+      toast.error("La date d'arrivée ne peut pas être avant aujourd'hui.");
       return;
     }
     if (form.departureDate < form.arrivalDate) {
@@ -325,11 +332,11 @@ export function PublicHotelRequestPage() {
                 <FieldLabel htmlFor="hd-arrival" required>
                   Date d&apos;arrivée
                 </FieldLabel>
-                <input
+                <DateInput
                   id="hd-arrival"
-                  type="date"
+                  min={getLocalDateKey()}
                   value={form.arrivalDate}
-                  onChange={(e) => updateField("arrivalDate", e.target.value)}
+                  onChange={(v) => updateField("arrivalDate", v)}
                   className={inputClass}
                   required
                 />
@@ -338,12 +345,11 @@ export function PublicHotelRequestPage() {
                 <FieldLabel htmlFor="hd-departure" required>
                   Date de départ
                 </FieldLabel>
-                <input
+                <DateInput
                   id="hd-departure"
-                  type="date"
                   value={form.departureDate}
-                  min={form.arrivalDate || undefined}
-                  onChange={(e) => updateField("departureDate", e.target.value)}
+                  min={form.arrivalDate || getLocalDateKey()}
+                  onChange={(v) => updateField("departureDate", v)}
                   className={inputClass}
                   required
                 />

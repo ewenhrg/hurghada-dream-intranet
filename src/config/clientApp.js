@@ -4,10 +4,17 @@ export const IS_CLIENT_APP = import.meta.env.VITE_CLIENT_APP === "true";
 /** Accueil public. L’intranet est sur `/intranet`. */
 export const PUBLIC_HOME_PATH = "/";
 export const INTRANET_PATH = "/intranet";
+export const SUPERADMIN_PATH = "/superadmin";
 
 export function isIntranetPath(path) {
   const p = path || "";
   return p === INTRANET_PATH || p.startsWith(`${INTRANET_PATH}/`);
+}
+
+/** Console ultra-admin (URL secrète, hors nav). */
+export function isSuperAdminPath(path) {
+  const p = path || "";
+  return p === SUPERADMIN_PATH || p.startsWith(`${SUPERADMIN_PATH}/`);
 }
 
 export function isPublicHomePath(path) {
@@ -30,6 +37,7 @@ export function publicBackPath(path) {
 export function isPublicClientPath(path) {
   const p = path || "";
   if (isIntranetPath(p)) return false;
+  if (isSuperAdminPath(p)) return false;
   return (
     isPublicHomePath(p) ||
     p === "/tarifs" ||

@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY, CATEGORIES } from "../constants";
 import { TextInput, PrimaryBtn } from "../components/ui";
+import { DateInput } from "../components/DateInput";
 import { toast } from "../utils/toast.js";
 import { logger } from "../utils/logger";
 import { formatPhoneWithPlus } from "../utils";
@@ -565,19 +566,14 @@ export function RequestPage() {
                       id="tooltip-arrival"
                     />
                   </label>
-                  <input
+                  <DateInput
                     id="arrivalDate"
                     name="arrivalDate"
                     required
-                    type="date"
                     disabled={requestSubmitted}
                     value={formData.arrivalDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, arrivalDate: e.target.value })
-                    }
-                    min={new Date().toISOString().split('T')[0]}
-                    aria-required="true"
-                    aria-describedby="tooltip-arrival"
+                    onChange={(v) => setFormData({ ...formData, arrivalDate: v })}
+                    min={new Date().toISOString().split("T")[0]}
                     className="w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -589,20 +585,14 @@ export function RequestPage() {
                       id="tooltip-departure"
                     />
                   </label>
-                  <input
+                  <DateInput
                     id="departureDate"
                     name="departureDate"
                     required
-                    type="date"
                     disabled={requestSubmitted}
                     value={formData.departureDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, departureDate: e.target.value })
-                    }
-                    min={formData.arrivalDate || new Date().toISOString().split('T')[0]}
-                    aria-required="true"
-                    aria-describedby="tooltip-departure"
-                    aria-invalid={formData.departureDate && formData.arrivalDate && formData.departureDate < formData.arrivalDate}
+                    onChange={(v) => setFormData({ ...formData, departureDate: v })}
+                    min={formData.arrivalDate || new Date().toISOString().split("T")[0]}
                     className="w-full rounded-xl border border-[rgba(148,163,184,0.35)] bg-[rgba(255,255,255,0.98)] px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[rgba(79,70,229,0.3)] focus:border-[rgba(79,70,229,0.7)] transition-all duration-200 shadow-[0_16px_35px_-28px_rgba(15,23,42,0.45)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.5)] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2),0_18px_36px_-26px_rgba(15,23,42,0.5)] min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>

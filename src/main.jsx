@@ -12,6 +12,13 @@ import "./index.css"; // 👈 c'est ici qu'on charge le CSS (où il y aura @tail
 // Initialiser le système de toasts au démarrage
 initToast();
 
+// Forcer le format de dates navigateur côté fr (JJ/MM/AAAA) autant que possible.
+try {
+  document.documentElement.lang = "fr";
+} catch {
+  /* ignore */
+}
+
 // Désactiver l’ancien SW de cache. Conserver stay-sw.js (notifications Mon séjour).
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {

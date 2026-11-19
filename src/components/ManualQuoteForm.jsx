@@ -7,6 +7,7 @@ import {
   emptyManualLine,
   normalizeManualLines,
 } from "../utils/manualQuotes";
+import { DateInput } from "./DateInput";
 
 const fieldClass =
   "w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-base font-medium text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30";
@@ -186,10 +187,9 @@ export function ManualQuoteForm({
             <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-600">
               Date d&apos;arrivée
             </span>
-            <input
-              type="date"
+            <DateInput
               value={client.arrivalDate || ""}
-              onChange={(e) => updateClient({ arrivalDate: e.target.value })}
+              onChange={(v) => updateClient({ arrivalDate: v })}
               className={fieldClass}
             />
           </label>
@@ -197,10 +197,9 @@ export function ManualQuoteForm({
             <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-600">
               Date de départ
             </span>
-            <input
-              type="date"
+            <DateInput
               value={client.departureDate || ""}
-              onChange={(e) => updateClient({ departureDate: e.target.value })}
+              onChange={(v) => updateClient({ departureDate: v })}
               className={fieldClass}
             />
           </label>
@@ -250,10 +249,9 @@ export function ManualQuoteForm({
                 <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-600">
                   Date (optionnel)
                 </span>
-                <input
-                  type="date"
+                <DateInput
                   value={line.date || ""}
-                  onChange={(e) => updateLine(line.id, { date: e.target.value })}
+                  onChange={(v) => updateLine(line.id, { date: v })}
                   className={fieldClass}
                 />
               </label>

@@ -15,6 +15,7 @@ import { CATEGORIES, SITE_KEY } from "../constants";
 import { getActivityPublicProse } from "../utils/activityHelpers";
 import { normalizeCatalogImageUrlsFromDb } from "../utils/catalogContent";
 import { getMinDepartureDate, isCatalogueStayTooShort } from "../utils/publicCatalogueStayStorage";
+import { DateInput } from "../components/DateInput";
 import {
   b2bSetupMessage,
   clearB2BSession,
@@ -508,16 +509,20 @@ function B2BCatalog({ session, onLogout }) {
             <div className="grid grid-cols-2 gap-3">
               <label className="block text-sm font-bold text-catalog-ink">
                 Arrivée
-                <input type="date" required value={client.arrivalDate} onChange={(e) => setClient((c) => ({ ...c, arrivalDate: e.target.value }))} className="hdc-input mt-1.5" />
+                <DateInput
+                  required
+                  value={client.arrivalDate}
+                  onChange={(v) => setClient((c) => ({ ...c, arrivalDate: v }))}
+                  className="hdc-input mt-1.5"
+                />
               </label>
               <label className="block text-sm font-bold text-catalog-ink">
                 Départ
-                <input
-                  type="date"
+                <DateInput
                   required
                   min={getMinDepartureDate(client.arrivalDate) || undefined}
                   value={client.departureDate}
-                  onChange={(e) => setClient((c) => ({ ...c, departureDate: e.target.value }))}
+                  onChange={(v) => setClient((c) => ({ ...c, departureDate: v }))}
                   className="hdc-input mt-1.5"
                 />
               </label>

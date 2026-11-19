@@ -64,6 +64,9 @@ export {
 export const EwenDashboardPage = lazyWithRetry(() =>
   import("../pages/EwenDashboardPage").then((module) => ({ default: module.EwenDashboardPage }))
 );
+export const SuperAdminPage = lazyWithRetry(() =>
+  import("../pages/SuperAdminPage").then((module) => ({ default: module.SuperAdminPage }))
+);
 export const PublicDevisPage = lazyWithRetry(() =>
   import("../pages/PublicDevisPage").then((m) => ({ default: m.PublicDevisPage }))
 );

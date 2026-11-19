@@ -16,6 +16,7 @@ import {
   savePublicCatalogueStay,
 } from "../utils/publicCatalogueStayStorage";
 import { CatalogueStayGateModal } from "../components/public/CatalogueStayGateModal";
+import { DateInput } from "../components/DateInput";
 import {
   deriveCatalogueLineMinors,
   formatActivityMinorCategoryLabel,
@@ -1480,11 +1481,9 @@ export function PublicClientDevisPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="block space-y-1">
                   <span className="text-[11px] font-extrabold uppercase tracking-wide text-catalog-body">Date d’arrivée *</span>
-                  <input
-                    type="date"
+                  <DateInput
                     value={client.arrivalDate}
-                    onChange={(e) => {
-                      const nextArrival = e.target.value;
+                    onChange={(nextArrival) => {
                       const minDep = getMinDepartureDate(nextArrival);
                       const nextDeparture =
                         minDep && client.departureDate && client.departureDate < minDep
@@ -1508,16 +1507,15 @@ export function PublicClientDevisPage() {
                 </label>
                 <label className="block space-y-1">
                   <span className="text-[11px] font-extrabold uppercase tracking-wide text-catalog-body">Date de fin (départ) *</span>
-                  <input
-                    type="date"
+                  <DateInput
                     value={client.departureDate}
                     min={getMinDepartureDate(client.arrivalDate) || undefined}
-                    onChange={(e) => {
-                      updateClientField("departureDate", e.target.value);
-                      if (isValidCatalogueStay({ arrivalDate: client.arrivalDate, departureDate: e.target.value })) {
+                    onChange={(v) => {
+                      updateClientField("departureDate", v);
+                      if (isValidCatalogueStay({ arrivalDate: client.arrivalDate, departureDate: v })) {
                         savePublicCatalogueStay({
                           arrivalDate: client.arrivalDate,
-                          departureDate: e.target.value,
+                          departureDate: v,
                         });
                       }
                     }}
@@ -1570,12 +1568,11 @@ export function PublicClientDevisPage() {
                               return (
                                 <label key={`${line.id}-dob-${i}`} className="block text-xs font-semibold text-catalog-body">
                                   Voyageur {i + 1}
-                                  <input
-                                    type="date"
+                                  <DateInput
                                     value={line.birthDates?.[i] || ""}
                                     max={line.date || client.arrivalDate || undefined}
                                     required
-                                    onChange={(e) => updateLineBirthDate(line.id, i, e.target.value)}
+                                    onChange={(v) => updateLineBirthDate(line.id, i, v)}
                                     className="mt-1 w-full rounded-xl border-2 border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-catalog-body outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25"
                                   />
                                   <span

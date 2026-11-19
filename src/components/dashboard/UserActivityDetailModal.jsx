@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   CalendarDays,
   ChevronLeft,
@@ -24,7 +23,6 @@ import {
   getMonthDurationTotal,
 } from "../../utils/presenceSessions";
 
-const MotionDiv = motion.div;
 
 /**
  * Modale détail activité : calendrier (temps + devis) + bilan du mois.
@@ -37,7 +35,6 @@ export function UserActivityDetailModal({
   quoteCountByDay,
   isOnline = false,
 }) {
-  const reduceMotion = useReducedMotion();
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -108,14 +105,9 @@ export function UserActivityDetailModal({
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <AnimatePresence>
-      {open && user ? (
-        <MotionDiv
+    open && user ? (
+        <div
           className="fixed inset-0 z-[220] flex items-end justify-center p-3 sm:items-center sm:p-6"
-          initial={reduceMotion ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
           role="presentation"
         >
           <button
@@ -125,14 +117,10 @@ export function UserActivityDetailModal({
             onClick={onClose}
           />
 
-          <MotionDiv
+          <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="hd-user-activity-title"
-            initial={reduceMotion ? false : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="relative z-10 flex max-h-[min(92vh,840px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20"
             onClick={(e) => e.stopPropagation()}
           >
@@ -330,10 +318,9 @@ export function UserActivityDetailModal({
                 </aside>
               </div>
             </div>
-          </MotionDiv>
-        </MotionDiv>
-      ) : null}
-    </AnimatePresence>,
+          </div>
+        </div>
+      ) : null,
     document.body
   );
 }

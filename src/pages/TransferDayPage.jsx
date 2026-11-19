@@ -16,6 +16,7 @@ import { chosenPickupTime, resolveActivityFromList, showsChosenPickupOnSituation
 import { requestClientStayPush } from "../utils/clientStayPush";
 import { supabase } from "../lib/supabase";
 import { toast } from "../utils/toast.js";
+import { DateInput } from "../components/DateInput";
 
 function shiftDateKey(ymd, days) {
   const [year, month, day] = String(ymd).split("-").map(Number);
@@ -346,10 +347,9 @@ export function TransferDayPage({ quotes = [], setQuotes, activities = [] }) {
           </label>
           <label className="inline-flex items-center gap-2 rounded-xl border-2 border-indigo-400 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-950">
             Date
-            <input
-              type="date"
+            <DateInput
               value={day}
-              onChange={(event) => setDay(event.target.value || tomorrowKey())}
+              onChange={(v) => setDay(v || tomorrowKey())}
               className="bg-transparent text-sm font-bold text-indigo-950 outline-none"
             />
           </label>

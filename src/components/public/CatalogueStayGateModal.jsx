@@ -8,6 +8,7 @@ import {
   isValidCatalogueStay,
   savePublicCatalogueStay,
 } from "../../utils/publicCatalogueStayStorage";
+import { DateInput } from "../DateInput";
 
 const fieldClass =
   "mt-1.5 w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25";
@@ -152,12 +153,10 @@ export function CatalogueStayGateModal({
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm font-semibold text-catalog-ink">
               Arrivée <span className="text-orange-500">*</span>
-              <input
-                type="date"
+              <DateInput
                 value={arrivalDate}
                 min={todayYmd}
-                onChange={(e) => {
-                  const nextArrival = e.target.value;
+                onChange={(nextArrival) => {
                   setArrivalDate(nextArrival);
                   const minDep = getMinDepartureDate(nextArrival);
                   if (departureDate && minDep && departureDate < minDep) {
@@ -170,11 +169,10 @@ export function CatalogueStayGateModal({
             </label>
             <label className="block text-sm font-semibold text-catalog-ink">
               Départ <span className="text-orange-500">*</span>
-              <input
-                type="date"
+              <DateInput
                 value={departureDate}
                 min={getMinDepartureDate(arrivalDate) || todayYmd}
-                onChange={(e) => setDepartureDate(e.target.value)}
+                onChange={setDepartureDate}
                 required
                 className={fieldClass}
               />

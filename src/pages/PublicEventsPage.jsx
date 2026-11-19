@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { PublicAppShell } from "../components/public/PublicAppShell";
+import { DateInput } from "../components/DateInput";
 import { supabase } from "../lib/supabase";
 import { SITE_KEY } from "../constants";
 
@@ -100,6 +101,11 @@ export function PublicEventsPage() {
 
   const setField = (key) => (event) => {
     setForm((current) => ({ ...current, [key]: event.target.value }));
+    setError("");
+  };
+
+  const setDateField = (key) => (value) => {
+    setForm((current) => ({ ...current, [key]: value }));
     setError("");
   };
 
@@ -326,10 +332,10 @@ export function PublicEventsPage() {
                   </Field>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="Début du séjour">
-                      <input className={inputClass} type="date" value={form.arrival} onChange={setField("arrival")} required />
+                      <DateInput className={inputClass} value={form.arrival} onChange={setDateField("arrival")} required />
                     </Field>
                     <Field label="Fin du séjour">
-                      <input className={inputClass} type="date" value={form.departure} onChange={setField("departure")} required />
+                      <DateInput className={inputClass} value={form.departure} onChange={setDateField("departure")} required />
                     </Field>
                   </div>
                   <Field label="Type d’événement">
@@ -342,7 +348,7 @@ export function PublicEventsPage() {
                   </Field>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="Date de l’événement">
-                      <input className={inputClass} type="date" value={form.eventDate} onChange={setField("eventDate")} required />
+                      <DateInput className={inputClass} value={form.eventDate} onChange={setDateField("eventDate")} required />
                     </Field>
                     <Field label="Nombre de personnes">
                       <input className={inputClass} type="number" min="1" step="1" inputMode="numeric" value={form.guestCount} onChange={setField("guestCount")} required />

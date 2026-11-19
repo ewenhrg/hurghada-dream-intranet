@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BedDouble, Building2, Loader2, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { GhostBtn, PrimaryBtn, TextInput } from "../components/ui";
+import { DateInput } from "../components/DateInput";
 import { toast } from "../utils/toast.js";
 import { loadPublicHotelsCatalog, savePublicHotel } from "../utils/publicHotelsCatalog";
 import {
@@ -613,21 +614,19 @@ export function HotelTarifsPage() {
                     </label>
                     <label className="block text-xs font-bold text-slate-600">
                       Date début
-                      <input
-                        type="date"
+                      <DateInput
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
                         value={draft.dateFrom}
-                        onChange={(e) => setDraft((d) => ({ ...d, dateFrom: e.target.value }))}
+                        onChange={(v) => setDraft((d) => ({ ...d, dateFrom: v }))}
                       />
                     </label>
                     <label className="block text-xs font-bold text-slate-600">
                       Date fin
-                      <input
-                        type="date"
+                      <DateInput
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
                         value={draft.dateTo}
                         min={draft.dateFrom || undefined}
-                        onChange={(e) => setDraft((d) => ({ ...d, dateTo: e.target.value }))}
+                        onChange={(v) => setDraft((d) => ({ ...d, dateTo: v }))}
                       />
                     </label>
                     <label className="block text-xs font-bold text-slate-600">

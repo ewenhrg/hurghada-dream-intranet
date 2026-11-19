@@ -23,6 +23,8 @@ import {
   formatHotelAgePolicyLabel,
   normalizeHotelAgePolicy,
 } from "../../utils/publicHotelsCatalog";
+import { getLocalDateKey } from "../../utils/pushSaleExpiry.js";
+import { DateInput } from "../DateInput";
 
 const EMPTY_CLIENT = {
   firstName: "",
@@ -439,20 +441,19 @@ export function HotelsDevisCart({
             <div data-sheet-item className="grid grid-cols-2 gap-3">
               <label className="block text-sm font-bold text-catalog-ink">
                 Arrivée <span className="text-catalog-coral">*</span>
-                <input
-                  type="date"
+                <DateInput
+                  min={getLocalDateKey()}
                   value={stayDraft.arrivalDate}
-                  onChange={(e) => updateStayField("arrivalDate", e.target.value)}
+                  onChange={(v) => updateStayField("arrivalDate", v)}
                   className={fieldClass}
                 />
               </label>
               <label className="block text-sm font-bold text-catalog-ink">
                 Départ <span className="text-catalog-coral">*</span>
-                <input
-                  type="date"
+                <DateInput
                   value={stayDraft.departureDate}
-                  min={stayDraft.arrivalDate || undefined}
-                  onChange={(e) => updateStayField("departureDate", e.target.value)}
+                  min={stayDraft.arrivalDate || getLocalDateKey()}
+                  onChange={(v) => updateStayField("departureDate", v)}
                   className={fieldClass}
                 />
               </label>
@@ -495,11 +496,10 @@ export function HotelsDevisCart({
                   return (
                     <label key={`dob-${i}`} className="block text-xs font-bold text-catalog-muted">
                       Voyageur {i + 1}
-                      <input
-                        type="date"
+                      <DateInput
                         value={stayDraft.birthDates?.[i] || ""}
                         max={stayDraft.arrivalDate || undefined}
-                        onChange={(e) => setBirthDateAt(i, e.target.value)}
+                        onChange={(v) => setBirthDateAt(i, v)}
                         className={fieldClass}
                       />
                       <span
