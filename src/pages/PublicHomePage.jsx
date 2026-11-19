@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { CatalogPhotoFrame } from "../components/public/CatalogPhotoFrame";
 import { HomeReviewsMarquee } from "../components/public/HomeReviewsMarquee";
-import { InstagramReelsRail } from "../components/public/InstagramReelsRail";
+import { isSlowConnection } from "../utils/network";
 import { PublicAppShell } from "../components/public/PublicAppShell";
 import { StarRow } from "../components/public/HotelUI";
 import { WhatsAppGlyph } from "../components/public/PublicUI";
@@ -37,9 +37,9 @@ import { GOOGLE_MAPS_PLACE_URL, GoogleWordmark } from "../components/public/Goog
 const AGENCY_WHATSAPP_URL = "https://wa.me/201062002850?text=Bonjour%20Hurghada%20Dream%2C%20";
 const AGENCY_MAPS_URL = "https://maps.app.goo.gl/qcx9LvVG3QwKUWyWA";
 const AGENCY_MAP_EMBED = "https://www.google.com/maps?q=27.1893675,33.8324796&z=16&hl=fr&output=embed";
-const HERO_IMAGE = "/client/home-hero-red-sea.jpg";
-const TILE_EXCURSIONS = "/client/home-tile-excursions.jpg";
-const TILE_STAY = "/client/home-tile-stay-calendar.jpg";
+const HERO_IMAGE = "/client/home-hero-red-sea.webp";
+const TILE_EXCURSIONS = "/client/home-tile-excursions.webp";
+const TILE_STAY = "/client/home-tile-stay-calendar.webp";
 /**
  * Vidéo du hero hébergée sur le site (720×1280, verticale) : plus de dépendance aux liens
  * Instagram qui expirent. Plein écran sur téléphone comme sur ordinateur.
@@ -47,8 +47,13 @@ const TILE_STAY = "/client/home-tile-stay-calendar.jpg";
 const HERO_REEL = {
   id: "hero-local",
   video: "/client/hero-reel.mp4",
-  image: "/client/hero-reel-poster.jpg",
+  image: "/client/hero-reel-poster.webp",
 };
+const HOME_SEO = {
+  fullTitle: "Hurghada Dream | Excursions, hôtels et séjours à Hurghada – Agence n°1",
+};
+/** Téléphone : même vidéo, compressée plus fort (4,3 Mo au lieu de 6,8 Mo). */
+const HERO_REEL_MOBILE = "/client/hero-reel-mobile.mp4";
 const PHONE_QUERY = "(max-width: 1023px)";
 const pendingPlays = new WeakMap();
 
@@ -149,7 +154,9 @@ export function PublicHomePage() {
   const railDragRef = useRef(false);
   const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia(PHONE_QUERY).matches);
   const [heroClear, setHeroClear] = useState(false);
-  const heroReel = HERO_REEL;
+  // Connexion lente : image fixe seulement. Téléphone : vidéo allégée.
+  const [slow] = useState(() => isSlowConnection());
+  const heroReel = useMemo(() => (phone ? { ...HERO_REEL, video: HERO_REEL_MOBILE } : HERO_REEL), [phone]);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,6 +171,7 @@ export function PublicHomePage() {
 
   // Préchauffe les chunks des pages les plus ouvertes (navigation instantanée).
   useEffect(() => {
+    if (slow) return undefined;
     const run = () => {
       void import("./PublicClientDevisPage");
       void import("./PublicHotelsCataloguePage");
@@ -176,7 +184,7 @@ export function PublicHomePage() {
     }
     const timer = window.setTimeout(run, 900);
     return () => window.clearTimeout(timer);
-  }, []);
+  },[slow]);
 
   const hotelsWithPhoto = useMemo(() => hotels.filter((h) => Array.isArray(h.images) && h.images[0]), [hotels]);
   const hotelPhoto = hotelsWithPhoto[0]?.images[0] || null;
@@ -378,7 +386,7 @@ export function PublicHomePage() {
   );
 
   return (
-    <PublicAppShell title={t("public.home")} wide="xl" nav={desktopNav}>
+    <PublicAppShell title={t("public.home")} wide="xl" nav={desktopNav} seo={HOME_SEO}>
       {/* ——— Hero « horizon » ——— */}
       <section ref={heroRef} className="hdc-hero-screen relative">
         {/* Grand bleu derrière l’ouverture : l’horizon se trace sur la mer avant que l’image s’ouvre. */}
@@ -388,8 +396,12 @@ export function PublicHomePage() {
           className="relative h-full overflow-hidden bg-catalog-raised"
         >
           <div data-hero-stage className="absolute inset-0 bg-catalog-abyss">
-            <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-label="Vidéo Hurghada">
-              <HeroReel key={heroReel.id} reel={heroReel} playing={!phone || !heroClear} />
+            <div ref={heroScrollRef} className="hdc-hero-reels absolute inset-0" aria-hidden>
+              {slow ? (
+                <img src={heroReel.image} alt="" fetchpriority="high" className="absolute inset-0 h-full w-full object-cover" />
+              ) : (
+                <HeroReel key={heroReel.video} reel={heroReel} playing={!phone || !heroClear} />
+              )}
             </div>
           </div>
           <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[4] h-1/2" data-veil-top />
@@ -403,7 +415,6 @@ export function PublicHomePage() {
                 href={GOOGLE_MAPS_PLACE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`Google ${t("public.home.rating")}/5 · ${t("public.home.eyebrow")}`}
                 className="hdc-liquid-glass pointer-events-auto inline-flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-full px-4 py-1.5 text-sm font-bold text-catalog-ink sm:text-[0.9375rem]"
               >
                 <GoogleWordmark />
@@ -538,8 +549,6 @@ export function PublicHomePage() {
         </section>
 
         <HomeReviewsMarquee />
-
-        <InstagramReelsRail />
 
         {/* ——— Nos adresses ——— */}
         {hotelsWithPhoto.length ? (

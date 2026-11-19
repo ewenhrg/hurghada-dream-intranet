@@ -1,11 +1,8 @@
 import { Suspense } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { fetchInstagramReels } from "./components/public/InstagramReelsRail";
 import GuestPageLoader from "./components/public/GuestPageLoader";
 import { PublicScrollRestore } from "./components/public/PublicScrollRestore";
-
-fetchInstagramReels();
 import { isPublicHomePath } from "./config/clientApp";
 import {
   RequestPage,

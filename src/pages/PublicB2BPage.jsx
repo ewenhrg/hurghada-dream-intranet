@@ -103,6 +103,7 @@ export function PublicB2BPage() {
 }
 
 function B2BLogin({ onLoggedIn }) {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
