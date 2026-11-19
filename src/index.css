@@ -2128,11 +2128,49 @@ button:not(:disabled):active {
   transform: translateY(0) scale(0.98);
 }
 
+/* Curseur : flèche/texte par défaut ; main uniquement sur les vrais contrôles cliquables */
+html,
+body,
+#root {
+  cursor: auto;
+}
+
+a[href]:not([aria-disabled="true"]),
+button:not(:disabled):not([aria-disabled="true"]),
+[role="button"]:not(:disabled):not([aria-disabled="true"]),
+summary,
+label,
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+input[type="file"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="button"]:not(:disabled),
+input[type="reset"]:not(:disabled),
+[data-clickable]:not([aria-disabled="true"]),
+[data-press]:not(:disabled):not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="range"]):not([type="color"]),
+textarea {
+  cursor: text;
+}
+
+:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* Améliorer le comportement tactile global - UNIQUEMENT pour les éléments interactifs */
-button, a[role="button"], [role="button"], [onclick] {
+button,
+a[href],
+a[role="button"],
+[role="button"],
+[data-clickable],
+[data-press] {
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(79, 70, 229, 0.2);
-  cursor: pointer;
 }
 
 /* S'assurer que le scroll avec la molette fonctionne partout */
@@ -2242,8 +2280,7 @@ button, a, [role="button"] {
   }
 
   /* Améliorer les zones cliquables */
-  [onclick], [data-clickable] {
-    cursor: pointer;
+  [data-clickable] {
     touch-action: manipulation;
   }
 }

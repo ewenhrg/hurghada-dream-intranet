@@ -15,6 +15,7 @@ import {
   normalizeTicketsPaymentMethods,
   normalizeQuoteItemsFromDb,
   uuid,
+  copyToClipboard,
 } from "../utils";
 import { generateQuoteHTML, generateTicketsHTML } from "../utils/printTemplates";
 import { openQuotePrintDocument } from "../utils/quotePdfDownload";
@@ -1169,7 +1170,7 @@ function QuoteCardComponent({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border transition-shadow duration-200 p-5 md:p-6 lg:p-7 shadow-lg hover:shadow-xl cursor-pointer bg-[#f7f9fc] ${
+      className={`relative overflow-hidden rounded-2xl border transition-shadow duration-200 p-5 md:p-6 lg:p-7 shadow-lg hover:shadow-xl bg-[#f7f9fc] ${
         allTicketsFilled
           ? "border-emerald-200/70 hover:border-emerald-300/90"
           : "border-amber-200/70 hover:border-amber-300/90"
@@ -1253,12 +1254,48 @@ function QuoteCardComponent({
               <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 text-sm md:text-base">
                 <p className="text-slate-700 font-semibold break-words flex items-center gap-2">
                   <span className="text-lg">📞</span>
-                  {formatPhoneWithPlus(d.client?.phone) || "Tél ?"}
+                  <span>{formatPhoneWithPlus(d.client?.phone) || "Tél ?"}</span>
+                  {formatPhoneWithPlus(d.client?.phone) ? (
+                    <button
+                      type="button"
+                      title="Copier le téléphone"
+                      aria-label="Copier le téléphone"
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void (async () => {
+                          const phone = formatPhoneWithPlus(d.client?.phone);
+                          const ok = await copyToClipboard(phone);
+                          if (ok) toast.success("Téléphone copié");
+                          else toast.error("Impossible de copier le téléphone");
+                        })();
+                      }}
+                    >
+                      <span aria-hidden className="text-sm leading-none">📋</span>
+                    </button>
+                  ) : null}
                 </p>
                 {d.client?.email ? (
                   <p className="text-slate-700 font-semibold break-all flex items-center gap-2">
                     <span className="text-lg">✉️</span>
-                    {d.client.email}
+                    <span className="min-w-0">{d.client.email}</span>
+                    <button
+                      type="button"
+                      title="Copier l'e-mail"
+                      aria-label="Copier l'e-mail"
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void (async () => {
+                          const email = String(d.client?.email || "").trim();
+                          const ok = await copyToClipboard(email);
+                          if (ok) toast.success("E-mail copié");
+                          else toast.error("Impossible de copier l'e-mail");
+                        })();
+                      }}
+                    >
+                      <span aria-hidden className="text-sm leading-none">📋</span>
+                    </button>
                   </p>
                 ) : null}
                 <p className="text-slate-700 font-semibold break-words flex items-center gap-2">
