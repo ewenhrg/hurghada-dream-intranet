@@ -145,7 +145,7 @@
           '<div id="hd-boot-hero" aria-hidden="true" style="position:fixed;inset:0;z-index:45;background:#0b3a4a;pointer-events:none">' +
             // 2 px de moins que l’écran : Chrome ignore les images plein écran (vues comme un fond)
             // pour le LCP ; la bande est invisible (même couleur que le bas de l’image).
-            '<img src="/client/hero-boot.webp" alt="" fetchpriority="high" style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 2px);object-fit:cover">' +
+            '<img src="' + (window.matchMedia("(min-width: 1024px)").matches ? "/client/hero-reel-poster.webp" : "/client/hero-boot.webp") + '" alt="" fetchpriority="high" style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 2px);object-fit:cover">' +
             '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,42,51,.45) 0%,rgba(4,20,28,.22) 35%,rgba(8,36,46,.9) 100%)"></div>' +
           "</div>"
         );

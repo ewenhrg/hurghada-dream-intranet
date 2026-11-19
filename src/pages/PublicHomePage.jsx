@@ -79,12 +79,46 @@ function playMuted(video) {
 }
 
 /** Une seule vidéo reel en fond du hero. */
+/** Image de démarrage (index.html), déjà en cache : sert d’attente puis d’affiche à la vidéo. */
+const HERO_BOOT_IMAGE = "/client/hero-boot.webp";
+
+/**
+ * La vidéo (4 à 7 Mo) ne démarre qu’une fois la page chargée et le navigateur au repos :
+ * elle ne prend plus la bande passante du code et du texte (premier affichage plus rapide,
+ * surtout sur mobile). L’image de démarrage reste affichée en attendant.
+ */
+let pageSettled = null;
+function afterPageSettled() {
+  if (!pageSettled) {
+    pageSettled = new Promise((resolve) => {
+      const idle = () =>
+        typeof window.requestIdleCallback === "function"
+          ? window.requestIdleCallback(() => resolve(), { timeout: 2500 })
+          : window.setTimeout(resolve, 600);
+      if (document.readyState === "complete") idle();
+      else window.addEventListener("load", idle, { once: true });
+    });
+  }
+  return pageSettled;
+}
+
 function HeroReel({ reel, playing }) {
   const videoRef = useRef(null);
+  const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    afterPageSettled().then(() => {
+      if (!cancelled) setArmed(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const node = videoRef.current;
-    if (!node) return undefined;
+    if (!armed || !node) return undefined;
     armVideo(node);
     node.autoplay = true;
     node.setAttribute("autoplay", "");
@@ -92,14 +126,15 @@ function HeroReel({ reel, playing }) {
     if (playing) playMuted(node);
     else node.pause();
     return undefined;
-  }, [reel.video, playing]);
+  }, [reel.video, playing, armed]);
 
   return (
     <div className="hdc-hero-reel relative h-full w-full overflow-hidden">
+      {armed ? (
       <video
         ref={videoRef}
         data-src={reel.video}
-        poster={reel.image}
+        poster={HERO_BOOT_IMAGE}
         autoPlay
         muted
         loop
@@ -108,6 +143,50 @@ function HeroReel({ reel, playing }) {
         referrerPolicy="no-referrer"
         className="pointer-events-none absolute inset-0 h-full w-full object-cover"
       />
+      ) : (
+        <img src={HERO_BOOT_IMAGE} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Carte Google Maps (~420 Ko de scripts Google) : insérée seulement quand elle arrive près
+ * de l’écran. `loading="lazy"` seul la chargeait dès l’ouverture sur grand écran.
+ */
+function LazyMapFrame({ title, src }) {
+  const holderRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const node = holderRef.current;
+    if (!node || visible) return undefined;
+    if (typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setVisible(true);
+      },
+      { rootMargin: "300px 0px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  return (
+    <div ref={holderRef} className="absolute inset-0">
+      {visible ? (
+        <iframe
+          title={title}
+          src={src}
+          className="absolute inset-0 h-full w-full border-0"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          allowFullScreen
+        />
+      ) : null}
     </div>
   );
 }
@@ -590,7 +669,7 @@ export function PublicHomePage() {
                     src={hotel.images[0]}
                     alt=""
                     loading="lazy"
-                    sizes="160px"
+                    sizes="(max-width: 1023px) 72vw, 300px"
                     imgClassName="pointer-events-none"
                   />
                   <div aria-hidden className="absolute inset-0 bg-catalog-photo-fade" />
@@ -632,13 +711,9 @@ export function PublicHomePage() {
               </div>
             </div>
             <div className="relative h-44 w-full bg-catalog-mist lg:h-auto lg:min-h-[12rem] lg:flex-1">
-              <iframe
+              <LazyMapFrame
                 title="Carte Google Maps — agence Hurghada Dream, Esplanada mall, Hurghada"
                 src={AGENCY_MAP_EMBED}
-                className="absolute inset-0 h-full w-full border-0"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
               />
             </div>
             <a

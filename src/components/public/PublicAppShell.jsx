@@ -206,8 +206,8 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
             <img
               src="/client/logo-wordmark-light.webp"
               alt="Hurghada Dream"
-              width={600}
-              height={173}
+              width={400}
+              height={116}
               className="hdc-wordmark hdc-wordmark-light object-contain"
             />
             <img

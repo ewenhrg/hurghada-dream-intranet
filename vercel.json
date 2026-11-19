@@ -125,7 +125,7 @@
       "headers": [
         {
           "key": "Link",
-          "value": "</client/hero-boot.webp>; rel=preload; as=image; fetchpriority=high"
+          "value": "</client/hero-boot.webp>; rel=preload; as=image; fetchpriority=high; media=\"(max-width: 1023px)\", </client/hero-reel-poster.webp>; rel=preload; as=image; fetchpriority=high; media=\"(min-width: 1024px)\""
         }
       ]
     }
