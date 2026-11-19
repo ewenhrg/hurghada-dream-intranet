@@ -159,7 +159,7 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
   return (
     <div
       ref={rootRef}
-      className="hd-public-catalog relative flex min-h-screen flex-col overflow-x-hidden bg-catalog-bg font-catalog-sans text-catalog-body antialiased"
+      className="hd-public-catalog relative flex min-h-screen flex-col overflow-x-clip bg-catalog-bg font-catalog-sans text-catalog-body antialiased"
     >
       {backTo ? (
         <header ref={headerRef} data-solid className="fixed inset-x-0 top-0 z-50">
@@ -199,11 +199,19 @@ export function PublicAppShell({ title, headerTitle, right, children, wide = fal
               </button>
             ) : null}
             <img
-              src="/client/logo-wordmark.png"
+              src="/client/logo-wordmark-light.png"
               alt="Hurghada Dream"
+              width={900}
+              height={260}
+              className="hdc-wordmark hdc-wordmark-light object-contain"
+            />
+            <img
+              src="/client/logo-wordmark.png"
+              alt=""
               width={468}
               height={158}
-              className="hdc-wordmark object-contain"
+              aria-hidden
+              className="hdc-wordmark hdc-wordmark-dark object-contain"
             />
             {nav ? <div className="hdc-homebar-nav hidden lg:block">{nav}</div> : null}
           </div>

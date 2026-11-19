@@ -399,7 +399,7 @@ export function useHeaderMorph(headerRef, active = true) {
 
 /**
  * Header fixe : disparaît en scrollant vers le bas, réapparaît en scrollant vers le haut.
- * Toujours visible près du haut de page.
+ * Accueil (`.hdc-homebar`) : transparent tout en haut, blanc dès qu’on a quitté le sommet.
  */
 export function useAutoHideHeader(headerRef, active = true) {
   useEffect(() => {
@@ -411,13 +411,19 @@ export function useAutoHideHeader(headerRef, active = true) {
     let ticking = false;
     const TOP_ALWAYS_SHOW = 24;
     const DELTA = 8;
+    const isHomebar = header.classList.contains("hdc-homebar");
 
-    const apply = (hidden) => {
-      header.classList.toggle("hdc-header-away", hidden);
-      header.setAttribute("data-away", hidden ? "true" : "false");
+    const apply = (nextHidden, atTop) => {
+      header.classList.toggle("hdc-header-away", nextHidden);
+      header.setAttribute("data-away", nextHidden ? "true" : "false");
+      if (isHomebar) {
+        const solid = !atTop;
+        header.classList.toggle("hdc-header-solid", solid);
+        header.setAttribute("data-solid", solid ? "true" : "false");
+      }
     };
 
-    apply(false);
+    apply(false, window.scrollY <= TOP_ALWAYS_SHOW);
 
     const onScroll = () => {
       if (ticking) return;
@@ -426,12 +432,17 @@ export function useAutoHideHeader(headerRef, active = true) {
         ticking = false;
         const y = window.scrollY;
         const delta = y - lastY;
-        if (y <= TOP_ALWAYS_SHOW) {
-          apply(false);
+        const atTop = y <= TOP_ALWAYS_SHOW;
+        if (atTop) {
+          apply(false, true);
         } else if (delta > DELTA) {
-          apply(true);
+          apply(true, false);
         } else if (delta < -DELTA) {
-          apply(false);
+          apply(false, false);
+        } else if (isHomebar) {
+          // Position inchangée : garder le fond blanc hors sommet.
+          header.classList.toggle("hdc-header-solid", true);
+          header.setAttribute("data-solid", "true");
         }
         lastY = y;
       });
@@ -440,7 +451,7 @@ export function useAutoHideHeader(headerRef, active = true) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
-      apply(false);
+      apply(false, true);
     };
   }, [headerRef, active]);
 }

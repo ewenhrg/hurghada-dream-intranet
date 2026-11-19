@@ -174,8 +174,10 @@ html:has(.hd-public-catalog) body {
   color: #33474D;
   height: auto;
   min-height: 100%;
-  /* Pas de !important : les modales doivent pouvoir poser overflow:hidden en inline. */
-  overflow-x: hidden;
+  /* Pas de !important : les modales doivent pouvoir poser overflow:hidden en inline.
+     `clip` et non `hidden` : `hidden` fait de body un conteneur de scroll, ce qui
+     casse tous les `position: sticky` (barre de filtres du catalogue). */
+  overflow-x: clip;
   overflow-y: visible;
   overscroll-behavior-y: auto;
   scroll-behavior: auto;
@@ -274,10 +276,10 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   max-width: 5.75rem;
 }
 
-/* Accueil : header blanc fixe ; disparaît au scroll bas, revient au scroll haut. */
+/* Accueil : transparent en haut, blanc au retour scroll ; disparaît au scroll bas. */
 .hd-public-catalog .hdc-homebar,
 .hd-public-catalog > header.fixed {
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.28s ease, box-shadow 0.28s ease;
   will-change: transform;
 }
 .hd-public-catalog .hdc-header-away {
@@ -285,12 +287,31 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   pointer-events: none;
 }
 .hd-public-catalog .hdc-homebar {
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+.hd-public-catalog .hdc-homebar > * {
+  pointer-events: auto;
+}
+.hd-public-catalog .hdc-homebar.hdc-header-solid {
   background: #ffffff;
   box-shadow: 0 1px 0 rgba(15, 42, 51, 0.08);
+  pointer-events: auto;
 }
 .hd-public-catalog .hdc-homebar .hdc-wordmark {
   height: 2.4rem;
   max-width: 9rem;
+  filter: drop-shadow(0 2px 10px rgba(8, 36, 46, 0.45));
+}
+.hd-public-catalog .hdc-homebar .hdc-wordmark-dark {
+  display: none;
+}
+.hd-public-catalog .hdc-homebar.hdc-header-solid .hdc-wordmark-light {
+  display: none;
+}
+.hd-public-catalog .hdc-homebar.hdc-header-solid .hdc-wordmark-dark {
+  display: block;
   filter: none;
 }
 @media (min-width: 1024px) {
@@ -300,25 +321,29 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   }
 }
 .hd-public-catalog .hdc-homebar-menu {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.hd-public-catalog .hdc-homebar.hdc-header-solid .hdc-homebar-menu {
   background: rgba(15, 42, 51, 0.06);
   color: #0f2a33;
   box-shadow: inset 0 0 0 1px rgba(15, 42, 51, 0.1);
-}
-.hd-public-catalog .hdc-homebar-lang {
-  background: rgba(15, 42, 51, 0.06) !important;
-  box-shadow: inset 0 0 0 1px rgba(15, 42, 51, 0.1);
-}
-.hd-public-catalog .hdc-homebar-lang button {
-  color: rgba(15, 42, 51, 0.72);
-}
-.hd-public-catalog .hdc-homebar-lang button[aria-pressed="true"] {
-  background: #0f2a33 !important;
-  color: #ffffff !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 .hd-public-catalog .hdc-homebar-nav a {
-  color: #0f2a33 !important;
+  color: rgba(255, 255, 255, 0.92) !important;
 }
 .hd-public-catalog .hdc-homebar-nav a:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+.hd-public-catalog .hdc-homebar.hdc-header-solid .hdc-homebar-nav a {
+  color: #0f2a33 !important;
+}
+.hd-public-catalog .hdc-homebar.hdc-header-solid .hdc-homebar-nav a:hover {
   background: rgba(15, 42, 51, 0.06) !important;
 }
 
@@ -665,6 +690,11 @@ html :where(.hd-public-catalog) :is(h1, h2) .hdc-serif:not([class*="text-"]) {
   background: rgba(250, 246, 239, 0.92);
   /* Pas de backdrop-filter : fond déjà opaque, scroll plus fluide. */
   box-shadow: 0 1px 0 rgba(15, 42, 51, 0.07);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Header caché au scroll bas : la barre remonte à sa place (sous la barre d’état). */
+.hd-public-catalog:has(> header.hdc-header-away) .hdc-filterbar {
+  transform: translateY(calc(env(safe-area-inset-top, 0px) - max(0.35rem, env(safe-area-inset-top)) - 3.25rem));
 }
 /* Fondu de bord : signale que la rangée de puces défile sur mobile. */
 .hd-public-catalog .hdc-chip-rail {
