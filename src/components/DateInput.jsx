@@ -120,18 +120,30 @@ export function DateInput({
     [emit, min, max]
   );
 
-  const openCalendar = useCallback(() => {
-    if (disabled) return;
-    if (typeof nativeRef.current?.showPicker === "function") {
-      nativeRef.current.showPicker();
-    } else {
-      nativeRef.current?.click();
-    }
-  }, [disabled]);
+  const openCalendar = useCallback(
+    (event) => {
+      // Évite que le <label> parent recentre le focus sur le champ texte (mobile).
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      if (disabled) return;
+      const node = nativeRef.current;
+      if (!node) return;
+      try {
+        if (typeof node.showPicker === "function") {
+          node.showPicker();
+          return;
+        }
+      } catch {
+        /* showPicker peut échouer hors geste / navigateur : fallback click */
+      }
+      node.click();
+    },
+    [disabled]
+  );
 
   return (
-    <div className="flex gap-2 flex-1 min-w-0">
-      <div className="flex-1 min-w-0">
+    <div className="flex min-w-0 flex-1 gap-2">
+      <div className="min-w-0 flex-1">
         <TextInput
           type="text"
           value={text}
@@ -147,28 +159,39 @@ export function DateInput({
           id={id}
         />
       </div>
-      <input
-        ref={nativeRef}
-        type="date"
-        lang="fr-FR"
-        value={value || ""}
-        onChange={handleNativeChange}
-        min={min}
-        max={max}
-        disabled={disabled}
-        className="absolute opacity-0 w-0 h-0 overflow-hidden pointer-events-none"
-        tabIndex={-1}
-        aria-hidden="true"
-      />
-      <button
-        type="button"
-        onClick={openCalendar}
-        disabled={disabled}
-        title="Ouvrir le calendrier"
-        className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl border border-[rgba(148,163,184,0.35)] bg-[var(--hd-surface-input)] hover:border-[rgba(79,70,229,0.5)] hover:shadow-md transition-all text-xl cursor-pointer touch-manipulation disabled:cursor-not-allowed disabled:opacity-50"
+      {/*
+        Sur téléphone, un input date en 0×0 + pointer-events:none n’ouvre pas le picker.
+        On pose l’input natif transparent sur l’icône : le tap ouvre le calendrier système,
+        tout en gardant la saisie JJ/MM/AAAA à côté.
+      */}
+      <div
+        className={`relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-xl border border-[rgba(148,163,184,0.35)] bg-[var(--hd-surface-input)] transition-all ${
+          disabled
+            ? "cursor-not-allowed opacity-50"
+            : "cursor-pointer touch-manipulation hover:border-[rgba(79,70,229,0.5)] hover:shadow-md"
+        }`}
       >
-        📅
-      </button>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center text-xl"
+        >
+          📅
+        </span>
+        <input
+          ref={nativeRef}
+          type="date"
+          lang="fr-FR"
+          value={value || ""}
+          onChange={handleNativeChange}
+          onClick={openCalendar}
+          min={min}
+          max={max}
+          disabled={disabled}
+          title="Ouvrir le calendrier"
+          aria-label="Ouvrir le calendrier"
+          className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+        />
+      </div>
     </div>
   );
 }

@@ -154,8 +154,10 @@ export function CatalogueStayGateModal({
           ) : null}
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm font-semibold text-catalog-ink">
-              {t("public.common.arrival")} <span className="text-catalog-coral">*</span>
+            <div className="block text-sm font-semibold text-catalog-ink">
+              <span className="mb-1.5 block">
+                {t("public.common.arrival")} <span className="text-catalog-coral">*</span>
+              </span>
               <DateInput
                 value={arrivalDate}
                 min={todayYmd}
@@ -169,9 +171,11 @@ export function CatalogueStayGateModal({
                 required
                 className={fieldClass}
               />
-            </label>
-            <label className="block text-sm font-semibold text-catalog-ink">
-              {t("public.common.departure")} <span className="text-catalog-coral">*</span>
+            </div>
+            <div className="block text-sm font-semibold text-catalog-ink">
+              <span className="mb-1.5 block">
+                {t("public.common.departure")} <span className="text-catalog-coral">*</span>
+              </span>
               <DateInput
                 value={departureDate}
                 min={getMinDepartureDate(arrivalDate) || todayYmd}
@@ -179,7 +183,7 @@ export function CatalogueStayGateModal({
                 required
                 className={fieldClass}
               />
-            </label>
+            </div>
           </div>
 
           {sameDaySelected ? (
